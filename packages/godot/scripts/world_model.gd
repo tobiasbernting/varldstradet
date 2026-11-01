@@ -12,6 +12,8 @@ signal area_changed(key: String) ## my map changed, or its data arrived
 signal object_changed(key: String, id: String, obj: Variant) ## obj null: gone
 signal animal_changed(key: String, id: String, animal: Variant)
 signal player_changed(id: String, player: Variant)
+signal terrain_changed(key: String, x: int, y: int)
+signal crop_changed(key: String, k: String, crop: Variant)
 signal snapshot ## a `state` was applied: new positions and health
 signal warped(id: String, x: float, y: float)
 signal toast(text: String)
@@ -25,11 +27,14 @@ var me := ""
 var farm: Dictionary = {}
 var areas: Dictionary = {}
 var player_snaps: Dictionary = {}
+var npc_snaps: Dictionary = {} ## the villagers on my map: id -> {x, y, facing, moving}
+var time_at := 0 ## Time.get_ticks_msec() when time_ms was set (the clock runs on between snapshots)
 var animal_snaps: Dictionary = {} ## the animals on my map only (ids are unique within one map)
 var saga: Dictionary = {} ## area key -> SagaSnap {f: {id: [hp, max, flags]}, m: {...}, b?}
 var day := 0
 var time_ms := 0.0
 var season := "none"
+var weather: Variant = null ## the server's WeatherState {kind, since, until, prev?} or null
 var server_offset_ms := 0.0 ## this clock minus the server's
 var last_now := 0.0 ## the server's clock on the latest `state` (the bot keys its health samples by it)
 
@@ -133,10 +138,13 @@ func _welcome(msg: Dictionary) -> void:
 	areas = {}
 	player_snaps = {}
 	animal_snaps = {}
+	npc_snaps = {}
 	saga = {}
 	day = int(farm.get("day", 0))
 	time_ms = float(farm.get("timeMs", 0))
+	time_at = Time.get_ticks_msec()
 	season = str(msg.get("season", "none"))
+	weather = farm.get("weather")
 	server_offset_ms = Time.get_unix_time_from_system() * 1000.0 - float(msg.get("now", 0))
 	area_changed.emit(my_area_key())
 
@@ -145,8 +153,11 @@ func _state(msg: Dictionary) -> void:
 	if farm.is_empty():
 		return
 	time_ms = float(msg.get("timeMs", time_ms))
+	time_at = Time.get_ticks_msec()
 	day = int(msg.get("day", day))
 	season = str(msg.get("season", season))
+	if msg.get("weather") != null:
+		weather = msg.get("weather")
 	server_offset_ms = Time.get_unix_time_from_system() * 1000.0 - float(msg.get("now", 0))
 	last_now = float(msg.get("now", 0))
 	var s: Variant = msg.get("saga")
@@ -169,6 +180,10 @@ func _state(msg: Dictionary) -> void:
 	var w := world_for(my_map)
 	var animals: Dictionary = w.get("animals", {})
 	animal_snaps = {}
+	npc_snaps = {}
+	for entry in msg.get("npcs", []):
+		if str(entry.get("area", "farm")) == my_map:
+			npc_snaps[str(entry.get("id", ""))] = entry
 	for entry in msg.get("animals", []):
 		var snap: Dictionary = entry
 		if str(snap.get("area", "farm")) != my_map:
@@ -213,6 +228,19 @@ func _change(c: Dictionary) -> void:
 			var i := int(c.get("y", 0)) * map_w(w) + int(c.get("x", 0))
 			if i >= 0 and i < terrain.size():
 				terrain[i] = str(c.get("terrain", ""))
+				terrain_changed.emit(area_k, int(c.get("x", 0)), int(c.get("y", 0)))
+		"crop":
+			var w := world_for(area_k)
+			if w.is_empty():
+				return
+			var ck := str(c.get("k", ""))
+			var crop: Variant = c.get("crop")
+			var crops: Dictionary = w.get("crops", {})
+			if crop is Dictionary:
+				crops[ck] = crop
+			else:
+				crops.erase(ck)
+			crop_changed.emit(area_k, ck, crop)
 		"object":
 			var w := world_for(area_k)
 			if w.is_empty():

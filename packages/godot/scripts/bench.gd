@@ -5,6 +5,8 @@ extends Node
 ## times say nothing. Run it on the MacBook and on the Intel laptop:
 ##   godot --path packages/godot -- --bench            (all three presets)
 ##   godot --path packages/godot -- --bench=mellan     (one: lag, mellan or hog)
+##   godot --path packages/godot -- --bench=mellan --scene=farm   (the farm, or forest; the default is the crypt's fight)
+## On the farm the hero walks to and fro along the path, so chunks and shadows are exercised.
 ## (or the exported build with `-- --bench`), and send the lines back. `--out=<file>` also writes them to a file.
 ##
 ## Steady state: a preset is set (which rebuilds the dungeon), then SETTLE seconds pass unmeasured, then the scripted
@@ -61,11 +63,16 @@ func _ready() -> void:
 	var info := Engine.get_version_info()
 	_say("Godot %s, %s, %s (%s)" % [info.get("string", "?"), RenderingServer.get_current_rendering_method(), RenderingServer.get_current_rendering_driver_name(), OS.get_name()])
 	_say("%s, %s" % [OS.get_processor_name(), RenderingServer.get_video_adapter_name()])
-	_say("%d objects, %d lights, %d actors" % [world.dungeon.object_count(), world.dungeon.light_count(), world.actors_root.get_child_count()])
+	_say("%d objects, %d lights, %d actors" % [_view().object_count(), _view().light_count(), world.actors_root.get_child_count()])
 	if DisplayServer.get_name() == "headless":
 		_say("WARNING headless, nothing is rendered: the numbers below only say the scripts ran")
 	RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), true)
 	_next()
+
+
+## The map's view: the farm's outdoors or the dungeon (both answer the same questions).
+func _view() -> Node:
+	return world.farm if world.is_outdoor() else world.dungeon
 
 
 func _say(text: String) -> void:
@@ -84,7 +91,7 @@ func _next() -> void:
 func _enter(phase: String) -> void:
 	_phase = phase
 	_t = 0.0
-	if phase == "warm" or phase == "measure":
+	if (phase == "warm" or phase == "measure") and fight != null:
 		fight.restart()
 	if phase == "measure":
 		_frame = 0
@@ -99,6 +106,9 @@ func _process(delta: float) -> void:
 	if _stage < 0 or _stage >= _presets.size():
 		return
 	_t += delta
+	if fight == null and world.is_outdoor():
+		world.hero.driven = true
+		world.hero.drive = Vector2(sin(_t * 0.6), 0.0)
 	match _phase:
 		"settle":
 			if _t >= SETTLE:
@@ -124,8 +134,8 @@ func _sample() -> void:
 	_samples["cpu"].append(RenderingServer.viewport_get_measured_render_time_cpu(rid))
 	_samples["gpu"].append(RenderingServer.viewport_get_measured_render_time_gpu(rid))
 	_samples["script"].append(_script_usec / 1000.0)
-	_samples["active"].append(world.dungeon.lights_near(world.camera.global_position))
-	_samples["shadows"].append(world.dungeon.shadow_light_count())
+	_samples["active"].append(_view().lights_near(world.camera.global_position))
+	_samples["shadows"].append(_view().shadow_light_count())
 
 
 func _mean(key: String) -> float:
@@ -152,7 +162,7 @@ func _report() -> void:
 	var name := Quality.label_of(str(_presets[_stage]))
 	var line := "%s: %s (%d frames)" % [name, HudLayer.perf_text(_times, false), _times.size()]
 	var counters := "  %s render: %d draw calls · %d primitives · %d objects · lights %d, %d in reach, %d with shadows · render cpu %.1f ms, gpu %.1f ms · scripts %.2f ms · objects %+d, nodes %+d" % [
-		name, roundi(_mean("draw")), roundi(_mean("prims")), roundi(_mean("objects")), world.dungeon.light_count(), roundi(_mean("active")), roundi(_mean("shadows")),
+		name, roundi(_mean("draw")), roundi(_mean("prims")), roundi(_mean("objects")), _view().light_count(), roundi(_mean("active")), roundi(_mean("shadows")),
 		_mean("cpu"), _mean("gpu"), _mean("script"),
 		int(Performance.get_monitor(Performance.OBJECT_COUNT)) - _objects_at_start, int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)) - _nodes_at_start]
 	var size := "  %s: %s" % [name, _size_text()]

@@ -24,6 +24,8 @@ var conn_label: Label
 var banner_label: Label
 var banner_sub: Label
 var toast_label: Label
+var farm_box: HBoxContainer ## the top right: clock and day, season, weather, coins, stars, hearts (outdoors)
+var farm_labels: Dictionary = {}
 var not_drawn: PanelContainer
 var not_drawn_label: Label
 var _banner_t := 0.0
@@ -63,6 +65,7 @@ var _fps_in := 0.0
 
 
 func _ready() -> void:
+	_build_farm_box()
 	var left := VBoxContainer.new()
 	left.position = Vector2(16, 12)
 	left.add_theme_constant_override("separation", 6)
@@ -391,6 +394,7 @@ func reset() -> void:
 	prompt_label.text = ""
 	hint_label.text = ""
 	not_drawn.visible = false
+	farm_box.visible = false
 	boss_box.visible = false
 	cast_box.visible = false
 	down_box.visible = false
@@ -458,8 +462,63 @@ func set_fps_shown(on: bool) -> void:
 
 
 ## The map's name in the corner; on a map the client does not draw, the notice in the middle instead.
+func _build_farm_box() -> void:
+	farm_box = HBoxContainer.new()
+	farm_box.anchor_left = 1.0
+	farm_box.anchor_right = 1.0
+	farm_box.offset_left = -640
+	farm_box.offset_right = -16
+	farm_box.offset_top = 12
+	farm_box.alignment = BoxContainer.ALIGNMENT_END
+	farm_box.add_theme_constant_override("separation", 8)
+	farm_box.visible = false
+	add_child(farm_box)
+	for k in ["clock", "season", "weather", "coins", "stars", "hearts"]:
+		var panel := PanelContainer.new()
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(0.1, 0.09, 0.07, 0.72)
+		sb.set_corner_radius_all(8)
+		sb.content_margin_left = 10
+		sb.content_margin_right = 10
+		sb.content_margin_top = 4
+		sb.content_margin_bottom = 4
+		panel.add_theme_stylebox_override("panel", sb)
+		var l := _label(20)
+		panel.add_child(l)
+		farm_box.add_child(panel)
+		farm_labels[k] = l
+		panel.visible = false
+		l.set_meta("panel", panel)
+
+
+func _farm_chip(k: String, text: String) -> void:
+	var l: Label = farm_labels[k]
+	l.text = text
+	(l.get_meta("panel") as Control).visible = text != ""
+
+
+## Outdoors: the clock and the day, the season and weather, my coins and stars and hearts (the browser's top chips).
+func set_farm_status(model: WorldModel, me: Dictionary) -> void:
+	farm_box.visible = true
+	var f := fposmod(model.time_ms + (0.0 if model.time_at == 0 else float(Time.get_ticks_msec() - model.time_at)), Data.constant("DAY_LENGTH_MS", 600000.0)) / Data.constant("DAY_LENGTH_MS", 600000.0)
+	var clock := "🌅" if f < 0.3 else ("☀️" if f < 0.65 else ("🌇" if f < 0.8 else "🌙"))
+	_farm_chip("clock", "%s %s" % [clock, Strings.t("day", {"day": model.day})])
+	var glyphs := {"halloween": "🎃", "jul": "🎄", "pask": "🐣", "midsommar": "🌸"}
+	_farm_chip("season", str(glyphs.get(model.season, "")))
+	var kind := str(model.weather.get("kind", "sun")) if model.weather is Dictionary else "sun"
+	_farm_chip("weather", Strings.weather_emoji(kind))
+	farm_labels["weather"].tooltip_text = Strings.weather(kind)
+	_farm_chip("coins", "%d %s" % [int(me.get("coins", 0)), Strings.t("coins")])
+	var stars := int(me.get("stars", 0))
+	_farm_chip("stars", "⭐ %d" % stars if stars > 0 else "")
+	var hearts := int(me.get("hearts", 0))
+	var max_h := int(Data.constant("MAX_HEARTS", 5.0))
+	_farm_chip("hearts", "❤️".repeat(maxi(0, hearts)) + "🖤".repeat(maxi(0, max_h - hearts)) if hearts < max_h else "")
+
+
 func set_area(area_name: String, drawn: bool) -> void:
 	area_label.text = area_name if drawn else ""
+	farm_box.visible = farm_box.visible and drawn
 	not_drawn.visible = not drawn
 	not_drawn_label.text = "" if drawn else Strings.t("areaNotDrawn", {"name": area_name})
 

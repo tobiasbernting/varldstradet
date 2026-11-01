@@ -4,6 +4,9 @@
     "TILE": 16,
     "MAP_W": 64,
     "MAP_H": 64,
+    "MAX_HEARTS": 5,
+    "DAY_LENGTH_MS": 600000,
+    "EDGE_GAP": 3,
     "PLAYER_SPEED": 64,
     "PLAYER_HALF_W": 5,
     "PLAYER_HALF_H": 3,
@@ -39,6 +42,34 @@
     "space",
     "water"
   ],
+  "portals": [
+    {
+      "from": {
+        "x": 10,
+        "y": 8
+      },
+      "to": {
+        "x": 57,
+        "y": 59
+      },
+      "facing": "up"
+    },
+    {
+      "from": {
+        "x": 57,
+        "y": 61
+      },
+      "to": {
+        "x": 10,
+        "y": 9
+      },
+      "facing": "down"
+    }
+  ],
+  "sagaPortal": {
+    "w": 3,
+    "h": 2
+  },
   "objects": {
     "alvlykta": {
       "w": 1,
@@ -80,17 +111,20 @@
       "w": 1,
       "h": 1,
       "solid": false,
-      "flat": true
+      "flat": true,
+      "interact": "exit"
     },
     "bathhouse": {
       "w": 3,
       "h": 2,
-      "solid": true
+      "solid": true,
+      "interact": "bath"
     },
     "bed": {
       "w": 1,
       "h": 2,
-      "solid": true
+      "solid": true,
+      "interact": "sleep"
     },
     "beehive": {
       "w": 1,
@@ -127,7 +161,8 @@
     "bus_stop": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "interact": "bus"
     },
     "bush": {
       "w": 1,
@@ -147,18 +182,21 @@
     "cave": {
       "w": 2,
       "h": 2,
-      "solid": true
+      "solid": true,
+      "interact": "cave"
     },
     "cave_exit": {
       "w": 1,
       "h": 1,
       "solid": false,
-      "flat": true
+      "flat": true,
+      "interact": "exit"
     },
     "cave_mouth": {
       "w": 2,
       "h": 2,
-      "solid": true
+      "solid": true,
+      "interact": "grotto"
     },
     "cave_rock": {
       "w": 1,
@@ -184,7 +222,8 @@
     "chest": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "interact": "chest"
     },
     "clock": {
       "w": 1,
@@ -284,7 +323,8 @@
       "w": 2,
       "h": 2,
       "solid": false,
-      "flat": true
+      "flat": true,
+      "interact": "fairy"
     },
     "fence": {
       "w": 1,
@@ -365,7 +405,8 @@
       "w": 3,
       "h": 3,
       "solid": true,
-      "light": true
+      "light": true,
+      "interact": "grotto"
     },
     "glowshroom": {
       "w": 1,
@@ -447,140 +488,166 @@
     "lm_apkungenstron": {
       "w": 3,
       "h": 3,
-      "solid": true
+      "solid": true,
+      "interact": "landmark"
     },
     "lm_blomsterlabyrint": {
       "w": 4,
       "h": 3,
-      "solid": true
+      "solid": true,
+      "interact": "landmark"
     },
     "lm_chokladfontan": {
       "w": 3,
       "h": 3,
-      "solid": true
+      "solid": true,
+      "interact": "landmark"
     },
     "lm_dinobo": {
       "w": 3,
       "h": 3,
-      "solid": true
+      "solid": true,
+      "interact": "landmark"
     },
     "lm_dvargport": {
       "w": 3,
       "h": 3,
       "solid": true,
-      "light": true
+      "light": true,
+      "interact": "landmark"
     },
     "lm_eldbrunn": {
       "w": 3,
       "h": 3,
       "solid": true,
-      "light": true
+      "light": true,
+      "interact": "landmark"
     },
     "lm_forstenadjatte": {
       "w": 3,
       "h": 3,
-      "solid": true
+      "solid": true,
+      "interact": "landmark"
     },
     "lm_frusetskepp": {
       "w": 3,
       "h": 3,
-      "solid": true
+      "solid": true,
+      "interact": "landmark"
     },
     "lm_gamlabron": {
       "w": 3,
       "h": 3,
-      "solid": true
+      "solid": true,
+      "interact": "landmark"
     },
     "lm_glasstorn": {
       "w": 3,
       "h": 3,
-      "solid": true
+      "solid": true,
+      "interact": "landmark"
     },
     "lm_jatteek": {
       "w": 3,
       "h": 3,
       "solid": true,
-      "light": true
+      "light": true,
+      "interact": "landmark"
     },
     "lm_jatteskelett": {
       "w": 4,
       "h": 3,
-      "solid": true
+      "solid": true,
+      "interact": "landmark"
     },
     "lm_klocktorn": {
       "w": 3,
       "h": 3,
-      "solid": true
+      "solid": true,
+      "interact": "landmark"
     },
     "lm_lykttrad": {
       "w": 3,
       "h": 3,
       "solid": true,
-      "light": true
+      "light": true,
+      "interact": "landmark"
     },
     "lm_manporten": {
       "w": 3,
       "h": 3,
       "solid": true,
-      "light": true
+      "light": true,
+      "interact": "landmark"
     },
     "lm_mossaltare": {
       "w": 3,
       "h": 3,
       "solid": true,
-      "light": true
+      "light": true,
+      "interact": "landmark"
     },
     "lm_oas": {
       "w": 3,
       "h": 3,
-      "solid": true
+      "solid": true,
+      "interact": "landmark"
     },
     "lm_ornnaste": {
       "w": 3,
       "h": 3,
-      "solid": true
+      "solid": true,
+      "interact": "landmark"
     },
     "lm_sandjatte": {
       "w": 3,
       "h": 3,
-      "solid": true
+      "solid": true,
+      "interact": "landmark"
     },
     "lm_satellit": {
       "w": 3,
       "h": 3,
       "solid": true,
-      "light": true
+      "light": true,
+      "interact": "landmark"
     },
     "lm_stencirkel": {
       "w": 3,
       "h": 3,
-      "solid": true
+      "solid": true,
+      "interact": "landmark"
     },
     "lm_svampring": {
       "w": 3,
       "h": 3,
       "solid": true,
-      "light": true
+      "light": true,
+      "interact": "landmark"
     },
     "lm_tjargrop": {
       "w": 3,
       "h": 3,
-      "solid": true
+      "solid": true,
+      "interact": "landmark"
     },
     "lm_valskelett": {
       "w": 4,
       "h": 3,
-      "solid": true
+      "solid": true,
+      "interact": "landmark"
     },
     "lm_vardkase": {
       "w": 3,
       "h": 3,
-      "solid": true
+      "solid": true,
+      "interact": "landmark"
     },
     "lm_vattenfall": {
       "w": 3,
       "h": 3,
-      "solid": true
+      "solid": true,
+      "interact": "landmark"
     },
     "lollipop_tree": {
       "w": 1,
@@ -590,17 +657,20 @@
     "loot_chest": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "interact": "loot"
     },
     "mailbox": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "interact": "catalogue"
     },
     "market": {
       "w": 2,
       "h": 2,
-      "solid": true
+      "solid": true,
+      "interact": "catalogue"
     },
     "maypole": {
       "w": 1,
@@ -670,7 +740,8 @@
       "w": 3,
       "h": 2,
       "solid": true,
-      "light": true
+      "light": true,
+      "interact": "pizzeria"
     },
     "plant": {
       "w": 1,
@@ -685,7 +756,8 @@
     "pyramid": {
       "w": 6,
       "h": 4,
-      "solid": true
+      "solid": true,
+      "interact": "grotto"
     },
     "reed": {
       "w": 1,
@@ -706,7 +778,8 @@
       "w": 2,
       "h": 3,
       "solid": true,
-      "light": true
+      "light": true,
+      "interact": "rocket"
     },
     "rug": {
       "w": 2,
@@ -768,7 +841,8 @@
     "saga_chest": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "interact": "sagachest"
     },
     "saga_cobweb": {
       "w": 1,
@@ -806,7 +880,8 @@
       "h": 1,
       "solid": false,
       "flat": true,
-      "light": true
+      "light": true,
+      "interact": "exit"
     },
     "saga_fairylight": {
       "w": 1,
@@ -898,7 +973,8 @@
       "w": 3,
       "h": 2,
       "solid": true,
-      "light": true
+      "light": true,
+      "interact": "saga"
     },
     "saga_rainbowshard": {
       "w": 1,
@@ -910,7 +986,8 @@
       "w": 1,
       "h": 1,
       "solid": true,
-      "light": true
+      "light": true,
+      "interact": "rest"
     },
     "saga_runepillar": {
       "w": 1,
@@ -945,7 +1022,8 @@
       "w": 1,
       "h": 1,
       "solid": true,
-      "light": true
+      "light": true,
+      "interact": "sagaclass"
     },
     "saga_torch": {
       "w": 1,
@@ -981,12 +1059,14 @@
     "sellbox": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "interact": "sell"
     },
     "sellstall": {
       "w": 2,
       "h": 2,
-      "solid": true
+      "solid": true,
+      "interact": "sell"
     },
     "sheepfold": {
       "w": 2,
@@ -1055,12 +1135,14 @@
     "start_bench": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "interact": "workbench"
     },
     "start_chest": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "interact": "chest"
     },
     "steam_vent": {
       "w": 1,
@@ -1072,7 +1154,8 @@
       "w": 1,
       "h": 1,
       "solid": true,
-      "light": true
+      "light": true,
+      "interact": "cook"
     },
     "street_lamp": {
       "w": 1,
@@ -1093,7 +1176,8 @@
     "temple": {
       "w": 4,
       "h": 3,
-      "solid": true
+      "solid": true,
+      "interact": "grotto"
     },
     "torch": {
       "w": 1,
@@ -1104,7 +1188,8 @@
     "town_well": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "interact": "water"
     },
     "traffic_light": {
       "w": 1,
@@ -1115,12 +1200,14 @@
       "w": 3,
       "h": 2,
       "solid": true,
-      "light": true
+      "light": true,
+      "interact": "train"
     },
     "treasure": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "interact": "treasure"
     },
     "tree": {
       "w": 1,
@@ -1140,7 +1227,8 @@
     "trough": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "interact": "feed"
     },
     "ufo": {
       "w": 3,
@@ -1167,12 +1255,14 @@
     "wardrobe": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "interact": "wardrobe"
     },
     "well": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "interact": "water"
     },
     "wild_flower_mid": {
       "w": 1,
@@ -1205,7 +1295,8 @@
     "workbench": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "interact": "workbench"
     },
     "xmas_tree": {
       "w": 1,
@@ -1217,6 +1308,393 @@
       "h": 1,
       "solid": true,
       "light": true
+    }
+  },
+  "crops": {
+    "carrot": {
+      "stages": 3,
+      "produce": "carrot"
+    },
+    "potato": {
+      "stages": 4,
+      "produce": "potato"
+    },
+    "strawberry": {
+      "stages": 4,
+      "produce": "strawberry"
+    },
+    "tomato": {
+      "stages": 4,
+      "produce": "tomato"
+    },
+    "pumpkin": {
+      "stages": 5,
+      "produce": "pumpkin"
+    },
+    "sunflower": {
+      "stages": 4,
+      "produce": "sunflower"
+    },
+    "wheat": {
+      "stages": 3,
+      "produce": "wheat"
+    }
+  },
+  "animals": {
+    "hen": {
+      "growDays": 3
+    },
+    "rabbit": {
+      "growDays": 3
+    },
+    "sheep": {
+      "growDays": 3
+    },
+    "cow": {
+      "growDays": 3
+    },
+    "pig": {
+      "growDays": 3
+    },
+    "horse": {
+      "growDays": 3
+    },
+    "dog": {
+      "growDays": 0
+    },
+    "cat": {
+      "growDays": 0
+    },
+    "fox": {
+      "growDays": 0
+    },
+    "deer": {
+      "growDays": 0
+    },
+    "penguin": {
+      "growDays": 0
+    },
+    "crab": {
+      "growDays": 0
+    },
+    "goat": {
+      "growDays": 0
+    },
+    "lizard": {
+      "growDays": 0
+    },
+    "hare": {
+      "growDays": 0
+    },
+    "boar": {
+      "growDays": 0
+    },
+    "moose": {
+      "growDays": 0
+    },
+    "frog": {
+      "growDays": 0
+    },
+    "parrot": {
+      "growDays": 0
+    },
+    "monkey": {
+      "growDays": 0
+    },
+    "salamander": {
+      "growDays": 0
+    },
+    "hedgehog": {
+      "growDays": 0
+    },
+    "dino": {
+      "growDays": 0
+    },
+    "gummy": {
+      "growDays": 0
+    },
+    "alien": {
+      "growDays": 0
+    },
+    "dragon": {
+      "growDays": 0
+    },
+    "bear": {
+      "growDays": 0
+    },
+    "wolf": {
+      "growDays": 0
+    },
+    "lynx": {
+      "growDays": 0
+    },
+    "car": {
+      "growDays": 0
+    },
+    "motorcycle": {
+      "growDays": 0
+    },
+    "bus": {
+      "growDays": 0
+    },
+    "train": {
+      "growDays": 0
+    },
+    "slime": {
+      "growDays": 0
+    },
+    "bat": {
+      "growDays": 0
+    },
+    "troll": {
+      "growDays": 0
+    },
+    "boss": {
+      "growDays": 0
+    },
+    "skelett": {
+      "growDays": 0
+    },
+    "draugbage": {
+      "growDays": 0
+    },
+    "gravrotta": {
+      "growDays": 0
+    },
+    "frosttroll": {
+      "growDays": 0
+    },
+    "isvarg": {
+      "growDays": 0
+    },
+    "isande": {
+      "growDays": 0
+    },
+    "eldimp": {
+      "growDays": 0
+    },
+    "lavagolem": {
+      "growDays": 0
+    },
+    "eldhund": {
+      "growDays": 0
+    },
+    "isblock": {
+      "growDays": 0
+    },
+    "gengangare": {
+      "growDays": 0
+    },
+    "helhund": {
+      "growDays": 0
+    },
+    "benspindel": {
+      "growDays": 0
+    },
+    "gruvtroll": {
+      "growDays": 0
+    },
+    "guldbagge": {
+      "growDays": 0
+    },
+    "stengolem": {
+      "growDays": 0
+    },
+    "sjodraug": {
+      "growDays": 0
+    },
+    "jattekrabba": {
+      "growDays": 0
+    },
+    "manet": {
+      "growDays": 0
+    },
+    "skuggalv": {
+      "growDays": 0
+    },
+    "jattespindel": {
+      "growDays": 0
+    },
+    "svampvakt": {
+      "growDays": 0
+    },
+    "ulv": {
+      "growDays": 0
+    },
+    "rimtroll": {
+      "growDays": 0
+    },
+    "bergsjatte": {
+      "growDays": 0
+    },
+    "spindelnat": {
+      "growDays": 0
+    },
+    "gravvaktare": {
+      "growDays": 0
+    },
+    "draugkung": {
+      "growDays": 0
+    },
+    "isbjorn": {
+      "growDays": 0
+    },
+    "rimturs": {
+      "growDays": 0
+    },
+    "smeden": {
+      "growDays": 0
+    },
+    "surt": {
+      "growDays": 0
+    },
+    "garm": {
+      "growDays": 0
+    },
+    "hel": {
+      "growDays": 0
+    },
+    "jarnvakten": {
+      "growDays": 0
+    },
+    "fafner": {
+      "growDays": 0
+    },
+    "blackis": {
+      "growDays": 0
+    },
+    "jormungand": {
+      "growDays": 0
+    },
+    "spindeldrottning": {
+      "growDays": 0
+    },
+    "nattmara": {
+      "growDays": 0
+    },
+    "skoll": {
+      "growDays": 0
+    },
+    "fenrisulven": {
+      "growDays": 0
+    },
+    "lokesskugga": {
+      "growDays": 0
+    },
+    "loke": {
+      "growDays": 0
+    },
+    "korp": {
+      "growDays": 0
+    },
+    "fenrisvalp": {
+      "growDays": 0
+    },
+    "sleipner": {
+      "growDays": 0
+    },
+    "gullinbursti": {
+      "growDays": 0
+    },
+    "garmvalp": {
+      "growDays": 0
+    },
+    "guldbagge_tam": {
+      "growDays": 0
+    },
+    "manet_tam": {
+      "growDays": 0
+    },
+    "alvljus_fe": {
+      "growDays": 0
+    },
+    "ulvvalp": {
+      "growDays": 0
+    },
+    "havshast": {
+      "growDays": 0
+    },
+    "jattehjort": {
+      "growDays": 0
+    },
+    "fenrisulv_ridbar": {
+      "growDays": 0
+    },
+    "lokeshast": {
+      "growDays": 0
+    },
+    "vandrardraug": {
+      "growDays": 0
+    },
+    "mosspoke": {
+      "growDays": 0
+    },
+    "bergatroll": {
+      "growDays": 0
+    },
+    "kustjatte": {
+      "growDays": 0
+    },
+    "angsvatte": {
+      "growDays": 0
+    },
+    "trollunge": {
+      "growDays": 0
+    },
+    "snotroll": {
+      "growDays": 0
+    },
+    "sandande": {
+      "growDays": 0
+    },
+    "djungelimp": {
+      "growDays": 0
+    },
+    "benodla": {
+      "growDays": 0
+    },
+    "sockerspoke": {
+      "growDays": 0
+    },
+    "rymdkryp": {
+      "growDays": 0
+    },
+    "ljushjort": {
+      "growDays": 0
+    }
+  },
+  "npcs": {
+    "greta": {
+      "name": "Tant Greta",
+      "area": "farm"
+    },
+    "sven": {
+      "name": "Fiskar-Sven",
+      "area": "farm"
+    },
+    "elsa": {
+      "name": "Lilla Elsa",
+      "area": "farm"
+    },
+    "bo": {
+      "name": "Bagar-Bo",
+      "area": "a:1,0"
+    },
+    "pino": {
+      "name": "Pizza-Pino",
+      "area": "a:1,0"
+    },
+    "stina": {
+      "name": "Smed-Stina",
+      "area": "a:1,0"
+    },
+    "lind": {
+      "name": "Fru Lind",
+      "area": "a:1,0"
+    },
+    "sigrun": {
+      "name": "Völvan Sigrun",
+      "area": "a:1,0"
     }
   },
   "dungeons": {
