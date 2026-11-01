@@ -441,7 +441,10 @@ replies, `nameAnimal`, `pets`) and draws what comes back.
 ## Godot client: home and village (2026-11-01)
 Milestone M4c of `PLAN.md`, the last farm slice: the family can play a whole farm evening in the native client. The only
 server changes are exports (`FLOOR_ITEMS` in `sim.ts` and the dialogue's tables in `dialogue.ts` are `export`ed so
-`pnpm godot:data` can write them to `game.json`); every rule is the browser's, read from `shared/src`, and every window sends
+`pnpm godot:data` can write them to `game.json`) and one development message, `{t:'dev', a:'starter'}` (only with
+`DEV_TELEPORT=1`, an error otherwise, tested both ways in `game.test.ts`), which gives a hero with a class the starter weapon,
+shield and amulet that Smed-Stina's forge makes for gold, because the new client has no smithy yet and the gear window needs
+something to put on in a check; every rule is the browser's, read from `shared/src`, and every window sends
 the browser's messages (`craft`, `cook`, `buy`, `sell`, `equip`, `quest`, `ride`, `saga` class/chapter/equip/hero/quest).
 - **Windows** (`scripts/game_window.gd` and one file each): a dark panel over a dimmed screen with a title, a purse, tabs, a
   scrolling list of rows (a picture, a name, a line of bbcode, buttons) and OK. Rows are rebuilt from my player record when

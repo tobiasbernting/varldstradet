@@ -199,7 +199,8 @@ browser game's Vite server on 5173 next to it). It refuses to start without a ch
 `DATABASE_URL` points at a Postgres that is not running, so pick one of two recipes. Both set `DEV_TELEPORT=1`: the
 native client draws only Draugkryptan's way in (the arch), so the switch lets the pause menu's "Gå in i …" entries for
 the other eight dungeons ask the server to put you inside, as their arches would, making you a Krigare first if you
-have no class. Draugkryptan itself needs no switch. Never set it on the real farm.
+have no class (and, since M4c, the farmer bot's `dev starter` hands a hero with a class the starter weapon Smed-Stina's forge
+makes, which the gear window can then put on). Draugkryptan itself needs no switch. Never set it on the real farm.
 
 - *Throwaway, nothing to set up* (no password, no database, nothing saved; a home network only):
 
@@ -300,8 +301,13 @@ spells, the same monster health and the same telegraphs, because all of it is th
 server of its own (it rolls the day over with the dev message `{t:'dev',a:'nextDay'}`, which only `DEV_TELEPORT=1` accepts):
 it tills, plants, waters, waits for the carrot to grow, harvests, drops and picks up a carrot, chops trees and mines rocks,
 does Elsa's and Fiskar-Sven's errands, fills the can at the pond, fishes, opens the chest and moves a stack through the
-bag window, and pets a wild animal in the forest, and its report is checked against the server's own record of the player
-(bag, coins, stars, and what the HUD shows). `BOT_ONLY=farm GODOT=~/godot/godot pnpm godot:bot` runs it alone; with
+bag window, and pets a wild animal in the forest. Since M4c it also buys seeds and a hat, plants wheat, sells a carrot, hands in
+wishes through the villagers' windows, crafts fences, shows the placement preview, builds and takes a fence down, is refused on a
+neighbour's fence (`tools/friend.mts` is a second player that joins over the socket and builds first), walks through the farmhouse
+door and out, bakes bread at the stove, puts the hat on at the wardrobe, talks (a joke, a riddle, sten sax påse), walks to Köpingen,
+picks a class at the Kämpastenen, hears Völvan and takes her reward, buys and eats a pizza, equips the starter weapon, switches to
+hero and back, and rides the bus home and out again, all by pressing the same buttons a person would. Its report is checked against the
+server's own record of the player (bag, coins, stars, and what the HUD shows). `BOT_ONLY=farm GODOT=~/godot/godot pnpm godot:bot` runs it alone; with
 `BOT_FARM_SHOTS=dir` under `xvfb-run` it also saves pictures. A third bot of the fight takes the real way in: it walks across the farm, the forest and the forest
 beyond to the arch and uses it, and the check is that it arrives in `saga:draug` with the dev message never sent. `GODOT=~/godot/godot pnpm godot:bot` starts the server in memory (`ACCESS=open`,
 `DEV_TELEPORT=1`, no Postgres), runs two headless clients in bot mode (`-- --bot`: log in, enter, walk to the first

@@ -210,7 +210,7 @@ volumetric fog in fog weather and 1500 particles. SSAO, glow and GI are the cryp
 
 ### Measured (M4a)
 
-`godot --path packages/godot -- --bench --scene=farm` (or `forest`, or `draug` for the crypt's fight), the sandbox's
+`godot --path packages/godot -- --bench --scene=farm` (or `forest`, `house`, `village`, or `draug` for the crypt's fight), the sandbox's
 Forward+ on Mesa's lavapipe under Xvfb, window 1280×720 (counts are exact; GPU ms are software and only compare rows):
 
 | Scene · preset | draw calls | primitives | lights (in reach) | GPU ms |
