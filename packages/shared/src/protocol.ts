@@ -121,6 +121,8 @@ export type ClientMsg =
   /** Development only (same switch): the day rolls over now, as the parent page's "skip day" does, so a check can
    * wait for a crop to grow. The server answers `error` when the switch is off. */
   | { t: 'dev'; a: 'nextDay' }
+  /** Development only (same switch): the starter set Smed-Stina makes (a weapon, a shield, an amulet) for my class, for free. */
+  | { t: 'dev'; a: 'starter' }
   | { t: 'ping' };
 
 export interface PlayerSnap {

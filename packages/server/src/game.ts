@@ -8,6 +8,7 @@ import {
   chooseClass,
   craftGear,
   devEnterSaga,
+  devStarterKit,
   equipGear,
   forgeGear,
   noticeLandmarks,
@@ -482,6 +483,7 @@ export class Game {
         }
         if (msg.a === 'saga') changes = devEnterSaga(this.world, pid, String(msg.id ?? ''));
         else if (msg.a === 'nextDay') this.skipDay();
+        else if (msg.a === 'starter') changes = devStarterKit(this.world, pid);
         break;
       case 'voice':
         this.voice.handle(pid, msg);

@@ -309,6 +309,23 @@ export function devEnterSaga(world: WorldState, playerId: string, id: string): C
   return out;
 }
 
+/**
+ * Development only (DEV_TELEPORT=1, `dev starter`): the starter set Smed-Stina makes, without gold or her forge, for the
+ * class the player has (a weapon, the wooden shield and the stone amulet), so a check of the native client, which has no
+ * smithy yet, has something to put on in the gear window. Nothing for a player without a class.
+ */
+export function devStarterKit(world: WorldState, playerId: string): Change[] {
+  const farm = farmOf(world);
+  const p = farm.players[playerId];
+  const cls = p?.saga?.cls;
+  if (!p || !cls) return [];
+  const weapon: Record<string, string> = { vaktare: 'jarnsvard', krigare: 'jarnyxa', helare: 'ekstav', magiker: 'ekstav' };
+  const out: Change[] = [];
+  for (const id of [weapon[cls]!, 'traskold', 'stenamulett']) if (!ownsGear(p, id)) giveItems(farm, p, id, 1, out);
+  out.push(playerChange(p));
+  return out;
+}
+
 /** Moves a player within the map they are on (blink, charge, getting up, a boss's pull): the client jumps there too. */
 function warp(h: Here | string, p: PlayerState, tx: number, ty: number, out: Change[], exact?: { x: number; y: number }): void {
   p.x = exact?.x ?? px(tx);
