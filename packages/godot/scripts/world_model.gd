@@ -14,6 +14,7 @@ signal animal_changed(key: String, id: String, animal: Variant)
 signal player_changed(id: String, player: Variant)
 signal terrain_changed(key: String, x: int, y: int)
 signal crop_changed(key: String, k: String, crop: Variant)
+signal drop_changed(key: String, id: String, drop: Variant) ## something lying on the ground; drop null: picked up
 signal snapshot ## a `state` was applied: new positions and health
 signal warped(id: String, x: float, y: float)
 signal toast(text: String)
@@ -101,6 +102,22 @@ func count_item(item: String) -> int:
 		if slot is Dictionary and str(slot.get("item", "")) == item:
 			n += int(slot.get("count", 0))
 	return n
+
+
+## The slot I hold (the hotbar's selected one) as a stack dictionary {item, count, charges?}; {} when empty.
+func held() -> Dictionary:
+	var me_p := my_player()
+	var inv: Array = me_p.get("inventory", [])
+	var i := int(me_p.get("selected", 0))
+	if i >= 0 and i < inv.size() and inv[i] is Dictionary:
+		return inv[i]
+	return {}
+
+
+## A chest object on my map by id ({} when it is not there).
+func chest(id: int) -> Dictionary:
+	var o: Variant = world_for(my_area_key()).get("objects", {}).get(str(id))
+	return o if o is Dictionary else {}
 
 
 ## My own health in the dungeon I am in: [hp, max, flags], or [] when the server has not said.
@@ -241,6 +258,19 @@ func _change(c: Dictionary) -> void:
 			else:
 				crops.erase(ck)
 			crop_changed.emit(area_k, ck, crop)
+		"drop":
+			var w := world_for(area_k)
+			if w.is_empty():
+				return
+			var id := str(int(c.get("id", 0)))
+			var drop: Variant = c.get("drop")
+			if not w.has("drops"):
+				w["drops"] = {}
+			if drop is Dictionary:
+				w["drops"][id] = drop
+			else:
+				w["drops"].erase(id)
+			drop_changed.emit(area_k, id, drop)
 		"object":
 			var w := world_for(area_k)
 			if w.is_empty():

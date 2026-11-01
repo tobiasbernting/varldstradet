@@ -1567,15 +1567,18 @@
     },
     "bear": {
       "growDays": 0,
-      "wild": true
+      "wild": true,
+      "predator": true
     },
     "wolf": {
       "growDays": 0,
-      "wild": true
+      "wild": true,
+      "predator": true
     },
     "lynx": {
       "growDays": 0,
-      "wild": true
+      "wild": true,
+      "predator": true
     },
     "car": {
       "growDays": 0
@@ -1590,16 +1593,20 @@
       "growDays": 0
     },
     "slime": {
-      "growDays": 0
+      "growDays": 0,
+      "mob": true
     },
     "bat": {
-      "growDays": 0
+      "growDays": 0,
+      "mob": true
     },
     "troll": {
-      "growDays": 0
+      "growDays": 0,
+      "mob": true
     },
     "boss": {
-      "growDays": 0
+      "growDays": 0,
+      "mob": true
     },
     "skelett": {
       "growDays": 0
@@ -1615,14 +1622,16 @@
     },
     "isvarg": {
       "growDays": 0,
-      "wild": true
+      "wild": true,
+      "mob": true
     },
     "isande": {
       "growDays": 0
     },
     "eldimp": {
       "growDays": 0,
-      "wild": true
+      "wild": true,
+      "mob": true
     },
     "lavagolem": {
       "growDays": 0
@@ -1644,7 +1653,8 @@
     },
     "gruvtroll": {
       "growDays": 0,
-      "wild": true
+      "wild": true,
+      "mob": true
     },
     "guldbagge": {
       "growDays": 0
@@ -1654,7 +1664,8 @@
     },
     "sjodraug": {
       "growDays": 0,
-      "wild": true
+      "wild": true,
+      "mob": true
     },
     "jattekrabba": {
       "growDays": 0
@@ -1664,7 +1675,8 @@
     },
     "skuggalv": {
       "growDays": 0,
-      "wild": true
+      "wild": true,
+      "mob": true
     },
     "jattespindel": {
       "growDays": 0
@@ -1792,51 +1804,63 @@
     },
     "vandrardraug": {
       "growDays": 0,
-      "wild": true
+      "wild": true,
+      "mob": true
     },
     "mosspoke": {
       "growDays": 0,
-      "wild": true
+      "wild": true,
+      "mob": true
     },
     "bergatroll": {
       "growDays": 0,
-      "wild": true
+      "wild": true,
+      "mob": true
     },
     "kustjatte": {
       "growDays": 0,
-      "wild": true
+      "wild": true,
+      "mob": true
     },
     "angsvatte": {
       "growDays": 0,
-      "wild": true
+      "wild": true,
+      "mob": true
     },
     "trollunge": {
       "growDays": 0,
-      "wild": true
+      "wild": true,
+      "mob": true
     },
     "snotroll": {
       "growDays": 0,
-      "wild": true
+      "wild": true,
+      "mob": true
     },
     "sandande": {
       "growDays": 0,
-      "wild": true
+      "wild": true,
+      "mob": true
     },
     "djungelimp": {
       "growDays": 0,
-      "wild": true
+      "wild": true,
+      "mob": true
     },
     "benodla": {
       "growDays": 0,
-      "wild": true
+      "wild": true,
+      "mob": true
     },
     "sockerspoke": {
       "growDays": 0,
-      "wild": true
+      "wild": true,
+      "mob": true
     },
     "rymdkryp": {
       "growDays": 0,
-      "wild": true
+      "wild": true,
+      "mob": true
     },
     "ljushjort": {
       "growDays": 0,

@@ -21,6 +21,7 @@ const PULL := Vector3(0.0, 0.38, 0.33)
 const WALK_FPS := 6.0
 const BAR_BACK_PRIORITY := 10
 const BAR_FILL_PRIORITY := 11
+const SWING_TIME := 0.26
 const FALLEN_TINT := Color(0.62, 0.62, 0.72)
 
 var sprite: Sprite3D
@@ -47,6 +48,9 @@ var _bubble_icon: Sprite3D = null
 var _bubble_until := 0.0
 var _marker: Sprite3D = null
 var _marker_t := 0.0
+var _tool: Sprite3D = null
+var _swing_t := 0.0
+var _swing_side := 1.0
 
 
 func _init() -> void:
@@ -173,6 +177,15 @@ func _tick_looks(delta: float) -> void:
 		sprite.position = base + _lunge * sin(k * PI)
 		if _lunge_t <= 0.0:
 			sprite.position = base
+	if _swing_t > 0.0:
+		_swing_t -= delta
+		if _swing_t <= 0.0:
+			_tool.visible = false
+		else:
+			# the tool sweeps an arc over the shoulder in front of the body (a billboard cannot be turned, so it moves)
+			var k := 1.0 - _swing_t / SWING_TIME
+			var a := lerpf(-1.1, 1.3, k)
+			_tool.position = Vector3(_swing_side * (0.32 + 0.3 * sin(a)), 0.55 + 0.32 * cos(a), 0.45)
 	if _bubble != null and _bubble_until > 0.0 and Time.get_ticks_msec() > _bubble_until:
 		_bubble_until = 0.0
 		_bubble.visible = false
@@ -197,6 +210,39 @@ func lunge(dir: Vector3, dist := 0.25) -> void:
 	var d := Vector3(dir.x, 0.0, dir.z)
 	_lunge = d.normalized() * dist if d.length() > 0.01 else Vector3(0.0, 0.0, -dist)
 	_lunge_t = 0.18
+
+
+## The farm's use animation: a lunge towards the tile and the tool's picture swinging past (the browser squashes the
+## body and swings the tool). `facing` is down, up, left or right.
+func swing(icon: Texture2D, facing: String) -> void:
+	if _tool == null:
+		_tool = Sprite3D.new()
+		_tool.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_tool.shaded = false
+		_tool.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+		_tool.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
+		_tool.pixel_size = 0.019
+		_tool.visible = false
+		add_child(_tool)
+	var dir := Vector3.ZERO
+	match facing:
+		"left":
+			dir = Vector3(-1, 0, 0)
+			_swing_side = -1.0
+		"right":
+			dir = Vector3(1, 0, 0)
+			_swing_side = 1.0
+		"up":
+			dir = Vector3(0, 0, -1)
+			_swing_side = 1.0
+		_:
+			dir = Vector3(0, 0, 1)
+			_swing_side = 1.0
+	lunge(dir, 0.2)
+	if icon != null:
+		_tool.texture = icon
+		_tool.visible = true
+		_swing_t = SWING_TIME
 
 
 ## Fallen (lying flat on the floor, grey), frozen (in an ice block), webbed (in threads), or up again.

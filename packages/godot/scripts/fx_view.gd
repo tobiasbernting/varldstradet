@@ -395,6 +395,8 @@ func on_change(c: Dictionary) -> void:
 				poof(at)
 			elif kind == "sparkle":
 				sparkle(at)
+			else:
+				_farm_fx(kind, at)
 		"object":
 			var obj: Variant = c.get("obj")
 			if obj is Dictionary and str(obj.get("kind", "")) == "saga_plate" and int(obj.get("variant", 0)) == 1:
@@ -1244,6 +1246,59 @@ func sparkle(at: Vector3) -> void:
 			_set_colour(motes[i], Color(1.0, 0.92, 0.5, 1.0 - u))
 	var f := _add(1.0, step, at)
 	f.nodes = motes
+
+
+## The farm's small effects (the server's `fx` kinds): water drops, wood and stone chips, hearts, coins.
+func _farm_fx(kind: String, at: Vector3) -> void:
+	match kind:
+		"water", "splash":
+			Sfx.play("water")
+			_droplets(at, Color(0.5, 0.78, 1.0), 10 if kind == "water" else 14, 2.2 if kind == "water" else 3.2)
+		"chop":
+			Sfx.play("chop")
+			_droplets(at, Color(0.66, 0.5, 0.3), 8, 2.6)
+		"hit":
+			Sfx.play("chop")
+			_droplets(at, Color(1.0, 0.95, 0.8), 5, 2.0)
+		"heart":
+			Sfx.play("heart")
+			_hearts(at)
+		"coin":
+			Sfx.play("coin")
+			sparkle(at)
+
+
+## Little drops thrown up from a tile that fall back in an arc (a splash, chips from a tree).
+func _droplets(at: Vector3, colour: Color, n: int, up: float) -> void:
+	var motes: Array = []
+	var vel: Array = []
+	for i in range(n):
+		motes.append(_glow(colour, 0.14))
+		var a := _rng.randf() * TAU
+		var sp := 0.5 + _rng.randf() * 0.9
+		vel.append(Vector3(cos(a) * sp, up * (0.7 + _rng.randf() * 0.5), sin(a) * sp))
+	var step := func(fx: Fx, k: float) -> void:
+		var t := k * 0.7
+		for i in range(n):
+			motes[i].position = fx.at + Vector3(0.0, 0.15, 0.0) + Vector3(vel[i].x * t, vel[i].y * t - 4.9 * t * t, vel[i].z * t)
+			_set_colour(motes[i], Color(colour.r, colour.g, colour.b, clampf(1.6 * (1.0 - k), 0.0, 1.0)))
+	var f := _add(0.7, step, at)
+	f.nodes = motes
+
+
+## Hearts rise from a petted animal.
+func _hearts(at: Vector3) -> void:
+	var hs: Array = []
+	for i in range(3):
+		hs.append(_label("❤", Color(1.0, 0.35, 0.45), 64))
+	var step := func(fx: Fx, k: float) -> void:
+		for i in range(3):
+			var u := clampf((k - i * 0.12) / 0.7, 0.0, 1.0)
+			hs[i].visible = u > 0.0 and u < 1.0
+			hs[i].position = fx.at + Vector3((i - 1) * 0.28, 0.9 + u * 0.9, 0.0)
+			hs[i].modulate = Color(1.0, 0.35, 0.45, 1.0 - u * u)
+	var f := _add(1.1, step, at)
+	f.nodes = hs
 
 
 ## A rune plate lights up under someone's feet: a chime and a fountain of sparkles.

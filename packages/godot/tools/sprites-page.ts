@@ -119,7 +119,7 @@ function iconSheet(dungeons: (keyof typeof DUNGEONS)[]): { sheet: Sheet; icons: 
   const art = getArt();
   const cells: [string, HTMLCanvasElement][] = [];
   for (const [id, sp] of Object.entries(SPELLS)) cells.push([`spell_${id}`, emoji(sp.icon)]);
-  for (const id of T.emotes) cells.push([`emote_${id}`, emoji(EMOTE_GLYPH[id] ?? id)]);
+  for (const id of new Set([...T.emotes, ...Object.keys(EMOTE_GLYPH)])) cells.push([`emote_${id}`, emoji(EMOTE_GLYPH[id] ?? id)]); // (M4b: the glyphs that are not on the wheel too: fiske, napp, vissla)
   for (const [name, glyph] of Object.entries(UI_GLYPHS)) cells.push([`ui_${name}`, emoji(glyph)]);
   // (M4b) the loot items, and every item the farm knows: the bag, the hotbar and the pick-up lines draw them all
   for (const id of [...new Set([...dungeons.flatMap(lootItemsOf), ...Object.keys(ITEMS)])].sort()) {

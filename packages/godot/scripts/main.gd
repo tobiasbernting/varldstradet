@@ -7,6 +7,7 @@ extends Node
 ##                       --time=0.7 --weather=rain --season=jul set the sky, --at=x,y where to stand
 ##   --bench[=preset]    the demo scene on each quality preset (or one: lag, mellan, hog) in steady state, printing
 ##                       frame times, draw calls, lights and the render timings (bench.gd)
+##   --farmbot           a headless player that farms against a local server (farm_bot.gd, M4b)
 ##   --bot               a headless player that logs in against a local server (ACCESS=open, DEV_TELEPORT=1), walks
 ##                       to the first pack, fights it and writes a report (bot.gd)
 
@@ -22,7 +23,14 @@ func _ready() -> void:
 	world.left.connect(_on_left)
 	Net.connection_changed.connect(_on_connection)
 	var args := OS.get_cmdline_user_args()
-	if args.has("--bot"):
+	if args.has("--farmbot"):
+		login.visible = false
+		_set_world(true)
+		var farmer := FarmBot.new()
+		farmer.name = "FarmBot"
+		farmer.world = world
+		add_child(farmer)
+	elif args.has("--bot"):
 		login.visible = false
 		_set_world(true)
 		var bot := Bot.new()
