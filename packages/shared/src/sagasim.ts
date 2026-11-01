@@ -6,7 +6,7 @@
 // own loot. Völvan Sigrun tells the saga, the villagers give quests, and anyone can jump to a family member.
 import { ANIMALS, ITEMS, NPCS, VILLAGE_KEY, objectDef } from './data.ts';
 import { MAX_HEARTS } from './dungeon.ts';
-import { isIndoorKey } from './hall.ts';
+import { isIndoorKey } from './bath.ts';
 import { addItem, countItem, removeItem } from './inventory.ts';
 import { addObject, inBounds, inInterior, mapH, mapW, objectAt, removeObject, tileIndex } from './map.ts';
 import type { Change } from './protocol.ts';

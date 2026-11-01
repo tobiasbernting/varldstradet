@@ -18,6 +18,9 @@ export const bathKey = (villageKey: string): string => `bath:${villageKey}`;
 export const isBathKey = (k: string | undefined): boolean => !!k && k.startsWith('bath:');
 export const villageOfBath = (k: string): string => k.slice('bath:'.length);
 
+/** Maps inside a building (the bath house): one lit room, dark around it, no weather. */
+export const isIndoorKey = (k: string | undefined): boolean => isBathKey(k);
+
 /** Where the bath house stands in a village (top-left tile of its 3×2 footprint). */
 export const bathhouseSpot = (): { x: number; y: number } => ({ x: BATHHOUSE.x, y: BATHHOUSE.y });
 

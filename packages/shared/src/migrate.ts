@@ -8,7 +8,7 @@ import { hashString, mulberry32 } from './rng.ts';
 import { ensureSagaPlaces } from './sagasim.ts';
 import { buildArea, openTileNear } from './sim.ts';
 import { ensureSpaceport } from './space.ts';
-import { TILE, type CaveTheme, type Terrain, type WorldState } from './types.ts';
+import { TILE, type CaveTheme, type PlayerState, type Terrain, type WorldState } from './types.ts';
 import { Painter, connect, plankBridge } from './worldgen.ts';
 
 /** Ground only people make (a map from before the wider world had none of it). */
@@ -135,4 +135,70 @@ export function settlePlayer(a: WorldState, p: { x: number; y: number }): void {
   const at = openTileNear(a, Math.floor(p.x / TILE), Math.floor(p.y / TILE));
   p.x = at.x * TILE + TILE / 2;
   p.y = at.y * TILE + TILE / 2;
+}
+
+// ---------------------------------------------------------------------------
+// The minigames (removed 2026-11-01): what old saves may still carry
+// ---------------------------------------------------------------------------
+
+/** Things of the minigames that a world saved before 2026-11-01 may still hold: the TV, Spelhallen and its machines,
+ * the rally garage, and the prizes from the prize counter. None of them has a definition any more. */
+export const REMOVED_KINDS = new Set(['tv', 'arcade_hall', 'arcade_machine', 'prize_counter', 'score_board', 'hall_wall', 'hall_exit', 'rally_garage', 'plush_cow', 'plush_hen', 'plush_dragon', 'trophy', 'lava_lamp', 'disco_ball', 'neon_sign']);
+/** Items of the minigames: the TV, the game cartridges and the prizes. */
+export const REMOVED_ITEMS = new Set(['tv', 'cart_rally', 'cart_snow', 'cart_golf', 'cart_hen', 'cart_dance', 'cart_star', 'plush_cow', 'plush_hen', 'plush_dragon', 'trophy', 'lava_lamp', 'disco_ball', 'neon_sign']);
+/** Gårdsbok counters and achievements that could only be earned in a minigame (the stars they gave stay). */
+export const REMOVED_STATS = ['arcade', 'tickets', 'carts', 'prizes', 'rallyRaces', 'rallyWins', 'rallyStyle', 'rallyCoins'];
+export const REMOVED_ACHIEVEMENTS = ['arcade_1', 'arcade_25', 'tickets_200', 'rally_1', 'rally_wins_10', 'rally_style', 'rally_coins_100'];
+/** Maps that were only there for the minigames (Spelhallen's inside). */
+export const isRemovedAreaKey = (k: string): boolean => k.startsWith('arcade:');
+
+/** A player saved before the minigames went: their scores, tickets, garage and the rest are dropped. Returns true if anything changed. */
+export function scrubPlayer(p: PlayerState): boolean {
+  let changed = false;
+  const bag = p as unknown as Record<string, unknown>;
+  for (const k of ['arcade', 'garage']) {
+    if (!(k in bag)) continue;
+    delete bag[k];
+    changed = true;
+  }
+  if (p.stats) for (const k of REMOVED_STATS) {
+    if (!(k in p.stats)) continue;
+    delete p.stats[k];
+    changed = true;
+  }
+  if (p.achievements?.some((a) => REMOVED_ACHIEVEMENTS.includes(a))) {
+    p.achievements = p.achievements.filter((a) => !REMOVED_ACHIEVEMENTS.includes(a));
+    changed = true;
+  }
+  if (p.inventory) p.inventory.forEach((s, i) => {
+    if (!s || !REMOVED_ITEMS.has(s.item)) return;
+    p.inventory[i] = null;
+    changed = true;
+  });
+  return changed;
+}
+
+/** A map saved before the minigames went: the TV, the garage, Spelhallen's front and the prizes on show are taken
+ * away, chests and the ground lose their prizes. Returns true if anything changed. */
+export function scrubArea(a: WorldState): boolean {
+  let changed = false;
+  for (const o of Object.values(a.objects)) {
+    if (REMOVED_KINDS.has(o.kind)) {
+      delete a.objects[o.id];
+      for (const [k, id] of Object.entries(a.occupancy ?? {})) if (id === o.id) delete a.occupancy[k];
+      changed = true;
+      continue;
+    }
+    o.items?.forEach((s, i) => {
+      if (!s || !REMOVED_ITEMS.has(s.item)) return;
+      o.items![i] = null;
+      changed = true;
+    });
+  }
+  for (const d of Object.values(a.drops ?? {})) {
+    if (!REMOVED_ITEMS.has(d.item)) continue;
+    delete a.drops[d.id];
+    changed = true;
+  }
+  return changed;
 }
