@@ -7,6 +7,7 @@ import {
   castSpell,
   chooseClass,
   craftGear,
+  devEnterSaga,
   equipGear,
   forgeGear,
   noticeLandmarks,
@@ -21,6 +22,7 @@ import {
   sagaSnapshot,
   cleanChat,
   setWeather,
+  T,
   MAX_PLAYERS,
   NPCS,
   TICK_HZ,
@@ -98,6 +100,8 @@ export interface GameOptions {
   autoStart?: boolean;
   /** Röstprat: who may use voice (default everyone, as on a home network) and the STUN/TURN servers (default none). */
   voice?: { policy?: () => VoicePolicy; ice?: () => Promise<IceServer[]> };
+  /** DEV_TELEPORT=1: the `dev` message may put a player straight into a dungeon (for a client without a world map). */
+  devTeleport?: boolean;
 }
 
 /** How long an offline player may stay in the cave before being carried out. */
@@ -470,6 +474,13 @@ export class Game {
         break;
       case 'jump':
         changes = jumpTo(this.world, pid, String(msg.to ?? ''));
+        break;
+      case 'dev':
+        if (!this.opts.devTeleport) {
+          client.link.send({ t: 'error', text: T.devTeleportOff });
+          return;
+        }
+        if (msg.a === 'saga') changes = devEnterSaga(this.world, pid, String(msg.id ?? ''));
         break;
       case 'voice':
         this.voice.handle(pid, msg);

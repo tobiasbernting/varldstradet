@@ -44,6 +44,7 @@ import {
   WIPE_MS,
   bossHpScale,
   DUNGEON_IDS,
+  isDungeonId,
   dungeonOfKey,
   isClassId,
   isSagaKey,
@@ -287,6 +288,24 @@ export function jumpTo(world: WorldState, playerId: string, toId: string): Chang
     out.push(...goInto(farm, p, qid, at));
   } else if (!placeIn(farm, p, q.area, at.x, at.y, q.facing, out)) return [toast(p.id, T.jumpNo)];
   out.push(toast(p.id, fmt(T.jumpTo, { name: q.name })), toast(q.id, fmt(T.jumpedHere, { name: p.name })), fxOn(q.area, at.x, at.y, 'sparkle'));
+  return out;
+}
+
+/**
+ * Development only (the server enables it with DEV_TELEPORT=1): puts a player straight into dungeon `id` from wherever
+ * they are, the way its arch would, for a client that cannot walk to the arch yet (the native client has no world map
+ * in M3). A player without a class becomes a Krigare first, exactly as Kämpastenen would make them one. The dungeon
+ * comes from the normal path (getArea → generateSaga), so it is the real thing: monsters, gate, rest stones, chests.
+ */
+export function devEnterSaga(world: WorldState, playerId: string, id: string): Change[] {
+  const farm = farmOf(world);
+  const p = farm.players[playerId];
+  if (!p || !isDungeonId(id) || p.area === 'dungeon' || p.sleeping) return [];
+  const out: Change[] = [];
+  if (!p.saga?.cls) out.push(...chooseClass(farm, playerId, 'krigare'));
+  const leaving = hereOf(world, p);
+  if (leaving && leaving.key !== sagaKey(id)) forget(leaving, p.id);
+  out.push(...goInto(farm, p, id, null));
   return out;
 }
 
