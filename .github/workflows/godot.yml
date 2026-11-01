@@ -75,16 +75,9 @@ jobs:
             echo "::error::the import reported errors (see above)"; exit 1
           fi
 
-      - name: Check every script (a parse or type error fails the job)
-        working-directory: packages/godot
-        run: |
-          set -euo pipefail
-          for f in scripts/*.gd; do
-            echo "== $f"
-            ~/godot/godot --headless --path . --check-only --script "res://$f"
-          done
-
-      - name: Run the main scene headless for a moment (scene and runtime errors fail here)
+      # (--check-only --script cannot be used here: it compiles one script without the project's autoloads, so every
+      # reference to Settings, Strings or Net fails. Running the main scene loads and compiles every script instead.)
+      - name: Run the main scene headless for a moment (script, scene and runtime errors fail here)
         working-directory: packages/godot
         run: |
           set -euo pipefail
