@@ -1,7 +1,7 @@
 extends Node
 ## What this machine remembers, in user://settings.cfg: the server's address, this device's token (the same long
 ## random token the browser keeps in a cookie; the server stores only its hash), the number to show while a parent
-## approves the device, and the last character picked.
+## approves the device, the last character picked, and the graphics quality preset (quality.gd).
 
 const FILE := "user://settings.cfg"
 const DEFAULT_URL := "https://example.invalid"
@@ -10,6 +10,7 @@ var server_url: String = DEFAULT_URL
 var token: String = ""
 var pending_code: String = ""
 var player_id: String = ""
+var quality: String = "mellan"
 
 
 func _ready() -> void:
@@ -20,6 +21,7 @@ func _ready() -> void:
 	token = str(cfg.get_value("device", "token", ""))
 	pending_code = str(cfg.get_value("device", "pending", ""))
 	player_id = str(cfg.get_value("device", "player", ""))
+	quality = str(cfg.get_value("graphics", "quality", "mellan"))
 
 
 func save() -> void:
@@ -28,6 +30,7 @@ func save() -> void:
 	cfg.set_value("device", "token", token)
 	cfg.set_value("device", "pending", pending_code)
 	cfg.set_value("device", "player", player_id)
+	cfg.set_value("graphics", "quality", quality)
 	var err := cfg.save(FILE)
 	if err != OK:
 		push_warning("could not save %s: %s" % [FILE, error_string(err)])

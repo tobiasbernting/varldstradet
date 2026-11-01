@@ -901,6 +901,26 @@ export const T = {
   worldLogTitle: 'Meddelanden',
   noCharactersYet: 'Inga karaktärer än. Skapa en i webbläsaren så länge.',
   quit: 'Avsluta',
+  // The native client, M3a: the dungeon on screen (pause menu, settings, the development way in, the HUD)
+  menuTitle: 'Paus',
+  menuContinue: 'Fortsätt',
+  menuSettings: 'Inställningar',
+  menuSwitchPlayer: 'Byt spelare',
+  settingsQuality: 'Grafik',
+  qualityLow: 'Låg',
+  qualityMedium: 'Mellan',
+  qualityHigh: 'Hög',
+  qualityLowHint: 'Inga skuggor, ingen dimma. För datorer med inbyggd grafik.',
+  qualityMediumHint: 'Skuggor och mjukt ljus. Standard, lagom för en MacBook Air.',
+  qualityHighHint: 'Allt på: globalt ljus, dimma och fler partiklar. För datorer med riktigt grafikkort.',
+  devTitle: 'Utvecklare',
+  devEnterDungeon: 'Gå in i Draugkryptan',
+  devEnterHint: 'Servern måste köras med DEV_TELEPORT=1. Har du inte valt väg blir du Krigare.',
+  devTeleportOff: 'Utvecklarvägen är avstängd på servern (DEV_TELEPORT=1 saknas).',
+  areaNotDrawn: 'Den här platsen ritas inte än i den nya klienten: {name}. Öppna menyn för att gå in i Draugkryptan.',
+  partyTitle: 'Sällskap',
+  connOpen: 'Ansluten',
+  connClosed: 'Ingen kontakt',
 };
 
 /** Names animals get until a player renames them. */
