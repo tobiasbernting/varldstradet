@@ -114,6 +114,10 @@ export type ClientMsg =
   | { t: 'voice'; a: 'room'; mode: 'auto' | 'alone' | 'with'; with?: string }
   | { t: 'voice'; a: 'signal'; to: string; data: unknown }
   | { t: 'voice'; a: 'talking'; on: boolean }
+  /** Development only (the server must run with DEV_TELEPORT=1): straight into a dungeon from wherever you are, as
+   * if you had walked through its arch; a player without a class becomes a Krigare first. For the native client,
+   * which has no world map yet. The server answers `error` when the switch is off. */
+  | { t: 'dev'; a: 'saga'; id: string }
   | { t: 'ping' };
 
 export interface PlayerSnap {

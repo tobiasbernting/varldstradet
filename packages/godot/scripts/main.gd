@@ -1,6 +1,7 @@
 extends Node
 ## Login first; the world once a character is picked; back to login when the server closes the door (4003) or the
-## player presses the menu button.
+## player picks "Byt spelare" in the pause menu. With `--demo` after `--` on the command line the login is skipped
+## and the world plays the recorded Draugkryptan fixture (no server needed).
 
 @onready var login: LoginScreen = $Login
 @onready var world: WorldView = $World
@@ -10,7 +11,12 @@ func _ready() -> void:
 	login.start_game.connect(_on_start)
 	world.left.connect(_on_left)
 	Net.connection_changed.connect(_on_connection)
-	_show_login()
+	if OS.get_cmdline_user_args().has("--demo"):
+		login.visible = false
+		_set_world(true)
+		world.start_demo()
+	else:
+		_show_login()
 
 
 func _show_login() -> void:
@@ -37,6 +43,8 @@ func _on_left() -> void:
 
 
 func _on_connection(status: String, _close_code: int) -> void:
+	if world.demo:
+		return
 	if status == "no_access":
 		# a parent closed the farm or took this device's access away: the login screen asks the gate why
 		_show_login()

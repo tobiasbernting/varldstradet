@@ -124,39 +124,74 @@ Environment:
 ## Native client
 
 The game is being rewritten as a native Godot client (`packages/godot`, [PLAN.md](PLAN.md) section 3). Milestone M2
-is a skeleton: it logs in with a join code, lets you pick a character, connects to the game socket and shows the day,
-the clock, who is online, your own hero as a placeholder (walk with WASD, the arrows or a gamepad; the others see you
-move) and a log of what the server sends. No world is drawn yet. The browser game keeps working unchanged.
+gave it login with a join code; milestone **M3a** puts the first dungeon on the screen: Draugkryptan as an HD-2D scene
+(a low-poly 3D crypt with the family's pixel characters and the saga's monsters standing in it as billboards), built
+from the same data the browser draws, with your hero walking in it, everyone else interpolated, the HUD basics and
+three quality presets. No combat yet (that is M3b), no farm, no world map. The browser game keeps working unchanged.
+`packages/godot/ART.md` has the art rules; `packages/godot/assets/LICENSES.md` every asset's origin.
 
-**Run it locally against `pnpm dev`:**
+![Draugkryptan in the native client](packages/godot/docs/m3a-draugkryptan.png)
+
+**Look at the dungeon without a server (demo mode):**
 
 1. Install [Godot 4.6](https://godotengine.org/download) (the standard build, not .NET). Any 4.6.x works for
    editing; CI pins 4.6.3.
-2. `pnpm dev` as above, and make a join code on the parent page (`http://localhost:8080/admin`).
-3. Open `packages/godot/project.godot` in Godot and press Play (or `godot --path packages/godot`).
-4. On the login screen, type the server's address: `http://localhost:8080` for a local server (plain `http`/`ws`
-   is only used for `localhost`; anything else becomes `https`/`wss`), or the real farm's address. Then the join code
-   and what to call this computer, and press Kom in.
-5. A code the parent approves shows the 6-digit number; the client polls `/api/gate` every few seconds and goes on
-   to "Vem är du?" when the parent has approved the device on the parent page. The character picker lists the
-   characters this device may play (characters are still created in the browser for now).
+2. `godot --path packages/godot -- --demo` (or open `packages/godot/project.godot` in Godot, press Play, and the
+   login screen comes up instead; the demo needs the command line). The recorded Draugkryptan of
+   `packages/godot/assets/fixtures/draug.json` is drawn with its monsters, and you walk in it with WASD, the arrows
+   or a gamepad's left stick; Escape or the start button opens the menu with the quality settings. Add `--at=24,53`
+   to start in the first monster room, and `--screenshot=/tmp/draug.png` to save a frame after 90 frames and quit.
 
-The client stores the server address and its device token in `user://settings.cfg` (`~/.local/share/godot/app_userdata/Sagan om Världsträdet/`
-on Linux, `~/Library/Application Support/Godot/app_userdata/…` on macOS, `%APPDATA%\Godot\app_userdata\…` on
-Windows); "Glöm den här enheten" clears it. The token is the same long random device token the browser keeps in its
-cookie, sent as `Authorization: Bearer` instead; the parent page shows the device like any other and can pause or
-remove it, which closes the game socket at once (code 4003) and sends the client back to the login screen. With
-`ACCESS=open` the server hands out no token and the client connects without one.
+**Run it against a server:**
 
-**Strings.** Every Swedish text comes from `packages/shared/src/sv.ts`; `pnpm godot:strings` writes
-`packages/godot/assets/sv.json` from it (Node 22.18+ runs the script as it is). Commit the json; the Godot workflow
-fails when it is out of date.
+1. Start the server with the development way into the dungeon on: `DEV_TELEPORT=1 pnpm dev` (the native client has
+   no world map yet, so it cannot walk to the arch; the switch lets the pause menu's "Gå in i Draugkryptan" ask the
+   server to put you inside, as the arch would, making you a Krigare first if you have no class. Never set it on the
+   real farm.) Make a join code on the parent page (`http://localhost:8080/admin`).
+2. `godot --path packages/godot` (or press Play in the editor). On the login screen, type the server's address:
+   `http://localhost:8080` for a local server (plain `http`/`ws` is only used for `localhost`; anything else becomes
+   `https`/`wss`), or the real farm's address. Then the join code and what to call this computer, and press Kom in.
+3. A code the parent approves shows the 6-digit number; the client polls `/api/gate` every few seconds and goes on
+   to "Vem är du?" when the parent has approved the device. Pick a character (characters are still created in the
+   browser for now).
+4. You start on the farm, which the client does not draw yet: a notice says so. Press Escape, then "Gå in i
+   Draugkryptan". The server generates the dungeon the normal way (`generateSaga`), sends it as `areaData`, and the
+   crypt appears with you at its start. Walk around: walls and the gate stop you exactly as they stop the browser
+   client; the monsters stand in their rooms and walk at you if you come close. The server's rules run as always,
+   so they do hurt you (your hearts drop, and when you fall you get up at the last rest stone), but this client draws
+   no attacks, telegraphs or spells and cannot cast any; that is M3b. E or space on the stairs takes you out again (to the arch's map, which is not
+   drawn yet; the menu takes you back in), on the chest opens it, on a rest stone tells you what it does. With two
+   clients (or a browser and the client) in the same dungeon, each sees the other walk, and the party list shows
+   everyone's hearts. The browser client can be in the same dungeon at the same time.
+5. Escape → Inställningar: Låg, Mellan, Hög. Mellan is the default; Låg is for a laptop with an Intel GPU.
 
-**Builds.** `.github/workflows/godot.yml` exports Windows x86_64, macOS universal, Linux x86_64 and Linux arm64 with
-Godot 4.6.3 and its export templates (downloaded by pinned URL and SHA-512, cached between runs). Every pull request
-runs it as a check (the exports are workflow artifacts), and a tag `v*` attaches the four zips to a GitHub Release.
-The macOS app is ad-hoc signed and not notarized: the first start needs right-click → Open. Art licences go in
-`packages/godot/assets/LICENSES.md` from the first asset.
+The client stores the server address, its device token and the quality preset in `user://settings.cfg`
+(`~/.local/share/godot/app_userdata/Sagan om Världsträdet/` on Linux, `~/Library/Application Support/Godot/app_userdata/…`
+on macOS, `%APPDATA%\Godot\app_userdata\…` on Windows); "Glöm den här enheten" clears the device. The token is the
+same long random device token the browser keeps in its cookie, sent as `Authorization: Bearer` instead; the parent
+page shows the device like any other and can pause or remove it, which closes the game socket at once (code 4003) and
+sends the client back to the login screen. With `ACCESS=open` the server hands out no token and the client connects
+without one.
+
+**Generated files.** Every Swedish text comes from `packages/shared/src/sv.ts`; the client also reads object
+footprints and solidity, the dungeons' colours and names, the creatures and the classes from the shared data, and the
+demo fixture from the shared dungeon generator. `pnpm godot:gen` writes all three (`assets/sv.json`, `assets/game.json`,
+`assets/fixtures/draug.json`; each also has its own script, `godot:strings`, `godot:data`, `godot:fixture`). Commit
+them; the Godot workflow fails when they are out of date. `pnpm godot:sprites` renders the pixel art in
+`packages/client/src/art` to the sheets in `assets/sprites` with Playwright's Chromium (it needs one; the sheets are
+committed, so CI does not run it).
+
+**Art.** Free CC0 packs only (the owner's decision of 2026-11-01): KayKit Dungeon Remastered for the crypt's walls,
+floor, torches, stairs, chests and candles, tinted to the palette in `ART.md`; what no reachable pack had (coffin,
+bones, urn, rest stone, gate) is made in code. `packages/godot/tools/fetch-assets.sh` downloads the whole packs,
+including the Kenney kits the build sandbox could not reach.
+
+**Builds.** `.github/workflows/godot.yml` checks the generated files, imports the project, runs the login scene and
+the Draugkryptan demo headless for a moment (script errors fail there), and exports Windows x86_64, macOS universal,
+Linux x86_64 and Linux arm64 with Godot 4.6.3 and its export templates (downloaded by pinned URL and SHA-512, cached
+between runs). Every pull request runs it as a check (the exports are workflow artifacts), and a tag `v*` attaches the
+four zips to a GitHub Release. The macOS app is ad-hoc signed and not notarized: the first start needs right-click →
+Open.
 
 ## Who may enter (access control)
 

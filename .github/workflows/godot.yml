@@ -30,10 +30,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: The Swedish strings in the client are up to date with sv.ts
+      - name: The generated files in the client are up to date with the shared code (strings, game data, the demo fixture)
         run: |
-          pnpm godot:strings
-          git diff --exit-code -- packages/godot/assets/sv.json
+          pnpm godot:gen
+          git diff --exit-code -- packages/godot/assets/sv.json packages/godot/assets/game.json packages/godot/assets/fixtures
 
       - name: Cache Godot
         id: godot-cache
@@ -84,6 +84,15 @@ jobs:
           timeout 120 ~/godot/godot --headless --path . --quit-after 60 2>&1 | tee run.log
           if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate" run.log; then
             echo "::error::running the project reported errors (see above)"; exit 1
+          fi
+
+      - name: Run the Draugkryptan demo headless for a moment (the dungeon view, actors and HUD run on the recorded fixture)
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          timeout 120 ~/godot/godot --headless --path . --quit-after 120 -- --demo 2>&1 | tee demo.log
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate" demo.log; then
+            echo "::error::the demo reported errors (see above)"; exit 1
           fi
 
       - name: Export all four targets

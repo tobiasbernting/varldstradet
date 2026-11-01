@@ -222,3 +222,51 @@ travel in a header too. Nothing changes for browsers; the parent page is untouch
   socket asks `/api/gate` once, like the browser's `checkAccess`, and goes back to the login screen if the device may
   not play. Strings come from `assets/sv.json`, generated from `sv.ts` by `pnpm godot:strings` (the gate and join
   texts moved into `sv.ts` for that; the server pages use them too).
+
+## Godot client: the dungeon on screen (2026-11-01)
+Milestone M3a of `PLAN.md`: Draugkryptan drawn by the native client (`packages/godot`) with the family's characters
+walking in it, no combat yet. The server is untouched in shape: the client renders and sends intent, as the browser
+does. `packages/godot/ART.md` is the style sheet every later session follows.
+- **Data flow.** The socket's messages go through `world_model.gd`, a port of `client/src/state.ts`: `welcome` brings
+  the farm with everyone's player records (each with its `area`); the dungeon arrives as the `areaData` change the
+  server sends when `placeIn` moves you to `saga:<id>` (the whole WorldState: the 64×64 terrain, the objects with
+  their `occupancy`, the animals, the `saga` instance); `changes` keeps it current (`object` for a lit rest stone or
+  plate, a gate that opens, a chest; `animal` for a monster that poofs; `player` for records; `warp` for the server
+  moving someone; `toast` and `banner` for text); `state` ten times a second gives everyone's position and the
+  `SagaSnap` with health and flags. `dungeon_view.gd` builds the scene from the WorldState once and patches it from
+  `object` changes: the floor from the terrain grid (KayKit tiles, three variants by a hash of the tile, the boss
+  hall's floor decorated), a wall per `saga_wall` object (a dark 1 × 2 × 1 m block with KayKit wall faces on the
+  sides that meet a floor tile), and a node per other object kind. Floors and walls are MultiMeshes in 8 × 8 tile
+  chunks. The dungeon's `ambient` colour is the environment's ambient light and fog; the look (`wall` index) picks
+  the stone tint and the torch colour from tables copied from the browser's `lighting.ts`. The rules the client
+  needs (object solidity and footprints, the dungeons, the creatures, the classes, `TILE`, `PLAYER_SPEED`, the
+  player's box, `SLOW_MUL`, `WALL_TERRAIN`) are not retyped: `tools/export-data.mts` writes them to
+  `assets/game.json` from the shared package, and the Godot workflow fails when it is stale.
+- **Movement.** `hero.gd` is `stepPlayer`/`resolveMove`/`isSolidForPlayer` from `sim.ts` in GDScript, for a dungeon
+  (no villagers or vehicles there, and the monsters do not block). It predicts locally, sends `move` at most 20
+  times a second while walking and once on stopping, snaps to the server's position when a snapshot is more than
+  40 px away (the browser's rule in `view.ts`), and jumps on `warp`. The saga snapshot's flags set the speed: fallen
+  or frozen stand still, slowed walk at `SLOW_MUL`. Everyone else and the monsters ease towards their latest
+  snapshot with the browser's exponential follow and jump when far (64 px for players, 48 for animals).
+- **Sprites.** `tools/export-sprites.mts` bundles the drawn-in-code art of `client/src/art` with Vite and runs it in
+  Playwright's Chromium: the hero in each class's outfit (`CLASSES[cls].outfit`, brown trousers, boots) for each
+  of the six skin tones, four directions × three frames (stand, walk, walk) in 16 × 32 px frames (eight rows of
+  headroom for tall hats), and the dungeon's creatures as `drawAnimal` draws them (two frames facing right, their
+  own size, their outline). The sheets and `atlas.json` are committed under `assets/sprites`. In the scene they
+  are `Sprite3D` Y-billboards at 1/16 m a pixel with nearest filtering, lit by the torches, a `Label3D` name over
+  the head. Hair is fixed and the weapon in hand is not drawn yet (M4 and M3b).
+- **The way in.** The client has no world map, so a dungeon cannot be reached by walking to its arch. The protocol
+  gets `{t:'dev', a:'saga', id}`: with `DEV_TELEPORT=1` on the server it puts the player straight into the dungeon
+  through the same `goInto` the arch uses (`getArea` → `generateSaga`, a fighter record, the dungeon's banner),
+  after making them a Krigare if they have no class; without the switch it answers `error`. Not for the real farm.
+  The way out is the normal one: the use key on the stairs runs `leaveSaga`.
+- **HUD and presets.** Hearts from the saga snapshot, the dungeon's name, the party (everyone else in the area with
+  their hearts), a connection dot, banners and toasts. The pause menu holds the settings: Låg, Mellan and Hög as
+  section 3 of the plan defines them (resolution scale, shadows on the nearest torches, SSAO, SDFGI, volumetric
+  fog, glow, particles), saved in `user://settings.cfg` and applied at start.
+- **Demo and CI.** `tools/export-fixture.mts` records the messages a hero gets on entering Draugkryptan (through
+  the real `placeIn` and `generateSaga`); `--demo` on the command line plays them without a server, with `--at` and
+  `--screenshot` for pictures. The Godot workflow runs the login scene and the demo headless after the import.
+  The build sandbox could run Godot 4.6.3 this time, headless and through Xvfb with Mesa's software OpenGL, which
+  is where `docs/m3a-*.png` come from (the Compatibility renderer; the owner's Mac runs Forward+).
+

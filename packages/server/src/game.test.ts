@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { TICK_HZ, TILE, VILLAGE_KEY, addItem, areaKey, enterCave, getArea, landmarkOfKind, npcState, objectDef, placeIn, type Change, type ServerMsg } from '../../shared/src/index.ts';
+import { DUNGEONS, TICK_HZ, TILE, VILLAGE_KEY, addItem, areaKey, enterCave, getArea, landmarkOfKind, npcState, objectDef, placeIn, sagaKey, type Change, type ServerMsg } from '../../shared/src/index.ts';
 import { Game, type Link } from './game.ts';
 import { MemoryStore } from './db/store.ts';
 
@@ -175,5 +175,54 @@ describe('cave and dropped connections', () => {
     placeIn(game.world, p, k, lm.x + 1, lm.y + d.h, 'up', []);
     for (let i = 0; i < TICK_HZ; i++) game.tick(1000 / TICK_HZ);
     expect(p.saga?.seen).toContain(`${k}:${landmarkOfKind(lm.kind)}`);
+  });
+
+  it('puts a player straight into a dungeon with the dev message only when DEV_TELEPORT is on', async () => {
+    const appearance = { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' };
+    // off (the default): the message is refused with an error and nothing moves
+    const off = new Game(new MemoryStore(), { autoStart: false });
+    await off.start();
+    const a = off.createPlayer('Astrid', appearance)!;
+    const la = fakeLink();
+    const ha = off.connect(la);
+    ha({ t: 'hello', playerId: a.id });
+    la.msgs.length = 0;
+    ha({ t: 'dev', a: 'saga', id: 'draug' });
+    expect(off.world.players[a.id]!.area).toBe('farm');
+    expect(la.msgs.some((m) => m.t === 'error')).toBe(true);
+    expect(off.world.areas?.[sagaKey('draug')]).toBeUndefined();
+
+    // on: the dungeon is generated the normal way, the player (made a Krigare) stands at its start, and the client
+    // gets the map (areaData), the player record and the dungeon's banner
+    const on = new Game(new MemoryStore(), { autoStart: false, devTeleport: true });
+    await on.start();
+    const b = on.createPlayer('Bo', appearance)!;
+    const lb = fakeLink();
+    const hb = on.connect(lb);
+    hb({ t: 'hello', playerId: b.id });
+    lb.msgs.length = 0;
+    hb({ t: 'dev', a: 'saga', id: 'draug' });
+    const key = sagaKey('draug');
+    const pb = on.world.players[b.id]!;
+    expect(pb.area).toBe(key);
+    expect(pb.saga?.cls).toBe('krigare');
+    const area = on.world.areas?.[key];
+    expect(area?.saga?.id).toBe('draug');
+    expect(Math.floor(pb.x / TILE)).toBe(area!.saga!.start.x);
+    expect(Math.floor(pb.y / TILE)).toBe(area!.saga!.start.y);
+    expect(area!.saga!.fighters[b.id]).toBeDefined();
+    expect(Object.keys(area!.saga!.mobs).length).toBeGreaterThan(10);
+    const changes = lb.msgs.flatMap((m) => (m.t === 'changes' ? m.changes : []));
+    expect(changes.some((c) => c.t === 'areaData' && c.key === key && c.world?.terrain.length === 64 * 64)).toBe(true);
+    expect(changes.some((c) => c.t === 'player' && c.id === b.id && c.player?.area === key)).toBe(true);
+    expect(changes.some((c) => c.t === 'banner' && c.text === DUNGEONS.draug.name)).toBe(true);
+    // the monsters are in the state snapshots for the one inside
+    lb.msgs.length = 0;
+    on.broadcastState();
+    const state = lb.msgs.find((m) => m.t === 'state');
+    expect(state && state.t === 'state' && state.animals.filter((an) => an.area === key).length).toBe(Object.keys(area!.animals).length);
+    // a bad id does nothing
+    hb({ t: 'dev', a: 'saga', id: 'nope' });
+    expect(on.world.players[b.id]!.area).toBe(key);
   });
 });

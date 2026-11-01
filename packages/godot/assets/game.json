@@ -1,0 +1,1588 @@
+{
+  "_comment": "Generated from packages/shared by `pnpm godot:data`. Do not edit; edit the shared data and run the script.",
+  "constants": {
+    "TILE": 16,
+    "MAP_W": 64,
+    "MAP_H": 64,
+    "PLAYER_SPEED": 64,
+    "PLAYER_HALF_W": 5,
+    "PLAYER_HALF_H": 3,
+    "SLOW_MUL": 0.6
+  },
+  "wallTerrain": [
+    "basalt",
+    "bog",
+    "choco",
+    "lava",
+    "rock",
+    "sandstone",
+    "space",
+    "water"
+  ],
+  "objects": {
+    "alvlykta": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "apartment": {
+      "w": 3,
+      "h": 3,
+      "solid": true
+    },
+    "banana_plant": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "banner_pole": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "barn": {
+      "w": 3,
+      "h": 2,
+      "solid": true
+    },
+    "barrel": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "barrel_stack": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "bath_exit": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "bathhouse": {
+      "w": 3,
+      "h": 2,
+      "solid": true
+    },
+    "bed": {
+      "w": 1,
+      "h": 2,
+      "solid": true
+    },
+    "beehive": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "bench": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "bifrostbit": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "blueberry_bush": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "bones": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "bookshelf": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "bus_stop": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "bush": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "cactus": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "candy_cane": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "cave": {
+      "w": 2,
+      "h": 2,
+      "solid": true
+    },
+    "cave_exit": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "cave_mouth": {
+      "w": 2,
+      "h": 2,
+      "solid": true
+    },
+    "cave_rock": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "cave_torch": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "light": true
+    },
+    "cave_wall": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "chair": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "chest": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "clock": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "cloudberry": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "coop": {
+      "w": 2,
+      "h": 2,
+      "solid": true
+    },
+    "crater": {
+      "w": 2,
+      "h": 2,
+      "solid": false,
+      "flat": true
+    },
+    "crystal": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "crystal_lamp": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "dead_tree": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "dig_spot": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "dino_bones": {
+      "w": 3,
+      "h": 2,
+      "solid": true
+    },
+    "dino_skeleton": {
+      "w": 3,
+      "h": 2,
+      "solid": true
+    },
+    "door": {
+      "w": 1,
+      "h": 1,
+      "solid": false
+    },
+    "door_out": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "dragon_egg": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "dvargstaty": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "earth": {
+      "w": 4,
+      "h": 4,
+      "solid": false,
+      "flat": true
+    },
+    "easter_twigs": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "egg_basket": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "fairy_ring": {
+      "w": 2,
+      "h": 2,
+      "solid": false,
+      "flat": true
+    },
+    "fence": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "fenrislanka": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "fern": {
+      "w": 1,
+      "h": 1,
+      "solid": false
+    },
+    "fire_crystal": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "flag_se": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "flower": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "flower_wreath_decor": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "flowerbox": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "fossil_rock": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "gate": {
+      "w": 1,
+      "h": 1,
+      "solid": false
+    },
+    "gem_vein": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "ghost_flag": {
+      "w": 1,
+      "h": 1,
+      "solid": false
+    },
+    "giant_glowshroom": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "giant_mushroom": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "gingerbread_house": {
+      "w": 3,
+      "h": 3,
+      "solid": true,
+      "light": true
+    },
+    "glowshroom": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true,
+      "light": true
+    },
+    "gold_vein": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "grass_tuft": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "hay_cart": {
+      "w": 2,
+      "h": 1,
+      "solid": true
+    },
+    "hels_lykta": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "house": {
+      "w": 5,
+      "h": 4,
+      "solid": true
+    },
+    "house_small": {
+      "w": 3,
+      "h": 3,
+      "solid": true
+    },
+    "hutch": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "iceberry": {
+      "w": 1,
+      "h": 1,
+      "solid": false
+    },
+    "jungle_flower": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "jungle_tree": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "lamp": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "lantern": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "light": true
+    },
+    "lights": {
+      "w": 1,
+      "h": 1,
+      "solid": false
+    },
+    "lm_apkungenstron": {
+      "w": 3,
+      "h": 3,
+      "solid": true
+    },
+    "lm_blomsterlabyrint": {
+      "w": 4,
+      "h": 3,
+      "solid": true
+    },
+    "lm_chokladfontan": {
+      "w": 3,
+      "h": 3,
+      "solid": true
+    },
+    "lm_dinobo": {
+      "w": 3,
+      "h": 3,
+      "solid": true
+    },
+    "lm_dvargport": {
+      "w": 3,
+      "h": 3,
+      "solid": true,
+      "light": true
+    },
+    "lm_eldbrunn": {
+      "w": 3,
+      "h": 3,
+      "solid": true,
+      "light": true
+    },
+    "lm_forstenadjatte": {
+      "w": 3,
+      "h": 3,
+      "solid": true
+    },
+    "lm_frusetskepp": {
+      "w": 3,
+      "h": 3,
+      "solid": true
+    },
+    "lm_gamlabron": {
+      "w": 3,
+      "h": 3,
+      "solid": true
+    },
+    "lm_glasstorn": {
+      "w": 3,
+      "h": 3,
+      "solid": true
+    },
+    "lm_jatteek": {
+      "w": 3,
+      "h": 3,
+      "solid": true,
+      "light": true
+    },
+    "lm_jatteskelett": {
+      "w": 4,
+      "h": 3,
+      "solid": true
+    },
+    "lm_klocktorn": {
+      "w": 3,
+      "h": 3,
+      "solid": true
+    },
+    "lm_lykttrad": {
+      "w": 3,
+      "h": 3,
+      "solid": true,
+      "light": true
+    },
+    "lm_manporten": {
+      "w": 3,
+      "h": 3,
+      "solid": true,
+      "light": true
+    },
+    "lm_mossaltare": {
+      "w": 3,
+      "h": 3,
+      "solid": true,
+      "light": true
+    },
+    "lm_oas": {
+      "w": 3,
+      "h": 3,
+      "solid": true
+    },
+    "lm_ornnaste": {
+      "w": 3,
+      "h": 3,
+      "solid": true
+    },
+    "lm_sandjatte": {
+      "w": 3,
+      "h": 3,
+      "solid": true
+    },
+    "lm_satellit": {
+      "w": 3,
+      "h": 3,
+      "solid": true,
+      "light": true
+    },
+    "lm_stencirkel": {
+      "w": 3,
+      "h": 3,
+      "solid": true
+    },
+    "lm_svampring": {
+      "w": 3,
+      "h": 3,
+      "solid": true,
+      "light": true
+    },
+    "lm_tjargrop": {
+      "w": 3,
+      "h": 3,
+      "solid": true
+    },
+    "lm_valskelett": {
+      "w": 4,
+      "h": 3,
+      "solid": true
+    },
+    "lm_vardkase": {
+      "w": 3,
+      "h": 3,
+      "solid": true
+    },
+    "lm_vattenfall": {
+      "w": 3,
+      "h": 3,
+      "solid": true
+    },
+    "lollipop_tree": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "loot_chest": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "mailbox": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "market": {
+      "w": 2,
+      "h": 2,
+      "solid": true
+    },
+    "maypole": {
+      "w": 1,
+      "h": 2,
+      "solid": true
+    },
+    "moon_cheese": {
+      "w": 1,
+      "h": 1,
+      "solid": false
+    },
+    "moon_rock": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "mushroom": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "mushroom_lamp": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "obsidian_rock": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "ore": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "ormtand": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "painting": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "palm": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "parked_car": {
+      "w": 2,
+      "h": 1,
+      "solid": true
+    },
+    "pigsty": {
+      "w": 2,
+      "h": 2,
+      "solid": true
+    },
+    "pizzeria": {
+      "w": 3,
+      "h": 2,
+      "solid": true,
+      "light": true
+    },
+    "plant": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "pumpkin_lantern": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "pyramid": {
+      "w": 6,
+      "h": 4,
+      "solid": true
+    },
+    "reed": {
+      "w": 1,
+      "h": 1,
+      "solid": false
+    },
+    "rock": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "rock_small": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "rocket": {
+      "w": 2,
+      "h": 3,
+      "solid": true,
+      "light": true
+    },
+    "rug": {
+      "w": 2,
+      "h": 2,
+      "solid": false,
+      "flat": true
+    },
+    "ruin_pillar": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "runestone": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "saga_anchor": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "saga_anvil": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "saga_bonepile": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "saga_bones": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "saga_brazier": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "saga_candles": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "light": true
+    },
+    "saga_chain": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "saga_chest": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "saga_cobweb": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "saga_coffin": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "saga_coral": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "saga_deadtree": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "saga_dwarfstatue": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "saga_elfstatue": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "saga_exit": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true,
+      "light": true
+    },
+    "saga_fairylight": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "light": true
+    },
+    "saga_frozenpillar": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "saga_gate": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "saga_ghostlight": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "light": true
+    },
+    "saga_glowshroom": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "saga_goldpile": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "saga_gravestone": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "saga_icecrystal": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "saga_icefang": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "saga_lavacrack": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true,
+      "light": true
+    },
+    "saga_minecart": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "saga_minelamp": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "light": true
+    },
+    "saga_mirror": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "saga_pearl": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "saga_plate": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true,
+      "light": true
+    },
+    "saga_portal": {
+      "w": 3,
+      "h": 2,
+      "solid": true,
+      "light": true
+    },
+    "saga_rainbowshard": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "saga_rest": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "saga_runepillar": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "saga_seaweed": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "saga_skullpile": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "saga_snowdrift": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "saga_starlamp": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "light": true
+    },
+    "saga_stone": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "saga_torch": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "light": true
+    },
+    "saga_urn": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "saga_wall": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "saga_wolfstatue": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "satellite_dish": {
+      "w": 2,
+      "h": 2,
+      "solid": true
+    },
+    "scarecrow": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "sellbox": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "sellstall": {
+      "w": 2,
+      "h": 2,
+      "solid": true
+    },
+    "sheepfold": {
+      "w": 2,
+      "h": 2,
+      "solid": true
+    },
+    "shell": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "shipwreck": {
+      "w": 4,
+      "h": 2,
+      "solid": true
+    },
+    "shop": {
+      "w": 3,
+      "h": 2,
+      "solid": true,
+      "light": true
+    },
+    "signpost": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "snowman": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "snowman_wild": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "sofa": {
+      "w": 2,
+      "h": 1,
+      "solid": true
+    },
+    "solruna": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "stalagmite": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "stall": {
+      "w": 3,
+      "h": 2,
+      "solid": true
+    },
+    "star_crystal": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "start_bench": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "start_chest": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "steam_vent": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "stove": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "street_lamp": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "light": true
+    },
+    "stump": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "table": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "temple": {
+      "w": 4,
+      "h": 3,
+      "solid": true
+    },
+    "torch": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "light": true
+    },
+    "town_well": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "traffic_light": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "train_station": {
+      "w": 3,
+      "h": 2,
+      "solid": true,
+      "light": true
+    },
+    "treasure": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "tree": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "tree_apple": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "tree_pine": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "trough": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "ufo": {
+      "w": 3,
+      "h": 2,
+      "solid": true,
+      "light": true
+    },
+    "volcano": {
+      "w": 6,
+      "h": 5,
+      "solid": true,
+      "light": true
+    },
+    "wall_stone": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "wall_wood": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "wardrobe": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "well": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "wild_flower_mid": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true
+    },
+    "wild_pumpkin": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "window": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "wisp": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "light": true
+    },
+    "wisp_jar": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    },
+    "workbench": {
+      "w": 1,
+      "h": 1,
+      "solid": true
+    },
+    "xmas_tree": {
+      "w": 1,
+      "h": 2,
+      "solid": true
+    },
+    "yggdrasil": {
+      "w": 1,
+      "h": 1,
+      "solid": true,
+      "light": true
+    }
+  },
+  "dungeons": {
+    "draug": {
+      "name": "Draugkryptan",
+      "chapter": 1,
+      "intro": "Det luktar gammal jord och kall sten. Någonstans långt in hörs ett skrapande… Draugkungen väntar.",
+      "floor": "crypt",
+      "bossFloor": "floor_stone",
+      "wall": 0,
+      "ambient": [
+        0.42,
+        0.45,
+        0.55
+      ],
+      "decor": [
+        "saga_coffin",
+        "saga_bones",
+        "saga_candles",
+        "saga_urn"
+      ],
+      "mini": "gravvaktare",
+      "boss": "draugkung"
+    },
+    "frost": {
+      "name": "Frostjättens borg",
+      "chapter": 2,
+      "intro": "Isiga vindar viner genom salarna. Allt är täckt av rimfrost, och golvet är halt som en skridskobana.",
+      "floor": "snow",
+      "bossFloor": "ice",
+      "wall": 1,
+      "ambient": [
+        0.55,
+        0.65,
+        0.85
+      ],
+      "decor": [
+        "saga_icecrystal",
+        "saga_frozenpillar",
+        "saga_icecrystal",
+        "saga_snowdrift"
+      ],
+      "mini": "isbjorn",
+      "boss": "rimturs"
+    },
+    "surt": {
+      "name": "Surts smedja",
+      "chapter": 3,
+      "intro": "Värmen slår emot er som från en ugn. Hammarslag ekar i berget, och lavan lyser rött mellan stenarna.",
+      "floor": "ash",
+      "bossFloor": "forge",
+      "wall": 2,
+      "ambient": [
+        0.75,
+        0.42,
+        0.3
+      ],
+      "decor": [
+        "saga_anvil",
+        "saga_brazier",
+        "saga_lavacrack",
+        "saga_brazier"
+      ],
+      "mini": "smeden",
+      "boss": "surt"
+    },
+    "hel": {
+      "name": "Helheim",
+      "chapter": 5,
+      "intro": "Allt är grått och stilla. Lyktor svävar i dimman, och någonstans långt ner skäller en hund. Hel väntar längst in.",
+      "floor": "mud",
+      "bossFloor": "crypt",
+      "wall": 3,
+      "ambient": [
+        0.4,
+        0.55,
+        0.5
+      ],
+      "decor": [
+        "saga_gravestone",
+        "saga_skullpile",
+        "saga_ghostlight",
+        "saga_deadtree"
+      ],
+      "mini": "garm",
+      "boss": "hel"
+    },
+    "dvarg": {
+      "name": "Svartalfheims gruvor",
+      "chapter": 6,
+      "intro": "Det knackar och klirrar i berget. Gruvlyktor lyser gult längs väggarna, och överallt glittrar det av guld.",
+      "floor": "gravel",
+      "bossFloor": "floor_stone",
+      "wall": 4,
+      "ambient": [
+        0.6,
+        0.5,
+        0.35
+      ],
+      "decor": [
+        "saga_minecart",
+        "saga_goldpile",
+        "saga_dwarfstatue",
+        "saga_minelamp"
+      ],
+      "mini": "jarnvakten",
+      "boss": "fafner"
+    },
+    "orm": {
+      "name": "Havsormens tempel",
+      "chapter": 7,
+      "intro": "Vatten droppar från taket och tången vajar fast det inte blåser. Långt in ringlar något stort, stort, stort.",
+      "floor": "sand",
+      "bossFloor": "floor_stone",
+      "wall": 5,
+      "ambient": [
+        0.35,
+        0.55,
+        0.7
+      ],
+      "decor": [
+        "saga_coral",
+        "saga_anchor",
+        "saga_seaweed",
+        "saga_pearl"
+      ],
+      "mini": "blackis",
+      "boss": "jormungand"
+    },
+    "alv": {
+      "name": "Alvernas lund",
+      "chapter": 8,
+      "intro": "Svampar lyser lila i skymningen och spindelnät glittrar mellan träden. Det är vackert, men alldeles för tyst.",
+      "floor": "moss",
+      "bossFloor": "grass",
+      "wall": 6,
+      "ambient": [
+        0.45,
+        0.4,
+        0.65
+      ],
+      "decor": [
+        "saga_glowshroom",
+        "saga_fairylight",
+        "saga_cobweb",
+        "saga_elfstatue"
+      ],
+      "mini": "spindeldrottning",
+      "boss": "nattmara"
+    },
+    "fenrir": {
+      "name": "Fenrisklyftan",
+      "chapter": 9,
+      "intro": "Kall vind ylar genom klyftan. Tunga kedjor ligger slängda på isen, och de är alla sönderslitna.",
+      "floor": "snow",
+      "bossFloor": "stone",
+      "wall": 7,
+      "ambient": [
+        0.55,
+        0.6,
+        0.75
+      ],
+      "decor": [
+        "saga_chain",
+        "saga_icefang",
+        "saga_wolfstatue",
+        "saga_bonepile"
+      ],
+      "mini": "skoll",
+      "boss": "fenrisulven"
+    },
+    "loke": {
+      "name": "Bifrost",
+      "chapter": 10,
+      "intro": "Regnbågsbron glittrar över stjärnhimlen. Allt ser lite för fint ut, och någon fnissar bakom er…",
+      "floor": "bifrost",
+      "bossFloor": "bifrost",
+      "wall": 8,
+      "ambient": [
+        0.7,
+        0.6,
+        0.85
+      ],
+      "decor": [
+        "saga_rainbowshard",
+        "saga_mirror",
+        "saga_starlamp",
+        "saga_runepillar"
+      ],
+      "mini": "lokesskugga",
+      "boss": "loke",
+      "illusions": true
+    }
+  },
+  "mobs": {
+    "skelett": {
+      "name": "Skelettkrigare"
+    },
+    "draugbage": {
+      "name": "Draugbågskytt"
+    },
+    "gravrotta": {
+      "name": "Gravråtta"
+    },
+    "frosttroll": {
+      "name": "Frosttroll"
+    },
+    "isvarg": {
+      "name": "Isvarg"
+    },
+    "isande": {
+      "name": "Isande"
+    },
+    "eldimp": {
+      "name": "Eldimp"
+    },
+    "lavagolem": {
+      "name": "Lavagolem"
+    },
+    "eldhund": {
+      "name": "Eldhund"
+    },
+    "isblock": {
+      "name": "Isblock"
+    },
+    "gengangare": {
+      "name": "Gengångare"
+    },
+    "helhund": {
+      "name": "Helhund"
+    },
+    "benspindel": {
+      "name": "Benspindel"
+    },
+    "gruvtroll": {
+      "name": "Gruvtroll"
+    },
+    "guldbagge": {
+      "name": "Guldbagge"
+    },
+    "stengolem": {
+      "name": "Stengolem"
+    },
+    "sjodraug": {
+      "name": "Sjödraug"
+    },
+    "jattekrabba": {
+      "name": "Jättekrabba"
+    },
+    "manet": {
+      "name": "Lysmanet"
+    },
+    "skuggalv": {
+      "name": "Skuggalv"
+    },
+    "jattespindel": {
+      "name": "Jättespindel"
+    },
+    "svampvakt": {
+      "name": "Svampvakt"
+    },
+    "ulv": {
+      "name": "Ulv"
+    },
+    "rimtroll": {
+      "name": "Rimtroll"
+    },
+    "bergsjatte": {
+      "name": "Bergsjätte"
+    },
+    "spindelnat": {
+      "name": "Spindelnät"
+    },
+    "gravvaktare": {
+      "name": "Gravväktaren",
+      "mini": true
+    },
+    "draugkung": {
+      "name": "Draugkungen Hrolf",
+      "boss": true
+    },
+    "isbjorn": {
+      "name": "Isbjörnen Kall",
+      "mini": true
+    },
+    "rimturs": {
+      "name": "Rimtursen",
+      "boss": true
+    },
+    "smeden": {
+      "name": "Smeden Glöd",
+      "mini": true
+    },
+    "surt": {
+      "name": "Surt",
+      "boss": true
+    },
+    "garm": {
+      "name": "Garm",
+      "mini": true
+    },
+    "hel": {
+      "name": "Hel",
+      "boss": true
+    },
+    "jarnvakten": {
+      "name": "Järnväktaren",
+      "mini": true
+    },
+    "fafner": {
+      "name": "Fafner",
+      "boss": true
+    },
+    "blackis": {
+      "name": "Bläckis",
+      "mini": true
+    },
+    "jormungand": {
+      "name": "Jörmungandr",
+      "boss": true
+    },
+    "spindeldrottning": {
+      "name": "Spindeldrottningen",
+      "mini": true
+    },
+    "nattmara": {
+      "name": "Nattmaran",
+      "boss": true
+    },
+    "skoll": {
+      "name": "Sköll",
+      "mini": true
+    },
+    "fenrisulven": {
+      "name": "Fenrisulven",
+      "boss": true
+    },
+    "lokesskugga": {
+      "name": "Lokes skugga",
+      "mini": true
+    },
+    "loke": {
+      "name": "Loke",
+      "boss": true
+    }
+  },
+  "classes": {
+    "vaktare": {
+      "name": "Väktare",
+      "roleName": "Tank",
+      "hp": 200,
+      "color": "#4f8fe8",
+      "outfit": {
+        "hat": "hat_vaktarhjalm",
+        "shirt": "shirt_vaktarrustning"
+      }
+    },
+    "helare": {
+      "name": "Helare",
+      "roleName": "Helare",
+      "hp": 120,
+      "color": "#5fd38d",
+      "outfit": {
+        "hat": "hat_volvakrans",
+        "shirt": "shirt_volvadrakt"
+      }
+    },
+    "krigare": {
+      "name": "Krigare",
+      "roleName": "Skada",
+      "hp": 150,
+      "color": "#e8613b",
+      "outfit": {
+        "hat": "hat_hornhjalm",
+        "shirt": "shirt_bjornskinn"
+      }
+    },
+    "magiker": {
+      "name": "Magiker",
+      "roleName": "Skada",
+      "hp": 110,
+      "color": "#b06ef0",
+      "outfit": {
+        "hat": "hat_runhatt",
+        "shirt": "shirt_runmantel"
+      }
+    }
+  }
+}
