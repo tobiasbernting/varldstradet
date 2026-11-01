@@ -44,9 +44,6 @@ import {
   newDay,
   npcState,
   performAction,
-  arcadeScore,
-  buyPrize,
-  garageAction,
   seasonForDate,
   selectSlot,
   sell,
@@ -75,7 +72,6 @@ import {
   type VoicePolicy,
 } from '../../shared/src/index.ts';
 import type { Store } from './db/store.ts';
-import { Races } from './races.ts';
 import { Voice } from './voice.ts';
 
 export interface Link {
@@ -106,8 +102,6 @@ export interface GameOptions {
 
 /** How long an offline player may stay in the cave before being carried out. */
 const DUNGEON_GRACE_MS = 90_000;
-/** How long an offline player keeps their place in a race room or out in free roam (a Wi-Fi blip). */
-export const RACE_GRACE_MS = 10_000;
 
 export class Game {
   world!: WorldState;
@@ -115,26 +109,12 @@ export class Game {
   private pending: Change[] = [];
   private rnd = mulberry32(Date.now() & 0xffffffff);
   private timers: NodeJS.Timeout[] = [];
-  /** Players gone offline, taken out of the races when the grace runs out unless they come back. */
-  private raceDrops = new Map<string, NodeJS.Timeout>();
   private lastTick = Date.now();
   private flushCounter = 0;
   /** Recent chat lines for players who come online (not saved). */
   private chatLog: Extract<Change, { t: 'chat' }>[] = [];
   private lastChat = new Map<string, number>();
   tickCount = 0;
-  /** Rallyvärlden: the lobby's rooms and the drivers out in free roam. */
-  readonly races = new Races({
-    world: () => this.world,
-    ctx: () => this.ctx(),
-    send: (id, msg) => this.sendTo(id, msg),
-    apply: (changes) => {
-      if (!changes.length) return;
-      this.pending.push(...changes);
-      this.dispatchPending();
-    },
-  });
-
   /** Röstprat: the rooms, their speakers and the handshake between them. */
   readonly voice: Voice;
 
@@ -164,8 +144,6 @@ export class Game {
   async stop(): Promise<void> {
     for (const t of this.timers) clearInterval(t);
     this.timers = [];
-    for (const t of this.raceDrops.values()) clearTimeout(t);
-    this.raceDrops.clear();
     for (const c of this.clients) c.link.close();
     this.store.markAllDirty(this.world);
     await this.store.flush(this.world);
@@ -194,7 +172,6 @@ export class Game {
     // once a second: the landmarks each player out in the world has come within sight of (for the world map)
     if (this.tickCount % TICK_HZ === 0) changes.push(...noticeLandmarks(this.world));
     if (changes.length) this.pending.push(...changes);
-    this.races.tick(now);
     this.dispatchPending();
     if (++this.flushCounter % (TICK_HZ * 15) === 0 && 'markMoving' in this.store) {
       (this.store as unknown as { markMoving(w: WorldState): void }).markMoving(this.world);
@@ -331,7 +308,6 @@ export class Game {
       if (c.playerId && ![...this.clients].some((o) => o.playerId === c.playerId)) {
         const p = this.world.players[c.playerId];
         this.voice.offline(c.playerId);
-        this.dropFromRacesLater(c.playerId);
         this.pending.push(...setOnline(this.world, c.playerId, false));
         this.dispatchPending();
         // A flaky tablet connection must not throw you out of the cave: wait a while before carrying you out
@@ -346,19 +322,6 @@ export class Game {
         }
       }
     }
-  }
-
-  /** Out of the race room and free roam, unless the player is back within RACE_GRACE_MS. */
-  private dropFromRacesLater(id: string): void {
-    clearTimeout(this.raceDrops.get(id));
-    this.raceDrops.set(
-      id,
-      setTimeout(() => {
-        this.raceDrops.delete(id);
-        if (this.world.players[id]?.online) return;
-        this.races.drop(id);
-      }, RACE_GRACE_MS),
-    );
   }
 
   private handle(client: Client, msg: ClientMsg): void {
@@ -381,9 +344,6 @@ export class Game {
         }
       }
       client.playerId = msg.playerId;
-      // back in time: still in the race room or out driving
-      clearTimeout(this.raceDrops.get(msg.playerId));
-      this.raceDrops.delete(msg.playerId);
       const biomes: Record<string, string> = {};
       for (const [k, a] of Object.entries(this.world.areas ?? {})) if (k.startsWith('a:') && a.biome) biomes[k] = a.biome;
       client.link.send({ t: 'welcome', you: p.id, world: { ...this.world, areas: undefined, dungeon: undefined }, season: this.season(), now: Date.now(), tick: this.tickCount, biomes });
@@ -487,12 +447,6 @@ export class Game {
       case 'paint':
         changes = paint(w, pid, String(msg.pixels ?? ''));
         break;
-      case 'arcade':
-        changes = arcadeScore(this.world, pid, String(msg.game ?? ''), Number(msg.score), this.ctx());
-        break;
-      case 'prize':
-        changes = buyPrize(this.world, pid, String(msg.item ?? ''));
-        break;
       case 'quest':
         changes = completeQuest(w, pid, String(msg.id ?? ''));
         break;
@@ -516,16 +470,6 @@ export class Game {
         break;
       case 'jump':
         changes = jumpTo(this.world, pid, String(msg.to ?? ''));
-        break;
-      case 'garage':
-        changes = garageAction(this.world, pid, msg, this.ctx());
-        break;
-      case 'race':
-        if (msg.a === 'solo') this.races.solo(pid, msg);
-        else this.races.race(pid, msg);
-        break;
-      case 'roam':
-        this.races.roam(pid, msg);
         break;
       case 'voice':
         this.voice.handle(pid, msg);
