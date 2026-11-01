@@ -38,6 +38,22 @@ fetch_kenney() {
   mkdir -p "kenney_${slug}" && unzip -q -o "kenney_${slug}.zip" -d "kenney_${slug}"
   echo "   unpacked into kenney_${slug}/"
 }
+echo "== Kenney Castle Kit (CC0): the GitHub mirror, since kenney.nl answers 403 from the build sandbox"
+if [ ! -d kenney-castle-kit ]; then
+  git clone --depth 1 https://github.com/Evolis-Work/kenney-castle-kit kenney-castle-kit
+else
+  echo "   already here"
+fi
+echo "   models: kenney-castle-kit/Models/GLB format (with Textures/colormap.png beside them)"
+
+echo "== KayKit Medieval Hexagon Pack (CC0): git"
+if [ ! -d kaykit-medieval-hexagon-pack ]; then
+  git clone --depth 1 https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack kaykit-medieval-hexagon-pack
+else
+  echo "   already here"
+fi
+echo "   models: kaykit-medieval-hexagon-pack/addons/kaykit_medieval_hexagon_pack/Assets/gltf"
+
 fetch_kenney graveyard-kit
 fetch_kenney mini-dungeon
 fetch_kenney nature-kit
