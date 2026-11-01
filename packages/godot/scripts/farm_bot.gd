@@ -671,13 +671,15 @@ func _path_to(from: Vector2i, goal: Vector2i, dist: Dictionary) -> Array:
 
 
 ## Walks to the middle of a tile; false when there is no way or it takes too long.
-func _goto(goal: Vector2i, timeout := 45.0) -> bool:
+func _goto(goal: Vector2i, timeout := 120.0) -> bool:
 	var hero := world.hero
 	var tile := Data.tile()
 	hero.driven = true
 	var until := Time.get_ticks_msec() + int(timeout * 1000.0)
 	var stuck := 0.0
 	var last := Vector2(hero.px, hero.py)
+	var path_from := Vector2i(-9999, -9999) ## (the route is worked out again only when I enter a new tile: a slow window must not spend its frames on it)
+	var path: Array = []
 	while Time.get_ticks_msec() < until and not _done:
 		var start := _my_tile()
 		var here := Vector2(hero.px, hero.py)
@@ -686,7 +688,9 @@ func _goto(goal: Vector2i, timeout := 45.0) -> bool:
 			hero.drive = Vector2.ZERO
 			await _wait(0.25)
 			return true
-		var path := _path_to(start, goal, _distance_field(start))
+		if start != path_from:
+			path_from = start
+			path = _path_to(start, goal, _distance_field(start))
 		if path.is_empty() and start != goal:
 			hero.drive = Vector2.ZERO
 			return false
@@ -862,7 +866,7 @@ func _leave_by(dir: String, key: String) -> bool:
 	var mw := int(w.get("w", 64))
 	var mh := int(w.get("h", 64))
 	var goal := Vector2i(mw / 2, 1) if dir == "n" else (Vector2i(mw / 2, mh - 2) if dir == "s" else (Vector2i(mw - 2, mh / 2) if dir == "e" else Vector2i(1, mh / 2)))
-	if not await _goto(goal, 60.0):
+	if not await _goto(goal, 180.0):
 		return false
 	world.hero.drive = Vector2(0, -1) if dir == "n" else (Vector2(0, 1) if dir == "s" else (Vector2(1, 0) if dir == "e" else Vector2(-1, 0)))
 	var arrived := await _until(func() -> bool: return world.model.my_area_key() == key and world._mode == "outdoor" and world._area == key, 12.0)
