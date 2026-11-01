@@ -78,17 +78,22 @@ func set_sheet(sheet_name: String) -> bool:
 	if tex == null:
 		_placeholder()
 		return false
-	_frames = s.get("frames", [])
-	_frame_w = int(s.get("frame_w", 16))
-	_frame_h = int(s.get("frame_h", 32))
-	_headroom = int(s.get("headroom", 0))
+	set_texture(tex, s.get("frames", []), int(s.get("frame_w", 16)), int(s.get("frame_h", 32)), int(s.get("headroom", 0)))
+	return true
+
+
+## Shows a texture that is a row of frames (`frames` names them in order): a composed player, an animal, a villager.
+func set_texture(tex: Texture2D, frame_names: Array, fw: int, fh: int, headroom: int) -> void:
+	_frames = frame_names
+	_frame_w = fw
+	_frame_h = fh
+	_headroom = headroom
 	_side_only = not _frames.has("down0")
 	sprite.texture = tex
 	sprite.region_enabled = true
 	sprite.position = Vector3(0.0, _frame_h * PIXEL / 2.0 + FOOT_LIFT, 0.0) + PULL
 	label.position.y = (_frame_h - _headroom) * PIXEL + 0.3
 	_show("right0" if _side_only else "down0")
-	return true
 
 
 func _placeholder() -> void:

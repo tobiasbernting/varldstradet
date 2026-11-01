@@ -20,8 +20,11 @@ const PLAYER_JUMP_PX := 64.0
 const ANIMAL_JUMP_PX := 48.0
 const SHADOW_EVERY := 0.3
 const USABLE := {"saga_exit": "actExit", "saga_chest": "actChest", "saga_rest": "actRest", "saga_plate": "actPlate", "saga_gate": "actGate"}
+## Outdoors only the dungeons' arches work yet; the other things you can use say so (M4b and M4c make them work).
+const ARCH := "saga_portal"
 
 @onready var dungeon: DungeonView = $Dungeon
+@onready var farm: FarmView = $Farm
 @onready var actors_root: Node3D = $Actors
 @onready var hero: Hero = $Hero
 @onready var rig: Node3D = $CameraRig
@@ -36,6 +39,10 @@ var loot: LootWindow
 var chat: ChatUi
 var wheel: Wheel
 var demo := false
+var looks: LookComposer
+var _mode := "" ## "dungeon", "outdoor" (the farm and the wild maps) or "" (nothing drawn)
+var _demo_time := -1.0 ## --time=<0..1>: a fixed time of day for pictures
+var _demo_rain := false
 var _area := "" ## the map drawn right now ("" when none)
 var _actors: Dictionary = {} ## "p:<id>" or "a:<id>" -> Actor
 var _prev_pos: Dictionary = {} ## actor key -> last scene position (facing from velocity)
@@ -49,6 +56,7 @@ var _rng := RandomNumberGenerator.new()
 
 
 func _ready() -> void:
+	looks = LookComposer.new()
 	combat = Combat.new(model, hero)
 	fx = FxView.new()
 	fx.name = "Fx"
@@ -73,6 +81,13 @@ func _ready() -> void:
 	camera.fov = 40.0
 	model.area_changed.connect(_on_area_changed)
 	model.object_changed.connect(_on_object_changed)
+	model.terrain_changed.connect(func(k: String, x: int, y: int) -> void:
+		if k == _area and _mode == "outdoor":
+			farm.update_terrain(x, y))
+	model.crop_changed.connect(func(k: String, ck: String, crop: Variant) -> void:
+		if k == _area and _mode == "outdoor":
+			farm.update_crop(ck, crop))
+	hero.travel_asked.connect(_on_travel_asked)
 	model.animal_changed.connect(func(key: String, _id: String, _a: Variant) -> void:
 		if key == _area:
 			_sync_actors())
@@ -101,9 +116,11 @@ func reset() -> void:
 	model.reset()
 	_clear_actors()
 	dungeon.clear()
+	farm.clear()
 	fx.clear()
 	combat.reset()
 	_area = ""
+	_mode = ""
 	hero.reset()
 	hero.send_moves = true
 	hud.reset()
@@ -112,19 +129,27 @@ func reset() -> void:
 
 
 ## Plays the recorded messages of assets/fixtures/draug.json instead of a socket.
-func start_demo() -> void:
+func start_demo(fixture := "draug") -> void:
 	reset()
 	demo = true
 	hero.send_moves = false
 	hud.set_connection("demo")
-	var text := FileAccess.get_file_as_string("res://assets/fixtures/draug.json")
+	var text := FileAccess.get_file_as_string("res://assets/fixtures/%s.json" % fixture)
 	var parsed: Variant = JSON.parse_string(text)
 	if not (parsed is Dictionary):
-		push_error("assets/fixtures/draug.json is missing or broken: run `pnpm godot:fixture`")
+		push_error("assets/fixtures/%s.json is missing or broken: run `pnpm godot:fixture`" % fixture)
 		return
 	for m in parsed.get("messages", []):
 		if m is Dictionary:
 			model.apply(m)
+	# --time=0.7 (a fraction of the day), --weather=rain, --season=jul: a fixed sky, for pictures
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--time="):
+			_demo_time = float(arg.substr(7))
+		elif arg.begins_with("--weather="):
+			model.weather = {"kind": arg.substr(10), "since": model.server_now() - 60000.0, "until": model.server_now() + 600000.0}
+		elif arg.begins_with("--season="):
+			model.season = arg.substr(9)
 	# --at=x,y (tiles) after --demo: stand somewhere else, for looking around and for screenshots
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--at="):
@@ -133,7 +158,7 @@ func start_demo() -> void:
 				var tile := Data.tile()
 				hero.place((float(parts[0]) + 0.5) * tile, (float(parts[1]) + 0.5) * tile)
 				rig.position = hero.position
-	print("demo: %s drawn with %d objects, %d lights and %d actors" % [_area, dungeon.get_node("Objects").get_child_count() if _area != "" else 0, dungeon.light_count(), _actors.size()])
+	print("demo: %s drawn (%s) with %d objects, %d lights and %d actors" % [_area, _mode, (farm.object_count() if _mode == "outdoor" else (dungeon.get_node("Objects").get_child_count() if _area != "" else 0)), (farm.light_count() if _mode == "outdoor" else dungeon.light_count()), _actors.size()])
 
 
 ## A message as if from the server (the demo's scripted fight in bench and screenshot runs).
@@ -225,6 +250,9 @@ func _act() -> void:
 		return
 	var obj := hero.facing_object()
 	var kind := str(obj.get("kind", ""))
+	if _mode == "outdoor":
+		_act_outdoors(obj, kind)
+		return
 	if USABLE.has(kind):
 		var t := hero.facing_tile()
 		Net.send({"t": "act", "tx": t.x, "ty": t.y})
@@ -233,6 +261,27 @@ func _act() -> void:
 		return
 	var t := hero.facing_tile()
 	Net.send({"t": "act", "tx": t.x, "ty": t.y})
+
+
+## The use key out in the world: a dungeon's arch goes in (the server does what it does for the browser); the other
+## things that open something say they are not drawn yet.
+func _act_outdoors(obj: Dictionary, kind: String) -> void:
+	if obj.is_empty():
+		return
+	var t := hero.facing_tile()
+	if kind == ARCH:
+		Net.send({"t": "act", "tx": t.x, "ty": t.y})
+		return
+	var def := Data.object_def(kind)
+	if def.has("interact"):
+		var text := Strings.t("notDrawnBus") if str(def.get("interact")) == "bus" else Strings.t("notDrawnThing", {"name": Strings.object_name(kind)})
+		hud.show_toast(text)
+
+
+func _arch_name(obj: Dictionary) -> String:
+	var ids := Data.dungeons.keys()
+	var v := int(obj.get("variant", 0))
+	return str(Data.dungeon(str(ids[v])).get("name", "")) if v >= 0 and v < ids.size() else ""
 
 
 func _open_emotes() -> void:
@@ -273,14 +322,30 @@ func _on_area_changed(_key: String) -> void:
 	_rebuild()
 
 
+func is_outdoor() -> bool:
+	return _mode == "outdoor"
+
+
+func _is_outdoor_key(key: String) -> bool:
+	return key == "farm" or key.begins_with("a:")
+
+
+func _clear_views() -> void:
+	dungeon.clear()
+	farm.clear()
+	_mode = ""
+
+
 func _rebuild() -> void:
 	var key := model.my_area_key()
 	var id := Data.dungeon_of_key(key)
 	_clear_actors()
 	fx.clear()
 	combat.reset()
-	if id == "" or not model.areas.has(key):
-		dungeon.clear()
+	var w := model.world_for(key)
+	var outdoor: bool = id == "" and _is_outdoor_key(key) and w.get("terrain", []).size() > 0
+	if not outdoor and (id == "" or not model.areas.has(key)):
+		_clear_views()
 		_area = ""
 		hero.set_world({})
 		hero.actor.set_pose("")
@@ -291,28 +356,71 @@ func _rebuild() -> void:
 		hud.build_spell_bar("")
 		hud.units.visible = false
 		return
-	var w: Dictionary = model.areas[key]
-	dungeon.build(w, key)
-	_area = key
-	hero.set_world(w)
 	var me := model.my_player()
+	if outdoor:
+		_clear_views()
+		farm.build(w, key)
+		farm.sky.follow(rig)
+		_mode = "outdoor"
+		_area = key
+		hero.set_world(w, true)
+		hud.set_area(_place_name(key, w), true)
+		hud.build_spell_bar("")
+		hud.units.visible = false
+	else:
+		w = model.areas[key]
+		_clear_views()
+		dungeon.build(w, key)
+		_mode = "dungeon"
+		_area = key
+		hud.farm_box.visible = false
+		hero.set_world(w)
+		hud.set_area(str(Data.dungeon(id).get("name", key)), true)
+		fx.load_area(key)
 	hero.place(float(me.get("x", 0)), float(me.get("y", 0)))
-	hero.actor.set_sheet(_hero_sheet_of(me))
+	_dress_hero(me)
 	hero.actor.set_label(str(me.get("name", "")))
 	rig.position = hero.position
-	hud.set_area(str(Data.dungeon(id).get("name", key)), true)
-	fx.load_area(key)
-	fx.warm_up(hero.position)
-	hud.build_spell_bar(combat.my_class())
-	if _hint_for != key:
-		_hint_for = key
-		hud.show_hint(Strings.t("sagaTargetHint") + "  ·  " + Strings.t("chatHint"), 10.0)
+	if _mode == "dungeon":
+		fx.warm_up(hero.position)
+		hud.build_spell_bar(combat.my_class())
+		if _hint_for != key:
+			_hint_for = key
+			hud.show_hint(Strings.t("sagaTargetHint") + "  ·  " + Strings.t("chatHint"), 10.0)
 	_sync_actors()
 	_update_hud()
 
 
+func _place_name(key: String, w: Dictionary) -> String:
+	if key == "farm":
+		return Strings.place("farm")
+	return Strings.place(str(w.get("biome", "")))
+
+
+## My own figure: on the farm in my outfit, in a dungeon in my class's.
+func _dress_hero(me: Dictionary) -> void:
+	if _mode == "outdoor" and looks.available():
+		hero.actor.set_texture(looks.texture_for(me), looks.frames(), 16, 32, 8)
+		hero.actor.set_meta("look", _look_key(me))
+	else:
+		hero.actor.set_sheet(_hero_sheet_of(me))
+
+
+func _look_key(p: Dictionary) -> String:
+	return str(hash(JSON.stringify([p.get("appearance"), p.get("outfit")])))
+
+
+func _on_travel_asked(dir: String) -> void:
+	if demo:
+		hud.show_toast(Strings.t("areaNotDrawn", {"name": dir}))
+
+
 func _on_object_changed(key: String, id: String, obj: Variant) -> void:
-	if key == _area:
+	if key != _area:
+		return
+	if _mode == "outdoor":
+		farm.update_object(id, obj)
+	else:
 		dungeon.update_object(id, obj)
 
 
@@ -387,7 +495,8 @@ func _find_actor(id: Variant) -> Variant:
 	return _actors.get("p:" + str(id))
 
 
-## One actor for every other player on my map and every monster in it; gone ones go.
+## One actor for every other player on my map, every animal or monster in it and (outdoors) every villager; gone
+## ones go. On the farm a player is dressed from the layers (look_composer.gd) and redressed when the outfit changes.
 func _sync_actors() -> void:
 	if _area == "":
 		return
@@ -399,34 +508,58 @@ func _sync_actors() -> void:
 		if str(p.get("area", "farm")) != _area:
 			continue
 		wanted["p:" + id] = p
-	var w: Dictionary = model.areas.get(_area, {})
+	var w: Dictionary = model.areas.get(_area, model.farm if _area == "farm" else {})
 	for id in w.get("animals", {}).keys():
 		wanted["a:" + str(id)] = w["animals"][id]
+	if _mode == "outdoor":
+		for id in model.npc_snaps.keys():
+			wanted["n:" + str(id)] = model.npc_snaps[id]
 	for k in _actors.keys():
 		if not wanted.has(k):
 			_actors[k].queue_free()
 			_actors.erase(k)
 			_prev_pos.erase(k)
 	for k in wanted.keys():
-		if _actors.has(k):
-			continue
 		var rec: Dictionary = wanted[k]
+		if _actors.has(k):
+			if k.begins_with("p:") and _mode == "outdoor" and str(_actors[k].get_meta("look", "")) != _look_key(rec):
+				_dress(_actors[k], rec)
+			continue
 		var actor := Actor.new()
 		if k.begins_with("p:"):
-			actor.set_sheet(_hero_sheet_of(rec))
+			_dress(actor, rec)
 			actor.set_label(str(rec.get("name", "")))
+		elif k.begins_with("n:"):
+			actor.set_sheet(Data.npc_sheet(k.substr(2)))
+			actor.set_label(str(Data.npcs.get(k.substr(2), {}).get("name", "")))
 		else:
 			var species := str(rec.get("species", ""))
-			actor.set_sheet(Data.mob_sheet(species))
+			var sheet := Data.mob_sheet(species) if not Data.mob(species).is_empty() else ""
+			if sheet == "":
+				# the farm's animals and the wild ones: a baby while it is young, in its winter hat at Christmas
+				var grow := int(Data.animals.get(species, {}).get("growDays", 3))
+				sheet = Data.animal_sheet(species, int(rec.get("age", 99)) < grow, model.season == "jul", int(rec.get("variant", 0)))
+			actor.set_sheet(sheet)
 			# dungeon monsters show their own bars instead of the name labels (the browser's ownsLabel)
-			actor.set_label("" if not Data.mob(species).is_empty() else str(rec.get("name", Data.mob_name(species))))
+			actor.set_label("" if (_mode == "dungeon" and not Data.mob(species).is_empty()) else str(rec.get("name", Data.mob_name(species))))
 		actor.position = _scene_of(float(rec.get("x", 0)), float(rec.get("y", 0)))
 		actors_root.add_child(actor)
 		_actors[k] = actor
 
 
+func _dress(actor: Actor, rec: Dictionary) -> void:
+	if _mode == "outdoor" and looks.available():
+		actor.set_texture(looks.texture_for(rec), looks.frames(), 16, 32, 8)
+		actor.set_meta("look", _look_key(rec))
+	else:
+		actor.set_sheet(_hero_sheet_of(rec))
+
+
 func _update_hud() -> void:
 	var me := model.my_player()
+	if _mode == "outdoor":
+		hud.set_farm_status(model, me)
+		return
 	var f := model.my_fighter()
 	var cls := combat.my_class()
 	var max_hp := float(Data.classes.get(cls, {}).get("hp", 0))
@@ -542,6 +675,8 @@ func _clear_actors() -> void:
 func _process(delta: float) -> void:
 	if _area == "":
 		return
+	if _mode == "outdoor":
+		farm.sky.update_sky(delta, _clock_ms(), model.season, model.weather, model.server_now())
 	combat.tick()
 	fx.tick(delta)
 	hero.actor.animate(hero.facing, hero.moving, delta)
@@ -562,6 +697,10 @@ func _process(delta: float) -> void:
 		if key.begins_with("p:"):
 			snapshot = model.player_snaps.get(id)
 			rec = model.players().get(id)
+			jump_px = PLAYER_JUMP_PX
+		elif key.begins_with("n:"):
+			snapshot = model.npc_snaps.get(id)
+			rec = snapshot
 			jump_px = PLAYER_JUMP_PX
 		else:
 			snapshot = model.animal_snaps.get(id)
@@ -590,7 +729,9 @@ func _process(delta: float) -> void:
 		elif key.begins_with("a:") and not moving:
 			moving = false
 		actor.animate(facing, moving, delta)
-		if key.begins_with("p:"):
+		if key.begins_with("n:"):
+			pass
+		elif key.begins_with("p:"):
 			actor.set_pose(_pose_of(id))
 			_bubble_of(id, actor)
 			var pf := model.fighter_of(id)
@@ -634,6 +775,16 @@ func _process(delta: float) -> void:
 		(get_tree().current_scene as Main).quit_clean()
 
 
+## The time of day (ms into the day): the server's, running on between its snapshots; fixed in the demo's --time.
+func _clock_ms() -> float:
+	var day_ms := Data.constant("DAY_LENGTH_MS", 600000.0)
+	if _demo_time >= 0.0:
+		return _demo_time * day_ms
+	if demo:
+		return model.time_ms
+	return model.time_ms + float(Time.get_ticks_msec() - model.time_at)
+
+
 ## Is this monster after me? The server keeps threat to itself, so the client reads it off the screen: a fighting
 ## monster moving my way, or standing in reach of me and nearer to me than to anyone else.
 func _chasing_me(actor: Actor, vel: Vector3, moving: bool, species: String, m: Array, me_pos: Vector3) -> bool:
@@ -669,7 +820,11 @@ func _bubble_of(id: String, actor: Actor) -> void:
 func _update_prompt() -> void:
 	if demo:
 		return
-	var kind := str(hero.facing_object().get("kind", ""))
+	var facing := hero.facing_object()
+	var kind := str(facing.get("kind", ""))
+	if _mode == "outdoor":
+		hud.set_prompt(("%s · %s" % [Strings.t("actKey"), Strings.t("actPortal", {"name": _arch_name(facing)})]) if kind == ARCH else "")
+		return
 	if USABLE.has(kind):
 		hud.set_prompt("%s · %s" % [Strings.t("actKey"), Strings.t(USABLE[kind])])
 	else:

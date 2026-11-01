@@ -1,4 +1,4 @@
-// Writes packages/godot/assets/fixtures/draug.json: the messages a client gets when a hero steps into
+// Writes packages/godot/assets/fixtures/draug.json (and farm.json and forest.json, see the end of this file): the messages a client gets when a hero steps into
 // Draugkryptan (a `welcome`, the `changes` with the dungeon's `areaData`, and one `state`), made by the shared code
 // that the server runs (generateSaga through placeIn). The native client's demo mode (`--demo` on the command line)
 // plays them back without a server, which is how the Godot workflow exercises the dungeon view headless, and how
@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chooseClass, createPlayer, generateWorld, placeIn, sagaKey, type AnimalSnap, type Change, type PlayerSnap, type ServerMsg } from '../../shared/src/index.ts';
+import { ITEMS, SPAWN, addAnimal, addObject, objectAt, removeObject, chooseClass, createPlayer, generateWorld, getArea, npcState, placeIn, sagaKey, type AnimalSnap, type Change, type NpcSnap, type PlayerSnap, type ServerMsg, type WorldState } from '../../shared/src/index.ts';
 
 const out = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../assets/fixtures/draug.json');
 const key = sagaKey('draug');
@@ -53,3 +53,115 @@ const fixture = {
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, JSON.stringify(fixture) + '\n');
 console.log(`${path.relative(process.cwd(), out)}: ${Object.keys(area.objects).length} objects, ${animals.length} monsters, ${(fs.statSync(out).size / 1024).toFixed(0)} kB`);
+
+// ---------------------------------------------------------------------------
+// farm.json: the real farm as the server sends it in `welcome` (terrain, objects, crops, animals, villagers, other
+// players in their outfits, the weather), for `--demo=farm`; and forest.json: the wild map a:-1,-1 with Draugkryptan's
+// arch, as the `areaData` change a `travel` would bring, for `--demo=forest`. Both are made by the shared code the
+// server runs, with fixed ids and clock so the files only change when the game data does.
+// ---------------------------------------------------------------------------
+function demoFarm(): { farm: WorldState; me: ReturnType<typeof createPlayer> } {
+  const farm = generateWorld();
+  const me = createPlayer(farm, 'Demo', { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' });
+  delete farm.players[me.id];
+  me.id = 'demo';
+  farm.players[me.id] = me;
+  me.online = true;
+  me.x = SPAWN.x * 16 + 8;
+  me.y = SPAWN.y * 16 + 8;
+  farm.day = 4;
+  farm.timeMs = 2.2 * 60 * 1000; // late morning
+  // the demo ground is cleared of the farm's wild growth first
+  for (let y = 10; y <= 28; y++)
+    for (let x = 12; x <= 34; x++) {
+      const o = objectAt(farm, x, y);
+      if (o && o.kind !== 'house') removeObject(farm, o.id);
+    }
+  // a field: tilled soil, some watered, crops in every stage of growing
+  const crops = ['morot', 'potatis', 'jordgubbe', 'tomat', 'pumpa', 'solros', 'vete'];
+  for (let i = 0; i < 7; i++)
+    for (let row = 0; row < 3; row++) {
+      const x = 20 + i;
+      const y = 13 + row;
+      farm.terrain[y * 64 + x] = row === 1 ? 'soil_wet' : 'soil';
+      farm.crops[`${x},${y}`] = { crop: crops[i]!, stage: row, progress: 0, watered: row === 1 };
+    }
+  // fences round the pen, a gate, a lamp, a well, a coop and a barn, a scarecrow
+  for (let x = 24; x <= 32; x++) for (const y of [20, 26]) addObject(farm, x === 28 && y === 26 ? 'gate' : 'fence', x, y);
+  for (let y = 21; y <= 25; y++) for (const x of [24, 32]) addObject(farm, 'fence', x, y);
+  addObject(farm, 'lamp', 17, 12);
+  addObject(farm, 'well', 18, 15);
+  addObject(farm, 'scarecrow', 23, 16);
+  addObject(farm, 'lantern', 14, 13);
+  const coop = addObject(farm, 'coop', 26, 22);
+  const barn = addObject(farm, 'barn', 29, 22);
+  if (coop) for (let i = 0; i < 3; i++) addAnimal(farm, 'hen', coop.id, i === 0 ? 'Gullan' : '');
+  if (barn) {
+    addAnimal(farm, 'cow', barn.id, 'Rosa');
+    addAnimal(farm, 'sheep', barn.id, 'Dolly');
+  }
+  for (const a of Object.values(farm.animals)) {
+    a.x = 26 * 16 + ((a.id * 37) % 90);
+    a.y = 23 * 16 + ((a.id * 53) % 60);
+  }
+  const dog = addAnimal(farm, 'dog', 0, 'Fido');
+  dog.owner = me.id;
+  dog.x = me.x + 24;
+  dog.y = me.y + 8;
+  // two friends in other outfits
+  const hats = Object.keys(ITEMS).filter((k) => ITEMS[k]!.clothing?.slot === 'hat');
+  const friend = (name: string, skin: string, hair: string, style: string, outfit: Record<string, string | undefined>, dx: number, dy: number) => {
+    const f = createPlayer(farm, name, { skin, hair, hairStyle: style });
+    delete farm.players[f.id];
+    f.id = name.toLowerCase();
+    farm.players[f.id] = f;
+    f.online = true;
+    f.outfit = outfit;
+    f.x = me.x + dx;
+    f.y = me.y + dy;
+  };
+  friend('Greta', '#8d5a32', '#2b2119', 'ponytail', { hat: hats[1], shirt: 'dress_pink', pants: 'pants_green', shoes: 'shoes_boots' }, -40, 20);
+  friend('Olle', '#f7d7c0', '#f2d16b', 'curly', { hat: hats[0], shirt: 'shirt_red', pants: 'pants_brown', shoes: 'shoes_boots' }, 36, -12);
+  for (const id of Object.keys(farm.npcs)) delete farm.npcs[id];
+  for (const id of ['greta', 'sven', 'elsa']) npcState(farm, id);
+  return { farm, me };
+}
+
+function farmMsgs(farm: WorldState, me: { id: string; x: number; y: number }, area: string | undefined, extra: Change[]): ServerMsg[] {
+  farm.weather = { kind: 'sun', since: 0, until: 600000 };
+  const players: PlayerSnap[] = Object.values(farm.players).map((q) => ({ id: q.id, x: q.x, y: q.y, facing: q.facing, moving: false, held: null, ...(q.id === me.id && area ? { area } : {}) }));
+  const here = area ? getArea(farm, area)! : farm;
+  const animals: AnimalSnap[] = Object.values(here.animals).map((a) => ({ id: a.id, x: a.x, y: a.y, facing: a.facing, moving: false, ...(area ? { area } : {}) }));
+  const npcs: NpcSnap[] = area ? [] : Object.entries(farm.npcs).map(([id, n]) => ({ id, x: n.x, y: n.y, facing: n.facing, moving: false }));
+  const welcome: ServerMsg = { t: 'welcome', you: me.id, world: { ...farm, areas: undefined, dungeon: undefined }, season: 'none', now: 0, tick: 0 };
+  const state: ServerMsg = { t: 'state', timeMs: farm.timeMs, day: farm.day, season: 'none', players, animals, npcs, now: 0, weather: farm.weather };
+  return [welcome, ...(extra.length ? [{ t: 'changes', changes: extra } as ServerMsg] : []), state];
+}
+
+function writeFixture(file: string, messages: ServerMsg[], what: string): void {
+  const dest = path.resolve(path.dirname(out), file);
+  fs.writeFileSync(dest, JSON.stringify({ _comment: 'Generated by `pnpm godot:fixture` from the shared world generator. Do not edit.', messages }) + '\n');
+  console.log(`${path.relative(process.cwd(), dest)}: ${what}, ${(fs.statSync(dest).size / 1024).toFixed(0)} kB`);
+}
+
+{
+  const { farm, me } = demoFarm();
+  writeFixture('farm.json', farmMsgs(farm, me, undefined, []), `${Object.keys(farm.objects).length} objects, ${Object.keys(farm.crops).length} crops, ${Object.keys(farm.animals).length} animals`);
+}
+{
+  // the way a player arrives at Draugkryptan's arch: through the north, then west (the real maps of the generator)
+  const { farm, me } = demoFarm();
+  const key = 'a:-1,-1';
+  const area = getArea(farm, key)!;
+  const changes: Change[] = [];
+  const arch = Object.values(area.objects).find((o) => o.kind === 'saga_portal' && (o.variant ?? 0) === 0)!;
+  placeIn(farm, me, key, arch.x + 1, arch.y + 4, 'up', changes);
+  for (const c of changes) if (c.t === 'areaData' && c.world) c.world = area;
+  const animals: AnimalSnap[] = Object.values(area.animals).map((a) => ({ id: a.id, x: a.x, y: a.y, facing: a.facing, moving: false, area: key }));
+  const msgs = farmMsgs(farm, me, key, changes);
+  const st = msgs[msgs.length - 1] as Extract<ServerMsg, { t: 'state' }>;
+  st.animals = animals;
+  // everyone else stays on the farm: only the hero is in the forest
+  st.players = st.players.map((q) => (q.id === me.id ? q : { ...q, area: 'farm' }));
+  writeFixture('forest.json', msgs, `${Object.keys(area.objects).length} objects, ${animals.length} animals, the arch at ${arch.x},${arch.y}`);
+}

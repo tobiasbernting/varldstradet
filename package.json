@@ -9,7 +9,7 @@
     "test": "pnpm -r run test",
     "typecheck": "pnpm -r run typecheck",
     "db:up": "podman compose up -d db || docker compose up -d db",
-    "godot:strings": "node packages/godot/tools/export-strings.mts",
+    "godot:strings": "node --experimental-transform-types packages/godot/tools/export-strings.mts",
     "godot:data": "node --experimental-transform-types packages/godot/tools/export-data.mts",
     "godot:fixture": "node --experimental-transform-types packages/godot/tools/export-fixture.mts",
     "godot:sprites": "node packages/godot/tools/export-sprites.mts",

@@ -2,8 +2,9 @@ class_name Main
 extends Node
 ## Login first; the world once a character is picked; back to login when the server closes the door (4003) or the
 ## player picks "Byt spelare" in the pause menu. The command line (after `--`) can skip the login:
-##   --demo              the world plays the recorded Draugkryptan fixture (no server needed); with --fight a
-##                       scripted fight runs on it (telegraphs, a boss, hits, a chest), for screenshots
+##   --demo[=farm|forest] the world plays a recorded fixture (no server needed): Draugkryptan (the default; with
+##                       --fight a scripted fight runs on it), the farm, or the forest with the dungeon's arch;
+##                       --time=0.7 --weather=rain --season=jul set the sky, --at=x,y where to stand
 ##   --bench[=preset]    the demo scene on each quality preset (or one: lag, mellan, hog) in steady state, printing
 ##                       frame times, draw calls, lights and the render timings (bench.gd)
 ##   --bot               a headless player that logs in against a local server (ACCESS=open, DEV_TELEPORT=1), walks
@@ -31,27 +32,46 @@ func _ready() -> void:
 	elif _flag(args, "--bench"):
 		login.visible = false
 		_set_world(true)
-		world.start_demo()
-		var fight := DemoFight.new()
-		fight.name = "DemoFight"
-		fight.world = world
-		add_child(fight)
+		var scene := _arg(args, "--scene", "draug")
+		world.start_demo(scene)
+		var fight: DemoFight = null
+		if scene == "draug":
+			fight = DemoFight.new()
+			fight.name = "DemoFight"
+			fight.world = world
+			add_child(fight)
 		var bench := Bench.new()
 		bench.name = "Bench"
 		bench.world = world
 		bench.fight = fight
 		add_child(bench)
-	elif args.has("--demo"):
+	elif _flag(args, "--demo"):
 		login.visible = false
 		_set_world(true)
-		world.start_demo()
-		if args.has("--fight"):
+		world.start_demo(_demo_name(args))
+		if args.has("--fight") and _demo_name(args) == "draug":
 			var fight := DemoFight.new()
 			fight.name = "DemoFight"
 			fight.world = world
 			add_child(fight)
 	else:
 		_show_login()
+
+
+## The value of `--name=value` among the arguments (`fallback` when there is none).
+func _arg(args: PackedStringArray, flag: String, fallback: String) -> String:
+	for a in args:
+		if a.begins_with(flag + "="):
+			return a.substr(flag.length() + 1)
+	return fallback
+
+
+## The fixture `--demo=<name>` asks for ("draug" without a name).
+func _demo_name(args: PackedStringArray) -> String:
+	for a in args:
+		if a.begins_with("--demo="):
+			return a.substr(7)
+	return "draug"
 
 
 ## `--name` or `--name=value` among the arguments.

@@ -6,6 +6,8 @@ extends Node3D
 ## second while walking and once when stopping, like the browser), and takes the server's word when it says
 ## otherwise: a snapshot more than 40 px away puts you there, a `warp` does so at once.
 
+signal travel_asked(dir: String)
+
 const SEND_EVERY := 0.05
 const RECONCILE_PX := 40.0
 
@@ -20,12 +22,15 @@ var world: Dictionary = {}
 ## 0 when fallen or frozen, SLOW_MUL when slowed (the dungeon's rules), 1 otherwise.
 var speed_mul := 1.0
 var send_moves := true
+## An outdoor map (the farm, the wild): its edges lead to the next map, and the farmhouse door is not drawn yet.
+var outdoor := false
 ## Set by the bot (and the spell wheel while it is open): walks this way instead of reading the Input Map.
 var drive := Vector2.ZERO
 var driven := false
 var _send_in := 0.0
 var _map_w := 64
 var _map_h := 64
+var _travel_at := -10.0
 
 
 func _init() -> void:
@@ -45,8 +50,9 @@ func reset() -> void:
 	position = Vector3.ZERO
 
 
-func set_world(w: Dictionary) -> void:
+func set_world(w: Dictionary, is_outdoor := false) -> void:
 	world = w
+	outdoor = is_outdoor
 	_map_w = int(w.get("w", 64))
 	_map_h = int(w.get("h", 64))
 
@@ -78,10 +84,46 @@ func _physics_process(delta: float) -> void:
 	var dir := drive if driven else Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	var was_moving := moving
 	_step(dir, delta)
+	if outdoor:
+		_edge_travel(dir)
 	_send_in -= delta
 	if send_moves and ((moving and _send_in <= 0.0) or (was_moving and not moving)):
 		_send_in = SEND_EVERY
 		Net.send({"t": "move", "x": px, "y": py, "facing": facing, "moving": moving})
+
+
+## Walking off an edge of the map inside the opening in its middle asks the server for the next map, as the browser
+## does (view.ts: at most once in 1.5 s, standing in the edge gap and pushing outwards).
+func _edge_travel(dir: Vector2) -> void:
+	if Time.get_ticks_msec() / 1000.0 - _travel_at < 1.5:
+		return
+	var tile := Data.tile()
+	var hw := Data.constant("PLAYER_HALF_W", 5.0)
+	var hh := Data.constant("PLAYER_HALF_H", 3.0)
+	var tx := floori(px / tile)
+	var ty := floori(py / tile)
+	var gap := Data.constant("EDGE_GAP", 3.0)
+	var w2 := _map_w / 2.0
+	var h2 := _map_h / 2.0
+	var in_gap := (absf(tx - w2) < gap and (ty < 4 or ty >= _map_h - 4)) or (absf(ty - h2) < gap and (tx < 4 or tx >= _map_w - 4))
+	if not in_gap:
+		return
+	var d := ""
+	if dir.y < -0.01 and py <= hh + 1.0:
+		d = "n"
+	elif dir.y > 0.01 and py >= _map_h * tile - hh - 1.0:
+		d = "s"
+	elif dir.x < -0.01 and px <= hw + 1.0:
+		d = "w"
+	elif dir.x > 0.01 and px >= _map_w * tile - hw - 1.0:
+		d = "e"
+	if d == "":
+		return
+	_travel_at = Time.get_ticks_msec() / 1000.0
+	if send_moves:
+		Net.send({"t": "move", "x": px, "y": py, "facing": facing, "moving": false})
+		Net.send({"t": "travel", "dir": d})
+	travel_asked.emit(d)
 
 
 ## stepPlayer in sim.ts.
@@ -141,6 +183,8 @@ func _is_solid(tx: int, ty: int) -> bool:
 	var i := ty * _map_w + tx
 	if i < terrain.size() and Data.is_wall_terrain(str(terrain[i])):
 		return true
+	if outdoor and _is_portal_tile(tx, ty):
+		return true # the farmhouse door: the room behind it is not drawn yet (the server never sees me step on it)
 	var id: Variant = world.get("occupancy", {}).get("%d,%d" % [tx, ty])
 	if id == null:
 		return false
@@ -148,6 +192,15 @@ func _is_solid(tx: int, ty: int) -> bool:
 	if not (obj is Dictionary):
 		return false
 	return bool(Data.object_def(str(obj.get("kind", ""))).get("solid", true))
+
+
+func _is_portal_tile(tx: int, ty: int) -> bool:
+	if not str(world.get("area", "")).is_empty() or world.get("biome") != null:
+		return false # the farm's portals (PORTALS in map.ts) belong to the farm map only
+	for p in Data.portals:
+		if int(p.get("from", {}).get("x", -1)) == tx and int(p.get("from", {}).get("y", -1)) == ty:
+			return true
+	return false
 
 
 ## The swing of a spell: a lunge towards `at` (scene units) and a flash.

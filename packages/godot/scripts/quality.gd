@@ -14,9 +14,9 @@ signal changed(preset: String)
 
 const ORDER := ["lag", "mellan", "hog"]
 const PRESETS := {
-	"lag": {"scale": 0.8, "mpix": 1.3, "shadows": 0, "ssao": false, "gi": false, "fog": false, "glow": false, "particles": 0},
-	"mellan": {"scale": 1.0, "mpix": 2.1, "shadows": 0, "ssao": true, "gi": false, "fog": false, "glow": true, "particles": 8},
-	"hog": {"scale": 1.0, "mpix": 3.7, "shadows": 6, "ssao": true, "gi": true, "fog": true, "glow": true, "particles": 16},
+	"lag": {"scale": 0.8, "mpix": 1.3, "shadows": 0, "ssao": false, "gi": false, "fog": false, "glow": false, "particles": 0, "sun_shadow": 0, "weather": 150},
+	"mellan": {"scale": 1.0, "mpix": 2.1, "shadows": 0, "ssao": true, "gi": false, "fog": false, "glow": true, "particles": 8, "sun_shadow": 1, "weather": 600},
+	"hog": {"scale": 1.0, "mpix": 3.7, "shadows": 6, "ssao": true, "gi": true, "fog": true, "glow": true, "particles": 16, "sun_shadow": 2, "weather": 1500},
 }
 ## The torch shadows' map: Hög only (the others have no positional shadows at all, so no atlas to clear every frame).
 const SHADOW_ATLAS := 4096

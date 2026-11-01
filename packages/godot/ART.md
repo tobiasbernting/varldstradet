@@ -81,6 +81,34 @@ the sheets are committed under `assets/sprites/` with `atlas.json` (frame size, 
   loot window and the wheels read them; an item without a picture of its own gets its kind's emoji, like the browser.
 - `mob_<species>.png`: the dungeon's monsters and bosses as `SAGA_MOBS`/`SAGA_BOSSES` name them, two walk frames
   facing right, at the size `SAGA_ANIMAL_SIZE` gives them, outlined as `drawAnimal` outlines them.
+- The farm's people (M4a): `farm_<kind>.png`, one PNG per layer kind with one row of 12 frames (`down0..2 up0..2 left0..2
+  right0..2`, 16×32, left = right mirrored) per layer; `atlas.json`'s `farm.layers` maps a layer key (`shirt_shirt_red`,
+  `hair_ponytail_3`, `hat_hat_viking`) to `{file, x, y}`, the cell of its frame 0 (frame i is at `x + i*16`). Any
+  `appearance` {skin, hair, hairStyle} and `outfit` {hat, shirt, pants, shoes} is put together at runtime with
+  alpha blending, and the result is `drawCharacter(lookOf(appearance, outfit), dir, frame)` pixel for pixel (the exporter
+  composes 1000 looks the same way and fails if one pixel differs). The order is the browser's drawing order, which is
+  not simply "body, then clothes" (hands are drawn over the shirt's hem but under its decoration, the head over the
+  shirt, the face shading over the hair), so there are ten layers, `farm.layer_order`:
+  `pants, shoes, shirt, hands, shirt_over, head, hair, shirt_shade, head_shade, hat`. Keys, with `<item>` an item id
+  (`farm.items` lists the clothing with slot, style and colour; an empty slot, or an item with no clothing, is
+  `default`, `lookOf`'s fallback) and `<skin>` the index in `farm.skins`, `<colour>` the index in `farm.hair_colors`:
+  `pants_<item>` (not drawn when the shirt is a dress: `farm.layers[shirt_<item>].dress`), `shoes_<item>` (`shoes_<item>_dress`
+  under a dress), `shirt_<item>`, `hands_<skin>`, `shirt_over_<item>` (the shirt's style on top; absent for a plain
+  shirt), `head_<skin>` (head, neck, face), `hair_<style>_<colour>` (none for `bald`; under a hat with `tucks_hair`
+  (the glass helmet) `long` and `ponytail` are drawn as `short`), `shirt_shade_<item>`, `head_shade_<skin>`, `hat_<item>`.
+  A hat with an `erase` key first clears the pixels where that layer is opaque from everything below it (the helmet's
+  glass clips the hair, the frog and dino hoods hide its top row), then is drawn. Last, the outline: every fully
+  transparent pixel with a 4-neighbour of alpha above 0 becomes `farm.outline.color` (`#2a2420`), per frame, on the
+  composed image (the outline follows the whole figure, so it is not in the layers). Skin and hair colours outside the
+  lists take the nearest entry.
+- `animal_<species>[_baby][_jul][_v<variant>].png`: the pets, farm animals, mounts, wild animals and roaming monsters
+  (vehicles and dungeon-only monsters excluded), side view facing right, the browser's two walk frames as `right0`
+  `right1` (the browser has no other directions; Godot mirrors for left), at the size `ANIMAL_SIZE` gives them, in
+  `atlas.json`'s `sheets` like the other sheets. `farm_animals` says per species what it is (`kinds`), its frame size,
+  how many `variants` (`_v1`, `_v2`; the game uses `variant % variants`), whether there is a `baby` (species that grow
+  up), the winter tomteluva (`_jul`, all of them) and lists the `sheets` (and `ride_lift` for mounts).
+- `npc_<id>.png`: the villagers, drawn as the browser draws them (`lookOf(appearance, outfit)`), in the hero layout of
+  12 frames; `atlas.json`'s `npcs` maps the id to `{sheet, name, area}`.
 
 Run `pnpm godot:sprites` after changing the art or adding a dungeon; it takes a few seconds and needs a Chromium that
 Playwright can start (the build sandbox has one, CI does not, so the sheets are committed).
@@ -157,6 +185,49 @@ The same Mellan in a 2560×1440-pixel window (what a Retina 1280×720 is): befor
 RIDs leaked (bench), after none; the CI logs are grepped for it. Where the sandbox ablations put the cost (Mellan,
 GPU ms, 229 in all): the four torch shadows 83, SSAO 46, 31 lights 64, glow 31; on Hög the GI was 138 of 423.
 Script time per frame (all `_process`) is 1–2.5 ms on the sandbox's slow cores, so GDScript was not the cost.
+
+## The farm and the wild maps (M4a)
+
+The same units and camera as the crypt (1 tile = 1 m, 51°, north up). Outdoors the world is lit by the sun
+(`scripts/day_night.gd`), not by torches: a `DirectionalLight3D` with the browser's day colours, ambient light and
+fog from the clock, lamps and windows at night (OmniLights with the crypt's distance fade, at most a handful in reach).
+
+| Name | Hex | Used for |
+| --- | --- | --- |
+| Trä ljus | `#a8793f` | fences, benches, the farm's tables, wooden floors |
+| Sten | `#7c7d78` | the arch, stone paths, rocks |
+| Tak | `#a83a2c` | the shop's awning, the farmhouse roof (the pack's own red) |
+| Halm | `#c9a24d` | hay, thatch |
+| Lövgrön / Höstlöv | `#64a848` (Gräs) → `#d8841f #b8501c #d8b02a` | foliage by season (spring `#8cc85a`, winter darker with snow) |
+
+**Foliage is recoloured by the shader, not by the mesh**: a vertex with foliage mask 1 takes the season's leaf colour
+(three per season, picked per tree) times its own lightness, so a tree is one mesh all year. The Kenney pines are
+recoloured once at load to the pine green (`#3f7a45` → `#79b25a`); the packs' rocks are greyed 45 % towards Sten.
+
+**Lighting rules by preset**: Låg has no sun shadow and no cloud shadows (a plain forward render, 150 weather
+particles); Mellan one short shadow cascade (26 m, 1024²) and 600 particles; Hög two cascades (38 m, 2048²),
+volumetric fog in fog weather and 1500 particles. SSAO, glow and GI are the crypt's.
+
+### Measured (M4a)
+
+`godot --path packages/godot -- --bench --scene=farm` (or `forest`, or `draug` for the crypt's fight), the sandbox's
+Forward+ on Mesa's lavapipe under Xvfb, window 1280×720 (counts are exact; GPU ms are software and only compare rows):
+
+| Scene · preset | draw calls | primitives | lights (in reach) | GPU ms |
+| --- | --- | --- | --- | --- |
+| Farm · Låg | 59 | 27 832 | 5 (0) | 110 |
+| Farm · Mellan | 88 | 79 141 | 5 (0) | 179 |
+| Farm · Hög | 88 | 132 200 | 5 (0) | 506 |
+| Forest · Låg | 52 | 17 014 | 4 (1) | 106 |
+| Forest · Mellan | 107 | 66 389 | 4 (1) | 185 |
+| Forest · Hög | 141 | 160 250 | 4 (1) | 383 |
+| Crypt · Låg (M3d) | 139 | 20 452 | 31 (7) | 130 |
+| Crypt · Mellan (M3d) | 141 | 20 496 | 31 (7) | 200 |
+| Crypt · Hög (M3d) | 174 | 26 273 | 31 (7, 6 shadows) | 359 |
+
+The farm and the forest stay under the crypt's draw-call budget on every preset; they draw more triangles (a tree is
+about a hundred) and fewer lights. **After M4a, on the MacBook Air M4** (owner: paste the three bench lines for
+`--scene=farm` here): `(owner: paste here)`.
 
 ## The fight on screen (M3b)
 

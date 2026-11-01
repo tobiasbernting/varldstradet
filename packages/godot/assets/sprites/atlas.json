@@ -334,6 +334,3143 @@
       "h": 32
     }
   },
+  "farm": {
+    "frame_w": 16,
+    "frame_h": 32,
+    "columns": 12,
+    "headroom": 8,
+    "frames": [
+      "down0",
+      "down1",
+      "down2",
+      "up0",
+      "up1",
+      "up2",
+      "left0",
+      "left1",
+      "left2",
+      "right0",
+      "right1",
+      "right2"
+    ],
+    "layer_order": [
+      "pants",
+      "shoes",
+      "shirt",
+      "hands",
+      "shirt_over",
+      "head",
+      "hair",
+      "shirt_shade",
+      "head_shade",
+      "hat"
+    ],
+    "outline": {
+      "color": "#2a2420"
+    },
+    "skins": [
+      "#f7d7c0",
+      "#f1c9a5",
+      "#dba97d",
+      "#b97a4e",
+      "#8d5a32",
+      "#5a3a22"
+    ],
+    "hair_colors": [
+      "#f2d16b",
+      "#d98b3a",
+      "#8a4a1e",
+      "#5a3a1e",
+      "#2b2119",
+      "#c43a2a",
+      "#e87ab8",
+      "#5aa0e8"
+    ],
+    "hair_styles": [
+      "short",
+      "long",
+      "curly",
+      "ponytail",
+      "bald"
+    ],
+    "files": {
+      "pants": {
+        "file": "farm_pants.png",
+        "width": 192,
+        "height": 224,
+        "rows": 7
+      },
+      "shoes": {
+        "file": "farm_shoes.png",
+        "width": 192,
+        "height": 256,
+        "rows": 8
+      },
+      "shirt": {
+        "file": "farm_shirt.png",
+        "width": 192,
+        "height": 1472,
+        "rows": 46
+      },
+      "hands": {
+        "file": "farm_hands.png",
+        "width": 192,
+        "height": 192,
+        "rows": 6
+      },
+      "shirt_over": {
+        "file": "farm_shirt_over.png",
+        "width": 192,
+        "height": 1152,
+        "rows": 36
+      },
+      "head": {
+        "file": "farm_head.png",
+        "width": 192,
+        "height": 192,
+        "rows": 6
+      },
+      "hair": {
+        "file": "farm_hair.png",
+        "width": 192,
+        "height": 1024,
+        "rows": 32
+      },
+      "shirt_shade": {
+        "file": "farm_shirt_shade.png",
+        "width": 192,
+        "height": 1472,
+        "rows": 46
+      },
+      "head_shade": {
+        "file": "farm_head_shade.png",
+        "width": 192,
+        "height": 192,
+        "rows": 6
+      },
+      "hat": {
+        "file": "farm_hat.png",
+        "width": 192,
+        "height": 1120,
+        "rows": 35
+      },
+      "hat_erase": {
+        "file": "farm_hat_erase.png",
+        "width": 192,
+        "height": 96,
+        "rows": 3
+      }
+    },
+    "layers": {
+      "pants_default": {
+        "file": "farm_pants.png",
+        "x": 0,
+        "y": 0
+      },
+      "pants_pants_blue": {
+        "file": "farm_pants.png",
+        "x": 0,
+        "y": 32
+      },
+      "pants_pants_brown": {
+        "file": "farm_pants.png",
+        "x": 0,
+        "y": 64
+      },
+      "pants_pants_green": {
+        "file": "farm_pants.png",
+        "x": 0,
+        "y": 96
+      },
+      "pants_pants_red": {
+        "file": "farm_pants.png",
+        "x": 0,
+        "y": 128
+      },
+      "pants_pants_skirt_blue": {
+        "file": "farm_pants.png",
+        "x": 0,
+        "y": 160
+      },
+      "pants_pants_skirt_pink": {
+        "file": "farm_pants.png",
+        "x": 0,
+        "y": 192
+      },
+      "shoes_default": {
+        "file": "farm_shoes.png",
+        "x": 0,
+        "y": 0
+      },
+      "shoes_default_dress": {
+        "file": "farm_shoes.png",
+        "x": 0,
+        "y": 32
+      },
+      "shoes_shoes_boots": {
+        "file": "farm_shoes.png",
+        "x": 0,
+        "y": 64
+      },
+      "shoes_shoes_boots_dress": {
+        "file": "farm_shoes.png",
+        "x": 0,
+        "y": 96
+      },
+      "shoes_shoes_red": {
+        "file": "farm_shoes.png",
+        "x": 0,
+        "y": 128
+      },
+      "shoes_shoes_red_dress": {
+        "file": "farm_shoes.png",
+        "x": 0,
+        "y": 160
+      },
+      "shoes_shoes_rubber": {
+        "file": "farm_shoes.png",
+        "x": 0,
+        "y": 192
+      },
+      "shoes_shoes_rubber_dress": {
+        "file": "farm_shoes.png",
+        "x": 0,
+        "y": 224
+      },
+      "shirt_default": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 0,
+        "dress": false
+      },
+      "shirt_dress_blue": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 32,
+        "dress": true
+      },
+      "shirt_dress_green_belt": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 64,
+        "dress": true
+      },
+      "shirt_dress_lucia": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 96,
+        "dress": true
+      },
+      "shirt_dress_midsommar": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 128,
+        "dress": true
+      },
+      "shirt_dress_mint": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 160,
+        "dress": true
+      },
+      "shirt_dress_pink": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 192,
+        "dress": true
+      },
+      "shirt_dress_purple": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 224,
+        "dress": true
+      },
+      "shirt_dress_red_belt": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 256,
+        "dress": true
+      },
+      "shirt_dress_white_flowers": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 288,
+        "dress": true
+      },
+      "shirt_dress_yellow_flowers": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 320,
+        "dress": true
+      },
+      "shirt_gown_blue": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 352,
+        "dress": true
+      },
+      "shirt_gown_gold": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 384,
+        "dress": true
+      },
+      "shirt_shirt_alvmantel": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 416,
+        "dress": false
+      },
+      "shirt_shirt_bifrostmantel": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 448,
+        "dress": false
+      },
+      "shirt_shirt_bjornfall": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 480,
+        "dress": false
+      },
+      "shirt_shirt_bjornskinn": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 512,
+        "dress": false
+      },
+      "shirt_shirt_blue": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 544,
+        "dress": false
+      },
+      "shirt_shirt_dvargbrynja": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 576,
+        "dress": false
+      },
+      "shirt_shirt_easter": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 608,
+        "dress": false
+      },
+      "shirt_shirt_eldmantel": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 640,
+        "dress": false
+      },
+      "shirt_shirt_fjallrustning": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 672,
+        "dress": false
+      },
+      "shirt_shirt_ghost": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 704,
+        "dress": false
+      },
+      "shirt_shirt_glodmantel": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 736,
+        "dress": false
+      },
+      "shirt_shirt_gold": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 768,
+        "dress": false
+      },
+      "shirt_shirt_green": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 800,
+        "dress": false
+      },
+      "shirt_shirt_helrustning": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 832,
+        "dress": false
+      },
+      "shirt_shirt_knight": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 864,
+        "dress": false
+      },
+      "shirt_shirt_lokesmantel": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 896,
+        "dress": false
+      },
+      "shirt_shirt_odenmantel": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 928,
+        "dress": false
+      },
+      "shirt_shirt_overalls": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 960,
+        "dress": false
+      },
+      "shirt_shirt_pink": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 992,
+        "dress": false
+      },
+      "shirt_shirt_purple": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 1024,
+        "dress": false
+      },
+      "shirt_shirt_red": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 1056,
+        "dress": false
+      },
+      "shirt_shirt_ringbrynja": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 1088,
+        "dress": false
+      },
+      "shirt_shirt_runmantel": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 1120,
+        "dress": true
+      },
+      "shirt_shirt_space": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 1152,
+        "dress": false
+      },
+      "shirt_shirt_star": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 1184,
+        "dress": false
+      },
+      "shirt_shirt_stjarnmantel": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 1216,
+        "dress": false
+      },
+      "shirt_shirt_stripes": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 1248,
+        "dress": false
+      },
+      "shirt_shirt_ulvpals": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 1280,
+        "dress": false
+      },
+      "shirt_shirt_vaktarrustning": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 1312,
+        "dress": false
+      },
+      "shirt_shirt_vandrarmantel": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 1344,
+        "dress": false
+      },
+      "shirt_shirt_volvadrakt": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 1376,
+        "dress": true
+      },
+      "shirt_shirt_xmas": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 1408,
+        "dress": false
+      },
+      "shirt_shirt_yellow": {
+        "file": "farm_shirt.png",
+        "x": 0,
+        "y": 1440,
+        "dress": false
+      },
+      "hands_0": {
+        "file": "farm_hands.png",
+        "x": 0,
+        "y": 0
+      },
+      "hands_1": {
+        "file": "farm_hands.png",
+        "x": 0,
+        "y": 32
+      },
+      "hands_2": {
+        "file": "farm_hands.png",
+        "x": 0,
+        "y": 64
+      },
+      "hands_3": {
+        "file": "farm_hands.png",
+        "x": 0,
+        "y": 96
+      },
+      "hands_4": {
+        "file": "farm_hands.png",
+        "x": 0,
+        "y": 128
+      },
+      "hands_5": {
+        "file": "farm_hands.png",
+        "x": 0,
+        "y": 160
+      },
+      "shirt_over_dress_blue": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 0
+      },
+      "shirt_over_dress_green_belt": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 32
+      },
+      "shirt_over_dress_lucia": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 64
+      },
+      "shirt_over_dress_midsommar": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 96
+      },
+      "shirt_over_dress_mint": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 128
+      },
+      "shirt_over_dress_pink": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 160
+      },
+      "shirt_over_dress_purple": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 192
+      },
+      "shirt_over_dress_red_belt": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 224
+      },
+      "shirt_over_dress_white_flowers": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 256
+      },
+      "shirt_over_dress_yellow_flowers": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 288
+      },
+      "shirt_over_gown_blue": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 320
+      },
+      "shirt_over_gown_gold": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 352
+      },
+      "shirt_over_shirt_alvmantel": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 384
+      },
+      "shirt_over_shirt_bifrostmantel": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 416
+      },
+      "shirt_over_shirt_bjornfall": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 448
+      },
+      "shirt_over_shirt_bjornskinn": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 480
+      },
+      "shirt_over_shirt_dvargbrynja": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 512
+      },
+      "shirt_over_shirt_eldmantel": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 544
+      },
+      "shirt_over_shirt_fjallrustning": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 576
+      },
+      "shirt_over_shirt_ghost": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 608
+      },
+      "shirt_over_shirt_glodmantel": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 640
+      },
+      "shirt_over_shirt_helrustning": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 672
+      },
+      "shirt_over_shirt_lokesmantel": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 704
+      },
+      "shirt_over_shirt_odenmantel": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 736
+      },
+      "shirt_over_shirt_overalls": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 768
+      },
+      "shirt_over_shirt_ringbrynja": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 800
+      },
+      "shirt_over_shirt_runmantel": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 832
+      },
+      "shirt_over_shirt_space": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 864
+      },
+      "shirt_over_shirt_star": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 896
+      },
+      "shirt_over_shirt_stjarnmantel": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 928
+      },
+      "shirt_over_shirt_stripes": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 960
+      },
+      "shirt_over_shirt_ulvpals": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 992
+      },
+      "shirt_over_shirt_vaktarrustning": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 1024
+      },
+      "shirt_over_shirt_vandrarmantel": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 1056
+      },
+      "shirt_over_shirt_volvadrakt": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 1088
+      },
+      "shirt_over_shirt_xmas": {
+        "file": "farm_shirt_over.png",
+        "x": 0,
+        "y": 1120
+      },
+      "head_0": {
+        "file": "farm_head.png",
+        "x": 0,
+        "y": 0
+      },
+      "head_1": {
+        "file": "farm_head.png",
+        "x": 0,
+        "y": 32
+      },
+      "head_2": {
+        "file": "farm_head.png",
+        "x": 0,
+        "y": 64
+      },
+      "head_3": {
+        "file": "farm_head.png",
+        "x": 0,
+        "y": 96
+      },
+      "head_4": {
+        "file": "farm_head.png",
+        "x": 0,
+        "y": 128
+      },
+      "head_5": {
+        "file": "farm_head.png",
+        "x": 0,
+        "y": 160
+      },
+      "hair_short_0": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 0
+      },
+      "hair_short_1": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 32
+      },
+      "hair_short_2": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 64
+      },
+      "hair_short_3": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 96
+      },
+      "hair_short_4": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 128
+      },
+      "hair_short_5": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 160
+      },
+      "hair_short_6": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 192
+      },
+      "hair_short_7": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 224
+      },
+      "hair_long_0": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 256
+      },
+      "hair_long_1": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 288
+      },
+      "hair_long_2": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 320
+      },
+      "hair_long_3": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 352
+      },
+      "hair_long_4": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 384
+      },
+      "hair_long_5": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 416
+      },
+      "hair_long_6": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 448
+      },
+      "hair_long_7": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 480
+      },
+      "hair_curly_0": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 512
+      },
+      "hair_curly_1": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 544
+      },
+      "hair_curly_2": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 576
+      },
+      "hair_curly_3": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 608
+      },
+      "hair_curly_4": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 640
+      },
+      "hair_curly_5": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 672
+      },
+      "hair_curly_6": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 704
+      },
+      "hair_curly_7": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 736
+      },
+      "hair_ponytail_0": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 768
+      },
+      "hair_ponytail_1": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 800
+      },
+      "hair_ponytail_2": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 832
+      },
+      "hair_ponytail_3": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 864
+      },
+      "hair_ponytail_4": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 896
+      },
+      "hair_ponytail_5": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 928
+      },
+      "hair_ponytail_6": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 960
+      },
+      "hair_ponytail_7": {
+        "file": "farm_hair.png",
+        "x": 0,
+        "y": 992
+      },
+      "shirt_shade_default": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 0
+      },
+      "shirt_shade_dress_blue": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 32
+      },
+      "shirt_shade_dress_green_belt": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 64
+      },
+      "shirt_shade_dress_lucia": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 96
+      },
+      "shirt_shade_dress_midsommar": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 128
+      },
+      "shirt_shade_dress_mint": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 160
+      },
+      "shirt_shade_dress_pink": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 192
+      },
+      "shirt_shade_dress_purple": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 224
+      },
+      "shirt_shade_dress_red_belt": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 256
+      },
+      "shirt_shade_dress_white_flowers": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 288
+      },
+      "shirt_shade_dress_yellow_flowers": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 320
+      },
+      "shirt_shade_gown_blue": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 352
+      },
+      "shirt_shade_gown_gold": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 384
+      },
+      "shirt_shade_shirt_alvmantel": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 416
+      },
+      "shirt_shade_shirt_bifrostmantel": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 448
+      },
+      "shirt_shade_shirt_bjornfall": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 480
+      },
+      "shirt_shade_shirt_bjornskinn": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 512
+      },
+      "shirt_shade_shirt_blue": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 544
+      },
+      "shirt_shade_shirt_dvargbrynja": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 576
+      },
+      "shirt_shade_shirt_easter": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 608
+      },
+      "shirt_shade_shirt_eldmantel": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 640
+      },
+      "shirt_shade_shirt_fjallrustning": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 672
+      },
+      "shirt_shade_shirt_ghost": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 704
+      },
+      "shirt_shade_shirt_glodmantel": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 736
+      },
+      "shirt_shade_shirt_gold": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 768
+      },
+      "shirt_shade_shirt_green": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 800
+      },
+      "shirt_shade_shirt_helrustning": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 832
+      },
+      "shirt_shade_shirt_knight": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 864
+      },
+      "shirt_shade_shirt_lokesmantel": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 896
+      },
+      "shirt_shade_shirt_odenmantel": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 928
+      },
+      "shirt_shade_shirt_overalls": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 960
+      },
+      "shirt_shade_shirt_pink": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 992
+      },
+      "shirt_shade_shirt_purple": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 1024
+      },
+      "shirt_shade_shirt_red": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 1056
+      },
+      "shirt_shade_shirt_ringbrynja": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 1088
+      },
+      "shirt_shade_shirt_runmantel": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 1120
+      },
+      "shirt_shade_shirt_space": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 1152
+      },
+      "shirt_shade_shirt_star": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 1184
+      },
+      "shirt_shade_shirt_stjarnmantel": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 1216
+      },
+      "shirt_shade_shirt_stripes": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 1248
+      },
+      "shirt_shade_shirt_ulvpals": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 1280
+      },
+      "shirt_shade_shirt_vaktarrustning": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 1312
+      },
+      "shirt_shade_shirt_vandrarmantel": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 1344
+      },
+      "shirt_shade_shirt_volvadrakt": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 1376
+      },
+      "shirt_shade_shirt_xmas": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 1408
+      },
+      "shirt_shade_shirt_yellow": {
+        "file": "farm_shirt_shade.png",
+        "x": 0,
+        "y": 1440
+      },
+      "head_shade_0": {
+        "file": "farm_head_shade.png",
+        "x": 0,
+        "y": 0
+      },
+      "head_shade_1": {
+        "file": "farm_head_shade.png",
+        "x": 0,
+        "y": 32
+      },
+      "head_shade_2": {
+        "file": "farm_head_shade.png",
+        "x": 0,
+        "y": 64
+      },
+      "head_shade_3": {
+        "file": "farm_head_shade.png",
+        "x": 0,
+        "y": 96
+      },
+      "head_shade_4": {
+        "file": "farm_head_shade.png",
+        "x": 0,
+        "y": 128
+      },
+      "head_shade_5": {
+        "file": "farm_head_shade.png",
+        "x": 0,
+        "y": 160
+      },
+      "hat_hat_alvkrona": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 0
+      },
+      "hat_hat_beanie": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 32
+      },
+      "hat_hat_bunny": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 64
+      },
+      "hat_hat_cap_blue": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 96
+      },
+      "hat_hat_cap_red": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 128
+      },
+      "hat_hat_cowboy": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 160
+      },
+      "hat_hat_crown": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 192
+      },
+      "hat_hat_dino": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 224,
+        "erase": "hat_erase_hat_dino"
+      },
+      "hat_hat_draugkrona": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 256
+      },
+      "hat_hat_dvarghjalm": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 288
+      },
+      "hat_hat_explorer": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 320
+      },
+      "hat_hat_flowerwreath": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 352
+      },
+      "hat_hat_frog": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 384,
+        "erase": "hat_erase_hat_frog"
+      },
+      "hat_hat_glodkrans": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 416
+      },
+      "hat_hat_helhjalm": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 448
+      },
+      "hat_hat_hornhjalm": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 480
+      },
+      "hat_hat_ice_crown": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 512
+      },
+      "hat_hat_lokeshorn": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 544
+      },
+      "hat_hat_norrskenshjalm": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 576
+      },
+      "hat_hat_oden": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 608
+      },
+      "hat_hat_party": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 640
+      },
+      "hat_hat_pirate": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 672
+      },
+      "hat_hat_runhatt": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 704
+      },
+      "hat_hat_santa": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 736
+      },
+      "hat_hat_sjokrona": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 768
+      },
+      "hat_hat_solkrona": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 800
+      },
+      "hat_hat_space": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 832,
+        "erase": "hat_erase_hat_space",
+        "tucks_hair": true
+      },
+      "hat_hat_stjarnkrona": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 864
+      },
+      "hat_hat_straw": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 896
+      },
+      "hat_hat_ulvhuva": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 928
+      },
+      "hat_hat_vaktarhjalm": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 960
+      },
+      "hat_hat_valkyria": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 992
+      },
+      "hat_hat_viking": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 1024
+      },
+      "hat_hat_volvakrans": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 1056
+      },
+      "hat_hat_witch": {
+        "file": "farm_hat.png",
+        "x": 0,
+        "y": 1088
+      },
+      "hat_erase_hat_dino": {
+        "file": "farm_hat_erase.png",
+        "x": 0,
+        "y": 0
+      },
+      "hat_erase_hat_frog": {
+        "file": "farm_hat_erase.png",
+        "x": 0,
+        "y": 32
+      },
+      "hat_erase_hat_space": {
+        "file": "farm_hat_erase.png",
+        "x": 0,
+        "y": 64
+      }
+    },
+    "items": {
+      "hat_alvkrona": {
+        "slot": "hat",
+        "style": "elfcrown",
+        "color": "#d8c8ff",
+        "layer": "hat_alvkrona"
+      },
+      "hat_beanie": {
+        "slot": "hat",
+        "style": "beanie",
+        "color": "#8a4fd1",
+        "layer": "hat_beanie"
+      },
+      "hat_bunny": {
+        "slot": "hat",
+        "style": "bunny",
+        "color": "#f5e6e8",
+        "layer": "hat_bunny"
+      },
+      "hat_cap_blue": {
+        "slot": "hat",
+        "style": "cap",
+        "color": "#3b6fd9",
+        "layer": "hat_cap_blue"
+      },
+      "hat_cap_red": {
+        "slot": "hat",
+        "style": "cap",
+        "color": "#d9453b",
+        "layer": "hat_cap_red"
+      },
+      "hat_cowboy": {
+        "slot": "hat",
+        "style": "cowboy",
+        "color": "#8a5a2a",
+        "layer": "hat_cowboy"
+      },
+      "hat_crown": {
+        "slot": "hat",
+        "style": "crown",
+        "color": "#f2d35a",
+        "layer": "hat_crown"
+      },
+      "hat_dino": {
+        "slot": "hat",
+        "style": "dino",
+        "color": "#4f9a3a",
+        "layer": "hat_dino"
+      },
+      "hat_draugkrona": {
+        "slot": "hat",
+        "style": "draugcrown",
+        "color": "#a7b0a0",
+        "layer": "hat_draugkrona"
+      },
+      "hat_dvarghjalm": {
+        "slot": "hat",
+        "style": "nasal",
+        "color": "#c8a050",
+        "layer": "hat_dvarghjalm"
+      },
+      "hat_explorer": {
+        "slot": "hat",
+        "style": "explorer",
+        "color": "#d9c48f",
+        "layer": "hat_explorer"
+      },
+      "hat_flowerwreath": {
+        "slot": "hat",
+        "style": "wreath",
+        "color": "#e8e0a0",
+        "layer": "hat_flowerwreath"
+      },
+      "hat_frog": {
+        "slot": "hat",
+        "style": "frog",
+        "color": "#5aae4a",
+        "layer": "hat_frog"
+      },
+      "hat_glodkrans": {
+        "slot": "hat",
+        "style": "circlet",
+        "color": "#ffb347",
+        "layer": "hat_glodkrans"
+      },
+      "hat_helhjalm": {
+        "slot": "hat",
+        "style": "nasal",
+        "color": "#7f8f88",
+        "layer": "hat_helhjalm"
+      },
+      "hat_hornhjalm": {
+        "slot": "hat",
+        "style": "viking",
+        "color": "#b0703a",
+        "layer": "hat_hornhjalm"
+      },
+      "hat_ice_crown": {
+        "slot": "hat",
+        "style": "crown",
+        "color": "#bfe3f5",
+        "layer": "hat_ice_crown"
+      },
+      "hat_lokeshorn": {
+        "slot": "hat",
+        "style": "horns",
+        "color": "#3ac878",
+        "layer": "hat_lokeshorn"
+      },
+      "hat_norrskenshjalm": {
+        "slot": "hat",
+        "style": "valkyrie",
+        "color": "#dfeeff",
+        "layer": "hat_norrskenshjalm"
+      },
+      "hat_oden": {
+        "slot": "hat",
+        "style": "wanderer",
+        "color": "#3a3f5a",
+        "layer": "hat_oden"
+      },
+      "hat_party": {
+        "slot": "hat",
+        "style": "party",
+        "color": "#e87ab8",
+        "layer": "hat_party"
+      },
+      "hat_pirate": {
+        "slot": "hat",
+        "style": "pirate",
+        "color": "#2b2622",
+        "layer": "hat_pirate"
+      },
+      "hat_runhatt": {
+        "slot": "hat",
+        "style": "runehat",
+        "color": "#b06ef0",
+        "layer": "hat_runhatt"
+      },
+      "hat_santa": {
+        "slot": "hat",
+        "style": "santa",
+        "color": "#d9453b",
+        "layer": "hat_santa"
+      },
+      "hat_sjokrona": {
+        "slot": "hat",
+        "style": "crown_sea",
+        "color": "#5fd0c8",
+        "layer": "hat_sjokrona"
+      },
+      "hat_solkrona": {
+        "slot": "hat",
+        "style": "crown",
+        "color": "#ffe27a",
+        "layer": "hat_solkrona"
+      },
+      "hat_space": {
+        "slot": "hat",
+        "style": "space",
+        "color": "#e8eef5",
+        "layer": "hat_space"
+      },
+      "hat_stjarnkrona": {
+        "slot": "hat",
+        "style": "crown",
+        "color": "#cfe6ff",
+        "layer": "hat_stjarnkrona"
+      },
+      "hat_straw": {
+        "slot": "hat",
+        "style": "straw",
+        "color": "#e0c060",
+        "layer": "hat_straw"
+      },
+      "hat_ulvhuva": {
+        "slot": "hat",
+        "style": "wolfhood",
+        "color": "#9aa4b0",
+        "layer": "hat_ulvhuva"
+      },
+      "hat_vaktarhjalm": {
+        "slot": "hat",
+        "style": "nasal",
+        "color": "#b8c2cc",
+        "layer": "hat_vaktarhjalm"
+      },
+      "hat_valkyria": {
+        "slot": "hat",
+        "style": "valkyrie",
+        "color": "#e0e6ee",
+        "layer": "hat_valkyria"
+      },
+      "hat_viking": {
+        "slot": "hat",
+        "style": "viking",
+        "color": "#9d9a92",
+        "layer": "hat_viking"
+      },
+      "hat_volvakrans": {
+        "slot": "hat",
+        "style": "circlet",
+        "color": "#e8d27a",
+        "layer": "hat_volvakrans"
+      },
+      "hat_witch": {
+        "slot": "hat",
+        "style": "witch",
+        "color": "#2a1a3a",
+        "layer": "hat_witch"
+      },
+      "dress_blue": {
+        "slot": "shirt",
+        "style": "dress",
+        "color": "#5aa0e8",
+        "layer": "dress_blue"
+      },
+      "dress_green_belt": {
+        "slot": "shirt",
+        "style": "dress_belt",
+        "color": "#3ba35b",
+        "layer": "dress_green_belt"
+      },
+      "dress_lucia": {
+        "slot": "shirt",
+        "style": "dress_belt",
+        "color": "#ffffff",
+        "layer": "dress_lucia"
+      },
+      "dress_midsommar": {
+        "slot": "shirt",
+        "style": "dress_flowers",
+        "color": "#9ad0f0",
+        "layer": "dress_midsommar"
+      },
+      "dress_mint": {
+        "slot": "shirt",
+        "style": "dress",
+        "color": "#5ac8a8",
+        "layer": "dress_mint"
+      },
+      "dress_pink": {
+        "slot": "shirt",
+        "style": "dress",
+        "color": "#e87ab8",
+        "layer": "dress_pink"
+      },
+      "dress_purple": {
+        "slot": "shirt",
+        "style": "dress",
+        "color": "#8a4fd1",
+        "layer": "dress_purple"
+      },
+      "dress_red_belt": {
+        "slot": "shirt",
+        "style": "dress_belt",
+        "color": "#d9453b",
+        "layer": "dress_red_belt"
+      },
+      "dress_white_flowers": {
+        "slot": "shirt",
+        "style": "dress_flowers",
+        "color": "#f4f2ec",
+        "layer": "dress_white_flowers"
+      },
+      "dress_yellow_flowers": {
+        "slot": "shirt",
+        "style": "dress_flowers",
+        "color": "#e8c23a",
+        "layer": "dress_yellow_flowers"
+      },
+      "gown_blue": {
+        "slot": "shirt",
+        "style": "gown",
+        "color": "#3b6fd9",
+        "layer": "gown_blue"
+      },
+      "gown_gold": {
+        "slot": "shirt",
+        "style": "gown",
+        "color": "#f2c230",
+        "layer": "gown_gold"
+      },
+      "shirt_alvmantel": {
+        "slot": "shirt",
+        "style": "cloak",
+        "color": "#7a5ac8",
+        "layer": "shirt_alvmantel"
+      },
+      "shirt_bifrostmantel": {
+        "slot": "shirt",
+        "style": "cloak",
+        "color": "#f0f0ff",
+        "layer": "shirt_bifrostmantel"
+      },
+      "shirt_bjornfall": {
+        "slot": "shirt",
+        "style": "bearpelt",
+        "color": "#e8eef4",
+        "layer": "shirt_bjornfall"
+      },
+      "shirt_bjornskinn": {
+        "slot": "shirt",
+        "style": "bearpelt",
+        "color": "#7a5a3a",
+        "layer": "shirt_bjornskinn"
+      },
+      "shirt_blue": {
+        "slot": "shirt",
+        "style": "plain",
+        "color": "#3b6fd9",
+        "layer": "shirt_blue"
+      },
+      "shirt_dvargbrynja": {
+        "slot": "shirt",
+        "style": "chainmail",
+        "color": "#d0a040",
+        "layer": "shirt_dvargbrynja"
+      },
+      "shirt_easter": {
+        "slot": "shirt",
+        "style": "plain",
+        "color": "#f5e04a",
+        "layer": "shirt_easter"
+      },
+      "shirt_eldmantel": {
+        "slot": "shirt",
+        "style": "cloak",
+        "color": "#5a1a10",
+        "layer": "shirt_eldmantel"
+      },
+      "shirt_fjallrustning": {
+        "slot": "shirt",
+        "style": "tabard",
+        "color": "#3a9ab0",
+        "layer": "shirt_fjallrustning"
+      },
+      "shirt_ghost": {
+        "slot": "shirt",
+        "style": "ghost",
+        "color": "#f0f0f0",
+        "layer": "shirt_ghost"
+      },
+      "shirt_glodmantel": {
+        "slot": "shirt",
+        "style": "cloak",
+        "color": "#8a3a2a",
+        "layer": "shirt_glodmantel"
+      },
+      "shirt_gold": {
+        "slot": "shirt",
+        "style": "plain",
+        "color": "#f2c230",
+        "layer": "shirt_gold"
+      },
+      "shirt_green": {
+        "slot": "shirt",
+        "style": "plain",
+        "color": "#3ba35b",
+        "layer": "shirt_green"
+      },
+      "shirt_helrustning": {
+        "slot": "shirt",
+        "style": "chainmail",
+        "color": "#5f7068",
+        "layer": "shirt_helrustning"
+      },
+      "shirt_knight": {
+        "slot": "shirt",
+        "style": "plain",
+        "color": "#b8bcc4",
+        "layer": "shirt_knight"
+      },
+      "shirt_lokesmantel": {
+        "slot": "shirt",
+        "style": "cloak",
+        "color": "#2a8a58",
+        "layer": "shirt_lokesmantel"
+      },
+      "shirt_odenmantel": {
+        "slot": "shirt",
+        "style": "cloak",
+        "color": "#2f3550",
+        "layer": "shirt_odenmantel"
+      },
+      "shirt_overalls": {
+        "slot": "shirt",
+        "style": "overalls",
+        "color": "#3b5fa6",
+        "layer": "shirt_overalls"
+      },
+      "shirt_pink": {
+        "slot": "shirt",
+        "style": "plain",
+        "color": "#e87ab8",
+        "layer": "shirt_pink"
+      },
+      "shirt_purple": {
+        "slot": "shirt",
+        "style": "plain",
+        "color": "#8a4fd1",
+        "layer": "shirt_purple"
+      },
+      "shirt_red": {
+        "slot": "shirt",
+        "style": "plain",
+        "color": "#d9453b",
+        "layer": "shirt_red"
+      },
+      "shirt_ringbrynja": {
+        "slot": "shirt",
+        "style": "chainmail",
+        "color": "#9aa3ad",
+        "layer": "shirt_ringbrynja"
+      },
+      "shirt_runmantel": {
+        "slot": "shirt",
+        "style": "robe",
+        "color": "#7a4fc0",
+        "layer": "shirt_runmantel"
+      },
+      "shirt_space": {
+        "slot": "shirt",
+        "style": "space",
+        "color": "#eef1f5",
+        "layer": "shirt_space"
+      },
+      "shirt_star": {
+        "slot": "shirt",
+        "style": "star",
+        "color": "#3b3f8a",
+        "layer": "shirt_star"
+      },
+      "shirt_stjarnmantel": {
+        "slot": "shirt",
+        "style": "cloak",
+        "color": "#2a2a5a",
+        "layer": "shirt_stjarnmantel"
+      },
+      "shirt_stripes": {
+        "slot": "shirt",
+        "style": "stripes",
+        "color": "#3b6fd9",
+        "layer": "shirt_stripes"
+      },
+      "shirt_ulvpals": {
+        "slot": "shirt",
+        "style": "bearpelt",
+        "color": "#a8b0bc",
+        "layer": "shirt_ulvpals"
+      },
+      "shirt_vaktarrustning": {
+        "slot": "shirt",
+        "style": "tabard",
+        "color": "#4f8fe8",
+        "layer": "shirt_vaktarrustning"
+      },
+      "shirt_vandrarmantel": {
+        "slot": "shirt",
+        "style": "cloak",
+        "color": "#3f6b3a",
+        "layer": "shirt_vandrarmantel"
+      },
+      "shirt_volvadrakt": {
+        "slot": "shirt",
+        "style": "robe",
+        "color": "#5fd38d",
+        "layer": "shirt_volvadrakt"
+      },
+      "shirt_xmas": {
+        "slot": "shirt",
+        "style": "xmas",
+        "color": "#2e8a3a",
+        "layer": "shirt_xmas"
+      },
+      "shirt_yellow": {
+        "slot": "shirt",
+        "style": "plain",
+        "color": "#e8c23a",
+        "layer": "shirt_yellow"
+      },
+      "pants_blue": {
+        "slot": "pants",
+        "style": "plain",
+        "color": "#2f4c8a",
+        "layer": "pants_blue"
+      },
+      "pants_brown": {
+        "slot": "pants",
+        "style": "plain",
+        "color": "#7a5230",
+        "layer": "pants_brown"
+      },
+      "pants_green": {
+        "slot": "pants",
+        "style": "plain",
+        "color": "#3f7a3a",
+        "layer": "pants_green"
+      },
+      "pants_red": {
+        "slot": "pants",
+        "style": "plain",
+        "color": "#a63838",
+        "layer": "pants_red"
+      },
+      "pants_skirt_blue": {
+        "slot": "pants",
+        "style": "skirt",
+        "color": "#5aa0e8",
+        "layer": "pants_skirt_blue"
+      },
+      "pants_skirt_pink": {
+        "slot": "pants",
+        "style": "skirt",
+        "color": "#e87ab8",
+        "layer": "pants_skirt_pink"
+      },
+      "shoes_boots": {
+        "slot": "shoes",
+        "style": "boots",
+        "color": "#3a3a3a",
+        "layer": "shoes_boots"
+      },
+      "shoes_red": {
+        "slot": "shoes",
+        "style": "plain",
+        "color": "#c43a3a",
+        "layer": "shoes_red"
+      },
+      "shoes_rubber": {
+        "slot": "shoes",
+        "style": "boots",
+        "color": "#2e8a3a",
+        "layer": "shoes_rubber"
+      }
+    },
+    "fallback": {
+      "shirt": "default",
+      "pants": "default",
+      "shoes": "default"
+    },
+    "rules": [
+      "Frame i of a figure is the cell at (x + i * frame_w, y) of its layer in the layer file; draw the layers in layer_order, source-over, into one frame_w x frame_h image.",
+      "pants: pants_<item> (pants_default without one), skipped when the shirt is a dress (layers[shirt_<item>].dress). shoes: shoes_<item> or shoes_default, with the suffix _dress when the shirt is a dress.",
+      "shirt, shirt_over, shirt_shade: the keys shirt_<item>, shirt_over_<item>, shirt_shade_<item> (shirt_default without a shirt); a key that is absent (shirt_over of a plain shirt) draws nothing.",
+      "hands, head, head_shade: hands_<skin>, head_<skin>, head_shade_<skin> with skin the index in skins.",
+      "hair: hair_<style>_<colour> with colour the index in hair_colors; none for bald; under a hat whose layer has tucks_hair, long and ponytail are drawn as short.",
+      "hat: if hat_<item> has an erase key, first make every pixel transparent where the erase layer is opaque, then draw hat_<item>.",
+      "After the hat, outline: every fully transparent pixel with a 4-neighbour of alpha > 0 (inside the frame only) becomes outline.color. Do this per frame, on the composed image.",
+      "Appearance colours outside skins / hair_colors take the nearest entry. The item must be in its own slot (hat in hat, ...); anything else is the default."
+    ]
+  },
+  "farm_animals": {
+    "alien": {
+      "kinds": [
+        "wild"
+      ],
+      "frame_w": 14,
+      "frame_h": 17,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_alien",
+        "animal_alien_jul"
+      ]
+    },
+    "alvljus_fe": {
+      "kinds": [
+        "pet"
+      ],
+      "frame_w": 10,
+      "frame_h": 12,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_alvljus_fe",
+        "animal_alvljus_fe_jul"
+      ]
+    },
+    "angsvatte": {
+      "kinds": [
+        "wild",
+        "mob"
+      ],
+      "frame_w": 16,
+      "frame_h": 19,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_angsvatte",
+        "animal_angsvatte_jul"
+      ]
+    },
+    "bat": {
+      "kinds": [
+        "mob"
+      ],
+      "frame_w": 16,
+      "frame_h": 10,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_bat",
+        "animal_bat_jul"
+      ]
+    },
+    "bear": {
+      "kinds": [
+        "wild",
+        "predator"
+      ],
+      "frame_w": 24,
+      "frame_h": 20,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_bear",
+        "animal_bear_jul"
+      ]
+    },
+    "benodla": {
+      "kinds": [
+        "wild",
+        "mob"
+      ],
+      "frame_w": 24,
+      "frame_h": 15,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_benodla",
+        "animal_benodla_jul"
+      ]
+    },
+    "bergatroll": {
+      "kinds": [
+        "wild",
+        "mob"
+      ],
+      "frame_w": 34,
+      "frame_h": 36,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_bergatroll",
+        "animal_bergatroll_jul"
+      ]
+    },
+    "boar": {
+      "kinds": [
+        "wild"
+      ],
+      "frame_w": 18,
+      "frame_h": 12,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_boar",
+        "animal_boar_jul"
+      ]
+    },
+    "boss": {
+      "kinds": [
+        "mob"
+      ],
+      "frame_w": 28,
+      "frame_h": 32,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_boss",
+        "animal_boss_jul"
+      ]
+    },
+    "cat": {
+      "kinds": [
+        "pet"
+      ],
+      "frame_w": 14,
+      "frame_h": 12,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_cat",
+        "animal_cat_jul"
+      ]
+    },
+    "cow": {
+      "kinds": [
+        "farm"
+      ],
+      "frame_w": 24,
+      "frame_h": 18,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": true,
+      "jul": true,
+      "sheets": [
+        "animal_cow",
+        "animal_cow_jul",
+        "animal_cow_baby",
+        "animal_cow_baby_jul"
+      ]
+    },
+    "crab": {
+      "kinds": [
+        "wild"
+      ],
+      "frame_w": 14,
+      "frame_h": 10,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_crab",
+        "animal_crab_jul"
+      ]
+    },
+    "deer": {
+      "kinds": [
+        "wild"
+      ],
+      "frame_w": 18,
+      "frame_h": 18,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_deer",
+        "animal_deer_jul"
+      ]
+    },
+    "dino": {
+      "kinds": [
+        "wild"
+      ],
+      "frame_w": 20,
+      "frame_h": 18,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 3,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_dino",
+        "animal_dino_v1",
+        "animal_dino_v2",
+        "animal_dino_jul",
+        "animal_dino_jul_v1",
+        "animal_dino_jul_v2"
+      ]
+    },
+    "djungelimp": {
+      "kinds": [
+        "wild",
+        "mob"
+      ],
+      "frame_w": 14,
+      "frame_h": 16,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_djungelimp",
+        "animal_djungelimp_jul"
+      ]
+    },
+    "dog": {
+      "kinds": [
+        "pet"
+      ],
+      "frame_w": 16,
+      "frame_h": 14,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_dog",
+        "animal_dog_jul"
+      ]
+    },
+    "dragon": {
+      "kinds": [
+        "pet"
+      ],
+      "frame_w": 22,
+      "frame_h": 18,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_dragon",
+        "animal_dragon_jul"
+      ]
+    },
+    "eldimp": {
+      "kinds": [
+        "wild",
+        "mob"
+      ],
+      "frame_w": 14,
+      "frame_h": 16,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_eldimp",
+        "animal_eldimp_jul"
+      ]
+    },
+    "fenrisulv_ridbar": {
+      "kinds": [
+        "mount"
+      ],
+      "frame_w": 35,
+      "frame_h": 24,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_fenrisulv_ridbar",
+        "animal_fenrisulv_ridbar_jul"
+      ],
+      "ride_lift": 7
+    },
+    "fenrisvalp": {
+      "kinds": [
+        "pet"
+      ],
+      "frame_w": 16,
+      "frame_h": 15,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_fenrisvalp",
+        "animal_fenrisvalp_jul"
+      ]
+    },
+    "fox": {
+      "kinds": [
+        "wild"
+      ],
+      "frame_w": 18,
+      "frame_h": 12,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_fox",
+        "animal_fox_jul"
+      ]
+    },
+    "frog": {
+      "kinds": [
+        "wild"
+      ],
+      "frame_w": 14,
+      "frame_h": 12,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_frog",
+        "animal_frog_jul"
+      ]
+    },
+    "garmvalp": {
+      "kinds": [
+        "pet"
+      ],
+      "frame_w": 16,
+      "frame_h": 15,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_garmvalp",
+        "animal_garmvalp_jul"
+      ]
+    },
+    "goat": {
+      "kinds": [
+        "wild"
+      ],
+      "frame_w": 16,
+      "frame_h": 14,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_goat",
+        "animal_goat_jul"
+      ]
+    },
+    "gruvtroll": {
+      "kinds": [
+        "wild",
+        "mob"
+      ],
+      "frame_w": 23,
+      "frame_h": 26,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_gruvtroll",
+        "animal_gruvtroll_jul"
+      ]
+    },
+    "guldbagge_tam": {
+      "kinds": [
+        "pet"
+      ],
+      "frame_w": 16,
+      "frame_h": 12,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_guldbagge_tam",
+        "animal_guldbagge_tam_jul"
+      ]
+    },
+    "gullinbursti": {
+      "kinds": [
+        "mount"
+      ],
+      "frame_w": 24,
+      "frame_h": 18,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_gullinbursti",
+        "animal_gullinbursti_jul"
+      ],
+      "ride_lift": 5
+    },
+    "gummy": {
+      "kinds": [
+        "wild"
+      ],
+      "frame_w": 12,
+      "frame_h": 12,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 4,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_gummy",
+        "animal_gummy_v1",
+        "animal_gummy_v2",
+        "animal_gummy_v3",
+        "animal_gummy_jul",
+        "animal_gummy_jul_v1",
+        "animal_gummy_jul_v2",
+        "animal_gummy_jul_v3"
+      ]
+    },
+    "hare": {
+      "kinds": [
+        "wild"
+      ],
+      "frame_w": 14,
+      "frame_h": 14,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_hare",
+        "animal_hare_jul"
+      ]
+    },
+    "havshast": {
+      "kinds": [
+        "mount"
+      ],
+      "frame_w": 33,
+      "frame_h": 30,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_havshast",
+        "animal_havshast_jul"
+      ],
+      "ride_lift": 10
+    },
+    "hedgehog": {
+      "kinds": [
+        "wild"
+      ],
+      "frame_w": 14,
+      "frame_h": 10,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_hedgehog",
+        "animal_hedgehog_jul"
+      ]
+    },
+    "hen": {
+      "kinds": [
+        "farm"
+      ],
+      "frame_w": 16,
+      "frame_h": 16,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": true,
+      "jul": true,
+      "sheets": [
+        "animal_hen",
+        "animal_hen_jul",
+        "animal_hen_baby",
+        "animal_hen_baby_jul"
+      ]
+    },
+    "horse": {
+      "kinds": [
+        "farm"
+      ],
+      "frame_w": 26,
+      "frame_h": 24,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": true,
+      "jul": true,
+      "sheets": [
+        "animal_horse",
+        "animal_horse_jul",
+        "animal_horse_baby",
+        "animal_horse_baby_jul"
+      ]
+    },
+    "isvarg": {
+      "kinds": [
+        "wild",
+        "mob"
+      ],
+      "frame_w": 22,
+      "frame_h": 16,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 2,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_isvarg",
+        "animal_isvarg_v1",
+        "animal_isvarg_jul",
+        "animal_isvarg_jul_v1"
+      ]
+    },
+    "jattehjort": {
+      "kinds": [
+        "mount"
+      ],
+      "frame_w": 34,
+      "frame_h": 38,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_jattehjort",
+        "animal_jattehjort_jul"
+      ],
+      "ride_lift": 10
+    },
+    "korp": {
+      "kinds": [
+        "pet"
+      ],
+      "frame_w": 20,
+      "frame_h": 16,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_korp",
+        "animal_korp_jul"
+      ]
+    },
+    "kustjatte": {
+      "kinds": [
+        "wild",
+        "mob"
+      ],
+      "frame_w": 38,
+      "frame_h": 48,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_kustjatte",
+        "animal_kustjatte_jul"
+      ]
+    },
+    "lizard": {
+      "kinds": [
+        "wild"
+      ],
+      "frame_w": 16,
+      "frame_h": 8,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_lizard",
+        "animal_lizard_jul"
+      ]
+    },
+    "ljushjort": {
+      "kinds": [
+        "mount"
+      ],
+      "frame_w": 34,
+      "frame_h": 38,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_ljushjort",
+        "animal_ljushjort_jul"
+      ],
+      "ride_lift": 10
+    },
+    "lokeshast": {
+      "kinds": [
+        "mount"
+      ],
+      "frame_w": 31,
+      "frame_h": 28,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_lokeshast",
+        "animal_lokeshast_jul"
+      ],
+      "ride_lift": 9
+    },
+    "lynx": {
+      "kinds": [
+        "wild",
+        "predator"
+      ],
+      "frame_w": 18,
+      "frame_h": 13,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_lynx",
+        "animal_lynx_jul"
+      ]
+    },
+    "manet_tam": {
+      "kinds": [
+        "pet"
+      ],
+      "frame_w": 12,
+      "frame_h": 15,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_manet_tam",
+        "animal_manet_tam_jul"
+      ]
+    },
+    "monkey": {
+      "kinds": [
+        "wild"
+      ],
+      "frame_w": 16,
+      "frame_h": 16,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_monkey",
+        "animal_monkey_jul"
+      ]
+    },
+    "moose": {
+      "kinds": [
+        "wild"
+      ],
+      "frame_w": 28,
+      "frame_h": 26,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_moose",
+        "animal_moose_jul"
+      ]
+    },
+    "mosspoke": {
+      "kinds": [
+        "wild",
+        "mob"
+      ],
+      "frame_w": 14,
+      "frame_h": 18,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_mosspoke",
+        "animal_mosspoke_jul"
+      ]
+    },
+    "parrot": {
+      "kinds": [
+        "wild"
+      ],
+      "frame_w": 16,
+      "frame_h": 15,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 3,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_parrot",
+        "animal_parrot_v1",
+        "animal_parrot_v2",
+        "animal_parrot_jul",
+        "animal_parrot_jul_v1",
+        "animal_parrot_jul_v2"
+      ]
+    },
+    "penguin": {
+      "kinds": [
+        "wild"
+      ],
+      "frame_w": 12,
+      "frame_h": 14,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_penguin",
+        "animal_penguin_jul"
+      ]
+    },
+    "pig": {
+      "kinds": [
+        "farm"
+      ],
+      "frame_w": 18,
+      "frame_h": 14,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": true,
+      "jul": true,
+      "sheets": [
+        "animal_pig",
+        "animal_pig_jul",
+        "animal_pig_baby",
+        "animal_pig_baby_jul"
+      ]
+    },
+    "rabbit": {
+      "kinds": [
+        "farm"
+      ],
+      "frame_w": 16,
+      "frame_h": 14,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": true,
+      "jul": true,
+      "sheets": [
+        "animal_rabbit",
+        "animal_rabbit_jul",
+        "animal_rabbit_baby",
+        "animal_rabbit_baby_jul"
+      ]
+    },
+    "rymdkryp": {
+      "kinds": [
+        "wild",
+        "mob"
+      ],
+      "frame_w": 16,
+      "frame_h": 12,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_rymdkryp",
+        "animal_rymdkryp_jul"
+      ]
+    },
+    "salamander": {
+      "kinds": [
+        "wild"
+      ],
+      "frame_w": 18,
+      "frame_h": 8,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_salamander",
+        "animal_salamander_jul"
+      ]
+    },
+    "sandande": {
+      "kinds": [
+        "wild",
+        "mob"
+      ],
+      "frame_w": 16,
+      "frame_h": 19,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_sandande",
+        "animal_sandande_jul"
+      ]
+    },
+    "sheep": {
+      "kinds": [
+        "farm"
+      ],
+      "frame_w": 18,
+      "frame_h": 16,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": true,
+      "jul": true,
+      "sheets": [
+        "animal_sheep",
+        "animal_sheep_jul",
+        "animal_sheep_baby",
+        "animal_sheep_baby_jul"
+      ]
+    },
+    "sjodraug": {
+      "kinds": [
+        "wild",
+        "mob"
+      ],
+      "frame_w": 20,
+      "frame_h": 23,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_sjodraug",
+        "animal_sjodraug_jul"
+      ]
+    },
+    "skuggalv": {
+      "kinds": [
+        "wild",
+        "mob"
+      ],
+      "frame_w": 19,
+      "frame_h": 24,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_skuggalv",
+        "animal_skuggalv_jul"
+      ]
+    },
+    "sleipner": {
+      "kinds": [
+        "mount"
+      ],
+      "frame_w": 30,
+      "frame_h": 26,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_sleipner",
+        "animal_sleipner_jul"
+      ],
+      "ride_lift": 8
+    },
+    "slime": {
+      "kinds": [
+        "mob"
+      ],
+      "frame_w": 14,
+      "frame_h": 12,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_slime",
+        "animal_slime_jul"
+      ]
+    },
+    "snotroll": {
+      "kinds": [
+        "wild",
+        "mob"
+      ],
+      "frame_w": 16,
+      "frame_h": 16,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_snotroll",
+        "animal_snotroll_jul"
+      ]
+    },
+    "sockerspoke": {
+      "kinds": [
+        "wild",
+        "mob"
+      ],
+      "frame_w": 18,
+      "frame_h": 23,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_sockerspoke",
+        "animal_sockerspoke_jul"
+      ]
+    },
+    "troll": {
+      "kinds": [
+        "mob"
+      ],
+      "frame_w": 18,
+      "frame_h": 22,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_troll",
+        "animal_troll_jul"
+      ]
+    },
+    "trollunge": {
+      "kinds": [
+        "wild",
+        "mob"
+      ],
+      "frame_w": 18,
+      "frame_h": 17,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_trollunge",
+        "animal_trollunge_jul"
+      ]
+    },
+    "ulvvalp": {
+      "kinds": [
+        "pet"
+      ],
+      "frame_w": 16,
+      "frame_h": 15,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_ulvvalp",
+        "animal_ulvvalp_jul"
+      ]
+    },
+    "vandrardraug": {
+      "kinds": [
+        "wild",
+        "mob"
+      ],
+      "frame_w": 20,
+      "frame_h": 24,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_vandrardraug",
+        "animal_vandrardraug_jul"
+      ]
+    },
+    "wolf": {
+      "kinds": [
+        "wild",
+        "predator"
+      ],
+      "frame_w": 20,
+      "frame_h": 14,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 1,
+      "baby": false,
+      "jul": true,
+      "sheets": [
+        "animal_wolf",
+        "animal_wolf_jul"
+      ]
+    }
+  },
+  "npcs": {
+    "greta": {
+      "sheet": "npc_greta",
+      "name": "Tant Greta",
+      "area": "farm"
+    },
+    "sven": {
+      "sheet": "npc_sven",
+      "name": "Fiskar-Sven",
+      "area": "farm"
+    },
+    "elsa": {
+      "sheet": "npc_elsa",
+      "name": "Lilla Elsa",
+      "area": "farm"
+    },
+    "bo": {
+      "sheet": "npc_bo",
+      "name": "Bagar-Bo",
+      "area": "a:1,0"
+    },
+    "pino": {
+      "sheet": "npc_pino",
+      "name": "Pizza-Pino",
+      "area": "a:1,0"
+    },
+    "stina": {
+      "sheet": "npc_stina",
+      "name": "Smed-Stina",
+      "area": "a:1,0"
+    },
+    "lind": {
+      "sheet": "npc_lind",
+      "name": "Fru Lind",
+      "area": "a:1,0"
+    },
+    "sigrun": {
+      "sheet": "npc_sigrun",
+      "name": "Völvan Sigrun",
+      "area": "a:1,0"
+    }
+  },
   "sheets": {
     "hero_vaktare_0": {
       "file": "hero_vaktare_0.png",
@@ -949,6 +4086,1890 @@
         "item_volvastav"
       ],
       "headroom": 0
+    },
+    "animal_alien": {
+      "file": "animal_alien.png",
+      "frame_w": 14,
+      "frame_h": 17,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_alien_jul": {
+      "file": "animal_alien_jul.png",
+      "frame_w": 14,
+      "frame_h": 17,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_alvljus_fe": {
+      "file": "animal_alvljus_fe.png",
+      "frame_w": 10,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_alvljus_fe_jul": {
+      "file": "animal_alvljus_fe_jul.png",
+      "frame_w": 10,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_angsvatte": {
+      "file": "animal_angsvatte.png",
+      "frame_w": 16,
+      "frame_h": 19,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_angsvatte_jul": {
+      "file": "animal_angsvatte_jul.png",
+      "frame_w": 16,
+      "frame_h": 19,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_bat": {
+      "file": "animal_bat.png",
+      "frame_w": 16,
+      "frame_h": 10,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_bat_jul": {
+      "file": "animal_bat_jul.png",
+      "frame_w": 16,
+      "frame_h": 10,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_bear": {
+      "file": "animal_bear.png",
+      "frame_w": 24,
+      "frame_h": 20,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_bear_jul": {
+      "file": "animal_bear_jul.png",
+      "frame_w": 24,
+      "frame_h": 20,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_benodla": {
+      "file": "animal_benodla.png",
+      "frame_w": 24,
+      "frame_h": 15,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_benodla_jul": {
+      "file": "animal_benodla_jul.png",
+      "frame_w": 24,
+      "frame_h": 15,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_bergatroll": {
+      "file": "animal_bergatroll.png",
+      "frame_w": 34,
+      "frame_h": 36,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_bergatroll_jul": {
+      "file": "animal_bergatroll_jul.png",
+      "frame_w": 34,
+      "frame_h": 36,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_boar": {
+      "file": "animal_boar.png",
+      "frame_w": 18,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_boar_jul": {
+      "file": "animal_boar_jul.png",
+      "frame_w": 18,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_boss": {
+      "file": "animal_boss.png",
+      "frame_w": 28,
+      "frame_h": 32,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_boss_jul": {
+      "file": "animal_boss_jul.png",
+      "frame_w": 28,
+      "frame_h": 32,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_cat": {
+      "file": "animal_cat.png",
+      "frame_w": 14,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_cat_jul": {
+      "file": "animal_cat_jul.png",
+      "frame_w": 14,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_cow": {
+      "file": "animal_cow.png",
+      "frame_w": 24,
+      "frame_h": 18,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_cow_jul": {
+      "file": "animal_cow_jul.png",
+      "frame_w": 24,
+      "frame_h": 18,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_cow_baby": {
+      "file": "animal_cow_baby.png",
+      "frame_w": 24,
+      "frame_h": 18,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_cow_baby_jul": {
+      "file": "animal_cow_baby_jul.png",
+      "frame_w": 24,
+      "frame_h": 18,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_crab": {
+      "file": "animal_crab.png",
+      "frame_w": 14,
+      "frame_h": 10,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_crab_jul": {
+      "file": "animal_crab_jul.png",
+      "frame_w": 14,
+      "frame_h": 10,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_deer": {
+      "file": "animal_deer.png",
+      "frame_w": 18,
+      "frame_h": 18,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_deer_jul": {
+      "file": "animal_deer_jul.png",
+      "frame_w": 18,
+      "frame_h": 18,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_dino": {
+      "file": "animal_dino.png",
+      "frame_w": 20,
+      "frame_h": 18,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_dino_v1": {
+      "file": "animal_dino_v1.png",
+      "frame_w": 20,
+      "frame_h": 18,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_dino_v2": {
+      "file": "animal_dino_v2.png",
+      "frame_w": 20,
+      "frame_h": 18,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_dino_jul": {
+      "file": "animal_dino_jul.png",
+      "frame_w": 20,
+      "frame_h": 18,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_dino_jul_v1": {
+      "file": "animal_dino_jul_v1.png",
+      "frame_w": 20,
+      "frame_h": 18,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_dino_jul_v2": {
+      "file": "animal_dino_jul_v2.png",
+      "frame_w": 20,
+      "frame_h": 18,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_djungelimp": {
+      "file": "animal_djungelimp.png",
+      "frame_w": 14,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_djungelimp_jul": {
+      "file": "animal_djungelimp_jul.png",
+      "frame_w": 14,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_dog": {
+      "file": "animal_dog.png",
+      "frame_w": 16,
+      "frame_h": 14,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_dog_jul": {
+      "file": "animal_dog_jul.png",
+      "frame_w": 16,
+      "frame_h": 14,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_dragon": {
+      "file": "animal_dragon.png",
+      "frame_w": 22,
+      "frame_h": 18,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_dragon_jul": {
+      "file": "animal_dragon_jul.png",
+      "frame_w": 22,
+      "frame_h": 18,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_eldimp": {
+      "file": "animal_eldimp.png",
+      "frame_w": 14,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_eldimp_jul": {
+      "file": "animal_eldimp_jul.png",
+      "frame_w": 14,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_fenrisulv_ridbar": {
+      "file": "animal_fenrisulv_ridbar.png",
+      "frame_w": 35,
+      "frame_h": 24,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_fenrisulv_ridbar_jul": {
+      "file": "animal_fenrisulv_ridbar_jul.png",
+      "frame_w": 35,
+      "frame_h": 24,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_fenrisvalp": {
+      "file": "animal_fenrisvalp.png",
+      "frame_w": 16,
+      "frame_h": 15,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_fenrisvalp_jul": {
+      "file": "animal_fenrisvalp_jul.png",
+      "frame_w": 16,
+      "frame_h": 15,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_fox": {
+      "file": "animal_fox.png",
+      "frame_w": 18,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_fox_jul": {
+      "file": "animal_fox_jul.png",
+      "frame_w": 18,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_frog": {
+      "file": "animal_frog.png",
+      "frame_w": 14,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_frog_jul": {
+      "file": "animal_frog_jul.png",
+      "frame_w": 14,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_garmvalp": {
+      "file": "animal_garmvalp.png",
+      "frame_w": 16,
+      "frame_h": 15,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_garmvalp_jul": {
+      "file": "animal_garmvalp_jul.png",
+      "frame_w": 16,
+      "frame_h": 15,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_goat": {
+      "file": "animal_goat.png",
+      "frame_w": 16,
+      "frame_h": 14,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_goat_jul": {
+      "file": "animal_goat_jul.png",
+      "frame_w": 16,
+      "frame_h": 14,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_gruvtroll": {
+      "file": "animal_gruvtroll.png",
+      "frame_w": 23,
+      "frame_h": 26,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_gruvtroll_jul": {
+      "file": "animal_gruvtroll_jul.png",
+      "frame_w": 23,
+      "frame_h": 26,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_guldbagge_tam": {
+      "file": "animal_guldbagge_tam.png",
+      "frame_w": 16,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_guldbagge_tam_jul": {
+      "file": "animal_guldbagge_tam_jul.png",
+      "frame_w": 16,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_gullinbursti": {
+      "file": "animal_gullinbursti.png",
+      "frame_w": 24,
+      "frame_h": 18,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_gullinbursti_jul": {
+      "file": "animal_gullinbursti_jul.png",
+      "frame_w": 24,
+      "frame_h": 18,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_gummy": {
+      "file": "animal_gummy.png",
+      "frame_w": 12,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_gummy_v1": {
+      "file": "animal_gummy_v1.png",
+      "frame_w": 12,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_gummy_v2": {
+      "file": "animal_gummy_v2.png",
+      "frame_w": 12,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_gummy_v3": {
+      "file": "animal_gummy_v3.png",
+      "frame_w": 12,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_gummy_jul": {
+      "file": "animal_gummy_jul.png",
+      "frame_w": 12,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_gummy_jul_v1": {
+      "file": "animal_gummy_jul_v1.png",
+      "frame_w": 12,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_gummy_jul_v2": {
+      "file": "animal_gummy_jul_v2.png",
+      "frame_w": 12,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_gummy_jul_v3": {
+      "file": "animal_gummy_jul_v3.png",
+      "frame_w": 12,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_hare": {
+      "file": "animal_hare.png",
+      "frame_w": 14,
+      "frame_h": 14,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_hare_jul": {
+      "file": "animal_hare_jul.png",
+      "frame_w": 14,
+      "frame_h": 14,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_havshast": {
+      "file": "animal_havshast.png",
+      "frame_w": 33,
+      "frame_h": 30,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_havshast_jul": {
+      "file": "animal_havshast_jul.png",
+      "frame_w": 33,
+      "frame_h": 30,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_hedgehog": {
+      "file": "animal_hedgehog.png",
+      "frame_w": 14,
+      "frame_h": 10,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_hedgehog_jul": {
+      "file": "animal_hedgehog_jul.png",
+      "frame_w": 14,
+      "frame_h": 10,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_hen": {
+      "file": "animal_hen.png",
+      "frame_w": 16,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_hen_jul": {
+      "file": "animal_hen_jul.png",
+      "frame_w": 16,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_hen_baby": {
+      "file": "animal_hen_baby.png",
+      "frame_w": 16,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_hen_baby_jul": {
+      "file": "animal_hen_baby_jul.png",
+      "frame_w": 16,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_horse": {
+      "file": "animal_horse.png",
+      "frame_w": 26,
+      "frame_h": 24,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_horse_jul": {
+      "file": "animal_horse_jul.png",
+      "frame_w": 26,
+      "frame_h": 24,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_horse_baby": {
+      "file": "animal_horse_baby.png",
+      "frame_w": 26,
+      "frame_h": 24,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_horse_baby_jul": {
+      "file": "animal_horse_baby_jul.png",
+      "frame_w": 26,
+      "frame_h": 24,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_isvarg": {
+      "file": "animal_isvarg.png",
+      "frame_w": 22,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_isvarg_v1": {
+      "file": "animal_isvarg_v1.png",
+      "frame_w": 22,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_isvarg_jul": {
+      "file": "animal_isvarg_jul.png",
+      "frame_w": 22,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_isvarg_jul_v1": {
+      "file": "animal_isvarg_jul_v1.png",
+      "frame_w": 22,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_jattehjort": {
+      "file": "animal_jattehjort.png",
+      "frame_w": 34,
+      "frame_h": 38,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_jattehjort_jul": {
+      "file": "animal_jattehjort_jul.png",
+      "frame_w": 34,
+      "frame_h": 38,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_korp": {
+      "file": "animal_korp.png",
+      "frame_w": 20,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_korp_jul": {
+      "file": "animal_korp_jul.png",
+      "frame_w": 20,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_kustjatte": {
+      "file": "animal_kustjatte.png",
+      "frame_w": 38,
+      "frame_h": 48,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_kustjatte_jul": {
+      "file": "animal_kustjatte_jul.png",
+      "frame_w": 38,
+      "frame_h": 48,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_lizard": {
+      "file": "animal_lizard.png",
+      "frame_w": 16,
+      "frame_h": 8,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_lizard_jul": {
+      "file": "animal_lizard_jul.png",
+      "frame_w": 16,
+      "frame_h": 8,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_ljushjort": {
+      "file": "animal_ljushjort.png",
+      "frame_w": 34,
+      "frame_h": 38,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_ljushjort_jul": {
+      "file": "animal_ljushjort_jul.png",
+      "frame_w": 34,
+      "frame_h": 38,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_lokeshast": {
+      "file": "animal_lokeshast.png",
+      "frame_w": 31,
+      "frame_h": 28,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_lokeshast_jul": {
+      "file": "animal_lokeshast_jul.png",
+      "frame_w": 31,
+      "frame_h": 28,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_lynx": {
+      "file": "animal_lynx.png",
+      "frame_w": 18,
+      "frame_h": 13,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_lynx_jul": {
+      "file": "animal_lynx_jul.png",
+      "frame_w": 18,
+      "frame_h": 13,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_manet_tam": {
+      "file": "animal_manet_tam.png",
+      "frame_w": 12,
+      "frame_h": 15,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_manet_tam_jul": {
+      "file": "animal_manet_tam_jul.png",
+      "frame_w": 12,
+      "frame_h": 15,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_monkey": {
+      "file": "animal_monkey.png",
+      "frame_w": 16,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_monkey_jul": {
+      "file": "animal_monkey_jul.png",
+      "frame_w": 16,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_moose": {
+      "file": "animal_moose.png",
+      "frame_w": 28,
+      "frame_h": 26,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_moose_jul": {
+      "file": "animal_moose_jul.png",
+      "frame_w": 28,
+      "frame_h": 26,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_mosspoke": {
+      "file": "animal_mosspoke.png",
+      "frame_w": 14,
+      "frame_h": 18,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_mosspoke_jul": {
+      "file": "animal_mosspoke_jul.png",
+      "frame_w": 14,
+      "frame_h": 18,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_parrot": {
+      "file": "animal_parrot.png",
+      "frame_w": 16,
+      "frame_h": 15,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_parrot_v1": {
+      "file": "animal_parrot_v1.png",
+      "frame_w": 16,
+      "frame_h": 15,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_parrot_v2": {
+      "file": "animal_parrot_v2.png",
+      "frame_w": 16,
+      "frame_h": 15,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_parrot_jul": {
+      "file": "animal_parrot_jul.png",
+      "frame_w": 16,
+      "frame_h": 15,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_parrot_jul_v1": {
+      "file": "animal_parrot_jul_v1.png",
+      "frame_w": 16,
+      "frame_h": 15,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_parrot_jul_v2": {
+      "file": "animal_parrot_jul_v2.png",
+      "frame_w": 16,
+      "frame_h": 15,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_penguin": {
+      "file": "animal_penguin.png",
+      "frame_w": 12,
+      "frame_h": 14,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_penguin_jul": {
+      "file": "animal_penguin_jul.png",
+      "frame_w": 12,
+      "frame_h": 14,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_pig": {
+      "file": "animal_pig.png",
+      "frame_w": 18,
+      "frame_h": 14,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_pig_jul": {
+      "file": "animal_pig_jul.png",
+      "frame_w": 18,
+      "frame_h": 14,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_pig_baby": {
+      "file": "animal_pig_baby.png",
+      "frame_w": 18,
+      "frame_h": 14,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_pig_baby_jul": {
+      "file": "animal_pig_baby_jul.png",
+      "frame_w": 18,
+      "frame_h": 14,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_rabbit": {
+      "file": "animal_rabbit.png",
+      "frame_w": 16,
+      "frame_h": 14,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_rabbit_jul": {
+      "file": "animal_rabbit_jul.png",
+      "frame_w": 16,
+      "frame_h": 14,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_rabbit_baby": {
+      "file": "animal_rabbit_baby.png",
+      "frame_w": 16,
+      "frame_h": 14,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_rabbit_baby_jul": {
+      "file": "animal_rabbit_baby_jul.png",
+      "frame_w": 16,
+      "frame_h": 14,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_rymdkryp": {
+      "file": "animal_rymdkryp.png",
+      "frame_w": 16,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_rymdkryp_jul": {
+      "file": "animal_rymdkryp_jul.png",
+      "frame_w": 16,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_salamander": {
+      "file": "animal_salamander.png",
+      "frame_w": 18,
+      "frame_h": 8,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_salamander_jul": {
+      "file": "animal_salamander_jul.png",
+      "frame_w": 18,
+      "frame_h": 8,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_sandande": {
+      "file": "animal_sandande.png",
+      "frame_w": 16,
+      "frame_h": 19,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_sandande_jul": {
+      "file": "animal_sandande_jul.png",
+      "frame_w": 16,
+      "frame_h": 19,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_sheep": {
+      "file": "animal_sheep.png",
+      "frame_w": 18,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_sheep_jul": {
+      "file": "animal_sheep_jul.png",
+      "frame_w": 18,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_sheep_baby": {
+      "file": "animal_sheep_baby.png",
+      "frame_w": 18,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_sheep_baby_jul": {
+      "file": "animal_sheep_baby_jul.png",
+      "frame_w": 18,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_sjodraug": {
+      "file": "animal_sjodraug.png",
+      "frame_w": 20,
+      "frame_h": 23,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_sjodraug_jul": {
+      "file": "animal_sjodraug_jul.png",
+      "frame_w": 20,
+      "frame_h": 23,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_skuggalv": {
+      "file": "animal_skuggalv.png",
+      "frame_w": 19,
+      "frame_h": 24,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_skuggalv_jul": {
+      "file": "animal_skuggalv_jul.png",
+      "frame_w": 19,
+      "frame_h": 24,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_sleipner": {
+      "file": "animal_sleipner.png",
+      "frame_w": 30,
+      "frame_h": 26,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_sleipner_jul": {
+      "file": "animal_sleipner_jul.png",
+      "frame_w": 30,
+      "frame_h": 26,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_slime": {
+      "file": "animal_slime.png",
+      "frame_w": 14,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_slime_jul": {
+      "file": "animal_slime_jul.png",
+      "frame_w": 14,
+      "frame_h": 12,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_snotroll": {
+      "file": "animal_snotroll.png",
+      "frame_w": 16,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_snotroll_jul": {
+      "file": "animal_snotroll_jul.png",
+      "frame_w": 16,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_sockerspoke": {
+      "file": "animal_sockerspoke.png",
+      "frame_w": 18,
+      "frame_h": 23,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_sockerspoke_jul": {
+      "file": "animal_sockerspoke_jul.png",
+      "frame_w": 18,
+      "frame_h": 23,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_troll": {
+      "file": "animal_troll.png",
+      "frame_w": 18,
+      "frame_h": 22,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_troll_jul": {
+      "file": "animal_troll_jul.png",
+      "frame_w": 18,
+      "frame_h": 22,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_trollunge": {
+      "file": "animal_trollunge.png",
+      "frame_w": 18,
+      "frame_h": 17,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_trollunge_jul": {
+      "file": "animal_trollunge_jul.png",
+      "frame_w": 18,
+      "frame_h": 17,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_ulvvalp": {
+      "file": "animal_ulvvalp.png",
+      "frame_w": 16,
+      "frame_h": 15,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_ulvvalp_jul": {
+      "file": "animal_ulvvalp_jul.png",
+      "frame_w": 16,
+      "frame_h": 15,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_vandrardraug": {
+      "file": "animal_vandrardraug.png",
+      "frame_w": 20,
+      "frame_h": 24,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_vandrardraug_jul": {
+      "file": "animal_vandrardraug_jul.png",
+      "frame_w": 20,
+      "frame_h": 24,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_wolf": {
+      "file": "animal_wolf.png",
+      "frame_w": 20,
+      "frame_h": 14,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_wolf_jul": {
+      "file": "animal_wolf_jul.png",
+      "frame_w": 20,
+      "frame_h": 14,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "npc_greta": {
+      "file": "npc_greta.png",
+      "frame_w": 16,
+      "frame_h": 32,
+      "columns": 12,
+      "frames": [
+        "down0",
+        "down1",
+        "down2",
+        "up0",
+        "up1",
+        "up2",
+        "left0",
+        "left1",
+        "left2",
+        "right0",
+        "right1",
+        "right2"
+      ],
+      "headroom": 8
+    },
+    "npc_sven": {
+      "file": "npc_sven.png",
+      "frame_w": 16,
+      "frame_h": 32,
+      "columns": 12,
+      "frames": [
+        "down0",
+        "down1",
+        "down2",
+        "up0",
+        "up1",
+        "up2",
+        "left0",
+        "left1",
+        "left2",
+        "right0",
+        "right1",
+        "right2"
+      ],
+      "headroom": 8
+    },
+    "npc_elsa": {
+      "file": "npc_elsa.png",
+      "frame_w": 16,
+      "frame_h": 32,
+      "columns": 12,
+      "frames": [
+        "down0",
+        "down1",
+        "down2",
+        "up0",
+        "up1",
+        "up2",
+        "left0",
+        "left1",
+        "left2",
+        "right0",
+        "right1",
+        "right2"
+      ],
+      "headroom": 8
+    },
+    "npc_bo": {
+      "file": "npc_bo.png",
+      "frame_w": 16,
+      "frame_h": 32,
+      "columns": 12,
+      "frames": [
+        "down0",
+        "down1",
+        "down2",
+        "up0",
+        "up1",
+        "up2",
+        "left0",
+        "left1",
+        "left2",
+        "right0",
+        "right1",
+        "right2"
+      ],
+      "headroom": 8
+    },
+    "npc_pino": {
+      "file": "npc_pino.png",
+      "frame_w": 16,
+      "frame_h": 32,
+      "columns": 12,
+      "frames": [
+        "down0",
+        "down1",
+        "down2",
+        "up0",
+        "up1",
+        "up2",
+        "left0",
+        "left1",
+        "left2",
+        "right0",
+        "right1",
+        "right2"
+      ],
+      "headroom": 8
+    },
+    "npc_stina": {
+      "file": "npc_stina.png",
+      "frame_w": 16,
+      "frame_h": 32,
+      "columns": 12,
+      "frames": [
+        "down0",
+        "down1",
+        "down2",
+        "up0",
+        "up1",
+        "up2",
+        "left0",
+        "left1",
+        "left2",
+        "right0",
+        "right1",
+        "right2"
+      ],
+      "headroom": 8
+    },
+    "npc_lind": {
+      "file": "npc_lind.png",
+      "frame_w": 16,
+      "frame_h": 32,
+      "columns": 12,
+      "frames": [
+        "down0",
+        "down1",
+        "down2",
+        "up0",
+        "up1",
+        "up2",
+        "left0",
+        "left1",
+        "left2",
+        "right0",
+        "right1",
+        "right2"
+      ],
+      "headroom": 8
+    },
+    "npc_sigrun": {
+      "file": "npc_sigrun.png",
+      "frame_w": 16,
+      "frame_h": 32,
+      "columns": 12,
+      "frames": [
+        "down0",
+        "down1",
+        "down2",
+        "up0",
+        "up1",
+        "up2",
+        "left0",
+        "left1",
+        "left2",
+        "right0",
+        "right1",
+        "right2"
+      ],
+      "headroom": 8
     }
   }
 }

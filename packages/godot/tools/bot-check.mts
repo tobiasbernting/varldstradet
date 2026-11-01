@@ -5,6 +5,10 @@
 // the same server tick, the numbers agree. Exit code 0 when all of that holds. `pnpm godot:bot` runs it; the
 // Godot workflow runs it on every pull request so a later milestone cannot break the fight quietly.
 //
+// A third bot (M4a) takes the real way instead of the dev one: it walks across the farm, the forest and the forest
+// beyond to Draugkryptan's arch and uses it, and the check is that it arrives in saga:draug through the server's normal
+// path (travel at the edges, `act` on the arch) with the dev message never sent.
+//
 //   GODOT=~/godot/godot pnpm godot:bot            (GODOT defaults to `godot` on the PATH)
 //   BOT_SECONDS=120 BOT_PORT=8097 BOT_PACKS=1     (optional)
 import { spawn, type ChildProcess } from 'node:child_process';
@@ -21,6 +25,7 @@ const port = Number(process.env.BOT_PORT ?? 8097);
 const seconds = Number(process.env.BOT_SECONDS ?? 120);
 const packs = Number(process.env.BOT_PACKS ?? 1);
 const names = ['Bot-Ask', 'Bot-Embla'];
+const walkerName = 'Bot-Vandrare';
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'varldstradet-bot-'));
 
 interface Report {
@@ -49,6 +54,9 @@ interface Report {
   errors: string[];
   packs_beaten: number;
   area: string;
+  route: string[];
+  arrived_via_arch: boolean;
+  dev_sent: boolean;
   summary?: string;
 }
 
@@ -106,7 +114,8 @@ async function main(): Promise<void> {
   try {
     await waitFor(`http://localhost:${port}/api/gate`, 60_000);
     console.log('server: up');
-    const bots = names.map((name, i) => {
+    const only = process.env.BOT_ONLY === 'walker';
+    const bots = (only ? [] : names).map((name, i) => {
       const report = path.join(tmp, `${name}.json`);
       const log = path.join(tmp, `${name}.log`);
       // 127.0.0.1, not localhost: the server listens on IPv4 and a resolver may try ::1 first
@@ -114,8 +123,16 @@ async function main(): Promise<void> {
       console.log(`bot ${i + 1}: ${godot} ${args.join(' ')}`);
       return { name, report, log, child: run(godot, args, { cwd: godotDir, log }) };
     });
-    const codes = await Promise.all(bots.map((b) => exited(b.child, (seconds + 40) * 1000)));
-    const reports: (Report | null)[] = bots.map((b, i) => {
+    const walker = (() => {
+      const report = path.join(tmp, `${walkerName}.json`);
+      const log = path.join(tmp, `${walkerName}.log`);
+      const args = ['--headless', '--path', godotDir, '--', '--bot', `--server=http://127.0.0.1:${port}`, `--name=${walkerName}`, `--report=${report}`, `--seconds=${seconds}`, '--route=arch'];
+      console.log(`walker: ${godot} ${args.join(' ')}`);
+      return { name: walkerName, report, log, child: run(godot, args, { cwd: godotDir, log }) };
+    })();
+    const all = [...bots, walker];
+    const codes = await Promise.all(all.map((b) => exited(b.child, (seconds + 40) * 1000)));
+    const reports: (Report | null)[] = all.map((b, i) => {
       console.log(`\n--- ${b.name} (exit ${codes[i] === null ? 'killed' : codes[i]}) ---`);
       const log = fs.existsSync(b.log) ? fs.readFileSync(b.log, 'utf8') : '';
       for (const line of log.split('\n').filter((l) => l.startsWith('bot ') || /SCRIPT ERROR|ERROR/.test(l)).slice(0, 60)) console.log(line);
@@ -129,10 +146,18 @@ async function main(): Promise<void> {
     for (const r of reports) {
       if (!r) continue;
       check(r.errors.length === 0, `${r.name}: no errors (${r.errors.join('; ') || 'none'})`);
-      const botLog = bots.find((b) => b.name === r.name)?.log;
+      const botLog = all.find((b) => b.name === r.name)?.log;
       const exitErrors = (botLog && fs.existsSync(botLog) ? fs.readFileSync(botLog, 'utf8') : '').split('\n').filter((l) => /leaked at exit|still in use at exit|Pages in use exist at exit/.test(l));
       check(exitErrors.length === 0, `${r.name}: exits clean, nothing leaked at exit (${exitErrors[0] ?? 'none'})`);
       check(r.area.startsWith('saga:'), `${r.name}: entered the dungeon (${r.area || 'never'})`);
+      if (r.name === walkerName) {
+        // the real way in: across the farm, through two forests, through the arch; the dev message never sent
+        const want = ['farm', 'a:0,-1', 'a:-1,-1', 'saga:draug'];
+        check(JSON.stringify(r.route) === JSON.stringify(want), `${r.name}: walked ${r.route.join(' → ')}`);
+        check(r.area === 'saga:draug', `${r.name}: arrived in saga:draug through the arch (${r.area || 'never'}) after ${r.seconds.toFixed(0)} s`);
+        check(r.arrived_via_arch && !r.dev_sent, `${r.name}: the dev way was never used (dev_sent ${r.dev_sent})`);
+        continue;
+      }
       check(r.casts_sent > 0, `${r.name}: sent casts (${r.casts_sent})`);
       check(r.casts_acked > 0, `${r.name}: the server acknowledged its casts (${r.casts_acked} of ${r.casts_sent}: ${JSON.stringify(r.spells_acked)})`);
       check(Object.keys(r.spells_acked).length >= 4, `${r.name}: all four spells went off at least once (${Object.keys(r.spells_acked).join(', ')})`);
@@ -145,7 +170,7 @@ async function main(): Promise<void> {
       check(r.hearts.length > 0, `${r.name}: saw its own hearts (${r.hearts.length} samples, last ${JSON.stringify(r.hearts.at(-1))})`);
       console.log(`     ${r.name}: zones seen ${r.zones_seen}, stepped out ${r.stepped_out}, fell ${r.fell}`);
     }
-    const [a, b] = reports;
+    const [a, b] = only ? [undefined, undefined] : reports.slice(0, 2);
     if (a && b) {
       check(a.others_casts > 0, `${a.name} saw ${b.name}'s casts (${a.others_casts}: ${JSON.stringify(a.others)})`);
       check(b.others_casts > 0, `${b.name} saw ${a.name}'s casts (${b.others_casts}: ${JSON.stringify(b.others)})`);

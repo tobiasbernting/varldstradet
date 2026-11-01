@@ -4,6 +4,10 @@ extends Node
 
 var _t: Dictionary = {}
 var _seasons: Dictionary = {}
+var _weather_names: Dictionary = {}
+var _weather_emoji: Dictionary = {}
+var _places: Dictionary = {}
+var _objects: Dictionary = {}
 
 
 func _ready() -> void:
@@ -12,6 +16,10 @@ func _ready() -> void:
 	if parsed is Dictionary:
 		_t = parsed.get("T", {})
 		_seasons = parsed.get("SEASON_NAMES", {})
+		_weather_names = parsed.get("WEATHER_NAMES", {})
+		_weather_emoji = parsed.get("WEATHER_EMOJI", {})
+		_places = parsed.get("BIOME_NAMES", {})
+		_objects = parsed.get("OBJECT_NAMES", {})
 	else:
 		push_error("assets/sv.json is missing or broken: run `pnpm godot:strings`")
 
@@ -32,3 +40,20 @@ func list(key: String) -> Array:
 
 func season(id: String) -> String:
 	return str(_seasons.get(id, id))
+
+
+func weather(id: String) -> String:
+	return str(_weather_names.get(id, id))
+
+
+func weather_emoji(id: String) -> String:
+	return str(_weather_emoji.get(id, ""))
+
+
+## The name of a map: "farm", or a wild map's biome ("skog"); "ang" is the fallback place.
+func place(biome: String) -> String:
+	return str(_places.get(biome, _places.get("ang", biome)))
+
+
+func object_name(kind: String) -> String:
+	return str(_objects.get(kind, kind))

@@ -8,6 +8,10 @@ extends Node
 var constants: Dictionary = {}
 var wall_terrain: Dictionary = {} ## terrain -> true, for ground nobody walks on (WALL_TERRAIN)
 var objects: Dictionary = {}
+var crops: Dictionary = {}
+var npcs: Dictionary = {}
+var animals: Dictionary = {}
+var portals: Array = []
 var dungeons: Dictionary = {}
 var mobs: Dictionary = {}
 var bosses: Dictionary = {}
@@ -31,6 +35,10 @@ func _ready() -> void:
 		for t in g.get("wallTerrain", []):
 			wall_terrain[str(t)] = true
 		objects = g.get("objects", {})
+		crops = g.get("crops", {})
+		npcs = g.get("npcs", {})
+		animals = g.get("animals", {})
+		portals = g.get("portals", [])
 		dungeons = g.get("dungeons", {})
 		mobs = g.get("mobs", {})
 		bosses = g.get("bosses", {})
@@ -193,3 +201,23 @@ func item_icon(id: String) -> Texture2D:
 	var kind := str(item(id).get("kind", ""))
 	var by_kind := {"weapon": "ui_sword", "offhand": "ui_shield", "potion": "ui_potion", "quest": "ui_box", "material": "ui_box"}
 	return icon(str(by_kind.get(kind, "ui_chest")))
+
+
+## The sheet of a farm or wild animal: its own (baby, winter and colour variants when they exist), "" when none.
+func animal_sheet(species: String, baby: bool, jul: bool, variant: int) -> String:
+	var info: Dictionary = atlas.get("farm_animals", {}).get(species, {})
+	if info.is_empty():
+		return ""
+	var n := "animal_" + species
+	if baby and bool(info.get("baby", false)):
+		n += "_baby"
+	if jul and bool(info.get("jul", false)):
+		n += "_jul"
+	var variants := int(info.get("variants", 1))
+	if variants > 1 and variant % variants > 0:
+		n += "_v%d" % (variant % variants)
+	return n if not sheet(n).is_empty() else ""
+
+
+func npc_sheet(id: String) -> String:
+	return str(atlas.get("npcs", {}).get(id, {}).get("sheet", ""))

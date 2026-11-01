@@ -104,6 +104,48 @@ jobs:
             echo "::error::the scripted fight reported errors (see above)"; exit 1
           fi
 
+      - name: Run the farm and the forest demos headless for a moment (the farm view, the sky, the sprites and the HUD run on the recorded maps)
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          for demo in farm forest; do
+            timeout 120 ~/godot/godot --headless --path . --quit-after 300 -- --demo=$demo --time=0.9 --weather=rain 2>&1 | tee "demo-$demo.log"
+            if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate|leaked at exit|still in use at exit|Pages in use exist at exit" "demo-$demo.log"; then
+              echo "::error::the $demo demo reported errors or leaked at exit (see above)"; exit 1
+            fi
+            grep -q "drawn (outdoor)" "demo-$demo.log" || { echo "::error::the $demo demo drew nothing"; exit 1; }
+          done
+
+      - name: Pictures of the farm under Xvfb (day, night, rain; software GL) and the farm bench
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y -q xvfb libgl1-mesa-dri mesa-vulkan-drivers
+          mkdir -p "$GITHUB_WORKSPACE/shots"
+          shot() { # name, demo args...
+            local name="$1"; shift
+            xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- "$@" --screenshot="$GITHUB_WORKSPACE/shots/$name.png" 2>&1 | tee "shot-$name.log"
+            if grep -E "SCRIPT ERROR|Parse Error|leaked at exit|still in use at exit|Pages in use exist at exit" "shot-$name.log"; then
+              echo "::error::$name: errors or leaks (see above)"; exit 1
+            fi
+            test "$(stat -c %s "$GITHUB_WORKSPACE/shots/$name.png")" -gt 20000
+          }
+          shot farm-day --demo=farm --at=18,14 --time=0.4
+          shot farm-night --demo=farm --at=16,12 --time=0.9
+          shot farm-rain --demo=farm --at=16,12 --time=0.4 --weather=rain
+          shot forest-arch --demo=forest
+          xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- --bench=mellan --scene=farm 2>&1 | tee bench-farm.log
+          grep -q "bench: done" bench-farm.log
+          if grep -E "SCRIPT ERROR|leaked at exit|still in use at exit|Pages in use exist at exit" bench-farm.log; then
+            echo "::error::the farm bench reported errors or leaked at exit"; exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: farm-screenshots
+          path: shots/*.png
+          if-no-files-found: error
+
       - name: Run the bench headless for a moment (the bench's scripts run and the process exits clean; headless frame times mean nothing)
         working-directory: packages/godot
         run: |
