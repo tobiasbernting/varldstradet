@@ -107,7 +107,8 @@ async function main(): Promise<void> {
     const bots = names.map((name, i) => {
       const report = path.join(tmp, `${name}.json`);
       const log = path.join(tmp, `${name}.log`);
-      const args = ['--headless', '--path', godotDir, '--', '--bot', `--server=http://localhost:${port}`, `--name=${name}`, `--report=${report}`, `--seconds=${seconds}`, `--packs=${packs}`];
+      // 127.0.0.1, not localhost: the server listens on IPv4 and a resolver may try ::1 first
+      const args = ['--headless', '--path', godotDir, '--', '--bot', `--server=http://127.0.0.1:${port}`, `--name=${name}`, `--report=${report}`, `--seconds=${seconds}`, `--packs=${packs}`];
       console.log(`bot ${i + 1}: ${godot} ${args.join(' ')}`);
       return { name, report, log, child: run(godot, args, { cwd: godotDir, log }) };
     });
@@ -168,6 +169,12 @@ async function main(): Promise<void> {
   }
   console.log(`\nlogs and reports in ${tmp}`);
   if (failures.length) {
+    // the whole story, for a failure nobody can reproduce by hand (CI)
+    for (const f of fs.readdirSync(tmp).filter((n) => n.endsWith('.log'))) {
+      const lines = fs.readFileSync(path.join(tmp, f), 'utf8').split('\n');
+      console.log(`\n--- ${f} (last ${Math.min(80, lines.length)} of ${lines.length} lines) ---`);
+      console.log(lines.slice(-80).join('\n'));
+    }
     console.log(`\n${failures.length} check(s) failed`);
     process.exit(1);
   }

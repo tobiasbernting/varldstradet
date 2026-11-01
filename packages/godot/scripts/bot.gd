@@ -60,6 +60,10 @@ func _ready() -> void:
 	world.model.change.connect(_on_change)
 	world.model.snapshot.connect(_on_snapshot)
 	world.model.error.connect(func(text: String) -> void: _error("server: " + text))
+	Net.connection_changed.connect(func(status: String, code: int) -> void: _log("socket %s (%d) %s" % [status, code, Settings.ws_url()]))
+	Net.message.connect(func(msg: Dictionary) -> void:
+		if str(msg.get("t", "")) == "welcome":
+			_log("welcome as %s" % str(msg.get("you", ""))))
 	world.model.area_changed.connect(func(key: String) -> void:
 		if Data.dungeon_of_key(key) == dungeon_id and _phase == "enter":
 			_report["area"] = key
