@@ -49,7 +49,6 @@ import {
   gearStats,
   heroLevel,
   isBathKey,
-  isHallKey,
   isSagaKey,
   itemName,
   landmarkKind,
@@ -381,7 +380,7 @@ const clock = (ms: number): string => {
 
 /** Where someone is, for the family list. */
 function placeOf(area: string): string {
-  if (area === 'farm' || area === 'dungeon' || isBathKey(area) || isHallKey(area)) return areaName(area);
+  if (area === 'farm' || area === 'dungeon' || isBathKey(area)) return areaName(area);
   if (isSagaKey(area)) return `⚔️ ${areaName(area)}`;
   const biome = client.biomes[area] ?? client.areas[area]?.biome;
   return `${placeEmoji(biome)} ${placeName(biome)}`;

@@ -7,7 +7,6 @@
 // from the top left. Each ground has a few variants, picked per tile with hash2, so nothing looks tiled.
 import { isCliff, type Terrain } from '@lilla-garden/shared';
 import { Px, hash2, hexToRgb, rgbToHex, shade } from './px.js';
-import { CARPET_TILES, carpetTiles } from './arcade.ts';
 import { bifrostTiles, cryptTiles, forgeTiles } from './saga.ts';
 
 export interface BiomeTerrain {
@@ -991,7 +990,6 @@ export function addBiomeTerrain(add: (p: Px) => number): BiomeTerrain {
   const redsand = n(3, (v) => put(redsandTile(v)));
   const candy = n(3, (v) => put(candyTile(v)));
   const space = n(6, (v) => put(spaceTile(v)));
-  const carpet = carpetTiles().map(add);
   const crypt = cryptTiles().map(add);
   const forge = forgeTiles().map(add);
   const bifrost = bifrostTiles().map(add);
@@ -1043,8 +1041,6 @@ export function addBiomeTerrain(add: (p: Px) => number): BiomeTerrain {
           return weighted(candy, W.candy, h);
         case 'space':
           return weighted(space, W.space, h);
-        case 'carpet': // one big pattern over 8×8 tiles
-          return carpet[(x % CARPET_TILES) + CARPET_TILES * (y % CARPET_TILES)]!;
         case 'crypt':
           return weighted(crypt, W.crypt, h);
         case 'forge':

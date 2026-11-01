@@ -2,7 +2,7 @@
 // the sky's ambient colour and gets every lamp, torch, window and lantern added in. Glows go on top after that, and
 // the things that shine by themselves (lit windows, flames, fireflies, lightning) are drawn last, unlit.
 import { EngineObject, Light, LightSystemPlugin, engineAddPlugin, lightSystem, rgb, vec2 } from 'littlejsengine';
-import { ARCADE, ARCADE_GAMES, DUNGEONS, TILE, type DungeonId } from '@lilla-garden/shared';
+import { DUNGEONS, TILE, type DungeonId } from '@lilla-garden/shared';
 
 export interface LampSpec {
   /** Colour of the light, 0..1. */
@@ -118,8 +118,6 @@ export function setAmbient(r: number, g: number, b: number): void {
 
 const WARM: [number, number, number] = [1, 0.72, 0.42];
 const FIRE: [number, number, number] = [1, 0.58, 0.26];
-const NEON_PINK: [number, number, number] = [1, 0.32, 0.85];
-const NEON_CYAN: [number, number, number] = [0.3, 0.88, 1];
 
 /**
  * How dark each dungeon is and how strongly its lamps shine: the frost castle's snow throws light back, so its
@@ -239,13 +237,6 @@ export function lampForAnimal(species: string): LampSpec | null {
   }
 }
 
-/** A minigame's colour (ARCADE_GAMES index) as light: a little paler than the paint, so it reads as a glow. */
-const gameLight = (i: number): [number, number, number] => {
-  const hex = ARCADE[ARCADE_GAMES[((i % ARCADE_GAMES.length) + ARCADE_GAMES.length) % ARCADE_GAMES.length]!].color;
-  const n = parseInt(hex.slice(1), 16);
-  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255].map((v) => 0.2 + 0.8 * v) as [number, number, number];
-};
-
 /** The lamp an object carries, if any. */
 export function lampFor(kind: string, variant: number | undefined): LampSpec | null {
   switch (kind) {
@@ -320,26 +311,6 @@ export function lampFor(kind: string, variant: number | undefined): LampSpec | n
     case 'market':
     case 'bathhouse':
       return { color: WARM, radius: 4.5, strength: 0.7, flicker: 0.05, glow: 2 };
-    // Minigames: the TV at home; Spelhallen's neon, its machines (each in its game's colour), the counter, the board
-    case 'tv':
-      return { color: [0.55, 0.75, 1], radius: 3, strength: 0.7, flicker: 0.9, glow: 1.2 };
-    case 'arcade_hall':
-      return { color: NEON_PINK, radius: 4.5, strength: 0.85, flicker: 0.1, glow: 4, cycle: [NEON_PINK, NEON_CYAN], cycleSec: 3 };
-    // Rallyvärlden's garage: warm workshop light from the windows and the half-open door, tinted by the beacons
-    case 'rally_garage':
-      return { color: WARM, radius: 4.5, strength: 0.75, flicker: 0.05, glow: 2, cycle: [WARM, [1, 0.62, 0.2]], cycleSec: 1.6 };
-    case 'arcade_machine':
-      return { color: gameLight(variant ?? 0), radius: 2.2, strength: 0.6, flicker: 0.25, glow: 1, always: true };
-    case 'prize_counter':
-      return { color: WARM, radius: 3.2, strength: 0.6, flicker: 0.05, glow: 1.4, always: true };
-    case 'score_board':
-      return { color: [0.85, 0.92, 1], radius: 3, strength: 0.6, flicker: 0.05, glow: 1.4, always: true };
-    case 'lava_lamp':
-      return { color: [1, 0.5, 0.45], radius: 2.6, strength: 0.75, flicker: 0.15, glow: 1.2, cycle: [[1, 0.55, 0.3], [1, 0.4, 0.62]], cycleSec: 4 };
-    case 'disco_ball':
-      return { color: [0.92, 0.82, 1], radius: 3.4, strength: 0.8, glow: 1.4, sparkle: 0.8, cycle: [NEON_PINK, NEON_CYAN, [1, 0.9, 0.4], [0.7, 0.5, 1]], cycleSec: 1.2 };
-    case 'neon_sign':
-      return { color: (variant ?? 0) % 2 === 1 ? NEON_CYAN : NEON_PINK, radius: 2.4, strength: 0.7, flicker: 0.08, glow: 1.2 };
     // Sagan om Världsträdet: each dungeon's torches, the daylight down the stairs out, a rest stone once it is lit,
     // candles, ice crystals, braziers and lava cracks; out in the world the arches, Kämpastenen and the keepsakes
     case 'saga_torch':

@@ -159,10 +159,6 @@ export class Net {
       case 'error':
         bus.emit('toast', msg.text);
         break;
-      case 'race':
-      case 'roam':
-        bus.emit('rally', msg);
-        break;
       case 'voice':
         bus.emit('voice', msg);
         break;

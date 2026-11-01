@@ -42,8 +42,6 @@ export interface Events {
   weather: WeatherState | null;
   /** Dungeons: the monster or friend you aim at changed. */
   target: void;
-  /** Rallyvärlden: the lobby, the race and free roam from the server (ui/rally.ts). */
-  rally: Extract<ServerMsg, { t: 'race' | 'roam' }>;
   /** Röstprat: rooms, speakers, the handshake and who is talking (ui/voice.ts). */
   voice: Extract<ServerMsg, { t: 'voice' }>;
 }
