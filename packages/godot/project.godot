@@ -13,7 +13,7 @@ config_version=5
 config/name="Sagan om Världsträdet"
 config/description="The family's farm and saga, as a native game. Milestone M3b: login with a join code, Draugkryptan on screen, and the Krigare fighting in it with the family."
 run/main_scene="res://scenes/main.tscn"
-config/features=PackedStringArray("4.6", "Forward Plus")
+config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]

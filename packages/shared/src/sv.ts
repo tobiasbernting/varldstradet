@@ -893,7 +893,7 @@ export const T = {
   // The native client (Godot)
   serverUrl: 'Serverns adress',
   serverUrlHint: 'T.ex. https://gard.example.se – fråga den som har gården.',
-  serverUnreachable: 'Nådde inte servern på {url}.',
+  serverUnreachable: 'Servern svarar inte på {url}. Startade du den?',
   deviceName: 'Vad heter den här datorn?',
   forgetDevice: 'Glöm den här enheten',
   worldOnline: '{n} online',

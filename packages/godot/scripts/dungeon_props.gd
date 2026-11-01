@@ -35,9 +35,13 @@ static func _mesh_node(mesh: Mesh, material: Material, at: Vector3, rot_y := 0.0
 
 
 ## The box behind every wall tile's faces: a whole 1 × 2 × 1 m block of dark stone.
+const WALL_TOP := 2.0 ## the height of a wall block, m
+
+
 static func wall_cap_mesh(tint: Color) -> BoxMesh:
 	var box := BoxMesh.new()
-	box.size = Vector3(1.0, 2.0, 1.0)
+	# 1 cm under the face slabs' top (dungeon_view.gd, WALL_TOP): the slab and the box must not share a plane
+	box.size = Vector3(1.0, WALL_TOP - 0.01, 1.0)
 	box.material = mat(KRYPTSTEN * tint * 0.55)
 	return box
 

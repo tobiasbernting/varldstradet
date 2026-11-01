@@ -12,7 +12,15 @@ extends Node3D
 const PIXEL := 1.0 / 16.0
 ## The KayKit floor tiles' top is 2.5 cm over 0: feet sit on it.
 const FOOT_LIFT := 0.03
+## A standing sprite is pulled this far toward the camera along the line of sight (the camera of world.gd looks
+## down at atan2(9.2, 8) = 49°: 0.5 m is 0.33 m nearer and 0.38 m higher). It looks the same on screen, but the
+## sprite then wins the depth test against a wall block within 0.5 m of it, so a hero standing against a wall in
+## front of or behind them is never cut off by it. Every sprite is pulled the same, so they still sort among
+## themselves by where they stand.
+const PULL := Vector3(0.0, 0.38, 0.33)
 const WALK_FPS := 6.0
+const BAR_BACK_PRIORITY := 10
+const BAR_FILL_PRIORITY := 11
 const FALLEN_TINT := Color(0.62, 0.62, 0.72)
 
 var sprite: Sprite3D
@@ -76,7 +84,7 @@ func set_sheet(sheet_name: String) -> bool:
 	_side_only = not _frames.has("down0")
 	sprite.texture = tex
 	sprite.region_enabled = true
-	sprite.position.y = _frame_h * PIXEL / 2.0 + FOOT_LIFT
+	sprite.position = Vector3(0.0, _frame_h * PIXEL / 2.0 + FOOT_LIFT, 0.0) + PULL
 	label.position.y = (_frame_h - _headroom) * PIXEL + 0.3
 	_show("right0" if _side_only else "down0")
 	return true
@@ -87,7 +95,7 @@ func _placeholder() -> void:
 	img.fill(Color(0.8, 0.3, 0.8))
 	sprite.texture = ImageTexture.create_from_image(img)
 	sprite.region_enabled = false
-	sprite.position.y = 24 * PIXEL / 2.0 + FOOT_LIFT
+	sprite.position = Vector3(0.0, 24 * PIXEL / 2.0 + FOOT_LIFT, 0.0) + PULL
 	label.position.y = 24 * PIXEL + 0.3
 	_frames = []
 	_frame_w = 16
@@ -154,7 +162,7 @@ func _tick_looks(delta: float) -> void:
 	if _lunge_t > 0.0:
 		_lunge_t -= delta
 		var k := clampf(_lunge_t / 0.18, 0.0, 1.0)
-		var base := Vector3(0.0, _frame_h * PIXEL / 2.0 + FOOT_LIFT, 0.0)
+		var base := Vector3(0.0, _frame_h * PIXEL / 2.0 + FOOT_LIFT, 0.0) + PULL
 		sprite.position = base + _lunge * sin(k * PI)
 		if _lunge_t <= 0.0:
 			sprite.position = base
@@ -203,7 +211,7 @@ func set_pose(p: String) -> void:
 		return
 	sprite.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
 	sprite.rotation = Vector3.ZERO
-	sprite.position = Vector3(0.0, _frame_h * PIXEL / 2.0 + FOOT_LIFT, 0.0)
+	sprite.position = Vector3(0.0, _frame_h * PIXEL / 2.0 + FOOT_LIFT, 0.0) + PULL
 	sprite.modulate = Color.WHITE
 	if p == "frozen":
 		_block = _ice_block()
@@ -273,9 +281,13 @@ func set_health(k: float, shown: bool, colour: Color, name_text := "") -> void:
 		return
 	if _bar == null:
 		_bar = Node3D.new()
-		var back := _quad(Vector2(1.0, 0.12), Color(0.1, 0.08, 0.08, 0.85))
+		# Both quads are alpha-blended with no depth test, so what draws first is decided by the distance of each
+		# one's middle to the camera. The fill's middle moves sideways with the health (and a monster's with its
+		# walk), which flips that order against the 1 mm of depth it had to the back panel: the panel (85 % opaque)
+		# then covers the fill and the bar jumps between full and empty. Explicit render priorities fix the order.
+		var back := _quad(Vector2(1.0, 0.12), Color(0.1, 0.08, 0.08, 0.85), BAR_BACK_PRIORITY)
 		_bar.add_child(back)
-		_bar_fill = _quad(Vector2(1.0, 0.12), colour)
+		_bar_fill = _quad(Vector2(1.0, 0.12), colour, BAR_FILL_PRIORITY)
 		_bar_fill.position.z = 0.001
 		_bar.add_child(_bar_fill)
 		_bar_name = Label3D.new()
@@ -301,7 +313,14 @@ func set_health(k: float, shown: bool, colour: Color, name_text := "") -> void:
 	_bar_name.scale.x = 1.0 / w
 
 
-func _quad(size: Vector2, colour: Color) -> MeshInstance3D:
+## The health the bar shows now, 0–1; -1 when there is no bar or it is hidden (the bot checks it never rises).
+func shown_health() -> float:
+	if _bar == null or not _bar.visible:
+		return -1.0
+	return _bar_fill.scale.x
+
+
+func _quad(size: Vector2, colour: Color, priority := 0) -> MeshInstance3D:
 	var q := QuadMesh.new()
 	q.size = size
 	var m := StandardMaterial3D.new()
@@ -310,6 +329,7 @@ func _quad(size: Vector2, colour: Color) -> MeshInstance3D:
 	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
 	m.albedo_color = colour
 	m.no_depth_test = true
+	m.render_priority = priority
 	var mi := MeshInstance3D.new()
 	mi.mesh = q
 	mi.material_override = m

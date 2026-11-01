@@ -172,6 +172,14 @@ func _make_environment(d: Dictionary) -> void:
 	env.volumetric_fog_density = 0.03
 	env.glow_intensity = 0.5
 	env.glow_bloom = 0.05
+	# Screen-space occlusion (Mellan and Hög; Forward+ only) darkens creases. Its defaults (a 1 m radius, intensity 2)
+	# are made for rooms: on 2 m walls seen from above they paint a dark band along every wall's foot and halos at the
+	# wall tops' edges. Small and light, it only gives the corners a little weight.
+	env.ssao_radius = 0.35
+	env.ssao_intensity = 1.0
+	env.ssao_power = 1.5
+	env.ssao_detail = 0.5
+	env.ssao_light_affect = 0.0
 	Quality.apply_environment(env)
 	_env = WorldEnvironment.new()
 	_env.environment = env
@@ -247,15 +255,22 @@ func _build_walls() -> void:
 		if not caps.has(chunk):
 			caps[chunk] = []
 			faces[chunk] = []
-		caps[chunk].append(Transform3D(Basis.IDENTITY, Vector3(x + 0.5, 1.0, y + 0.5)))
+		# the block's box is 1 cm lower than the wall (see wall_cap_mesh), so its top is never in the slabs' plane
+		caps[chunk].append(Transform3D(Basis.IDENTITY, Vector3(x + 0.5, (DungeonProps.WALL_TOP - 0.01) / 2.0, y + 0.5)))
+		var side := 0
 		for dir in [Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 0), Vector2i(-1, 0)]:
 			if not _is_open(x + dir.x, y + dir.y):
 				continue
 			var normal := Vector3(dir.x, 0.0, dir.y)
-			var origin := Vector3(x + 0.5, 0.0, y + 0.5) + normal * 0.5 - normal * 0.25
+			# The KayKit slab is 0.5 m thick and its outer face lay exactly in the box's side, and its top in the
+			# box's top: two surfaces in one plane, which flicker against each other (z-fighting, worst at the foot
+			# of the wall and on its top). Now the slab stands 1 cm proud of the box and 2 cm lower than the
+			# block's top (a further 1 mm per side, so two slabs meeting at a corner do not share a plane either).
+			var origin := Vector3(x + 0.5, 0.0, y + 0.5) + normal * 0.51 - normal * 0.25
 			var angle := atan2(-float(dir.x), float(dir.y))
 			# the model spans x 0..2 (×0.5 = 0..1): pre-shifted so the edge's midpoint is its middle
-			var t := Transform3D(Basis(Vector3.UP, angle), origin) * Transform3D(Basis.from_scale(Vector3.ONE * SCALE), Vector3(-0.5, 0.0, 0.0))
+			var t := Transform3D(Basis(Vector3.UP, angle), origin) * Transform3D(Basis(Vector3(SCALE, 0.0, 0.0), Vector3(0.0, SCALE * (0.99 - 0.001 * side), 0.0), Vector3(0.0, 0.0, SCALE)), Vector3(-0.5, 0.0, 0.0))
+			side += 1
 			faces[chunk].append(t)
 	var cap_mesh := DungeonProps.wall_cap_mesh(tint())
 	var face_mesh := _tinted_mesh(KAYKIT + "wall_half.gltf.glb", tint())
