@@ -171,4 +171,4 @@ func _finish() -> void:
 			var f := FileAccess.open(arg.substr(6), FileAccess.WRITE)
 			if f != null:
 				f.store_string("\n".join(_results) + "\n")
-	get_tree().quit()
+	(get_tree().current_scene as Main).quit_clean()

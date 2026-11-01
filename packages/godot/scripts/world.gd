@@ -631,7 +631,7 @@ func _process(delta: float) -> void:
 		if img != null:
 			img.save_png(_screenshot)
 			print("screenshot saved to %s" % _screenshot)
-		get_tree().quit()
+		(get_tree().current_scene as Main).quit_clean()
 
 
 ## Is this monster after me? The server keeps threat to itself, so the client reads it off the screen: a fighting

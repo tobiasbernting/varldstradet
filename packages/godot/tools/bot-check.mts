@@ -129,6 +129,9 @@ async function main(): Promise<void> {
     for (const r of reports) {
       if (!r) continue;
       check(r.errors.length === 0, `${r.name}: no errors (${r.errors.join('; ') || 'none'})`);
+      const botLog = bots.find((b) => b.name === r.name)?.log;
+      const exitErrors = (botLog && fs.existsSync(botLog) ? fs.readFileSync(botLog, 'utf8') : '').split('\n').filter((l) => /leaked at exit|still in use at exit|Pages in use exist at exit/.test(l));
+      check(exitErrors.length === 0, `${r.name}: exits clean, nothing leaked at exit (${exitErrors[0] ?? 'none'})`);
       check(r.area.startsWith('saga:'), `${r.name}: entered the dungeon (${r.area || 'never'})`);
       check(r.casts_sent > 0, `${r.name}: sent casts (${r.casts_sent})`);
       check(r.casts_acked > 0, `${r.name}: the server acknowledged its casts (${r.casts_acked} of ${r.casts_sent}: ${JSON.stringify(r.spells_acked)})`);

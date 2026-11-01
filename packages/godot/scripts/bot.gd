@@ -479,4 +479,4 @@ func _finish() -> void:
 			_log("could not write %s" % report_path)
 	Net.disconnect_now()
 	await get_tree().create_timer(0.5).timeout
-	get_tree().quit(0 if bool(_report["ok"]) else 1)
+	(get_tree().current_scene as Main).quit_clean(0 if bool(_report["ok"]) else 1)
