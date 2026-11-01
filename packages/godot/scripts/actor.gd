@@ -4,20 +4,40 @@ extends Node3D
 ## the saga's creatures, with a name over the head. The sheets come from assets/sprites (tools/export-sprites.mts).
 ## Heroes have four directions by three frames; creatures one side view (facing right) by two frames, mirrored for
 ## left. A missing sheet shows a plain magenta figure, so an unexported creature is visible rather than invisible.
+##
+## M3b adds what a fight shows on a body: a flash when hit, a lunge when swinging, lying flat when fallen, the ice
+## block or the web around a frozen friend, a health bar over the head, a chat or emote bubble, and the mark on the
+## monster that is after you.
 
 const PIXEL := 1.0 / 16.0
 ## The KayKit floor tiles' top is 2.5 cm over 0: feet sit on it.
 const FOOT_LIFT := 0.03
 const WALK_FPS := 6.0
+const FALLEN_TINT := Color(0.62, 0.62, 0.72)
 
 var sprite: Sprite3D
 var label: Label3D
 var _frames: Array = []
 var _frame_w := 16
 var _frame_h := 32
+var _headroom := 0
 var _side_only := false
 var _anim_t := 0.0
 var _last_facing := "down"
+var _flash_t := 0.0
+var _flash_colour := Color.WHITE
+var _lunge := Vector3.ZERO
+var _lunge_t := 0.0
+var pose := "" ## "", "down", "frozen", "web"
+var _block: Node3D = null
+var _bar: Node3D = null
+var _bar_fill: MeshInstance3D = null
+var _bar_name: Label3D = null
+var _bubble: Label3D = null
+var _bubble_icon: Sprite3D = null
+var _bubble_until := 0.0
+var _marker: Sprite3D = null
+var _marker_t := 0.0
 
 
 func _init() -> void:
@@ -35,6 +55,7 @@ func _init() -> void:
 	label.outline_size = 12
 	label.outline_modulate = Color("2b2419")
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.no_depth_test = true
 	add_child(label)
 
 
@@ -51,12 +72,12 @@ func set_sheet(sheet_name: String) -> bool:
 	_frames = s.get("frames", [])
 	_frame_w = int(s.get("frame_w", 16))
 	_frame_h = int(s.get("frame_h", 32))
-	var headroom := int(s.get("headroom", 0))
+	_headroom = int(s.get("headroom", 0))
 	_side_only = not _frames.has("down0")
 	sprite.texture = tex
 	sprite.region_enabled = true
 	sprite.position.y = _frame_h * PIXEL / 2.0 + FOOT_LIFT
-	label.position.y = (_frame_h - headroom) * PIXEL + 0.3
+	label.position.y = (_frame_h - _headroom) * PIXEL + 0.3
 	_show("right0" if _side_only else "down0")
 	return true
 
@@ -69,10 +90,31 @@ func _placeholder() -> void:
 	sprite.position.y = 24 * PIXEL / 2.0 + FOOT_LIFT
 	label.position.y = 24 * PIXEL + 0.3
 	_frames = []
+	_frame_w = 16
+	_frame_h = 24
+	_headroom = 0
 
 
 func set_label(text: String) -> void:
 	label.text = text
+
+
+## The figure's height in metres (without the headroom) and its width.
+func height() -> float:
+	return (_frame_h - _headroom) * PIXEL
+
+
+func width() -> float:
+	return _frame_w * PIXEL
+
+
+## The middle of the body in the scene (where things hit).
+func body_position() -> Vector3:
+	return global_position + Vector3(0.0, height() * 0.55, 0.0)
+
+
+func head_position() -> Vector3:
+	return global_position + Vector3(0.0, height() + 0.1, 0.0)
 
 
 func _show(frame_name: String) -> void:
@@ -84,11 +126,14 @@ func _show(frame_name: String) -> void:
 
 ## One frame of walking or standing, facing a way (down, up, left, right).
 func animate(facing: String, moving: bool, delta: float) -> void:
-	if moving:
+	if moving and pose == "":
 		_anim_t += delta
 	else:
 		_anim_t = 0.0
+	_tick_looks(delta)
 	if _frames.is_empty():
+		return
+	if pose == "down":
 		return
 	if _side_only:
 		if facing == "left" or facing == "right":
@@ -99,3 +144,220 @@ func animate(facing: String, moving: bool, delta: float) -> void:
 		sprite.flip_h = false
 		var step := 1 + int(_anim_t * WALK_FPS) % 2 if moving else 0
 		_show("%s%d" % [facing, step])
+
+
+func _tick_looks(delta: float) -> void:
+	if _flash_t > 0.0:
+		_flash_t -= delta
+		var k := clampf(_flash_t / 0.12, 0.0, 1.0)
+		sprite.modulate = (FALLEN_TINT if pose == "down" else Color.WHITE).lerp(_flash_colour, k)
+	if _lunge_t > 0.0:
+		_lunge_t -= delta
+		var k := clampf(_lunge_t / 0.18, 0.0, 1.0)
+		var base := Vector3(0.0, _frame_h * PIXEL / 2.0 + FOOT_LIFT, 0.0)
+		sprite.position = base + _lunge * sin(k * PI)
+		if _lunge_t <= 0.0:
+			sprite.position = base
+	if _bubble != null and _bubble_until > 0.0 and Time.get_ticks_msec() > _bubble_until:
+		_bubble_until = 0.0
+		_bubble.visible = false
+		_bubble_icon.visible = false
+	if _marker != null and _marker.visible:
+		_marker_t += delta
+		_marker.position.y = head_marker_y() + 0.08 * sin(_marker_t * 6.0)
+
+
+# ---------------------------------------------------------------------------
+# A fight on this body
+
+
+## A quick flash of colour (hit: white, hurt: red, healed: green).
+func flash(colour: Color = Color(1.0, 1.0, 1.0), seconds := 0.12) -> void:
+	_flash_colour = colour
+	_flash_t = seconds
+
+
+## A short lunge in a direction (the swing of a melee spell), scene units.
+func lunge(dir: Vector3, dist := 0.25) -> void:
+	var d := Vector3(dir.x, 0.0, dir.z)
+	_lunge = d.normalized() * dist if d.length() > 0.01 else Vector3(0.0, 0.0, -dist)
+	_lunge_t = 0.18
+
+
+## Fallen (lying flat on the floor, grey), frozen (in an ice block), webbed (in threads), or up again.
+func set_pose(p: String) -> void:
+	if p == pose:
+		return
+	pose = p
+	if _block != null:
+		_block.queue_free()
+		_block = null
+	if p == "down":
+		# lying on the ground: the billboard goes, the sprite is laid flat with its feet where it stood
+		sprite.billboard = BaseMaterial3D.BILLBOARD_DISABLED
+		sprite.rotation = Vector3(-PI / 2.0, 0.0, PI / 2.0)
+		sprite.position = Vector3(0.0, 0.06, -height() / 2.0 + 0.2)
+		sprite.modulate = FALLEN_TINT
+		if _bar != null:
+			_bar.visible = false
+		return
+	sprite.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
+	sprite.rotation = Vector3.ZERO
+	sprite.position = Vector3(0.0, _frame_h * PIXEL / 2.0 + FOOT_LIFT, 0.0)
+	sprite.modulate = Color.WHITE
+	if p == "frozen":
+		_block = _ice_block()
+		add_child(_block)
+	elif p == "web":
+		_block = _web()
+		add_child(_block)
+
+
+## A block of ice around a frozen friend: a translucent pale blue box, shining a little.
+func _ice_block() -> Node3D:
+	var node := Node3D.new()
+	var box := BoxMesh.new()
+	var h := height() + 0.3
+	box.size = Vector3(1.1, h, 0.8)
+	var m := StandardMaterial3D.new()
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.albedo_color = Color(0.65, 0.88, 1.0, 0.45)
+	m.roughness = 0.15
+	m.emission_enabled = true
+	m.emission = Color(0.5, 0.85, 1.0)
+	m.emission_energy_multiplier = 0.4
+	box.material = m
+	var mi := MeshInstance3D.new()
+	mi.mesh = box
+	mi.position = Vector3(0.0, h / 2.0, 0.0)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	node.add_child(mi)
+	return node
+
+
+## A spider's web: white threads wound round and round a webbed friend.
+func _web() -> Node3D:
+	var node := Node3D.new()
+	var m := StandardMaterial3D.new()
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.albedo_color = Color(1.0, 1.0, 1.0, 0.75)
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	var h := height() + 0.2
+	for i in range(6):
+		var ring := TorusMesh.new()
+		ring.inner_radius = 0.42
+		ring.outer_radius = 0.46
+		ring.rings = 16
+		ring.ring_segments = 6
+		ring.material = m
+		var mi := MeshInstance3D.new()
+		mi.mesh = ring
+		mi.position = Vector3(0.0, 0.15 + i * (h - 0.3) / 5.0, 0.0)
+		mi.rotation = Vector3(0.0, 0.0, 0.25 if i % 2 == 0 else -0.25)
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		node.add_child(mi)
+	return node
+
+
+## Where a marker or a bar sits over the head (over the name when there is one).
+func head_marker_y() -> float:
+	return label.position.y + (0.35 if label.text != "" else 0.1)
+
+
+## A health bar over the head: `k` 0–1, in a colour; `shown` false hides it. `name_text` is shown over the bar
+## (a boss's or a target's name, as the browser does), "" for none.
+func set_health(k: float, shown: bool, colour: Color, name_text := "") -> void:
+	if not shown:
+		if _bar != null:
+			_bar.visible = false
+		return
+	if _bar == null:
+		_bar = Node3D.new()
+		var back := _quad(Vector2(1.0, 0.12), Color(0.1, 0.08, 0.08, 0.85))
+		_bar.add_child(back)
+		_bar_fill = _quad(Vector2(1.0, 0.12), colour)
+		_bar_fill.position.z = 0.001
+		_bar.add_child(_bar_fill)
+		_bar_name = Label3D.new()
+		_bar_name.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_bar_name.font_size = 40
+		_bar_name.pixel_size = 0.005
+		_bar_name.outline_size = 10
+		_bar_name.outline_modulate = Color("2b2419")
+		_bar_name.no_depth_test = true
+		_bar_name.position.y = 0.2
+		_bar.add_child(_bar_name)
+		add_child(_bar)
+	_bar.visible = pose != "down"
+	_bar.position.y = head_marker_y()
+	var w := maxf(0.6, width() * 1.2)
+	_bar.scale.x = w
+	var kk := clampf(k, 0.0, 1.0)
+	_bar_fill.scale.x = maxf(0.001, kk)
+	_bar_fill.position.x = -(1.0 - kk) / 2.0
+	var mat: StandardMaterial3D = _bar_fill.material_override
+	mat.albedo_color = colour
+	_bar_name.text = name_text
+	_bar_name.scale.x = 1.0 / w
+
+
+func _quad(size: Vector2, colour: Color) -> MeshInstance3D:
+	var q := QuadMesh.new()
+	q.size = size
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	m.albedo_color = colour
+	m.no_depth_test = true
+	var mi := MeshInstance3D.new()
+	mi.mesh = q
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return mi
+
+
+## A chat line (text) or an emote (icon) over the head for `seconds`.
+func set_bubble(text: String, icon: Texture2D, seconds: float) -> void:
+	if _bubble == null:
+		_bubble = Label3D.new()
+		_bubble.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_bubble.font_size = 40
+		_bubble.pixel_size = 0.005
+		_bubble.outline_size = 10
+		_bubble.outline_modulate = Color("2b2419")
+		_bubble.modulate = Color(1.0, 0.98, 0.9)
+		_bubble.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_bubble.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_bubble.width = 320.0
+		_bubble.no_depth_test = true
+		add_child(_bubble)
+		_bubble_icon = Sprite3D.new()
+		_bubble_icon.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_bubble_icon.pixel_size = 0.02
+		_bubble_icon.no_depth_test = true
+		_bubble_icon.shaded = false
+		add_child(_bubble_icon)
+	_bubble.text = text
+	_bubble.visible = text != ""
+	_bubble.position.y = head_marker_y() + 0.45
+	_bubble_icon.texture = icon
+	_bubble_icon.visible = icon != null
+	_bubble_icon.position.y = head_marker_y() + 0.55
+	_bubble_until = Time.get_ticks_msec() + seconds * 1000.0
+
+
+## The mark on the monster that is after you (a bobbing warning sign over its head).
+func set_marker(on: bool) -> void:
+	if _marker == null:
+		if not on:
+			return
+		_marker = Sprite3D.new()
+		_marker.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_marker.pixel_size = 0.014
+		_marker.no_depth_test = true
+		_marker.shaded = false
+		_marker.texture = Data.icon("ui_warn")
+		add_child(_marker)
+	_marker.visible = on
+	_marker.position.y = head_marker_y() + 0.5

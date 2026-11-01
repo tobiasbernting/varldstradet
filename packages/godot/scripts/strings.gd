@@ -24,5 +24,11 @@ func t(key: String, vars: Dictionary = {}) -> String:
 	return s
 
 
+## T.key when it is a list (the emotes).
+func list(key: String) -> Array:
+	var v: Variant = _t.get(key)
+	return v if v is Array else []
+
+
 func season(id: String) -> String:
 	return str(_seasons.get(id, id))

@@ -17,6 +17,9 @@ signal warped(id: String, x: float, y: float)
 signal toast(text: String)
 signal banner(text: String, sub: String, kind: String)
 signal error(text: String)
+## Every change after it was applied (spell, hit, zone, yell, loot, chat, fx, xp… the fight's messages): the
+## view draws from these. The area ones carry `area`; the view checks it against the map it draws.
+signal change(c: Dictionary)
 
 var me := ""
 var farm: Dictionary = {}
@@ -28,6 +31,7 @@ var day := 0
 var time_ms := 0.0
 var season := "none"
 var server_offset_ms := 0.0 ## this clock minus the server's
+var last_now := 0.0 ## the server's clock on the latest `state` (the bot keys its health samples by it)
 
 
 func reset() -> void:
@@ -63,6 +67,37 @@ func map_h(w: Dictionary) -> int:
 	return int(w.get("h", 64))
 
 
+## The server's clock now (ms), like the browser's serverNow().
+func server_now() -> float:
+	return Time.get_unix_time_from_system() * 1000.0 - server_offset_ms
+
+
+## The telegraphs on my map (SagaZone dictionaries), [] outside a dungeon.
+func zones() -> Array:
+	var inst: Variant = world_for(my_area_key()).get("saga")
+	return inst.get("zones", []) if inst is Dictionary else []
+
+
+## The saga snapshot of my map ({} before the first one).
+func my_saga() -> Dictionary:
+	return saga.get(my_area_key(), {})
+
+
+## A monster's [hp, max] from the snapshot ([] when it is neither fighting nor hurt).
+func mob_hp(id: String) -> Array:
+	var m: Variant = my_saga().get("m", {}).get(id)
+	return m if m is Array else []
+
+
+## My inventory's count of an item (countItem in the shared package).
+func count_item(item: String) -> int:
+	var n := 0
+	for slot in my_player().get("inventory", []):
+		if slot is Dictionary and str(slot.get("item", "")) == item:
+			n += int(slot.get("count", 0))
+	return n
+
+
 ## My own health in the dungeon I am in: [hp, max, flags], or [] when the server has not said.
 func my_fighter() -> Array:
 	var snap: Dictionary = saga.get(my_area_key(), {})
@@ -86,6 +121,8 @@ func apply(msg: Dictionary) -> void:
 			for c in msg.get("changes", []):
 				if c is Dictionary:
 					_change(c)
+					if not farm.is_empty():
+						change.emit(c)
 		"error":
 			error.emit(str(msg.get("text", "")))
 
@@ -111,6 +148,7 @@ func _state(msg: Dictionary) -> void:
 	day = int(msg.get("day", day))
 	season = str(msg.get("season", season))
 	server_offset_ms = Time.get_unix_time_from_system() * 1000.0 - float(msg.get("now", 0))
+	last_now = float(msg.get("now", 0))
 	var s: Variant = msg.get("saga")
 	saga = s if s is Dictionary else {}
 	var seen: Dictionary = {}
@@ -215,6 +253,29 @@ func _change(c: Dictionary) -> void:
 				snap["x"] = float(c.get("x", 0))
 				snap["y"] = float(c.get("y", 0))
 			warped.emit(id, float(c.get("x", 0)), float(c.get("y", 0)))
+		"zone":
+			# a boss's attack marked on the ground (or burning ground), kept on the map's saga record like the browser
+			var w := world_for(area_k)
+			var inst: Variant = w.get("saga")
+			if not (inst is Dictionary):
+				return
+			var zones: Array = inst.get("zones", [])
+			if not inst.has("zones"):
+				inst["zones"] = zones
+			var zid := str(c.get("id", ""))
+			var i := -1
+			for k in range(zones.size()):
+				if str(zones[k].get("id", "")) == zid:
+					i = k
+					break
+			var z: Variant = c.get("zone")
+			if z is Dictionary:
+				if i >= 0:
+					zones[i] = z
+				else:
+					zones.append(z)
+			elif i >= 0:
+				zones.remove_at(i)
 		"day":
 			day = int(c.get("day", day))
 			farm["day"] = day

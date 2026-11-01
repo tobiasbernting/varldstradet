@@ -48,6 +48,10 @@ func send(msg: Dictionary) -> void:
 
 func _open() -> void:
 	_ws = WebSocketPeer.new()
+	# the welcome carries the whole farm and an areaData a whole dungeon (hundreds of kB); the default inbound
+	# buffer is 64 KiB and the server's close code 1009 ("too big") was all a client saw of them
+	_ws.inbound_buffer_size = 8 << 20
+	_ws.max_queued_packets = 4096
 	_was_open = false
 	var headers := PackedStringArray()
 	if Settings.token != "":

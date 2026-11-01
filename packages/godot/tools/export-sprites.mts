@@ -50,6 +50,7 @@ try {
     heroes: Record<string, string[]>;
     skins: string[];
     species: string[];
+    icons: Record<string, { x: number; y: number; w: number; h: number }>;
   };
   fs.mkdirSync(outDir, { recursive: true });
   const sheets: Record<string, { file: string; frame_w: number; frame_h: number; columns: number; frames: string[]; headroom: number }> = {};
@@ -68,10 +69,12 @@ try {
     skins: result.skins,
     /** The creatures with a `mob_<species>` sheet. */
     species: result.species,
+    /** Where each icon sits in icons.png: `spell_<id>`, `emote_<id>`, `item_<id>`, `ui_<name>` (M3b). */
+    icons: result.icons,
     sheets,
   };
   fs.writeFileSync(path.join(outDir, 'atlas.json'), JSON.stringify(atlas, null, 2) + '\n');
-  console.log(`${path.relative(process.cwd(), outDir)}: ${result.sheets.length} sheets (${Object.keys(result.heroes).length} classes × ${result.skins.length} skins, ${result.species.length} creatures: ${result.species.join(', ')})`);
+  console.log(`${path.relative(process.cwd(), outDir)}: ${result.sheets.length} sheets (${Object.keys(result.heroes).length} classes × ${result.skins.length} skins, ${result.species.length} creatures: ${result.species.join(', ')}; ${Object.keys(result.icons).length} icons)`);
 } finally {
   await browser.close();
 }

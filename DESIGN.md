@@ -270,3 +270,73 @@ does. `packages/godot/ART.md` is the style sheet every later session follows.
   The build sandbox could run Godot 4.6.3 this time, headless and through Xvfb with Mesa's software OpenGL, which
   is where `docs/m3a-*.png` come from (the Compatibility renderer; the owner's Mac runs Forward+).
 
+## Godot client: fighting in Draugkryptan (2026-11-01)
+Milestone M3b of `PLAN.md`: the Krigare fights in the native client, the dungeon fights back visibly, and two players
+can clear it together, one in Godot and one in the browser. The server is untouched: every rule and every message is
+the browser's (`client/src/saga.ts`, `clientljs/src/saga.ts`, `ui/saga.ts`, `protocol.ts`), ported to GDScript.
+- **The fight from my side** (`scripts/combat.gd`, the browser's `client/src/saga.ts`): the target is an animal id or a
+  player id (Tab cycles the monsters near me, ice blocks and monsters already fighting first; a click picks the
+  nearest; the monster the server picked for an unaimed cast becomes the target; a monster left 16 tiles behind is
+  let go). `cast` goes with the target when there is one and without one otherwise, and the server does the picking
+  (nearest hostile in reach, line of sight for bolts and lances, the worst-hurt friend for a heal, myself for a buff).
+  Cooldowns start when my own `spell` change comes back (the spell's `cd`, the 400 ms pause after any spell, the
+  potion's 15 s); a press while cooling waits up to 1.5 s and goes when ready; nothing goes while fallen, frozen or
+  with a cast on its way (350 ms). The use key uses the stairs, a chest, a rest stone or a plate, swings the everyday
+  attack at the target when in reach, and otherwise sends `act` on the tile in front, which the server answers with a
+  quiet swing at whatever is near.
+- **What the server says, on screen** (`scripts/fx_view.gd`, the browser's `clientljs/src/saga.ts`): every `zone` as
+  a flat shape on the floor (a disc, a sector or a strip, unit-sized and scaled), a dim red base, a brighter fill that
+  grows from the middle, or from the boss for a cone or a line, until `at`, a blinking edge; burning ground (`until`)
+  pulses orange; a pull's circle is a violet whirl with rings sliding in; a mend's small circle is not drawn. `spell`
+  changes become glows and rings in the browser's colours (the `MOVE_COLOUR` and `BOSS_MOVE_COLOUR` tables are copied),
+  `cast_<move>` a swelling glow with sparks rushing in for the move's warning time (a mend: rings breathing out and
+  z's), `land_<move>` the landing per move, a `kick` hit ends the wind-up in blue. `hit` changes float as Label3D
+  numbers over the body (held while a bolt is in the air, three abreast when they come together, red on me), `xp` as
+  "+n xp", and the `fx` poof and sparkle are soft clouds and golden motes. The flags in the saga snapshot draw the
+  lasting looks (a shield wall's bubble, rage's flames, the healing ring's leaves, a fallen friend's halo) and the blue
+  shield over a boss winding up something stoppable. A small camera shake on the big landings.
+- **Bodies** (`scripts/actor.gd`): a fallen hero lies flat on the floor, grey, the billboard turned off; a frozen one
+  stands in a translucent ice box, a webbed one in white rings; a hit flashes the sprite and my own swing lunges it;
+  a health bar over the head for every friend and for a hurt hostile (the boss has the top bar instead), the name on
+  the target, bosses and blocks; a chat or emote bubble; and the warning sign on the monster after me. Monsters face
+  where they walk (the sheets have one side view). The server keeps its threat table to itself, so "after me" is read
+  off the screen: a fighting monster moving my way, or in reach of me and nearer to me than to anyone else. The
+  death "poof" is the server's `fx`, nothing bleeds.
+- **The HUD** (`scripts/hud.gd`, the browser's `ui/saga.ts`): the spell bar (icon, name, key, a cooldown sweep that
+  empties from the top, the seconds left, dimmed when nothing may go or the potion is out, red-tinted when the target
+  is out of reach, a blue border on the spells that can stop the boss's current cast), the frames of me and my target
+  with flags, the party with hearts and flags, the boss bar with name, title, phase pips and health, the cast bar
+  (⚠️ or 🛡️, the move's name, "Kan avbrytas!"), the boss's shouts, the fallen/frozen/webbed box with the countdown to
+  the rest stone or "Alla föll…", the use prompt ("E · Öppna kistan"), banners with the browser's sounds per kind.
+- **Chests and chat.** The `loot` message opens the loot window (`scripts/loot_window.gd`): each item's picture, name
+  × count, rarity name in the rarity's colour, text; coins and stars; the plainer replay chest. The once-per-player
+  rule is the server's (`found`); the window shows what came. `chat` lines (80 characters, the phrases from
+  `CHAT_PHRASES`) go to a fading log and a bubble over the head; the emote wheel sends `emote`, and the snapshot's
+  `emote` field shows the glyph over the head as the browser does. A boss's `yell` is written into the log too.
+- **Pictures** (`tools/export-sprites.mts`): `icons.png` holds the spells' and emotes' emoji (drawn by Chromium's Noto
+  Color Emoji) and the loot items' 16 px pictures at ×2 (an item without one gets its kind's emoji, like the browser),
+  `atlas.json` says where each sits. `game.json` grew the spells, the bosses' moves, every creature's reach and speed,
+  the items, the rarity colours, the chat phrases and the fight's constants (`tools/export-data.mts`).
+- **Sound** (`scripts/sfx.gd`): the browser's code-generated sounds (`sagasfx.ts`, `sound.ts`) rendered once per
+  recipe into 22 kHz PCM with the same primitives (tone with an exponential fade and a slide, noise, a filtered sweep,
+  a swell, notes), kept as `AudioStreamWAV`. No audio files.
+- **Gamepads and the kids** (PLAN.md section 7): the Input Map's `spell_1..4` are X, Y, B and RB as in the browser,
+  `potion` LB, `target_next` d-pad right, `emote` d-pad up, `chat` Back, `spell_wheel` RB; the setting
+  *Trollformler: Knappar / Hjul* (`Settings.spell_input`) decides whether RB is the fourth spell or opens the radial
+  wheel (`scripts/wheel.gd`): lean the stick, let go. The emote wheel is the same control. The owner tests both with
+  the kids; the keyboard keeps 1–4 either way.
+- **Measuring** (`scripts/bench.gd`, F3): the overlay shows fps, the average frame time and the 1 % low (the mean of
+  the slowest 1 % of frames); `--bench` runs the demo with the scripted fight (`scripts/demo_fight.gd`: a server-less
+  timeline of `state`, `zone`, `spell`, `hit`, `banner` and `loot` messages for the mid-boss) for 10 s per preset and
+  prints the same. The build sandbox could not run Godot this time (its network policy refused the editor download),
+  so no sandbox numbers and no new screenshots; the Godot workflow runs everything headless.
+- **The bot** (`scripts/bot.gd`, `tools/bot-check.mts`, `pnpm godot:bot`, a job in the Godot workflow): a headless
+  client that logs in through `/api/gate` and `/api/players` (creating its character; `ACCESS=open`, the memory store,
+  `DEV_TELEPORT=1`), asks the dev way into Draugkryptan, finds the first pack by a breadth-first walk over the floor
+  with `hero.gd`'s own solidity rule, drives the hero along the path, casts the four spells every 200 ms (the big ones
+  first, the axe last, so the axe is what waits), steps out of telegraphs with the server's own `inZone`, and writes
+  a JSON report. Two bots against one server must each see the other's casts and agree on every monster's health at
+  every `state` (keyed by the message's `now`, the same broadcast to both). Nothing new on the server. Its first
+  run found a real bug: `WebSocketPeer`'s default 64 KiB inbound buffer dropped the `welcome` (the whole farm) with
+  close code 1009 and the client reconnected forever; `net.gd` now gives the socket 8 MiB.
+

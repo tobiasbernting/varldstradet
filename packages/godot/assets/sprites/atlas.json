@@ -50,6 +50,290 @@
     "gravvaktare",
     "skelett"
   ],
+  "icons": {
+    "spell_hugg": {
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "spell_utmana": {
+      "x": 32,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "spell_skoldslag": {
+      "x": 64,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "spell_skoldmur": {
+      "x": 96,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "spell_lakerunan": {
+      "x": 128,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "spell_ljuspil": {
+      "x": 160,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "spell_lakekrets": {
+      "x": 192,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "spell_vackupp": {
+      "x": 224,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "spell_yxhugg": {
+      "x": 0,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "spell_stormsteg": {
+      "x": 32,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "spell_virvelvind": {
+      "x": 64,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "spell_raseri": {
+      "x": 96,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "spell_eldboll": {
+      "x": 128,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "spell_isspjut": {
+      "x": 160,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "spell_askregn": {
+      "x": 192,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "spell_blink": {
+      "x": 224,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "emote_hjärta": {
+      "x": 0,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "emote_skratt": {
+      "x": 32,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "emote_hej": {
+      "x": 64,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "emote_hjälp": {
+      "x": 96,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "emote_titta": {
+      "x": 128,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "emote_sova": {
+      "x": 160,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "ui_potion": {
+      "x": 192,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "ui_coin": {
+      "x": 224,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "ui_star": {
+      "x": 0,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "ui_chest": {
+      "x": 32,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "ui_box": {
+      "x": 64,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "ui_skull": {
+      "x": 96,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "ui_ice": {
+      "x": 128,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "ui_web": {
+      "x": 160,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "ui_shield": {
+      "x": 192,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "ui_warn": {
+      "x": 224,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "ui_crown": {
+      "x": 0,
+      "y": 128,
+      "w": 32,
+      "h": 32
+    },
+    "ui_chat": {
+      "x": 32,
+      "y": 128,
+      "w": 32,
+      "h": 32
+    },
+    "ui_aim": {
+      "x": 64,
+      "y": 128,
+      "w": 32,
+      "h": 32
+    },
+    "ui_sword": {
+      "x": 96,
+      "y": 128,
+      "w": 32,
+      "h": 32
+    },
+    "item_drakfjall": {
+      "x": 128,
+      "y": 128,
+      "w": 32,
+      "h": 32
+    },
+    "item_draugyxa": {
+      "x": 160,
+      "y": 128,
+      "w": 32,
+      "h": 32
+    },
+    "item_gold": {
+      "x": 192,
+      "y": 128,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_draugkrona": {
+      "x": 224,
+      "y": 128,
+      "w": 32,
+      "h": 32
+    },
+    "item_healing_potion": {
+      "x": 0,
+      "y": 160,
+      "w": 32,
+      "h": 32
+    },
+    "item_monsteressens": {
+      "x": 32,
+      "y": 160,
+      "w": 32,
+      "h": 32
+    },
+    "item_old_coin": {
+      "x": 64,
+      "y": 160,
+      "w": 32,
+      "h": 32
+    },
+    "item_pet_hugin": {
+      "x": 96,
+      "y": 160,
+      "w": 32,
+      "h": 32
+    },
+    "item_runsvard": {
+      "x": 128,
+      "y": 160,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_ringbrynja": {
+      "x": 160,
+      "y": 160,
+      "w": 32,
+      "h": 32
+    },
+    "item_volvastav": {
+      "x": 192,
+      "y": 160,
+      "w": 32,
+      "h": 32
+    }
+  },
   "sheets": {
     "hero_vaktare_0": {
       "file": "hero_vaktare_0.png",
@@ -607,6 +891,62 @@
       "frames": [
         "right0",
         "right1"
+      ],
+      "headroom": 0
+    },
+    "icons": {
+      "file": "icons.png",
+      "frame_w": 32,
+      "frame_h": 32,
+      "columns": 8,
+      "frames": [
+        "spell_hugg",
+        "spell_utmana",
+        "spell_skoldslag",
+        "spell_skoldmur",
+        "spell_lakerunan",
+        "spell_ljuspil",
+        "spell_lakekrets",
+        "spell_vackupp",
+        "spell_yxhugg",
+        "spell_stormsteg",
+        "spell_virvelvind",
+        "spell_raseri",
+        "spell_eldboll",
+        "spell_isspjut",
+        "spell_askregn",
+        "spell_blink",
+        "emote_hjärta",
+        "emote_skratt",
+        "emote_hej",
+        "emote_hjälp",
+        "emote_titta",
+        "emote_sova",
+        "ui_potion",
+        "ui_coin",
+        "ui_star",
+        "ui_chest",
+        "ui_box",
+        "ui_skull",
+        "ui_ice",
+        "ui_web",
+        "ui_shield",
+        "ui_warn",
+        "ui_crown",
+        "ui_chat",
+        "ui_aim",
+        "ui_sword",
+        "item_drakfjall",
+        "item_draugyxa",
+        "item_gold",
+        "item_hat_draugkrona",
+        "item_healing_potion",
+        "item_monsteressens",
+        "item_old_coin",
+        "item_pet_hugin",
+        "item_runsvard",
+        "item_shirt_ringbrynja",
+        "item_volvastav"
       ],
       "headroom": 0
     }

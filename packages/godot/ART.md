@@ -75,7 +75,10 @@ the sheets are committed under `assets/sprites/` with `atlas.json` (frame size, 
   16×32 px frames (the 8 rows of headroom over the 24-row figure keep the horned helmet and the rune hat inside the
   frame). Hair is the default short dark brown: the class hats hide most of it, and one sheet per hair colour and style
   would be 40 more sheets per class, which is M4's problem when the farm's wardrobe comes over. The weapon in hand is
-  not in the sheet either (M3b draws spells and weapons).
+  not in the sheet; a swing is a lunge and a flash of the sprite with the spell's light drawn over it (M3b).
+- `icons.png` (M3b): the spells' and the emotes' emoji drawn by Chromium's colour emoji font, the loot items' 16 px
+  pictures at ×2, and a few HUD glyphs, in 32 px squares; `atlas.json`'s `icons` says where each sits. The HUD, the
+  loot window and the wheels read them; an item without a picture of its own gets its kind's emoji, like the browser.
 - `mob_<species>.png`: the dungeon's monsters and bosses as `SAGA_MOBS`/`SAGA_BOSSES` name them, two walk frames
   facing right, at the size `SAGA_ANIMAL_SIZE` gives them, outlined as `drawAnimal` outlines them.
 
@@ -98,3 +101,19 @@ Everything expensive is a toggle in `scripts/quality.gd`, so a scene is built on
 
 Låg must stay a plain forward render with a handful of unshadowed lights: that is what an Intel integrated GPU does
 at 60 fps. The decision Mobile-vs-Forward+ is made with a frame-time capture in M3b, not here.
+
+## The fight on screen (M3b)
+
+- **Telegraphs** are flat shapes 4.5 cm over the floor: a dim red base in the zone's full size, a brighter fill that
+  grows from the middle (from the boss, for a cone or a line) until the attack lands, and a blinking edge. Red is danger
+  and nothing else is red on the floor; a pull is violet (a whirl with rings sliding in), burning ground pulses orange,
+  a mend is not marked (the boss glows green instead). The colours per move are the browser's `MOVE_COLOUR` and
+  `BOSS_MOVE_COLOUR`, copied into `fx_view.gd`.
+- **Spells and hits** are additive glow quads (a radial gradient texture made in code, billboarded) and flat rings;
+  no particles systems, so they cost the same on Låg. Numbers are `Label3D`, white for damage, gold for a crit, green
+  for healing, red when it is me.
+- **Bodies.** Fallen: the sprite laid flat (billboard off), grey, with a halo of motes. Frozen: a translucent pale blue
+  box (Is); webbed: white rings. Health bars are two unshaded quads over the head; the target's and a boss's name over
+  them. The monster after you carries the ⚠️ icon, bobbing.
+- **Sound** is code-generated into PCM (`sfx.gd`), one recipe per spell, move and HUD event, the browser's.
+

@@ -95,6 +95,22 @@ jobs:
             echo "::error::the demo reported errors (see above)"; exit 1
           fi
 
+      - name: Run the scripted fight on the demo headless (telegraphs, the boss bar, hits, the loot window)
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          timeout 120 ~/godot/godot --headless --path . --quit-after 900 -- --demo --fight 2>&1 | tee fight.log
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate" fight.log; then
+            echo "::error::the scripted fight reported errors (see above)"; exit 1
+          fi
+
+      # Two headless bots fight the first pack of Draugkryptan together against a server running in memory
+      # (no Postgres: the server's MemoryStore). tools/bot-check.mts compares their reports.
+      - name: Two bots clear the first pack together (the server in memory, ACCESS=open, DEV_TELEPORT=1)
+        run: |
+          set -euo pipefail
+          GODOT=~/godot/godot BOT_SECONDS=150 pnpm godot:bot 2>&1 | tee bot.log
+
       - name: Export all four targets
         working-directory: packages/godot
         run: |
