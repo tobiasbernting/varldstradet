@@ -14,9 +14,9 @@ permissions:
 
 env:
   # Pinned: the editor and the export templates must match. Checksums from the release's SHA512-SUMS.txt.
-  GODOT_VERSION: 4.6.3
-  GODOT_EDITOR_SHA512: a035258da32b77f966a5376f9fa29c30a6adde826a85ba918e1605bd1fc9823eba7d85f1dd5e748956bd2ba72827c0025ffa11bb82aec91128c407a2e723c99c
-  GODOT_TEMPLATES_SHA512: da606b61c10157844f8300172df374472665f95015495cb1a7cd132c40ede404faa96cc1016a4b9662db9909ddea69632c4948b2cd11163438dad4808881fb68
+  GODOT_VERSION: 4.7.2
+  GODOT_EDITOR_SHA512: 9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65
+  GODOT_TEMPLATES_SHA512: ca4d71c4d7b81dfc15d1a98baa07534aa95b03fdda78a0075b06672e1648d2e5f40980c9adc28d23e1b92e732ee7bf3461997aa804af74ec2fcd7a93ccb84079
 
 jobs:
   export:
@@ -40,7 +40,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/godot
-          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64-templates-4
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64-templates-5
 
       - name: Download Godot ${{ env.GODOT_VERSION }} and its export templates (pinned, checksummed)
         if: steps.godot-cache.outputs.cache-hit != 'true'

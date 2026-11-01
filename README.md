@@ -137,8 +137,8 @@ clients can be in the same dungeon at the same time. `packages/godot/ART.md` has
 
 **Look at the dungeon without a server (demo mode):**
 
-1. Install [Godot 4.6](https://godotengine.org/download) (the standard build, not .NET). Any 4.6.x works for
-   editing; CI pins 4.6.3.
+1. Install [Godot 4.7](https://godotengine.org/download) (the standard build, not .NET). Any 4.7.x works for
+   editing; CI pins 4.7.2.
 2. `godot --path packages/godot -- --demo` (or open `packages/godot/project.godot` in Godot, press Play, and the
    login screen comes up instead; the demo needs the command line). The recorded Draugkryptan of
    `packages/godot/assets/fixtures/draug.json` is drawn with its monsters, and you walk in it with WASD, the arrows
@@ -215,7 +215,7 @@ including the Kenney kits the build sandbox could not reach.
 **Builds.** `.github/workflows/godot.yml` checks the generated files, imports the project, runs the login scene, the
 Draugkryptan demo and the scripted fight headless for a moment (script errors fail there), runs the two bots against
 a server in memory, and exports Windows x86_64, macOS universal,
-Linux x86_64 and Linux arm64 with Godot 4.6.3 and its export templates (downloaded by pinned URL and SHA-512, cached
+Linux x86_64 and Linux arm64 with Godot 4.7.2 and its export templates (downloaded by pinned URL and SHA-512, cached
 between runs). Every pull request runs it as a check (the exports are workflow artifacts), and a tag `v*` attaches the
 four zips to a GitHub Release. The macOS app is ad-hoc signed and not notarized: the first start needs right-click →
 Open.
@@ -267,7 +267,7 @@ There is still no text chat: players can only use emotes.
 - `packages/clientljs` – the game, drawn with [LittleJS](https://github.com/KilledByAPixel/LittleJS): light and
   shadow, animation and the cozy extras (see below). PWA, landscape. Its HUD, menus, networking, sounds and pixel art
   come from `packages/client` (the `@v1/*` alias); the view is its own.
-- `packages/godot` – the native client (Godot 4.6, GDScript): the login screen, the socket, Draugkryptan on screen and
+- `packages/godot` – the native client (Godot 4.7, GDScript): the login screen, the socket, Draugkryptan on screen and
   the Krigare fighting in it; `tools/` makes its generated files from the shared package
 - `packages/client` – the HTML menus, HUD, networking, client state, sounds and the pixel art generated in code
   (once the Phaser client; that view is gone, the shared parts stay here)
