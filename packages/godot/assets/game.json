@@ -7,6 +7,14 @@
     "MAX_HEARTS": 5,
     "DAY_LENGTH_MS": 600000,
     "EDGE_GAP": 3,
+    "REACH": 1,
+    "PICKUP_RADIUS": 12,
+    "RIDE_SPEED_MUL": 1.8,
+    "WATERING_CAN_CHARGES": 20,
+    "HOTBAR_SIZE": 8,
+    "INVENTORY_SIZE": 32,
+    "CHEST_SIZE": 32,
+    "MAX_STACK": 99,
     "PLAYER_SPEED": 64,
     "PLAYER_HALF_W": 5,
     "PLAYER_HALF_H": 3,
@@ -75,7 +83,8 @@
       "w": 1,
       "h": 1,
       "solid": true,
-      "light": true
+      "light": true,
+      "breakWith": "hammer"
     },
     "apartment": {
       "w": 3,
@@ -85,7 +94,9 @@
     "banana_plant": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer",
+      "harvest": true
     },
     "banner_pole": {
       "w": 1,
@@ -95,12 +106,14 @@
     "barn": {
       "w": 3,
       "h": 2,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "barrel": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "barrel_stack": {
       "w": 1,
@@ -124,28 +137,35 @@
       "w": 1,
       "h": 2,
       "solid": true,
-      "interact": "sleep"
+      "interact": "sleep",
+      "breakWith": "hammer"
     },
     "beehive": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer",
+      "harvest": true
     },
     "bench": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "bifrostbit": {
       "w": 1,
       "h": 1,
       "solid": true,
-      "light": true
+      "light": true,
+      "breakWith": "hammer"
     },
     "blueberry_bush": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer",
+      "harvest": true
     },
     "bones": {
       "w": 1,
@@ -156,7 +176,8 @@
     "bookshelf": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "bus_stop": {
       "w": 1,
@@ -167,17 +188,22 @@
     "bush": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "axe"
     },
     "cactus": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer",
+      "harvest": true
     },
     "candy_cane": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer",
+      "harvest": true
     },
     "cave": {
       "w": 2,
@@ -201,7 +227,8 @@
     "cave_rock": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "pick"
     },
     "cave_torch": {
       "w": 1,
@@ -217,30 +244,36 @@
     "chair": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "chest": {
       "w": 1,
       "h": 1,
       "solid": true,
-      "interact": "chest"
+      "interact": "chest",
+      "breakWith": "hammer"
     },
     "clock": {
       "w": 1,
       "h": 1,
       "solid": false,
-      "flat": true
+      "flat": true,
+      "breakWith": "hammer"
     },
     "cloudberry": {
       "w": 1,
       "h": 1,
       "solid": false,
-      "flat": true
+      "flat": true,
+      "breakWith": "hammer",
+      "harvest": true
     },
     "coop": {
       "w": 2,
       "h": 2,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "crater": {
       "w": 2,
@@ -252,24 +285,28 @@
       "w": 1,
       "h": 1,
       "solid": true,
-      "light": true
+      "light": true,
+      "breakWith": "pick"
     },
     "crystal_lamp": {
       "w": 1,
       "h": 1,
       "solid": true,
-      "light": true
+      "light": true,
+      "breakWith": "hammer"
     },
     "dead_tree": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "axe"
     },
     "dig_spot": {
       "w": 1,
       "h": 1,
       "solid": false,
-      "flat": true
+      "flat": true,
+      "breakWith": "hoe"
     },
     "dino_bones": {
       "w": 3,
@@ -279,12 +316,14 @@
     "dino_skeleton": {
       "w": 3,
       "h": 2,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "door": {
       "w": 1,
       "h": 1,
-      "solid": false
+      "solid": false,
+      "breakWith": "hammer"
     },
     "door_out": {
       "w": 1,
@@ -295,13 +334,15 @@
     "dragon_egg": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "dvargstaty": {
       "w": 1,
       "h": 1,
       "solid": true,
-      "light": true
+      "light": true,
+      "breakWith": "hammer"
     },
     "earth": {
       "w": 4,
@@ -312,12 +353,14 @@
     "easter_twigs": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "egg_basket": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "fairy_ring": {
       "w": 2,
@@ -329,24 +372,28 @@
     "fence": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "fenrislanka": {
       "w": 1,
       "h": 1,
       "solid": true,
-      "light": true
+      "light": true,
+      "breakWith": "hammer"
     },
     "fern": {
       "w": 1,
       "h": 1,
-      "solid": false
+      "solid": false,
+      "breakWith": "scythe"
     },
     "fire_crystal": {
       "w": 1,
       "h": 1,
       "solid": true,
-      "light": true
+      "light": true,
+      "breakWith": "pick"
     },
     "flag_se": {
       "w": 1,
@@ -357,49 +404,58 @@
       "w": 1,
       "h": 1,
       "solid": false,
-      "flat": true
+      "flat": true,
+      "breakWith": "scythe"
     },
     "flower_wreath_decor": {
       "w": 1,
       "h": 1,
       "solid": false,
-      "flat": true
+      "flat": true,
+      "breakWith": "hammer"
     },
     "flowerbox": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "fossil_rock": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "pick"
     },
     "gate": {
       "w": 1,
       "h": 1,
-      "solid": false
+      "solid": false,
+      "breakWith": "hammer"
     },
     "gem_vein": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "pick"
     },
     "ghost_flag": {
       "w": 1,
       "h": 1,
-      "solid": false
+      "solid": false,
+      "breakWith": "hammer"
     },
     "giant_glowshroom": {
       "w": 1,
       "h": 1,
       "solid": true,
-      "light": true
+      "light": true,
+      "breakWith": "axe"
     },
     "giant_mushroom": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "axe"
     },
     "gingerbread_house": {
       "w": 3,
@@ -413,18 +469,22 @@
       "h": 1,
       "solid": false,
       "flat": true,
-      "light": true
+      "light": true,
+      "breakWith": "hammer",
+      "harvest": true
     },
     "gold_vein": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "pick"
     },
     "grass_tuft": {
       "w": 1,
       "h": 1,
       "solid": false,
-      "flat": true
+      "flat": true,
+      "breakWith": "scythe"
     },
     "hay_cart": {
       "w": 2,
@@ -435,7 +495,8 @@
       "w": 1,
       "h": 1,
       "solid": true,
-      "light": true
+      "light": true,
+      "breakWith": "hammer"
     },
     "house": {
       "w": 5,
@@ -450,29 +511,35 @@
     "hutch": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "iceberry": {
       "w": 1,
       "h": 1,
-      "solid": false
+      "solid": false,
+      "breakWith": "hammer",
+      "harvest": true
     },
     "jungle_flower": {
       "w": 1,
       "h": 1,
       "solid": false,
-      "flat": true
+      "flat": true,
+      "breakWith": "scythe"
     },
     "jungle_tree": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "axe"
     },
     "lamp": {
       "w": 1,
       "h": 1,
       "solid": true,
-      "light": true
+      "light": true,
+      "breakWith": "hammer"
     },
     "lantern": {
       "w": 1,
@@ -483,7 +550,8 @@
     "lights": {
       "w": 1,
       "h": 1,
-      "solid": false
+      "solid": false,
+      "breakWith": "hammer"
     },
     "lm_apkungenstron": {
       "w": 3,
@@ -652,7 +720,9 @@
     "lollipop_tree": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer",
+      "harvest": true
     },
     "loot_chest": {
       "w": 1,
@@ -675,56 +745,69 @@
     "maypole": {
       "w": 1,
       "h": 2,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "moon_cheese": {
       "w": 1,
       "h": 1,
-      "solid": false
+      "solid": false,
+      "breakWith": "hammer",
+      "harvest": true
     },
     "moon_rock": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "pick"
     },
     "mushroom": {
       "w": 1,
       "h": 1,
       "solid": false,
-      "flat": true
+      "flat": true,
+      "breakWith": "hammer",
+      "harvest": true
     },
     "mushroom_lamp": {
       "w": 1,
       "h": 1,
       "solid": true,
-      "light": true
+      "light": true,
+      "breakWith": "hammer"
     },
     "obsidian_rock": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "pick"
     },
     "ore": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "pick"
     },
     "ormtand": {
       "w": 1,
       "h": 1,
       "solid": true,
-      "light": true
+      "light": true,
+      "breakWith": "hammer"
     },
     "painting": {
       "w": 1,
       "h": 1,
       "solid": false,
-      "flat": true
+      "flat": true,
+      "breakWith": "hammer",
+      "harvest": true
     },
     "palm": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "axe"
     },
     "parked_car": {
       "w": 2,
@@ -734,7 +817,8 @@
     "pigsty": {
       "w": 2,
       "h": 2,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "pizzeria": {
       "w": 3,
@@ -746,12 +830,14 @@
     "plant": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "pumpkin_lantern": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "pyramid": {
       "w": 6,
@@ -762,17 +848,20 @@
     "reed": {
       "w": 1,
       "h": 1,
-      "solid": false
+      "solid": false,
+      "breakWith": "scythe"
     },
     "rock": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "pick"
     },
     "rock_small": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "pick"
     },
     "rocket": {
       "w": 2,
@@ -785,7 +874,8 @@
       "w": 2,
       "h": 2,
       "solid": false,
-      "flat": true
+      "flat": true,
+      "breakWith": "hammer"
     },
     "ruin_pillar": {
       "w": 1,
@@ -1054,7 +1144,8 @@
     "scarecrow": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "sellbox": {
       "w": 1,
@@ -1071,13 +1162,16 @@
     "sheepfold": {
       "w": 2,
       "h": 2,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "shell": {
       "w": 1,
       "h": 1,
       "solid": false,
-      "flat": true
+      "flat": true,
+      "breakWith": "hammer",
+      "harvest": true
     },
     "shipwreck": {
       "w": 4,
@@ -1098,7 +1192,8 @@
     "snowman": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "snowman_wild": {
       "w": 1,
@@ -1108,29 +1203,34 @@
     "sofa": {
       "w": 2,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "solruna": {
       "w": 1,
       "h": 1,
       "solid": true,
-      "light": true
+      "light": true,
+      "breakWith": "hammer"
     },
     "stalagmite": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "pick"
     },
     "stall": {
       "w": 3,
       "h": 2,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "star_crystal": {
       "w": 1,
       "h": 1,
       "solid": true,
-      "light": true
+      "light": true,
+      "breakWith": "pick"
     },
     "start_bench": {
       "w": 1,
@@ -1155,7 +1255,8 @@
       "h": 1,
       "solid": true,
       "light": true,
-      "interact": "cook"
+      "interact": "cook",
+      "breakWith": "hammer"
     },
     "street_lamp": {
       "w": 1,
@@ -1166,12 +1267,14 @@
     "stump": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "axe"
     },
     "table": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "temple": {
       "w": 4,
@@ -1183,7 +1286,8 @@
       "w": 1,
       "h": 1,
       "solid": false,
-      "light": true
+      "light": true,
+      "breakWith": "hammer"
     },
     "town_well": {
       "w": 1,
@@ -1212,23 +1316,27 @@
     "tree": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "axe"
     },
     "tree_apple": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "axe"
     },
     "tree_pine": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "axe"
     },
     "trough": {
       "w": 1,
       "h": 1,
       "solid": true,
-      "interact": "feed"
+      "interact": "feed",
+      "breakWith": "hammer"
     },
     "ufo": {
       "w": 3,
@@ -1245,12 +1353,14 @@
     "wall_stone": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "wall_wood": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "wardrobe": {
       "w": 1,
@@ -1262,52 +1372,64 @@
       "w": 1,
       "h": 1,
       "solid": true,
-      "interact": "water"
+      "interact": "water",
+      "breakWith": "hammer"
     },
     "wild_flower_mid": {
       "w": 1,
       "h": 1,
       "solid": false,
-      "flat": true
+      "flat": true,
+      "breakWith": "hammer",
+      "harvest": true
     },
     "wild_pumpkin": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer",
+      "harvest": true
     },
     "window": {
       "w": 1,
       "h": 1,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "wisp": {
       "w": 1,
       "h": 1,
       "solid": false,
-      "light": true
+      "light": true,
+      "breakWith": "hammer",
+      "harvest": true
     },
     "wisp_jar": {
       "w": 1,
       "h": 1,
       "solid": true,
-      "light": true
+      "light": true,
+      "breakWith": "hammer"
     },
     "workbench": {
       "w": 1,
       "h": 1,
       "solid": true,
-      "interact": "workbench"
+      "interact": "workbench",
+      "breakWith": "hammer"
     },
     "xmas_tree": {
       "w": 1,
       "h": 2,
-      "solid": true
+      "solid": true,
+      "breakWith": "hammer"
     },
     "yggdrasil": {
       "w": 1,
       "h": 1,
       "solid": true,
-      "light": true
+      "light": true,
+      "breakWith": "hammer"
     }
   },
   "crops": {
@@ -1342,91 +1464,121 @@
   },
   "animals": {
     "hen": {
-      "growDays": 3
+      "growDays": 3,
+      "product": "egg"
     },
     "rabbit": {
       "growDays": 3
     },
     "sheep": {
-      "growDays": 3
+      "growDays": 3,
+      "product": "wool"
     },
     "cow": {
-      "growDays": 3
+      "growDays": 3,
+      "product": "milk"
     },
     "pig": {
-      "growDays": 3
+      "growDays": 3,
+      "product": "truffle"
     },
     "horse": {
       "growDays": 3
     },
     "dog": {
-      "growDays": 0
+      "growDays": 0,
+      "pet": true
     },
     "cat": {
-      "growDays": 0
+      "growDays": 0,
+      "pet": true
     },
     "fox": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true
     },
     "deer": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true
     },
     "penguin": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true
     },
     "crab": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true
     },
     "goat": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true
     },
     "lizard": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true
     },
     "hare": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true
     },
     "boar": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true
     },
     "moose": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true
     },
     "frog": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true
     },
     "parrot": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true
     },
     "monkey": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true
     },
     "salamander": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true
     },
     "hedgehog": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true
     },
     "dino": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true
     },
     "gummy": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true
     },
     "alien": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true
     },
     "dragon": {
-      "growDays": 0
+      "growDays": 0,
+      "pet": true
     },
     "bear": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true,
+      "predator": true
     },
     "wolf": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true,
+      "predator": true
     },
     "lynx": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true,
+      "predator": true
     },
     "car": {
       "growDays": 0
@@ -1441,16 +1593,20 @@
       "growDays": 0
     },
     "slime": {
-      "growDays": 0
+      "growDays": 0,
+      "mob": true
     },
     "bat": {
-      "growDays": 0
+      "growDays": 0,
+      "mob": true
     },
     "troll": {
-      "growDays": 0
+      "growDays": 0,
+      "mob": true
     },
     "boss": {
-      "growDays": 0
+      "growDays": 0,
+      "mob": true
     },
     "skelett": {
       "growDays": 0
@@ -1465,13 +1621,17 @@
       "growDays": 0
     },
     "isvarg": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true,
+      "mob": true
     },
     "isande": {
       "growDays": 0
     },
     "eldimp": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true,
+      "mob": true
     },
     "lavagolem": {
       "growDays": 0
@@ -1492,7 +1652,9 @@
       "growDays": 0
     },
     "gruvtroll": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true,
+      "mob": true
     },
     "guldbagge": {
       "growDays": 0
@@ -1501,7 +1663,9 @@
       "growDays": 0
     },
     "sjodraug": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true,
+      "mob": true
     },
     "jattekrabba": {
       "growDays": 0
@@ -1510,7 +1674,9 @@
       "growDays": 0
     },
     "skuggalv": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true,
+      "mob": true
     },
     "jattespindel": {
       "growDays": 0
@@ -1585,82 +1751,120 @@
       "growDays": 0
     },
     "korp": {
-      "growDays": 0
+      "growDays": 0,
+      "pet": true
     },
     "fenrisvalp": {
-      "growDays": 0
+      "growDays": 0,
+      "pet": true
     },
     "sleipner": {
-      "growDays": 0
+      "growDays": 0,
+      "mount": 1.75
     },
     "gullinbursti": {
-      "growDays": 0
+      "growDays": 0,
+      "mount": 1.6
     },
     "garmvalp": {
-      "growDays": 0
+      "growDays": 0,
+      "pet": true
     },
     "guldbagge_tam": {
-      "growDays": 0
+      "growDays": 0,
+      "pet": true
     },
     "manet_tam": {
-      "growDays": 0
+      "growDays": 0,
+      "pet": true
     },
     "alvljus_fe": {
-      "growDays": 0
+      "growDays": 0,
+      "pet": true
     },
     "ulvvalp": {
-      "growDays": 0
+      "growDays": 0,
+      "pet": true
     },
     "havshast": {
-      "growDays": 0
+      "growDays": 0,
+      "mount": 1.7
     },
     "jattehjort": {
-      "growDays": 0
+      "growDays": 0,
+      "mount": 1.7
     },
     "fenrisulv_ridbar": {
-      "growDays": 0
+      "growDays": 0,
+      "mount": 1.8
     },
     "lokeshast": {
-      "growDays": 0
+      "growDays": 0,
+      "mount": 1.85
     },
     "vandrardraug": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true,
+      "mob": true
     },
     "mosspoke": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true,
+      "mob": true
     },
     "bergatroll": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true,
+      "mob": true
     },
     "kustjatte": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true,
+      "mob": true
     },
     "angsvatte": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true,
+      "mob": true
     },
     "trollunge": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true,
+      "mob": true
     },
     "snotroll": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true,
+      "mob": true
     },
     "sandande": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true,
+      "mob": true
     },
     "djungelimp": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true,
+      "mob": true
     },
     "benodla": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true,
+      "mob": true
     },
     "sockerspoke": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true,
+      "mob": true
     },
     "rymdkryp": {
-      "growDays": 0
+      "growDays": 0,
+      "wild": true,
+      "mob": true
     },
     "ljushjort": {
-      "growDays": 0
+      "growDays": 0,
+      "mount": 1.75
     }
   },
   "npcs": {
@@ -3277,693 +3481,2696 @@
       "name": "Runsvärd",
       "rarity": "rare",
       "kind": "weapon",
-      "text": "Runorna på bladet lyser blått i mörkret."
+      "text": "Runorna på bladet lyser blått i mörkret.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "sword"
     },
     "draugyxa": {
       "name": "Draugyxa",
       "rarity": "rare",
       "kind": "weapon",
-      "text": "En gammal stridsyxa som lyser spöklikt grön."
+      "text": "En gammal stridsyxa som lyser spöklikt grön.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "axe"
     },
     "volvastav": {
       "name": "Völvans stav",
       "rarity": "rare",
       "kind": "weapon",
-      "text": "En stav med en lysande sten i toppen."
+      "text": "En stav med en lysande sten i toppen.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "hammer"
     },
     "frostbett": {
       "name": "Frostbett",
       "rarity": "epic",
       "kind": "weapon",
-      "text": "Ett svärd av evig is som aldrig smälter."
+      "text": "Ett svärd av evig is som aldrig smälter.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "sword"
     },
     "isyxa": {
       "name": "Isyxa",
       "rarity": "epic",
       "kind": "weapon",
-      "text": "Hugger is lika lätt som trä."
+      "text": "Hugger is lika lätt som trä.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "axe"
     },
     "ullrsbage": {
       "name": "Ullrs båge",
       "rarity": "epic",
       "kind": "weapon",
-      "text": "Vinterguden Ullrs båge, med strängar av norrsken."
+      "text": "Vinterguden Ullrs båge, med strängar av norrsken.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "bow"
     },
     "surtsvard": {
       "name": "Surts eldsvärd",
       "rarity": "legendary",
       "kind": "weapon",
-      "text": "Eldjättens eget svärd. Det brinner, men aldrig i din hand."
+      "text": "Eldjättens eget svärd. Det brinner, men aldrig i din hand.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "sword"
     },
     "mjolner": {
       "name": "Mjölner",
       "rarity": "legendary",
       "kind": "weapon",
-      "text": "Tors hammare. Det knastrar av blixtar om den."
+      "text": "Tors hammare. Det knastrar av blixtar om den.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "hammer"
     },
     "gungner": {
       "name": "Gungner",
       "rarity": "legendary",
       "kind": "weapon",
-      "text": "Odens spjut, som alltid träffar."
+      "text": "Odens spjut, som alltid träffar.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "sword"
     },
     "hat_draugkrona": {
       "name": "Draugkrona",
       "rarity": "rare",
       "kind": "hat",
-      "text": "Draugkungens gamla krona."
+      "text": "Draugkungens gamla krona.",
+      "category": "clothing",
+      "stack": 1
     },
     "shirt_ringbrynja": {
       "name": "Ringbrynja",
       "rarity": "uncommon",
       "kind": "shirt",
-      "text": "Tusen små järnringar."
+      "text": "Tusen små järnringar.",
+      "category": "clothing",
+      "stack": 1
     },
     "hat_valkyria": {
       "name": "Valkyriahjälm",
       "rarity": "epic",
       "kind": "hat",
-      "text": "En silverhjälm med vita vingar."
+      "text": "En silverhjälm med vita vingar.",
+      "category": "clothing",
+      "stack": 1
     },
     "shirt_bjornfall": {
       "name": "Björnfäll",
       "rarity": "rare",
       "kind": "shirt",
-      "text": "En varm vit fäll från Isbjörnen Kall."
+      "text": "En varm vit fäll från Isbjörnen Kall.",
+      "category": "clothing",
+      "stack": 1
     },
     "hat_oden": {
       "name": "Odens hatt",
       "rarity": "legendary",
       "kind": "hat",
-      "text": "Vandrarens bredbrättade hatt."
+      "text": "Vandrarens bredbrättade hatt.",
+      "category": "clothing",
+      "stack": 1
     },
     "shirt_odenmantel": {
       "name": "Odens mantel",
       "rarity": "epic",
       "kind": "shirt",
-      "text": "En mörkblå mantel med en korp på ryggen."
+      "text": "En mörkblå mantel med en korp på ryggen.",
+      "category": "clothing",
+      "stack": 1
     },
     "hat_vaktarhjalm": {
       "name": "Väktarhjälm",
       "rarity": "uncommon",
       "kind": "hat",
-      "text": "Väktarens hjälm med nässkydd."
+      "text": "Väktarens hjälm med nässkydd.",
+      "category": "clothing",
+      "stack": 1
     },
     "shirt_vaktarrustning": {
       "name": "Väktarrustning",
       "rarity": "uncommon",
       "kind": "shirt",
-      "text": "Rustning med en sköld på bröstet."
+      "text": "Rustning med en sköld på bröstet.",
+      "category": "clothing",
+      "stack": 1
     },
     "hat_volvakrans": {
       "name": "Völvans krans",
       "rarity": "uncommon",
       "kind": "hat",
-      "text": "En krans med små runor."
+      "text": "En krans med små runor.",
+      "category": "clothing",
+      "stack": 1
     },
     "shirt_volvadrakt": {
       "name": "Völvans dräkt",
       "rarity": "uncommon",
       "kind": "shirt",
-      "text": "En grön dräkt med läkande runor."
+      "text": "En grön dräkt med läkande runor.",
+      "category": "clothing",
+      "stack": 1
     },
     "hat_hornhjalm": {
       "name": "Hornhjälm",
       "rarity": "uncommon",
       "kind": "hat",
-      "text": "Bärsärkens hjälm."
+      "text": "Bärsärkens hjälm.",
+      "category": "clothing",
+      "stack": 1
     },
     "shirt_bjornskinn": {
       "name": "Björnskinn",
       "rarity": "uncommon",
       "kind": "shirt",
-      "text": "Ett brunt björnskinn över axlarna."
+      "text": "Ett brunt björnskinn över axlarna.",
+      "category": "clothing",
+      "stack": 1
     },
     "hat_runhatt": {
       "name": "Runhatt",
       "rarity": "uncommon",
       "kind": "hat",
-      "text": "En spetsig hatt med lysande runor."
+      "text": "En spetsig hatt med lysande runor.",
+      "category": "clothing",
+      "stack": 1
     },
     "shirt_runmantel": {
       "name": "Runmantel",
       "rarity": "uncommon",
       "kind": "shirt",
-      "text": "En lila mantel full av runor."
+      "text": "En lila mantel full av runor.",
+      "category": "clothing",
+      "stack": 1
     },
     "pet_hugin": {
       "name": "Hugin och Munin",
       "rarity": "epic",
       "kind": "pet",
-      "text": "Odens två korpar flyger med dig vart du går."
+      "text": "Odens två korpar flyger med dig vart du går.",
+      "category": "animal",
+      "stack": 1
     },
     "pet_fenrisvalp": {
       "name": "Fenrisvalp",
       "rarity": "epic",
       "kind": "pet",
-      "text": "En liten ulv med stora tassar. Snäll, för det mesta."
+      "text": "En liten ulv med stora tassar. Snäll, för det mesta.",
+      "category": "animal",
+      "stack": 1
     },
     "mount_sleipner": {
       "name": "Sleipner",
       "rarity": "legendary",
       "kind": "mount",
-      "text": "Odens häst med åtta ben. Den snabbaste hästen i alla världar."
+      "text": "Odens häst med åtta ben. Den snabbaste hästen i alla världar.",
+      "category": "animal",
+      "stack": 1
     },
     "mount_gullinbursti": {
       "name": "Gullinbursti",
       "rarity": "legendary",
       "kind": "mount",
-      "text": "Freys galt med borst av guld som lyser i mörkret."
+      "text": "Freys galt med borst av guld som lyser i mörkret.",
+      "category": "animal",
+      "stack": 1
     },
     "draugjarn": {
       "name": "Draugjärn",
       "rarity": "common",
       "kind": "quest",
-      "text": "Rostigt järn från en skelettkrigare. Smed-Stina vill ha det."
+      "text": "Rostigt järn från en skelettkrigare. Smed-Stina vill ha det.",
+      "category": "material",
+      "stack": 99
     },
     "frostros": {
       "name": "Frostros",
       "rarity": "common",
       "kind": "quest",
-      "text": "En ros av is som aldrig smälter. Fru Lind vill ha den."
+      "text": "En ros av is som aldrig smälter. Fru Lind vill ha den.",
+      "category": "material",
+      "stack": 99
     },
     "glodkol": {
       "name": "Glödkol",
       "rarity": "common",
       "kind": "quest",
-      "text": "Kol som glöder fast det är kallt. Bagar-Bo vill ha det till ugnen."
+      "text": "Kol som glöder fast det är kallt. Bagar-Bo vill ha det till ugnen.",
+      "category": "material",
+      "stack": 99
     },
     "healing_potion": {
       "name": "Läkedryck",
       "rarity": "common",
       "kind": "potion",
-      "text": "Dricks i en fängelsehåla: fyller på hälsan."
+      "text": "Dricks i en fängelsehåla: fyller på hälsan.",
+      "category": "material",
+      "stack": 20,
+      "food": true
     },
     "solruna": {
       "name": "Solrunan",
       "rarity": "epic",
       "kind": "decor",
-      "text": "Runstenen som håller vintern borta. Den lyser som solen."
+      "text": "Runstenen som håller vintern borta. Den lyser som solen.",
+      "category": "placeable",
+      "stack": 1
     },
     "yggdrasil": {
       "name": "Yggdrasils skott",
       "rarity": "legendary",
       "kind": "decor",
-      "text": "Ett litet skott av Världsträdet, som glittrar i mörkret."
+      "text": "Ett litet skott av Världsträdet, som glittrar i mörkret.",
+      "category": "placeable",
+      "stack": 1
     },
     "helsvard": {
       "name": "Helsvärd",
       "rarity": "rare",
       "kind": "weapon",
-      "text": "Ett blekt svärd som lyser som en lykta i dimman."
+      "text": "Ett blekt svärd som lyser som en lykta i dimman.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "sword"
     },
     "garmklo": {
       "name": "Garms klo",
       "rarity": "rare",
       "kind": "weapon",
-      "text": "En yxa formad som en stor hundklo. Voff!"
+      "text": "En yxa formad som en stor hundklo. Voff!",
+      "category": "tool",
+      "stack": 1,
+      "tool": "axe"
     },
     "gruvhacka": {
       "name": "Dvärgarnas hacka",
       "rarity": "rare",
       "kind": "weapon",
-      "text": "Den hittar guld alldeles av sig själv."
+      "text": "Den hittar guld alldeles av sig själv.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "hammer"
     },
     "fafnerstand": {
       "name": "Fafners tand",
       "rarity": "epic",
       "kind": "weapon",
-      "text": "En draktand, vass som ett svärd och varm som en brasa."
+      "text": "En draktand, vass som ett svärd och varm som en brasa.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "sword"
     },
     "korallspjut": {
       "name": "Korallspjutet",
       "rarity": "epic",
       "kind": "weapon",
-      "text": "En treudd av rosa korall. Den luktar lite hav."
+      "text": "En treudd av rosa korall. Den luktar lite hav.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "sword"
     },
     "stormbage": {
       "name": "Stormbågen",
       "rarity": "epic",
       "kind": "weapon",
-      "text": "Pilarna susar som havsvinden."
+      "text": "Pilarna susar som havsvinden.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "bow"
     },
     "alvklinga": {
       "name": "Alvklingan",
       "rarity": "epic",
       "kind": "weapon",
-      "text": "Lätt som en fjäder och blank som månen."
+      "text": "Lätt som en fjäder och blank som månen.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "sword"
     },
     "manstav": {
       "name": "Månstaven",
       "rarity": "epic",
       "kind": "weapon",
-      "text": "En stav med en liten måne i toppen. Den lyser mest på natten."
+      "text": "En stav med en liten måne i toppen. Den lyser mest på natten.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "hammer"
     },
     "fenristand": {
       "name": "Fenristanden",
       "rarity": "legendary",
       "kind": "weapon",
-      "text": "Fenrisulvens tappade mjölktand. Den är större än du!"
+      "text": "Fenrisulvens tappade mjölktand. Den är större än du!",
+      "category": "tool",
+      "stack": 1,
+      "tool": "sword"
     },
     "tyrsyxa": {
       "name": "Tyrs yxa",
       "rarity": "legendary",
       "kind": "weapon",
-      "text": "Guden Tyr var modigast av alla. Hans yxa är det också."
+      "text": "Guden Tyr var modigast av alla. Hans yxa är det också.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "axe"
     },
     "lokesstav": {
       "name": "Lokes stav",
       "rarity": "legendary",
       "kind": "weapon",
-      "text": "Den byter färg när ingen tittar."
+      "text": "Den byter färg när ingen tittar.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "hammer"
     },
     "bifrostbage": {
       "name": "Bifrostbågen",
       "rarity": "legendary",
       "kind": "weapon",
-      "text": "Varje pil lämnar en liten regnbåge efter sig."
+      "text": "Varje pil lämnar en liten regnbåge efter sig.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "bow"
     },
     "heimdallshorn": {
       "name": "Heimdalls horn",
       "rarity": "legendary",
       "kind": "weapon",
-      "text": "När det blåses hörs det i alla nio världar."
+      "text": "När det blåses hörs det i alla nio världar.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "hammer"
     },
     "offhand_helskold": {
       "name": "Helsköld",
       "rarity": "uncommon",
       "kind": "offhand",
-      "text": "En rund sköld, kall som en vinternatt."
+      "text": "En rund sköld, kall som en vinternatt.",
+      "category": "decor",
+      "stack": 1
     },
     "offhand_runbok": {
       "name": "Runboken",
       "rarity": "rare",
       "kind": "offhand",
-      "text": "Full av runor. Några av dem kittlar."
+      "text": "Full av runor. Några av dem kittlar.",
+      "category": "decor",
+      "stack": 1
     },
     "offhand_dvargskold": {
       "name": "Dvärgsköld",
       "rarity": "rare",
       "kind": "offhand",
-      "text": "Smidd av dvärgar, så den håller för vad som helst."
+      "text": "Smidd av dvärgar, så den håller för vad som helst.",
+      "category": "decor",
+      "stack": 1
     },
     "offhand_koger": {
       "name": "Snäckkogret",
       "rarity": "rare",
       "kind": "offhand",
-      "text": "Ett koger av snäckskal som aldrig blir tomt."
+      "text": "Ett koger av snäckskal som aldrig blir tomt.",
+      "category": "decor",
+      "stack": 1
     },
     "offhand_perlemorskold": {
       "name": "Pärlemorskölden",
       "rarity": "epic",
       "kind": "offhand",
-      "text": "Den skimrar i alla regnbågens färger."
+      "text": "Den skimrar i alla regnbågens färger.",
+      "category": "decor",
+      "stack": 1
     },
     "offhand_alvlykta": {
       "name": "Alvlyktan",
       "rarity": "epic",
       "kind": "offhand",
-      "text": "En liten lykta med en alv inuti. Ibland vinkar hon."
+      "text": "En liten lykta med en alv inuti. Ibland vinkar hon.",
+      "category": "decor",
+      "stack": 1
     },
     "offhand_tyrshandske": {
       "name": "Tyrs handske",
       "rarity": "legendary",
       "kind": "offhand",
-      "text": "Guden Tyrs järnhandske. Den är lite för stor, men det gör inget."
+      "text": "Guden Tyrs järnhandske. Den är lite för stor, men det gör inget.",
+      "category": "decor",
+      "stack": 1
     },
     "offhand_lokesmask": {
       "name": "Lokes mask",
       "rarity": "legendary",
       "kind": "offhand",
-      "text": "En mask som ler. Ibland blinkar den åt dig."
+      "text": "En mask som ler. Ibland blinkar den åt dig.",
+      "category": "decor",
+      "stack": 1
     },
     "amulet_vegvisir": {
       "name": "Vegvisir",
       "rarity": "uncommon",
       "kind": "amulet",
-      "text": "En runa som visar vägen hem, var du än är."
+      "text": "En runa som visar vägen hem, var du än är.",
+      "category": "decor",
+      "stack": 1
     },
     "amulet_helring": {
       "name": "Hels ring",
       "rarity": "rare",
       "kind": "amulet",
-      "text": "En ring av svart sten. Den är alltid lite kall."
+      "text": "En ring av svart sten. Den är alltid lite kall.",
+      "category": "decor",
+      "stack": 1
     },
     "amulet_andvaranaut": {
       "name": "Andvaranaut",
       "rarity": "epic",
       "kind": "amulet",
-      "text": "Fafners ring. Den vill gärna ha mer guld."
+      "text": "Fafners ring. Den vill gärna ha mer guld.",
+      "category": "decor",
+      "stack": 1
     },
     "amulet_perla": {
       "name": "Havets pärla",
       "rarity": "epic",
       "kind": "amulet",
-      "text": "Håll den mot örat, så hör du havet."
+      "text": "Håll den mot örat, så hör du havet.",
+      "category": "decor",
+      "stack": 1
     },
     "amulet_alvsten": {
       "name": "Alvstenen",
       "rarity": "epic",
       "kind": "amulet",
-      "text": "En sten som lyser som en liten stjärna."
+      "text": "En sten som lyser som en liten stjärna.",
+      "category": "decor",
+      "stack": 1
     },
     "amulet_gleipnir": {
       "name": "Gleipner",
       "rarity": "legendary",
       "kind": "amulet",
-      "text": "Bandet som höll Fenrisulven, gjort av kattens steg och fiskens andetag."
+      "text": "Bandet som höll Fenrisulven, gjort av kattens steg och fiskens andetag.",
+      "category": "decor",
+      "stack": 1
     },
     "amulet_brisingamen": {
       "name": "Brisingamen",
       "rarity": "legendary",
       "kind": "amulet",
-      "text": "Gudinnan Frejas halsband. Det glittrar som tusen solar."
+      "text": "Gudinnan Frejas halsband. Det glittrar som tusen solar.",
+      "category": "decor",
+      "stack": 1
     },
     "hat_helhjalm": {
       "name": "Helhjälm",
       "rarity": "rare",
       "kind": "hat",
-      "text": "En gråblek hjälm från Helheim."
+      "text": "En gråblek hjälm från Helheim.",
+      "category": "clothing",
+      "stack": 1
     },
     "shirt_helrustning": {
       "name": "Helrustning",
       "rarity": "rare",
       "kind": "shirt",
-      "text": "Rustning som lyser svagt grönt i mörkret."
+      "text": "Rustning som lyser svagt grönt i mörkret.",
+      "category": "clothing",
+      "stack": 1
     },
     "hat_dvarghjalm": {
       "name": "Dvärghjälm",
       "rarity": "rare",
       "kind": "hat",
-      "text": "En stadig hjälm av mässing, smidd av dvärgar."
+      "text": "En stadig hjälm av mässing, smidd av dvärgar.",
+      "category": "clothing",
+      "stack": 1
     },
     "shirt_dvargbrynja": {
       "name": "Dvärgbrynja",
       "rarity": "rare",
       "kind": "shirt",
-      "text": "En brynja av små guldringar. Tung, men så fin!"
+      "text": "En brynja av små guldringar. Tung, men så fin!",
+      "category": "clothing",
+      "stack": 1
     },
     "hat_sjokrona": {
       "name": "Sjökrona",
       "rarity": "epic",
       "kind": "hat",
-      "text": "En krona av korall och snäckor."
+      "text": "En krona av korall och snäckor.",
+      "category": "clothing",
+      "stack": 1
     },
     "shirt_fjallrustning": {
       "name": "Fjällrustning",
       "rarity": "epic",
       "kind": "shirt",
-      "text": "Rustning av glänsande fiskfjäll."
+      "text": "Rustning av glänsande fiskfjäll.",
+      "category": "clothing",
+      "stack": 1
     },
     "hat_alvkrona": {
       "name": "Alvkrona",
       "rarity": "epic",
       "kind": "hat",
-      "text": "En smal krona av silver och månsken."
+      "text": "En smal krona av silver och månsken.",
+      "category": "clothing",
+      "stack": 1
     },
     "shirt_alvmantel": {
       "name": "Alvmantel",
       "rarity": "epic",
       "kind": "shirt",
-      "text": "En mantel som glittrar som stjärnhimlen."
+      "text": "En mantel som glittrar som stjärnhimlen.",
+      "category": "clothing",
+      "stack": 1
     },
     "hat_ulvhuva": {
       "name": "Ulvhuva",
       "rarity": "epic",
       "kind": "hat",
-      "text": "En varm luva med ulvöron."
+      "text": "En varm luva med ulvöron.",
+      "category": "clothing",
+      "stack": 1
     },
     "shirt_ulvpals": {
       "name": "Ulvpäls",
       "rarity": "epic",
       "kind": "shirt",
-      "text": "En grå päls som håller vintern borta."
+      "text": "En grå päls som håller vintern borta.",
+      "category": "clothing",
+      "stack": 1
     },
     "hat_lokeshorn": {
       "name": "Lokes horn",
       "rarity": "legendary",
       "kind": "hat",
-      "text": "Två små gröna horn. Nu ser du lite busig ut."
+      "text": "Två små gröna horn. Nu ser du lite busig ut.",
+      "category": "clothing",
+      "stack": 1
     },
     "shirt_lokesmantel": {
       "name": "Lokes mantel",
       "rarity": "legendary",
       "kind": "shirt",
-      "text": "En grön mantel som byter mönster när du snurrar."
+      "text": "En grön mantel som byter mönster när du snurrar.",
+      "category": "clothing",
+      "stack": 1
     },
     "pet_garmvalp": {
       "name": "Garmvalp",
       "rarity": "epic",
       "kind": "pet",
-      "text": "En liten helhundsvalp med två huvuden som båda vill bli klappade."
+      "text": "En liten helhundsvalp med två huvuden som båda vill bli klappade.",
+      "category": "animal",
+      "stack": 1
     },
     "pet_guldbagge": {
       "name": "Guldbagge",
       "rarity": "epic",
       "kind": "pet",
-      "text": "En liten guldbagge som surrar och glittrar."
+      "text": "En liten guldbagge som surrar och glittrar.",
+      "category": "animal",
+      "stack": 1
     },
     "pet_lysmanet": {
       "name": "Lysmanet",
       "rarity": "epic",
       "kind": "pet",
-      "text": "En liten manet som svävar efter dig och lyser som en nattlampa."
+      "text": "En liten manet som svävar efter dig och lyser som en nattlampa.",
+      "category": "animal",
+      "stack": 1
     },
     "pet_alvljus": {
       "name": "Alvljus",
       "rarity": "epic",
       "kind": "pet",
-      "text": "En pytteliten ljusalv som fladdrar runt dig."
+      "text": "En pytteliten ljusalv som fladdrar runt dig.",
+      "category": "animal",
+      "stack": 1
     },
     "pet_ulvvalp": {
       "name": "Ulvvalp",
       "rarity": "epic",
       "kind": "pet",
-      "text": "En grå ulvvalp som ylar när den är glad."
+      "text": "En grå ulvvalp som ylar när den är glad.",
+      "category": "animal",
+      "stack": 1
     },
     "mount_havshast": {
       "name": "Havshäst",
       "rarity": "legendary",
       "kind": "mount",
-      "text": "En häst med fenor och en man av sjöskum."
+      "text": "En häst med fenor och en man av sjöskum.",
+      "category": "animal",
+      "stack": 1
     },
     "mount_jattehjort": {
       "name": "Jättehjort",
       "rarity": "legendary",
       "kind": "mount",
-      "text": "En vit hjort med lysande horn, stor som en häst."
+      "text": "En vit hjort med lysande horn, stor som en häst.",
+      "category": "animal",
+      "stack": 1
     },
     "mount_fenrisulv": {
       "name": "Vinterulven",
       "rarity": "legendary",
       "kind": "mount",
-      "text": "En jättelik ulv som låter dig rida på ryggen. Snäll mot dig, i alla fall."
+      "text": "En jättelik ulv som låter dig rida på ryggen. Snäll mot dig, i alla fall.",
+      "category": "animal",
+      "stack": 1
     },
     "mount_lokeshast": {
       "name": "Lokes föl",
       "rarity": "legendary",
       "kind": "mount",
-      "text": "Ett åttabent föl, Sleipners lilla kusin. Det springer åt alla håll på en gång."
+      "text": "Ett åttabent föl, Sleipners lilla kusin. Det springer åt alla håll på en gång.",
+      "category": "animal",
+      "stack": 1
     },
     "glimmersten": {
       "name": "Glimmersten",
       "rarity": "common",
       "kind": "quest",
-      "text": "En sten som glittrar som guld. Smed-Stina vill ha den."
+      "text": "En sten som glittrar som guld. Smed-Stina vill ha den.",
+      "category": "material",
+      "stack": 99
     },
     "alvdagg": {
       "name": "Alvdagg",
       "rarity": "common",
       "kind": "quest",
-      "text": "Dagg från Alvernas lund som lyser i mörkret. Fru Lind vill ha den."
+      "text": "Dagg från Alvernas lund som lyser i mörkret. Fru Lind vill ha den.",
+      "category": "material",
+      "stack": 99
     },
     "krabbklo": {
       "name": "Krabbklo",
       "rarity": "common",
       "kind": "quest",
-      "text": "En stor krabbklo. Pizza-Pino vill ha den."
+      "text": "En stor krabbklo. Pizza-Pino vill ha den.",
+      "category": "material",
+      "stack": 99
     },
     "ulvtand": {
       "name": "Ulvtand",
       "rarity": "common",
       "kind": "quest",
-      "text": "En tand från en ulv. Fiskar-Sven gör fiskekrokar av dem."
+      "text": "En tand från en ulv. Fiskar-Sven gör fiskekrokar av dem.",
+      "category": "material",
+      "stack": 99
     },
     "bifrostskarva": {
       "name": "Bifrostskärva",
       "rarity": "common",
       "kind": "quest",
-      "text": "En glittrande skärva av regnbågsbron. Lilla Elsa samlar på dem."
+      "text": "En glittrande skärva av regnbågsbron. Lilla Elsa samlar på dem.",
+      "category": "material",
+      "stack": 99
     },
     "styrkedryck": {
       "name": "Styrkedryck",
       "rarity": "common",
       "kind": "potion",
-      "text": "Dricks i en strid: du slår hårdare en liten stund."
+      "text": "Dricks i en strid: du slår hårdare en liten stund.",
+      "category": "material",
+      "stack": 20,
+      "food": true
     },
     "hels_lykta": {
       "name": "Hels lykta",
       "rarity": "epic",
       "kind": "decor",
-      "text": "En lykta från Helheim som lyser grönt och snällt."
+      "text": "En lykta från Helheim som lyser grönt och snällt.",
+      "category": "placeable",
+      "stack": 1
     },
     "dvargstaty": {
       "name": "Dvärgstaty",
       "rarity": "epic",
       "kind": "decor",
-      "text": "En liten dvärg av guld som vinkar."
+      "text": "En liten dvärg av guld som vinkar.",
+      "category": "placeable",
+      "stack": 1
     },
     "ormtand": {
       "name": "Ormtand",
       "rarity": "epic",
       "kind": "decor",
-      "text": "En tand från Midgårdsormen, stor som en dörr."
+      "text": "En tand från Midgårdsormen, stor som en dörr.",
+      "category": "placeable",
+      "stack": 1
     },
     "alvlykta": {
       "name": "Ljusalvernas lykta",
       "rarity": "epic",
       "kind": "decor",
-      "text": "Ljusalvernas tack. Den lyser lila hela natten."
+      "text": "Ljusalvernas tack. Den lyser lila hela natten.",
+      "category": "placeable",
+      "stack": 1
     },
     "fenrislanka": {
       "name": "Fenrislänken",
       "rarity": "legendary",
       "kind": "decor",
-      "text": "En länk från kedjan som höll Fenrisulven."
+      "text": "En länk från kedjan som höll Fenrisulven.",
+      "category": "placeable",
+      "stack": 1
     },
     "bifrostbit": {
       "name": "Bit av Bifrost",
       "rarity": "legendary",
       "kind": "decor",
-      "text": "En bit av regnbågsbron som skimrar i alla färger."
+      "text": "En bit av regnbågsbron som skimrar i alla färger.",
+      "category": "placeable",
+      "stack": 1
     },
     "shirt_vandrarmantel": {
       "name": "Vandrarmanteln",
       "rarity": "uncommon",
       "kind": "shirt",
-      "text": "En grön mantel för den som har börjat sin vandring."
+      "text": "En grön mantel för den som har börjat sin vandring.",
+      "category": "clothing",
+      "stack": 1
     },
     "hat_glodkrans": {
       "name": "Glödkransen",
       "rarity": "rare",
       "kind": "hat",
-      "text": "En krans som glöder som en brasa i mörkret."
+      "text": "En krans som glöder som en brasa i mörkret.",
+      "category": "clothing",
+      "stack": 1
     },
     "pet_lyktfe": {
       "name": "Lyktfén",
       "rarity": "rare",
       "kind": "pet",
-      "text": "En liten fe med en lykta, som lyser upp vägen åt dig."
+      "text": "En liten fe med en lykta, som lyser upp vägen åt dig.",
+      "category": "animal",
+      "stack": 1
     },
     "shirt_glodmantel": {
       "name": "Glödmanteln",
       "rarity": "rare",
       "kind": "shirt",
-      "text": "En mantel med en kant som glöder som kol."
+      "text": "En mantel med en kant som glöder som kol.",
+      "category": "clothing",
+      "stack": 1
     },
     "hat_stjarnkrona": {
       "name": "Stjärnkronan",
       "rarity": "epic",
       "kind": "hat",
-      "text": "En krona av stjärnljus. Den tindrar när du går."
+      "text": "En krona av stjärnljus. Den tindrar när du går.",
+      "category": "clothing",
+      "stack": 1
     },
     "amulet_hjaltemarke": {
       "name": "Hjältemärket",
       "rarity": "epic",
       "kind": "amulet",
-      "text": "Ett märke av silver som bara riktiga hjältar får bära."
+      "text": "Ett märke av silver som bara riktiga hjältar får bära.",
+      "category": "decor",
+      "stack": 1
     },
     "shirt_stjarnmantel": {
       "name": "Stjärnmanteln",
       "rarity": "epic",
       "kind": "shirt",
-      "text": "En mantel lika mörk som natthimlen, full av små lysande stjärnor."
+      "text": "En mantel lika mörk som natthimlen, full av små lysande stjärnor.",
+      "category": "clothing",
+      "stack": 1
     },
     "hat_norrskenshjalm": {
       "name": "Norrskenshjälmen",
       "rarity": "epic",
       "kind": "hat",
-      "text": "En vingad hjälm som skimrar grönt som norrskenet."
+      "text": "En vingad hjälm som skimrar grönt som norrskenet.",
+      "category": "clothing",
+      "stack": 1
     },
     "mount_ljushjort": {
       "name": "Ljushjorten",
       "rarity": "legendary",
       "kind": "mount",
-      "text": "En blekt vitblå hjort vars horn lyser som månsken."
+      "text": "En blekt vitblå hjort vars horn lyser som månsken.",
+      "category": "animal",
+      "stack": 1
     },
     "shirt_eldmantel": {
       "name": "Eldmanteln",
       "rarity": "legendary",
       "kind": "shirt",
-      "text": "En mantel som fladdrar som lågor, men aldrig bränns."
+      "text": "En mantel som fladdrar som lågor, men aldrig bränns.",
+      "category": "clothing",
+      "stack": 1
     },
     "hat_solkrona": {
       "name": "Solkronan",
       "rarity": "legendary",
       "kind": "hat",
-      "text": "En krona av guld som lyser som solen själv."
+      "text": "En krona av guld som lyser som solen själv.",
+      "category": "clothing",
+      "stack": 1
     },
     "amulet_yggdrasil": {
       "name": "Yggdrasils löv",
       "rarity": "legendary",
       "kind": "amulet",
-      "text": "Ett löv från Världsträdet. Det är grönt året runt."
+      "text": "Ett löv från Världsträdet. Det är grönt året runt.",
+      "category": "decor",
+      "stack": 1
     },
     "shirt_bifrostmantel": {
       "name": "Bifrostmanteln",
       "rarity": "legendary",
       "kind": "shirt",
-      "text": "En mantel vävd av regnbågsbron. Den skimrar i alla färger."
+      "text": "En mantel vävd av regnbågsbron. Den skimrar i alla färger.",
+      "category": "clothing",
+      "stack": 1
     },
     "monsteressens": {
       "name": "Monsteressens",
       "rarity": "uncommon",
       "kind": "material",
-      "text": "En virvlande lila droppe som monstren i fängelsehålorna lämnar efter sig. Smed-Stina smider med den."
+      "text": "En virvlande lila droppe som monstren i fängelsehålorna lämnar efter sig. Smed-Stina smider med den.",
+      "category": "material",
+      "stack": 99
     },
     "drakfjall": {
       "name": "Drakfjäll",
       "rarity": "rare",
       "kind": "material",
-      "text": "Ett rödgyllene fjäll från en mäktig boss. Det hårdaste Smed-Stina vet."
+      "text": "Ett rödgyllene fjäll från en mäktig boss. Det hårdaste Smed-Stina vet.",
+      "category": "material",
+      "stack": 99
     },
     "jarnsvard": {
       "name": "Järnsvärd",
       "rarity": "uncommon",
       "kind": "weapon",
-      "text": "Ett stadigt svärd av järn, smitt av Smed-Stina."
+      "text": "Ett stadigt svärd av järn, smitt av Smed-Stina.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "sword"
     },
     "jarnyxa": {
       "name": "Järnyxa",
       "rarity": "uncommon",
       "kind": "weapon",
-      "text": "En yxa av järn som biter lika bra i ved som i monster."
+      "text": "En yxa av järn som biter lika bra i ved som i monster.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "axe"
     },
     "ekstav": {
       "name": "Ekstav",
       "rarity": "uncommon",
       "kind": "weapon",
-      "text": "En stav av ek med guldbeslag. Den känns varm i handen."
+      "text": "En stav av ek med guldbeslag. Den känns varm i handen.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "hammer"
     },
     "jaktbage": {
       "name": "Jaktbåge",
       "rarity": "uncommon",
       "kind": "weapon",
-      "text": "En enkel båge av trä och snöre, men den skjuter rakt."
+      "text": "En enkel båge av trä och snöre, men den skjuter rakt.",
+      "category": "tool",
+      "stack": 1,
+      "tool": "bow"
     },
     "traskold": {
       "name": "Träsköld",
       "rarity": "uncommon",
       "kind": "offhand",
-      "text": "En rund sköld av trä med en kant av guld."
+      "text": "En rund sköld av trä med en kant av guld.",
+      "category": "decor",
+      "stack": 1
     },
     "stenamulett": {
       "name": "Stenamulett",
       "rarity": "uncommon",
       "kind": "amulet",
-      "text": "En slät sten med en kristall i, på ett läderband."
+      "text": "En slät sten med en kristall i, på ett läderband.",
+      "category": "decor",
+      "stack": 1
+    },
+    "animal_cat": {
+      "name": "Katt",
+      "rarity": "common",
+      "kind": "animal",
+      "text": "",
+      "category": "animal",
+      "stack": 1
+    },
+    "animal_cow": {
+      "name": "Ko",
+      "rarity": "common",
+      "kind": "animal",
+      "text": "",
+      "category": "animal",
+      "stack": 1
+    },
+    "animal_dog": {
+      "name": "Hund",
+      "rarity": "common",
+      "kind": "animal",
+      "text": "",
+      "category": "animal",
+      "stack": 1
+    },
+    "animal_hen": {
+      "name": "Höna",
+      "rarity": "common",
+      "kind": "animal",
+      "text": "",
+      "category": "animal",
+      "stack": 1
+    },
+    "animal_horse": {
+      "name": "Häst",
+      "rarity": "common",
+      "kind": "animal",
+      "text": "",
+      "category": "animal",
+      "stack": 1
+    },
+    "animal_pig": {
+      "name": "Gris",
+      "rarity": "common",
+      "kind": "animal",
+      "text": "",
+      "category": "animal",
+      "stack": 1
+    },
+    "animal_rabbit": {
+      "name": "Kanin",
+      "rarity": "common",
+      "kind": "animal",
+      "text": "",
+      "category": "animal",
+      "stack": 1
+    },
+    "animal_sheep": {
+      "name": "Får",
+      "rarity": "common",
+      "kind": "animal",
+      "text": "",
+      "category": "animal",
+      "stack": 1
+    },
+    "axe": {
+      "name": "Yxa",
+      "rarity": "common",
+      "kind": "tool",
+      "text": "",
+      "category": "tool",
+      "stack": 1,
+      "tool": "axe"
+    },
+    "banana": {
+      "name": "Banan",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99,
+      "food": true
+    },
+    "barn": {
+      "name": "Lada",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "bazooka": {
+      "name": "Bazooka",
+      "rarity": "common",
+      "kind": "tool",
+      "text": "",
+      "category": "tool",
+      "stack": 1,
+      "tool": "bazooka"
+    },
+    "bed": {
+      "name": "Säng",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "bench": {
+      "name": "Bänk",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "blueberry": {
+      "name": "Blåbär",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "blueberry_pie": {
+      "name": "Blåbärspaj",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "bookshelf": {
+      "name": "Bokhylla",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "bow": {
+      "name": "Pilbåge",
+      "rarity": "common",
+      "kind": "tool",
+      "text": "",
+      "category": "tool",
+      "stack": 1,
+      "tool": "bow"
+    },
+    "bread": {
+      "name": "Bröd",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "brush": {
+      "name": "Borste",
+      "rarity": "common",
+      "kind": "tool",
+      "text": "",
+      "category": "tool",
+      "stack": 1,
+      "tool": "brush"
+    },
+    "cactus_fruit": {
+      "name": "Kaktusfrukt",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "can": {
+      "name": "Vattenkanna",
+      "rarity": "common",
+      "kind": "tool",
+      "text": "",
+      "category": "tool",
+      "stack": 1,
+      "tool": "can"
+    },
+    "carrot": {
+      "name": "Morot",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "carrot_cake": {
+      "name": "Morotskaka",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "carrot_seed": {
+      "name": "Morotsfrön",
+      "rarity": "common",
+      "kind": "seed",
+      "text": "",
+      "category": "seed",
+      "stack": 99
+    },
+    "chair": {
+      "name": "Stol",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "chest": {
+      "name": "Kista",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "clock": {
+      "name": "Klocka",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "cloudberry": {
+      "name": "Hjortron",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "cloudberry_jam": {
+      "name": "Hjortronsylt",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "coal": {
+      "name": "Kol",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "coop": {
+      "name": "Hönshus",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "crystal": {
+      "name": "Kristall",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "crystal_lamp": {
+      "name": "Kristallampa",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "dino_skeleton": {
+      "name": "Dinosaurieskelett",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "dirt": {
+      "name": "Jord",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "door": {
+      "name": "Dörr",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "dragon_egg": {
+      "name": "Drakägg",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "dress_blue": {
+      "name": "Klänning, blå",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "dress_green_belt": {
+      "name": "Klänning med skärp, grön",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "dress_lucia": {
+      "name": "Luciaklänning",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "dress_midsommar": {
+      "name": "Midsommarklänning",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "dress_mint": {
+      "name": "Klänning, mint",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "dress_pink": {
+      "name": "Klänning, rosa",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "dress_purple": {
+      "name": "Klänning, lila",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "dress_red_belt": {
+      "name": "Klänning med skärp, röd",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "dress_white_flowers": {
+      "name": "Blomklänning, vit",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "dress_yellow_flowers": {
+      "name": "Blomklänning, gul",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "easter_twigs": {
+      "name": "Påskris",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "egg": {
+      "name": "Ägg",
+      "rarity": "common",
+      "kind": "animal_product",
+      "text": "",
+      "category": "animal_product",
+      "stack": 99
+    },
+    "egg_basket": {
+      "name": "Äggkorg",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "egg_pask": {
+      "name": "Påskägg",
+      "rarity": "common",
+      "kind": "animal_product",
+      "text": "",
+      "category": "animal_product",
+      "stack": 99
+    },
+    "fairy_dust": {
+      "name": "Älvdamm",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "fence": {
+      "name": "Staket",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "fiber": {
+      "name": "Fiber",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "fire_crystal": {
+      "name": "Eldkristall",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "fish_gold": {
+      "name": "Guldfisk",
+      "rarity": "common",
+      "kind": "fish",
+      "text": "",
+      "category": "fish",
+      "stack": 99
+    },
+    "fish_perch": {
+      "name": "Abborre",
+      "rarity": "common",
+      "kind": "fish",
+      "text": "",
+      "category": "fish",
+      "stack": 99
+    },
+    "fish_pike": {
+      "name": "Gädda",
+      "rarity": "common",
+      "kind": "fish",
+      "text": "",
+      "category": "fish",
+      "stack": 99
+    },
+    "fish_roach": {
+      "name": "Mört",
+      "rarity": "common",
+      "kind": "fish",
+      "text": "",
+      "category": "fish",
+      "stack": 99
+    },
+    "fish_soup": {
+      "name": "Fisksoppa",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "floor_stone": {
+      "name": "Stengolv",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "floor_wood": {
+      "name": "Trägolv",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "flower_wreath_decor": {
+      "name": "Blomsterkrans",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "flowerbox": {
+      "name": "Blomlåda",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "fossil": {
+      "name": "Fossil",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "fur": {
+      "name": "fur",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "gate": {
+      "name": "Grind",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "gem": {
+      "name": "Ädelsten",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "ghost_flag": {
+      "name": "Spökflagga",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "glowshroom": {
+      "name": "Lyssvamp",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "gold": {
+      "name": "Guldmynt",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "gown_blue": {
+      "name": "Balklänning, blå",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "gown_gold": {
+      "name": "Balklänning, guld",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "gravel": {
+      "name": "Grus",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "hammer": {
+      "name": "Hammare",
+      "rarity": "common",
+      "kind": "tool",
+      "text": "",
+      "category": "tool",
+      "stack": 1,
+      "tool": "hammer"
+    },
+    "hat_beanie": {
+      "name": "Mössa",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "hat_bunny": {
+      "name": "Kaninöron",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "hat_cap_blue": {
+      "name": "Blå keps",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "hat_cap_red": {
+      "name": "Röd keps",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "hat_cowboy": {
+      "name": "Cowboyhatt",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "hat_crown": {
+      "name": "Krona",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "hat_dino": {
+      "name": "Dinohuva",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "hat_explorer": {
+      "name": "Tropikhjälm",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "hat_flowerwreath": {
+      "name": "Blomsterkrans",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "hat_frog": {
+      "name": "Grodmössa",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "hat_ice_crown": {
+      "name": "Iskrona",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "hat_party": {
+      "name": "Partyhatt",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "hat_pirate": {
+      "name": "Sjörövarhatt",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "hat_santa": {
+      "name": "Tomteluva",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "hat_space": {
+      "name": "Rymdhjälm",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "hat_straw": {
+      "name": "Stråhatt",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "hat_viking": {
+      "name": "Vikingahjälm",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "hat_witch": {
+      "name": "Häxhatt",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "hay": {
+      "name": "Hö",
+      "rarity": "common",
+      "kind": "feed",
+      "text": "",
+      "category": "feed",
+      "stack": 99
+    },
+    "heartberry": {
+      "name": "Hjärtbär",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "hoe": {
+      "name": "Hacka",
+      "rarity": "common",
+      "kind": "tool",
+      "text": "",
+      "category": "tool",
+      "stack": 1,
+      "tool": "hoe"
+    },
+    "honey": {
+      "name": "Honung",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "hutch": {
+      "name": "Kaninbur",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "iceberry": {
+      "name": "Isbär",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "idol": {
+      "name": "Guldstatyett",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "lamp": {
+      "name": "Lampa",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "lasso": {
+      "name": "lasso",
+      "rarity": "common",
+      "kind": "tool",
+      "text": "",
+      "category": "tool",
+      "stack": 1,
+      "tool": "lasso"
+    },
+    "lemonade": {
+      "name": "Saft",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99,
+      "food": true
+    },
+    "lights": {
+      "name": "Ljusslinga",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "lollipop": {
+      "name": "Klubba",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99,
+      "food": true
+    },
+    "maypole": {
+      "name": "Midsommarstång",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "milk": {
+      "name": "Mjölk",
+      "rarity": "common",
+      "kind": "animal_product",
+      "text": "",
+      "category": "animal_product",
+      "stack": 99
+    },
+    "moon_cheese": {
+      "name": "Månost",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99,
+      "food": true
+    },
+    "moon_rock": {
+      "name": "Månsten",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "mushroom": {
+      "name": "Svamp",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "mushroom_lamp": {
+      "name": "Svamplampa",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "obsidian": {
+      "name": "Obsidian",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "old_coin": {
+      "name": "Gammalt mynt",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "paint_blue": {
+      "name": "Blå färg",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "paint_green": {
+      "name": "Grön färg",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "paint_pink": {
+      "name": "Rosa färg",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "paint_red": {
+      "name": "Röd färg",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "paint_white": {
+      "name": "Vit färg",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "paint_yellow": {
+      "name": "Gul färg",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "painting": {
+      "name": "Tavla",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "pancakes": {
+      "name": "Pannkakor",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "pants_blue": {
+      "name": "Blå byxor",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "pants_brown": {
+      "name": "Bruna byxor",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "pants_green": {
+      "name": "Gröna byxor",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "pants_red": {
+      "name": "Röda byxor",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "pants_skirt_blue": {
+      "name": "Blå kjol",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "pants_skirt_pink": {
+      "name": "Rosa kjol",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "paper": {
+      "name": "Papper",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "path_dirt": {
+      "name": "Grusstig",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "path_stone": {
+      "name": "Stenstig",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "pearl": {
+      "name": "Pärla",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "pick": {
+      "name": "Spett",
+      "rarity": "common",
+      "kind": "tool",
+      "text": "",
+      "category": "tool",
+      "stack": 1,
+      "tool": "pick"
+    },
+    "pigsty": {
+      "name": "Svinstia",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "pizza": {
+      "name": "Pizza Margherita",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99,
+      "food": true
+    },
+    "pizza_hawaii": {
+      "name": "Pizza Hawaii",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99,
+      "food": true
+    },
+    "pizza_kebab": {
+      "name": "Kebabpizza",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99,
+      "food": true
+    },
+    "plant": {
+      "name": "Krukväxt",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "polkagris": {
+      "name": "Polkagris",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99,
+      "food": true
+    },
+    "potato": {
+      "name": "Potatis",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "potato_seed": {
+      "name": "Sättpotatis",
+      "rarity": "common",
+      "kind": "seed",
+      "text": "",
+      "category": "seed",
+      "stack": 99
+    },
+    "pumpkin": {
+      "name": "Pumpa",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "pumpkin_lantern": {
+      "name": "Pumpalykta",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "pumpkin_pie": {
+      "name": "Pumpapaj",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "pumpkin_seed": {
+      "name": "Pumpafrön",
+      "rarity": "common",
+      "kind": "seed",
+      "text": "",
+      "category": "seed",
+      "stack": 99
+    },
+    "rocket": {
+      "name": "Raket",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "rod": {
+      "name": "Fiskespö",
+      "rarity": "common",
+      "kind": "tool",
+      "text": "",
+      "category": "tool",
+      "stack": 1,
+      "tool": "rod"
+    },
+    "rug": {
+      "name": "Matta",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "sand": {
+      "name": "Sand",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "scarab": {
+      "name": "Guldskarabé",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "scarecrow": {
+      "name": "Fågelskrämma",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "scythe": {
+      "name": "Lie",
+      "rarity": "common",
+      "kind": "tool",
+      "text": "",
+      "category": "tool",
+      "stack": 1,
+      "tool": "scythe"
+    },
+    "sheepfold": {
+      "name": "Fårhus",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "shell": {
+      "name": "Snäcka",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "shield": {
+      "name": "Sköld",
+      "rarity": "common",
+      "kind": "tool",
+      "text": "",
+      "category": "tool",
+      "stack": 1,
+      "tool": "shield"
+    },
+    "shirt_blue": {
+      "name": "Blå tröja",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "shirt_easter": {
+      "name": "Påsktröja",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "shirt_ghost": {
+      "name": "Spökdräkt",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "shirt_gold": {
+      "name": "Guldtröja",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "shirt_green": {
+      "name": "Grön tröja",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "shirt_knight": {
+      "name": "Riddarskjorta",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "shirt_overalls": {
+      "name": "Snickarbyxor",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "shirt_pink": {
+      "name": "Rosa tröja",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "shirt_purple": {
+      "name": "Lila tröja",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "shirt_red": {
+      "name": "Röd tröja",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "shirt_space": {
+      "name": "Rymddräkt",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "shirt_star": {
+      "name": "Stjärntröja",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "shirt_stripes": {
+      "name": "Randig tröja",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "shirt_xmas": {
+      "name": "Jultröja",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "shirt_yellow": {
+      "name": "Gul tröja",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "shoes_boots": {
+      "name": "Stövlar",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "shoes_red": {
+      "name": "Röda skor",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "shoes_rubber": {
+      "name": "Gummistövlar",
+      "rarity": "common",
+      "kind": "clothing",
+      "text": "",
+      "category": "clothing",
+      "stack": 1
+    },
+    "snowman": {
+      "name": "Snögubbe",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "sofa": {
+      "name": "Soffa",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "stall": {
+      "name": "Stall",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "star_crystal": {
+      "name": "Stjärnkristall",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "stone": {
+      "name": "Sten",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "stove": {
+      "name": "Spis",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "strawberry": {
+      "name": "Jordgubbe",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "strawberry_jam": {
+      "name": "Jordgubbssylt",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "strawberry_seed": {
+      "name": "Jordgubbsplantor",
+      "rarity": "common",
+      "kind": "seed",
+      "text": "",
+      "category": "seed",
+      "stack": 99
+    },
+    "sunflower": {
+      "name": "Solros",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "sunflower_seed": {
+      "name": "Solrosfrön",
+      "rarity": "common",
+      "kind": "seed",
+      "text": "",
+      "category": "seed",
+      "stack": 99
+    },
+    "sword": {
+      "name": "Svärd",
+      "rarity": "common",
+      "kind": "tool",
+      "text": "",
+      "category": "tool",
+      "stack": 1,
+      "tool": "sword"
+    },
+    "table": {
+      "name": "Bord",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "tomato": {
+      "name": "Tomat",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "tomato_seed": {
+      "name": "Tomatfrön",
+      "rarity": "common",
+      "kind": "seed",
+      "text": "",
+      "category": "seed",
+      "stack": 99
+    },
+    "torch": {
+      "name": "Fackla",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "trough": {
+      "name": "Matho",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "truffle": {
+      "name": "Tryffel",
+      "rarity": "common",
+      "kind": "animal_product",
+      "text": "",
+      "category": "animal_product",
+      "stack": 99
+    },
+    "truffle_pasta": {
+      "name": "Tryffelpasta",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "vehicle_car_blue": {
+      "name": "Hästkärra (blå)",
+      "rarity": "common",
+      "kind": "animal",
+      "text": "",
+      "category": "animal",
+      "stack": 1
+    },
+    "vehicle_car_red": {
+      "name": "Hästkärra (röd)",
+      "rarity": "common",
+      "kind": "animal",
+      "text": "",
+      "category": "animal",
+      "stack": 1
+    },
+    "vehicle_car_yellow": {
+      "name": "Hästkärra (gul)",
+      "rarity": "common",
+      "kind": "animal",
+      "text": "",
+      "category": "animal",
+      "stack": 1
+    },
+    "vehicle_motorcycle": {
+      "name": "Ridhäst",
+      "rarity": "common",
+      "kind": "animal",
+      "text": "",
+      "category": "animal",
+      "stack": 1
+    },
+    "wall_stone": {
+      "name": "Stenvägg",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "wall_wood": {
+      "name": "Trävägg",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "well": {
+      "name": "Brunn",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "wheat": {
+      "name": "Vete",
+      "rarity": "common",
+      "kind": "crop",
+      "text": "",
+      "category": "crop",
+      "stack": 99
+    },
+    "wheat_seed": {
+      "name": "Vetefrön",
+      "rarity": "common",
+      "kind": "seed",
+      "text": "",
+      "category": "seed",
+      "stack": 99
+    },
+    "window": {
+      "name": "Fönster",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "wisp_jar": {
+      "name": "Irrbloss i burk",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "wood": {
+      "name": "Trä",
+      "rarity": "common",
+      "kind": "material",
+      "text": "",
+      "category": "material",
+      "stack": 99
+    },
+    "wool": {
+      "name": "Ull",
+      "rarity": "common",
+      "kind": "animal_product",
+      "text": "",
+      "category": "animal_product",
+      "stack": 99
+    },
+    "workbench": {
+      "name": "Arbetsbänk",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
+    },
+    "xmas_tree": {
+      "name": "Julgran",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99
     }
   },
+  "filters": [
+    {
+      "id": "tools",
+      "emoji": "🔧",
+      "categories": [
+        "tool"
+      ],
+      "name": "Verktyg"
+    },
+    {
+      "id": "seeds",
+      "emoji": "🌱",
+      "categories": [
+        "seed"
+      ],
+      "name": "Frön"
+    },
+    {
+      "id": "food",
+      "emoji": "🥕",
+      "categories": [
+        "crop",
+        "animal_product",
+        "fish",
+        "feed"
+      ],
+      "name": "Mat & skörd"
+    },
+    {
+      "id": "materials",
+      "emoji": "🪵",
+      "categories": [
+        "material"
+      ],
+      "name": "Material"
+    },
+    {
+      "id": "build",
+      "emoji": "🪑",
+      "categories": [
+        "placeable",
+        "decor"
+      ],
+      "name": "Bygg & möbler"
+    },
+    {
+      "id": "other",
+      "emoji": "🎁",
+      "categories": [
+        "clothing",
+        "animal"
+      ],
+      "name": "Annat"
+    }
+  ],
+  "categoryOrder": [
+    "tool",
+    "seed",
+    "crop",
+    "animal_product",
+    "fish",
+    "feed",
+    "material",
+    "placeable",
+    "clothing",
+    "animal",
+    "decor"
+  ],
   "rarity": {
     "colors": {
       "common": "#ffffff",

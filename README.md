@@ -133,13 +133,19 @@ clears the first pack in CI. No farm and no world map yet. The browser game keep
 clients can be in the same dungeon at the same time. **M4a** draws the farm: the 64×64 map (and the wild maps beyond
 its edges, with the same code) from the server's data, with day and night, the seasons and the weather, other players
 in their own clothes, animals and villagers, and the real way into Draugkryptan: walk off the farm's north edge, west
-through the forest, and use the arch in the forest beyond. Crops, watering, animals' care, building, the house and the
-shop come in M4b and M4c; what opens them says it is not drawn yet. `packages/godot/ART.md` has the art rules;
+through the forest, and use the arch in the forest beyond. **M4b** makes the farm usable: the hotbar and the bag (and a
+chest's), the tools on the tile in front of you (till, plant, water, harvest, cut grass, chop, mine), things on the ground
+that you pick up by walking over them, the animals (pet, brush, feed, collect, name, ride) and the pets' commands, fishing,
+and coins and stars on the HUD. Building and crafting, the farmhouse, the shop and selling, the wardrobe, cooking and the
+villagers' errands and talk come in M4c; what opens them says it is not drawn yet. `packages/godot/ART.md` has the art rules;
 `packages/godot/assets/LICENSES.md` every asset's origin.
 
 ![Draugkryptan in the native client](packages/godot/docs/m3a-draugkryptan.png)
 
 ![The farm in the native client](packages/godot/docs/m4a-farm-day.png)
+
+Farming (M4b): [watering](packages/godot/docs/m4b-watering.png), [the bag and a chest](packages/godot/docs/m4b-bag-chest.png),
+[the bag from the demo](packages/godot/docs/m4b-bag-demo.png) [a bite](packages/godot/docs/m4b-fishing-bite.png) and [a wild fox petted](packages/godot/docs/m4b-pet.png).
 
 Night, rain and snow: [night](packages/godot/docs/m4a-farm-night.png), [rain](packages/godot/docs/m4a-farm-rain.png),
 [snow](packages/godot/docs/m4a-farm-snow.png); [the arch in the forest](packages/godot/docs/m4a-forest-arch.png).
@@ -235,7 +241,20 @@ Then start the client:
    the opening in the middle of that map's west edge, and in the forest beyond up to the stone arch with the glowing
    doorway; press `E` facing it. The server generates the dungeon the normal way (`generateSaga`), sends it as
    `areaData`, and the crypt appears with you at its start. Without a class the arch says so. The farmhouse door, the
-   bus stop and the other things that open a window say they are not drawn yet.
+   bus stop and the other things that open a window say they are not drawn yet (M4c).
+   **Farming** (M4b) works on the tile in front of you, which is outlined (green when something would happen) with the
+   action written under it ("E · Vattna"): `1`–`8` (the shoulder buttons `LB`/`RB`, the mouse wheel, `[` `]`) pick the
+   hotbar square; `E`, space, `A` or a click on a tile beside you use it. The hoe tills grass, seeds go in tilled soil, the
+   watering can waters (20 charges, refilled at the pond: face the water and use it; the number is on the hotbar), a ripe
+   crop is harvested whatever you hold, the scythe cuts grass, the axe chops trees and bushes, the pick breaks rocks,
+   the hammer and the brush are M4c's tools (they do what the server says, and the brush grooms an animal). Walk over
+   what lies on the ground to pick it up. `Q` or `I` (`Y` on a pad) opens the bag: press one square and then another to
+   move the stack, "Sortera", "Håll", "Lägg ner"; face a chest and use it to open it beside the bag, with "Lägg i kistan".
+   Animals: use the tool-less hand or a brush on one to pet or groom it, hay feeds it, a ripe animal gives its egg or wool,
+   a new one asks for its name (OK keeps the suggestion, so a pad can do it), `X` (`R3`) tells your pets to stay and `V`
+   (`L3`) whistles for them, and a named horse can be ridden (use it again to get off). Fishing: hold the rod, face the
+   water, use it, wait for "Napp!" (the ring and the ❗) and use it again. Fiskar-Sven gives a rod for five wood (the
+   errand itself is M4c's window; the bot sends the same message).
 5. **Fight.** `1`–`4` (gamepad `X`/`Y`/`B`/`RB`) are the Krigare's spells: Yxhugg, Stormsteg, Virvelvind,
    Bärsärkaraseri, on the bar at the bottom with their cooldowns; `5` (`LB`) drinks a potion. The server picks the
    monster (the nearest in reach, in sight for a ranged spell) unless you aim: click a monster, or Tab (d-pad right)
@@ -245,7 +264,7 @@ Then start the client:
    Stormsteg or Isspjut can stop it (blue), and the spell's button lights up blue then. Numbers float up from hits,
    monsters flash and poof, the one chasing you carries a warning sign. Fallen heroes lie down (a box counts down to
    the rest stone; everyone fallen shows the pause and the walk back); chests open the loot window.
-6. `Enter` or `T` (Back on the gamepad) opens the chat with the ready-made phrases; `V` (d-pad up) the emote wheel.
+6. `Enter` or `T` (Back on the gamepad) opens the chat with the ready-made phrases; `F` (d-pad up) the emote wheel.
    Lines show as bubbles over heads and in the log in the corner.
 7. Escape → Inställningar: Låg, Mellan, Hög (Mellan is the default; Låg is for a laptop with an Intel GPU);
    *Trollformler: Knappar / Hjul* (the four spells on the face buttons, or one button, `RB`/`Q`, that opens a wheel
@@ -256,7 +275,13 @@ in as above and go in through the menu; in the browser, log in as another charac
 (or, with the same switch, nothing else is needed: the browser walks in the normal way). Both see each other's
 spells, the same monster health and the same telegraphs, because all of it is the server's.
 
-**Without a human (the bot).** A third bot takes the real way in: it walks across the farm, the forest and the forest
+**Without a human (the bots).** A fourth bot, the farmer (`-- --farmbot`, `scripts/farm_bot.gd`), works a second in-memory
+server of its own (it rolls the day over with the dev message `{t:'dev',a:'nextDay'}`, which only `DEV_TELEPORT=1` accepts):
+it tills, plants, waters, waits for the carrot to grow, harvests, drops and picks up a carrot, chops trees and mines rocks,
+does Elsa's and Fiskar-Sven's errands, fills the can at the pond, fishes, opens the chest and moves a stack through the
+bag window, and pets a wild animal in the forest, and its report is checked against the server's own record of the player
+(bag, coins, stars, and what the HUD shows). `BOT_ONLY=farm GODOT=~/godot/godot pnpm godot:bot` runs it alone; with
+`BOT_FARM_SHOTS=dir` under `xvfb-run` it also saves pictures. A third bot of the fight takes the real way in: it walks across the farm, the forest and the forest
 beyond to the arch and uses it, and the check is that it arrives in `saga:draug` with the dev message never sent. `GODOT=~/godot/godot pnpm godot:bot` starts the server in memory (`ACCESS=open`,
 `DEV_TELEPORT=1`, no Postgres), runs two headless clients in bot mode (`-- --bot`: log in, enter, walk to the first
 pack, cast the four spells on cooldown, step out of telegraphs) and checks their reports against each other: casts
@@ -277,7 +302,7 @@ the saga's items and the chat phrases from the shared data, and the demo fixture
 `assets/fixtures/draug.json`; each also has its own script, `godot:strings`, `godot:data`, `godot:fixture`). Commit
 them; the Godot workflow fails when they are out of date. `pnpm godot:sprites` renders the pixel art in
 `packages/client/src/art` to the sheets in `assets/sprites` with Playwright's Chromium (it needs one; the sheets are
-committed, so CI does not run it), and `icons.png` with the spells' and emotes' emoji and the loot items' pictures.
+committed, so CI does not run it), and `icons.png` with the spells' and emotes' emoji and the pictures of every item (the bag, the hotbar and the pick-up lines draw them).
 
 **Art.** Free CC0 packs only (the owner's decision of 2026-11-01): KayKit Dungeon Remastered for the crypt's walls,
 floor, torches, stairs, chests and candles, tinted to the palette in `ART.md`; what no reachable pack had (coffin,

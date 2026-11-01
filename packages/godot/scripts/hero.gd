@@ -27,6 +27,8 @@ var outdoor := false
 ## Set by the bot (and the spell wheel while it is open): walks this way instead of reading the Input Map.
 var drive := Vector2.ZERO
 var driven := false
+## A window is open (the bag, a name box): stand still.
+var frozen := false
 var _send_in := 0.0
 var _map_w := 64
 var _map_h := 64
@@ -42,6 +44,7 @@ func reset() -> void:
 	world = {}
 	drive = Vector2.ZERO
 	driven = false
+	frozen = false
 	px = 0.0
 	py = 0.0
 	facing = "down"
@@ -81,7 +84,7 @@ func _sync_scene() -> void:
 func _physics_process(delta: float) -> void:
 	if world.is_empty():
 		return
-	var dir := drive if driven else Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	var dir := Vector2.ZERO if frozen else (drive if driven else Input.get_vector("move_left", "move_right", "move_up", "move_down"))
 	var was_moving := moving
 	_step(dir, delta)
 	if outdoor:

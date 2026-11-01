@@ -134,16 +134,30 @@ jobs:
           shot farm-night --demo=farm --at=16,12 --time=0.9
           shot farm-rain --demo=farm --at=16,12 --time=0.4 --weather=rain
           shot forest-arch --demo=forest
+          shot farm-bag --demo=farm --at=18,14 --time=0.4 --bag
           xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- --bench=mellan --scene=farm 2>&1 | tee bench-farm.log
           grep -q "bench: done" bench-farm.log
           if grep -E "SCRIPT ERROR|leaked at exit|still in use at exit|Pages in use exist at exit" bench-farm.log; then
             echo "::error::the farm bench reported errors or leaked at exit"; exit 1
           fi
 
+      # The farmer works a farm of its own (a second in-memory server) in a window under Xvfb and takes pictures at the
+      # moments the owner asked for: watering, the bag and a chest open, a fish biting, a wild animal petted. The same run
+      # is checked headless by the bot step below; this one has a window and keeps the pictures.
+      - name: The farmer in a window under Xvfb (pictures of watering, the bag, a bite and a pet)
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/shots/farmer"
+          GODOT=~/godot/godot BOT_ONLY=farm BOT_FARM_SECONDS=220 BOT_FARM_SHOTS="$GITHUB_WORKSPACE/shots/farmer" \
+            xvfb-run -a -s "-screen 0 1280x720x24" pnpm godot:bot 2>&1 | tee farmer.log
+          for f in watering bag-open fishing-bite pet; do test "$(stat -c %s "$GITHUB_WORKSPACE/shots/farmer/$f.png")" -gt 20000; done
+
       - uses: actions/upload-artifact@v4
         with:
           name: farm-screenshots
-          path: shots/*.png
+          path: |
+            shots/*.png
+            shots/farmer/*.png
           if-no-files-found: error
 
       - name: Run the bench headless for a moment (the bench's scripts run and the process exits clean; headless frame times mean nothing)

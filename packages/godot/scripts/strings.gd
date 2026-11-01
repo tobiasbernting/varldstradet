@@ -8,6 +8,7 @@ var _weather_names: Dictionary = {}
 var _weather_emoji: Dictionary = {}
 var _places: Dictionary = {}
 var _objects: Dictionary = {}
+var _species: Dictionary = {}
 
 
 func _ready() -> void:
@@ -20,6 +21,7 @@ func _ready() -> void:
 		_weather_emoji = parsed.get("WEATHER_EMOJI", {})
 		_places = parsed.get("BIOME_NAMES", {})
 		_objects = parsed.get("OBJECT_NAMES", {})
+		_species = parsed.get("SPECIES_NAMES", {})
 	else:
 		push_error("assets/sv.json is missing or broken: run `pnpm godot:strings`")
 
@@ -57,3 +59,8 @@ func place(biome: String) -> String:
 
 func object_name(kind: String) -> String:
 	return str(_objects.get(kind, kind))
+
+
+## An animal species' Swedish name ("hen" -> "Höna").
+func species(id: String) -> String:
+	return str(_species.get(id, id))

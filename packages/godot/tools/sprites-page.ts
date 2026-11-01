@@ -71,6 +71,8 @@ export interface IconEntry {
 }
 /** The emoji the browser's loot window shows for an item without a picture of its own (ui/saga.ts, KIND_EMOJI). */
 const KIND_EMOJI: Record<string, string> = { weapon: '⚔️', offhand: '🛡️', amulet: '📿', hat: '🪖', shirt: '👕', pet: '🐾', mount: '🐎', potion: '🧪', decor: '✨', quest: '📦', material: '💠' };
+/** What an item with no picture of its own is drawn as, by its category. */
+const CATEGORY_EMOJI: Record<string, string> = { tool: '🔧', seed: '🌱', crop: '🥕', animal_product: '🥚', fish: '🐟', feed: '🌾', material: '🪵', placeable: '🏠', clothing: '👕', animal: '🐾', decor: '🪴' };
 /** Glyphs the HUD uses (the browser's: the boss bar's crown and skull, the frozen and webbed overlays, and so on). */
 const UI_GLYPHS: Record<string, string> = { potion: '🧪', coin: '🪙', star: '⭐', chest: '🎁', box: '📦', skull: '💀', ice: '🧊', web: '🕸️', shield: '🛡️', warn: '⚠️', crown: '👑', chat: '💬', aim: '🎯', sword: '⚔️' };
 
@@ -117,9 +119,10 @@ function iconSheet(dungeons: (keyof typeof DUNGEONS)[]): { sheet: Sheet; icons: 
   const art = getArt();
   const cells: [string, HTMLCanvasElement][] = [];
   for (const [id, sp] of Object.entries(SPELLS)) cells.push([`spell_${id}`, emoji(sp.icon)]);
-  for (const id of T.emotes) cells.push([`emote_${id}`, emoji(EMOTE_GLYPH[id] ?? id)]);
+  for (const id of new Set([...T.emotes, ...Object.keys(EMOTE_GLYPH)])) cells.push([`emote_${id}`, emoji(EMOTE_GLYPH[id] ?? id)]); // (M4b: the glyphs that are not on the wheel too: fiske, napp, vissla)
   for (const [name, glyph] of Object.entries(UI_GLYPHS)) cells.push([`ui_${name}`, emoji(glyph)]);
-  for (const id of [...new Set(dungeons.flatMap(lootItemsOf))].sort()) {
+  // (M4b) the loot items, and every item the farm knows: the bag, the hotbar and the pick-up lines draw them all
+  for (const id of [...new Set([...dungeons.flatMap(lootItemsOf), ...Object.keys(ITEMS)])].sort()) {
     const p = art.icons[id];
     if (hasIcon(p)) {
       const c = document.createElement('canvas');
@@ -129,7 +132,7 @@ function iconSheet(dungeons: (keyof typeof DUNGEONS)[]): { sheet: Sheet; icons: 
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(p!.canvas, 0, 0, ICON, ICON);
       cells.push([`item_${id}`, c]);
-    } else cells.push([`item_${id}`, emoji(KIND_EMOJI[sagaItem(id)?.kind ?? ''] ?? '🎁')]);
+    } else cells.push([`item_${id}`, emoji(KIND_EMOJI[sagaItem(id)?.kind ?? ''] ?? CATEGORY_EMOJI[ITEMS[id]?.category ?? ''] ?? '🎁')]);
   }
   const columns = 8;
   const rows = Math.ceil(cells.length / columns);

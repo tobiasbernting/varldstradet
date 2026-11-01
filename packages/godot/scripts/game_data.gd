@@ -21,6 +21,8 @@ var items: Dictionary = {}
 var rarity_colors: Dictionary = {}
 var rarity_names: Dictionary = {}
 var chat_phrases: Array = []
+var filters: Array = [] ## the bag's filter chips [{id, emoji, categories, name}]
+var category_order: Array = []
 var flags: Dictionary = {"down": 1, "wall": 2, "rage": 4, "hot": 8, "slow": 16, "frozen": 32}
 var interrupt_kinds: Array = ["bash", "charge", "lance"]
 var atlas: Dictionary = {}
@@ -49,6 +51,8 @@ func _ready() -> void:
 		rarity_colors = rar.get("colors", {})
 		rarity_names = rar.get("names", {})
 		chat_phrases = g.get("chatPhrases", [])
+		filters = g.get("filters", [])
+		category_order = g.get("categoryOrder", [])
 		if g.get("flags") is Dictionary:
 			flags = g.get("flags")
 		if g.get("interruptKinds") is Array:
@@ -133,6 +137,24 @@ func item(id: String) -> Dictionary:
 
 func item_name(id: String) -> String:
 	return str(item(id).get("name", id))
+
+
+## An item's category ("tool", "seed", "crop"…), its tool kind ("hoe", "can"…; "" for none) and its stack size.
+func item_category(id: String) -> String:
+	return str(item(id).get("category", ""))
+
+
+func item_tool(id: String) -> String:
+	return str(item(id).get("tool", ""))
+
+
+## The filter chip (its id) an item belongs to, like filterOf in shared/src/filters.ts.
+func filter_of(id: String) -> String:
+	var cat := item_category(id)
+	for f in filters:
+		if f.get("categories", []).has(cat):
+			return str(f.get("id", "other"))
+	return "other"
 
 
 func rarity_color(rarity: String) -> Color:

@@ -38,6 +38,7 @@ var menu: PauseMenu
 var loot: LootWindow
 var chat: ChatUi
 var wheel: Wheel
+var play: FarmPlay
 var demo := false
 var looks: LookComposer
 var _mode := "" ## "dungeon", "outdoor" (the farm and the wild maps) or "" (nothing drawn)
@@ -72,6 +73,9 @@ func _ready() -> void:
 	add_child(chat)
 	wheel = Wheel.new()
 	add_child(wheel)
+	play = FarmPlay.new()
+	add_child(play)
+	play.setup(self)
 	hud.menu_asked.connect(menu.open)
 	menu.switch_player.connect(func() -> void: left.emit())
 	menu.dev_enter.connect(_on_dev_enter)
@@ -91,7 +95,10 @@ func _ready() -> void:
 	model.animal_changed.connect(func(key: String, _id: String, _a: Variant) -> void:
 		if key == _area:
 			_sync_actors())
-	model.player_changed.connect(func(_id: String, _p: Variant) -> void: _sync_actors())
+	model.player_changed.connect(func(id: String, _p: Variant) -> void:
+		_sync_actors()
+		if id == model.me and _area != "":
+			_update_hud())
 	model.snapshot.connect(_on_snapshot)
 	model.warped.connect(_on_warped)
 	model.toast.connect(hud.show_toast)
@@ -123,6 +130,7 @@ func reset() -> void:
 	_mode = ""
 	hero.reset()
 	hero.send_moves = true
+	play.leave()
 	hud.reset()
 	chat.reset()
 	demo = false
@@ -194,7 +202,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		hud.set_fps_shown(Settings.show_fps)
 		get_viewport().set_input_as_handled()
 		return
-	if menu.is_open() or chat.is_open() or loot.is_open() or wheel.is_open() or _area == "":
+	if menu.is_open() or chat.is_open() or loot.is_open() or wheel.is_open() or _area == "" or play.is_busy():
 		return
 	if event.is_action_pressed("chat"):
 		chat.open()
@@ -202,6 +210,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed("emote"):
 		_open_emotes()
+		get_viewport().set_input_as_handled()
+		return
+	# out in the world the hotbar, the bag, the pets, the use key and a click on a tile are the farm's (farm_play.gd)
+	if _mode == "outdoor" and play.handle_input(event):
 		get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed("spell_wheel") and (Settings.spell_input == "wheel" or event is InputEventKey):
@@ -263,19 +275,10 @@ func _act() -> void:
 	Net.send({"t": "act", "tx": t.x, "ty": t.y})
 
 
-## The use key out in the world: a dungeon's arch goes in (the server does what it does for the browser); the other
-## things that open something say they are not drawn yet.
-func _act_outdoors(obj: Dictionary, kind: String) -> void:
-	if obj.is_empty():
-		return
-	var t := hero.facing_tile()
-	if kind == ARCH:
-		Net.send({"t": "act", "tx": t.x, "ty": t.y})
-		return
-	var def := Data.object_def(kind)
-	if def.has("interact"):
-		var text := Strings.t("notDrawnBus") if str(def.get("interact")) == "bus" else Strings.t("notDrawnThing", {"name": Strings.object_name(kind)})
-		hud.show_toast(text)
+## The use key out in the world (farm_play.gd): the tile in front of me; a dungeon's arch goes in as the server does
+## for the browser, a window the new client does not have yet says so.
+func _act_outdoors(_obj: Dictionary, _kind: String) -> void:
+	play.act()
 
 
 func _arch_name(obj: Dictionary) -> String:
@@ -337,6 +340,7 @@ func _clear_views() -> void:
 
 
 func _rebuild() -> void:
+	play.leave()
 	var key := model.my_area_key()
 	var id := Data.dungeon_of_key(key)
 	_clear_actors()
@@ -363,7 +367,10 @@ func _rebuild() -> void:
 		farm.sky.follow(rig)
 		_mode = "outdoor"
 		_area = key
+		fx.area = key
+		fx.me_id = model.me
 		hero.set_world(w, true)
+		play.enter(w)
 		hud.set_area(_place_name(key, w), true)
 		hud.build_spell_bar("")
 		hud.units.visible = false
@@ -458,6 +465,8 @@ func _on_change(c: Dictionary) -> void:
 		return
 	if c.has("area") and str(c.get("area")) != _area:
 		return
+	if _mode == "outdoor":
+		play.on_change(c)
 	combat.on_change(c)
 	fx.on_change(c)
 	match t:
@@ -679,6 +688,7 @@ func _process(delta: float) -> void:
 		farm.sky.update_sky(delta, _clock_ms(), model.season, model.weather, model.server_now())
 	combat.tick()
 	fx.tick(delta)
+	play.tick(delta)
 	hero.actor.animate(hero.facing, hero.moving, delta)
 	hero.actor.set_pose(_pose_of(model.me))
 	_bubble_of(model.me, hero.actor)
@@ -823,8 +833,7 @@ func _update_prompt() -> void:
 	var facing := hero.facing_object()
 	var kind := str(facing.get("kind", ""))
 	if _mode == "outdoor":
-		hud.set_prompt(("%s · %s" % [Strings.t("actKey"), Strings.t("actPortal", {"name": _arch_name(facing)})]) if kind == ARCH else "")
-		return
+		return # (farm_play.gd sets the prompt: what the use key does on the tile in front)
 	if USABLE.has(kind):
 		hud.set_prompt("%s · %s" % [Strings.t("actKey"), Strings.t(USABLE[kind])])
 	else:
