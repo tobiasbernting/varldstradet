@@ -113,7 +113,7 @@ func _run() -> void:
 	await _wait(0.5)
 	_log("on the farm at %s as %s" % [str(_my_tile()), world.model.me])
 	var stages := {
-		"patch": _farm_patch, "drop": _drop_and_pick_up, "gather": _gather, "quests": _quests, "pond": _pond_and_fishing, "bag": _bag_and_chest, "pet": _pet_wild,
+		"patch": _farm_patch, "keys": _keys_and_pets, "drop": _drop_and_pick_up, "gather": _gather, "quests": _quests, "pond": _pond_and_fishing, "bag": _bag_and_chest, "pet": _pet_wild,
 	}
 	for key in stages.keys():
 		if _done:
@@ -165,7 +165,7 @@ func _farm_patch() -> void:
 	if not await _goto(stand):
 		_step("walk to the patch", false, str(stand))
 		return
-	_face("up")
+	_face("down")
 	var carrots_before := model.count_item("carrot")
 	var seeds_before := model.count_item("carrot_seed")
 	await _use_item_slot("hoe")
@@ -178,8 +178,7 @@ func _farm_patch() -> void:
 	_step("plant", planted and model.count_item("carrot_seed") == seeds_before - 1, "a carrot seed went into the ground (%d seeds left)" % model.count_item("carrot_seed"))
 	var can_before := _can_charges()
 	await _use_item_slot("can")
-	await _act()
-	await _shot("watering", 0.12)
+	await _act("watering")
 	var watered := await _until(func() -> bool: return _crop_at(_plot) is Dictionary and bool(_crop_at(_plot).get("watered", false)), 4.0)
 	_step("water", watered and _can_charges() == can_before - 1, "can %d -> %d charges" % [can_before, _can_charges()])
 	# the days: every morning the crop grows one step if it was watered, then the soil is dry again
@@ -206,6 +205,52 @@ func _farm_patch() -> void:
 	_step("harvest", harvested and model.count_item("carrot") > carrots_before and model.count_item("carrot_seed") >= seeds_before, "carrots %d -> %d, seeds %d -> %d" % [carrots_before, model.count_item("carrot"), seeds_before, model.count_item("carrot_seed")])
 
 
+## The keys themselves, sent as input events through the engine (the Input Map, then the view, then farm_play.gd):
+## the digit keys and the shoulder buttons pick hotbar squares, X and V talk to the pets (there are none on a new farm,
+## and the server says so).
+func _keys_and_pets() -> void:
+	var model := world.model
+	var inv: Array = model.my_player().get("inventory", [])
+	_press_key(KEY_3)
+	var third := await _until(func() -> bool: return str(model.held().get("item", "")) == str(inv[2].get("item", "")), 2.0)
+	_press_action("slot_next")
+	var next := await _until(func() -> bool: return str(model.held().get("item", "")) == str(inv[3].get("item", "")), 2.0)
+	_press_action("slot_prev")
+	var back := await _until(func() -> bool: return str(model.held().get("item", "")) == str(inv[2].get("item", "")), 2.0)
+	_step("hotbar keys", third and next and back, "3 holds %s, the next square %s, the one before %s again" % [str(inv[2].get("item", "")), str(inv[3].get("item", "")), str(inv[2].get("item", ""))])
+	var told := 0
+	for cmd in [["pets_stay", "noPetsHere"], ["pets_come", "noPets"]]:
+		var before: int = _report["toasts"].size()
+		_press_action(cmd[0])
+		if await _until(func() -> bool: return _report["toasts"].slice(before).has(Strings.t(cmd[1])), 3.0):
+			told += 1
+	_step("pets commands", told == 2, "stay (X) and whistle (V) reached the server, which has no pets to tell: %d of 2 answered" % told)
+
+
+func _press_key(code: Key) -> void:
+	var ev := InputEventKey.new()
+	ev.physical_keycode = code
+	ev.keycode = code
+	ev.pressed = true
+	Input.parse_input_event(ev)
+	var up := InputEventKey.new()
+	up.physical_keycode = code
+	up.keycode = code
+	up.pressed = false
+	Input.parse_input_event(up)
+
+
+func _press_action(action: String) -> void:
+	var ev := InputEventAction.new()
+	ev.action = action
+	ev.pressed = true
+	Input.parse_input_event(ev)
+	var up := InputEventAction.new()
+	up.action = action
+	up.pressed = false
+	Input.parse_input_event(up)
+
+
 ## Put a carrot on the ground, see it drawn, walk over it.
 func _drop_and_pick_up() -> void:
 	var model := world.model
@@ -214,7 +259,7 @@ func _drop_and_pick_up() -> void:
 	if slot < 0:
 		_step("drop", false, "no carrot to drop")
 		return
-	_face("up")
+	_face("down")
 	var drops_before := _drop_count()
 	Net.send({"t": "drop", "slot": slot, "qty": 1})
 	var dropped := await _until(func() -> bool: return _drop_count() == drops_before + 1 and world.play.drops.count() == drops_before + 1, 4.0)
@@ -507,10 +552,14 @@ func _use_item_slot(item: String) -> void:
 
 
 ## The use key.
-func _act() -> void:
+func _act(picture := "") -> void:
 	await _wait(0.2) # (a use is never sent twice within play.ACT_GAP)
 	world.play.act()
-	await _wait(0.35)
+	if picture != "":
+		await _shot(picture, 0.2) # (the swing and the splash are at their best a moment after the use)
+		await _wait(0.2)
+	else:
+		await _wait(0.35)
 
 
 ## Turn on the spot, and tell the server (it keeps the way I face for `drop`).
@@ -600,7 +649,8 @@ func _goto(goal: Vector2i, timeout := 45.0) -> bool:
 	return false
 
 
-## A free grass tile near the start, with the tile below it to stand on (facing up at it).
+## A free grass tile near the start, with the tile above it to stand on (facing down at it: the camera looks over the
+## hero's shoulder at what is in front of him, and a hero facing up would stand in front of his own patch).
 func _find_patch() -> Dictionary:
 	var start := _my_tile()
 	var dist := _distance_field(start)
@@ -610,7 +660,7 @@ func _find_patch() -> Dictionary:
 		var d: int = dist[tile]
 		if d > 14 or d >= best_d:
 			continue
-		var g: Vector2i = tile + Vector2i(0, -1)
+		var g: Vector2i = tile + Vector2i(0, 1)
 		var stand: Vector2i = tile
 		if _terrain_at(g) != "grass" or world.hero._is_solid(g.x, g.y) or _crop_at(g) != null:
 			continue
@@ -834,7 +884,7 @@ func _finish() -> void:
 	for s in steps:
 		if not bool(s["ok"]):
 			failed += 1
-	_report["ok"] = _report["errors"].is_empty() and failed == 0 and (steps.size() >= 14 or only != "")
+	_report["ok"] = _report["errors"].is_empty() and failed == 0 and (steps.size() >= 16 or only != "")
 	_log("%d steps, %d failed, %d errors" % [steps.size(), failed, _report["errors"].size()])
 	if report_path != "":
 		var fa := FileAccess.open(report_path, FileAccess.WRITE)

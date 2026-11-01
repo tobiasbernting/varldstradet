@@ -36,6 +36,7 @@ var _filter := "all"
 var _query := ""
 var _open := false
 var _opened_at := 0
+var _far_in := 0.0
 
 
 func _ready() -> void:
@@ -176,8 +177,26 @@ func _button(text: String, call: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.custom_minimum_size = Vector2(0, 40)
+	style_button(b)
 	b.pressed.connect(call)
 	return b
+
+
+## The windows' buttons: a lit plate on the dark panel (the default theme's are almost the panel's own colour).
+static func style_button(b: Button) -> void:
+	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(0.3, 0.24, 0.16) if state == "normal" else (Color(0.4, 0.32, 0.2) if state == "hover" or state == "pressed" else (Color(0.3, 0.24, 0.16, 0.0) if state == "focus" else Color(0.2, 0.17, 0.13)))
+		sb.set_corner_radius_all(6)
+		sb.content_margin_left = 14
+		sb.content_margin_right = 14
+		sb.content_margin_top = 6
+		sb.content_margin_bottom = 6
+		if state == "focus":
+			sb.draw_center = false
+			sb.set_border_width_all(3)
+			sb.border_color = Color.WHITE
+		b.add_theme_stylebox_override(state, sb)
 
 
 func _add_chip(parent: Control, id: String, text: String, tip: String) -> void:
@@ -186,6 +205,7 @@ func _add_chip(parent: Control, id: String, text: String, tip: String) -> void:
 	b.tooltip_text = tip
 	b.toggle_mode = true
 	b.custom_minimum_size = Vector2(44, 36)
+	style_button(b)
 	b.button_pressed = id == "all"
 	b.pressed.connect(func() -> void:
 		_filter = id
@@ -367,9 +387,13 @@ func _on_stack() -> void:
 		Net.send({"t": "quickStack", "chest": _chest_id})
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if not _open or _chest_id < 0:
 		return
+	_far_in -= delta
+	if _far_in > 0.0:
+		return
+	_far_in = 0.25
 	# walked away from the chest, or someone took it down
 	var c := model.chest(_chest_id)
 	if c.is_empty():

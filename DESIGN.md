@@ -392,3 +392,48 @@ server is untouched; everything below renders what it sends and sends what the b
   Xvfb. Findings of the first run worth keeping: in the Compatibility and Forward+ renderers alike a `MultiMesh`
   without instance colours multiplies vertex colours by black, so every `MultiMesh` here has `use_colors` on (white);
   Godot draws the *clockwise* side of a triangle, so shapes are written counter-clockwise and emitted reversed.
+
+## Godot client: farming (2026-11-01)
+Milestone M4b of `PLAN.md`, the second of three farm slices: the farm can be used. The server is unchanged except for one
+dev-only message; the client sends the browser's messages (`act`, `select`, `swap`, `sort`, `quickStack`, `drop`, `open`'s
+replies, `nameAnimal`, `pets`) and draws what comes back.
+- **The use key** (`scripts/farm_play.gd`): E, space, A, or a click on a tile within one step sends `act` on the tile in front
+  (`facingTile`), which `performAction` in `sim.ts` resolves: hacka tills grass or dirt, seeds go in soil, a ripe crop is
+  harvested whatever you hold, vattenkanna waters and refills at water or at the well, lie cuts tufts and flowers (and
+  un-tills soil), yxa chops trees and bushes (a stump stays), spett breaks rocks, a rod casts, hay and the brush and an empty hand
+  go to an animal. The client does not decide anything: `farm_target.gd` only *reads* the same rules to outline the tile (green when
+  something would happen) and write the action ("E · Hacka marken"), at most ten times a second and only when the tile or the held
+  thing changed. Objects whose `interact` needs a window the client does not have yet (the shop, the bench, a bed, the bus, the
+  caves) are not asked for; the server's `open` for a villager or the like becomes "…används inte än".
+- **Bag and hotbar** (`hotbar.gd`, `bag_window.gd`, `item_slot.gd`): 8 + 24 squares like the browser's, search and the six filter
+  chips (display only, as in the browser: slot indices stay the protocol), pick-one-then-another moves (`swap`, which the server
+  merges), sort (`sort`; the hotbar never moves), "Lägg i kistan" (`quickStack`), hold (`select`), put down one or all (`drop`), a
+  chest beside the bag (closes when you walk more than 3.2 tiles away, as the server would refuse). Every square is a button, so the
+  mouse, the keyboard and a pad all work. Tools never break (DESIGN's rule), so the only wear shown is the can's 0–20 charges, on the
+  hotbar and in the held name. Keys: 1–8, `LB`/`RB`, `[` `]` and the mouse wheel pick a square; Q or I or `Y` the bag. The emote key
+  moves from V to F (as in the browser) because V whistles.
+- **Things the server says happened** (`fx_view.gd`, `drops_view.gd`, `pickup_feed.gd`): the tool swings (`Actor.swing`: a lunge and the
+  tool's picture along an arc; a billboard cannot be turned), the `fx` kinds water, splash, chop, hit, heart and coin become drops,
+  chips, rising hearts and a glint, `drop` changes become bobbing pictures over a soft shadow (the server picks them up when you are
+  within 12 px), and anything that came into the bag shows as "+2 Morot" with its picture. Coins and stars come from the player
+  record, so they follow `changes` (the HUD refreshes on every change to my record, not only on the next snapshot).
+- **Animals and pets**: petting, brushing, feeding and collecting are all `act`; an unnamed animal opens `name_window.gd`; X sends
+  `pets stay`, V `pets come`; a mounted hero is lifted and walks at the mount's speed (`mount.speed`, else `RIDE_SPEED_MUL`; the server
+  trusts the client's position as always, so the client has to apply it). Animal houses are M4c; animals already living in them are
+  simply animals.
+- **Fishing** (`fishing_view.gd`): the server does not say where you cast or that you are fishing, only the `fiske`/`napp` emote on
+  your snapshot and a splash at the bite; the view remembers the tile of the last `act` and shows the bobber, the line and, at the bite,
+  the dip and the ring while that emote is up. The ❗ over the head is the emote itself (`icons.png` now has `fiske`, `napp`, `vissla`,
+  `dans`).
+- **Data**: `game.json` has every item (name, category, stack, tool), the filters, what an object needs (`breakWith`, `harvest`), pets,
+  wild animals, predators and monsters, mounts and the reach, pick-up and ride constants; `sv.json` the farming prompts and the species
+  names; `icons.png` a picture for each item (the browser's art, blown up ×2). Run `pnpm godot:gen`.
+- **Server**: `{t:'dev', a:'nextDay'}` rolls the day over like the parent page's "skip day"; it needs `DEV_TELEPORT=1` and answers
+  `error` otherwise (tested in `game.test.ts`). The farm bot uses it to wait for a carrot.
+- **Checks**: `--farmbot` (`farm_bot.gd`) walks the whole farming loop through the same code the keys use, against a second in-memory
+  server, and `bot-check.mts` compares its bag, coins and stars (and what the HUD shows) with the server's own record over a websocket;
+  CI also takes the pictures under Xvfb. Findings worth keeping: `rod` in hand returns before an animal is considered (the server's
+  order in `performAction`), so the bot pets with the hoe; a hero facing up hides his own patch behind his sprite at the camera's angle,
+  so the bot faces down for pictures; wild maps have wolves, bears and roaming monsters that make a loitering bot faint, so it keeps
+  away from them; the server never says a fishing line is in the water.
+

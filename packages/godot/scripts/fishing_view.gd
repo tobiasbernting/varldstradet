@@ -13,7 +13,6 @@ var biting := false
 var _bobber: MeshInstance3D
 var _line: MeshInstance3D
 var _ring: MeshInstance3D
-var _mark: Label3D
 var _t := 0.0
 var _bite_t := 0.0
 
@@ -50,19 +49,12 @@ func _init() -> void:
 	_ring.mesh = torus
 	_ring.scale = Vector3(1, 0.05, 1)
 	add_child(_ring)
-	_mark = Label3D.new()
-	_mark.text = "❗"
-	_mark.font_size = 72
-	_mark.pixel_size = 0.008
-	_mark.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_mark.no_depth_test = true
-	_mark.position = Vector3(0, 0.9, 0)
-	add_child(_mark)
 	visible = false
 
 
 func tick(delta: float) -> void:
-	var emote: Variant = model.player_snaps.get(model.me, {}).get("emote")
+	var snap: Variant = model.player_snaps.get(model.me)
+	var emote: Variant = snap.get("emote") if snap is Dictionary else null
 	var id := ""
 	if emote is Dictionary and float(emote.get("until", 0)) > model.server_now():
 		id = str(emote.get("id", ""))
@@ -85,7 +77,6 @@ func tick(delta: float) -> void:
 	if biting:
 		bob = -0.09 + 0.05 * sin(_t * 26.0)
 	_bobber.position = Vector3(0, -0.04 + bob + 0.05, 0)
-	_mark.visible = biting
 	_ring.visible = biting
 	if biting:
 		var r := 1.0 + fmod(_bite_t, 0.7) * 2.2

@@ -120,7 +120,7 @@ func _ready() -> void:
 	fps_label.anchor_right = 1.0
 	fps_label.offset_left = -300
 	fps_label.offset_right = -16
-	fps_label.offset_top = 40
+	fps_label.offset_top = 84
 	fps_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	fps_label.visible = false
 	add_child(fps_label)
@@ -468,7 +468,7 @@ func _build_farm_box() -> void:
 	farm_box.anchor_right = 1.0
 	farm_box.offset_left = -640
 	farm_box.offset_right = -16
-	farm_box.offset_top = 12
+	farm_box.offset_top = 44 # (under the connection dot, which sits at the top right)
 	farm_box.alignment = BoxContainer.ALIGNMENT_END
 	farm_box.add_theme_constant_override("separation", 8)
 	farm_box.visible = false

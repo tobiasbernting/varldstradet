@@ -60,6 +60,7 @@ func _ready() -> void:
 	_ok = Button.new()
 	_ok.text = Strings.t("ok")
 	_ok.custom_minimum_size = Vector2(0, 44)
+	BagWindow.style_button(_ok)
 	_ok.pressed.connect(_submit)
 	stack.add_child(_ok)
 

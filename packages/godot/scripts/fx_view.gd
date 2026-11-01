@@ -389,7 +389,9 @@ func on_change(c: Dictionary) -> void:
 			if str(c.get("to", "")) == me_id and str(c.get("area", "farm")) == area:
 				_xp(int(c.get("n", 0)))
 		"fx":
-			var at := scene_of(float(c.get("x", 0)) * Data.tile() + Data.tile() / 2.0, float(c.get("y", 0)) * Data.tile() + Data.tile() / 2.0)
+			# (the server's fx are in pixels already: a tile's middle, as `fx(tx, ty)` in sim.ts makes it. Until M4b this
+			# multiplied them by the tile size again, which put the dungeon's poofs and sparkles sixteen times too far away)
+			var at := scene_of(float(c.get("x", 0)), float(c.get("y", 0)))
 			var kind := str(c.get("kind", ""))
 			if kind == "poof":
 				poof(at)
@@ -1273,7 +1275,10 @@ func _droplets(at: Vector3, colour: Color, n: int, up: float) -> void:
 	var motes: Array = []
 	var vel: Array = []
 	for i in range(n):
-		motes.append(_glow(colour, 0.14))
+		var drop := _glow(colour, 0.22)
+		# (drops are lit by the sky, not added to it: an added light blue is white on the grass)
+		(drop.material_override as StandardMaterial3D).blend_mode = BaseMaterial3D.BLEND_MODE_MIX
+		motes.append(drop)
 		var a := _rng.randf() * TAU
 		var sp := 0.5 + _rng.randf() * 0.9
 		vel.append(Vector3(cos(a) * sp, up * (0.7 + _rng.randf() * 0.5), sin(a) * sp))

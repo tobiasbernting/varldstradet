@@ -34,9 +34,11 @@ var active := false
 var _totals: Dictionary = {} ## item -> how many I hold, to tell what came in
 var _have_totals := false
 var _ride_mul := 1.0
+var _riding := false
 var _lifted := false
 var _act_at := 0.0
-var _last_prompt := ""
+var _last_text := "\u0001"
+var _last_busy := false
 var _wheel_at := 0.0
 
 
@@ -96,6 +98,8 @@ func enter(w: Dictionary) -> void:
 ## The map is something else (a dungeon, or nothing).
 func leave() -> void:
 	active = false
+	_riding = false
+	_last_text = "\u0001"
 	hotbar.visible = false
 	target.visible = false
 	fishing.visible = false
@@ -217,7 +221,7 @@ func _act_on(t: Vector2i) -> void:
 	Net.send({"t": "act", "tx": t.x, "ty": t.y})
 	var held := model.held()
 	var id := str(held.get("item", ""))
-	if id != "" and model.my_player().get("riding") == null and (Data.item_tool(id) != "" or Data.item_category(id) == "seed"):
+	if id != "" and not _riding and (Data.item_tool(id) != "" or Data.item_category(id) == "seed"):
 		hero.actor.swing(Data.item_icon(id), hero.facing)
 		Sfx.play("cast" if Data.item_tool(id) == "rod" else "swing")
 
@@ -241,7 +245,11 @@ func on_change(c: Dictionary) -> void:
 			var n: Dictionary = Data.npcs.get(str(c.get("npc", "")), {})
 			hud.show_toast(Strings.t("notDrawnThing", {"name": str(n.get("name", ui))}))
 		"saga", "sagaClass":
-			hud.show_toast(Strings.t("notDrawnThing", {"name": Strings.t("sagaClassTitle") if ui == "sagaClass" else Strings.t("inventory")}))
+			hud.show_toast(Strings.t("notDrawnThing", {"name": Strings.t("sagaStoneTitle") if ui == "sagaClass" else str(Data.npcs.get(str(c.get("npc", "")), {}).get("name", ui))}))
+		"workbench":
+			hud.show_toast(Strings.t("notDrawnThing", {"name": Strings.t("craft")}))
+		"travel":
+			hud.show_toast(Strings.t("notDrawnBus"))
 		_:
 			hud.show_toast(Strings.t("notDrawnThing", {"name": Strings.t(ui)}))
 
@@ -254,6 +262,7 @@ func _on_player_changed(id: String, rec: Variant) -> void:
 	# riding: the mount's speed (a horse has no speed of its own: RIDE_SPEED_MUL)
 	_ride_mul = 1.0
 	var riding: Variant = rec.get("riding")
+	_riding = riding != null
 	if riding != null:
 		var a: Variant = hero.world.get("animals", {}).get(str(int(riding)))
 		var def: Dictionary = Data.animals.get(str(a.get("species", "")), {}) if a is Dictionary else {}
@@ -293,15 +302,15 @@ func tick(delta: float) -> void:
 		return
 	hero.frozen = is_busy()
 	hero.speed_mul = _ride_mul
-	var riding: bool = model.my_player().get("riding") != null
-	if riding != _lifted:
-		_lifted = riding
-		hero.actor.position.y = 0.32 if riding else 0.0
+	if _riding != _lifted:
+		_lifted = _riding
+		hero.actor.position.y = 0.32 if _riding else 0.0
 	drops.tick(delta)
 	target.tick(delta)
 	fishing.tick(delta)
-	if not view.demo:
-		var text := ("%s · %s" % [Strings.t("actKey"), target.text]) if target.text != "" and not is_busy() else ""
-		if text != _last_prompt:
-			_last_prompt = text
-			hud.set_prompt(text)
+	# the prompt is rebuilt only when what it says changed (no strings made every frame)
+	var busy := is_busy()
+	if not view.demo and (target.text != _last_text or busy != _last_busy):
+		_last_text = target.text
+		_last_busy = busy
+		hud.set_prompt(("%s · %s" % [Strings.t("actKey"), target.text]) if target.text != "" and not busy else "")

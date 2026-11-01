@@ -165,7 +165,7 @@ async function checkFarmer(r: FarmReport, farmPort: number, botLog?: string): Pr
   check(r.errors.length === 0, `${r.name}: no errors (${r.errors.join('; ') || 'none'})`);
   const exitErrors = (botLog && fs.existsSync(botLog) ? fs.readFileSync(botLog, 'utf8') : '').split('\n').filter((l) => /leaked at exit|still in use at exit|Pages in use exist at exit|SCRIPT ERROR/.test(l));
   check(exitErrors.length === 0, `${r.name}: no script errors, nothing leaked at exit (${exitErrors[0] ?? 'none'})`);
-  for (const want of ['till', 'plant', 'water', 'grow', 'harvest', 'drop', 'pick up', 'chop', 'mine', 'Elsas uppdrag', 'Svens uppdrag', 'fill the can', 'fishing', 'open the chest', 'move a stack', 'pet']) {
+  for (const want of ['till', 'plant', 'water', 'grow', 'harvest', 'hotbar keys', 'pets commands', 'drop', 'pick up', 'chop', 'mine', 'Elsas uppdrag', 'Svens uppdrag', 'fill the can', 'fishing', 'open the chest', 'move a stack', 'pet']) {
     const st = r.steps.find((x) => x.name === want);
     check(!!st && st.ok, `${r.name}: ${want}${st ? ` (${st.detail})` : ' (never ran)'}`);
   }
