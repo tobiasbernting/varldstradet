@@ -103,7 +103,7 @@ const SPECS := {
 	"stall": {"m": ["stall"], "front": true},
 	"pigsty": {"m": ["pigsty"], "front": true},
 	"lamp": {"m": ["lamp"], "node": true, "light": [Color("#ffc977"), 6.0, 1.4, 1.5, 0.15], "night": true},
-	"street_lamp": {"m": ["lamp"], "node": true, "light": [Color("#ffc977"), 7.0, 1.5, 2.2, 0.1], "night": true},
+	"street_lamp": {"m": ["lamp"], "node": true, "light": [Color("#ffc977"), 7.0, 1.5, 2.2, 0.1, 12.0], "night": true},
 	"lantern": {"m": ["lantern"], "node": true, "light": [Color("#ffb55a"), 5.0, 1.2, 0.6, 0.25], "night": true},
 	"torch": {"m": ["torch"], "node": true, "light": [Color("#ff9a3c"), 5.5, 1.5, 1.3, 0.35], "night": true},
 	"crystal_lamp": {"m": ["lantern"], "node": true, "light": [Color("#9fe8ff"), 5.0, 1.0, 0.6, 0.1]},

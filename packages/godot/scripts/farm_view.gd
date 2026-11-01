@@ -641,7 +641,7 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 	if lt is Array:
 		var night := bool(spec.get("night", false))
 		var lcol: Color = lt[0]
-		_add_light(node, Vector3(0.0, float(lt[3]), 0.0), lcol, float(lt[1]), float(lt[2]), float(lt[4]), night)
+		_add_light(node, Vector3(0.0, float(lt[3]), 0.0), lcol, float(lt[1]), float(lt[2]), float(lt[4]), night, float(lt[5]) if lt.size() > 5 else -1.0)
 		if night:
 			var gq := assets.glow_quad(lcol, 1.4, 0.0)
 			gq.position = Vector3(0.0, float(lt[3]), 0.0)
@@ -677,7 +677,7 @@ func _landmark(kind: String, node: Node3D) -> Node3D:
 	return node
 
 
-func _add_light(parent: Node3D, at: Vector3, colour: Color, range_m: float, energy: float, flicker: float, night: bool) -> void:
+func _add_light(parent: Node3D, at: Vector3, colour: Color, range_m: float, energy: float, flicker: float, night: bool, fade_begin := -1.0) -> void:
 	var light := OmniLight3D.new()
 	light.position = at
 	light.light_color = colour
@@ -686,8 +686,9 @@ func _add_light(parent: Node3D, at: Vector3, colour: Color, range_m: float, ener
 	light.light_energy = 0.0 if night else energy
 	light.shadow_enabled = false
 	light.distance_fade_enabled = true
-	light.distance_fade_begin = Quality.LIGHT_FADE_BEGIN
-	light.distance_fade_length = Quality.LIGHT_FADE_LENGTH
+	# (a street of lamps fades sooner than a lone lamp: the village must not light more than the crypt does)
+	light.distance_fade_begin = Quality.LIGHT_FADE_BEGIN if fade_begin < 0.0 else fade_begin
+	light.distance_fade_length = Quality.LIGHT_FADE_LENGTH if fade_begin < 0.0 else 4.0
 	light.distance_fade_shadow = Quality.SHADOW_FADE
 	light.visible = not night
 	parent.add_child(light)

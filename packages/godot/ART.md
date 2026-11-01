@@ -229,6 +229,34 @@ The farm and the forest stay under the crypt's draw-call budget on every preset;
 about a hundred) and fewer lights. **After M4a, on the MacBook Air M4** (owner: paste the three bench lines for
 `--scene=farm` here): `(owner: paste here)`.
 
+### Measured (M4c): the farmhouse and Köpingen
+
+`--bench --scene=house` (the farm with the hero walking to and fro inside the farmhouse's room) and `--scene=village` (Köpingen
+with the Völvan and the Kämpastenen), both with `--time=0.9` (night, when the lamps and windows are lit), then `--scene=farm` the
+same way for comparison. This time the sandbox could only offer the Compatibility renderer on Mesa's llvmpipe under Xvfb (its
+Vulkan has no surface extension), so the farm row differs from the M4a table above; the three rows below were measured together
+and compare with each other. Counts are exact, GPU ms are software:
+
+| Scene (night) · preset | draw calls | primitives | lights (in reach) | render CPU ms |
+| --- | --- | --- | --- | --- |
+| Farm · Låg | 88 | 31 723 | 7 (0) | 21.3 |
+| Farm · Mellan | 118 | 81 446 | 7 (0) | 50.5 |
+| Farm · Hög | 119 | 134 327 | 7 (0) | 63.8 |
+| House · Låg | 88 | 31 737 | 7 (3) | 21.0 |
+| House · Mellan | 118 | 76 921 | 7 (3) | 50.8 |
+| House · Hög | 119 | 129 313 | 7 (3) | 66.4 |
+| Village · Låg | 79 | 19 155 | 21 (6) | 22.0 |
+| Village · Mellan | 110 | 60 341 | 21 (6) | 55.6 |
+| Village · Hög | 130 | 137 524 | 21 (6) | 64.6 |
+
+The room adds two lights to the farm (a warm one over it and a cool one at the back wall for the window, on the lamps' night
+switch), 3 of the farm's 7 are in reach from inside. The village has 21 lights in all (fourteen street lamps, the shop, the
+pizzeria and the station, the runestone and the Kämpastenen) but the street lamps fade out 12 m (plus 4) from the camera, so at
+most 6 are in reach at once, under the crypt's 7, and its draw calls stay under the farm's on Låg and Mellan and under the crypt's
+on every preset. The windows are rows of `Button`s built when a window opens or my record changes, so nothing is allocated per
+frame; the camera's move into the room is one `Transform3D` a frame while it eases. (owner: paste the M4 Air's three lines for
+`--scene=house` and `--scene=village` here: `(owner: paste here)`.)
+
 ## The fight on screen (M3b)
 
 - **Telegraphs** are flat shapes 4.5 cm over the floor: a dim red base in the zone's full size, a brighter fill that

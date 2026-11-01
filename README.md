@@ -149,9 +149,10 @@ this the browser client is not needed for a farm evening. `packages/godot/ART.md
 
 ![The farm in the native client](packages/godot/docs/m4a-farm-day.png)
 
-Home and village (M4c): [the workbench](packages/godot/docs/m4c-workbench.png), [the farmhouse at night](packages/godot/docs/m4c-house-night.png),
-[the shop](packages/godot/docs/m4c-shop.png), [the wardrobe](packages/godot/docs/m4c-wardrobe.png) and
-[the Völvan](packages/godot/docs/m4c-volva.png).
+Home and village (M4c): [the workbench](packages/godot/docs/m4c-workbench.png), [a fence that is not yours](packages/godot/docs/m4c-not-yours.png),
+[the farmhouse at night](packages/godot/docs/m4c-house-night.png), [the shop](packages/godot/docs/m4c-shop.png),
+[the wardrobe](packages/godot/docs/m4c-wardrobe.png), [Köpingen](packages/godot/docs/m4c-village.png),
+[the class stone](packages/godot/docs/m4c-class.png), [the Völvan](packages/godot/docs/m4c-volva.png) and [the gear window](packages/godot/docs/m4c-gear.png).
 
 Farming (M4b): [watering](packages/godot/docs/m4b-watering.png), [the bag and a chest](packages/godot/docs/m4b-bag-chest.png),
 [the bag from the demo](packages/godot/docs/m4b-bag-demo.png) [a bite](packages/godot/docs/m4b-fishing-bite.png) and [a wild fox petted](packages/godot/docs/m4b-pet.png).
