@@ -471,7 +471,7 @@ func _update_hud() -> void:
 	hud.set_boss(b, boss_species, model.mob_hp(str(boss_id)) if boss_id >= 0 else [], model.server_now())
 	# fallen, frozen, webbed
 	var flags := int(f[2]) if f.size() >= 3 else 0
-	var all_down := not snap.get("f", {}).is_empty()
+	var all_down: bool = not snap.get("f", {}).is_empty()
 	for id in snap.get("f", {}).keys():
 		var pf: Array = snap["f"][id]
 		if pf.size() < 3 or (int(pf[2]) & Data.flag("down")) == 0:

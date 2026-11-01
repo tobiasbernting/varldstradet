@@ -696,7 +696,7 @@ func tick_spell_bar(combat: Combat, kick: bool) -> void:
 ## My frame and my target's (f: [hp, max, flags] or []).
 func set_units(me_name: String, me_cls: String, me_f: Array, target: Variant, target_name: String, target_f: Array, target_kind: String) -> void:
 	units.visible = true
-	var cls := Data.classes.get(me_cls, {})
+	var cls: Dictionary = Data.classes.get(me_cls, {})
 	var ccol := str(cls.get("color", "#ffe98a"))
 	_set_unit(me_frame, Data.icon("ui_sword") if me_cls != "" else null, me_name, me_f, Color.html(ccol) if ccol.is_valid_html_color() else Color.WHITE)
 	target_frame["root"].visible = target != null
