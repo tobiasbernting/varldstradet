@@ -69,7 +69,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_vaktare_1": {
       "file": "hero_vaktare_1.png",
@@ -89,7 +90,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_vaktare_2": {
       "file": "hero_vaktare_2.png",
@@ -109,7 +111,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_vaktare_3": {
       "file": "hero_vaktare_3.png",
@@ -129,7 +132,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_vaktare_4": {
       "file": "hero_vaktare_4.png",
@@ -149,7 +153,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_vaktare_5": {
       "file": "hero_vaktare_5.png",
@@ -169,7 +174,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_helare_0": {
       "file": "hero_helare_0.png",
@@ -189,7 +195,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_helare_1": {
       "file": "hero_helare_1.png",
@@ -209,7 +216,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_helare_2": {
       "file": "hero_helare_2.png",
@@ -229,7 +237,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_helare_3": {
       "file": "hero_helare_3.png",
@@ -249,7 +258,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_helare_4": {
       "file": "hero_helare_4.png",
@@ -269,7 +279,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_helare_5": {
       "file": "hero_helare_5.png",
@@ -289,7 +300,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_krigare_0": {
       "file": "hero_krigare_0.png",
@@ -309,7 +321,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_krigare_1": {
       "file": "hero_krigare_1.png",
@@ -329,7 +342,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_krigare_2": {
       "file": "hero_krigare_2.png",
@@ -349,7 +363,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_krigare_3": {
       "file": "hero_krigare_3.png",
@@ -369,7 +384,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_krigare_4": {
       "file": "hero_krigare_4.png",
@@ -389,7 +405,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_krigare_5": {
       "file": "hero_krigare_5.png",
@@ -409,7 +426,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_magiker_0": {
       "file": "hero_magiker_0.png",
@@ -429,7 +447,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_magiker_1": {
       "file": "hero_magiker_1.png",
@@ -449,7 +468,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_magiker_2": {
       "file": "hero_magiker_2.png",
@@ -469,7 +489,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_magiker_3": {
       "file": "hero_magiker_3.png",
@@ -489,7 +510,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_magiker_4": {
       "file": "hero_magiker_4.png",
@@ -509,7 +531,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "hero_magiker_5": {
       "file": "hero_magiker_5.png",
@@ -529,7 +552,8 @@
         "right0",
         "right1",
         "right2"
-      ]
+      ],
+      "headroom": 8
     },
     "mob_draugbage": {
       "file": "mob_draugbage.png",
@@ -539,7 +563,8 @@
       "frames": [
         "right0",
         "right1"
-      ]
+      ],
+      "headroom": 0
     },
     "mob_draugkung": {
       "file": "mob_draugkung.png",
@@ -549,7 +574,8 @@
       "frames": [
         "right0",
         "right1"
-      ]
+      ],
+      "headroom": 0
     },
     "mob_gravrotta": {
       "file": "mob_gravrotta.png",
@@ -559,7 +585,8 @@
       "frames": [
         "right0",
         "right1"
-      ]
+      ],
+      "headroom": 0
     },
     "mob_gravvaktare": {
       "file": "mob_gravvaktare.png",
@@ -569,7 +596,8 @@
       "frames": [
         "right0",
         "right1"
-      ]
+      ],
+      "headroom": 0
     },
     "mob_skelett": {
       "file": "mob_skelett.png",
@@ -579,7 +607,8 @@
       "frames": [
         "right0",
         "right1"
-      ]
+      ],
+      "headroom": 0
     }
   }
 }

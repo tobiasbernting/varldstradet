@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Sagan om Världsträdet"
-config/description="The family's farm and saga, as a native game. Milestone M2: login with a join code and a bare world view."
+config/description="The family's farm and saga, as a native game. Milestone M3a: login with a join code, and Draugkryptan on screen with the family walking in it."
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
@@ -20,6 +20,8 @@ config/icon="res://icon.svg"
 
 Settings="*res://scripts/settings.gd"
 Strings="*res://scripts/strings.gd"
+Data="*res://scripts/game_data.gd"
+Quality="*res://scripts/quality.gd"
 Net="*res://scripts/net.gd"
 
 [display]

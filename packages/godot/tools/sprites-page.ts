@@ -2,7 +2,7 @@
 // (packages/client/src/art, which needs a canvas) and hands back PNG data for every sheet. Nothing here runs in Node.
 import { CLASSES, DUNGEONS, SAGA_BOSSES, type ClassId } from '@lilla-garden/shared';
 import { drawAnimal, ANIMAL_SIZE } from '../../client/src/art/animals.ts';
-import { CHAR_H, CHAR_W, drawCharacter, lookOf, SKIN_TONES, type Dir } from '../../client/src/art/characters.ts';
+import { CHAR_H, CHAR_W, drawCharacter, HEADROOM, lookOf, SKIN_TONES, type Dir } from '../../client/src/art/characters.ts';
 import { Px } from '../../client/src/art/px.js';
 
 export interface Sheet {
@@ -11,6 +11,8 @@ export interface Sheet {
   frame_h: number;
   columns: number;
   frames: string[];
+  /** Empty rows over the figure (a hero's 8 rows for tall hats); 0 for creatures. */
+  headroom: number;
   png: string;
 }
 
@@ -27,7 +29,7 @@ function heroSheet(cls: ClassId, skinIndex: number): Sheet {
     sheet.blit(frame, i * CHAR_W, 0, dir === 'left');
   });
   const file = `hero_${cls}_${skinIndex}.png`;
-  return { file, frame_w: CHAR_W, frame_h: CHAR_H, columns: HERO_FRAMES.length, frames: HERO_FRAMES.map(([n]) => n), png: sheet.dataUrl() };
+  return { file, frame_w: CHAR_W, frame_h: CHAR_H, columns: HERO_FRAMES.length, frames: HERO_FRAMES.map(([n]) => n), headroom: HEADROOM, png: sheet.dataUrl() };
 }
 
 /** Two walk frames facing right, the creature's own size, outlined like the browser draws it. */
@@ -35,7 +37,7 @@ function mobSheet(species: string): Sheet {
   const size = ANIMAL_SIZE[species] ?? { w: 16, h: 16 };
   const sheet = new Px(size.w * 2, size.h);
   sheet.blit(drawAnimal(species, 0, false, false, 0), 0, 0).blit(drawAnimal(species, 1, false, false, 0), size.w, 0);
-  return { file: `mob_${species}.png`, frame_w: size.w, frame_h: size.h, columns: 2, frames: ['right0', 'right1'], png: sheet.dataUrl() };
+  return { file: `mob_${species}.png`, frame_w: size.w, frame_h: size.h, columns: 2, frames: ['right0', 'right1'], headroom: 0, png: sheet.dataUrl() };
 }
 
 /** Every creature a dungeon can show: its packs, the mid-boss and boss, and the helpers they call. */

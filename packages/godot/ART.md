@@ -16,7 +16,7 @@ the owner decides otherwise); `assets/LICENSES.md` has every file's origin.
   (torches light them), `alpha_cut = ALPHA_CUT_DISCARD`, `texture_filter = NEAREST`, feet on the floor (the sprite
   sits so its bottom row is at y = 0). Directions: down, up, left, right; left is right mirrored as in the browser.
   Monsters have one side view (facing right), mirrored for left, as in `sagaanimals.ts`. Two walk frames, one stand frame.
-- **Camera.** Perspective, FOV 40°, 11 m behind (+Z) and 9 m above the hero, pitched about 50° down, looking north.
+- **Camera.** Perspective, FOV 40°, 8 m behind (+Z) and 10 m above the hero, pitched about 51° down, looking north.
   It follows the hero smoothly and never rotates: north is always up on the screen, like the map. The angle shows the
   floor as the main surface (where the telegraphs will be drawn in M3b) with the walls as a frame.
 - **Light.** A dungeon is dark in its own colour: `WorldEnvironment.ambient_light_color` is
