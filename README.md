@@ -135,33 +135,78 @@ clients can be in the same dungeon at the same time. `packages/godot/ART.md` has
 
 ![Draugkryptan in the native client](packages/godot/docs/m3a-draugkryptan.png)
 
-**Look at the dungeon without a server (demo mode):**
+**Once per checkout.**
 
 1. Install [Godot 4.7](https://godotengine.org/download) (the standard build, not .NET). Any 4.7.x works for
-   editing; CI pins 4.7.2.
-2. `godot --path packages/godot -- --demo` (or open `packages/godot/project.godot` in Godot, press Play, and the
+   editing; CI pins 4.7.2. Below, `godot` stands for the program: on Linux and Windows the one on your path, on a Mac
+   `/Applications/Godot.app/Contents/MacOS/Godot` (so `alias godot=/Applications/Godot.app/Contents/MacOS/Godot`
+   makes every command here work as written).
+2. Import the project once, from the repository's root: `godot --headless --path packages/godot --import` (or open
+   `packages/godot/project.godot` in the editor once and close it). The import builds Godot's class list and its
+   cache of the art in `packages/godot/.godot/` (not committed). Without it a fresh checkout does not know the scripts'
+   `class_name`s: `login.gd`, `world.gd` and others fail to load ("Parse Error: Cannot infer the type of …" in the
+   console) and the login screen's character button does nothing. Run it again after pulling new scripts.
+
+**Look at the dungeon without a server (demo mode):**
+
+1. `godot --path packages/godot -- --demo` (or open `packages/godot/project.godot` in Godot, press Play, and the
    login screen comes up instead; the demo needs the command line). The recorded Draugkryptan of
    `packages/godot/assets/fixtures/draug.json` is drawn with its monsters, and you walk in it with WASD, the arrows
    or a gamepad's left stick; Escape or the start button opens the menu with the settings. Add `--at=24,53`
    to start in the first monster room, `--fight` to play a scripted fight with the mid-boss on the recording
    (telegraphs of every shape, the boss bar and cast bar, hit numbers, a wipe, a chest with the loot window; no
    server and no rules, only the pictures), and `--screenshot=/tmp/draug.png` to save a frame after 90 frames and quit.
-3. `godot --path packages/godot -- --bench` runs that scripted fight for 10 s on each quality preset and prints the
+2. `godot --path packages/godot -- --bench` runs that scripted fight for 10 s on each quality preset and prints the
    average frame time and the 1 % low per preset (the mean of the slowest 1 % of frames); F3 in the game shows the
    same numbers live. It needs a window: headless Godot renders nothing.
 
-**Run it against a server:**
+**Run it against a server.** The server is the one in `packages/server` (`pnpm dev` starts it on port 8080, and the
+browser game's Vite server on 5173 next to it). It refuses to start without a choice about access, and dies if
+`DATABASE_URL` points at a Postgres that is not running, so pick one of two recipes. Both set `DEV_TELEPORT=1`: the
+native client has no world map yet, so it cannot walk to the arch, and the switch lets the pause menu's "Gå in i
+Draugkryptan" ask the server to put you inside, as the arch would, making you a Krigare first if you have no class.
+Never set it on the real farm.
 
-1. Start the server with the development way into the dungeon on: `DEV_TELEPORT=1 pnpm dev` (the native client has
-   no world map yet, so it cannot walk to the arch; the switch lets the pause menu's "Gå in i Draugkryptan" ask the
-   server to put you inside, as the arch would, making you a Krigare first if you have no class. Never set it on the
-   real farm.) Make a join code on the parent page (`http://localhost:8080/admin`).
-2. `godot --path packages/godot` (or press Play in the editor). On the login screen, type the server's address:
-   `http://localhost:8080` for a local server (plain `http`/`ws` is only used for `localhost`; anything else becomes
-   `https`/`wss`), or the real farm's address. Then the join code and what to call this computer, and press Kom in.
+- *Throwaway, nothing to set up* (no password, no database, nothing saved; a home network only):
+
+  ```bash
+  pnpm install
+  ACCESS=open DEV_TELEPORT=1 DATABASE_URL= pnpm dev
+  ```
+
+  `ACCESS=open` turns the access control off, so there is no join code and no parent login (the client connects
+  without a device token). `DATABASE_URL=` (empty) makes the server keep everything in memory. It has to be said
+  out loud: `pnpm dev` also reads a `.env` in the repository's root if there is one, and a `.env` made from
+  `.env.example` points `DATABASE_URL` at the container's Postgres on port 5435, which is not running. What is set in
+  the shell wins over `.env`, empty values included.
+- *With join codes and a saved farm* (the way the real farm runs):
+
+  ```bash
+  pnpm install
+  pnpm db:up                       # Postgres in a container on port 5435 (podman or docker)
+  cp .env.example .env             # DATABASE_URL for that container; edit PARENT_PASSWORD, 12 characters or more
+  DEV_TELEPORT=1 pnpm dev
+  ```
+
+  or without a `.env`: `PARENT_PASSWORD=<12+ characters> DATABASE_URL=postgres://lilla_garden:lilla_garden@localhost:5435/lilla_garden DEV_TELEPORT=1 pnpm dev`.
+  Open the parent page at **`http://localhost:8080/admin`**, log in with `PARENT_PASSWORD` and make a join code.
+  The parent page and the whole API belong to the server on **8080**; port 5173 is the browser game's development
+  server, which only forwards `/api`, `/admin` and `/ws` to 8080 for the browser (so the page also opens there while
+  `pnpm dev` runs, and nowhere on a real farm). Use 8080 for the parent page and for the native client.
+
+Then start the client:
+
+1. `godot --path packages/godot` (on a Mac: `/Applications/Godot.app/Contents/MacOS/Godot --path packages/godot`;
+   or press Play in the editor, once the project has been imported as above). If the login screen says "Servern svarar
+   inte på … Startade du den?", nothing answers on that address: the server is not running or died on start (look at
+   the terminal where `pnpm dev` runs), or the address is wrong.
+2. On the login screen, type the server's address: `http://localhost:8080` for a local server (plain `http`/`ws` is
+   only used for `localhost`; anything else becomes `https`/`wss`), or the real farm's address. With `ACCESS=open`
+   the server ignores the code, but the field must not be empty (type anything); otherwise it is the join code from the
+   parent page. Then what to call this computer, and press Kom in.
 3. A code the parent approves shows the 6-digit number; the client polls `/api/gate` every few seconds and goes on
-   to "Vem är du?" when the parent has approved the device. Pick a character (characters are still created in the
-   browser for now).
+   to "Vem är du?" when the parent has approved the device. Pick a character. Characters are still created in the
+   browser for now, so on a fresh server make one first: open `http://localhost:5173` and make a person.
 4. You start on the farm, which the client does not draw yet: a notice says so. Press Escape, then "Gå in i
    Draugkryptan". The server generates the dungeon the normal way (`generateSaga`), sends it as `areaData`, and the
    crypt appears with you at its start.
