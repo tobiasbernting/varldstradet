@@ -335,25 +335,30 @@ func _pond_and_fishing() -> void:
 		_step("fishing", false, "no rod")
 		return
 	await _use_item_slot("rod")
-	var caught := ""
+	var fish_start := _fish_count()
 	var bites := 0
-	for attempt in range(6):
-		var fish_before := _fish_count()
+	for attempt in range(8):
+		if _fish_count() > fish_start:
+			break
 		await _act()
 		if not await _until(func() -> bool: return world.play.fishing.visible, 3.0):
 			continue
 		if await _until(func() -> bool: return world.play.fishing.biting, 9.0):
 			bites += 1
+			var fish_before := _fish_count()
+			world.play.act() # at once: the bite lasts 1.3 s, and a slow machine has few frames in it
 			await _shot("fishing-bite", 0.15)
-			await _act()
-			await _wait(0.6)
-			if _fish_count() > fish_before:
-				caught = "fish"
-				break
+			# the answer is a catch or "the fish swam away"; a slow runner may take a moment to say either
+			await _until(func() -> bool: return _fish_count() > fish_before or _report["toasts"].back() == Strings.t("fishingLost"), 3.0)
+			await _wait(0.3)
 		else:
 			await _act()
 			await _wait(0.4)
-	_step("fishing", caught != "", "%d bites, a fish in the bag: %s" % [bites, str(_fish_count())])
+	# honest, not strict: a bite can be missed on a slow machine (that is timing, not a bug). What must hold is that
+	# a fish bit, a fish was caught, and no fish came without a bite.
+	var fish := _fish_count() - fish_start
+	var missed := maxi(0, bites - fish)
+	_step("fishing", bites >= 1 and fish >= 1 and fish <= bites, "%d bites, %d fish caught (note: %d bites missed)" % [bites, fish, missed])
 
 
 ## The chest by the house, the bag, a move between squares and the sort.
