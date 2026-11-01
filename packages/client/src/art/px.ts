@@ -3,6 +3,12 @@
 export class Px {
   readonly canvas: HTMLCanvasElement;
   readonly ctx: CanvasRenderingContext2D;
+  /**
+   * Layer export (tools/export-sprites): 'all' draws everything (the default, the browser never changes it), 'off'
+   * turns px/rect/clear into no-ops, 'erase' turns only the drawing off and keeps clear() working, so the pixels a
+   * clear would punch out can be read from a pre-filled canvas.
+   */
+  mode: 'all' | 'off' | 'erase' = 'all';
 
   constructor(
     readonly w: number,
@@ -16,6 +22,7 @@ export class Px {
   }
 
   px(x: number, y: number, c: string): this {
+    if (this.mode !== 'all') return this;
     this.ctx.fillStyle = c;
     this.ctx.fillRect(Math.round(x), Math.round(y), 1, 1);
     return this;
@@ -23,11 +30,13 @@ export class Px {
 
   /** Makes a box transparent again. */
   clear(x: number, y: number, w: number, h: number): this {
+    if (this.mode === 'off') return this;
     this.ctx.clearRect(x, y, w, h);
     return this;
   }
 
   rect(x: number, y: number, w: number, h: number, c: string): this {
+    if (this.mode !== 'all') return this;
     this.ctx.fillStyle = c;
     this.ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
     return this;

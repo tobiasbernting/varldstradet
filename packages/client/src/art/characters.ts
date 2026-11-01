@@ -5,6 +5,13 @@ import { Px, shade } from './px.js';
 import { OUTLINE } from './world.js';
 
 export type Dir = 'down' | 'up' | 'right';
+/**
+ * The parts of a figure in the order the code draws them (the Godot export draws one at a time and composes them in
+ * this order; see tools/export-sprites.mts). `hat_erase` is not drawn: it yields the pixels the hat clears from what
+ * is below it (a glass helmet clips the hair, a frog hat hides the hair's top row).
+ */
+export type CharLayer = 'pants' | 'shoes' | 'shirt' | 'hands' | 'shirt_over' | 'head' | 'hair' | 'shirt_shade' | 'head_shade' | 'hat' | 'hat_erase';
+export const CHAR_LAYERS: CharLayer[] = ['pants', 'shoes', 'shirt', 'hands', 'shirt_over', 'head', 'hair', 'shirt_shade', 'head_shade', 'hat'];
 export const DIRS: Dir[] = ['down', 'up', 'right'];
 export const CHAR_W = 16;
 /** Empty rows over the 24-row figure, so tall hats (a wizard's point, horns, wings) fit in the frame. */
@@ -96,9 +103,20 @@ function drawDressPixel(p: Px, style: string, c: string, dir: Dir, frame: number
   }
 }
 
-/** Draws one frame: the 16x24 figure at the bottom, the HEADROOM rows above it free for a tall hat. */
-export function drawCharacter(l: Look, dir: Dir, frame: number): Px {
+/**
+ * Draws one frame: the 16x24 figure at the bottom, the HEADROOM rows above it free for a tall hat. With `only` it draws
+ * just that part of the figure (no outline); without it, everything, as always.
+ */
+export function drawCharacter(l: Look, dir: Dir, frame: number, only?: CharLayer): Px {
   const p = new Px(CHAR_W, CHAR_H);
+  if (only === 'hat_erase') {
+    p.ctx.fillStyle = '#000';
+    p.ctx.fillRect(0, 0, CHAR_W, CHAR_H);
+  }
+  /** Switches drawing to a part: the others are muted (the hat's clears still run for `hat_erase`). */
+  const at = (layer: CharLayer): void => {
+    p.mode = only === undefined || only === layer ? 'all' : only === 'hat_erase' && layer === 'hat' ? 'erase' : 'off';
+  };
   p.ctx.translate(0, HEADROOM);
   const skinD = shade(l.skin, 0.8);
   const legOff = frame === 0 ? [0, 0] : frame === 1 ? [-1, 1] : [1, -1]; // leg length deltas (walk)
@@ -112,6 +130,7 @@ export function drawCharacter(l: Look, dir: Dir, frame: number): Px {
   const dress = isDress(l.shirt.style);
   if (dress) {
     // legs are hidden under the skirt: only the shoes show, stepping with the walk cycle
+    at('shoes');
     if (dir === 'right') {
       const frontX = frame === 1 ? 8 : frame === 2 ? 5 : 6;
       const backX = frame === 1 ? 5 : frame === 2 ? 8 : 8;
@@ -127,40 +146,48 @@ export function drawCharacter(l: Look, dir: Dir, frame: number): Px {
     const back = 6 + legOff[1]! * 0; // keep simple: alternate which leg is forward
     const frontX = frame === 1 ? 8 : frame === 2 ? 5 : 6;
     const backX = frame === 1 ? 5 : frame === 2 ? 8 : 8;
+    at('pants');
     p.rect(backX, 17, 3, 5, pantsD);
     p.rect(frontX, 17, 3, 5, pantsC);
     void back;
+    at('shoes');
     p.rect(backX, 22, 3, 2, shade(shoeC, 0.8));
     p.rect(frontX, 22, 4, 2, shoeC).px(frontX + 3, 22, shoeL);
   } else {
     const ly = 17;
+    at('pants');
     const lLen = 5 + legOff[0]!;
     const rLen = 5 + legOff[1]!;
     p.rect(4, ly, 3, lLen, pantsC).rect(9, ly, 3, rLen, pantsC);
     p.rect(6, ly, 1, lLen, pantsD).rect(11, ly, 1, rLen, pantsD);
+    at('shoes');
     p.rect(4, ly + lLen, 3, 2, shoeC).rect(9, ly + rLen, 3, 2, shoeC);
     p.px(4, ly + lLen, shoeL).px(9, ly + rLen, shoeL);
     if (l.shoes.style === 'boots') p.rect(4, ly + lLen - 1, 3, 1, shade(shoeC, 0.9)).rect(9, ly + rLen - 1, 3, 1, shade(shoeC, 0.9));
   }
   if (l.pants.style === 'skirt' && !dress) {
     const sk = shade(pantsC, 1.1);
+    at('pants');
     p.rect(3, 15, 10, 1, sk).rect(2, 16, 12, 3, sk).rect(2, 18, 12, 1, pantsD);
   }
 
   // --- torso & shirt (rows 10..17) ---
   const shirtC = l.shirt.style === 'ghost' ? '#f4f4f4' : l.shirt.color;
   const shirtD = shade(shirtC, 0.8);
+  at('shirt');
   p.rect(3, 10 + bob, 10, 7, shirtC);
   p.rect(3, 16 + bob, 10, 1, shirtD);
   // arms
-  if (dir === 'right') {
-    p.rect(6, 11 + bob, 3, 5, shirtD);
-    p.rect(6, 16 + bob, 3, 1, l.skin);
-  } else {
-    p.rect(2, 11 + bob, 2, 5, shirtD).rect(12, 11 + bob, 2, 5, shirtD);
+  if (dir === 'right') p.rect(6, 11 + bob, 3, 5, shirtD);
+  else p.rect(2, 11 + bob, 2, 5, shirtD).rect(12, 11 + bob, 2, 5, shirtD);
+  // hands (over the shirt's hem, under what the shirt style adds, which may cover them)
+  at('hands');
+  if (dir === 'right') p.rect(6, 16 + bob, 3, 1, l.skin);
+  else {
     const swing = frame === 1 ? 1 : frame === 2 ? -1 : 0;
     p.rect(2, 16 + bob + Math.max(0, swing), 2, 1, l.skin).rect(12, 16 + bob + Math.max(0, -swing), 2, 1, l.skin);
   }
+  at('shirt_over');
   if (l.shirt.style === 'stripes') for (let y = 11; y < 16; y += 2) p.rect(3, y + bob, 10, 1, '#ffffff');
   if (l.shirt.style === 'overalls') {
     p.rect(3, 10 + bob, 10, 7, '#f0e4c8');
@@ -203,6 +230,7 @@ export function drawCharacter(l: Look, dir: Dir, frame: number): Px {
   if (dress) drawDressPixel(p, l.shirt.style, shirtC, dir, frame);
 
   // --- head (rows 2..10) ---
+  at('head');
   const hx = 4;
   const hy = 2 + bob;
   p.rect(hx, hy, 8, 8, l.skin);
@@ -220,6 +248,7 @@ export function drawCharacter(l: Look, dir: Dir, frame: number): Px {
   }
 
   // --- hair ---
+  at('hair');
   const H = l.hair;
   const Hd = shade(H, 0.75);
   const style = l.hat?.style === 'space' && (l.hairStyle === 'long' || l.hairStyle === 'ponytail') ? 'short' : l.hairStyle; // tucked into the helmet
@@ -249,12 +278,17 @@ export function drawCharacter(l: Look, dir: Dir, frame: number): Px {
   }
 
   // soft shading: darker right edge of torso and head, hair highlight, eye shine (before the hat, which covers it)
+  at('shirt_shade');
   p.rect(12, 10 + bob, 1, 7, shade(shirtC, 0.72));
+  at('head_shade');
   p.rect(11, 2 + bob, 1, 7, shade(l.skin, 0.85));
+  at('hair');
   if (style !== 'bald') p.rect(hx + 1, hy - 1, 3, 1, shade(l.hair, 1.35));
+  at('head');
   if (dir === 'down') p.px(hx + 2, hy + 4, '#ffffff').px(hx + 6, hy + 4, '#ffffff');
 
   // --- hat ---
+  at('hat');
   if (l.hat) {
     const C = l.hat.color;
     const Cd = shade(C, 0.75);
@@ -353,7 +387,8 @@ export function drawCharacter(l: Look, dir: Dir, frame: number): Px {
     }
   }
   p.ctx.setTransform(1, 0, 0, 1, 0, 0);
-  return p.outline('#2a2420');
+  p.mode = 'all';
+  return only ? p : p.outline('#2a2420');
 }
 
 // ---------------------------------------------------------------------------

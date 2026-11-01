@@ -81,6 +81,34 @@ the sheets are committed under `assets/sprites/` with `atlas.json` (frame size, 
   loot window and the wheels read them; an item without a picture of its own gets its kind's emoji, like the browser.
 - `mob_<species>.png`: the dungeon's monsters and bosses as `SAGA_MOBS`/`SAGA_BOSSES` name them, two walk frames
   facing right, at the size `SAGA_ANIMAL_SIZE` gives them, outlined as `drawAnimal` outlines them.
+- The farm's people (M4a): `farm_<kind>.png`, one PNG per layer kind with one row of 12 frames (`down0..2 up0..2 left0..2
+  right0..2`, 16×32, left = right mirrored) per layer; `atlas.json`'s `farm.layers` maps a layer key (`shirt_shirt_red`,
+  `hair_ponytail_3`, `hat_hat_viking`) to `{file, x, y}`, the cell of its frame 0 (frame i is at `x + i*16`). Any
+  `appearance` {skin, hair, hairStyle} and `outfit` {hat, shirt, pants, shoes} is put together at runtime with
+  alpha blending, and the result is `drawCharacter(lookOf(appearance, outfit), dir, frame)` pixel for pixel (the exporter
+  composes 1000 looks the same way and fails if one pixel differs). The order is the browser's drawing order, which is
+  not simply "body, then clothes" (hands are drawn over the shirt's hem but under its decoration, the head over the
+  shirt, the face shading over the hair), so there are ten layers, `farm.layer_order`:
+  `pants, shoes, shirt, hands, shirt_over, head, hair, shirt_shade, head_shade, hat`. Keys, with `<item>` an item id
+  (`farm.items` lists the clothing with slot, style and colour; an empty slot, or an item with no clothing, is
+  `default`, `lookOf`'s fallback) and `<skin>` the index in `farm.skins`, `<colour>` the index in `farm.hair_colors`:
+  `pants_<item>` (not drawn when the shirt is a dress: `farm.layers[shirt_<item>].dress`), `shoes_<item>` (`shoes_<item>_dress`
+  under a dress), `shirt_<item>`, `hands_<skin>`, `shirt_over_<item>` (the shirt's style on top; absent for a plain
+  shirt), `head_<skin>` (head, neck, face), `hair_<style>_<colour>` (none for `bald`; under a hat with `tucks_hair`
+  (the glass helmet) `long` and `ponytail` are drawn as `short`), `shirt_shade_<item>`, `head_shade_<skin>`, `hat_<item>`.
+  A hat with an `erase` key first clears the pixels where that layer is opaque from everything below it (the helmet's
+  glass clips the hair, the frog and dino hoods hide its top row), then is drawn. Last, the outline: every fully
+  transparent pixel with a 4-neighbour of alpha above 0 becomes `farm.outline.color` (`#2a2420`), per frame, on the
+  composed image (the outline follows the whole figure, so it is not in the layers). Skin and hair colours outside the
+  lists take the nearest entry.
+- `animal_<species>[_baby][_jul][_v<variant>].png`: the pets, farm animals, mounts, wild animals and roaming monsters
+  (vehicles and dungeon-only monsters excluded), side view facing right, the browser's two walk frames as `right0`
+  `right1` (the browser has no other directions; Godot mirrors for left), at the size `ANIMAL_SIZE` gives them, in
+  `atlas.json`'s `sheets` like the other sheets. `farm_animals` says per species what it is (`kinds`), its frame size,
+  how many `variants` (`_v1`, `_v2`; the game uses `variant % variants`), whether there is a `baby` (species that grow
+  up), the winter tomteluva (`_jul`, all of them) and lists the `sheets` (and `ride_lift` for mounts).
+- `npc_<id>.png`: the villagers, drawn as the browser draws them (`lookOf(appearance, outfit)`), in the hero layout of
+  12 frames; `atlas.json`'s `npcs` maps the id to `{sheet, name, area}`.
 
 Run `pnpm godot:sprites` after changing the art or adding a dungeon; it takes a few seconds and needs a Chromium that
 Playwright can start (the build sandbox has one, CI does not, so the sheets are committed).
