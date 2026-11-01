@@ -186,6 +186,9 @@ func _process(delta: float) -> void:
 func _plan() -> void:
 	var w: Dictionary = world.model.areas.get(world.model.my_area_key(), {})
 	var inst: Dictionary = w.get("saga", {})
+	if inst.is_empty():
+		# the map's data (`areaData`) can arrive after the player record that moves me into the dungeon
+		return
 	var start := _my_tile()
 	var dist := _distance_field(start)
 	var best_pack := -1
