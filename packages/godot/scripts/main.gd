@@ -3,7 +3,8 @@ extends Node
 ## player picks "Byt spelare" in the pause menu. The command line (after `--`) can skip the login:
 ##   --demo              the world plays the recorded Draugkryptan fixture (no server needed); with --fight a
 ##                       scripted fight runs on it (telegraphs, a boss, hits, a chest), for screenshots
-##   --bench             the demo for 10 s on each quality preset, printing the average and 1 % low frame times
+##   --bench[=preset]    the demo scene on each quality preset (or one: lag, mellan, hog) in steady state, printing
+##                       frame times, draw calls, lights and the render timings (bench.gd)
 ##   --bot               a headless player that logs in against a local server (ACCESS=open, DEV_TELEPORT=1), walks
 ##                       to the first pack, fights it and writes a report (bot.gd)
 
@@ -23,7 +24,7 @@ func _ready() -> void:
 		bot.name = "Bot"
 		bot.world = world
 		add_child(bot)
-	elif args.has("--bench"):
+	elif _flag(args, "--bench"):
 		login.visible = false
 		_set_world(true)
 		world.start_demo()
@@ -34,6 +35,7 @@ func _ready() -> void:
 		var bench := Bench.new()
 		bench.name = "Bench"
 		bench.world = world
+		bench.fight = fight
 		add_child(bench)
 	elif args.has("--demo"):
 		login.visible = false
@@ -46,6 +48,14 @@ func _ready() -> void:
 			add_child(fight)
 	else:
 		_show_login()
+
+
+## `--name` or `--name=value` among the arguments.
+func _flag(args: PackedStringArray, flag: String) -> bool:
+	for a in args:
+		if a == flag or a.begins_with(flag + "="):
+			return true
+	return false
 
 
 func _show_login() -> void:

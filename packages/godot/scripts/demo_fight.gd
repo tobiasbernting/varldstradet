@@ -151,6 +151,15 @@ func _s_loot() -> void:
 	_loot()
 
 
+## Plays the timeline again from its start, with the hero up and the boss at full health (the bench measures the same
+## fight on every preset).
+func restart() -> void:
+	_t = 0.0
+	_step = 0
+	_hp = 1100.0
+	_state({}, {"me": [150, 150, 0]}, null)
+
+
 func _process(delta: float) -> void:
 	_t += delta
 	while _step < _timeline.size() and _t >= float(_timeline[_step][0]):

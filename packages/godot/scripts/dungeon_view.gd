@@ -142,6 +142,29 @@ func light_count() -> int:
 	return _lights.size()
 
 
+## How many lights throw shadows now.
+func shadow_light_count() -> int:
+	var n := 0
+	for light in _lights:
+		if light.shadow_enabled:
+			n += 1
+	return n
+
+
+## How many lights are within reach of the camera at `at` (a light fades out at its distance_fade_begin + length).
+func lights_near(at: Vector3) -> int:
+	var n := 0
+	for light in _lights:
+		if not light.distance_fade_enabled or light.global_position.distance_to(at) < light.distance_fade_begin + light.distance_fade_length:
+			n += 1
+	return n
+
+
+## The nodes standing in the dungeon (props, lights, the floor's and the walls' MultiMeshes).
+func object_count() -> int:
+	return _props.size() + (_static.get_child_count() if _static != null else 0)
+
+
 func tint() -> Color:
 	return STONE_TINT[look]
 
