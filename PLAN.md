@@ -129,7 +129,11 @@ generated image is made from it. The free packs below share a flat, low-poly loo
 | Draugar, skeletons | KayKit Skeletons, free tier | glTF, animated. |
 | Weather | inkharbor Weather FX Lite (free); Godot's own particles and sky | The 10 USD Storm & Wind bundle is a nice-to-have, not needed. |
 
-**Spend (about 40 USD, about 37 EUR):**
+**Decision 2026-11-01: start on the free packs only.** Nothing is bought for M3. Where a free pack cannot cover
+something (a Norse longhouse, a runestone, a specific monster), the asset is generated with the AI stack below and
+listed in `LICENSES.md`. The purchases in the next table are deferred and need a new decision from the owner.
+
+**Deferred purchases (about 40 USD, about 37 EUR):**
 
 | Need | Pack | Price | When |
 | --- | --- | --- | --- |
@@ -170,7 +174,7 @@ skeleton that connects, logs in with a join code and prints the `welcome` world.
 and Linux builds on a tag. 3 evenings. Done when the owner starts the exported build on the MacBook Air, types a join
 code, and the parent page shows the device.
 
-**M3. Prototype: one zone, one class.** Draugkryptan as an HD-2D zone with bought and free assets, Krigare with four
+**M3. Prototype: one zone, one class.** Draugkryptan as an HD-2D zone with free CC0 assets (generated where they fall short), Krigare with four
 spells, movement, camera, combat, telegraphs, rest stone, the mid-boss, the HUD, gamepad and keyboard, and the three
 quality presets measured on an Intel iGPU laptop and the M4. Chat and emotes. 8–12 evenings. Done when two players clear
 it together over the internet at 60 fps on Låg.
