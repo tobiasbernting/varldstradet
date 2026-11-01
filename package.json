@@ -13,6 +13,7 @@
     "godot:data": "node --experimental-transform-types packages/godot/tools/export-data.mts",
     "godot:fixture": "node --experimental-transform-types packages/godot/tools/export-fixture.mts",
     "godot:sprites": "node packages/godot/tools/export-sprites.mts",
+    "godot:bot": "node packages/godot/tools/bot-check.mts",
     "godot:gen": "pnpm godot:strings && pnpm godot:data && pnpm godot:fixture"
   },
   "devDependencies": {
