@@ -136,13 +136,22 @@ in their own clothes, animals and villagers, and the real way into Draugkryptan:
 through the forest, and use the arch in the forest beyond. **M4b** makes the farm usable: the hotbar and the bag (and a
 chest's), the tools on the tile in front of you (till, plant, water, harvest, cut grass, chop, mine), things on the ground
 that you pick up by walking over them, the animals (pet, brush, feed, collect, name, ride) and the pets' commands, fishing,
-and coins and stars on the HUD. Building and crafting, the farmhouse, the shop and selling, the wardrobe, cooking and the
-villagers' errands and talk come in M4c; what opens them says it is not drawn yet. `packages/godot/ART.md` has the art rules;
+and coins and stars on the HUD. **M4c** is the rest of the farm evening: the workbench (recipes with what is missing in red)
+and building with a preview of where the thing goes (green or red) and the ownership rule (only the one who built it takes it down;
+the prompt and the toast say whose it is), the farmhouse (walk through the door; the camera closes in, the room has its own warm
+light at night), the Gårdsbutik, the sell box and the pizzeria, the wardrobe, the gear window and the hero switch, the stove,
+the villagers (their talk, the day's önskningar and a list of them), Köpingen drawn like the farm with its buildings and
+villagers, the bus between the farm and the village, and Völvan Sigrun at the Kämpastenen, where the class is chosen. After
+this the browser client is not needed for a farm evening. `packages/godot/ART.md` has the art rules;
 `packages/godot/assets/LICENSES.md` every asset's origin.
 
 ![Draugkryptan in the native client](packages/godot/docs/m3a-draugkryptan.png)
 
 ![The farm in the native client](packages/godot/docs/m4a-farm-day.png)
+
+Home and village (M4c): [the workbench](packages/godot/docs/m4c-workbench.png), [the farmhouse at night](packages/godot/docs/m4c-house-night.png),
+[the shop](packages/godot/docs/m4c-shop.png), [the wardrobe](packages/godot/docs/m4c-wardrobe.png) and
+[the Völvan](packages/godot/docs/m4c-volva.png).
 
 Farming (M4b): [watering](packages/godot/docs/m4b-watering.png), [the bag and a chest](packages/godot/docs/m4b-bag-chest.png),
 [the bag from the demo](packages/godot/docs/m4b-bag-demo.png) [a bite](packages/godot/docs/m4b-fishing-bite.png) and [a wild fox petted](packages/godot/docs/m4b-pet.png).
@@ -233,28 +242,40 @@ Then start the client:
    to "Vem är du?" when the parent has approved the device. Pick a character. Characters are still created in the
    browser for now, so on a fresh server make one first: open `http://localhost:5173` and make a person.
 4. You start on the farm. Walk with WASD, the arrows or the left stick. Draugkryptan is reached the way the browser
-   reaches it, so the character needs a class first: the Völvan's stone in Köpingen is where it is chosen, and the
-   village is not drawn yet, so choose in the browser once (the character keeps it; a class chosen there is the one
-   you fight with here), or, on a server with `DEV_TELEPORT=1`, use one of the pause menu's "Gå in i …" entries, which
-   makes a character without a class a Krigare. Then walk out of the farm through the opening in the middle of the
+   reaches it, so the character needs a class first, and **it is chosen at the Kämpastenen in Köpingen** (M4c): walk out
+   of the farm through the opening in the middle of the east edge (or take the bus: the stop north-east of the farm and
+   the one on the main street of the village, once you have been there), use the stone and pick a way; Völvan Sigrun
+   beside it tells the chapter and gives the reward. (On a server with `DEV_TELEPORT=1` the pause menu's "Gå in i …"
+   entries still make a character without a class a Krigare.) Then walk out of the farm through the opening in the middle of the
    north edge (the client asks the server for the next map, as the browser does), through the forest, west through
    the opening in the middle of that map's west edge, and in the forest beyond up to the stone arch with the glowing
    doorway; press `E` facing it. The server generates the dungeon the normal way (`generateSaga`), sends it as
-   `areaData`, and the crypt appears with you at its start. Without a class the arch says so. The farmhouse door, the
-   bus stop and the other things that open a window say they are not drawn yet (M4c).
+   `areaData`, and the crypt appears with you at its start. Without a class the arch says so.
+   **At home and in the village** (M4c): the prompt under the tile says what the use key does ("E · Använd Arbetsbänk",
+   "E · Prata med Tant Greta"). *Workbench*: every recipe with its ingredients, what is missing in red, "Snickra". *Building*:
+   hold a placeable (a fence, a path, a wall, a chest, a lamp, an animal house…) and the outline shows its footprint, green
+   where the server would put it and red where not; use puts it down and it remembers who built it, the hammer takes it
+   down again, and someone else's build is refused ("Pappa byggde Staket"). *The farmhouse*: walk onto the door under the
+   roof and you are inside (the camera comes closer, the room is lit warm at night); the stove cooks ("Laga mat"), the bed
+   sleeps (E wakes you), the way out is the mat at the bottom. *The shop stand* (the Gårdsbutik): tabs, search, "Köp 1/5/10";
+   *the sell box*: "Sälj 1/alla" with what it fetches; *the wardrobe*: hats, shirts, pants and shoes you own (hair and skin
+   are chosen when the character is made, as in the browser). `G` (or the pause menu) opens the **gear window**: your class,
+   level, the weapon, shield and amulet you wear and carry (kraft, hälsa, skydd) and the **hero switch**, which puts the
+   class's clothes on out in the world and back; `J` lists the day's **önskningar**. *Villagers*: use the key facing one:
+   "Prata!" (stories, questions, jokes, riddles, sten sax påse) and their wishes, handed over with "Lämna".
    **Farming** (M4b) works on the tile in front of you, which is outlined (green when something would happen) with the
    action written under it ("E · Vattna"): `1`–`8` (the shoulder buttons `LB`/`RB`, the mouse wheel, `[` `]`) pick the
    hotbar square; `E`, space, `A` or a click on a tile beside you use it. The hoe tills grass, seeds go in tilled soil, the
    watering can waters (20 charges, refilled at the pond: face the water and use it; the number is on the hotbar), a ripe
    crop is harvested whatever you hold, the scythe cuts grass, the axe chops trees and bushes, the pick breaks rocks,
-   the hammer and the brush are M4c's tools (they do what the server says, and the brush grooms an animal). Walk over
+   the hammer takes down what you built and the brush grooms an animal. Walk over
    what lies on the ground to pick it up. `Q` or `I` (`Y` on a pad) opens the bag: press one square and then another to
    move the stack, "Sortera", "Håll", "Lägg ner"; face a chest and use it to open it beside the bag, with "Lägg i kistan".
    Animals: use the tool-less hand or a brush on one to pet or groom it, hay feeds it, a ripe animal gives its egg or wool,
    a new one asks for its name (OK keeps the suggestion, so a pad can do it), `X` (`R3`) tells your pets to stay and `V`
    (`L3`) whistles for them, and a named horse can be ridden (use it again to get off). Fishing: hold the rod, face the
    water, use it, wait for "Napp!" (the ring and the ❗) and use it again. Fiskar-Sven gives a rod for five wood (the
-   errand itself is M4c's window; the bot sends the same message).
+   errand is a wish in his window.)
 5. **Fight.** `1`–`4` (gamepad `X`/`Y`/`B`/`RB`) are the Krigare's spells: Yxhugg, Stormsteg, Virvelvind,
    Bärsärkaraseri, on the bar at the bottom with their cooldowns; `5` (`LB`) drinks a potion. The server picks the
    monster (the nearest in reach, in sight for a ranged spell) unless you aim: click a monster, or Tab (d-pad right)

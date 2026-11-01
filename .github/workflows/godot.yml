@@ -104,11 +104,11 @@ jobs:
             echo "::error::the scripted fight reported errors (see above)"; exit 1
           fi
 
-      - name: Run the farm and the forest demos headless for a moment (the farm view, the sky, the sprites and the HUD run on the recorded maps)
+      - name: Run the farm, the forest, the farmhouse and the village demos headless for a moment (the farm view, the sky, the sprites and the HUD run on the recorded maps)
         working-directory: packages/godot
         run: |
           set -euo pipefail
-          for demo in farm forest; do
+          for demo in farm forest house village; do
             timeout 120 ~/godot/godot --headless --path . --quit-after 300 -- --demo=$demo --time=0.9 --weather=rain 2>&1 | tee "demo-$demo.log"
             if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate|leaked at exit|still in use at exit|Pages in use exist at exit" "demo-$demo.log"; then
               echo "::error::the $demo demo reported errors or leaked at exit (see above)"; exit 1
@@ -135,22 +135,35 @@ jobs:
           shot farm-rain --demo=farm --at=16,12 --time=0.4 --weather=rain
           shot forest-arch --demo=forest
           shot farm-bag --demo=farm --at=18,14 --time=0.4 --bag
+          shot house-night --demo=house --time=0.9
+          shot house-day --demo=house --time=0.4
+          shot village-day --demo=village --time=0.4
+          shot village-night --demo=village --time=0.9
           xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- --bench=mellan --scene=farm 2>&1 | tee bench-farm.log
           grep -q "bench: done" bench-farm.log
           if grep -E "SCRIPT ERROR|leaked at exit|still in use at exit|Pages in use exist at exit" bench-farm.log; then
             echo "::error::the farm bench reported errors or leaked at exit"; exit 1
           fi
+          for scene in house village; do
+            xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- --bench=mellan --scene=$scene 2>&1 | tee "bench-$scene.log"
+            grep -q "bench: done" "bench-$scene.log"
+            if grep -E "SCRIPT ERROR|leaked at exit|still in use at exit|Pages in use exist at exit" "bench-$scene.log"; then
+              echo "::error::the $scene bench reported errors or leaked at exit"; exit 1
+            fi
+          done
 
       # The farmer works a farm of its own (a second in-memory server) in a window under Xvfb and takes pictures at the
-      # moments the owner asked for: watering, the bag and a chest open, a fish biting, a wild animal petted. The same run
-      # is checked headless by the bot step below; this one has a window and keeps the pictures.
-      - name: The farmer in a window under Xvfb (pictures of watering, the bag, a bite and a pet)
+      # moments the owner asked for: watering, the bag and a chest open, a fish biting, a wild animal petted (M4b); and
+      # the shop, the workbench, a refused fence, the farmhouse, the stove, the wardrobe, a talk, Köpingen, the class
+      # stone, Völvan, the gear and the bus (M4c). The same run is checked headless by the bot step below; this one has a
+      # window and keeps the pictures.
+      - name: The farmer in a window under Xvfb (pictures of the farm's work, the shop, the house, the wardrobe and the village)
         run: |
           set -euo pipefail
           mkdir -p "$GITHUB_WORKSPACE/shots/farmer"
-          GODOT=~/godot/godot BOT_ONLY=farm BOT_FARM_SECONDS=220 BOT_FARM_SHOTS="$GITHUB_WORKSPACE/shots/farmer" \
+          GODOT=~/godot/godot BOT_ONLY=farm BOT_FARM_SECONDS=900 BOT_FARM_SHOTS="$GITHUB_WORKSPACE/shots/farmer" \
             xvfb-run -a -s "-screen 0 1280x720x24" pnpm godot:bot 2>&1 | tee farmer.log
-          for f in watering bag-open fishing-bite pet; do test "$(stat -c %s "$GITHUB_WORKSPACE/shots/farmer/$f.png")" -gt 20000; done
+          for f in watering bag-open fishing-bite pet shop workbench not-yours house cook wardrobe talk village class volva gear bus; do test "$(stat -c %s "$GITHUB_WORKSPACE/shots/farmer/$f.png")" -gt 20000; done
 
       - uses: actions/upload-artifact@v4
         with:

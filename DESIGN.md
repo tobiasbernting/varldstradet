@@ -437,3 +437,52 @@ replies, `nameAnimal`, `pets`) and draws what comes back.
   so the bot faces down for pictures; wild maps have wolves, bears and roaming monsters that make a loitering bot faint, so it keeps
   away from them; the server never says a fishing line is in the water.
 
+
+## Godot client: home and village (2026-11-01)
+Milestone M4c of `PLAN.md`, the last farm slice: the family can play a whole farm evening in the native client. The only
+server changes are exports (`FLOOR_ITEMS` in `sim.ts` and the dialogue's tables in `dialogue.ts` are `export`ed so
+`pnpm godot:data` can write them to `game.json`); every rule is the browser's, read from `shared/src`, and every window sends
+the browser's messages (`craft`, `cook`, `buy`, `sell`, `equip`, `quest`, `ride`, `saga` class/chapter/equip/hero/quest).
+- **Windows** (`scripts/game_window.gd` and one file each): a dark panel over a dimmed screen with a title, a purse, tabs, a
+  scrolling list of rows (a picture, a name, a line of bbcode, buttons) and OK. Rows are rebuilt from my player record when
+  the window opens and whenever the server sends the record again, never per frame; the focused button is remembered across
+  the rebuild so a pad does not lose its place. Every control is a `Button`, so the mouse, the keyboard and a pad all work;
+  Escape or B closes. `farm_windows.gd` owns them, routes the server's `open` changes (`workbench`, `cook`, `catalogue`,
+  `pizzeria`, `sell`, `wardrobe`, `npc`, `saga`, `sagaClass`, `travel`) and closes them all when the map changes.
+- **Building**: `farm_target.gd` now reads the placement rules (`addObject` and the floor rules in `performAction`) for what I
+  hold: the outline takes the footprint of the thing (`Data.object_def`), green when the server would put it there, red
+  (and "Går inte att bygga här") on water, cliffs, objects, crops or someone standing in it. It also reads the ownership rule: an
+  object with `by` that is not me, whose builder is still a player of the farm, gives "Pappa byggde Staket" with a grey
+  outline (the server refuses and the toast says the same). There is no rotation in the game (the browser has none), so there is
+  none here.
+- **The farmhouse** is a walled room in the farm map's south-east corner (`INTERIOR` in `map.ts`), not another map. Its door
+  is a portal (`PORTALS`): `hero.gd` now lets the door tile be walked on (the server's `isSolidForPlayer` returns false for a
+  portal before it looks at objects) and applies `applyPortal` after a step, so the next `move` tells the server, which accepts a
+  jump between the two ends of a portal. Snapshots from before the jump would pull me back, so `reconcile` ignores them for
+  0.8 s. The camera comes to 62 % of its distance inside the room and eases back out. The room is dark at night (it has no
+  roof for the sun, and nothing else lights it), so two lights come with the farm map: a warm one over the room and a cool one
+  at the back wall for the window, both on the same switch as the lamps (`set_dark`).
+- **Shop, sell box, pizzeria** read the prices, tabs and seasons from `game.json` (`shopItems` keeps the browser's order),
+  with a search that looks in every tab, "Du har N", the house an animal needs, and everyone's animals on the way. **The
+  wardrobe** shows what I own per slot with a picture of me in what I wear (one frame of the composed sheet); it cannot change hair
+  or skin because the browser cannot either. **The gear window** (`gear.gd` is `gearStats`, `forgeStats`, `gearOf` and the level
+  table of `saga.ts` ported) shows the numbers the server uses, the three slots, the bag's gear and the hero switch.
+- **Cooking** is the same window as the workbench with the stove's recipes; eating is the server's: hold the dish, use the key.
+- **Villagers**: `dialogue.gd` is `talkNode` ported line for line, playing the same tree from `game.json`; the window shows the
+  day's wishes (`Quest` records from the welcome and the `quests` change), what I carry against what they want, the reward, and
+  "Lämna" (`quest`), plus the saga's quests for them and, for Völvan Sigrun, the chapter told line by line (`saga chapter`) and a
+  way to the class stone (`saga class`). `J` lists all the day's wishes.
+- **Köpingen** is drawn by the same generic view (`a:1,0`, biome `by`): the streets and rails were ground already; the buildings
+  were boxes, so `farm_assets.gd` gets the pizzeria, the station, the shop, the apartments, the small houses (KayKit's), the market
+  stalls, the bath house, traffic lights, parked cars, banner poles, the square's runestone and the Kämpastenen, with lit windows
+  at night. `--demo=village` and `--demo=house` are fixtures (`tools/export-fixture.mts`). **The bus** is the stop's window
+  (`ride`): home, and the villages visited (the welcome's `biomes` tells which are villages).
+- **Checks**: the farmer (`farm_bot.gd`, `farm_bot_home.gd`) now buys seeds and a hat, plants wheat beside the carrot, sells a
+  carrot, hands in Elsa's and Sven's wishes through their windows, crafts fences, tries a fence on the water (red) and on grass
+  (green), places it, takes it down, is refused on another player's fence (built by `tools/friend.mts`, a second player that
+  joins over the socket), walks through the farmhouse door and out, bakes and eats bread, puts the hat on, talks (a joke, a
+  riddle, sten sax påse), walks to Köpingen, picks Krigare at the stone, hears Völvan and takes her reward, equips the weapon,
+  switches to hero and back, and rides the bus home and out again. All by pressing the rows' own buttons. Findings worth keeping:
+  a breadth-first route that treats the farmhouse door as a floor leads straight through it and back out again forever (the
+  walking helper skips portal tiles and the bot steps through the door with the stick); `Strings.object_name` falls back to the
+  item's name for things built from an item (a fence is "Staket", not "fence").

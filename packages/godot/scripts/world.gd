@@ -19,7 +19,9 @@ const CAMERA_LOOK := Vector3(0.0, 0.8, 0.0)
 const PLAYER_JUMP_PX := 64.0
 const ANIMAL_JUMP_PX := 48.0
 const SHADOW_EVERY := 0.3
-const INSIDE_ZOOM := 0.62
+## Inside the farmhouse the camera stands higher over the hero and nearer, looking down steeper (the same distance in the
+## same direction would put it among the crowns of the trees behind the room's south wall).
+const INSIDE_OFFSET := Vector3(0.0, 9.6, 5.2)
 const USABLE := {"saga_exit": "actExit", "saga_chest": "actChest", "saga_rest": "actRest", "saga_plate": "actPlate", "saga_gate": "actGate"}
 ## Outdoors only the dungeons' arches work yet; the other things you can use say so (M4b and M4c make them work).
 const ARCH := "saga_portal"
@@ -53,7 +55,7 @@ var _shadow_in := 0.0
 var _screenshot := ""
 var _frames := 0
 var _rest_glow_in := 0.0
-var _cam_k := 1.0 ## how far the camera is from the hero, 1 outdoors, closer inside the farmhouse
+var _cam_k := 0.0 ## 0 outdoors, 1 inside the farmhouse: how far the camera has moved to its closer, steeper place
 var _hint_for := ""
 var _rng := RandomNumberGenerator.new()
 
@@ -800,20 +802,25 @@ func _process(delta: float) -> void:
 
 
 ## The browser closes in inside the farmhouse (a small room at the same zoom would be a postage stamp): the camera
-## comes to about two thirds of its distance there and eases back out through the door.
+## moves to a closer, steeper place there and eases back out through the door.
+## The camera is a child of the rig that follows the hero: its place and aim are in the rig's own space.
+func _aim_camera(off: Vector3) -> void:
+	camera.transform = Transform3D(Basis.looking_at(CAMERA_LOOK - off, Vector3.UP), off)
+
+
 func _frame_camera(delta: float) -> void:
 	var inside := false
 	if _mode == "outdoor" and _area == "farm":
 		var tile := Data.tile()
 		inside = Data.in_interior(floori(hero.px / tile), floori(hero.py / tile))
-	var want := INSIDE_ZOOM if inside else 1.0
+	var want := 1.0 if inside else 0.0
 	if absf(_cam_k - want) < 0.002:
 		if _cam_k != want:
 			_cam_k = want
-			camera.look_at_from_position(CAMERA_OFFSET * _cam_k, CAMERA_LOOK)
+			_aim_camera(CAMERA_OFFSET.lerp(INSIDE_OFFSET, _cam_k))
 		return
 	_cam_k = lerpf(_cam_k, want, 1.0 - pow(0.02, delta))
-	camera.look_at_from_position(CAMERA_OFFSET * _cam_k, CAMERA_LOOK)
+	_aim_camera(CAMERA_OFFSET.lerp(INSIDE_OFFSET, _cam_k))
 
 
 ## The time of day (ms into the day): the server's, running on between its snapshots; fixed in the demo's --time.

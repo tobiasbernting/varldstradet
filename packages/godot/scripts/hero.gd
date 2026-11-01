@@ -33,6 +33,7 @@ var _send_in := 0.0
 var _map_w := 64
 var _map_h := 64
 var _travel_at := -10.0
+var _portals: Dictionary = {} ## Vector2i of a portal's `from` tile -> the portal
 var _portal_at := -10.0 ## when I last stepped through the farmhouse door (snapshots from before it are stale)
 signal portal_used(inside: bool)
 
@@ -58,6 +59,11 @@ func reset() -> void:
 func set_world(w: Dictionary, is_outdoor := false) -> void:
 	world = w
 	outdoor = is_outdoor
+	# the farm's portals (PORTALS in map.ts) belong to the farm map only: a set of tiles, so a step costs a lookup
+	_portals = {}
+	if str(w.get("area", "")).is_empty() and w.get("biome") == null:
+		for p in Data.portals:
+			_portals[Vector2i(int(p.get("from", {}).get("x", -1)), int(p.get("from", {}).get("y", -1)))] = p
 	_map_w = int(w.get("w", 64))
 	_map_h = int(w.get("h", 64))
 
@@ -209,27 +215,20 @@ func _apply_portal() -> void:
 	var tile := Data.tile()
 	var tx := floori(px / tile)
 	var ty := floori(py / tile)
-	if not _is_portal_tile(tx, ty):
+	var p: Variant = _portals.get(Vector2i(tx, ty))
+	if not (p is Dictionary):
 		return
-	for p in Data.portals:
-		if int(p.get("from", {}).get("x", -1)) == tx and int(p.get("from", {}).get("y", -1)) == ty:
-			var to: Dictionary = p.get("to", {})
-			px = (float(to.get("x", tx)) + 0.5) * tile
-			py = (float(to.get("y", ty)) + 0.5) * tile
-			facing = str(p.get("facing", "down"))
-			_portal_at = Time.get_ticks_msec() / 1000.0
-			_send_in = 0.0
-			portal_used.emit(Data.in_interior(int(to.get("x", tx)), int(to.get("y", ty))))
-			return
+	var to: Dictionary = p.get("to", {})
+	px = (float(to.get("x", tx)) + 0.5) * tile
+	py = (float(to.get("y", ty)) + 0.5) * tile
+	facing = str(p.get("facing", "down"))
+	_portal_at = Time.get_ticks_msec() / 1000.0
+	_send_in = 0.0
+	portal_used.emit(Data.in_interior(int(to.get("x", tx)), int(to.get("y", ty))))
 
 
 func _is_portal_tile(tx: int, ty: int) -> bool:
-	if not str(world.get("area", "")).is_empty() or world.get("biome") != null:
-		return false # the farm's portals (PORTALS in map.ts) belong to the farm map only
-	for p in Data.portals:
-		if int(p.get("from", {}).get("x", -1)) == tx and int(p.get("from", {}).get("y", -1)) == ty:
-			return true
-	return false
+	return _portals.has(Vector2i(tx, ty))
 
 
 ## The swing of a spell: a lunge towards `at` (scene units) and a flash.

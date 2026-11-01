@@ -36,7 +36,7 @@ const packs = Number(process.env.BOT_PACKS ?? 1);
 const names = ['Bot-Ask', 'Bot-Embla'];
 const walkerName = 'Bot-Vandrare';
 const farmerName = 'Bot-Bonde';
-const farmSeconds = Number(process.env.BOT_FARM_SECONDS ?? 200);
+const farmSeconds = Number(process.env.BOT_FARM_SECONDS ?? 600);
 const farmShots = process.env.BOT_FARM_SHOTS ?? '';
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'varldstradet-bot-'));
 
@@ -222,6 +222,12 @@ async function main(): Promise<void> {
       farmServers.push(farmServer);
       await waitFor(`http://localhost:${farmPort}/api/gate`, 60_000);
       console.log(`server 2 (the farmer's): port ${farmPort}`);
+      // a second player builds three fences first: the farmer has to be refused when it tries to take one down
+      const friendReport = path.join(tmp, 'friend.json');
+      const friend = run(process.execPath, [path.join(here, 'friend.mts'), `http://127.0.0.1:${farmPort}`, friendReport], { cwd: here, log: path.join(tmp, 'friend.log') });
+      const friendCode = await exited(friend, 90_000);
+      const fr = fs.existsSync(friendReport) ? (JSON.parse(fs.readFileSync(friendReport, 'utf8')) as { ok: boolean; note: string }) : { ok: false, note: 'no report' };
+      check(friendCode === 0 && fr.ok, `the neighbour (a second player) put fences on the farm: ${fr.note}`);
       const report = path.join(tmp, `${farmerName}.json`);
       const log = path.join(tmp, `${farmerName}.log`);
       const args = ['--headless', '--path', godotDir, '--', '--farmbot', `--server=http://127.0.0.1:${farmPort}`, `--name=${farmerName}`, `--report=${report}`, `--seconds=${farmSeconds}`];
