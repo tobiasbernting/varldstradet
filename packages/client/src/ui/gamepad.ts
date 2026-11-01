@@ -1,5 +1,5 @@
 // Game controllers (Gamepad API, "standard" layout: Xbox/PlayStation/Switch pads in a browser).
-// Polled once per animation frame; the minigames read the pads themselves (packages/arcade).
+// Polled once per animation frame.
 //
 // Playing: left stick walks, A/X/RT uses, B/LT/L3 runs, LB/RB and d-pad left/right pick a tool, Y backpack,
 // d-pad up emotes, d-pad down minimap, Start help, Select/Back book.
@@ -36,10 +36,8 @@ export function initGamepad(opts: {
   /** Every window B should close; menus first. */
   windows: Closable[];
   hud: Hud;
-  /** A minigame is open: it reads the pad itself. */
-  paused: () => boolean;
 }): void {
-  const { ui, target, menus, windows, hud, paused } = opts;
+  const { ui, target, menus, windows, hud } = opts;
   let prev: boolean[] = [];
   let pressed: boolean[] = [];
   let axes = [0, 0, 0, 0];
@@ -103,11 +101,6 @@ export function initGamepad(opts: {
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
     if (!read()) return;
-    if (paused()) {
-      stopPlaying();
-      setFocus(null);
-      return;
-    }
     if (!active && (pressed.some(Boolean) || axes.some((v) => v !== 0))) setActive(true);
     if (!active) return;
     const root = menuRoot();

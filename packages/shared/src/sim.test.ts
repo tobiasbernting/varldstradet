@@ -2064,7 +2064,7 @@ describe('staden', () => {
       // the villagers' spots, the doors, and every open tile of the square
       for (const n of npcsIn(w)) for (const wp of [n, ...n.routine]) expect(reach[tileIndex(w, wp.x, wp.y)], `${n.id} ${wp.x},${wp.y}`).toBe(1);
       for (const o of Object.values(w.objects))
-        if (['pizzeria', 'bathhouse', 'arcade_hall', 'train_station'].includes(o.kind)) expect(reach[tileIndex(w, o.x + 1, o.y + 2)], o.kind).toBe(1);
+        if (['pizzeria', 'bathhouse', 'train_station'].includes(o.kind)) expect(reach[tileIndex(w, o.x + 1, o.y + 2)], o.kind).toBe(1);
       for (let y = 20; y <= 31; y++) for (let x = 34; x <= 47; x++) if (!isSolidForPlayer(w, x, y)) expect(reach[tileIndex(w, x, y)], `square ${x},${y}`).toBe(1);
     };
     const city = generateArea(1, 0);

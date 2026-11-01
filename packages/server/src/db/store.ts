@@ -5,7 +5,7 @@ import { inArray, sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { AREA_GEN, CAVE_EXIT_TILE, MAX_HEARTS, TILE, settlePlayer, upgradeSavedArea, ensureArcadeHall, ensureBathhouse, ensureGear, ensureLevelRewards, ensureRoaming, ensureTownDress, ensureSagaPlaces, ensureCave, ensureCity, ensureLandmarks, ensureFarmBusStop, ensureFarmExits, ensureGarage, ensureInterior, ensurePizzeria, ensureTransport, ensureTv, ensureVillagers, generateWorld, isHallKey, isSagaKey, DUNGEONS, dungeonOfKey, portalFront, archFront, rebuildOccupancy, type Change, type DungeonId, type WorldState } from '../../../shared/src/index.ts';
+import { AREA_GEN, CAVE_EXIT_TILE, MAX_HEARTS, TILE, settlePlayer, upgradeSavedArea, ensureBathhouse, ensureGear, ensureLevelRewards, ensureRoaming, ensureTownDress, ensureSagaPlaces, ensureCave, ensureCity, ensureLandmarks, ensureFarmBusStop, ensureFarmExits, ensureInterior, ensurePizzeria, ensureTransport, ensureVillagers, generateWorld, isRemovedAreaKey, isSagaKey, scrubArea, scrubPlayer, DUNGEONS, dungeonOfKey, portalFront, archFront, rebuildOccupancy, type Change, type DungeonId, type WorldState } from '../../../shared/src/index.ts';
 import * as s from './schema.ts';
 import { PgAccessStore } from './accessStore.ts';
 
@@ -23,9 +23,7 @@ export interface Store {
 export class MemoryStore implements Store {
   constructor(private seed = 1337) {}
   async load(): Promise<WorldState> {
-    const world = generateWorld(this.seed);
-    ensureGarage(world);
-    return world;
+    return generateWorld(this.seed);
   }
   noteChanges(): void {}
   markAllDirty(): void {}
@@ -69,7 +67,6 @@ export class PgStore implements Store {
     const row = rows[0];
     if (!row) {
       const world = generateWorld();
-      ensureGarage(world);
       this.markAllDirty(world);
       await this.flush(world);
       return world;
@@ -101,6 +98,8 @@ export class PgStore implements Store {
     }
     for (const c of await this.db.select().from(s.crops)) world.crops[c.k] = c.data;
     for (const a of await this.db.select().from(s.animals)) world.animals[a.id] = a.data;
+    /** Saves from before the minigames went (2026-11-01) are cleaned and written back. */
+    let scrubbed = false;
     for (const p of await this.db.select().from(s.players)) {
       world.players[p.id] = { ...p.data, questsDone: p.data.questsDone ?? [], stars: p.data.stars ?? 0, stats: p.data.stats ?? {}, achievements: p.data.achievements ?? [], area: p.data.area && p.data.area !== 'dungeon' ? p.data.area : 'farm', visited: p.data.visited ?? ['farm'], hearts: MAX_HEARTS, online: false, moving: false };
       delete world.players[p.id]!.riding; // horses are re-mounted after a restart
@@ -120,6 +119,12 @@ export class PgStore implements Store {
       }
       delete world.players[p.id]!.emote;
       delete world.players[p.id]!.fishing;
+      // scores, tickets, a garage or prizes from before the minigames went
+      if (scrubPlayer(world.players[p.id]!)) {
+        this.players.add(p.id);
+        this.worldDirty = true;
+        scrubbed = true;
+      }
       // heroes from before gear: their best weapon goes from the bag into their hand
       ensureGear(world.players[p.id]!);
       // heroes from before the level rewards: everything their level has earned (and levels from the new table)
@@ -128,14 +133,17 @@ export class PgStore implements Store {
         this.worldDirty = true;
       }
     }
+    // the TV, the rally garage and the prizes have no definitions any more: out before the occupancy is rebuilt
+    if (scrubArea(world)) scrubbed = true;
     rebuildOccupancy(world);
     world.areas = {};
     for (const row of await this.db.select().from(s.areas)) {
-      // Spelhallen is rebuilt from its plan each time, so it always has the latest machines; dungeons start over
-      if (isHallKey(row.key) || isSagaKey(row.key)) continue;
+      // Spelhallen's insides are gone (migration 0004 deletes the rows); dungeons start over
+      if (isRemovedAreaKey(row.key) || isSagaKey(row.key)) continue;
       const a = row.data;
       a.players = {};
       a.area = row.key;
+      if (scrubArea(a)) this.dirtyAreas.add(row.key);
       rebuildOccupancy(a);
       if (ensureCity(a, world)) {
         console.log(`rebuilt the saved village ${row.key} as a city`);
@@ -174,10 +182,6 @@ export class PgStore implements Store {
         this.dirtyAreas.add(k);
         console.log(`added the bus stop and station to ${k}`);
       }
-      if (ensureArcadeHall(a)) {
-        this.dirtyAreas.add(k);
-        console.log(`added Spelhallen to ${k}`);
-      }
       if (ensureTownDress(a)) {
         this.dirtyAreas.add(k);
         console.log(`dressed ${k} as a Norse market town`);
@@ -205,15 +209,14 @@ export class PgStore implements Store {
     // Worlds saved by older versions: add the farmhouse interior and room for the villagers
     const before = Object.keys(world.objects).length;
     if (ensureInterior(world)) console.log('added the farmhouse interior to the saved world');
-    if (ensureTv(world)) console.log('put a TV in the farmhouse');
     ensureVillagers(world);
     if (ensureCave(world)) console.log('added the cave to the saved world');
     ensureFarmExits(world);
     if (ensureFarmBusStop(world)) console.log('added the bus stop to the farm');
-    if (ensureGarage(world)) console.log('built the rally garage on the farm');
     // Objects removed by the repairs above must also leave the database
     for (const id of loadedObjectIds) if (!world.objects[id]) this.gone.objects.add(id);
-    if (Object.keys(world.objects).length !== before || this.gone.objects.size > 0 || before === 0) {
+    if (scrubbed) console.log('cleaned what the minigames left in the saved world');
+    if (scrubbed || Object.keys(world.objects).length !== before || this.gone.objects.size > 0 || before === 0) {
       this.markAllDirty(world);
       await this.flush(world);
     }

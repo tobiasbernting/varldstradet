@@ -31,19 +31,6 @@ See [DESIGN.md](DESIGN.md) for the agreed design.
 - Gräv upp skatter där det är ett kryss, dansa i älvringar, fånga dinosaurier och gelébjörnar med lasso, kläck ett
   drakägg – och åk raket till månen (månost, stjärnkristaller, rymdvarelser och ett kraschat ufo).
 - Gör souvenirer av fynden: kristallampa, svamplampa och ett dinosaurieskelett. Nya kläder finns i skattkistorna.
-- Minispel på TV:n i stugan och i Spelhallen i varje köping: Rallyt (3D-racing), Snöbollskriget (3D-skjutspel med
-  snöbollar), Minigolfen (3D), Hönan Hilda (plattformsspel i gammal grön handkonsol-stil), Dansbanan (rytmspel i
-  neondisco) och Stjärnstorm (rymdskjutspel i glödande vektorgrafik). Familjens topplista per spel; i Spelhallen
-  vinner man biljetter att byta mot gosedjur, lampor, pokaler och nya TV-spel. Fler spelkassetter finns i grottornas
-  skattkistor och i ufot på månen.
-- Rallyvärlden: i garaget öster om gården köper du bilar (rallybil, buggy, pickup, sportbil, monstertruck), trimmar
-  delar (motor, däck, fjädring, bromsar, turbo, pansar) och stylar bilen med lack, mönster, klistermärken, fälgar,
-  spoiler, prylar, underglow, förare och skylt – med bilen på en snurrande piedestal i 3D. Tävla mot datorn eller med
-  familjen (skapa ett lopp med egna regler: bana, varv, bucklor på/av, datorbilar, svårighet, tid på dygnet, väder,
-  nitro, lika bilar, turboplattor) på fem banor: Gårdsbanan, Skogsbanan (grus), Isbanan, Strandbanan och Stadsbanan
-  (natt). Alla som kör i mål får kr, snabba tider ger medaljer och tidskörning har ett spöke av ditt rekord. Bucklor
-  gör bilen långsammare men aldrig obrukbar; laga dem i garaget för kr (lite läker av sig självt varje morgon).
-  Åk fritt i 3D över gårdslandskapet med andra som kör samtidigt: mynt att hitta, hopp, sladdzoner och halmbalar.
 - Sagan om Världsträdet: välj klass vid Kämpastenen (Väktare, Helare, Krigare eller Magiker) och lyssna på Völvan
   Sigrun, som berättar sagan i tio kapitel. Del I är Draugkryptan, Frostjättens borg och Surts smedja; del II, Lokes
   list, tar er vidare till Helheim, Svartalfheims gruvor, Havsormens tempel, Alvernas lund, Fenrisklyftan och
@@ -57,7 +44,7 @@ See [DESIGN.md](DESIGN.md) for the agreed design.
 - Köpingen öster om gården är en nordisk marknadsstad: kullerstensgator, timmerhus och långhus, lyktor, banérstänger,
   tunnor och en runsten på torget. Där åker du med hästkärror och ridhästar (köps under Kärror & hästar i
   gårdsbutiken – de följer med över kartkanten), Diligensen (5 kr, till ställen du redan besökt) och dvärgarnas
-  Gruvtåg (15 kr, även till en okänd köping långt borta). Spelhallen och Rallyvärldens garage är kvar som förut.
+  Gruvtåg (15 kr, även till en okänd köping långt borta).
 - Hjältenivåer 1–20 för alla, med eller utan klass: varje monster du besegrar ute i världen ger erfarenhet (svärd,
   båge, bazooka eller besvärjelser; vänner några rutor bort får lika mycket). Lätta vilda monster bor i varje
   sorts plats (Ängsvätte, Trollunge, Snötroll, Sandande, Djungelimp, Benödla, Sockerspöke och Rymdkryp). Varje nivå
@@ -114,7 +101,8 @@ merge to `main` is live the next morning, and a migration must work on the real 
 homelab repo (`cloud/roles/lilla-garden`).
 
 (The 3D version, the Phaser client and the `gard-ljs` trial farm were retired on 2026-10-30; their last images
-stay in the registry as they were.)
+stay in the registry as they were. The minigames, Spelhallen and Rallyvärlden were removed on 2026-11-01, milestone
+M1 of [PLAN.md](PLAN.md); the web game at `lilla-garden` keeps them.)
 
 Environment:
 
@@ -178,12 +166,6 @@ There is still no text chat: players can only use emotes.
   come from `packages/client` (the `@v1/*` alias); the view is its own.
 - `packages/client` – the HTML menus, HUD, networking, client state, sounds and the pixel art generated in code
   (once the Phaser client; that view is gone, the shared parts stay here)
-- `packages/arcade` – the minigames and the overlay they run in (title card, pause, results, one controller for
-  keyboard, gamepad and touch). Each game is loaded only when played. `pnpm --filter @lilla-garden/arcade lab`
-  opens a lab page that plays any game without the server (`?play=rally`, `?game=golf`, `?tv`, `&touch=1`;
-  for Rallyvärlden `&rallycourse=ice`, `&rallymode=roam|timetrial`, `&rallyrules=laps:1,ai:3,damage:1,time:night,weather:rain`,
-  `&rallybody=monster&rallyparts=3`, `&rallynet=echo` for a pretend family member). `preview.html` shows the garage's
-  car preview with any style in the address (`?body=buggy&livery=flames&extras=flag,lightbar&night=1&damage=80`).
 
 ## Controls
 
@@ -200,13 +182,8 @@ There is still no text chat: players can only use emotes.
 - Handkontroll (Xbox, PlayStation, Switch): vänster spak går, `A`/`X`/`RT` använder, `B`/`LT` springer, `LB`/`RB` eller
   styrkorset vänster/höger väljer verktyg, `Y` ryggsäck, styrkorset upp emotes och ner minikarta, Start hjälp, Select bok.
   I en fängelsehåla är `X`/`Y`/`B`/`RB` besvärjelserna, `LB` läkedryck, styrkorset vänster/höger byter monster och
-  Select ryggsäck. I menyerna flyttar spaken/styrkorset markeringen, `A` trycker och `B` stänger. Minispelen läser
-  kontrollen själva.
+  Select ryggsäck. I menyerna flyttar spaken/styrkorset markeringen, `A` trycker och `B` stänger.
   Hur du kopplar ihop en Xbox-, PS5- eller Switch-kontroll med en Android-surfplatta, Mac eller PC står i hjälpen under 🕹️ Handkontroll.
-- Rallyt: `↑`/`W` gasar, `↓`/`S` bromsar och backar, `←`/`→` styr, mellanslag handbroms (sladda länge för turbo), `L` nitro,
-  `C`/Enter byter kamera, `R` tillbaka på vägen. Handkontroll: RT gas, LT broms, A handbroms, X nitro, B tillbaka på vägen.
-  Surfplatta: bilen gasar själv, `◀ ▶` styr, `▼` bromsar, 🌀 handbroms, 🔥 nitro (🎥 kamera när bilen inte har någon nitro).
-  I Åk fritt: Enter/🏠 hem till garaget.
 - `?` i hörnet öppnar hjälpen (visas automatiskt första gången på en enhet).
 
 ## Art

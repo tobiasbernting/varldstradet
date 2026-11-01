@@ -7,14 +7,11 @@ import { BIOME_EMOJI, BIOME_NAMES, DISCOVERABLE, arrivalTile, areaCoords, areaKe
 import { caveKey, entranceFront, generateCave, isCaveKey, isUnderground, parseCaveKey, regrow, themeOfEntrance } from './caves.ts';
 import { MOON_KEY, MOON_ROCKET, SPACEPORT_KEY, BASE_ROCKET, generateMoon, isMoonKey, rocketFront } from './space.ts';
 import { landmarkFronts, reachableFrom } from './worldgen.ts';
-import { BATH_EXIT, BATH_POOL, SWIM_SPEED_MUL, bathKey, bathhouseDoorTile, generateBath, isBathKey, villageOfBath } from './bath.ts';
-import { ARCADE, ARCADE_GAMES, ARCADE_MAX_SCORE, MAX_TICKETS_PER_DAY, MIN_GAME_MS, PRIZES, SPARE_CART_TICKETS, isArcadeGame, ticketsFor } from './arcade.ts';
-import { INDOOR_EXIT, familyBest, familyGames, generateHall, hallDoorTile, hallKey, isHallKey, isIndoorKey, villageOfHall } from './hall.ts';
+import { BATH_EXIT, BATH_POOL, SWIM_SPEED_MUL, bathKey, bathhouseDoorTile, generateBath, isBathKey, isIndoorKey, villageOfBath } from './bath.ts';
 import { driveVehicle, isVehicle, vehicleBlocks } from './city.ts';
 import { DUNGEONS, VOLVA_ID, dungeonOfKey, isSagaKey, sagaItem } from './saga.ts';
 import { generateSaga } from './sagamap.ts';
 import { discoverLandmark } from './explore.ts';
-import { garageOf, healCars } from './rallysim.ts';
 import { enterSaga, ensureSagaPlaces, heroAction, idleSaga, isSagaMob, killXp, roamingDown, sagaAct, sagaRooted, tickSaga } from './sagasim.ts';
 import { addItem, countItem, hasSpace, makeInventory, makeStack, moveStack, quickStack, removeItem, sortInventory, takeFromSlot } from './inventory.ts';
 import { PORTALS, SPAWN, addObject, generateWorld, inBounds, inInterior, mapH, mapW, objectAt, portalAt, removeObject, tileIndex } from './map.ts';
@@ -28,7 +25,6 @@ import { WALL_TERRAIN, isFishWater } from './types.ts';
 import type {
   AnimalState,
   Appearance,
-  ArcadeState,
   ClothingSlot,
   CropState,
   DropState,
@@ -917,31 +913,12 @@ function interactObject(world: WorldState, p: PlayerState, obj: WorldObject, hel
     case 'bath':
       out.push(...enterBath(world, p.id));
       return;
-    case 'hall':
-      out.push(...enterHall(world, p.id));
-      return;
     case 'saga':
       out.push(...enterSaga(world, p, obj));
       return;
     case 'sagaclass':
       out.push({ t: 'open', to: p.id, ui: 'sagaClass', id: obj.id });
       return;
-    case 'tv':
-    case 'machine':
-      openArcade(p, obj, ctx, out);
-      return;
-    case 'prizes':
-    case 'scores':
-      out.push({ t: 'open', to: p.id, ui: def.interact });
-      return;
-    case 'garage': {
-      // Rallyvärlden: the starter car is waiting in the garage the first time
-      const fresh = !p.garage;
-      garageOf(p);
-      if (fresh) out.push(playerChange(p));
-      out.push({ t: 'open', to: p.id, ui: 'rally', id: obj.id });
-      return;
-    }
     case 'sleep':
       goToSleep(world, p, out);
       return;
@@ -951,7 +928,6 @@ function interactObject(world: WorldState, p: PlayerState, obj: WorldObject, hel
       return;
     case 'exit':
       if (isBathKey(world.area)) out.push(...leaveBath(world, p.id));
-      else if (isHallKey(world.area)) out.push(...leaveHall(world, p.id));
       else if (isCaveKey(world.area)) out.push(...leaveGrotto(world, p.id));
       return;
     case 'treasure':
@@ -1784,9 +1760,6 @@ export function getArea(world: WorldState, keyStr: string): WorldState | null {
     if (isBathKey(keyStr)) {
       if (!getArea(farm, villageOfBath(keyStr))) return null;
       a = generateBath(villageOfBath(keyStr));
-    } else if (isHallKey(keyStr)) {
-      if (!getArea(farm, villageOfHall(keyStr))) return null;
-      a = generateHall(villageOfHall(keyStr));
     } else if (isSagaKey(keyStr)) {
       const id = dungeonOfKey(keyStr);
       if (!id) return null;
@@ -1820,7 +1793,6 @@ const sagaChecked = new WeakSet<WorldState>();
 export const areaName = (keyStr: string, world?: WorldState): string => {
   if (keyStr === 'farm' || keyStr === 'dungeon') return BIOME_NAMES[keyStr];
   if (isBathKey(keyStr)) return T.bathhouseName;
-  if (isHallKey(keyStr)) return T.hallName;
   const sagaId = dungeonOfKey(keyStr);
   if (sagaId) return DUNGEONS[sagaId].name;
   const a = world ? getArea(world, keyStr) : null;
@@ -2263,7 +2235,6 @@ function openTreasure(d: WorldState, p: PlayerState, chest: WorldObject, ctx: Si
   out.push(toast(p.id, fmt(T.treasureOpened, { loot: loot.join(' + ') })), toast(null, T.caveCleared), playerChange(p));
 }
 
-
 // ---------------------------------------------------------------------------
 // The wider world: discoveries, caves, treasure, fairy rings and the rocket to the moon
 // ---------------------------------------------------------------------------
@@ -2312,11 +2283,6 @@ export function grantLoot(world: WorldState, p: PlayerState, table: string, ctx:
     }
     if (!pick.item) continue;
     const n = randInt(ctx.rnd, pick.min, pick.max);
-    const game = ITEMS[pick.item]?.game;
-    if (game) {
-      got.push(findCartridge(farmOf(world), p, game, out));
-      continue;
-    }
     if (ITEMS[pick.item]?.category === 'clothing') {
       // clothes go to the wardrobe; one you already have becomes a gem
       if (!p.wardrobe.includes(pick.item)) {
@@ -2782,7 +2748,6 @@ function tickOtherAreas(world: WorldState, dtMs: number, ctx: SimCtx, out: Chang
     tickNpcs(a, dtMs);
     tickDrops(a, local);
     if (isBathKey(k)) tickBath(a, local, out);
-    else if (isHallKey(k)) tickHall(a, out);
     out.push(...tagArea(local, k));
   }
 }
@@ -2840,126 +2805,6 @@ function tickBath(bath: WorldState, local: Change[], out: Change[]): void {
     }
   }
   void BATH_POOL;
-}
-
-// ---------------------------------------------------------------------------
-// Minigames: the TV at home and Spelhallen in the city
-// ---------------------------------------------------------------------------
-
-function arcadeOf(p: PlayerState): ArcadeState {
-  if (!p.arcade) p.arcade = { best: {}, tickets: 0, games: [], day: 0, won: 0 };
-  return p.arcade;
-}
-
-/** Walks into Spelhallen from the street. */
-export function enterHall(world: WorldState, playerId: string): Change[] {
-  const farm = farmOf(world);
-  const p = farm.players[playerId];
-  if (!p || p.area === 'dungeon' || p.area === 'farm' || isIndoorKey(p.area)) return [];
-  const out: Change[] = [];
-  if (!placeIn(farm, p, hallKey(p.area), INDOOR_EXIT.x, INDOOR_EXIT.y - 1, 'up', out)) return [];
-  out.push(toast(p.id, T.enteredHall));
-  return out;
-}
-
-/** Back out through the door to the city. */
-export function leaveHall(world: WorldState, playerId: string): Change[] {
-  const farm = farmOf(world);
-  const p = farm.players[playerId];
-  if (!p || !isHallKey(p.area)) return [];
-  const villageKey = villageOfHall(p.area);
-  const village = getArea(farm, villageKey);
-  if (!village) return [];
-  const door = hallDoorTile(village);
-  const out: Change[] = [];
-  placeIn(farm, p, villageKey, door.x, door.y, 'down', out);
-  return out;
-}
-
-/** Players walk out through the door. */
-function tickHall(hall: WorldState, out: Change[]): void {
-  for (const p of Object.values(hall.players)) {
-    if (!p.online || p.moveLock) continue;
-    if (tileOf(p.x) === INDOOR_EXIT.x && tileOf(p.y) === INDOOR_EXIT.y) out.push(...leaveHall(hall, p.id));
-  }
-}
-
-/** The TV or a machine is turned on: the client opens the arcade (a machine plays its own game). */
-function openArcade(p: PlayerState, obj: WorldObject, ctx: SimCtx, out: Change[]): void {
-  const a = arcadeOf(p);
-  a.open = obj.kind === 'arcade_machine' ? { where: 'hall', game: ARCADE_GAMES[obj.variant ?? 0] ?? ARCADE_GAMES[0], at: ctx.now } : { where: 'tv', at: ctx.now };
-  out.push({ t: 'open', to: p.id, ui: 'arcade', id: obj.id });
-}
-
-/** A game cartridge was found: a new game on the family's TV, or tickets when the family has it already. Returns what to tell. */
-function findCartridge(farm: WorldState, p: PlayerState, game: string, out: Change[]): string {
-  const a = arcadeOf(p);
-  if (!isArcadeGame(game) || familyGames(farm).includes(game)) {
-    a.tickets += SPARE_CART_TICKETS;
-    return `🎟️ ${fmt(T.spareCart, { n: SPARE_CART_TICKETS })}`;
-  }
-  a.games.push(game);
-  bump(p, 'carts', 1, out);
-  return `📺 ${ARCADE[game].name} (${T.newTvGame})`;
-}
-
-/** A minigame run ended: keep the best score, and in Spelhallen win tickets (up to a daily limit). */
-export function arcadeScore(world: WorldState, playerId: string, game: string, raw: number, ctx: SimCtx): Change[] {
-  const farm = farmOf(world);
-  const p = farm.players[playerId];
-  if (!p || !isArcadeGame(game)) return [];
-  const a = arcadeOf(p);
-  const open = a.open;
-  if (!open || ctx.now - open.at < MIN_GAME_MS) return [];
-  if (open.where === 'hall' ? open.game !== game || !isHallKey(p.area) : !familyGames(farm).includes(game)) return [];
-  const score = Math.max(0, Math.min(ARCADE_MAX_SCORE, Math.round(Number(raw) || 0)));
-  const out: Change[] = [];
-  const record = familyBest(farm, game);
-  if (score > (a.best[game] ?? 0)) a.best[game] = score;
-  // one run takes a while: quick repeats only keep the score
-  if (open.where === 'hall' && (open.last === undefined || ctx.now - open.last >= MIN_GAME_MS)) {
-    if (a.day !== farm.day) {
-      a.day = farm.day;
-      a.won = 0;
-    }
-    const n = Math.min(ticketsFor(score), Math.max(0, MAX_TICKETS_PER_DAY - a.won));
-    a.tickets += n;
-    a.won += n;
-    if (n > 0) bump(p, 'tickets', n, out);
-  }
-  open.last = ctx.now;
-  bump(p, 'arcade', 1, out);
-  // beating someone else's family record is news for everyone
-  if (record.id && record.id !== p.id && score > record.score) out.push(toast(null, fmt(T.arcadeRecord, { name: p.name, game: ARCADE[game].name, score: score.toLocaleString('sv-SE') })));
-  out.push(playerChange(p));
-  return out;
-}
-
-/** Swaps tickets for a prize at the prize counter. */
-export function buyPrize(world: WorldState, playerId: string, itemId: string): Change[] {
-  const farm = farmOf(world);
-  const p = farm.players[playerId];
-  if (!p || !isHallKey(p.area)) return [];
-  const prize = PRIZES.find((x) => x.item === itemId);
-  if (!prize) return [];
-  const a = arcadeOf(p);
-  const out: Change[] = [];
-  const cart = ITEMS[itemId]?.game;
-  const game = isArcadeGame(cart) ? cart : null;
-  if (cart && (!game || familyGames(farm).includes(game))) {
-    out.push(toast(p.id, T.familyHasGame));
-    return out;
-  }
-  if (a.tickets < prize.tickets) {
-    out.push(toast(p.id, T.notEnoughTickets));
-    return out;
-  }
-  if (game) a.games.push(game);
-  else giveItems(areaOf(farm, p), p, itemId, 1, out);
-  a.tickets -= prize.tickets;
-  bump(p, 'prizes', 1, out);
-  out.push(toast(p.id, fmt(T.prizeBought, { item: game ? `${ARCADE[game].name} (${T.newTvGame})` : itemName(itemId) })), playerChange(p));
-  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -3295,7 +3140,6 @@ export function newDay(world: WorldState, ctx: SimCtx, out: Change[] = []): Chan
   }
   regrowAreas(world, ctx, out);
   hatchEggs(world, ctx, out);
-  healCars(world, out);
 
   // Ordered animals arrive
   for (const p of Object.values(world.players)) {

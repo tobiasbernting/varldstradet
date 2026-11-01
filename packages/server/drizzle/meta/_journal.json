@@ -29,6 +29,13 @@
       "when": 1793473767912,
       "tag": "0003_saga_best",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793522497924,
+      "tag": "0004_remove_minigames",
+      "breakpoints": true
     }
   ]
 }

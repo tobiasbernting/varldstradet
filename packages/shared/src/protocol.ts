@@ -15,7 +15,6 @@ import type {
 } from './types.ts';
 import type { DungeonId, SagaBest, SagaZone } from './saga.ts';
 import type { SagaSnap } from './sagasim.ts';
-import type { CarBody, CarPart, CarSnap, CarStyle, GarageCar, RaceResultLine, RaceRules, RoomInfo } from './rally.ts';
 import type { IceServer, VoiceState } from './voice.ts';
 
 /** A change to the world that the server broadcasts after applying. `area` marks dungeon changes. */
@@ -29,7 +28,7 @@ export type Change =
   | { t: 'player'; id: string; player: PlayerState | null }
   | { t: 'day'; day: number }
   | { t: 'toast'; to: string | null; text: string }
-  | { t: 'open'; to: string; ui: 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'nameAnimal' | 'npc' | 'cook' | 'paint' | 'pizzeria' | 'travel' | 'arcade' | 'prizes' | 'scores' | 'saga' | 'sagaClass' | 'rally'; id?: number; npc?: string }
+  | { t: 'open'; to: string; ui: 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'nameAnimal' | 'npc' | 'cook' | 'paint' | 'pizzeria' | 'travel' | 'saga' | 'sagaClass'; id?: number; npc?: string }
   /** Private: the rider boards a bus, a train or the rocket (the client plays the trip). */
   | { t: 'ride'; to: string; via: 'bus' | 'train' | 'rocket'; place: string }
   | { t: 'quests'; quests: Quest[] }
@@ -86,10 +85,6 @@ export type ClientMsg =
   | { t: 'teleport'; to: string }
   | { t: 'ride'; via: 'bus' | 'train'; to: string }
   | { t: 'paint'; pixels: string }
-  /** A minigame run ended (TV or a machine in Spelhallen). */
-  | { t: 'arcade'; game: string; score: number }
-  /** Swap tickets for a prize at Spelhallen's prize counter. */
-  | { t: 'prize'; item: string }
   /** 2D game: tell your pets and horses to stay, or whistle for them. */
   | { t: 'pets'; cmd: 'stay' | 'come' }
   /** 2D game: a chat line to everyone. */
@@ -111,31 +106,6 @@ export type ClientMsg =
   | { t: 'saga'; a: 'craft'; item: string }
   /** Jump to a family member, wherever they are. */
   | { t: 'jump'; to: string }
-  /** Rallyvärlden, the garage: buy a car, pick the one you drive, buy the next level of a part, change the style (the server charges for what changed), repair, rename, sell. */
-  | { t: 'garage'; a: 'buyCar'; body: CarBody; name?: string }
-  | { t: 'garage'; a: 'select'; car: number }
-  | { t: 'garage'; a: 'part'; car: number; part: CarPart }
-  | { t: 'garage'; a: 'style'; car: number; style: Partial<CarStyle> }
-  | { t: 'garage'; a: 'repair'; car: number }
-  | { t: 'garage'; a: 'rename'; car: number; name: string }
-  | { t: 'garage'; a: 'sell'; car: number }
-  /** Rallyvärlden, races: the lobby (create a room with rules, join, leave, ready, the host starts), then the race itself (car snapshots relayed to the room, my finish time, and `done` when the result card is closed: the car's damage is saved). `solo` races alone against the computer: no room, prizes paid on `finish`. */
-  | { t: 'race'; a: 'rooms' }
-  | { t: 'race'; a: 'create'; rules: RaceRules }
-  | { t: 'race'; a: 'join'; room: string }
-  | { t: 'race'; a: 'leave' }
-  | { t: 'race'; a: 'ready'; ready: boolean }
-  | { t: 'race'; a: 'rules'; rules: RaceRules }
-  | { t: 'race'; a: 'start' }
-  | { t: 'race'; a: 'snap'; snaps: CarSnap[] }
-  /** My finish; the host also reports each of its computer cars crossing the line (`id` `ai:<n>` and its name). */
-  | { t: 'race'; a: 'finish'; time: number; damage: number; id?: string; name?: string }
-  | { t: 'race'; a: 'solo'; rules: RaceRules; place: number; n: number; time: number; damage: number }
-  | { t: 'race'; a: 'done'; damage: number }
-  /** Rallyvärlden, free roam: who is out driving (positions relayed), and the coins found when you come back. */
-  | { t: 'roam'; a: 'enter' }
-  | { t: 'roam'; a: 'leave'; coins: number; damage: number }
-  | { t: 'roam'; a: 'snap'; snap: CarSnap }
   /** Röstprat: pick up (want voice) or hang up; make this device the room's speaker; move to a room of your own,
    * back to the automatic room, or into another player's room; a WebRTC signal to another speaker; speaking or not. */
   | { t: 'voice'; a: 'join' }
@@ -181,17 +151,6 @@ export type ServerMsg =
   | { t: 'state'; timeMs: number; day: number; season: Season; players: PlayerSnap[]; animals: AnimalSnap[]; npcs: NpcSnap[]; now: number; weather?: WeatherState; saga?: Record<string, SagaSnap> }
   | { t: 'changes'; changes: Change[] }
   | { t: 'error'; text: string }
-  /** Rallyvärlden: the lobby's rooms (to whoever asked or is in the garage), your room (null when it closed), the start (startAt is server wall clock), relayed snapshots, and the result with everyone's prize. */
-  | { t: 'race'; ev: 'rooms'; rooms: RoomInfo[] }
-  | { t: 'race'; ev: 'room'; room: RoomInfo | null }
-  | { t: 'race'; ev: 'go'; room: RoomInfo }
-  | { t: 'race'; ev: 'snap'; from: string; snaps: CarSnap[] }
-  | { t: 'race'; ev: 'finish'; from: string; time: number }
-  | { t: 'race'; ev: 'result'; room: string; results: RaceResultLine[] }
-  /** Free roam: the others out driving (name and car for the model), their snapshots, and who went home. */
-  | { t: 'roam'; ev: 'peers'; peers: { id: string; name: string; car: GarageCar }[] }
-  | { t: 'roam'; ev: 'snap'; from: string; snap: CarSnap }
-  | { t: 'roam'; ev: 'left'; id: string }
   /** Röstprat: the rooms and who speaks for them (to everyone online when it changes), the STUN/TURN servers (to a
    * device that became a speaker), a relayed signal from another speaker, and a room that started or stopped talking. */
   | { t: 'voice'; ev: 'state'; state: VoiceState }

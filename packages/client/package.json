@@ -8,7 +8,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@lilla-garden/arcade": "workspace:*",
     "@lilla-garden/shared": "workspace:*"
   },
   "devDependencies": {

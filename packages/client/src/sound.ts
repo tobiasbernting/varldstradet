@@ -99,15 +99,6 @@ function whinny(): void {
 export const SFX = {
   /** The 🐴 emote and a cart waiting for you to cross: a whinny. */
   honk: () => whinny(),
-  /** Rallyvärlden's cars keep their real horn. */
-  horn: () => {
-    tone(440, 0.18, 'square', 0.07);
-    tone(554, 0.18, 'square', 0.05);
-    setTimeout(() => {
-      tone(440, 0.22, 'square', 0.07);
-      tone(554, 0.22, 'square', 0.05);
-    }, 220);
-  },
   coin: () => {
     tone(880, 0.08, 'square', 0.06);
     setTimeout(() => tone(1320, 0.12, 'square', 0.06), 70);
@@ -215,15 +206,8 @@ export function setAmbience(kind: string | null): void {
   applyAmbience();
 }
 
-/** A minigame is open: the rain and wind keep quiet until it closes. */
-let hushed = false;
-export function hushAmbience(on: boolean): void {
-  hushed = on;
-  applyAmbience();
-}
-
 function applyAmbience(): void {
-  const want = muted || hushed ? null : ambKind;
+  const want = muted ? null : ambKind;
   if (!want) {
     if (amb && ctx) amb.gain.gain.setTargetAtTime(0, ctx.currentTime, 0.6);
     return;

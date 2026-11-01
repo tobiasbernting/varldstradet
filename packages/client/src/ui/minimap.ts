@@ -34,7 +34,6 @@ const COLORS: Record<string, string> = {
   choco: '#6a3a1e',
   moon: '#bdbdc6',
   space: '#0a0a1a',
-  carpet: '#2a2152',
   crypt: '#6a6e62',
   forge: '#3a2226',
   bifrost: '#e8e5f4',

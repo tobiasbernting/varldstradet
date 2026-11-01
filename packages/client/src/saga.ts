@@ -42,7 +42,7 @@ export const inSaga = (): boolean => isSagaKey(myPlayer()?.area);
 /** Is hero mode on (a class, and walking the world as it)? */
 export const heroOn = (p: PlayerState | undefined = myPlayer()): boolean => !!p?.saga?.hero && !!p.saga.cls;
 
-/** Out in the world (not the old dungeon, a saga dungeon, the bath house or the arcade hall)? */
+/** Out in the world (not the old dungeon, a saga dungeon or the bath house)? */
 const outdoors = (area: string | undefined): boolean => !!area && area !== 'dungeon' && !isSagaKey(area) && !isIndoorKey(area);
 
 /** Fighting with spells: always in a saga dungeon, and out in the world while hero mode is on. */

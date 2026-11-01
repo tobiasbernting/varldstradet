@@ -1,7 +1,6 @@
 // 16x16 item icons for the hotbar and menus.
 import { ITEMS, type ItemDef } from '@lilla-garden/shared';
 import { drawAnimal } from './animals.js';
-import { arcadeIcons } from './arcade.ts';
 import { sagaIcons } from './saga.ts';
 import { drawCharacter, HEADROOM } from './characters.js';
 import { Px, shade } from './px.js';
@@ -594,7 +593,6 @@ export function drawIcons(objects: Record<string, ObjectArt>): Record<string, Px
   icons.path_dirt = floorTile('#c9a978', '#a98858');
   icons.floor_wood = floorTile('#b07a44', '#8a5c30');
   icons.floor_stone = floorTile('#b9b6ad', '#8e8b83');
-  Object.assign(icons, arcadeIcons());
   Object.assign(icons, sagaIcons());
   return icons;
 }

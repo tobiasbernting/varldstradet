@@ -3,7 +3,6 @@ import { CROPS, type Terrain } from '@lilla-garden/shared';
 import { Px, hash2, shade } from './px.js';
 import { drawBiomeObjects } from './objects2.ts';
 import { caveWallThemed, drawLandmarks } from './landmarks.ts';
-import { drawArcade } from './arcade.ts';
 import { drawSaga } from './saga.ts';
 import { drawSagaPlaces } from './sagaplaces.ts';
 import { addBiomeTerrain, edgeGroup } from './terrain2.ts';
@@ -1356,7 +1355,6 @@ export function drawObjects(): Record<string, ObjectArt> {
   set('treasure', [treasure()]);
   drawBiomeObjects(set);
   drawLandmarks(set);
-  drawArcade(set);
   drawSaga(set);
   drawSagaPlaces(set);
   return art;

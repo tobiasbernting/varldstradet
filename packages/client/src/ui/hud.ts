@@ -1,5 +1,5 @@
 // HUD: top chips, hotbar, toasts, touch controls.
-import { CLASSES, HOTBAR_SIZE, MAX_HEARTS, SPELLS, T, WATERING_CAN_CHARGES, areaName, fmt, isBathKey, isHallKey, isSagaKey, itemName, placeEmoji, placeName, type ItemStack } from '@lilla-garden/shared';
+import { CLASSES, HOTBAR_SIZE, MAX_HEARTS, SPELLS, T, WATERING_CAN_CHARGES, areaName, fmt, isBathKey, isSagaKey, itemName, placeEmoji, placeName, type ItemStack } from '@lilla-garden/shared';
 import { Minimap } from './minimap.ts';
 import { getArt } from '../art/textures.js';
 import { stackIconUrl } from '../art/painting.ts';
@@ -213,7 +213,6 @@ export class Hud {
     // hearts: in the cave, when hurt, and always while walking the world as a hero
     if (me && (me.area === 'dungeon' || me.hearts < MAX_HEARTS || (!!me.saga?.hero && !isSagaKey(me.area)))) this.top.append(h('div', { class: 'chip hearts' }, '❤️'.repeat(Math.max(0, me.hearts)) + '🖤'.repeat(Math.max(0, MAX_HEARTS - me.hearts))));
     if (me && isBathKey(me.area)) this.top.append(h('div', { class: 'chip' }, `🏊 ${T.bathhouseName}`));
-    else if (me && isHallKey(me.area)) this.top.append(h('div', { class: 'chip' }, `🕹️ ${T.hallName}`), h('div', { class: 'chip', title: T.tickets }, `🎟️ ${me.arcade?.tickets ?? 0}`));
     else if (me && isSagaKey(me.area)) this.top.append(h('div', { class: 'chip' }, `⚔️ ${areaName(me.area)}`));
     else if (me && me.area !== 'farm' && me.area !== 'dungeon') {
       const b = client.areas[me.area]?.biome;

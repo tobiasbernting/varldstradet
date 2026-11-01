@@ -38,8 +38,6 @@ import { Hud } from '@v1/ui/hud.ts';
 import { Menus } from '@v1/ui/menus.ts';
 import { Picker } from '@v1/ui/picker.ts';
 import { initRide } from '@v1/ui/ride.ts';
-import { initArcade } from '@v1/ui/arcade.ts';
-import { initRally } from '@v1/ui/rally.ts';
 import { SagaUi } from '@v1/ui/saga.ts';
 import { initSound, isMuted, setMuted } from '@v1/sound.ts';
 import { Chat, SocialButtons, petCommand, weatherChip } from '@v1/ui/social.ts';
@@ -83,27 +81,6 @@ const hud = new Hud(
   (kind) => menus.toggle(kind),
 );
 hud.root.style.display = 'none';
-// ---- minigames: while one is open, the farm waits behind it unseen and unheard ----
-let arcadeOpen = false;
-let glowWas = true;
-function pauseWorld(open: boolean): void {
-  arcadeOpen = open;
-  syncUiOpen();
-  view.hush(open);
-  // keys held when the TV went on would otherwise stay held in the game
-  inputClear();
-  gameEl.style.visibility = open ? 'hidden' : '';
-  labels.style.visibility = open ? 'hidden' : '';
-  if (postProcess) {
-    if (open) {
-      glowWas = postProcess.enabled;
-      postProcess.enabled = false;
-    } else postProcess.enabled = glowWas;
-  }
-}
-initArcade(pauseWorld);
-// Rallyvärlden: the garage's window, and its races and drives in the arcade overlay (which pause the farm too)
-const rally = initRally(ui, pauseWorld);
 // chat, pets that stay or come when you whistle, weather
 hud.topExtras.push(weatherChip);
 bus.on('weather', () => hud.renderTop());
@@ -117,14 +94,13 @@ const voice = new VoiceUi(hud.root);
 const social = new SocialButtons(hud.root, chat, voice);
 // Sagan om Världsträdet: the dungeon HUD, Kämpastenen, Völvan, the journal, loot and the family list
 const saga = new SagaUi(ui, hud.root, menus, social.el);
-/** Any window (or a minigame) open: the world stops reading taps and keys. */
+/** Any window open: the world stops reading taps and keys. */
 function syncUiOpen(): void {
-  view.uiOpen = arcadeOpen || menus.isOpen() || saga.isOpen() || rally.isOpen();
+  view.uiOpen = menus.isOpen() || saga.isOpen();
 }
 menus.onChange = syncUiOpen;
 saga.onChange = syncUiOpen;
-rally.onChange = syncUiOpen;
-initGamepad({ ui, target: () => (started ? view : null), menus, windows: [menus, saga, rally], hud, paused: () => arcadeOpen });
+initGamepad({ ui, target: () => (started ? view : null), menus, windows: [menus, saga], hud });
 
 const status = h('div', { class: 'status', style: { display: 'none' } }, T.disconnected);
 ui.append(status);
@@ -138,7 +114,7 @@ window.addEventListener('keydown', (e) => {
   if (!started) return;
   if (e.target instanceof HTMLInputElement) return;
   // in a dungeon 1–5 are spells and a potion and Tab picks a monster; the saga's windows take their keys
-  if (saga.key(e) || rally.key(e)) return;
+  if (saga.key(e)) return;
   if ((e.key === 'Enter' || e.key === 't' || e.key === 'T') && !menus.isOpen()) {
     e.preventDefault();
     chat.open();
@@ -202,10 +178,9 @@ void engineInit(
     if (client.world) start();
   },
   () => {
-    if (!arcadeOpen) view.update(timeDelta);
+    view.update(timeDelta);
   },
   () => {
-    if (arcadeOpen) return;
     view.placeLabels();
     // on a slow screen the glow and tilt-shift pass (the one costly extra) goes first
     if (postProcess?.enabled && !speedChecked && started && timeReal - startedAt > 8) {
@@ -224,10 +199,10 @@ void engineInit(
     }
   },
   () => {
-    if (!arcadeOpen) view.render();
+    view.render();
   },
   () => {
-    if (!arcadeOpen) view.renderPost();
+    view.renderPost();
   },
   [],
   gameEl,
