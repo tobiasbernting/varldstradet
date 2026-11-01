@@ -17,6 +17,8 @@ var hero: Hero
 var text := "" ## what the use key does on the tile in front of me ("" for nothing)
 var can := false ## something would happen
 var tile := Vector2i.ZERO
+var size := Vector2i.ONE ## the outline's footprint in tiles (a placeable's; 1 × 1 otherwise)
+var placing := false ## I hold something that puts a thing down, and the outline is its footprint
 var _ring: MeshInstance3D
 var _mat: StandardMaterial3D
 var _t := 0.0
@@ -60,7 +62,8 @@ func tick(delta: float) -> void:
 	visible = true
 	_t += delta
 	var t := hero.facing_tile()
-	position = Vector3(t.x + 0.5, 0.06, t.y + 0.5)
+	position = Vector3(t.x + size.x / 2.0, 0.06, t.y + size.y / 2.0)
+	_ring.scale = Vector3(size.x, 1.0, size.y)
 	_in -= delta
 	if _in <= 0.0 or t != tile:
 		_in = 0.1
@@ -77,6 +80,8 @@ func _describe(tx: int, ty: int) -> void:
 	var held := model.held()
 	var id := str(held.get("item", ""))
 	var tool := Data.item_tool(id)
+	size = Vector2i.ONE
+	placing = false
 	var next := _text_for(tx, ty, me, id, tool)
 	if next == "":
 		can = false
@@ -96,17 +101,26 @@ func _text_for(tx: int, ty: int, me: Dictionary, id: String, tool: String) -> St
 			can = false
 			return Strings.t("actWaiting")
 	var w := hero.world
-	# a villager: their window is M4c's
-	for n in model.npc_snaps.values():
+	# a villager: a talk
+	for nid in model.npc_snaps.keys():
+		var n: Dictionary = model.npc_snaps[nid]
 		if floori(float(n.get("x", -99)) / Data.tile()) == tx and floori(float(n.get("y", -99)) / Data.tile()) == ty:
-			return ""
+			return Strings.t("actTalk", {"name": str(Data.npcs.get(str(nid), {}).get("name", ""))})
+	var obj := object_at(tx, ty)
+	# food: eaten (unless I point at something that opens)
+	if id != "" and Data.item(id).has("food") and (obj.is_empty() or str(Data.object_def(str(obj.get("kind", ""))).get("interact", "")) == ""):
+		return Strings.t("actEat", {"item": Data.item_name(id)})
 	var a := animal_at(tx, ty)
 	if not a.is_empty():
 		return _animal_text(a, id, tool)
-	var obj := object_at(tx, ty)
 	if not obj.is_empty():
 		var kind := str(obj.get("kind", ""))
 		var def := Data.object_def(kind)
+		var builder := _builder_other(obj)
+		if builder != "" and (bool(def.get("harvest", false)) or (str(def.get("breakWith", "")) != "" and str(def.get("breakWith", "")) == tool)):
+			# the server refuses: only the one who built it takes it down (DESIGN.md, Ownership)
+			can = false
+			return Strings.t("actBuiltBy", {"owner": builder, "name": Strings.object_name(kind)})
 		if kind == "saga_portal":
 			return Strings.t("actPortal", {"name": _arch_name(obj)})
 		if bool(def.get("harvest", false)):
@@ -123,16 +137,21 @@ func _text_for(tx: int, ty: int, me: Dictionary, id: String, tool: String) -> St
 				"hoe":
 					return Strings.t("actTill")
 				_:
-					return Strings.object_name(kind)
+					return Strings.t("actRemove", {"name": Strings.object_name(kind)})
 		var inter := str(def.get("interact", ""))
 		if inter == "chest":
 			return Strings.t("actChest")
 		if inter == "water" and tool == "can":
 			return Strings.t("actFillCan")
+		if inter == "sleep":
+			return Strings.t("actSleep")
 		if inter != "":
-			return Strings.object_name(kind)
+			return Strings.t("actUse", {"name": Strings.object_name(kind)})
 		if not (bool(def.get("flat", false)) and (tool == "can" or id == "")):
 			return ""
+	var places := str(Data.item(id).get("places", ""))
+	if places != "" and obj.is_empty():
+		return _place_text(tx, ty, places)
 	var ck := "%d,%d" % [tx, ty]
 	var crop: Variant = w.get("crops", {}).get(ck)
 	if crop is Dictionary:
@@ -161,6 +180,74 @@ func _text_for(tx: int, ty: int, me: Dictionary, id: String, tool: String) -> St
 	if Data.item_category(id) == "seed" and SOIL.has(t):
 		return Strings.t("actPlant", {"item": Data.item_name(id)})
 	return ""
+
+
+## The name of the one who built this and is still on the farm, when it is not me ("" when I may take it down).
+func _builder_other(obj: Dictionary) -> String:
+	var by: Variant = obj.get("by")
+	if by == null or str(by) == model.me:
+		return ""
+	var p: Variant = model.players().get(str(by))
+	return str(p.get("name", "")) if p is Dictionary else ""
+
+
+## The placement preview: the footprint of what I hold on the tile in front of me, green when the server would put it
+## there (addObject and the floor rules in sim.ts), red when not.
+func _place_text(tx: int, ty: int, places: String) -> String:
+	var def := Data.object_def(places)
+	var floor_kind: bool = Data.floors.has(places)
+	placing = true
+	var label := Strings.object_name(places)
+	if floor_kind:
+		size = Vector2i.ONE
+	else:
+		size = Vector2i(int(def.get("w", 1)), int(def.get("h", 1)))
+	if _can_place(tx, ty, places, floor_kind):
+		return Strings.t("actPlace", {"name": label})
+	can = false
+	return Strings.t("actNoPlace")
+
+
+func _can_place(tx: int, ty: int, places: String, floor_kind: bool) -> bool:
+	var t := terrain_at(tx, ty)
+	if t == "" or t == "pool" or (Data.is_wall_terrain(t) and t != "water"):
+		return false
+	var w := hero.world
+	var crops: Dictionary = w.get("crops", {})
+	if floor_kind:
+		if t == "water" or t == places:
+			return false
+		if crops.has("%d,%d" % [tx, ty]) and SOIL.has(t):
+			return false
+		var o := object_at(tx, ty)
+		return o.is_empty() or not bool(Data.object_def(str(o.get("kind", ""))).get("solid", true))
+	var def := Data.object_def(places)
+	for dy in range(size.y):
+		for dx in range(size.x):
+			var x := tx + dx
+			var y := ty + dy
+			var tt := terrain_at(x, y)
+			if tt == "" or tt == "water" or not object_at(x, y).is_empty() or crops.has("%d,%d" % [x, y]):
+				return false
+	return not _someone_in(tx, ty, size.x, size.y)
+
+
+## footprintOccupied in sim.ts: a player or an animal standing in the footprint.
+func _someone_in(x: int, y: int, w: int, h: int) -> bool:
+	var tile_px := Data.tile()
+	var hw := Data.constant("PLAYER_HALF_W", 5.0)
+	var hh := Data.constant("PLAYER_HALF_H", 3.0)
+	var spots: Array = [Vector2(hero.px, hero.py)]
+	for id in model.player_snaps.keys():
+		if str(id) != model.me:
+			var s: Dictionary = model.player_snaps[id]
+			spots.append(Vector2(float(s.get("x", -99)), float(s.get("y", -99))))
+	for s in model.animal_snaps.values():
+		spots.append(Vector2(float(s.get("x", -99)), float(s.get("y", -99))))
+	for p in spots:
+		if p.x + hw > x * tile_px and p.x - hw < (x + w) * tile_px and p.y + hh > y * tile_px and p.y - hh < (y + h) * tile_px:
+			return true
+	return false
 
 
 func held_charges() -> int:
