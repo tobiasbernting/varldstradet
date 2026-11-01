@@ -124,11 +124,14 @@ Environment:
 ## Native client
 
 The game is being rewritten as a native Godot client (`packages/godot`, [PLAN.md](PLAN.md) section 3). Milestone M2
-gave it login with a join code; milestone **M3a** puts the first dungeon on the screen: Draugkryptan as an HD-2D scene
-(a low-poly 3D crypt with the family's pixel characters and the saga's monsters standing in it as billboards), built
-from the same data the browser draws, with your hero walking in it, everyone else interpolated, the HUD basics and
-three quality presets. No combat yet (that is M3b), no farm, no world map. The browser game keeps working unchanged.
-`packages/godot/ART.md` has the art rules; `packages/godot/assets/LICENSES.md` every asset's origin.
+gave it login with a join code; **M3a** put the first dungeon on the screen: Draugkryptan as an HD-2D scene (a low-poly
+3D crypt with the family's pixel characters and the saga's monsters standing in it as billboards), built from the same
+data the browser draws, with your hero walking in it and everyone else interpolated. **M3b** makes it a fight: the
+Krigare's four spells, the dungeon's telegraphs and bosses on screen, falling and getting up, chests with the loot
+window, chat and emotes, a gamepad setting for the kids, a frame-time overlay and a bench, and a headless bot that
+clears the first pack in CI. No farm and no world map yet. The browser game keeps working unchanged, and the two
+clients can be in the same dungeon at the same time. `packages/godot/ART.md` has the art rules;
+`packages/godot/assets/LICENSES.md` every asset's origin.
 
 ![Draugkryptan in the native client](packages/godot/docs/m3a-draugkryptan.png)
 
@@ -139,8 +142,13 @@ three quality presets. No combat yet (that is M3b), no farm, no world map. The b
 2. `godot --path packages/godot -- --demo` (or open `packages/godot/project.godot` in Godot, press Play, and the
    login screen comes up instead; the demo needs the command line). The recorded Draugkryptan of
    `packages/godot/assets/fixtures/draug.json` is drawn with its monsters, and you walk in it with WASD, the arrows
-   or a gamepad's left stick; Escape or the start button opens the menu with the quality settings. Add `--at=24,53`
-   to start in the first monster room, and `--screenshot=/tmp/draug.png` to save a frame after 90 frames and quit.
+   or a gamepad's left stick; Escape or the start button opens the menu with the settings. Add `--at=24,53`
+   to start in the first monster room, `--fight` to play a scripted fight with the mid-boss on the recording
+   (telegraphs of every shape, the boss bar and cast bar, hit numbers, a wipe, a chest with the loot window; no
+   server and no rules, only the pictures), and `--screenshot=/tmp/draug.png` to save a frame after 90 frames and quit.
+3. `godot --path packages/godot -- --bench` runs that scripted fight for 10 s on each quality preset and prints the
+   average frame time and the 1 % low per preset (the mean of the slowest 1 % of frames); F3 in the game shows the
+   same numbers live. It needs a window: headless Godot renders nothing.
 
 **Run it against a server:**
 
@@ -156,16 +164,34 @@ three quality presets. No combat yet (that is M3b), no farm, no world map. The b
    browser for now).
 4. You start on the farm, which the client does not draw yet: a notice says so. Press Escape, then "Gå in i
    Draugkryptan". The server generates the dungeon the normal way (`generateSaga`), sends it as `areaData`, and the
-   crypt appears with you at its start. Walk around: walls and the gate stop you exactly as they stop the browser
-   client; the monsters stand in their rooms and walk at you if you come close. The server's rules run as always,
-   so they do hurt you (your hearts drop, and when you fall you get up at the last rest stone), but this client draws
-   no attacks, telegraphs or spells and cannot cast any; that is M3b. E or space on the stairs takes you out again (to the arch's map, which is not
-   drawn yet; the menu takes you back in), on the chest opens it, on a rest stone tells you what it does. With two
-   clients (or a browser and the client) in the same dungeon, each sees the other walk, and the party list shows
-   everyone's hearts. The browser client can be in the same dungeon at the same time.
-5. Escape → Inställningar: Låg, Mellan, Hög. Mellan is the default; Låg is for a laptop with an Intel GPU.
+   crypt appears with you at its start.
+5. **Fight.** `1`–`4` (gamepad `X`/`Y`/`B`/`RB`) are the Krigare's spells: Yxhugg, Stormsteg, Virvelvind,
+   Bärsärkaraseri, on the bar at the bottom with their cooldowns; `5` (`LB`) drinks a potion. The server picks the
+   monster (the nearest in reach, in sight for a ranged spell) unless you aim: click a monster, or Tab (d-pad right)
+   cycles the monsters near you; Escape lets go. `E`, space or the south button use what is in front of you (the
+   stairs, a chest, a rest stone, a plate; the prompt says what) and otherwise swing the axe. A boss marks its big
+   attacks on the floor in red, filling up until they land: step out. Its cast bar at the top says when Sköldslag,
+   Stormsteg or Isspjut can stop it (blue), and the spell's button lights up blue then. Numbers float up from hits,
+   monsters flash and poof, the one chasing you carries a warning sign. Fallen heroes lie down (a box counts down to
+   the rest stone; everyone fallen shows the pause and the walk back); chests open the loot window.
+6. `Enter` or `T` (Back on the gamepad) opens the chat with the ready-made phrases; `V` (d-pad up) the emote wheel.
+   Lines show as bubbles over heads and in the log in the corner.
+7. Escape → Inställningar: Låg, Mellan, Hög (Mellan is the default; Låg is for a laptop with an Intel GPU);
+   *Trollformler: Knappar / Hjul* (the four spells on the face buttons, or one button, `RB`/`Q`, that opens a wheel
+   you lean the stick towards); *Visa bildfrekvens (F3)*.
 
-The client stores the server address, its device token and the quality preset in `user://settings.cfg`
+**Two players, one in Godot and one in the browser.** Start the server with `DEV_TELEPORT=1`, log the Godot client
+in as above and go in through the menu; in the browser, log in as another character and walk to Draugkryptan's arch
+(or, with the same switch, nothing else is needed: the browser walks in the normal way). Both see each other's
+spells, the same monster health and the same telegraphs, because all of it is the server's.
+
+**Without a human (the bot).** `GODOT=~/godot/godot pnpm godot:bot` starts the server in memory (`ACCESS=open`,
+`DEV_TELEPORT=1`, no Postgres), runs two headless clients in bot mode (`-- --bot`: log in, enter, walk to the first
+pack, cast the four spells on cooldown, step out of telegraphs) and checks their reports against each other: casts
+acknowledged, each other's casts seen, monsters beaten, the same monster health at the same server tick. The Godot
+workflow runs it on every pull request.
+
+The client stores the server address, its device token, the quality preset and the input settings in `user://settings.cfg`
 (`~/.local/share/godot/app_userdata/Sagan om Världsträdet/` on Linux, `~/Library/Application Support/Godot/app_userdata/…`
 on macOS, `%APPDATA%\Godot\app_userdata\…` on Windows); "Glöm den här enheten" clears the device. The token is the
 same long random device token the browser keeps in its cookie, sent as `Authorization: Bearer` instead; the parent
@@ -174,20 +200,21 @@ sends the client back to the login screen. With `ACCESS=open` the server hands o
 without one.
 
 **Generated files.** Every Swedish text comes from `packages/shared/src/sv.ts`; the client also reads object
-footprints and solidity, the dungeons' colours and names, the creatures and the classes from the shared data, and the
-demo fixture from the shared dungeon generator. `pnpm godot:gen` writes all three (`assets/sv.json`, `assets/game.json`,
+footprints and solidity, the dungeons' colours and names, the creatures, the classes, the spells, the bosses' moves,
+the saga's items and the chat phrases from the shared data, and the demo fixture from the shared dungeon generator. `pnpm godot:gen` writes all three (`assets/sv.json`, `assets/game.json`,
 `assets/fixtures/draug.json`; each also has its own script, `godot:strings`, `godot:data`, `godot:fixture`). Commit
 them; the Godot workflow fails when they are out of date. `pnpm godot:sprites` renders the pixel art in
 `packages/client/src/art` to the sheets in `assets/sprites` with Playwright's Chromium (it needs one; the sheets are
-committed, so CI does not run it).
+committed, so CI does not run it), and `icons.png` with the spells' and emotes' emoji and the loot items' pictures.
 
 **Art.** Free CC0 packs only (the owner's decision of 2026-11-01): KayKit Dungeon Remastered for the crypt's walls,
 floor, torches, stairs, chests and candles, tinted to the palette in `ART.md`; what no reachable pack had (coffin,
 bones, urn, rest stone, gate) is made in code. `packages/godot/tools/fetch-assets.sh` downloads the whole packs,
 including the Kenney kits the build sandbox could not reach.
 
-**Builds.** `.github/workflows/godot.yml` checks the generated files, imports the project, runs the login scene and
-the Draugkryptan demo headless for a moment (script errors fail there), and exports Windows x86_64, macOS universal,
+**Builds.** `.github/workflows/godot.yml` checks the generated files, imports the project, runs the login scene, the
+Draugkryptan demo and the scripted fight headless for a moment (script errors fail there), runs the two bots against
+a server in memory, and exports Windows x86_64, macOS universal,
 Linux x86_64 and Linux arm64 with Godot 4.6.3 and its export templates (downloaded by pinned URL and SHA-512, cached
 between runs). Every pull request runs it as a check (the exports are workflow artifacts), and a tag `v*` attaches the
 four zips to a GitHub Release. The macOS app is ad-hoc signed and not notarized: the first start needs right-click →
@@ -240,8 +267,8 @@ There is still no text chat: players can only use emotes.
 - `packages/clientljs` – the game, drawn with [LittleJS](https://github.com/KilledByAPixel/LittleJS): light and
   shadow, animation and the cozy extras (see below). PWA, landscape. Its HUD, menus, networking, sounds and pixel art
   come from `packages/client` (the `@v1/*` alias); the view is its own.
-- `packages/godot` – the native client (Godot 4.6, GDScript): the login screen, the socket and a bare world view so
-  far; `tools/export-strings.mts` makes its `assets/sv.json` from the shared strings
+- `packages/godot` – the native client (Godot 4.6, GDScript): the login screen, the socket, Draugkryptan on screen and
+  the Krigare fighting in it; `tools/` makes its generated files from the shared package
 - `packages/client` – the HTML menus, HUD, networking, client state, sounds and the pixel art generated in code
   (once the Phaser client; that view is gone, the shared parts stay here)
 
