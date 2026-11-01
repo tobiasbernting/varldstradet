@@ -1,0 +1,4 @@
+# Godot's import cache and editor state
+.godot/
+# exports (CI writes them to the repository root's build/)
+build/

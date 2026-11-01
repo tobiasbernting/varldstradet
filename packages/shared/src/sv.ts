@@ -899,6 +899,7 @@ export const T = {
   worldOnline: '{n} online',
   worldPosition: 'Du: {x}, {y}',
   worldLogTitle: 'Meddelanden',
+  noCharactersYet: 'Inga karaktärer än. Skapa en i webbläsaren så länge.',
   quit: 'Avsluta',
 };
 
