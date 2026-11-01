@@ -28,10 +28,14 @@ var _packs_done := 0
 var _cast_in := 0.0
 var _stuck_t := 0.0
 var _last_pos := Vector2.ZERO
+var _bar_prev: Dictionary = {} ## monster id -> the health its bar showed the last frame (0-1)
+var _hp_prev: Dictionary = {} ## monster id -> [hp, max] of the last snapshot
+var _healed_until: Dictionary = {} ## monster id -> local ms until which a rise is explained (the server healed it)
+const HEAL_GRACE_MS := 2000.0
 var _report := {
 	"name": "", "ok": false, "phase": "", "seconds": 0.0, "casts_sent": 0, "casts_acked": 0, "spells_sent": {}, "spells_acked": {},
 	"others_casts": 0, "others": {}, "monsters_beaten": [], "hits_taken": 0, "damage_taken": 0, "hits_dealt": 0, "damage_dealt": 0,
-	"zones_seen": 0, "stepped_out": 0, "fell": 0, "hearts": [], "mob_hp": [], "errors": [], "packs_beaten": 0, "area": "",
+	"zones_seen": 0, "stepped_out": 0, "fell": 0, "hearts": [], "mob_hp": [], "bar_samples": 0, "rises": [], "errors": [], "packs_beaten": 0, "area": "",
 }
 
 
@@ -118,9 +122,45 @@ func _on_snapshot() -> void:
 		var m: Array = snap["m"][id]
 		if _report["mob_hp"].size() < 4000:
 			_report["mob_hp"].append([int(world.model.last_now), int(id), int(m[0]), int(m[1])])
+		var before: Variant = _hp_prev.get(id)
+		if before is Array and int(before[1]) == int(m[1]) and int(m[0]) > int(before[0]) and not _healed(id):
+			_rose("snapshot", id, float(before[0]) / maxf(1.0, float(before[1])), float(m[0]) / maxf(1.0, float(m[1])))
+		_hp_prev[id] = [int(m[0]), int(m[1])]
 	var f := world.model.my_fighter()
 	if f.size() >= 2 and _report["hearts"].size() < 4000:
 		_report["hearts"].append([int(now), int(f[0]), int(f[1])])
+
+
+## Was this monster healed by the server lately (a boss's `mend`: a `hit` of kind heal on it)?
+func _healed(id: Variant) -> bool:
+	return float(_healed_until.get(str(id), 0.0)) > Time.get_ticks_msec()
+
+
+## A monster's health went up with no heal from the server: the bar must follow the server's last word downwards.
+func _rose(where: String, id: Variant, from: float, to: float) -> void:
+	_report["rises"].append([int(world.model.last_now), int(id), snappedf(from, 0.001), snappedf(to, 0.001), where])
+	_error("monster %s health rose from %.3f to %.3f (%s)" % [str(id), from, to, where])
+
+
+## Every frame: what each monster's health bar shows may only fall, except right after the server healed it. A
+## monster whose bar is hidden, or that is new, starts again (an idle one is not in the snapshot until it fights).
+func _sample_bars() -> void:
+	var seen: Dictionary = {}
+	for key in world._actors.keys():
+		if not str(key).begins_with("a:"):
+			continue
+		var id := str(key).substr(2)
+		var k: float = (world._actors[key] as Actor).shown_health()
+		if k < 0.0:
+			continue
+		seen[id] = true
+		_report["bar_samples"] += 1
+		if _bar_prev.has(id) and k > float(_bar_prev[id]) + 0.0005 and not _healed(id):
+			_rose("bar", id, float(_bar_prev[id]), k)
+		_bar_prev[id] = k
+	for id in _bar_prev.keys():
+		if not seen.has(id):
+			_bar_prev.erase(id)
 
 
 func _on_change(c: Dictionary) -> void:
@@ -142,6 +182,8 @@ func _on_change(c: Dictionary) -> void:
 		"hit":
 			var on: Variant = c.get("on")
 			var kind := str(c.get("kind", ""))
+			if (on is float or on is int) and kind == "heal":
+				_healed_until[str(int(on))] = Time.get_ticks_msec() + HEAL_GRACE_MS
 			if on is String and on == world.model.me and kind in ["dmg", "block"]:
 				_report["hits_taken"] += 1
 				_report["damage_taken"] += int(c.get("n", 0))
@@ -164,6 +206,7 @@ func _process(delta: float) -> void:
 	_report["seconds"] = _t
 	if _phase == "done":
 		return
+	_sample_bars()
 	if _t > seconds:
 		_log("time is up in phase %s" % _phase)
 		_finish()

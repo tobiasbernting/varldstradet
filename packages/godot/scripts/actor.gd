@@ -19,6 +19,8 @@ const FOOT_LIFT := 0.03
 ## themselves by where they stand.
 const PULL := Vector3(0.0, 0.38, 0.33)
 const WALK_FPS := 6.0
+const BAR_BACK_PRIORITY := 10
+const BAR_FILL_PRIORITY := 11
 const FALLEN_TINT := Color(0.62, 0.62, 0.72)
 
 var sprite: Sprite3D
@@ -279,9 +281,13 @@ func set_health(k: float, shown: bool, colour: Color, name_text := "") -> void:
 		return
 	if _bar == null:
 		_bar = Node3D.new()
-		var back := _quad(Vector2(1.0, 0.12), Color(0.1, 0.08, 0.08, 0.85))
+		# Both quads are alpha-blended with no depth test, so what draws first is decided by the distance of each
+		# one's middle to the camera. The fill's middle moves sideways with the health (and a monster's with its
+		# walk), which flips that order against the 1 mm of depth it had to the back panel: the panel (85 % opaque)
+		# then covers the fill and the bar jumps between full and empty. Explicit render priorities fix the order.
+		var back := _quad(Vector2(1.0, 0.12), Color(0.1, 0.08, 0.08, 0.85), BAR_BACK_PRIORITY)
 		_bar.add_child(back)
-		_bar_fill = _quad(Vector2(1.0, 0.12), colour)
+		_bar_fill = _quad(Vector2(1.0, 0.12), colour, BAR_FILL_PRIORITY)
 		_bar_fill.position.z = 0.001
 		_bar.add_child(_bar_fill)
 		_bar_name = Label3D.new()
@@ -307,7 +313,14 @@ func set_health(k: float, shown: bool, colour: Color, name_text := "") -> void:
 	_bar_name.scale.x = 1.0 / w
 
 
-func _quad(size: Vector2, colour: Color) -> MeshInstance3D:
+## The health the bar shows now, 0–1; -1 when there is no bar or it is hidden (the bot checks it never rises).
+func shown_health() -> float:
+	if _bar == null or not _bar.visible:
+		return -1.0
+	return _bar_fill.scale.x
+
+
+func _quad(size: Vector2, colour: Color, priority := 0) -> MeshInstance3D:
 	var q := QuadMesh.new()
 	q.size = size
 	var m := StandardMaterial3D.new()
@@ -316,6 +329,7 @@ func _quad(size: Vector2, colour: Color) -> MeshInstance3D:
 	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
 	m.albedo_color = colour
 	m.no_depth_test = true
+	m.render_priority = priority
 	var mi := MeshInstance3D.new()
 	mi.mesh = q
 	mi.material_override = m

@@ -44,6 +44,8 @@ interface Report {
   fell: number;
   hearts: [number, number, number][];
   mob_hp: [number, number, number, number][];
+  bar_samples: number;
+  rises: [number, number, number, number, string][];
   errors: string[];
   packs_beaten: number;
   area: string;
@@ -134,6 +136,9 @@ async function main(): Promise<void> {
       check(r.monsters_beaten.length > 0, `${r.name}: saw monsters beaten (${r.monsters_beaten.length})`);
       check(r.packs_beaten >= packs, `${r.name}: beat the first pack (${r.packs_beaten} of ${packs}) in ${r.seconds.toFixed(0)} s`);
       check(r.hits_dealt > 0 && r.damage_dealt > 0, `${r.name}: hit numbers came back (${r.hits_dealt} hits, ${r.damage_dealt} damage dealt; took ${r.hits_taken} hits, ${r.damage_taken} damage)`);
+      // a monster's health, as its bar shows it, only falls (the server's `mend` heal excepted)
+      check(r.bar_samples > 0, `${r.name}: sampled the monsters' health bars (${r.bar_samples} samples)`);
+      check(r.rises.length === 0, `${r.name}: no monster's health rose without a server heal (${r.rises.length}${r.rises.length ? ': ' + r.rises.slice(0, 3).map((x) => `${x[4]} monster ${x[1]} ${x[2]}->${x[3]} at ${x[0]}`).join('; ') : ''})`);
       check(r.hearts.length > 0, `${r.name}: saw its own hearts (${r.hearts.length} samples, last ${JSON.stringify(r.hearts.at(-1))})`);
       console.log(`     ${r.name}: zones seen ${r.zones_seen}, stepped out ${r.stepped_out}, fell ${r.fell}`);
     }
