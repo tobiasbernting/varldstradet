@@ -19,6 +19,7 @@ const CAMERA_LOOK := Vector3(0.0, 0.8, 0.0)
 const PLAYER_JUMP_PX := 64.0
 const ANIMAL_JUMP_PX := 48.0
 const SHADOW_EVERY := 0.3
+const INSIDE_ZOOM := 0.62
 const USABLE := {"saga_exit": "actExit", "saga_chest": "actChest", "saga_rest": "actRest", "saga_plate": "actPlate", "saga_gate": "actGate"}
 ## Outdoors only the dungeons' arches work yet; the other things you can use say so (M4b and M4c make them work).
 const ARCH := "saga_portal"
@@ -52,6 +53,7 @@ var _shadow_in := 0.0
 var _screenshot := ""
 var _frames := 0
 var _rest_glow_in := 0.0
+var _cam_k := 1.0 ## how far the camera is from the hero, 1 outdoors, closer inside the farmhouse
 var _hint_for := ""
 var _rng := RandomNumberGenerator.new()
 
@@ -80,6 +82,9 @@ func _ready() -> void:
 	menu.switch_player.connect(func() -> void: left.emit())
 	menu.dev_enter.connect(_on_dev_enter)
 	menu.fps_toggled.connect(hud.set_fps_shown)
+	menu.window_asked.connect(func(which: String) -> void:
+		if _mode == "outdoor" and not demo:
+			play.windows.toggle_gear() if which == "gear" else play.windows.toggle_quests())
 	camera.position = CAMERA_OFFSET
 	camera.look_at_from_position(CAMERA_OFFSET, CAMERA_LOOK)
 	camera.fov = 40.0
@@ -140,6 +145,10 @@ func reset() -> void:
 func start_demo(fixture := "draug") -> void:
 	reset()
 	demo = true
+	# `--demo=house` is the farm with me standing in the farmhouse's room (the camera closes in there)
+	var house := fixture == "house"
+	if house:
+		fixture = "farm"
 	hero.send_moves = false
 	hud.set_connection("demo")
 	var text := FileAccess.get_file_as_string("res://assets/fixtures/%s.json" % fixture)
@@ -159,6 +168,10 @@ func start_demo(fixture := "draug") -> void:
 		elif arg.begins_with("--season="):
 			model.season = arg.substr(9)
 	# --at=x,y (tiles) after --demo: stand somewhere else, for looking around and for screenshots
+	if house and _area != "":
+		var tile_px := Data.tile()
+		hero.place(57.5 * tile_px, 58.5 * tile_px)
+		rig.position = hero.position
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--at="):
 			var parts := arg.substr("--at=".length()).split(",")
@@ -768,6 +781,7 @@ func _process(delta: float) -> void:
 			actor.set_marker(_chasing_me(actor, vel, moving, species, m, me_pos))
 	_update_prompt()
 	_rest_glow(delta, snap)
+	_frame_camera(delta)
 	var shake := fx.shake
 	var wobble := Vector3((_rng.randf() - 0.5) * shake * 0.5, (_rng.randf() - 0.5) * shake * 0.3, 0.0) if shake > 0.0 else Vector3.ZERO
 	rig.position = rig.position.lerp(hero.position, 1.0 - pow(0.002, delta)) + wobble
@@ -783,6 +797,23 @@ func _process(delta: float) -> void:
 			img.save_png(_screenshot)
 			print("screenshot saved to %s" % _screenshot)
 		(get_tree().current_scene as Main).quit_clean()
+
+
+## The browser closes in inside the farmhouse (a small room at the same zoom would be a postage stamp): the camera
+## comes to about two thirds of its distance there and eases back out through the door.
+func _frame_camera(delta: float) -> void:
+	var inside := false
+	if _mode == "outdoor" and _area == "farm":
+		var tile := Data.tile()
+		inside = Data.in_interior(floori(hero.px / tile), floori(hero.py / tile))
+	var want := INSIDE_ZOOM if inside else 1.0
+	if absf(_cam_k - want) < 0.002:
+		if _cam_k != want:
+			_cam_k = want
+			camera.look_at_from_position(CAMERA_OFFSET * _cam_k, CAMERA_LOOK)
+		return
+	_cam_k = lerpf(_cam_k, want, 1.0 - pow(0.02, delta))
+	camera.look_at_from_position(CAMERA_OFFSET * _cam_k, CAMERA_LOOK)
 
 
 ## The time of day (ms into the day): the server's, running on between its snapshots; fixed in the demo's --time.

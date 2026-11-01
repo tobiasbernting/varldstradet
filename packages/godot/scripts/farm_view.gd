@@ -149,6 +149,18 @@ func build(w: Dictionary, k: String) -> void:
 			_chunk_at(int(p[0]), int(p[1])).crop_keys[ck] = true
 	# the map's own light: the sky works from the biome and the key
 	sky.setup(self, str(w.get("biome", "")), k)
+	if k == "farm":
+		_light_the_house()
+
+
+## The farmhouse room is a walled patch of the farm map with no roof to let the sun in at night: a warm light over the
+## room and a cool one by its back wall (the window), both on only when it is dark (the lamps' own switch, `set_dark`).
+func _light_the_house() -> void:
+	var r: Dictionary = Data.interior
+	var cx := float(r.get("x", 52)) + float(r.get("w", 10)) / 2.0
+	var cy := float(r.get("y", 55)) + float(r.get("h", 6)) / 2.0
+	_add_light(_objects_root, Vector3(cx, 2.3, cy + 0.5), Color("#ffc98a"), 9.0, 1.5, 0.05, true)
+	_add_light(_objects_root, Vector3(cx - 1.0, 1.6, float(r.get("y", 55)) - 0.2), Color("#9bb8ff"), 6.0, 0.7, 0.0, true)
 
 
 func biome() -> String:
@@ -617,6 +629,14 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 			node.position = Vector3.ZERO
 		"cave", "cave_mouth":
 			_add_light(node, Vector3(0.0, 0.8, 1.0), Color("#8aa0c8"), 3.5, 0.6, 0.0, false)
+	# windows that shine at night (the village's shop, pizzeria and station)
+	var glows: Variant = spec.get("glows")
+	if glows is Array:
+		for gp in glows:
+			var gw := assets.glow_quad(Color("#ffc977"), 0.9, 0.0)
+			gw.position = Vector3(float(gp[0]), float(gp[1]), float(gp[2]))
+			node.add_child(gw)
+			_night_glows.append([gw, 1.6])
 	var lt: Variant = spec.get("light")
 	if lt is Array:
 		var night := bool(spec.get("night", false))
