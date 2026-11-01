@@ -8,7 +8,8 @@
     "build": "pnpm -r run build",
     "test": "pnpm -r run test",
     "typecheck": "pnpm -r run typecheck",
-    "db:up": "podman compose up -d db || docker compose up -d db"
+    "db:up": "podman compose up -d db || docker compose up -d db",
+    "godot:strings": "node packages/godot/tools/export-strings.mts"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

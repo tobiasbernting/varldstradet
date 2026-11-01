@@ -1,6 +1,6 @@
 // Server-rendered pages around the game: the gate (/access), invite links (/join), the parent login and the
 // access sections of the parent page. Swedish, plain HTML, no external resources.
-import { T } from '../../shared/src/index.ts';
+import { T, fmt as tfmt } from '../../shared/src/index.ts';
 import type { Access, Device, Gate, ParentSession } from './access.ts';
 import { otpauthUri } from './totp.ts';
 
@@ -57,22 +57,22 @@ export function accessPage(gate: Gate, device: Device | null, access: Access, no
   let body: string;
   switch (gate) {
     case 'pending':
-      body = `<h1>⏳ Nästan klart!</h1>
-<div class="card"><p>En förälder på gården måste godkänna <strong>${esc(device!.name)}</strong> innan du kan spela.</p>
-<p>Om föräldern frågar, visa den här koden:</p><p class="code">${spaced(device!.code)}</p>
+      body = `<h1>⏳ ${T.gatePendingTitle}</h1>
+<div class="card"><p>${tfmt(esc(T.gatePending), { name: `<strong>${esc(device!.name)}</strong>` })}</p>
+<p>${T.gatePendingCode}</p><p class="code">${spaced(device!.code)}</p>
 <p class="muted">Sidan öppnar spelet av sig själv när du är godkänd.</p></div>`;
       break;
     case 'paused':
-      body = `<h1>⏸️ Pausad</h1><div class="card"><p>En förälder har pausat den här enheten. Fråga en vuxen.</p></div>`;
+      body = `<h1>⏸️ Pausad</h1><div class="card"><p>${T.gatePaused}</p></div>`;
       break;
     case 'closed':
-      body = `<h1>🌙 Gården är stängd</h1><div class="card"><p>Djuren sover. Gården är stängd just nu.</p></div>`;
+      body = `<h1>🌙 Gården är stängd</h1><div class="card"><p>${T.gateClosed}</p></div>`;
       break;
     case 'guests-closed':
-      body = `<h1>🌙 Gården är stängd för gäster</h1><div class="card"><p>Just nu får bara familjen vara på gården. Välkommen tillbaka en annan gång!</p></div>`;
+      body = `<h1>🌙 Gården är stängd för gäster</h1><div class="card"><p>${T.gateGuestsClosed}</p></div>`;
       break;
     case 'hours':
-      body = `<h1>🌙 Gården är stängd</h1><div class="card"><p>Gården är öppen ${esc(s.from ?? '')}–${esc(s.to ?? '')}. Välkommen tillbaka då!</p></div>`;
+      body = `<h1>🌙 Gården är stängd</h1><div class="card"><p>${tfmt(esc(T.gateHours), { from: esc(s.from ?? ''), to: esc(s.to ?? '') })}</p></div>`;
       break;
     case 'unknown':
       body = `<h1>🔒 ${T.title}</h1><div class="card"><p>Det här är en privat gård. För att komma in behöver du en kod från en förälder på gården.</p>
@@ -89,15 +89,15 @@ ${codeForm('')}</div>`;
 /** The code field: typed on the start page, or filled in from a link (/join#CODE). */
 const codeForm = (error: string): string => `${error ? `<p class="warn">${esc(error)}</p>` : ''}
 <form method="post" action="/join" class="block">
-<p><label>Kod<br><input name="code" id="code" required maxlength="20" placeholder="ABCD-1234" autocomplete="off" autocapitalize="characters" spellcheck="false" class="codein"></label></p>
-<p><label>Vem är du?<br><input name="name" maxlength="40" placeholder="T.ex. Kalle, iPad" autocomplete="off"></label></p>
-<p><button>Kom in</button></p>
+<p><label>${T.joinCode}<br><input name="code" id="code" required maxlength="20" placeholder="ABCD-1234" autocomplete="off" autocapitalize="characters" spellcheck="false" class="codein"></label></p>
+<p><label>${T.whoAreYou}<br><input name="name" maxlength="40" placeholder="T.ex. Kalle, iPad" autocomplete="off"></label></p>
+<p><button>${T.joinEnter}</button></p>
 </form>`;
 
 export function joinPage(nonce: string, error = ''): string {
-  const body = `<h1>🌱 Välkommen till ${T.title}!</h1>
+  const body = `<h1>🌱 ${tfmt(T.joinWelcome, { title: T.title })}</h1>
 <div class="card">
-<p>Skriv koden du har fått och vem du är, så att föräldrarna på gården ser vem som kommit.</p>
+<p>${T.joinIntro}</p>
 ${codeForm(error)}
 </div>`;
   // A link carries the code in its #fragment, so it never reaches logs or proxies; take it out of the address bar too

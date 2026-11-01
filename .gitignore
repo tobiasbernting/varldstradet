@@ -6,3 +6,5 @@ dist/
 .claude/
 packages/clientljs/dev-dist/
 packages/clientljs/public/icon-*.png
+# Godot exports (CI)
+build/
