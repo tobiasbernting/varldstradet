@@ -156,9 +156,12 @@ clients can be in the same dungeon at the same time. `packages/godot/ART.md` has
    to start in the first monster room, `--fight` to play a scripted fight with the mid-boss on the recording
    (telegraphs of every shape, the boss bar and cast bar, hit numbers, a wipe, a chest with the loot window; no
    server and no rules, only the pictures), and `--screenshot=/tmp/draug.png` to save a frame after 90 frames and quit.
-2. `godot --path packages/godot -- --bench` runs that scripted fight for 10 s on each quality preset and prints the
-   average frame time and the 1 % low per preset (the mean of the slowest 1 % of frames); F3 in the game shows the
-   same numbers live. It needs a window: headless Godot renders nothing.
+2. `godot --path packages/godot -- --bench` runs that scripted fight on each quality preset (a second of settling and
+   one unmeasured pass of the fight, then 10 s measured, so every preset is in steady state) and prints per preset the
+   average frame time and the 1 % low (the mean of the slowest 1 % of frames), the draw calls, primitives, lights and
+   shadow-casting lights, the render CPU and GPU milliseconds and the window's size in pixels, after the Godot version
+   and renderer; `--bench=mellan` runs one preset. F3 in the game shows the frame times live. It needs a window:
+   headless Godot renders nothing. `packages/godot/ART.md` ("Measured") keeps the numbers.
 
 **Run it against a server.** The server is the one in `packages/server` (`pnpm dev` starts it on port 8080, and the
 browser game's Vite server on 5173 next to it). It refuses to start without a choice about access, and dies if

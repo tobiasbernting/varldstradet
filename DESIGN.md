@@ -262,7 +262,7 @@ does. `packages/godot/ART.md` is the style sheet every later session follows.
   The way out is the normal one: the use key on the stairs runs `leaveSaga`.
 - **HUD and presets.** Hearts from the saga snapshot, the dungeon's name, the party (everyone else in the area with
   their hearts), a connection dot, banners and toasts. The pause menu holds the settings: Låg, Mellan and Hög as
-  section 3 of the plan defines them (resolution scale, shadows on the nearest torches, SSAO, SDFGI, volumetric
+  section 3 of the plan defines them (a pixel budget for the 3D scene, shadows from the nearest torches on Hög only, SSAO, SDFGI, volumetric
   fog, glow, particles), saved in `user://settings.cfg` and applied at start.
 - **Demo and CI.** `tools/export-fixture.mts` records the messages a hero gets on entering Draugkryptan (through
   the real `placeIn` and `generateSaga`); `--demo` on the command line plays them without a server, with `--at` and
@@ -328,7 +328,8 @@ the browser's (`client/src/saga.ts`, `clientljs/src/saga.ts`, `ui/saga.ts`, `pro
 - **Measuring** (`scripts/bench.gd`, F3): the overlay shows fps, the average frame time and the 1 % low (the mean of
   the slowest 1 % of frames); `--bench` runs the demo with the scripted fight (`scripts/demo_fight.gd`: a server-less
   timeline of `state`, `zone`, `spell`, `hit`, `banner` and `loot` messages for the mid-boss) for 10 s per preset and
-  prints the same. The build sandbox could not run Godot this time (its network policy refused the editor download),
+  prints the same (M3d: steady state, the engine's render counters and the window's pixels too; ART.md "Measured").
+  The build sandbox could not run Godot this time (its network policy refused the editor download),
   so no sandbox numbers and no new screenshots; the Godot workflow runs everything headless.
 - **The bot** (`scripts/bot.gd`, `tools/bot-check.mts`, `pnpm godot:bot`, a job in the Godot workflow): a headless
   client that logs in through `/api/gate` and `/api/players` (creating its character; `ACCESS=open`, the memory store,
