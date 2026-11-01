@@ -336,5 +336,7 @@ the browser's (`client/src/saga.ts`, `clientljs/src/saga.ts`, `ui/saga.ts`, `pro
   with `hero.gd`'s own solidity rule, drives the hero along the path, casts the four spells every 200 ms (the big ones
   first, the axe last, so the axe is what waits), steps out of telegraphs with the server's own `inZone`, and writes
   a JSON report. Two bots against one server must each see the other's casts and agree on every monster's health at
-  every `state` (keyed by the message's `now`, the same broadcast to both). Nothing new on the server.
+  every `state` (keyed by the message's `now`, the same broadcast to both). Nothing new on the server. Its first
+  run found a real bug: `WebSocketPeer`'s default 64 KiB inbound buffer dropped the `welcome` (the whole farm) with
+  close code 1009 and the client reconnected forever; `net.gd` now gives the socket 8 MiB.
 
