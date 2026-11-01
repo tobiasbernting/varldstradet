@@ -186,6 +186,49 @@ RIDs leaked (bench), after none; the CI logs are grepped for it. Where the sandb
 GPU ms, 229 in all): the four torch shadows 83, SSAO 46, 31 lights 64, glow 31; on Hög the GI was 138 of 423.
 Script time per frame (all `_process`) is 1–2.5 ms on the sandbox's slow cores, so GDScript was not the cost.
 
+## The farm and the wild maps (M4a)
+
+The same units and camera as the crypt (1 tile = 1 m, 51°, north up). Outdoors the world is lit by the sun
+(`scripts/day_night.gd`), not by torches: a `DirectionalLight3D` with the browser's day colours, ambient light and
+fog from the clock, lamps and windows at night (OmniLights with the crypt's distance fade, at most a handful in reach).
+
+| Name | Hex | Used for |
+| --- | --- | --- |
+| Trä ljus | `#a8793f` | fences, benches, the farm's tables, wooden floors |
+| Sten | `#7c7d78` | the arch, stone paths, rocks |
+| Tak | `#a83a2c` | the shop's awning, the farmhouse roof (the pack's own red) |
+| Halm | `#c9a24d` | hay, thatch |
+| Lövgrön / Höstlöv | `#64a848` (Gräs) → `#d8841f #b8501c #d8b02a` | foliage by season (spring `#8cc85a`, winter darker with snow) |
+
+**Foliage is recoloured by the shader, not by the mesh**: a vertex with foliage mask 1 takes the season's leaf colour
+(three per season, picked per tree) times its own lightness, so a tree is one mesh all year. The Kenney pines are
+recoloured once at load to the pine green (`#3f7a45` → `#79b25a`); the packs' rocks are greyed 45 % towards Sten.
+
+**Lighting rules by preset**: Låg has no sun shadow and no cloud shadows (a plain forward render, 150 weather
+particles); Mellan one short shadow cascade (26 m, 1024²) and 600 particles; Hög two cascades (38 m, 2048²),
+volumetric fog in fog weather and 1500 particles. SSAO, glow and GI are the crypt's.
+
+### Measured (M4a)
+
+`godot --path packages/godot -- --bench --scene=farm` (or `forest`, or `draug` for the crypt's fight), the sandbox's
+Forward+ on Mesa's lavapipe under Xvfb, window 1280×720 (counts are exact; GPU ms are software and only compare rows):
+
+| Scene · preset | draw calls | primitives | lights (in reach) | GPU ms |
+| --- | --- | --- | --- | --- |
+| Farm · Låg | 59 | 27 832 | 5 (0) | 110 |
+| Farm · Mellan | 88 | 79 141 | 5 (0) | 179 |
+| Farm · Hög | 88 | 132 200 | 5 (0) | 506 |
+| Forest · Låg | 52 | 17 014 | 4 (1) | 106 |
+| Forest · Mellan | 107 | 66 389 | 4 (1) | 185 |
+| Forest · Hög | 141 | 160 250 | 4 (1) | 383 |
+| Crypt · Låg (M3d) | 139 | 20 452 | 31 (7) | 130 |
+| Crypt · Mellan (M3d) | 141 | 20 496 | 31 (7) | 200 |
+| Crypt · Hög (M3d) | 174 | 26 273 | 31 (7, 6 shadows) | 359 |
+
+The farm and the forest stay under the crypt's draw-call budget on every preset; they draw more triangles (a tree is
+about a hundred) and fewer lights. **After M4a, on the MacBook Air M4** (owner: paste the three bench lines for
+`--scene=farm` here): `(owner: paste here)`.
+
 ## The fight on screen (M3b)
 
 - **Telegraphs** are flat shapes 4.5 cm over the floor: a dim red base in the zone's full size, a brighter fill that

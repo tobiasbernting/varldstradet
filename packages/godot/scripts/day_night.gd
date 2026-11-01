@@ -68,10 +68,11 @@ func setup(v: FarmView, biome: String, key: String) -> void:
 	env.background_mode = Environment.BG_COLOR
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.tonemap_white = 4.0
 	env.fog_enabled = true
 	env.fog_density = 0.006
 	env.fog_sky_affect = 1.0
-	env.glow_intensity = 0.4
+	env.glow_intensity = 0.15
 	env.glow_bloom = 0.04
 	env.ssao_radius = 0.6
 	env.ssao_intensity = 1.2
@@ -210,10 +211,10 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 	_dark = lerpf(_dark, dark, 1.0 - pow(0.05, delta))
 	var lit := amb
 	env.ambient_light_color = _ambient.lerp(Color(0.35, 0.4, 0.6), _dark * 0.4)
-	env.ambient_light_energy = 0.38 + 0.2 * (1.0 - _dark)
+	env.ambient_light_energy = 0.28 + 0.14 * (1.0 - _dark)
 	# the sun climbs in the east, stands south at noon and sets in the west; at night a pale moon takes its place
 	sun.light_color = (Color(1.0, 0.92, 0.8).lerp(Color(1.0, 0.7, 0.45), clampf(1.0 - elevation * 2.2, 0.0, 1.0)) if up else Color(0.55, 0.62, 0.9))
-	sun.light_energy = (0.15 + 0.8 * sun_share * smoothstep(0.0, 0.25, elevation)) if up else 0.22 * (1.0 - _wet * 0.5)
+	sun.light_energy = (0.12 + 0.62 * sun_share * smoothstep(0.0, 0.25, elevation)) if up else 0.22 * (1.0 - _wet * 0.5)
 	var el := deg_to_rad(lerpf(14.0, 62.0, elevation)) if up else deg_to_rad(48.0)
 	var az2 := (az - PI * 0.5) if up else 0.6
 	sun.rotation = Vector3(-el, az2 + PI, 0.0)
@@ -225,7 +226,7 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 	env.background_color = sky_color
 	env.fog_light_color = sky_color
 	var fog_k := _wvis["fog"] as float
-	env.fog_density = 0.002 + 0.045 * fog_k + 0.006 * _wvis["rain"]
+	env.fog_density = 0.0006 + 0.045 * fog_k + 0.006 * _wvis["rain"]
 	env.volumetric_fog_enabled = Quality.spec().get("fog", false) and fog_k > 0.1
 	if env.volumetric_fog_enabled:
 		env.volumetric_fog_density = 0.02 * fog_k

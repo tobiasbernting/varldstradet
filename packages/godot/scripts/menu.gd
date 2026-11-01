@@ -1,7 +1,7 @@
 class_name PauseMenu
 extends CanvasLayer
 ## The pause menu (the `menu` action: Escape or the gamepad's start button): continue, settings (the quality
-## presets of quality.gd), the development way into Draugkryptan (the server's `dev` message, DEV_TELEPORT=1), and
+## presets of quality.gd), the development way into the dungeons that have no arch drawn yet (the server's `dev` message, DEV_TELEPORT=1), and
 ## back to the login screen. Built in code; the texts come from assets/sv.json.
 
 signal resumed
@@ -56,9 +56,14 @@ func _ready() -> void:
 	dev_title.add_theme_font_size_override("font_size", 16)
 	dev_title.modulate = Color(1, 1, 1, 0.7)
 	_main.add_child(dev_title)
-	_main.add_child(_button(Strings.t("devEnterDungeon"), func() -> void:
-		dev_enter.emit("draug")
-		close()))
+	# Draugkryptan has its real way in (the arch in the forest); the other eight have none drawn yet
+	for id in Data.dungeons.keys():
+		if str(id) == "draug":
+			continue
+		var did: String = str(id)
+		_main.add_child(_button(Strings.t("devEnterDungeon", {"name": str(Data.dungeon(did).get("name", did))}), func() -> void:
+			dev_enter.emit(did)
+			close()))
 	var dev_hint := Label.new()
 	dev_hint.text = Strings.t("devEnterHint")
 	dev_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

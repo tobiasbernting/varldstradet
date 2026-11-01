@@ -341,3 +341,54 @@ the browser's (`client/src/saga.ts`, `clientljs/src/saga.ts`, `ui/saga.ts`, `pro
   run found a real bug: `WebSocketPeer`'s default 64 KiB inbound buffer dropped the `welcome` (the whole farm) with
   close code 1009 and the client reconnected forever; `net.gd` now gives the socket 8 MiB.
 
+
+## Godot client: the farm on screen (2026-11-01)
+Milestone M4a of `PLAN.md`: the farm drawn by the native client, walkable, with the real way into Draugkryptan. The
+server is untouched; everything below renders what it sends and sends what the browser sends.
+- **One view for every outdoor map** (`scripts/farm_view.gd`): the `farm` and the wild maps `a:x,y` are the same code.
+  The ground is one mesh per 16 × 16 tiles with a colour per tile (tilled soil in four furrow strips, paths, sand,
+  snow, road, rail and the rest of `Terrain`), water, bog, chocolate and lava as sunken beds with a surface drawn by
+  one shader (ripples, sun glint, a foam line at the bank), cliffs (`WALL_TERRAIN` rock) as raised blocks. Every
+  object kind is a mesh: trees, rocks, bushes, tufts, flowers and fences are instances in a `MultiMesh` per chunk and
+  kind (a forest of a thousand trees is a few draw calls; a changed object marks its chunk, rebuilt next frame);
+  houses, lamps, arches and the cave are nodes with their lights. Crops are three stage meshes per crop (seedling,
+  growing, ripe) and not interactive. A kind with no entry gets a lilac box on its footprint and one warning, and the
+  landmarks (`lm_*`) are such boxes for now; this is where the village, the beach and the others will plug in.
+- **Assets** (`scripts/farm_assets.gd`, `assets/LICENSES.md`): Kenney Castle Kit (pines, rocks) and KayKit Medieval
+  Hexagon Pack (farmhouse, well, barn, stall, props), both CC0 from GitHub mirrors, are *baked*: triangles copied with
+  the colour of the pack's palette strip at each vertex, centred, scaled, and recoloured to the ART.md palette. The
+  rest (oak and apple trees, bushes, flowers, fences, furniture, sheds, lamps, the dungeon's arch) is generated in code
+  (`scripts/farm_mesh.gd`). All props share one vertex-colour shader (`assets/shaders/farm_prop.gdshader`), which is
+  what lets the season's leaf colours, snow on every upward face, rain and wind act on all of them. Quaternius,
+  Kenney's Nature Kit and KayKit's Medieval Builder were not reachable from the sandbox (see LICENSES.md).
+- **Sky** (`scripts/day_night.gd`, a port of `sky.ts`): the browser's day colours and weather tints drive the sun
+  (angle, colour, strength), the ambient light and the fog from the server's clock (`timeMs`, run on between `state`
+  messages), the leaf colours from the calendar (`yearSeason`: spring, summer, autumn, winter; Christmas is always
+  winter), the snow cover (Christmas, or snow that has fallen a while), and the weather (`localWeather` per biome):
+  rain, hail, snow and wind leaves as GPU particles that follow the hero, fog as density (volumetric on Hög), a flash
+  in storms, a rainbow after rain, lamps and windows lit by how dark it is. The camera looks down at 51°, so the sky
+  itself is never on screen: the background is the horizon colour. Presets: Låg has no sun shadow, 150 weather
+  particles and no cloud shadows; Mellan one short shadow cascade (26 m) and 600; Hög two (38 m) and 1500.
+- **People and animals**: `tools/export-sprites.mts` exports the farm's clothes as *layers* (pants, shoes, shirt,
+  hands, head, hair, shading, hat), `scripts/look_composer.gd` blends them in the browser's order per player and caches
+  the sheet (checked pixel for pixel against `drawCharacter` for 1083 looks), 64 species of animals with baby, winter
+  and colour variants, and the villagers. They are `Actor`s like the crypt's monsters; names over heads, emotes and
+  chat bubbles work as in the crypt. Animals and villagers walk from the `state` snapshots.
+- **Walking and the ways out**: `hero.gd` is the same prediction code with the farm's rules (the map's edge, ground
+  nobody walks on, solid objects; the farmhouse door's tile is solid client-side because the room behind it is not
+  drawn yet, so the server never sees a step on it). At an edge opening (`EDGE_GAP`, the browser's `inEdgeGap`) a
+  push outwards sends `travel` (at most every 1.5 s). The dungeon's arch is the shape the server made it (`saga_portal`,
+  3 × 2 tiles, solid): the use key facing it sends `act`, which is what the browser sends. **Draugkryptan's arch is not
+  on the farm** but in the forest two maps away (`a:-1,-1`, from `DUNGEONS.draug.portal`): so walking there needs the
+  wild maps drawn, which the generic view does (the task's "not drawn yet" notice stays for caves, indoors, the bus,
+  the shop and the door). Without a class the server answers "Du behöver välja en väg först" (the class is chosen at a
+  stone in the village). The pause menu's dev entries remain for the other eight dungeons.
+- **HUD**: clock and day, season, weather, coins, stars and hearts at the top right (`T.day`, `T.coins`,
+  `WEATHER_EMOJI`, `BIOME_NAMES` from `sv.ts` through `pnpm godot:strings`), the map's name at the top left.
+- **Checks**: `--demo=farm` and `--demo=forest` (fixtures from `tools/export-fixture.mts`, with `--time`, `--weather`,
+  `--season`, `--at`), `--bench --scene=farm|forest`, a third bot that walks farm → `a:0,-1` → `a:-1,-1` → the arch →
+  `saga:draug` (a breadth-first path with `hero.gd`'s own solidity; the dev message never sent; found that the first
+  `saga class` message after the welcome can be lost and sends it again), CI steps for all of it and for pictures under
+  Xvfb. Findings of the first run worth keeping: in the Compatibility and Forward+ renderers alike a `MultiMesh`
+  without instance colours multiplies vertex colours by black, so every `MultiMesh` here has `use_colors` on (white);
+  Godot draws the *clockwise* side of a triangle, so shapes are written counter-clockwise and emitted reversed.

@@ -130,10 +130,19 @@ data the browser draws, with your hero walking in it and everyone else interpola
 Krigare's four spells, the dungeon's telegraphs and bosses on screen, falling and getting up, chests with the loot
 window, chat and emotes, a gamepad setting for the kids, a frame-time overlay and a bench, and a headless bot that
 clears the first pack in CI. No farm and no world map yet. The browser game keeps working unchanged, and the two
-clients can be in the same dungeon at the same time. `packages/godot/ART.md` has the art rules;
+clients can be in the same dungeon at the same time. **M4a** draws the farm: the 64×64 map (and the wild maps beyond
+its edges, with the same code) from the server's data, with day and night, the seasons and the weather, other players
+in their own clothes, animals and villagers, and the real way into Draugkryptan: walk off the farm's north edge, west
+through the forest, and use the arch in the forest beyond. Crops, watering, animals' care, building, the house and the
+shop come in M4b and M4c; what opens them says it is not drawn yet. `packages/godot/ART.md` has the art rules;
 `packages/godot/assets/LICENSES.md` every asset's origin.
 
 ![Draugkryptan in the native client](packages/godot/docs/m3a-draugkryptan.png)
+
+![The farm in the native client](packages/godot/docs/m4a-farm-day.png)
+
+Night, rain and snow: [night](packages/godot/docs/m4a-farm-night.png), [rain](packages/godot/docs/m4a-farm-rain.png),
+[snow](packages/godot/docs/m4a-farm-snow.png); [the arch in the forest](packages/godot/docs/m4a-forest-arch.png).
 
 **Once per checkout.**
 
@@ -146,6 +155,13 @@ clients can be in the same dungeon at the same time. `packages/godot/ART.md` has
    cache of the art in `packages/godot/.godot/` (not committed). Without it a fresh checkout does not know the scripts'
    `class_name`s: `login.gd`, `world.gd` and others fail to load ("Parse Error: Cannot infer the type of …" in the
    console) and the login screen's character button does nothing. Run it again after pulling new scripts.
+
+**Look at the farm without a server (demo mode):** `godot --path packages/godot -- --demo=farm` plays the recorded farm
+of `assets/fixtures/farm.json` (its field with crops, fences, animals, villagers and two friends in other outfits) and
+`--demo=forest` the forest with Draugkryptan's arch; both are made by `pnpm godot:fixture` from the shared world
+generator. `--time=0.9` (a fraction of the day: 0 sunrise, 0.4 midday, 0.9 night), `--weather=rain|snow|fog|storm|hail|wind`,
+`--season=jul|halloween|pask|midsommar`, `--at=x,y` and `--screenshot=file.png` set the picture. `-- --bench --scene=farm`
+(or `forest`) measures the farm as `--bench` measures the crypt.
 
 **Look at the dungeon without a server (demo mode):**
 
@@ -166,9 +182,9 @@ clients can be in the same dungeon at the same time. `packages/godot/ART.md` has
 **Run it against a server.** The server is the one in `packages/server` (`pnpm dev` starts it on port 8080, and the
 browser game's Vite server on 5173 next to it). It refuses to start without a choice about access, and dies if
 `DATABASE_URL` points at a Postgres that is not running, so pick one of two recipes. Both set `DEV_TELEPORT=1`: the
-native client has no world map yet, so it cannot walk to the arch, and the switch lets the pause menu's "Gå in i
-Draugkryptan" ask the server to put you inside, as the arch would, making you a Krigare first if you have no class.
-Never set it on the real farm.
+native client draws only Draugkryptan's way in (the arch), so the switch lets the pause menu's "Gå in i …" entries for
+the other eight dungeons ask the server to put you inside, as their arches would, making you a Krigare first if you
+have no class. Draugkryptan itself needs no switch. Never set it on the real farm.
 
 - *Throwaway, nothing to set up* (no password, no database, nothing saved; a home network only):
 
@@ -210,9 +226,16 @@ Then start the client:
 3. A code the parent approves shows the 6-digit number; the client polls `/api/gate` every few seconds and goes on
    to "Vem är du?" when the parent has approved the device. Pick a character. Characters are still created in the
    browser for now, so on a fresh server make one first: open `http://localhost:5173` and make a person.
-4. You start on the farm, which the client does not draw yet: a notice says so. Press Escape, then "Gå in i
-   Draugkryptan". The server generates the dungeon the normal way (`generateSaga`), sends it as `areaData`, and the
-   crypt appears with you at its start.
+4. You start on the farm. Walk with WASD, the arrows or the left stick. Draugkryptan is reached the way the browser
+   reaches it, so the character needs a class first: the Völvan's stone in Köpingen is where it is chosen, and the
+   village is not drawn yet, so choose in the browser once (the character keeps it; a class chosen there is the one
+   you fight with here), or, on a server with `DEV_TELEPORT=1`, use one of the pause menu's "Gå in i …" entries, which
+   makes a character without a class a Krigare. Then walk out of the farm through the opening in the middle of the
+   north edge (the client asks the server for the next map, as the browser does), through the forest, west through
+   the opening in the middle of that map's west edge, and in the forest beyond up to the stone arch with the glowing
+   doorway; press `E` facing it. The server generates the dungeon the normal way (`generateSaga`), sends it as
+   `areaData`, and the crypt appears with you at its start. Without a class the arch says so. The farmhouse door, the
+   bus stop and the other things that open a window say they are not drawn yet.
 5. **Fight.** `1`–`4` (gamepad `X`/`Y`/`B`/`RB`) are the Krigare's spells: Yxhugg, Stormsteg, Virvelvind,
    Bärsärkaraseri, on the bar at the bottom with their cooldowns; `5` (`LB`) drinks a potion. The server picks the
    monster (the nearest in reach, in sight for a ranged spell) unless you aim: click a monster, or Tab (d-pad right)
@@ -233,7 +256,8 @@ in as above and go in through the menu; in the browser, log in as another charac
 (or, with the same switch, nothing else is needed: the browser walks in the normal way). Both see each other's
 spells, the same monster health and the same telegraphs, because all of it is the server's.
 
-**Without a human (the bot).** `GODOT=~/godot/godot pnpm godot:bot` starts the server in memory (`ACCESS=open`,
+**Without a human (the bot).** A third bot takes the real way in: it walks across the farm, the forest and the forest
+beyond to the arch and uses it, and the check is that it arrives in `saga:draug` with the dev message never sent. `GODOT=~/godot/godot pnpm godot:bot` starts the server in memory (`ACCESS=open`,
 `DEV_TELEPORT=1`, no Postgres), runs two headless clients in bot mode (`-- --bot`: log in, enter, walk to the first
 pack, cast the four spells on cooldown, step out of telegraphs) and checks their reports against each other: casts
 acknowledged, each other's casts seen, monsters beaten, the same monster health at the same server tick. The Godot

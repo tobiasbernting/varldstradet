@@ -11,6 +11,12 @@ extends Node
 ##
 ##   godot --headless --path packages/godot -- --bot --server=http://localhost:8080 --name=Bot1 \
 ##         --report=/tmp/bot1.json [--seconds=90] [--dungeon=draug] [--packs=1]
+##
+## `--route=arch` (M4a) is the real way in instead of the dev one: after choosing the Krigare (the message the
+## browser's class picker sends; the stone it is picked at is in the village, which is not drawn yet) the bot walks
+## across the farm to the north opening, across the forest to the west opening, and in the forest beyond to
+## Draugkryptan's arch, presses the use key facing it, and the report says which maps it passed and that it arrived in
+## `saga:draug` without the dev message ever being sent.
 
 var world: WorldView
 var server_url := "http://localhost:8080"
@@ -19,6 +25,11 @@ var report_path := ""
 var seconds := 90.0
 var dungeon_id := "draug"
 var packs_wanted := 1
+var route := ""
+var _route_goal := Vector2i.ZERO
+var _route_push := Vector2.ZERO
+var _route_act := false
+var _route_acted := 0.0
 var _api: Api
 var _phase := "start" ## start, login, enter, plan, walk, fight, done
 var _t := 0.0
@@ -35,7 +46,7 @@ const HEAL_GRACE_MS := 2000.0
 var _report := {
 	"name": "", "ok": false, "phase": "", "seconds": 0.0, "casts_sent": 0, "casts_acked": 0, "spells_sent": {}, "spells_acked": {},
 	"others_casts": 0, "others": {}, "monsters_beaten": [], "hits_taken": 0, "damage_taken": 0, "hits_dealt": 0, "damage_dealt": 0,
-	"zones_seen": 0, "stepped_out": 0, "fell": 0, "hearts": [], "mob_hp": [], "bar_samples": 0, "rises": [], "errors": [], "packs_beaten": 0, "area": "",
+	"route": [], "arrived_via_arch": false, "dev_sent": false, "zones_seen": 0, "stepped_out": 0, "fell": 0, "hearts": [], "mob_hp": [], "bar_samples": 0, "rises": [], "errors": [], "packs_beaten": 0, "area": "",
 }
 
 
@@ -53,6 +64,8 @@ func _ready() -> void:
 			dungeon_id = arg.substr(10)
 		elif arg.begins_with("--packs="):
 			packs_wanted = int(arg.substr(8))
+		elif arg.begins_with("--route="):
+			route = arg.substr(8)
 	_report["name"] = bot_name
 	_api = Api.new()
 	add_child(_api)
@@ -64,11 +77,20 @@ func _ready() -> void:
 	world.model.change.connect(_on_change)
 	world.model.snapshot.connect(_on_snapshot)
 	world.model.error.connect(func(text: String) -> void: _error("server: " + text))
+	if route != "":
+		world.model.toast.connect(func(text: String) -> void: _log("toast: " + text))
+		world.model.banner.connect(func(text: String, _sub: String, kind: String) -> void: _log("banner %s: %s" % [kind, text]))
+		world.model.player_changed.connect(func(id: String, p: Variant) -> void:
+			if id == world.model.me and p is Dictionary:
+				_log("my record: area %s at %d,%d" % [str(p.get("area", "farm")), int(p.get("x", 0)), int(p.get("y", 0))]))
 	Net.connection_changed.connect(func(status: String, code: int) -> void: _log("socket %s (%d) %s" % [status, code, Settings.ws_url()]))
 	Net.message.connect(func(msg: Dictionary) -> void:
 		if str(msg.get("t", "")) == "welcome":
 			_log("welcome as %s" % str(msg.get("you", ""))))
 	world.model.area_changed.connect(func(key: String) -> void:
+		if route != "":
+			_on_route_area(key)
+			return
 		if Data.dungeon_of_key(key) == dungeon_id and _phase == "enter":
 			_report["area"] = key
 			_log("in %s" % key)
@@ -214,9 +236,19 @@ func _process(delta: float) -> void:
 	match _phase:
 		"welcome":
 			if not world.model.farm.is_empty() and Net.is_open():
-				_phase = "enter"
-				Net.send({"t": "dev", "a": "saga", "id": dungeon_id})
-				_log("asked for %s" % dungeon_id)
+				if route != "":
+					Net.send({"t": "saga", "a": "class", "cls": "krigare"})
+					_phase = "route_plan"
+					_log("chose the Krigare, walking to the arch")
+				else:
+					_phase = "enter"
+					_report["dev_sent"] = true
+					Net.send({"t": "dev", "a": "saga", "id": dungeon_id})
+					_log("asked for %s" % dungeon_id)
+		"route_plan":
+			_route_plan()
+		"route":
+			_route_walk(delta)
 		"plan":
 			_plan()
 		"walk":
@@ -266,6 +298,109 @@ func _plan() -> void:
 	_phase = "walk"
 	world.hero.driven = true
 	_stuck_t = 0.0
+
+
+## A new map while walking the route: note it, finish in the dungeon, plan again in an outdoor map.
+func _on_route_area(key: String) -> void:
+	if not _report["route"].is_empty() and _report["route"][-1] == key:
+		return # (the map's data and my record each say so)
+	_report["route"].append(key)
+	_log("now in %s" % key)
+	if Data.dungeon_of_key(key) == dungeon_id:
+		_report["area"] = key
+		_report["arrived_via_arch"] = not bool(_report["dev_sent"])
+		_report["ok"] = _report["errors"].is_empty() and bool(_report["arrived_via_arch"])
+		_finish()
+	elif _phase != "done":
+		world.hero.drive = Vector2.ZERO
+		_phase = "route_plan"
+		_path = []
+
+
+## Where to walk in this map: the opening towards the arch's map, or the arch's front.
+func _route_plan() -> void:
+	var key := world.model.my_area_key()
+	if world._mode != "outdoor" or not world.model.areas.has(key) and key != "farm":
+		return # the map is still on its way
+	var w := world.model.world_for(key)
+	var mw := world.model.map_w(w)
+	var mh := world.model.map_h(w)
+	_route_act = false
+	match key:
+		"farm":
+			_route_goal = Vector2i(mw / 2, 0)
+			_route_push = Vector2(0, -1)
+		"a:0,-1":
+			_route_goal = Vector2i(0, mh / 2)
+			_route_push = Vector2(-1, 0)
+		"a:-1,-1":
+			var arch: Dictionary = {}
+			for o in w.get("objects", {}).values():
+				if str(o.get("kind", "")) == "saga_portal" and int(o.get("variant", 0)) == Data.dungeons.keys().find(dungeon_id):
+					arch = o
+			if arch.is_empty():
+				_error("no arch for %s in %s" % [dungeon_id, key])
+				_finish()
+				return
+			# the tile in front of the arch (portalFront): its middle column, below it
+			_route_goal = Vector2i(int(arch.get("x", 0)) + 1, int(arch.get("y", 0)) + 2)
+			_route_act = true
+		_:
+			_error("the route does not know the map %s" % key)
+			_finish()
+			return
+	var start := _my_tile()
+	var dist := _distance_field(start)
+	_path = _path_to(start, _route_goal, dist)
+	if _path.is_empty() and start != _route_goal:
+		_error("no way from %s to %s in %s" % [str(start), str(_route_goal), key])
+		_finish()
+		return
+	_log("%s: from %s to %s, %d steps" % [key, str(start), str(_route_goal), _path.size()])
+	_phase = "route"
+	world.hero.driven = true
+	_stuck_t = 0.0
+	_route_acted = 0.0
+
+
+func _route_walk(delta: float) -> void:
+	var tile := Data.tile()
+	var me := Vector2(world.hero.px, world.hero.py)
+	if not _path.is_empty():
+		var next: Vector2i = _path[0]
+		var target := Vector2((next.x + 0.5) * tile, (next.y + 0.5) * tile)
+		if me.distance_to(target) < 3.0:
+			_path.pop_front()
+			return
+		_drive_towards(target)
+		if me.distance_to(_last_pos) < 0.5:
+			_stuck_t += delta
+			if _stuck_t > 2.0:
+				_log("stuck at %s, planning again" % str(_my_tile()))
+				_phase = "route_plan"
+		else:
+			_stuck_t = 0.0
+		_last_pos = me
+		return
+	if _route_act:
+		# at the arch's front: face it and use it, as the use key does (the server sends me in, or says why not)
+		world.hero.drive = Vector2.ZERO
+		world.hero.facing = "up"
+		var saga: Variant = world.model.my_player().get("saga")
+		if not (saga is Dictionary and str(saga.get("cls", "")) != ""):
+			# the class did not take (the first message can be lost while the socket settles): ask again
+			_route_acted += delta
+			if fmod(_route_acted, 1.0) < delta:
+				Net.send({"t": "saga", "a": "class", "cls": "krigare"})
+			return
+		_route_acted += delta
+		if _route_acted > 0.3 and _route_acted - delta <= 0.3:
+			world._act_outdoors(world.hero.facing_object(), str(world.hero.facing_object().get("kind", "")))
+		elif _route_acted > 4.0:
+			_route_acted = 0.0
+		return
+	# at the opening: push on outwards until the hero asks for the next map
+	world.hero.drive = _route_push
 
 
 func _my_tile() -> Vector2i:
