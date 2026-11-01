@@ -7,8 +7,28 @@
     "PLAYER_SPEED": 64,
     "PLAYER_HALF_W": 5,
     "PLAYER_HALF_H": 3,
-    "SLOW_MUL": 0.6
+    "SLOW_MUL": 0.6,
+    "GCD_MS": 400,
+    "DOWN_MS": 10000,
+    "WIPE_MS": 4000,
+    "POTION_CD": 15000,
+    "CHAT_MAX_LEN": 80,
+    "CHAT_BUBBLE_MS": 6000,
+    "EMOTE_MS": 2500
   },
+  "flags": {
+    "down": 1,
+    "wall": 2,
+    "rage": 4,
+    "hot": 8,
+    "slow": 16,
+    "frozen": 32
+  },
+  "interruptKinds": [
+    "bash",
+    "charge",
+    "lance"
+  ],
   "wallTerrain": [
     "basalt",
     "bog",
@@ -1393,196 +1413,2107 @@
   },
   "mobs": {
     "skelett": {
-      "name": "Skelettkrigare"
+      "name": "Skelettkrigare",
+      "hp": 170,
+      "reach": 1.4,
+      "speed": 2.4,
+      "aggro": 4.5
     },
     "draugbage": {
-      "name": "Draugbågskytt"
+      "name": "Draugbågskytt",
+      "hp": 130,
+      "reach": 5,
+      "speed": 2.2,
+      "aggro": 6
     },
     "gravrotta": {
-      "name": "Gravråtta"
+      "name": "Gravråtta",
+      "hp": 70,
+      "reach": 1.2,
+      "speed": 3.4,
+      "aggro": 4
     },
     "frosttroll": {
-      "name": "Frosttroll"
+      "name": "Frosttroll",
+      "hp": 260,
+      "reach": 1.5,
+      "speed": 2.2,
+      "aggro": 4.5
     },
     "isvarg": {
-      "name": "Isvarg"
+      "name": "Isvarg",
+      "hp": 140,
+      "reach": 1.3,
+      "speed": 3.6,
+      "aggro": 5
     },
     "isande": {
-      "name": "Isande"
+      "name": "Isande",
+      "hp": 110,
+      "reach": 5,
+      "speed": 2,
+      "aggro": 6
     },
     "eldimp": {
-      "name": "Eldimp"
+      "name": "Eldimp",
+      "hp": 95,
+      "reach": 1.2,
+      "speed": 3.6,
+      "aggro": 5
     },
     "lavagolem": {
-      "name": "Lavagolem"
+      "name": "Lavagolem",
+      "hp": 360,
+      "reach": 1.6,
+      "speed": 1.8,
+      "aggro": 4
     },
     "eldhund": {
-      "name": "Eldhund"
+      "name": "Eldhund",
+      "hp": 190,
+      "reach": 1.3,
+      "speed": 3.4,
+      "aggro": 5
     },
     "isblock": {
-      "name": "Isblock"
+      "name": "Isblock",
+      "hp": 60,
+      "reach": 0,
+      "speed": 0,
+      "aggro": 0,
+      "block": true
     },
     "gengangare": {
-      "name": "Gengångare"
+      "name": "Gengångare",
+      "hp": 190,
+      "reach": 1.4,
+      "speed": 2.4,
+      "aggro": 4.5
     },
     "helhund": {
-      "name": "Helhund"
+      "name": "Helhund",
+      "hp": 150,
+      "reach": 1.3,
+      "speed": 3.6,
+      "aggro": 5
     },
     "benspindel": {
-      "name": "Benspindel"
+      "name": "Benspindel",
+      "hp": 120,
+      "reach": 5,
+      "speed": 2.2,
+      "aggro": 6
     },
     "gruvtroll": {
-      "name": "Gruvtroll"
+      "name": "Gruvtroll",
+      "hp": 230,
+      "reach": 1.5,
+      "speed": 2.3,
+      "aggro": 4.5
     },
     "guldbagge": {
-      "name": "Guldbagge"
+      "name": "Guldbagge",
+      "hp": 90,
+      "reach": 1.2,
+      "speed": 3.6,
+      "aggro": 5
     },
     "stengolem": {
-      "name": "Stengolem"
+      "name": "Stengolem",
+      "hp": 380,
+      "reach": 1.6,
+      "speed": 1.7,
+      "aggro": 4
     },
     "sjodraug": {
-      "name": "Sjödraug"
+      "name": "Sjödraug",
+      "hp": 200,
+      "reach": 1.4,
+      "speed": 2.4,
+      "aggro": 4.5
     },
     "jattekrabba": {
-      "name": "Jättekrabba"
+      "name": "Jättekrabba",
+      "hp": 260,
+      "reach": 1.5,
+      "speed": 2,
+      "aggro": 4.5
     },
     "manet": {
-      "name": "Lysmanet"
+      "name": "Lysmanet",
+      "hp": 110,
+      "reach": 5,
+      "speed": 2,
+      "aggro": 6
     },
     "skuggalv": {
-      "name": "Skuggalv"
+      "name": "Skuggalv",
+      "hp": 160,
+      "reach": 5,
+      "speed": 2.6,
+      "aggro": 6
     },
     "jattespindel": {
-      "name": "Jättespindel"
+      "name": "Jättespindel",
+      "hp": 210,
+      "reach": 1.4,
+      "speed": 3,
+      "aggro": 5
     },
     "svampvakt": {
-      "name": "Svampvakt"
+      "name": "Svampvakt",
+      "hp": 300,
+      "reach": 1.6,
+      "speed": 1.8,
+      "aggro": 4
     },
     "ulv": {
-      "name": "Ulv"
+      "name": "Ulv",
+      "hp": 170,
+      "reach": 1.3,
+      "speed": 3.8,
+      "aggro": 5.5
     },
     "rimtroll": {
-      "name": "Rimtroll"
+      "name": "Rimtroll",
+      "hp": 320,
+      "reach": 1.5,
+      "speed": 2.1,
+      "aggro": 4.5
     },
     "bergsjatte": {
-      "name": "Bergsjätte"
+      "name": "Bergsjätte",
+      "hp": 450,
+      "reach": 1.8,
+      "speed": 1.6,
+      "aggro": 4
     },
     "spindelnat": {
-      "name": "Spindelnät"
+      "name": "Spindelnät",
+      "hp": 60,
+      "reach": 0,
+      "speed": 0,
+      "aggro": 0,
+      "block": true
     },
     "gravvaktare": {
       "name": "Gravväktaren",
-      "mini": true
+      "mini": true,
+      "hp": 1100,
+      "reach": 1.8,
+      "speed": 2,
+      "aggro": 5
     },
     "draugkung": {
       "name": "Draugkungen Hrolf",
-      "boss": true
+      "boss": true,
+      "hp": 2200,
+      "reach": 2,
+      "speed": 2.1,
+      "aggro": 5
     },
     "isbjorn": {
       "name": "Isbjörnen Kall",
-      "mini": true
+      "mini": true,
+      "hp": 1500,
+      "reach": 1.8,
+      "speed": 2.6,
+      "aggro": 5
     },
     "rimturs": {
       "name": "Rimtursen",
-      "boss": true
+      "boss": true,
+      "hp": 2600,
+      "reach": 2.2,
+      "speed": 1.9,
+      "aggro": 5
     },
     "smeden": {
       "name": "Smeden Glöd",
-      "mini": true
+      "mini": true,
+      "hp": 1700,
+      "reach": 1.9,
+      "speed": 2,
+      "aggro": 5
     },
     "surt": {
       "name": "Surt",
-      "boss": true
+      "boss": true,
+      "hp": 3200,
+      "reach": 2.4,
+      "speed": 2,
+      "aggro": 5
     },
     "garm": {
       "name": "Garm",
-      "mini": true
+      "mini": true,
+      "hp": 1900,
+      "reach": 1.9,
+      "speed": 2.6,
+      "aggro": 5
     },
     "hel": {
       "name": "Hel",
-      "boss": true
+      "boss": true,
+      "hp": 3400,
+      "reach": 2.2,
+      "speed": 1.9,
+      "aggro": 5
     },
     "jarnvakten": {
       "name": "Järnväktaren",
-      "mini": true
+      "mini": true,
+      "hp": 2100,
+      "reach": 1.8,
+      "speed": 1.8,
+      "aggro": 5
     },
     "fafner": {
       "name": "Fafner",
-      "boss": true
+      "boss": true,
+      "hp": 3800,
+      "reach": 2.4,
+      "speed": 2,
+      "aggro": 5
     },
     "blackis": {
       "name": "Bläckis",
-      "mini": true
+      "mini": true,
+      "hp": 2300,
+      "reach": 2,
+      "speed": 2.2,
+      "aggro": 5
     },
     "jormungand": {
       "name": "Jörmungandr",
-      "boss": true
+      "boss": true,
+      "hp": 4200,
+      "reach": 2.6,
+      "speed": 1.9,
+      "aggro": 5
     },
     "spindeldrottning": {
       "name": "Spindeldrottningen",
-      "mini": true
+      "mini": true,
+      "hp": 2500,
+      "reach": 1.9,
+      "speed": 2.5,
+      "aggro": 5
     },
     "nattmara": {
       "name": "Nattmaran",
-      "boss": true
+      "boss": true,
+      "hp": 4400,
+      "reach": 2.2,
+      "speed": 2.1,
+      "aggro": 5
     },
     "skoll": {
       "name": "Sköll",
-      "mini": true
+      "mini": true,
+      "hp": 2700,
+      "reach": 1.9,
+      "speed": 2.8,
+      "aggro": 5
     },
     "fenrisulven": {
       "name": "Fenrisulven",
-      "boss": true
+      "boss": true,
+      "hp": 4800,
+      "reach": 2.4,
+      "speed": 2.4,
+      "aggro": 5
     },
     "lokesskugga": {
       "name": "Lokes skugga",
-      "mini": true
+      "mini": true,
+      "hp": 3000,
+      "reach": 2,
+      "speed": 2.3,
+      "aggro": 5
     },
     "loke": {
       "name": "Loke",
-      "boss": true
+      "boss": true,
+      "hp": 6000,
+      "reach": 2.2,
+      "speed": 2.3,
+      "aggro": 5
+    }
+  },
+  "bosses": {
+    "gravvaktare": {
+      "name": "Gravväktaren",
+      "title": "Kryptans vakt",
+      "phases": [
+        0.5
+      ],
+      "mini": true,
+      "moves": [
+        {
+          "move": "slam",
+          "name": "Gravslaget",
+          "warn": 1500,
+          "radius": 2.6,
+          "dmg": 28,
+          "text": "Slår i marken så det skakar runt honom. Spring ut ur cirkeln!"
+        }
+      ],
+      "yells": {
+        "pull": "Ingen stör kungens sömn!",
+        "phase": [
+          "Råttor! Till mig!"
+        ],
+        "kill": "Vila i frid…",
+        "death": "Kungen… kommer att… vakna…",
+        "wipe": "Kryptan behåller sina gäster."
+      }
+    },
+    "draugkung": {
+      "name": "Draugkungen Hrolf",
+      "title": "Kryptans herre",
+      "phases": [
+        0.66,
+        0.33
+      ],
+      "moves": [
+        {
+          "move": "cleave",
+          "name": "Kungasvärdet",
+          "warn": 1300,
+          "radius": 3.4,
+          "dmg": 34,
+          "arc": 100,
+          "text": "Svingar svärdet i en stor båge framför sig. Ställ dig bakom honom!"
+        },
+        {
+          "move": "rain",
+          "name": "Gravfrost",
+          "warn": 1600,
+          "radius": 1.5,
+          "dmg": 26,
+          "text": "Frost kryper upp ur graven under er. Flytta på er!"
+        },
+        {
+          "move": "nova",
+          "name": "Draugropet",
+          "warn": 2600,
+          "radius": 7,
+          "dmg": 30,
+          "interrupt": true,
+          "text": "Han samlar kraft till ett skrik som träffar alla nära. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!"
+        }
+      ],
+      "yells": {
+        "pull": "Vem vågar väcka Draugkungen?!",
+        "phase": [
+          "Mina krigare, res er!",
+          "Solrunan är MIN!"
+        ],
+        "kill": "Ännu en till min krypta!",
+        "death": "Solen… den lyser igen…",
+        "wipe": "Kom tillbaka när ni har blivit modigare!"
+      }
+    },
+    "isbjorn": {
+      "name": "Isbjörnen Kall",
+      "title": "Borgens vaktbjörn",
+      "phases": [
+        0.5
+      ],
+      "mini": true,
+      "moves": [
+        {
+          "move": "charge",
+          "name": "Isrusning",
+          "warn": 1400,
+          "radius": 1.8,
+          "dmg": 30,
+          "text": "Rusar mot någon av er och landar med en smäll. Hoppa undan från cirkeln!"
+        }
+      ],
+      "yells": {
+        "pull": "GRRRAAAH!",
+        "phase": [
+          "AAAOOOOO!"
+        ],
+        "kill": "Grrr…",
+        "death": "Grr… mmm…",
+        "wipe": "Grrrrr."
+      }
+    },
+    "rimturs": {
+      "name": "Rimtursen",
+      "title": "Frostjätten",
+      "phases": [
+        0.5
+      ],
+      "moves": [
+        {
+          "move": "cleave",
+          "name": "Frostandedräkt",
+          "warn": 1500,
+          "radius": 4.2,
+          "dmg": 34,
+          "arc": 70,
+          "text": "Andas iskall luft rakt fram. Gå åt sidan!"
+        },
+        {
+          "move": "rain",
+          "name": "Istappar",
+          "warn": 1400,
+          "radius": 1.3,
+          "dmg": 24,
+          "text": "Istappar faller från taket där ni står. Flytta på er!"
+        },
+        {
+          "move": "freeze",
+          "name": "Isfängelse",
+          "warn": 800,
+          "radius": 1,
+          "dmg": 15,
+          "text": "Fryser in någon i ett isblock. Slå sönder isen för att rädda din vän!"
+        },
+        {
+          "move": "nova",
+          "name": "Snöstorm",
+          "warn": 2600,
+          "radius": 8,
+          "dmg": 32,
+          "interrupt": true,
+          "text": "Kallar på en snöstorm runt sig. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!"
+        }
+      ],
+      "yells": {
+        "pull": "Små varma varelser i MIN borg? Ni ska bli istappar!",
+        "phase": [
+          "Känn vinterns vrede!"
+        ],
+        "kill": "Frys!",
+        "death": "Våren… kommer… ändå…",
+        "wipe": "Vintern vinner alltid."
+      }
+    },
+    "smeden": {
+      "name": "Smeden Glöd",
+      "title": "Surts smed",
+      "phases": [
+        0.5
+      ],
+      "mini": true,
+      "moves": [
+        {
+          "move": "slam",
+          "name": "Städslaget",
+          "warn": 1300,
+          "radius": 2.8,
+          "dmg": 30,
+          "text": "Slår hammaren i städet så golvet sprakar. Spring ut ur cirkeln!"
+        },
+        {
+          "move": "pools",
+          "name": "Glödande slagg",
+          "warn": 1000,
+          "radius": 1.4,
+          "dmg": 8,
+          "linger": 8000,
+          "text": "Kastar glödande slagg som brinner kvar på golvet. Stå inte i elden!"
+        }
+      ],
+      "yells": {
+        "pull": "Ingen kommer in i Surts smedja!",
+        "phase": [
+          "Imparna! Hjälp mig!"
+        ],
+        "kill": "Mer kol till ugnen!",
+        "death": "Elden… slocknar…",
+        "wipe": "Ha! Härdat i elden!"
+      }
+    },
+    "surt": {
+      "name": "Surt",
+      "title": "Eldjätten från Muspelheim",
+      "phases": [
+        0.7,
+        0.4
+      ],
+      "moves": [
+        {
+          "move": "cleave",
+          "name": "Eldsvärdet",
+          "warn": 1300,
+          "radius": 4.4,
+          "dmg": 40,
+          "arc": 110,
+          "text": "Svingar det flammande svärdet i en stor båge. Ställ dig bakom honom!"
+        },
+        {
+          "move": "pools",
+          "name": "Lavapölar",
+          "warn": 1200,
+          "radius": 1.6,
+          "dmg": 10,
+          "linger": 10000,
+          "text": "Lava väller upp under er och brinner kvar. Flytta på er!"
+        },
+        {
+          "move": "nova",
+          "name": "Muspels vrede",
+          "warn": 2800,
+          "radius": 7,
+          "dmg": 45,
+          "interrupt": true,
+          "text": "Hela salen fylls av eld. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!"
+        }
+      ],
+      "yells": {
+        "pull": "Med det här svärdet ska jag bränna Världsträdet!",
+        "phase": [
+          "Muspelheims eld brinner i mig!",
+          "NI KAN INTE STOPPA MIG!"
+        ],
+        "kill": "Aska till aska!",
+        "death": "Världsträdet… lever…",
+        "wipe": "Ingen kan stå emot elden!"
+      }
+    },
+    "garm": {
+      "name": "Garm",
+      "title": "Hels hund",
+      "phases": [
+        0.5
+      ],
+      "mini": true,
+      "moves": [
+        {
+          "move": "charge",
+          "name": "Helbett",
+          "warn": 1400,
+          "radius": 1.8,
+          "dmg": 34,
+          "text": "Garm tar sats och hoppar på någon av er med gapet öppet. Hoppa undan från cirkeln!"
+        },
+        {
+          "move": "summon",
+          "name": "Yla!",
+          "warn": 1500,
+          "radius": 0,
+          "dmg": 0,
+          "text": "Garm ylar och kallar på helhundarna. Ta hand om dem snabbt!"
+        }
+      ],
+      "yells": {
+        "pull": "VOFF! VOFF! Ingen går förbi Garm!",
+        "phase": [
+          "AOOOOO! Valpar, kom hit!"
+        ],
+        "kill": "Voff!",
+        "death": "Gnyy… ville bara… leka…",
+        "wipe": "Voff voff! Garm vann!"
+      }
+    },
+    "hel": {
+      "name": "Hel",
+      "title": "Dödsrikets drottning",
+      "phases": [
+        0.66,
+        0.33
+      ],
+      "moves": [
+        {
+          "move": "pull",
+          "name": "Dödens famn",
+          "warn": 2200,
+          "radius": 7,
+          "dmg": 20,
+          "text": "Hel sträcker ut sina kalla händer och drar alla nära sig. Akta er, för sedan kommer Helskriket!"
+        },
+        {
+          "move": "nova",
+          "name": "Helskriket",
+          "warn": 2400,
+          "radius": 4,
+          "dmg": 44,
+          "interrupt": true,
+          "text": "Hon skriker så det isar i hela salen. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring ut ur cirkeln!"
+        },
+        {
+          "move": "rain",
+          "name": "Gravkyla",
+          "warn": 1500,
+          "radius": 1.5,
+          "dmg": 28,
+          "text": "Kall dimma stiger upp ur golvet där ni står. Flytta på er!"
+        }
+      ],
+      "yells": {
+        "pull": "Levande barn? Här nere? Jag får ju aldrig besök!",
+        "phase": [
+          "Mina gengångare, vakna!",
+          "Pappa Loke lovade mig hela Midgård!"
+        ],
+        "kill": "Välkommen till Helheim.",
+        "death": "Ljuset… är så… varmt…",
+        "wipe": "Helheim har gott om plats. Kom tillbaka när ni vill!"
+      }
+    },
+    "jarnvakten": {
+      "name": "Järnväktaren",
+      "title": "Dvärgarnas vakt",
+      "phases": [
+        0.5
+      ],
+      "mini": true,
+      "moves": [
+        {
+          "move": "line",
+          "name": "Ångstråle",
+          "warn": 1500,
+          "radius": 7,
+          "dmg": 36,
+          "width": 1.6,
+          "text": "Het ånga sprutar ur hans mun i en lång rak stråle. Gå åt sidan!"
+        },
+        {
+          "move": "slam",
+          "name": "Järnstamp",
+          "warn": 1300,
+          "radius": 2.6,
+          "dmg": 30,
+          "text": "Han stampar med järnfoten så golvet skakar. Spring ut ur cirkeln!"
+        }
+      ],
+      "yells": {
+        "pull": "KLONK. INKRÄKTARE. UPPTÄCKTA.",
+        "phase": [
+          "KLONK KLONK. SKICKAR. BAGGAR."
+        ],
+        "kill": "INKRÄKTARE. BORTA. KLONK.",
+        "death": "Pys… pys… äntligen… vila…",
+        "wipe": "VAKTEN. KLAR. KLONK."
+      }
+    },
+    "fafner": {
+      "name": "Fafner",
+      "title": "Guldets drake",
+      "phases": [
+        0.6,
+        0.3
+      ],
+      "moves": [
+        {
+          "move": "cleave",
+          "name": "Drakeld",
+          "warn": 1400,
+          "radius": 4.6,
+          "dmg": 40,
+          "arc": 90,
+          "text": "Han sprutar eld rakt fram. Ställ dig bakom eller bredvid honom!"
+        },
+        {
+          "move": "pools",
+          "name": "Smält guld",
+          "warn": 1200,
+          "radius": 1.5,
+          "dmg": 10,
+          "linger": 9000,
+          "text": "Smält guld rinner ut på golvet och är hett länge. Stå inte i det!"
+        },
+        {
+          "move": "mend",
+          "name": "Guldsömn",
+          "warn": 3000,
+          "radius": 1,
+          "dmg": 0,
+          "interrupt": true,
+          "text": "Han kryper ihop på sitt guld och sover sig frisk. Väck honom med Sköldslag, Stormsteg eller Isspjut!"
+        }
+      ],
+      "yells": {
+        "pull": "MITT guld! Allt är MITT! Inte ett enda litet mynt får ni!",
+        "phase": [
+          "Baggar! Skydda skatten!",
+          "Loke lovade mig allt guld i hela världen!"
+        ],
+        "kill": "Ännu en sak till högen.",
+        "death": "Mitt… fina… guld…",
+        "wipe": "Ha! Guldet stannar hos mig."
+      }
+    },
+    "blackis": {
+      "name": "Bläckis",
+      "title": "Tempelbläckfisken",
+      "phases": [
+        0.5
+      ],
+      "mini": true,
+      "moves": [
+        {
+          "move": "pools",
+          "name": "Bläck",
+          "warn": 1100,
+          "radius": 1.6,
+          "dmg": 9,
+          "linger": 8000,
+          "text": "Han sprutar svart bläck som ligger kvar på golvet. Stå inte i bläcket!"
+        },
+        {
+          "move": "line",
+          "name": "Tentakelsvep",
+          "warn": 1500,
+          "radius": 6,
+          "dmg": 34,
+          "width": 1.8,
+          "text": "En lång tentakel slår ner i en rak linje. Gå åt sidan!"
+        }
+      ],
+      "yells": {
+        "pull": "Blubb! Vem har spårat in sand i MITT fina tempel?",
+        "phase": [
+          "Blubb blubb! Maneter, hjälp till!"
+        ],
+        "kill": "Blubb!",
+        "death": "Blubb… blubb… bluuubb…",
+        "wipe": "Hihi! Åtta armar är bättre än två!"
+      }
+    },
+    "jormungand": {
+      "name": "Jörmungandr",
+      "title": "Midgårdsormen",
+      "phases": [
+        0.66,
+        0.33
+      ],
+      "moves": [
+        {
+          "move": "line",
+          "name": "Svansslag",
+          "warn": 1500,
+          "radius": 8,
+          "dmg": 42,
+          "width": 2,
+          "text": "Den väldiga svansen slår ner i en lång rak linje. Gå åt sidan!"
+        },
+        {
+          "move": "pull",
+          "name": "Malström",
+          "warn": 2200,
+          "radius": 7,
+          "dmg": 18,
+          "text": "Vattnet virvlar och drar alla nära ormen till honom. Akta er, för sedan kommer Gifteld!"
+        },
+        {
+          "move": "nova",
+          "name": "Gifteld",
+          "warn": 2600,
+          "radius": 4.5,
+          "dmg": 44,
+          "interrupt": true,
+          "text": "Ormen sprutar grönt gift runt sig. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring ut ur cirkeln!"
+        },
+        {
+          "move": "rain",
+          "name": "Störtvåg",
+          "warn": 1600,
+          "radius": 1.6,
+          "dmg": 30,
+          "text": "Vågor störtar ner från taket där ni står. Flytta på er!"
+        }
+      ],
+      "yells": {
+        "pull": "Sssså. Små människor i mitt tempel. Vet ni att jag når runt hela Midgård?",
+        "phase": [
+          "Sjödraugar, ssstig upp!",
+          "Sssnart släpper jag min svans, och då skakar hela världen!"
+        ],
+        "kill": "Ssslurp.",
+        "death": "Ssss… tillbaka… till havet…",
+        "wipe": "Havet vinner alltid till sssist."
+      }
+    },
+    "spindeldrottning": {
+      "name": "Spindeldrottningen",
+      "title": "Lundens väverska",
+      "phases": [
+        0.5
+      ],
+      "mini": true,
+      "moves": [
+        {
+          "move": "freeze",
+          "name": "Spindelnät",
+          "warn": 900,
+          "radius": 1,
+          "dmg": 12,
+          "block": "spindelnat",
+          "text": "Hon spinner in någon i ett klibbigt nät. Slå sönder nätet för att rädda din vän!"
+        },
+        {
+          "move": "rain",
+          "name": "Giftdroppar",
+          "warn": 1400,
+          "radius": 1.4,
+          "dmg": 28,
+          "text": "Gröna droppar faller från taket där ni står. Flytta på er!"
+        }
+      ],
+      "yells": {
+        "pull": "Ssså fina små flugor som har flugit in i min lund!",
+        "phase": [
+          "Mina barn! Middagen är serverad!"
+        ],
+        "kill": "Insnärjd!",
+        "death": "Mitt… vackra… nät…",
+        "wipe": "Sov gott i mitt nät, små flugor."
+      }
+    },
+    "nattmara": {
+      "name": "Nattmaran",
+      "title": "Drömmarnas skugga",
+      "phases": [
+        0.6,
+        0.3
+      ],
+      "moves": [
+        {
+          "move": "nova",
+          "name": "Mardröm",
+          "warn": 2600,
+          "radius": 7,
+          "dmg": 46,
+          "interrupt": true,
+          "text": "Hon fyller salen med en mardröm. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!"
+        },
+        {
+          "move": "pools",
+          "name": "Skuggpölar",
+          "warn": 1200,
+          "radius": 1.5,
+          "dmg": 10,
+          "linger": 10000,
+          "text": "Mörka pölar av skugga sprider sig på golvet. Stå inte i dem!"
+        },
+        {
+          "move": "mend",
+          "name": "Drömsömn",
+          "warn": 3000,
+          "radius": 1,
+          "dmg": 0,
+          "interrupt": true,
+          "text": "Hon somnar och drömmer sig frisk. Väck henne med Sköldslag, Stormsteg eller Isspjut!"
+        },
+        {
+          "move": "summon",
+          "name": "Skuggor!",
+          "warn": 1500,
+          "radius": 0,
+          "dmg": 0,
+          "text": "Hon kallar fram skuggalver ur mörkret. Ta hand om dem snabbt!"
+        }
+      ],
+      "yells": {
+        "pull": "Shhh… sov nu, små barn. Jag har så otäcka drömmar åt er!",
+        "phase": [
+          "Vakna inte! Drömmen har bara börjat!",
+          "Skuggor, kom fram!"
+        ],
+        "kill": "Sov så gott…",
+        "death": "Nej… morgonen… kommer…",
+        "wipe": "Sov gott! Hihihi…"
+      }
+    },
+    "skoll": {
+      "name": "Sköll",
+      "title": "Solens jägare",
+      "phases": [
+        0.5
+      ],
+      "mini": true,
+      "moves": [
+        {
+          "move": "charge",
+          "name": "Språng",
+          "warn": 1300,
+          "radius": 1.8,
+          "dmg": 36,
+          "text": "Sköll tar sats och hoppar på någon av er. Hoppa undan från cirkeln!"
+        },
+        {
+          "move": "nova",
+          "name": "Ylande",
+          "warn": 2400,
+          "radius": 6,
+          "dmg": 40,
+          "interrupt": true,
+          "text": "Han ylar så att isen spricker. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!"
+        }
+      ],
+      "yells": {
+        "pull": "Grrr! Jag jagar solen över himlen varje dag. Er hinner jag ikapp!",
+        "phase": [
+          "Flocken! Till mig!"
+        ],
+        "kill": "Fångad!",
+        "death": "Solen… kom undan… igen…",
+        "wipe": "Ingen springer ifrån Sköll!"
+      }
+    },
+    "fenrisulven": {
+      "name": "Fenrisulven",
+      "title": "Den bundne",
+      "phases": [
+        0.7,
+        0.4
+      ],
+      "moves": [
+        {
+          "move": "charge",
+          "name": "Käftarna",
+          "warn": 1400,
+          "radius": 2,
+          "dmg": 48,
+          "text": "Han hoppar fram med gapet på vid gavel. Hoppa undan från cirkeln!"
+        },
+        {
+          "move": "cleave",
+          "name": "Klorna",
+          "warn": 1300,
+          "radius": 4.2,
+          "dmg": 42,
+          "arc": 100,
+          "text": "Han slår med klorna i en stor båge framför sig. Ställ dig bakom honom!"
+        },
+        {
+          "move": "summon",
+          "name": "Flocken!",
+          "warn": 1500,
+          "radius": 0,
+          "dmg": 0,
+          "text": "Han kallar på sin flock. Ta hand om ulvarna snabbt!"
+        },
+        {
+          "move": "nova",
+          "name": "Vinterylet",
+          "warn": 2800,
+          "radius": 8,
+          "dmg": 50,
+          "interrupt": true,
+          "text": "Han ylar så att hela klyftan fryser. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!"
+        }
+      ],
+      "yells": {
+        "pull": "Loke har slitit av mina band! Nu är jag FRI!",
+        "phase": [
+          "Flocken! Jakten börjar!",
+          "Inga band i världen kan hålla mig nu!"
+        ],
+        "kill": "AOOOOO!",
+        "death": "Gleipner… igen? Nåja… den var ju… mjuk…",
+        "wipe": "Ingen binder Fenrisulven!"
+      }
+    },
+    "lokesskugga": {
+      "name": "Lokes skugga",
+      "title": "En lögn i mörkret",
+      "phases": [
+        0.5
+      ],
+      "mini": true,
+      "moves": [
+        {
+          "move": "rain",
+          "name": "Falska stjärnor",
+          "warn": 1500,
+          "radius": 1.5,
+          "dmg": 34,
+          "text": "Stjärnor som inte ens är riktiga faller ner där ni står. Flytta på er!"
+        },
+        {
+          "move": "nova",
+          "name": "Hånskratt",
+          "warn": 2400,
+          "radius": 6,
+          "dmg": 42,
+          "interrupt": true,
+          "text": "Skuggan skrattar så det ekar. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!"
+        }
+      ],
+      "yells": {
+        "pull": "Buh! Trodde ni att jag var Loke? Fel! Jag är bara hans skugga. Hihi!",
+        "phase": [
+          "Kom fram, gamla benrangel!"
+        ],
+        "kill": "Hihi! Lurad!",
+        "death": "Men… jag är ju bara… en skugga… puff!",
+        "wipe": "Hahaha! Ni slogs mot en skugga och förlorade!"
+      }
+    },
+    "loke": {
+      "name": "Loke",
+      "title": "Lögnernas fader",
+      "phases": [
+        0.8,
+        0.6,
+        0.4,
+        0.2
+      ],
+      "moves": [
+        {
+          "move": "cleave",
+          "name": "Kungasvärdet",
+          "warn": 1300,
+          "radius": 3.6,
+          "dmg": 44,
+          "arc": 100,
+          "text": "Han härmar Draugkungen och svingar ett svärd i en stor båge. Ställ dig bakom honom!"
+        },
+        {
+          "move": "nova",
+          "name": "Snöstorm",
+          "warn": 2600,
+          "radius": 8,
+          "dmg": 40,
+          "interrupt": true,
+          "text": "Han härmar Rimtursen och kallar på en snöstorm. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!"
+        },
+        {
+          "move": "pools",
+          "name": "Lavapölar",
+          "warn": 1200,
+          "radius": 1.6,
+          "dmg": 11,
+          "linger": 9000,
+          "text": "Han härmar Surt, och lava väller upp under er. Flytta på er!"
+        },
+        {
+          "move": "mend",
+          "name": "Lokes list",
+          "warn": 3000,
+          "radius": 1,
+          "dmg": 0,
+          "interrupt": true,
+          "text": "Han låtsas sova och läker sig i smyg. Avbryt med Sköldslag, Stormsteg eller Isspjut!"
+        },
+        {
+          "move": "pull",
+          "name": "Dödens famn",
+          "warn": 2200,
+          "radius": 7,
+          "dmg": 20,
+          "text": "Han härmar Hel och drar alla nära sig. Akta er, för sedan kommer Helskriket!"
+        },
+        {
+          "move": "nova",
+          "name": "Helskriket",
+          "warn": 2400,
+          "radius": 4,
+          "dmg": 44,
+          "interrupt": true,
+          "text": "Han skriker som Hel. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring ut ur cirkeln!"
+        },
+        {
+          "move": "line",
+          "name": "Svansslag",
+          "warn": 1500,
+          "radius": 8,
+          "dmg": 48,
+          "width": 2,
+          "text": "Han trollar fram Midgårdsormens svans, som slår ner i en lång rak linje. Gå åt sidan!"
+        }
+      ],
+      "yells": {
+        "pull": "Ni trodde Surt var farlig? Han var bara min hantlangare! Välkomna till min lilla bro. Hihi!",
+        "phase": [
+          "Brrr! Titta, nu är jag Rimtursen! Snöstorm!",
+          "Och nu är jag Surt! Akta tårna, det bränns!",
+          "Buuu! Jag är Hel! Kom hit och få en kram!",
+          "Sssså! Midgårdsormen har en svans. Nu har jag också en!"
+        ],
+        "kill": "Hoppsan! Var det jag som gjorde så?",
+        "death": "Ni… ni fuskade! Ingen besegrar Loke!… Nåja. Den här gången.",
+        "wipe": "Hahaha! Ska vi ta det en gång till?"
+      }
+    }
+  },
+  "spells": {
+    "hugg": {
+      "name": "Svärdshugg",
+      "icon": "🗡️",
+      "kind": "melee",
+      "cd": 800,
+      "range": 1.8,
+      "power": 14,
+      "text": "Ett hugg som får monstren att vilja slåss med dig.",
+      "attack": true,
+      "friend": false
+    },
+    "utmana": {
+      "name": "Utmana!",
+      "icon": "📣",
+      "kind": "taunt",
+      "cd": 8000,
+      "range": 0,
+      "power": 0,
+      "radius": 5,
+      "ms": 4000,
+      "text": "Alla monster runt dig måste slåss med dig en stund.",
+      "attack": false,
+      "friend": false
+    },
+    "skoldslag": {
+      "name": "Sköldslag",
+      "icon": "🛡️",
+      "kind": "bash",
+      "cd": 6000,
+      "range": 1.8,
+      "power": 20,
+      "ms": 1500,
+      "text": "Slår med skölden så monstret blir yrt. Avbryter bossens stora attacker!",
+      "attack": true,
+      "friend": false
+    },
+    "skoldmur": {
+      "name": "Sköldmur",
+      "icon": "🧱",
+      "kind": "wall",
+      "cd": 20000,
+      "range": 0,
+      "power": 60,
+      "ms": 6000,
+      "text": "Du tar mycket mindre skada en stund och får lite hälsa tillbaka.",
+      "attack": false,
+      "friend": false
+    },
+    "lakerunan": {
+      "name": "Läkerunan",
+      "icon": "💚",
+      "kind": "heal",
+      "cd": 1500,
+      "range": 7,
+      "power": 32,
+      "text": "Läker den som har ont, eller den du pekar på.",
+      "attack": false,
+      "friend": true
+    },
+    "ljuspil": {
+      "name": "Ljuspil",
+      "icon": "✨",
+      "kind": "bolt",
+      "cd": 1100,
+      "range": 7,
+      "power": 12,
+      "text": "Skjuter en pil av ljus.",
+      "attack": true,
+      "friend": false
+    },
+    "lakekrets": {
+      "name": "Läkekrets",
+      "icon": "🌿",
+      "kind": "hot",
+      "cd": 12000,
+      "range": 0,
+      "power": 60,
+      "radius": 4,
+      "ms": 6000,
+      "text": "En ring av runor läker alla nära dig en stund.",
+      "attack": false,
+      "friend": false
+    },
+    "vackupp": {
+      "name": "Väck upp!",
+      "icon": "🌅",
+      "kind": "revive",
+      "cd": 15000,
+      "range": 4,
+      "power": 50,
+      "text": "Väcker en kompis som har fallit.",
+      "attack": false,
+      "friend": true
+    },
+    "yxhugg": {
+      "name": "Yxhugg",
+      "icon": "🪓",
+      "kind": "melee",
+      "cd": 900,
+      "range": 1.8,
+      "power": 20,
+      "text": "Ett kraftigt hugg med yxan.",
+      "attack": true,
+      "friend": false
+    },
+    "stormsteg": {
+      "name": "Stormsteg",
+      "icon": "💨",
+      "kind": "charge",
+      "cd": 9000,
+      "range": 7,
+      "power": 14,
+      "ms": 1000,
+      "text": "Rusar fram till monstret och gör det yrt.",
+      "attack": true,
+      "friend": false
+    },
+    "virvelvind": {
+      "name": "Virvelvind",
+      "icon": "🌪️",
+      "kind": "whirl",
+      "cd": 6000,
+      "range": 0,
+      "power": 16,
+      "radius": 2.2,
+      "text": "Snurrar runt och träffar alla monster nära dig.",
+      "attack": false,
+      "friend": false
+    },
+    "raseri": {
+      "name": "Bärsärkaraseri",
+      "icon": "🔥",
+      "kind": "rage",
+      "cd": 24000,
+      "range": 0,
+      "power": 50,
+      "ms": 8000,
+      "text": "Du slår hårdare, springer fortare och läker lite av varje hugg en stund.",
+      "attack": false,
+      "friend": false
+    },
+    "eldboll": {
+      "name": "Eldboll",
+      "icon": "☄️",
+      "kind": "bolt",
+      "cd": 1300,
+      "range": 8,
+      "power": 24,
+      "text": "Kastar en eldboll.",
+      "attack": true,
+      "friend": false
+    },
+    "isspjut": {
+      "name": "Isspjut",
+      "icon": "❄️",
+      "kind": "lance",
+      "cd": 4000,
+      "range": 8,
+      "power": 14,
+      "ms": 3000,
+      "text": "Ett spjut av is som gör monstret långsamt. Avbryter bossens stora attacker!",
+      "attack": true,
+      "friend": false
+    },
+    "askregn": {
+      "name": "Åskregn",
+      "icon": "⚡",
+      "kind": "storm",
+      "cd": 9000,
+      "range": 8,
+      "power": 28,
+      "radius": 2.4,
+      "text": "Blixtar slår ner på ett ställe och träffar alla där.",
+      "attack": true,
+      "friend": false
+    },
+    "blink": {
+      "name": "Blink",
+      "icon": "🌀",
+      "kind": "blink",
+      "cd": 10000,
+      "range": 4,
+      "power": 0,
+      "text": "Hoppar några steg framåt. Bra för att komma undan.",
+      "attack": false,
+      "friend": false
     }
   },
   "classes": {
     "vaktare": {
       "name": "Väktare",
       "roleName": "Tank",
+      "emoji": "🛡️",
       "hp": 200,
       "color": "#4f8fe8",
       "outfit": {
         "hat": "hat_vaktarhjalm",
         "shirt": "shirt_vaktarrustning"
-      }
+      },
+      "spells": [
+        "hugg",
+        "utmana",
+        "skoldslag",
+        "skoldmur"
+      ]
     },
     "helare": {
       "name": "Helare",
       "roleName": "Helare",
+      "emoji": "🌿",
       "hp": 120,
       "color": "#5fd38d",
       "outfit": {
         "hat": "hat_volvakrans",
         "shirt": "shirt_volvadrakt"
-      }
+      },
+      "spells": [
+        "lakerunan",
+        "ljuspil",
+        "lakekrets",
+        "vackupp"
+      ]
     },
     "krigare": {
       "name": "Krigare",
       "roleName": "Skada",
+      "emoji": "🪓",
       "hp": 150,
       "color": "#e8613b",
       "outfit": {
         "hat": "hat_hornhjalm",
         "shirt": "shirt_bjornskinn"
-      }
+      },
+      "spells": [
+        "yxhugg",
+        "stormsteg",
+        "virvelvind",
+        "raseri"
+      ]
     },
     "magiker": {
       "name": "Magiker",
       "roleName": "Skada",
+      "emoji": "⚡",
       "hp": 110,
       "color": "#b06ef0",
       "outfit": {
         "hat": "hat_runhatt",
         "shirt": "shirt_runmantel"
-      }
+      },
+      "spells": [
+        "eldboll",
+        "isspjut",
+        "askregn",
+        "blink"
+      ]
     }
-  }
+  },
+  "items": {
+    "runsvard": {
+      "name": "Runsvärd",
+      "rarity": "rare",
+      "kind": "weapon",
+      "text": "Runorna på bladet lyser blått i mörkret."
+    },
+    "draugyxa": {
+      "name": "Draugyxa",
+      "rarity": "rare",
+      "kind": "weapon",
+      "text": "En gammal stridsyxa som lyser spöklikt grön."
+    },
+    "volvastav": {
+      "name": "Völvans stav",
+      "rarity": "rare",
+      "kind": "weapon",
+      "text": "En stav med en lysande sten i toppen."
+    },
+    "frostbett": {
+      "name": "Frostbett",
+      "rarity": "epic",
+      "kind": "weapon",
+      "text": "Ett svärd av evig is som aldrig smälter."
+    },
+    "isyxa": {
+      "name": "Isyxa",
+      "rarity": "epic",
+      "kind": "weapon",
+      "text": "Hugger is lika lätt som trä."
+    },
+    "ullrsbage": {
+      "name": "Ullrs båge",
+      "rarity": "epic",
+      "kind": "weapon",
+      "text": "Vinterguden Ullrs båge, med strängar av norrsken."
+    },
+    "surtsvard": {
+      "name": "Surts eldsvärd",
+      "rarity": "legendary",
+      "kind": "weapon",
+      "text": "Eldjättens eget svärd. Det brinner, men aldrig i din hand."
+    },
+    "mjolner": {
+      "name": "Mjölner",
+      "rarity": "legendary",
+      "kind": "weapon",
+      "text": "Tors hammare. Det knastrar av blixtar om den."
+    },
+    "gungner": {
+      "name": "Gungner",
+      "rarity": "legendary",
+      "kind": "weapon",
+      "text": "Odens spjut, som alltid träffar."
+    },
+    "hat_draugkrona": {
+      "name": "Draugkrona",
+      "rarity": "rare",
+      "kind": "hat",
+      "text": "Draugkungens gamla krona."
+    },
+    "shirt_ringbrynja": {
+      "name": "Ringbrynja",
+      "rarity": "uncommon",
+      "kind": "shirt",
+      "text": "Tusen små järnringar."
+    },
+    "hat_valkyria": {
+      "name": "Valkyriahjälm",
+      "rarity": "epic",
+      "kind": "hat",
+      "text": "En silverhjälm med vita vingar."
+    },
+    "shirt_bjornfall": {
+      "name": "Björnfäll",
+      "rarity": "rare",
+      "kind": "shirt",
+      "text": "En varm vit fäll från Isbjörnen Kall."
+    },
+    "hat_oden": {
+      "name": "Odens hatt",
+      "rarity": "legendary",
+      "kind": "hat",
+      "text": "Vandrarens bredbrättade hatt."
+    },
+    "shirt_odenmantel": {
+      "name": "Odens mantel",
+      "rarity": "epic",
+      "kind": "shirt",
+      "text": "En mörkblå mantel med en korp på ryggen."
+    },
+    "hat_vaktarhjalm": {
+      "name": "Väktarhjälm",
+      "rarity": "uncommon",
+      "kind": "hat",
+      "text": "Väktarens hjälm med nässkydd."
+    },
+    "shirt_vaktarrustning": {
+      "name": "Väktarrustning",
+      "rarity": "uncommon",
+      "kind": "shirt",
+      "text": "Rustning med en sköld på bröstet."
+    },
+    "hat_volvakrans": {
+      "name": "Völvans krans",
+      "rarity": "uncommon",
+      "kind": "hat",
+      "text": "En krans med små runor."
+    },
+    "shirt_volvadrakt": {
+      "name": "Völvans dräkt",
+      "rarity": "uncommon",
+      "kind": "shirt",
+      "text": "En grön dräkt med läkande runor."
+    },
+    "hat_hornhjalm": {
+      "name": "Hornhjälm",
+      "rarity": "uncommon",
+      "kind": "hat",
+      "text": "Bärsärkens hjälm."
+    },
+    "shirt_bjornskinn": {
+      "name": "Björnskinn",
+      "rarity": "uncommon",
+      "kind": "shirt",
+      "text": "Ett brunt björnskinn över axlarna."
+    },
+    "hat_runhatt": {
+      "name": "Runhatt",
+      "rarity": "uncommon",
+      "kind": "hat",
+      "text": "En spetsig hatt med lysande runor."
+    },
+    "shirt_runmantel": {
+      "name": "Runmantel",
+      "rarity": "uncommon",
+      "kind": "shirt",
+      "text": "En lila mantel full av runor."
+    },
+    "pet_hugin": {
+      "name": "Hugin och Munin",
+      "rarity": "epic",
+      "kind": "pet",
+      "text": "Odens två korpar flyger med dig vart du går."
+    },
+    "pet_fenrisvalp": {
+      "name": "Fenrisvalp",
+      "rarity": "epic",
+      "kind": "pet",
+      "text": "En liten ulv med stora tassar. Snäll, för det mesta."
+    },
+    "mount_sleipner": {
+      "name": "Sleipner",
+      "rarity": "legendary",
+      "kind": "mount",
+      "text": "Odens häst med åtta ben. Den snabbaste hästen i alla världar."
+    },
+    "mount_gullinbursti": {
+      "name": "Gullinbursti",
+      "rarity": "legendary",
+      "kind": "mount",
+      "text": "Freys galt med borst av guld som lyser i mörkret."
+    },
+    "draugjarn": {
+      "name": "Draugjärn",
+      "rarity": "common",
+      "kind": "quest",
+      "text": "Rostigt järn från en skelettkrigare. Smed-Stina vill ha det."
+    },
+    "frostros": {
+      "name": "Frostros",
+      "rarity": "common",
+      "kind": "quest",
+      "text": "En ros av is som aldrig smälter. Fru Lind vill ha den."
+    },
+    "glodkol": {
+      "name": "Glödkol",
+      "rarity": "common",
+      "kind": "quest",
+      "text": "Kol som glöder fast det är kallt. Bagar-Bo vill ha det till ugnen."
+    },
+    "healing_potion": {
+      "name": "Läkedryck",
+      "rarity": "common",
+      "kind": "potion",
+      "text": "Dricks i en fängelsehåla: fyller på hälsan."
+    },
+    "solruna": {
+      "name": "Solrunan",
+      "rarity": "epic",
+      "kind": "decor",
+      "text": "Runstenen som håller vintern borta. Den lyser som solen."
+    },
+    "yggdrasil": {
+      "name": "Yggdrasils skott",
+      "rarity": "legendary",
+      "kind": "decor",
+      "text": "Ett litet skott av Världsträdet, som glittrar i mörkret."
+    },
+    "helsvard": {
+      "name": "Helsvärd",
+      "rarity": "rare",
+      "kind": "weapon",
+      "text": "Ett blekt svärd som lyser som en lykta i dimman."
+    },
+    "garmklo": {
+      "name": "Garms klo",
+      "rarity": "rare",
+      "kind": "weapon",
+      "text": "En yxa formad som en stor hundklo. Voff!"
+    },
+    "gruvhacka": {
+      "name": "Dvärgarnas hacka",
+      "rarity": "rare",
+      "kind": "weapon",
+      "text": "Den hittar guld alldeles av sig själv."
+    },
+    "fafnerstand": {
+      "name": "Fafners tand",
+      "rarity": "epic",
+      "kind": "weapon",
+      "text": "En draktand, vass som ett svärd och varm som en brasa."
+    },
+    "korallspjut": {
+      "name": "Korallspjutet",
+      "rarity": "epic",
+      "kind": "weapon",
+      "text": "En treudd av rosa korall. Den luktar lite hav."
+    },
+    "stormbage": {
+      "name": "Stormbågen",
+      "rarity": "epic",
+      "kind": "weapon",
+      "text": "Pilarna susar som havsvinden."
+    },
+    "alvklinga": {
+      "name": "Alvklingan",
+      "rarity": "epic",
+      "kind": "weapon",
+      "text": "Lätt som en fjäder och blank som månen."
+    },
+    "manstav": {
+      "name": "Månstaven",
+      "rarity": "epic",
+      "kind": "weapon",
+      "text": "En stav med en liten måne i toppen. Den lyser mest på natten."
+    },
+    "fenristand": {
+      "name": "Fenristanden",
+      "rarity": "legendary",
+      "kind": "weapon",
+      "text": "Fenrisulvens tappade mjölktand. Den är större än du!"
+    },
+    "tyrsyxa": {
+      "name": "Tyrs yxa",
+      "rarity": "legendary",
+      "kind": "weapon",
+      "text": "Guden Tyr var modigast av alla. Hans yxa är det också."
+    },
+    "lokesstav": {
+      "name": "Lokes stav",
+      "rarity": "legendary",
+      "kind": "weapon",
+      "text": "Den byter färg när ingen tittar."
+    },
+    "bifrostbage": {
+      "name": "Bifrostbågen",
+      "rarity": "legendary",
+      "kind": "weapon",
+      "text": "Varje pil lämnar en liten regnbåge efter sig."
+    },
+    "heimdallshorn": {
+      "name": "Heimdalls horn",
+      "rarity": "legendary",
+      "kind": "weapon",
+      "text": "När det blåses hörs det i alla nio världar."
+    },
+    "offhand_helskold": {
+      "name": "Helsköld",
+      "rarity": "uncommon",
+      "kind": "offhand",
+      "text": "En rund sköld, kall som en vinternatt."
+    },
+    "offhand_runbok": {
+      "name": "Runboken",
+      "rarity": "rare",
+      "kind": "offhand",
+      "text": "Full av runor. Några av dem kittlar."
+    },
+    "offhand_dvargskold": {
+      "name": "Dvärgsköld",
+      "rarity": "rare",
+      "kind": "offhand",
+      "text": "Smidd av dvärgar, så den håller för vad som helst."
+    },
+    "offhand_koger": {
+      "name": "Snäckkogret",
+      "rarity": "rare",
+      "kind": "offhand",
+      "text": "Ett koger av snäckskal som aldrig blir tomt."
+    },
+    "offhand_perlemorskold": {
+      "name": "Pärlemorskölden",
+      "rarity": "epic",
+      "kind": "offhand",
+      "text": "Den skimrar i alla regnbågens färger."
+    },
+    "offhand_alvlykta": {
+      "name": "Alvlyktan",
+      "rarity": "epic",
+      "kind": "offhand",
+      "text": "En liten lykta med en alv inuti. Ibland vinkar hon."
+    },
+    "offhand_tyrshandske": {
+      "name": "Tyrs handske",
+      "rarity": "legendary",
+      "kind": "offhand",
+      "text": "Guden Tyrs järnhandske. Den är lite för stor, men det gör inget."
+    },
+    "offhand_lokesmask": {
+      "name": "Lokes mask",
+      "rarity": "legendary",
+      "kind": "offhand",
+      "text": "En mask som ler. Ibland blinkar den åt dig."
+    },
+    "amulet_vegvisir": {
+      "name": "Vegvisir",
+      "rarity": "uncommon",
+      "kind": "amulet",
+      "text": "En runa som visar vägen hem, var du än är."
+    },
+    "amulet_helring": {
+      "name": "Hels ring",
+      "rarity": "rare",
+      "kind": "amulet",
+      "text": "En ring av svart sten. Den är alltid lite kall."
+    },
+    "amulet_andvaranaut": {
+      "name": "Andvaranaut",
+      "rarity": "epic",
+      "kind": "amulet",
+      "text": "Fafners ring. Den vill gärna ha mer guld."
+    },
+    "amulet_perla": {
+      "name": "Havets pärla",
+      "rarity": "epic",
+      "kind": "amulet",
+      "text": "Håll den mot örat, så hör du havet."
+    },
+    "amulet_alvsten": {
+      "name": "Alvstenen",
+      "rarity": "epic",
+      "kind": "amulet",
+      "text": "En sten som lyser som en liten stjärna."
+    },
+    "amulet_gleipnir": {
+      "name": "Gleipner",
+      "rarity": "legendary",
+      "kind": "amulet",
+      "text": "Bandet som höll Fenrisulven, gjort av kattens steg och fiskens andetag."
+    },
+    "amulet_brisingamen": {
+      "name": "Brisingamen",
+      "rarity": "legendary",
+      "kind": "amulet",
+      "text": "Gudinnan Frejas halsband. Det glittrar som tusen solar."
+    },
+    "hat_helhjalm": {
+      "name": "Helhjälm",
+      "rarity": "rare",
+      "kind": "hat",
+      "text": "En gråblek hjälm från Helheim."
+    },
+    "shirt_helrustning": {
+      "name": "Helrustning",
+      "rarity": "rare",
+      "kind": "shirt",
+      "text": "Rustning som lyser svagt grönt i mörkret."
+    },
+    "hat_dvarghjalm": {
+      "name": "Dvärghjälm",
+      "rarity": "rare",
+      "kind": "hat",
+      "text": "En stadig hjälm av mässing, smidd av dvärgar."
+    },
+    "shirt_dvargbrynja": {
+      "name": "Dvärgbrynja",
+      "rarity": "rare",
+      "kind": "shirt",
+      "text": "En brynja av små guldringar. Tung, men så fin!"
+    },
+    "hat_sjokrona": {
+      "name": "Sjökrona",
+      "rarity": "epic",
+      "kind": "hat",
+      "text": "En krona av korall och snäckor."
+    },
+    "shirt_fjallrustning": {
+      "name": "Fjällrustning",
+      "rarity": "epic",
+      "kind": "shirt",
+      "text": "Rustning av glänsande fiskfjäll."
+    },
+    "hat_alvkrona": {
+      "name": "Alvkrona",
+      "rarity": "epic",
+      "kind": "hat",
+      "text": "En smal krona av silver och månsken."
+    },
+    "shirt_alvmantel": {
+      "name": "Alvmantel",
+      "rarity": "epic",
+      "kind": "shirt",
+      "text": "En mantel som glittrar som stjärnhimlen."
+    },
+    "hat_ulvhuva": {
+      "name": "Ulvhuva",
+      "rarity": "epic",
+      "kind": "hat",
+      "text": "En varm luva med ulvöron."
+    },
+    "shirt_ulvpals": {
+      "name": "Ulvpäls",
+      "rarity": "epic",
+      "kind": "shirt",
+      "text": "En grå päls som håller vintern borta."
+    },
+    "hat_lokeshorn": {
+      "name": "Lokes horn",
+      "rarity": "legendary",
+      "kind": "hat",
+      "text": "Två små gröna horn. Nu ser du lite busig ut."
+    },
+    "shirt_lokesmantel": {
+      "name": "Lokes mantel",
+      "rarity": "legendary",
+      "kind": "shirt",
+      "text": "En grön mantel som byter mönster när du snurrar."
+    },
+    "pet_garmvalp": {
+      "name": "Garmvalp",
+      "rarity": "epic",
+      "kind": "pet",
+      "text": "En liten helhundsvalp med två huvuden som båda vill bli klappade."
+    },
+    "pet_guldbagge": {
+      "name": "Guldbagge",
+      "rarity": "epic",
+      "kind": "pet",
+      "text": "En liten guldbagge som surrar och glittrar."
+    },
+    "pet_lysmanet": {
+      "name": "Lysmanet",
+      "rarity": "epic",
+      "kind": "pet",
+      "text": "En liten manet som svävar efter dig och lyser som en nattlampa."
+    },
+    "pet_alvljus": {
+      "name": "Alvljus",
+      "rarity": "epic",
+      "kind": "pet",
+      "text": "En pytteliten ljusalv som fladdrar runt dig."
+    },
+    "pet_ulvvalp": {
+      "name": "Ulvvalp",
+      "rarity": "epic",
+      "kind": "pet",
+      "text": "En grå ulvvalp som ylar när den är glad."
+    },
+    "mount_havshast": {
+      "name": "Havshäst",
+      "rarity": "legendary",
+      "kind": "mount",
+      "text": "En häst med fenor och en man av sjöskum."
+    },
+    "mount_jattehjort": {
+      "name": "Jättehjort",
+      "rarity": "legendary",
+      "kind": "mount",
+      "text": "En vit hjort med lysande horn, stor som en häst."
+    },
+    "mount_fenrisulv": {
+      "name": "Vinterulven",
+      "rarity": "legendary",
+      "kind": "mount",
+      "text": "En jättelik ulv som låter dig rida på ryggen. Snäll mot dig, i alla fall."
+    },
+    "mount_lokeshast": {
+      "name": "Lokes föl",
+      "rarity": "legendary",
+      "kind": "mount",
+      "text": "Ett åttabent föl, Sleipners lilla kusin. Det springer åt alla håll på en gång."
+    },
+    "glimmersten": {
+      "name": "Glimmersten",
+      "rarity": "common",
+      "kind": "quest",
+      "text": "En sten som glittrar som guld. Smed-Stina vill ha den."
+    },
+    "alvdagg": {
+      "name": "Alvdagg",
+      "rarity": "common",
+      "kind": "quest",
+      "text": "Dagg från Alvernas lund som lyser i mörkret. Fru Lind vill ha den."
+    },
+    "krabbklo": {
+      "name": "Krabbklo",
+      "rarity": "common",
+      "kind": "quest",
+      "text": "En stor krabbklo. Pizza-Pino vill ha den."
+    },
+    "ulvtand": {
+      "name": "Ulvtand",
+      "rarity": "common",
+      "kind": "quest",
+      "text": "En tand från en ulv. Fiskar-Sven gör fiskekrokar av dem."
+    },
+    "bifrostskarva": {
+      "name": "Bifrostskärva",
+      "rarity": "common",
+      "kind": "quest",
+      "text": "En glittrande skärva av regnbågsbron. Lilla Elsa samlar på dem."
+    },
+    "styrkedryck": {
+      "name": "Styrkedryck",
+      "rarity": "common",
+      "kind": "potion",
+      "text": "Dricks i en strid: du slår hårdare en liten stund."
+    },
+    "hels_lykta": {
+      "name": "Hels lykta",
+      "rarity": "epic",
+      "kind": "decor",
+      "text": "En lykta från Helheim som lyser grönt och snällt."
+    },
+    "dvargstaty": {
+      "name": "Dvärgstaty",
+      "rarity": "epic",
+      "kind": "decor",
+      "text": "En liten dvärg av guld som vinkar."
+    },
+    "ormtand": {
+      "name": "Ormtand",
+      "rarity": "epic",
+      "kind": "decor",
+      "text": "En tand från Midgårdsormen, stor som en dörr."
+    },
+    "alvlykta": {
+      "name": "Ljusalvernas lykta",
+      "rarity": "epic",
+      "kind": "decor",
+      "text": "Ljusalvernas tack. Den lyser lila hela natten."
+    },
+    "fenrislanka": {
+      "name": "Fenrislänken",
+      "rarity": "legendary",
+      "kind": "decor",
+      "text": "En länk från kedjan som höll Fenrisulven."
+    },
+    "bifrostbit": {
+      "name": "Bit av Bifrost",
+      "rarity": "legendary",
+      "kind": "decor",
+      "text": "En bit av regnbågsbron som skimrar i alla färger."
+    },
+    "shirt_vandrarmantel": {
+      "name": "Vandrarmanteln",
+      "rarity": "uncommon",
+      "kind": "shirt",
+      "text": "En grön mantel för den som har börjat sin vandring."
+    },
+    "hat_glodkrans": {
+      "name": "Glödkransen",
+      "rarity": "rare",
+      "kind": "hat",
+      "text": "En krans som glöder som en brasa i mörkret."
+    },
+    "pet_lyktfe": {
+      "name": "Lyktfén",
+      "rarity": "rare",
+      "kind": "pet",
+      "text": "En liten fe med en lykta, som lyser upp vägen åt dig."
+    },
+    "shirt_glodmantel": {
+      "name": "Glödmanteln",
+      "rarity": "rare",
+      "kind": "shirt",
+      "text": "En mantel med en kant som glöder som kol."
+    },
+    "hat_stjarnkrona": {
+      "name": "Stjärnkronan",
+      "rarity": "epic",
+      "kind": "hat",
+      "text": "En krona av stjärnljus. Den tindrar när du går."
+    },
+    "amulet_hjaltemarke": {
+      "name": "Hjältemärket",
+      "rarity": "epic",
+      "kind": "amulet",
+      "text": "Ett märke av silver som bara riktiga hjältar får bära."
+    },
+    "shirt_stjarnmantel": {
+      "name": "Stjärnmanteln",
+      "rarity": "epic",
+      "kind": "shirt",
+      "text": "En mantel lika mörk som natthimlen, full av små lysande stjärnor."
+    },
+    "hat_norrskenshjalm": {
+      "name": "Norrskenshjälmen",
+      "rarity": "epic",
+      "kind": "hat",
+      "text": "En vingad hjälm som skimrar grönt som norrskenet."
+    },
+    "mount_ljushjort": {
+      "name": "Ljushjorten",
+      "rarity": "legendary",
+      "kind": "mount",
+      "text": "En blekt vitblå hjort vars horn lyser som månsken."
+    },
+    "shirt_eldmantel": {
+      "name": "Eldmanteln",
+      "rarity": "legendary",
+      "kind": "shirt",
+      "text": "En mantel som fladdrar som lågor, men aldrig bränns."
+    },
+    "hat_solkrona": {
+      "name": "Solkronan",
+      "rarity": "legendary",
+      "kind": "hat",
+      "text": "En krona av guld som lyser som solen själv."
+    },
+    "amulet_yggdrasil": {
+      "name": "Yggdrasils löv",
+      "rarity": "legendary",
+      "kind": "amulet",
+      "text": "Ett löv från Världsträdet. Det är grönt året runt."
+    },
+    "shirt_bifrostmantel": {
+      "name": "Bifrostmanteln",
+      "rarity": "legendary",
+      "kind": "shirt",
+      "text": "En mantel vävd av regnbågsbron. Den skimrar i alla färger."
+    },
+    "monsteressens": {
+      "name": "Monsteressens",
+      "rarity": "uncommon",
+      "kind": "material",
+      "text": "En virvlande lila droppe som monstren i fängelsehålorna lämnar efter sig. Smed-Stina smider med den."
+    },
+    "drakfjall": {
+      "name": "Drakfjäll",
+      "rarity": "rare",
+      "kind": "material",
+      "text": "Ett rödgyllene fjäll från en mäktig boss. Det hårdaste Smed-Stina vet."
+    },
+    "jarnsvard": {
+      "name": "Järnsvärd",
+      "rarity": "uncommon",
+      "kind": "weapon",
+      "text": "Ett stadigt svärd av järn, smitt av Smed-Stina."
+    },
+    "jarnyxa": {
+      "name": "Järnyxa",
+      "rarity": "uncommon",
+      "kind": "weapon",
+      "text": "En yxa av järn som biter lika bra i ved som i monster."
+    },
+    "ekstav": {
+      "name": "Ekstav",
+      "rarity": "uncommon",
+      "kind": "weapon",
+      "text": "En stav av ek med guldbeslag. Den känns varm i handen."
+    },
+    "jaktbage": {
+      "name": "Jaktbåge",
+      "rarity": "uncommon",
+      "kind": "weapon",
+      "text": "En enkel båge av trä och snöre, men den skjuter rakt."
+    },
+    "traskold": {
+      "name": "Träsköld",
+      "rarity": "uncommon",
+      "kind": "offhand",
+      "text": "En rund sköld av trä med en kant av guld."
+    },
+    "stenamulett": {
+      "name": "Stenamulett",
+      "rarity": "uncommon",
+      "kind": "amulet",
+      "text": "En slät sten med en kristall i, på ett läderband."
+    }
+  },
+  "rarity": {
+    "colors": {
+      "common": "#ffffff",
+      "uncommon": "#1eff00",
+      "rare": "#0070dd",
+      "epic": "#a335ee",
+      "legendary": "#ff8000"
+    },
+    "names": {
+      "common": "Vanlig",
+      "uncommon": "Ovanlig",
+      "rare": "Sällsynt",
+      "epic": "Episk",
+      "legendary": "Legendarisk"
+    }
+  },
+  "chatPhrases": [
+    "Hej! 👋",
+    "Kom hit!",
+    "Titta här! 👀",
+    "Hjälp mig!",
+    "Tack! ❤️",
+    "Ja!",
+    "Nej",
+    "Vänta på mig!",
+    "Följ mig!",
+    "Haha 😂",
+    "Godnatt! 💤",
+    "Hejdå!"
+  ]
 }
