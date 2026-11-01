@@ -186,3 +186,39 @@ The family finished the saga and asked for more to do out in the world: bigger m
 - **The cap.** `POWER_CAP` goes from 1.8 to 2.0 with forging counted inside the product. The reasoning: damage is `RARITY_POWER × (1 + Σ gear, forge included) × class fit × level`. A level-20 parent in a fully forged legendary set with a class that fits would be well over 2× without the cap; with it they do at most twice what a level-1 kid in plain gear does, and the monsters scale with the party (`mobHpScale`, `bossHpScale`) rather than with anyone's gear, so a dungeon stays a team effort and a kid is never a passenger. Health still grows with the amulet and the level, and armor stays capped at 0.4.
 - **Replays.** `prog.chestDay` maps a boss species to the game day its chest was last taken in full. A boss or mid-boss chest gives its full loot (and, from a final boss, one Drakfjäll) the first time each game day per player; after that the same day it is the replay chest (`replayChest`): a third of the coins, 2–4 monsteressens, one drakfjäll from a final boss, no stars, the usual XP, and a loot window that says which chest it was (`replay: true` on the `loot` change). Dungeon monsters (not a boss's helpers) drop a Monsteressens with `ESSENS_CHANCE` 15 % into the bag of whoever beat them. Together they are why a family can replay for materials without the same rolls becoming a farm for stars.
 - **Best times.** `sagaBest` is on the farm world (`farm.sagaBest[dungeon] = { ms, names, day }`): `bestTime` measures from the first player's entry on a fresh instance (`startedAt`) to the last boss's fall, and keeps the best. A new best sends a `sagaBest` change (the clients store it and the journal's dungeon cards show it) and, when it beats an old one, a toast to everyone. It is saved in the `saga_best` jsonb column on the world table (migration `0003_saga_best`, nullable so existing farms are untouched); the store loads it into the farm record and writes it with the rest.
+
+## Native login (2026-11-01)
+Milestone M2 of `PLAN.md`: the Godot client (`packages/godot`) logs in with the same join codes as the browser, but it
+has no cookie jar. So the device token (the long random token whose sha256 is the only thing stored in `devices`) can
+travel in a header too. Nothing changes for browsers; the parent page is untouched.
+- **Routes** (`server/src/http.ts`), all JSON, no cookies set or read:
+  - `POST /api/join` with `{ code, name? }`: exactly `/join` (same `Access.redeem`: normalised code, device limit,
+    expiry, reopen codes, the wrong-code limits of 10 per address per 15 min and 100 per hour, the 10-device cap on
+    waiting devices). Answers `200 { gate, token, name, kind, pending? }`: `gate` is the device's gate right now
+    (`ok` for an auto code, `pending` for a parent-approved one), `token` the new device token, `name`/`kind` the
+    device's, and `pending` the 6-digit number the parent sees, only while waiting. Errors: `403 { error: 'invalid' }`
+    (unknown, used or expired code), `403 { error: 'full' }`, `429 { error: 'limit' }`, `400 { error: 'json' }`.
+  - `GET /api/gate`: the same answer as `/api/me` (`{ gate, name?, kind?, canCreate? }`, 200 when `ok`, else 403),
+    plus `hours: { from, to }` when the gate is `hours`, so a client can show when the farm opens. The native client
+    polls it every 3 s while it waits for approval or while the farm is shut.
+  - `GET /api/players` (the "Vem är du?" list) and `POST /api/players` work with a bearer as they do with the cookie.
+  - Without access control (`ACCESS=open`) `/api/join` answers `{ gate: 'ok' }` with no token and `/api/gate`
+    `{ gate: 'ok', canCreate: true }`, like `/api/me`.
+- **The bearer rule.** `bearerToken(header)` in `access.ts` reads `Authorization: Bearer <token>`; `deviceOf` in
+  `http.ts` looks there first and at the `lg_device` cookie second, everywhere the cookie was read, including the `/ws`
+  upgrade. If both are present the header wins (a wrong header with a right cookie is refused). `/admin` and the parent
+  session never take a bearer: a bearer carrying a device token or a parent session token gets the login redirect
+  (401 on POST). The token itself is unchanged: `Access.redeem` makes it, only its hash is stored, `deviceFor` finds
+  it, and the parent's pause/remove/close reach a bearer socket through the same `enforce()` (close 4003).
+- **Origin.** A native client sends no `Origin`. The origin check lets a request through without one when it carries
+  a bearer token and is not for `/admin`; a request with an `Origin` that does not match is refused as before, bearer
+  or not, and the browser rules (`Origin` must match the host or `PUBLIC_URL`; `"null"` needs same-origin fetch
+  metadata) are unchanged. A browser cannot attach a bearer header cross-site without a CORS preflight, which the server
+  does not answer, so the carve-out opens nothing for cookies.
+- **The client's side** (`packages/godot`): `user://settings.cfg` holds the server address (default
+  `https://example.invalid`, typed on the login screen; `http`/`ws` only for `localhost`), the token, the pending
+  number and the last character. `Net` (`scripts/net.gd`) opens `WebSocketPeer` to `/ws` with the bearer in
+  `handshake_headers`, sends `hello`, pings every 15 s, reconnects with backoff (0.5–8 s) and stops on 4003; a dropped
+  socket asks `/api/gate` once, like the browser's `checkAccess`, and goes back to the login screen if the device may
+  not play. Strings come from `assets/sv.json`, generated from `sv.ts` by `pnpm godot:strings` (the gate and join
+  texts moved into `sv.ts` for that; the server pages use them too).

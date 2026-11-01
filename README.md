@@ -121,6 +121,43 @@ Environment:
 | `TURN_URLS`       | Röstprat: a TURN relay for the connections STUN can't manage (mobile data, strict NATs), with either `TURN_USERNAME` + `TURN_CREDENTIAL` (fixed login) or `TURN_SECRET` (coturn `use-auth-secret`: short-lived logins made by the server). |
 | `CLOUDFLARE_TURN_KEY_ID` | Röstprat: Cloudflare's TURN service instead of a relay of your own (`CLOUDFLARE_TURN_API_TOKEN` alongside). Short-lived logins are fetched from its API and cached. The public farm has no open ports, so this is the one that fits it. |
 
+## Native client
+
+The game is being rewritten as a native Godot client (`packages/godot`, [PLAN.md](PLAN.md) section 3). Milestone M2
+is a skeleton: it logs in with a join code, lets you pick a character, connects to the game socket and shows the day,
+the clock, who is online, your own hero as a placeholder (walk with WASD, the arrows or a gamepad; the others see you
+move) and a log of what the server sends. No world is drawn yet. The browser game keeps working unchanged.
+
+**Run it locally against `pnpm dev`:**
+
+1. Install [Godot 4.6](https://godotengine.org/download) (the standard build, not .NET). Any 4.6.x works for
+   editing; CI pins 4.6.3.
+2. `pnpm dev` as above, and make a join code on the parent page (`http://localhost:8080/admin`).
+3. Open `packages/godot/project.godot` in Godot and press Play (or `godot --path packages/godot`).
+4. On the login screen, type the server's address: `http://localhost:8080` for a local server (plain `http`/`ws`
+   is only used for `localhost`; anything else becomes `https`/`wss`), or the real farm's address. Then the join code
+   and what to call this computer, and press Kom in.
+5. A code the parent approves shows the 6-digit number; the client polls `/api/gate` every few seconds and goes on
+   to "Vem är du?" when the parent has approved the device on the parent page. The character picker lists the
+   characters this device may play (characters are still created in the browser for now).
+
+The client stores the server address and its device token in `user://settings.cfg` (`~/.local/share/godot/app_userdata/Sagan om Världsträdet/`
+on Linux, `~/Library/Application Support/Godot/app_userdata/…` on macOS, `%APPDATA%\Godot\app_userdata\…` on
+Windows); "Glöm den här enheten" clears it. The token is the same long random device token the browser keeps in its
+cookie, sent as `Authorization: Bearer` instead; the parent page shows the device like any other and can pause or
+remove it, which closes the game socket at once (code 4003) and sends the client back to the login screen. With
+`ACCESS=open` the server hands out no token and the client connects without one.
+
+**Strings.** Every Swedish text comes from `packages/shared/src/sv.ts`; `pnpm godot:strings` writes
+`packages/godot/assets/sv.json` from it (Node 22.18+ runs the script as it is). Commit the json; the Godot workflow
+fails when it is out of date.
+
+**Builds.** `.github/workflows/godot.yml` exports Windows x86_64, macOS universal, Linux x86_64 and Linux arm64 with
+Godot 4.6.3 and its export templates (downloaded by pinned URL and SHA-512, cached between runs). Every pull request
+runs it as a check (the exports are workflow artifacts), and a tag `v*` attaches the four zips to a GitHub Release.
+The macOS app is ad-hoc signed and not notarized: the first start needs right-click → Open. Art licences go in
+`packages/godot/assets/LICENSES.md` from the first asset.
+
 ## Who may enter (access control)
 
 Lilla Gården is a kids' game, so nobody gets in without a parent having said yes:
@@ -153,6 +190,10 @@ Lilla Gården is a kids' game, so nobody gets in without a parent having said ye
 11. **Web hardening**: `HttpOnly` + `SameSite=Strict` cookies (`Secure` over HTTPS), origin checks on every form and
     on the WebSocket, strict Content-Security-Policy, no framing, `noindex`, `/health` reveals nothing.
 
+A native client (the Godot game) cannot hold the cookie, so the same device token is also accepted as an
+`Authorization: Bearer` header on `/api/*` and on the game socket; `POST /api/join` answers it in JSON. The parent page
+stays cookie-only. See "Native login" in [DESIGN.md](DESIGN.md).
+
 There is still no text chat: players can only use emotes.
 
 ## Layout
@@ -164,6 +205,8 @@ There is still no text chat: players can only use emotes.
 - `packages/clientljs` – the game, drawn with [LittleJS](https://github.com/KilledByAPixel/LittleJS): light and
   shadow, animation and the cozy extras (see below). PWA, landscape. Its HUD, menus, networking, sounds and pixel art
   come from `packages/client` (the `@v1/*` alias); the view is its own.
+- `packages/godot` – the native client (Godot 4.6, GDScript): the login screen, the socket and a bare world view so
+  far; `tools/export-strings.mts` makes its `assets/sv.json` from the shared strings
 - `packages/client` – the HTML menus, HUD, networking, client state, sounds and the pixel art generated in code
   (once the Phaser client; that view is gone, the shared parts stay here)
 
