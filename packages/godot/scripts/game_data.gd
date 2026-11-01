@@ -1,15 +1,27 @@
 extends Node
 ## The shared game data the client needs, read from json the shared package generates: assets/game.json
 ## (`pnpm godot:data`: object footprints and solidity, the dungeons, the creatures, the classes, the movement
-## constants) and assets/sprites/atlas.json (`pnpm godot:sprites`: the sprite sheets). Never edit the json by hand.
+## constants, and since M3b the spells, the bosses' moves, the saga's items, the chat phrases and the fight's
+## constants) and assets/sprites/atlas.json (`pnpm godot:sprites`: the sprite sheets and the icon sheet).
+## Never edit the json by hand.
 
 var constants: Dictionary = {}
 var wall_terrain: Dictionary = {} ## terrain -> true, for ground nobody walks on (WALL_TERRAIN)
 var objects: Dictionary = {}
 var dungeons: Dictionary = {}
 var mobs: Dictionary = {}
+var bosses: Dictionary = {}
+var spells: Dictionary = {}
 var classes: Dictionary = {}
+var items: Dictionary = {}
+var rarity_colors: Dictionary = {}
+var rarity_names: Dictionary = {}
+var chat_phrases: Array = []
+var flags: Dictionary = {"down": 1, "wall": 2, "rage": 4, "hot": 8, "slow": 16, "frozen": 32}
+var interrupt_kinds: Array = ["bash", "charge", "lance"]
 var atlas: Dictionary = {}
+var _icon_sheet: Texture2D = null
+var _icon_cache: Dictionary = {}
 
 
 func _ready() -> void:
@@ -21,7 +33,18 @@ func _ready() -> void:
 		objects = g.get("objects", {})
 		dungeons = g.get("dungeons", {})
 		mobs = g.get("mobs", {})
+		bosses = g.get("bosses", {})
+		spells = g.get("spells", {})
 		classes = g.get("classes", {})
+		items = g.get("items", {})
+		var rar: Dictionary = g.get("rarity", {})
+		rarity_colors = rar.get("colors", {})
+		rarity_names = rar.get("names", {})
+		chat_phrases = g.get("chatPhrases", [])
+		if g.get("flags") is Dictionary:
+			flags = g.get("flags")
+		if g.get("interruptKinds") is Array:
+			interrupt_kinds = g.get("interruptKinds")
 	var a: Variant = _read("res://assets/sprites/atlas.json", "pnpm godot:sprites")
 	if a is Dictionary:
 		atlas = a
@@ -44,6 +67,10 @@ func constant(key: String, fallback: float) -> float:
 	return float(constants.get(key, fallback))
 
 
+func flag(flag_name: String) -> int:
+	return int(flags.get(flag_name, 0))
+
+
 ## An object kind's footprint and whether it blocks walking (an unknown kind is taken as a solid 1×1).
 func object_def(kind: String) -> Dictionary:
 	return objects.get(kind, {"w": 1, "h": 1, "solid": true})
@@ -63,6 +90,46 @@ func dungeon_of_key(key: String) -> String:
 
 func dungeon(id: String) -> Dictionary:
 	return dungeons.get(id, {})
+
+
+func spell(id: String) -> Dictionary:
+	return spells.get(id, {})
+
+
+## A class's four spell ids ([] without a class).
+func class_spells(cls: String) -> Array:
+	return classes.get(cls, {}).get("spells", [])
+
+
+func boss(species: String) -> Dictionary:
+	return bosses.get(species, {})
+
+
+func is_boss(species: String) -> bool:
+	return bosses.has(species)
+
+
+## A creature's fight record from the data (reach, speed, hp…); {} for an unknown species.
+func mob(species: String) -> Dictionary:
+	return mobs.get(species, {})
+
+
+## The ice block or web that holds a frozen friend.
+func is_block(species: String) -> bool:
+	return bool(mob(species).get("block", false))
+
+
+func item(id: String) -> Dictionary:
+	return items.get(id, {})
+
+
+func item_name(id: String) -> String:
+	return str(item(id).get("name", id))
+
+
+func rarity_color(rarity: String) -> Color:
+	var hex := str(rarity_colors.get(rarity, "#ffffff"))
+	return Color.html(hex) if hex.is_valid_html_color() else Color.WHITE
 
 
 ## A sheet's entry in the atlas ({} when there is none).
@@ -98,3 +165,31 @@ func mob_sheet(species: String) -> String:
 
 func mob_name(species: String) -> String:
 	return str(mobs.get(species, {}).get("name", species))
+
+
+## An icon from icons.png (`spell_<id>`, `emote_<id>`, `item_<id>`, `ui_<name>`) as a texture; null when missing.
+func icon(icon_name: String) -> Texture2D:
+	if _icon_cache.has(icon_name):
+		return _icon_cache[icon_name]
+	var entry: Variant = atlas.get("icons", {}).get(icon_name)
+	var tex: Texture2D = null
+	if entry is Dictionary:
+		if _icon_sheet == null and ResourceLoader.exists("res://assets/sprites/icons.png"):
+			_icon_sheet = load("res://assets/sprites/icons.png")
+		if _icon_sheet != null:
+			var at := AtlasTexture.new()
+			at.atlas = _icon_sheet
+			at.region = Rect2(float(entry.get("x", 0)), float(entry.get("y", 0)), float(entry.get("w", 32)), float(entry.get("h", 32)))
+			tex = at
+	_icon_cache[icon_name] = tex
+	return tex
+
+
+## An item's picture for the loot window: its own, else its kind's emoji (the browser's itemIcon).
+func item_icon(id: String) -> Texture2D:
+	var own := icon("item_" + id)
+	if own != null:
+		return own
+	var kind := str(item(id).get("kind", ""))
+	var by_kind := {"weapon": "ui_sword", "offhand": "ui_shield", "potion": "ui_potion", "quest": "ui_box", "material": "ui_box"}
+	return icon(str(by_kind.get(kind, "ui_chest")))

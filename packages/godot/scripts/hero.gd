@@ -20,6 +20,9 @@ var world: Dictionary = {}
 ## 0 when fallen or frozen, SLOW_MUL when slowed (the dungeon's rules), 1 otherwise.
 var speed_mul := 1.0
 var send_moves := true
+## Set by the bot (and the spell wheel while it is open): walks this way instead of reading the Input Map.
+var drive := Vector2.ZERO
+var driven := false
 var _send_in := 0.0
 var _map_w := 64
 var _map_h := 64
@@ -32,6 +35,8 @@ func _init() -> void:
 
 func reset() -> void:
 	world = {}
+	drive = Vector2.ZERO
+	driven = false
 	px = 0.0
 	py = 0.0
 	facing = "down"
@@ -70,7 +75,7 @@ func _sync_scene() -> void:
 func _physics_process(delta: float) -> void:
 	if world.is_empty():
 		return
-	var dir := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	var dir := drive if driven else Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	var was_moving := moving
 	_step(dir, delta)
 	_send_in -= delta
@@ -143,6 +148,12 @@ func _is_solid(tx: int, ty: int) -> bool:
 	if not (obj is Dictionary):
 		return false
 	return bool(Data.object_def(str(obj.get("kind", ""))).get("solid", true))
+
+
+## The swing of a spell: a lunge towards `at` (scene units) and a flash.
+func swing(at: Vector3, colour: Color) -> void:
+	actor.lunge(at - position, 0.3)
+	actor.flash(colour, 0.15)
 
 
 ## The tile in front of me (facingTile in sim.ts: one tile on from the one I stand on).

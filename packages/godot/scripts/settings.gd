@@ -11,6 +11,9 @@ var token: String = ""
 var pending_code: String = ""
 var player_id: String = ""
 var quality: String = "mellan"
+## "buttons": the four spells on X, Y, B and RB (the browser's layout); "wheel": one button opens a radial wheel.
+var spell_input: String = "buttons"
+var show_fps: bool = false
 
 
 func _ready() -> void:
@@ -22,6 +25,8 @@ func _ready() -> void:
 	pending_code = str(cfg.get_value("device", "pending", ""))
 	player_id = str(cfg.get_value("device", "player", ""))
 	quality = str(cfg.get_value("graphics", "quality", "mellan"))
+	spell_input = str(cfg.get_value("input", "spells", "buttons"))
+	show_fps = bool(cfg.get_value("graphics", "fps", false))
 
 
 func save() -> void:
@@ -31,6 +36,8 @@ func save() -> void:
 	cfg.set_value("device", "pending", pending_code)
 	cfg.set_value("device", "player", player_id)
 	cfg.set_value("graphics", "quality", quality)
+	cfg.set_value("input", "spells", spell_input)
+	cfg.set_value("graphics", "fps", show_fps)
 	var err := cfg.save(FILE)
 	if err != OK:
 		push_warning("could not save %s: %s" % [FILE, error_string(err)])
