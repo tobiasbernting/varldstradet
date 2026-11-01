@@ -481,6 +481,7 @@ export class Game {
           return;
         }
         if (msg.a === 'saga') changes = devEnterSaga(this.world, pid, String(msg.id ?? ''));
+        else if (msg.a === 'nextDay') this.skipDay();
         break;
       case 'voice':
         this.voice.handle(pid, msg);

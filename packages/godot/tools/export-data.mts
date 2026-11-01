@@ -13,6 +13,7 @@ import {
   BLOCK_SPECIES,
   CHAT_BUBBLE_MS,
   CHAT_MAX_LEN,
+  CHEST_SIZE,
   CHAT_PHRASES,
   CLASSES,
   CROPS,
@@ -24,17 +25,23 @@ import {
   EMOTE_MS,
   FRIEND_KINDS,
   GCD_MS,
+  HOTBAR_SIZE,
+  INVENTORY_SIZE,
   ITEMS,
   MAP_H,
   MAP_W,
   MAX_HEARTS,
+  MAX_STACK,
   NPCS,
   OBJECTS,
   PLAYER_HALF_H,
   PLAYER_HALF_W,
   PLAYER_SPEED,
+  PICKUP_RADIUS,
   PORTALS,
   POTION_CD,
+  REACH,
+  RIDE_SPEED_MUL,
   RARITY_COLORS,
   RARITY_NAMES,
   SAGA_BOSSES,
@@ -45,24 +52,29 @@ import {
   SPELLS,
   TILE,
   WALL_TERRAIN,
+  WATERING_CAN_CHARGES,
   WIPE_MS,
+  INVENTORY_FILTERS,
+  FILTER_NAMES,
   itemName,
+  CATEGORY_ORDER,
 } from '../../shared/src/index.ts';
 
 const out = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../assets/game.json');
 
-const objects: Record<string, { w: number; h: number; solid: boolean; flat?: true; light?: true; interact?: string }> = {};
+const objects: Record<string, { w: number; h: number; solid: boolean; flat?: true; light?: true; interact?: string; breakWith?: string; harvest?: true }> = {};
 for (const [kind, d] of Object.entries(OBJECTS).sort(([a], [b]) => a.localeCompare(b))) {
-  objects[kind] = { w: d.w, h: d.h, solid: d.solid, ...(d.flat ? { flat: true } : {}), ...(d.light ? { light: true } : {}), ...(d.interact ? { interact: d.interact } : {}) };
+  objects[kind] = { w: d.w, h: d.h, solid: d.solid, ...(d.flat ? { flat: true } : {}), ...(d.light ? { light: true } : {}), ...(d.interact ? { interact: d.interact } : {}), ...(d.breakWith ? { breakWith: d.breakWith } : {}), ...(d.harvest ? { harvest: true as const } : {}) };
 }
 
 /** The crops: how many growth stages before ripe (a crop at stage >= stages is ripe) and what it gives. */
 const crops: Record<string, { stages: number; produce: string }> = {};
 for (const [id, c] of Object.entries(CROPS)) crops[id] = { stages: c.stages.length, produce: c.produce };
 
-/** How long a baby animal stays a baby (isBaby: age < growDays), by species. */
-const animals: Record<string, { growDays: number }> = {};
-for (const [id, a] of Object.entries(ANIMALS)) animals[id] = { growDays: a.growDays };
+/** How long a baby animal stays a baby (isBaby: age < growDays), by species; M4b adds what the farm tells apart: pets
+ * (they follow their owner), what it gives, wild ones, and the speed of a mount (a horse has none of its own: RIDE_SPEED_MUL). */
+const animals: Record<string, { growDays: number; pet?: true; wild?: true; product?: string; mount?: number }> = {};
+for (const [id, a] of Object.entries(ANIMALS)) animals[id] = { growDays: a.growDays, ...(a.pet ? { pet: true as const } : {}), ...(a.wild ? { wild: true as const } : {}), ...(a.product ? { product: a.product } : {}), ...(a.mount ? { mount: a.mount.speed } : {}) };
 
 /** The villagers: who they are and which map they live on (the sprite is npc_<id> in the atlas). */
 const npcs: Record<string, { name: string; area: string }> = {};
@@ -101,13 +113,21 @@ const classes: Record<string, unknown> = {};
 for (const c of Object.values(CLASSES)) classes[c.id] = { name: c.name, roleName: c.roleName, emoji: c.emoji, hp: c.hp, color: c.color, outfit: c.outfit, spells: c.spells };
 
 /** The saga's items (the loot window), plus the farm items a chest can hold (potions, materials). */
-const items: Record<string, { name: string; rarity: string; kind: string; text: string }> = {};
+const items: Record<string, { name: string; rarity: string; kind: string; text: string; category?: string; stack?: number; tool?: string; food?: true }> = {};
 for (const it of SAGA_ITEMS) items[it.id] = { name: it.name, rarity: it.rarity, kind: it.kind, text: it.text };
 for (const id of ['healing_potion', 'styrkedryck']) if (!items[id] && ITEMS[id]) items[id] = { name: itemName(id), rarity: 'common', kind: 'potion', text: '' };
+// M4b: every item the farm knows (the bag, the hotbar and the pick-up lines name and sort them)
+for (const id of Object.keys(ITEMS).sort()) {
+  const d = ITEMS[id]!;
+  const base = items[id] ?? { name: itemName(id), rarity: 'common', kind: d.category, text: '' };
+  items[id] = { ...base, category: d.category, stack: d.stack, ...(d.tool ? { tool: d.tool } : {}), ...(d.food ? { food: true as const } : {}) };
+}
+/** The bag's filter chips (shared/src/filters.ts): id, emoji, the categories it keeps lit, and its name. */
+const filters = INVENTORY_FILTERS.map((f) => ({ id: f.id, emoji: f.emoji, categories: f.categories, name: FILTER_NAMES[f.id] ?? f.id }));
 
 const data = {
   _comment: 'Generated from packages/shared by `pnpm godot:data`. Do not edit; edit the shared data and run the script.',
-  constants: { TILE, MAP_W, MAP_H, MAX_HEARTS, DAY_LENGTH_MS, EDGE_GAP, PLAYER_SPEED, PLAYER_HALF_W, PLAYER_HALF_H, SLOW_MUL, GCD_MS, DOWN_MS, WIPE_MS, POTION_CD, CHAT_MAX_LEN, CHAT_BUBBLE_MS, EMOTE_MS },
+  constants: { TILE, MAP_W, MAP_H, MAX_HEARTS, DAY_LENGTH_MS, EDGE_GAP, REACH, PICKUP_RADIUS, RIDE_SPEED_MUL, WATERING_CAN_CHARGES, HOTBAR_SIZE, INVENTORY_SIZE, CHEST_SIZE, MAX_STACK, PLAYER_SPEED, PLAYER_HALF_W, PLAYER_HALF_H, SLOW_MUL, GCD_MS, DOWN_MS, WIPE_MS, POTION_CD, CHAT_MAX_LEN, CHAT_BUBBLE_MS, EMOTE_MS },
   /** The fighter flags in a saga snapshot (sagasim.ts, SagaSnap.f). */
   flags: { down: 1, wall: 2, rage: 4, hot: 8, slow: 16, frozen: 32 },
   /** Spells that stop a boss's big attack (the browser's INTERRUPTS). */
@@ -127,6 +147,9 @@ const data = {
   spells,
   classes,
   items,
+  filters,
+  /** The category order the server sorts a bag by (shared/src/inventory.ts). */
+  categoryOrder: CATEGORY_ORDER,
   rarity: { colors: RARITY_COLORS, names: RARITY_NAMES },
   chatPhrases: CHAT_PHRASES,
 };

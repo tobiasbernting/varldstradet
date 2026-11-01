@@ -267,69 +267,1935 @@
       "w": 32,
       "h": 32
     },
-    "item_drakfjall": {
+    "item_alvdagg": {
       "x": 128,
       "y": 128,
       "w": 32,
       "h": 32
     },
-    "item_draugyxa": {
+    "item_alvklinga": {
       "x": 160,
       "y": 128,
       "w": 32,
       "h": 32
     },
-    "item_gold": {
+    "item_alvlykta": {
       "x": 192,
       "y": 128,
       "w": 32,
       "h": 32
     },
-    "item_hat_draugkrona": {
+    "item_amulet_alvsten": {
       "x": 224,
       "y": 128,
       "w": 32,
       "h": 32
     },
-    "item_healing_potion": {
+    "item_amulet_andvaranaut": {
       "x": 0,
       "y": 160,
       "w": 32,
       "h": 32
     },
-    "item_monsteressens": {
+    "item_amulet_brisingamen": {
       "x": 32,
       "y": 160,
       "w": 32,
       "h": 32
     },
-    "item_old_coin": {
+    "item_amulet_gleipnir": {
       "x": 64,
       "y": 160,
       "w": 32,
       "h": 32
     },
-    "item_pet_hugin": {
+    "item_amulet_helring": {
       "x": 96,
       "y": 160,
       "w": 32,
       "h": 32
     },
-    "item_runsvard": {
+    "item_amulet_hjaltemarke": {
       "x": 128,
       "y": 160,
       "w": 32,
       "h": 32
     },
-    "item_shirt_ringbrynja": {
+    "item_amulet_perla": {
       "x": 160,
       "y": 160,
       "w": 32,
       "h": 32
     },
-    "item_volvastav": {
+    "item_amulet_vegvisir": {
       "x": 192,
       "y": 160,
+      "w": 32,
+      "h": 32
+    },
+    "item_amulet_yggdrasil": {
+      "x": 224,
+      "y": 160,
+      "w": 32,
+      "h": 32
+    },
+    "item_animal_cat": {
+      "x": 0,
+      "y": 192,
+      "w": 32,
+      "h": 32
+    },
+    "item_animal_cow": {
+      "x": 32,
+      "y": 192,
+      "w": 32,
+      "h": 32
+    },
+    "item_animal_dog": {
+      "x": 64,
+      "y": 192,
+      "w": 32,
+      "h": 32
+    },
+    "item_animal_hen": {
+      "x": 96,
+      "y": 192,
+      "w": 32,
+      "h": 32
+    },
+    "item_animal_horse": {
+      "x": 128,
+      "y": 192,
+      "w": 32,
+      "h": 32
+    },
+    "item_animal_pig": {
+      "x": 160,
+      "y": 192,
+      "w": 32,
+      "h": 32
+    },
+    "item_animal_rabbit": {
+      "x": 192,
+      "y": 192,
+      "w": 32,
+      "h": 32
+    },
+    "item_animal_sheep": {
+      "x": 224,
+      "y": 192,
+      "w": 32,
+      "h": 32
+    },
+    "item_axe": {
+      "x": 0,
+      "y": 224,
+      "w": 32,
+      "h": 32
+    },
+    "item_banana": {
+      "x": 32,
+      "y": 224,
+      "w": 32,
+      "h": 32
+    },
+    "item_barn": {
+      "x": 64,
+      "y": 224,
+      "w": 32,
+      "h": 32
+    },
+    "item_bazooka": {
+      "x": 96,
+      "y": 224,
+      "w": 32,
+      "h": 32
+    },
+    "item_bed": {
+      "x": 128,
+      "y": 224,
+      "w": 32,
+      "h": 32
+    },
+    "item_bench": {
+      "x": 160,
+      "y": 224,
+      "w": 32,
+      "h": 32
+    },
+    "item_bifrostbage": {
+      "x": 192,
+      "y": 224,
+      "w": 32,
+      "h": 32
+    },
+    "item_bifrostbit": {
+      "x": 224,
+      "y": 224,
+      "w": 32,
+      "h": 32
+    },
+    "item_bifrostskarva": {
+      "x": 0,
+      "y": 256,
+      "w": 32,
+      "h": 32
+    },
+    "item_blueberry": {
+      "x": 32,
+      "y": 256,
+      "w": 32,
+      "h": 32
+    },
+    "item_blueberry_pie": {
+      "x": 64,
+      "y": 256,
+      "w": 32,
+      "h": 32
+    },
+    "item_bookshelf": {
+      "x": 96,
+      "y": 256,
+      "w": 32,
+      "h": 32
+    },
+    "item_bow": {
+      "x": 128,
+      "y": 256,
+      "w": 32,
+      "h": 32
+    },
+    "item_bread": {
+      "x": 160,
+      "y": 256,
+      "w": 32,
+      "h": 32
+    },
+    "item_brush": {
+      "x": 192,
+      "y": 256,
+      "w": 32,
+      "h": 32
+    },
+    "item_cactus_fruit": {
+      "x": 224,
+      "y": 256,
+      "w": 32,
+      "h": 32
+    },
+    "item_can": {
+      "x": 0,
+      "y": 288,
+      "w": 32,
+      "h": 32
+    },
+    "item_carrot": {
+      "x": 32,
+      "y": 288,
+      "w": 32,
+      "h": 32
+    },
+    "item_carrot_cake": {
+      "x": 64,
+      "y": 288,
+      "w": 32,
+      "h": 32
+    },
+    "item_carrot_seed": {
+      "x": 96,
+      "y": 288,
+      "w": 32,
+      "h": 32
+    },
+    "item_chair": {
+      "x": 128,
+      "y": 288,
+      "w": 32,
+      "h": 32
+    },
+    "item_chest": {
+      "x": 160,
+      "y": 288,
+      "w": 32,
+      "h": 32
+    },
+    "item_clock": {
+      "x": 192,
+      "y": 288,
+      "w": 32,
+      "h": 32
+    },
+    "item_cloudberry": {
+      "x": 224,
+      "y": 288,
+      "w": 32,
+      "h": 32
+    },
+    "item_cloudberry_jam": {
+      "x": 0,
+      "y": 320,
+      "w": 32,
+      "h": 32
+    },
+    "item_coal": {
+      "x": 32,
+      "y": 320,
+      "w": 32,
+      "h": 32
+    },
+    "item_coop": {
+      "x": 64,
+      "y": 320,
+      "w": 32,
+      "h": 32
+    },
+    "item_crystal": {
+      "x": 96,
+      "y": 320,
+      "w": 32,
+      "h": 32
+    },
+    "item_crystal_lamp": {
+      "x": 128,
+      "y": 320,
+      "w": 32,
+      "h": 32
+    },
+    "item_dino_skeleton": {
+      "x": 160,
+      "y": 320,
+      "w": 32,
+      "h": 32
+    },
+    "item_dirt": {
+      "x": 192,
+      "y": 320,
+      "w": 32,
+      "h": 32
+    },
+    "item_door": {
+      "x": 224,
+      "y": 320,
+      "w": 32,
+      "h": 32
+    },
+    "item_dragon_egg": {
+      "x": 0,
+      "y": 352,
+      "w": 32,
+      "h": 32
+    },
+    "item_drakfjall": {
+      "x": 32,
+      "y": 352,
+      "w": 32,
+      "h": 32
+    },
+    "item_draugjarn": {
+      "x": 64,
+      "y": 352,
+      "w": 32,
+      "h": 32
+    },
+    "item_draugyxa": {
+      "x": 96,
+      "y": 352,
+      "w": 32,
+      "h": 32
+    },
+    "item_dress_blue": {
+      "x": 128,
+      "y": 352,
+      "w": 32,
+      "h": 32
+    },
+    "item_dress_green_belt": {
+      "x": 160,
+      "y": 352,
+      "w": 32,
+      "h": 32
+    },
+    "item_dress_lucia": {
+      "x": 192,
+      "y": 352,
+      "w": 32,
+      "h": 32
+    },
+    "item_dress_midsommar": {
+      "x": 224,
+      "y": 352,
+      "w": 32,
+      "h": 32
+    },
+    "item_dress_mint": {
+      "x": 0,
+      "y": 384,
+      "w": 32,
+      "h": 32
+    },
+    "item_dress_pink": {
+      "x": 32,
+      "y": 384,
+      "w": 32,
+      "h": 32
+    },
+    "item_dress_purple": {
+      "x": 64,
+      "y": 384,
+      "w": 32,
+      "h": 32
+    },
+    "item_dress_red_belt": {
+      "x": 96,
+      "y": 384,
+      "w": 32,
+      "h": 32
+    },
+    "item_dress_white_flowers": {
+      "x": 128,
+      "y": 384,
+      "w": 32,
+      "h": 32
+    },
+    "item_dress_yellow_flowers": {
+      "x": 160,
+      "y": 384,
+      "w": 32,
+      "h": 32
+    },
+    "item_dvargstaty": {
+      "x": 192,
+      "y": 384,
+      "w": 32,
+      "h": 32
+    },
+    "item_easter_twigs": {
+      "x": 224,
+      "y": 384,
+      "w": 32,
+      "h": 32
+    },
+    "item_egg": {
+      "x": 0,
+      "y": 416,
+      "w": 32,
+      "h": 32
+    },
+    "item_egg_basket": {
+      "x": 32,
+      "y": 416,
+      "w": 32,
+      "h": 32
+    },
+    "item_egg_pask": {
+      "x": 64,
+      "y": 416,
+      "w": 32,
+      "h": 32
+    },
+    "item_ekstav": {
+      "x": 96,
+      "y": 416,
+      "w": 32,
+      "h": 32
+    },
+    "item_fafnerstand": {
+      "x": 128,
+      "y": 416,
+      "w": 32,
+      "h": 32
+    },
+    "item_fairy_dust": {
+      "x": 160,
+      "y": 416,
+      "w": 32,
+      "h": 32
+    },
+    "item_fence": {
+      "x": 192,
+      "y": 416,
+      "w": 32,
+      "h": 32
+    },
+    "item_fenrislanka": {
+      "x": 224,
+      "y": 416,
+      "w": 32,
+      "h": 32
+    },
+    "item_fenristand": {
+      "x": 0,
+      "y": 448,
+      "w": 32,
+      "h": 32
+    },
+    "item_fiber": {
+      "x": 32,
+      "y": 448,
+      "w": 32,
+      "h": 32
+    },
+    "item_fire_crystal": {
+      "x": 64,
+      "y": 448,
+      "w": 32,
+      "h": 32
+    },
+    "item_fish_gold": {
+      "x": 96,
+      "y": 448,
+      "w": 32,
+      "h": 32
+    },
+    "item_fish_perch": {
+      "x": 128,
+      "y": 448,
+      "w": 32,
+      "h": 32
+    },
+    "item_fish_pike": {
+      "x": 160,
+      "y": 448,
+      "w": 32,
+      "h": 32
+    },
+    "item_fish_roach": {
+      "x": 192,
+      "y": 448,
+      "w": 32,
+      "h": 32
+    },
+    "item_fish_soup": {
+      "x": 224,
+      "y": 448,
+      "w": 32,
+      "h": 32
+    },
+    "item_floor_stone": {
+      "x": 0,
+      "y": 480,
+      "w": 32,
+      "h": 32
+    },
+    "item_floor_wood": {
+      "x": 32,
+      "y": 480,
+      "w": 32,
+      "h": 32
+    },
+    "item_flower_wreath_decor": {
+      "x": 64,
+      "y": 480,
+      "w": 32,
+      "h": 32
+    },
+    "item_flowerbox": {
+      "x": 96,
+      "y": 480,
+      "w": 32,
+      "h": 32
+    },
+    "item_fossil": {
+      "x": 128,
+      "y": 480,
+      "w": 32,
+      "h": 32
+    },
+    "item_frostbett": {
+      "x": 160,
+      "y": 480,
+      "w": 32,
+      "h": 32
+    },
+    "item_frostros": {
+      "x": 192,
+      "y": 480,
+      "w": 32,
+      "h": 32
+    },
+    "item_fur": {
+      "x": 224,
+      "y": 480,
+      "w": 32,
+      "h": 32
+    },
+    "item_garmklo": {
+      "x": 0,
+      "y": 512,
+      "w": 32,
+      "h": 32
+    },
+    "item_gate": {
+      "x": 32,
+      "y": 512,
+      "w": 32,
+      "h": 32
+    },
+    "item_gem": {
+      "x": 64,
+      "y": 512,
+      "w": 32,
+      "h": 32
+    },
+    "item_ghost_flag": {
+      "x": 96,
+      "y": 512,
+      "w": 32,
+      "h": 32
+    },
+    "item_glimmersten": {
+      "x": 128,
+      "y": 512,
+      "w": 32,
+      "h": 32
+    },
+    "item_glodkol": {
+      "x": 160,
+      "y": 512,
+      "w": 32,
+      "h": 32
+    },
+    "item_glowshroom": {
+      "x": 192,
+      "y": 512,
+      "w": 32,
+      "h": 32
+    },
+    "item_gold": {
+      "x": 224,
+      "y": 512,
+      "w": 32,
+      "h": 32
+    },
+    "item_gown_blue": {
+      "x": 0,
+      "y": 544,
+      "w": 32,
+      "h": 32
+    },
+    "item_gown_gold": {
+      "x": 32,
+      "y": 544,
+      "w": 32,
+      "h": 32
+    },
+    "item_gravel": {
+      "x": 64,
+      "y": 544,
+      "w": 32,
+      "h": 32
+    },
+    "item_gruvhacka": {
+      "x": 96,
+      "y": 544,
+      "w": 32,
+      "h": 32
+    },
+    "item_gungner": {
+      "x": 128,
+      "y": 544,
+      "w": 32,
+      "h": 32
+    },
+    "item_hammer": {
+      "x": 160,
+      "y": 544,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_alvkrona": {
+      "x": 192,
+      "y": 544,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_beanie": {
+      "x": 224,
+      "y": 544,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_bunny": {
+      "x": 0,
+      "y": 576,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_cap_blue": {
+      "x": 32,
+      "y": 576,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_cap_red": {
+      "x": 64,
+      "y": 576,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_cowboy": {
+      "x": 96,
+      "y": 576,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_crown": {
+      "x": 128,
+      "y": 576,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_dino": {
+      "x": 160,
+      "y": 576,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_draugkrona": {
+      "x": 192,
+      "y": 576,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_dvarghjalm": {
+      "x": 224,
+      "y": 576,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_explorer": {
+      "x": 0,
+      "y": 608,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_flowerwreath": {
+      "x": 32,
+      "y": 608,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_frog": {
+      "x": 64,
+      "y": 608,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_glodkrans": {
+      "x": 96,
+      "y": 608,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_helhjalm": {
+      "x": 128,
+      "y": 608,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_hornhjalm": {
+      "x": 160,
+      "y": 608,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_ice_crown": {
+      "x": 192,
+      "y": 608,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_lokeshorn": {
+      "x": 224,
+      "y": 608,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_norrskenshjalm": {
+      "x": 0,
+      "y": 640,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_oden": {
+      "x": 32,
+      "y": 640,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_party": {
+      "x": 64,
+      "y": 640,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_pirate": {
+      "x": 96,
+      "y": 640,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_runhatt": {
+      "x": 128,
+      "y": 640,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_santa": {
+      "x": 160,
+      "y": 640,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_sjokrona": {
+      "x": 192,
+      "y": 640,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_solkrona": {
+      "x": 224,
+      "y": 640,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_space": {
+      "x": 0,
+      "y": 672,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_stjarnkrona": {
+      "x": 32,
+      "y": 672,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_straw": {
+      "x": 64,
+      "y": 672,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_ulvhuva": {
+      "x": 96,
+      "y": 672,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_vaktarhjalm": {
+      "x": 128,
+      "y": 672,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_valkyria": {
+      "x": 160,
+      "y": 672,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_viking": {
+      "x": 192,
+      "y": 672,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_volvakrans": {
+      "x": 224,
+      "y": 672,
+      "w": 32,
+      "h": 32
+    },
+    "item_hat_witch": {
+      "x": 0,
+      "y": 704,
+      "w": 32,
+      "h": 32
+    },
+    "item_hay": {
+      "x": 32,
+      "y": 704,
+      "w": 32,
+      "h": 32
+    },
+    "item_healing_potion": {
+      "x": 64,
+      "y": 704,
+      "w": 32,
+      "h": 32
+    },
+    "item_heartberry": {
+      "x": 96,
+      "y": 704,
+      "w": 32,
+      "h": 32
+    },
+    "item_heimdallshorn": {
+      "x": 128,
+      "y": 704,
+      "w": 32,
+      "h": 32
+    },
+    "item_hels_lykta": {
+      "x": 160,
+      "y": 704,
+      "w": 32,
+      "h": 32
+    },
+    "item_helsvard": {
+      "x": 192,
+      "y": 704,
+      "w": 32,
+      "h": 32
+    },
+    "item_hoe": {
+      "x": 224,
+      "y": 704,
+      "w": 32,
+      "h": 32
+    },
+    "item_honey": {
+      "x": 0,
+      "y": 736,
+      "w": 32,
+      "h": 32
+    },
+    "item_hutch": {
+      "x": 32,
+      "y": 736,
+      "w": 32,
+      "h": 32
+    },
+    "item_iceberry": {
+      "x": 64,
+      "y": 736,
+      "w": 32,
+      "h": 32
+    },
+    "item_idol": {
+      "x": 96,
+      "y": 736,
+      "w": 32,
+      "h": 32
+    },
+    "item_isyxa": {
+      "x": 128,
+      "y": 736,
+      "w": 32,
+      "h": 32
+    },
+    "item_jaktbage": {
+      "x": 160,
+      "y": 736,
+      "w": 32,
+      "h": 32
+    },
+    "item_jarnsvard": {
+      "x": 192,
+      "y": 736,
+      "w": 32,
+      "h": 32
+    },
+    "item_jarnyxa": {
+      "x": 224,
+      "y": 736,
+      "w": 32,
+      "h": 32
+    },
+    "item_korallspjut": {
+      "x": 0,
+      "y": 768,
+      "w": 32,
+      "h": 32
+    },
+    "item_krabbklo": {
+      "x": 32,
+      "y": 768,
+      "w": 32,
+      "h": 32
+    },
+    "item_lamp": {
+      "x": 64,
+      "y": 768,
+      "w": 32,
+      "h": 32
+    },
+    "item_lasso": {
+      "x": 96,
+      "y": 768,
+      "w": 32,
+      "h": 32
+    },
+    "item_lemonade": {
+      "x": 128,
+      "y": 768,
+      "w": 32,
+      "h": 32
+    },
+    "item_lights": {
+      "x": 160,
+      "y": 768,
+      "w": 32,
+      "h": 32
+    },
+    "item_lokesstav": {
+      "x": 192,
+      "y": 768,
+      "w": 32,
+      "h": 32
+    },
+    "item_lollipop": {
+      "x": 224,
+      "y": 768,
+      "w": 32,
+      "h": 32
+    },
+    "item_manstav": {
+      "x": 0,
+      "y": 800,
+      "w": 32,
+      "h": 32
+    },
+    "item_maypole": {
+      "x": 32,
+      "y": 800,
+      "w": 32,
+      "h": 32
+    },
+    "item_milk": {
+      "x": 64,
+      "y": 800,
+      "w": 32,
+      "h": 32
+    },
+    "item_mjolner": {
+      "x": 96,
+      "y": 800,
+      "w": 32,
+      "h": 32
+    },
+    "item_monsteressens": {
+      "x": 128,
+      "y": 800,
+      "w": 32,
+      "h": 32
+    },
+    "item_moon_cheese": {
+      "x": 160,
+      "y": 800,
+      "w": 32,
+      "h": 32
+    },
+    "item_moon_rock": {
+      "x": 192,
+      "y": 800,
+      "w": 32,
+      "h": 32
+    },
+    "item_mount_fenrisulv": {
+      "x": 224,
+      "y": 800,
+      "w": 32,
+      "h": 32
+    },
+    "item_mount_gullinbursti": {
+      "x": 0,
+      "y": 832,
+      "w": 32,
+      "h": 32
+    },
+    "item_mount_havshast": {
+      "x": 32,
+      "y": 832,
+      "w": 32,
+      "h": 32
+    },
+    "item_mount_jattehjort": {
+      "x": 64,
+      "y": 832,
+      "w": 32,
+      "h": 32
+    },
+    "item_mount_ljushjort": {
+      "x": 96,
+      "y": 832,
+      "w": 32,
+      "h": 32
+    },
+    "item_mount_lokeshast": {
+      "x": 128,
+      "y": 832,
+      "w": 32,
+      "h": 32
+    },
+    "item_mount_sleipner": {
+      "x": 160,
+      "y": 832,
+      "w": 32,
+      "h": 32
+    },
+    "item_mushroom": {
+      "x": 192,
+      "y": 832,
+      "w": 32,
+      "h": 32
+    },
+    "item_mushroom_lamp": {
+      "x": 224,
+      "y": 832,
+      "w": 32,
+      "h": 32
+    },
+    "item_obsidian": {
+      "x": 0,
+      "y": 864,
+      "w": 32,
+      "h": 32
+    },
+    "item_offhand_alvlykta": {
+      "x": 32,
+      "y": 864,
+      "w": 32,
+      "h": 32
+    },
+    "item_offhand_dvargskold": {
+      "x": 64,
+      "y": 864,
+      "w": 32,
+      "h": 32
+    },
+    "item_offhand_helskold": {
+      "x": 96,
+      "y": 864,
+      "w": 32,
+      "h": 32
+    },
+    "item_offhand_koger": {
+      "x": 128,
+      "y": 864,
+      "w": 32,
+      "h": 32
+    },
+    "item_offhand_lokesmask": {
+      "x": 160,
+      "y": 864,
+      "w": 32,
+      "h": 32
+    },
+    "item_offhand_perlemorskold": {
+      "x": 192,
+      "y": 864,
+      "w": 32,
+      "h": 32
+    },
+    "item_offhand_runbok": {
+      "x": 224,
+      "y": 864,
+      "w": 32,
+      "h": 32
+    },
+    "item_offhand_tyrshandske": {
+      "x": 0,
+      "y": 896,
+      "w": 32,
+      "h": 32
+    },
+    "item_old_coin": {
+      "x": 32,
+      "y": 896,
+      "w": 32,
+      "h": 32
+    },
+    "item_ormtand": {
+      "x": 64,
+      "y": 896,
+      "w": 32,
+      "h": 32
+    },
+    "item_paint_blue": {
+      "x": 96,
+      "y": 896,
+      "w": 32,
+      "h": 32
+    },
+    "item_paint_green": {
+      "x": 128,
+      "y": 896,
+      "w": 32,
+      "h": 32
+    },
+    "item_paint_pink": {
+      "x": 160,
+      "y": 896,
+      "w": 32,
+      "h": 32
+    },
+    "item_paint_red": {
+      "x": 192,
+      "y": 896,
+      "w": 32,
+      "h": 32
+    },
+    "item_paint_white": {
+      "x": 224,
+      "y": 896,
+      "w": 32,
+      "h": 32
+    },
+    "item_paint_yellow": {
+      "x": 0,
+      "y": 928,
+      "w": 32,
+      "h": 32
+    },
+    "item_painting": {
+      "x": 32,
+      "y": 928,
+      "w": 32,
+      "h": 32
+    },
+    "item_pancakes": {
+      "x": 64,
+      "y": 928,
+      "w": 32,
+      "h": 32
+    },
+    "item_pants_blue": {
+      "x": 96,
+      "y": 928,
+      "w": 32,
+      "h": 32
+    },
+    "item_pants_brown": {
+      "x": 128,
+      "y": 928,
+      "w": 32,
+      "h": 32
+    },
+    "item_pants_green": {
+      "x": 160,
+      "y": 928,
+      "w": 32,
+      "h": 32
+    },
+    "item_pants_red": {
+      "x": 192,
+      "y": 928,
+      "w": 32,
+      "h": 32
+    },
+    "item_pants_skirt_blue": {
+      "x": 224,
+      "y": 928,
+      "w": 32,
+      "h": 32
+    },
+    "item_pants_skirt_pink": {
+      "x": 0,
+      "y": 960,
+      "w": 32,
+      "h": 32
+    },
+    "item_paper": {
+      "x": 32,
+      "y": 960,
+      "w": 32,
+      "h": 32
+    },
+    "item_path_dirt": {
+      "x": 64,
+      "y": 960,
+      "w": 32,
+      "h": 32
+    },
+    "item_path_stone": {
+      "x": 96,
+      "y": 960,
+      "w": 32,
+      "h": 32
+    },
+    "item_pearl": {
+      "x": 128,
+      "y": 960,
+      "w": 32,
+      "h": 32
+    },
+    "item_pet_alvljus": {
+      "x": 160,
+      "y": 960,
+      "w": 32,
+      "h": 32
+    },
+    "item_pet_fenrisvalp": {
+      "x": 192,
+      "y": 960,
+      "w": 32,
+      "h": 32
+    },
+    "item_pet_garmvalp": {
+      "x": 224,
+      "y": 960,
+      "w": 32,
+      "h": 32
+    },
+    "item_pet_guldbagge": {
+      "x": 0,
+      "y": 992,
+      "w": 32,
+      "h": 32
+    },
+    "item_pet_hugin": {
+      "x": 32,
+      "y": 992,
+      "w": 32,
+      "h": 32
+    },
+    "item_pet_lyktfe": {
+      "x": 64,
+      "y": 992,
+      "w": 32,
+      "h": 32
+    },
+    "item_pet_lysmanet": {
+      "x": 96,
+      "y": 992,
+      "w": 32,
+      "h": 32
+    },
+    "item_pet_ulvvalp": {
+      "x": 128,
+      "y": 992,
+      "w": 32,
+      "h": 32
+    },
+    "item_pick": {
+      "x": 160,
+      "y": 992,
+      "w": 32,
+      "h": 32
+    },
+    "item_pigsty": {
+      "x": 192,
+      "y": 992,
+      "w": 32,
+      "h": 32
+    },
+    "item_pizza": {
+      "x": 224,
+      "y": 992,
+      "w": 32,
+      "h": 32
+    },
+    "item_pizza_hawaii": {
+      "x": 0,
+      "y": 1024,
+      "w": 32,
+      "h": 32
+    },
+    "item_pizza_kebab": {
+      "x": 32,
+      "y": 1024,
+      "w": 32,
+      "h": 32
+    },
+    "item_plant": {
+      "x": 64,
+      "y": 1024,
+      "w": 32,
+      "h": 32
+    },
+    "item_polkagris": {
+      "x": 96,
+      "y": 1024,
+      "w": 32,
+      "h": 32
+    },
+    "item_potato": {
+      "x": 128,
+      "y": 1024,
+      "w": 32,
+      "h": 32
+    },
+    "item_potato_seed": {
+      "x": 160,
+      "y": 1024,
+      "w": 32,
+      "h": 32
+    },
+    "item_pumpkin": {
+      "x": 192,
+      "y": 1024,
+      "w": 32,
+      "h": 32
+    },
+    "item_pumpkin_lantern": {
+      "x": 224,
+      "y": 1024,
+      "w": 32,
+      "h": 32
+    },
+    "item_pumpkin_pie": {
+      "x": 0,
+      "y": 1056,
+      "w": 32,
+      "h": 32
+    },
+    "item_pumpkin_seed": {
+      "x": 32,
+      "y": 1056,
+      "w": 32,
+      "h": 32
+    },
+    "item_rocket": {
+      "x": 64,
+      "y": 1056,
+      "w": 32,
+      "h": 32
+    },
+    "item_rod": {
+      "x": 96,
+      "y": 1056,
+      "w": 32,
+      "h": 32
+    },
+    "item_rug": {
+      "x": 128,
+      "y": 1056,
+      "w": 32,
+      "h": 32
+    },
+    "item_runsvard": {
+      "x": 160,
+      "y": 1056,
+      "w": 32,
+      "h": 32
+    },
+    "item_sand": {
+      "x": 192,
+      "y": 1056,
+      "w": 32,
+      "h": 32
+    },
+    "item_scarab": {
+      "x": 224,
+      "y": 1056,
+      "w": 32,
+      "h": 32
+    },
+    "item_scarecrow": {
+      "x": 0,
+      "y": 1088,
+      "w": 32,
+      "h": 32
+    },
+    "item_scythe": {
+      "x": 32,
+      "y": 1088,
+      "w": 32,
+      "h": 32
+    },
+    "item_sheepfold": {
+      "x": 64,
+      "y": 1088,
+      "w": 32,
+      "h": 32
+    },
+    "item_shell": {
+      "x": 96,
+      "y": 1088,
+      "w": 32,
+      "h": 32
+    },
+    "item_shield": {
+      "x": 128,
+      "y": 1088,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_alvmantel": {
+      "x": 160,
+      "y": 1088,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_bifrostmantel": {
+      "x": 192,
+      "y": 1088,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_bjornfall": {
+      "x": 224,
+      "y": 1088,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_bjornskinn": {
+      "x": 0,
+      "y": 1120,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_blue": {
+      "x": 32,
+      "y": 1120,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_dvargbrynja": {
+      "x": 64,
+      "y": 1120,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_easter": {
+      "x": 96,
+      "y": 1120,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_eldmantel": {
+      "x": 128,
+      "y": 1120,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_fjallrustning": {
+      "x": 160,
+      "y": 1120,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_ghost": {
+      "x": 192,
+      "y": 1120,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_glodmantel": {
+      "x": 224,
+      "y": 1120,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_gold": {
+      "x": 0,
+      "y": 1152,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_green": {
+      "x": 32,
+      "y": 1152,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_helrustning": {
+      "x": 64,
+      "y": 1152,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_knight": {
+      "x": 96,
+      "y": 1152,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_lokesmantel": {
+      "x": 128,
+      "y": 1152,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_odenmantel": {
+      "x": 160,
+      "y": 1152,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_overalls": {
+      "x": 192,
+      "y": 1152,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_pink": {
+      "x": 224,
+      "y": 1152,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_purple": {
+      "x": 0,
+      "y": 1184,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_red": {
+      "x": 32,
+      "y": 1184,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_ringbrynja": {
+      "x": 64,
+      "y": 1184,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_runmantel": {
+      "x": 96,
+      "y": 1184,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_space": {
+      "x": 128,
+      "y": 1184,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_star": {
+      "x": 160,
+      "y": 1184,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_stjarnmantel": {
+      "x": 192,
+      "y": 1184,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_stripes": {
+      "x": 224,
+      "y": 1184,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_ulvpals": {
+      "x": 0,
+      "y": 1216,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_vaktarrustning": {
+      "x": 32,
+      "y": 1216,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_vandrarmantel": {
+      "x": 64,
+      "y": 1216,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_volvadrakt": {
+      "x": 96,
+      "y": 1216,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_xmas": {
+      "x": 128,
+      "y": 1216,
+      "w": 32,
+      "h": 32
+    },
+    "item_shirt_yellow": {
+      "x": 160,
+      "y": 1216,
+      "w": 32,
+      "h": 32
+    },
+    "item_shoes_boots": {
+      "x": 192,
+      "y": 1216,
+      "w": 32,
+      "h": 32
+    },
+    "item_shoes_red": {
+      "x": 224,
+      "y": 1216,
+      "w": 32,
+      "h": 32
+    },
+    "item_shoes_rubber": {
+      "x": 0,
+      "y": 1248,
+      "w": 32,
+      "h": 32
+    },
+    "item_snowman": {
+      "x": 32,
+      "y": 1248,
+      "w": 32,
+      "h": 32
+    },
+    "item_sofa": {
+      "x": 64,
+      "y": 1248,
+      "w": 32,
+      "h": 32
+    },
+    "item_solruna": {
+      "x": 96,
+      "y": 1248,
+      "w": 32,
+      "h": 32
+    },
+    "item_stall": {
+      "x": 128,
+      "y": 1248,
+      "w": 32,
+      "h": 32
+    },
+    "item_star_crystal": {
+      "x": 160,
+      "y": 1248,
+      "w": 32,
+      "h": 32
+    },
+    "item_stenamulett": {
+      "x": 192,
+      "y": 1248,
+      "w": 32,
+      "h": 32
+    },
+    "item_stone": {
+      "x": 224,
+      "y": 1248,
+      "w": 32,
+      "h": 32
+    },
+    "item_stormbage": {
+      "x": 0,
+      "y": 1280,
+      "w": 32,
+      "h": 32
+    },
+    "item_stove": {
+      "x": 32,
+      "y": 1280,
+      "w": 32,
+      "h": 32
+    },
+    "item_strawberry": {
+      "x": 64,
+      "y": 1280,
+      "w": 32,
+      "h": 32
+    },
+    "item_strawberry_jam": {
+      "x": 96,
+      "y": 1280,
+      "w": 32,
+      "h": 32
+    },
+    "item_strawberry_seed": {
+      "x": 128,
+      "y": 1280,
+      "w": 32,
+      "h": 32
+    },
+    "item_styrkedryck": {
+      "x": 160,
+      "y": 1280,
+      "w": 32,
+      "h": 32
+    },
+    "item_sunflower": {
+      "x": 192,
+      "y": 1280,
+      "w": 32,
+      "h": 32
+    },
+    "item_sunflower_seed": {
+      "x": 224,
+      "y": 1280,
+      "w": 32,
+      "h": 32
+    },
+    "item_surtsvard": {
+      "x": 0,
+      "y": 1312,
+      "w": 32,
+      "h": 32
+    },
+    "item_sword": {
+      "x": 32,
+      "y": 1312,
+      "w": 32,
+      "h": 32
+    },
+    "item_table": {
+      "x": 64,
+      "y": 1312,
+      "w": 32,
+      "h": 32
+    },
+    "item_tomato": {
+      "x": 96,
+      "y": 1312,
+      "w": 32,
+      "h": 32
+    },
+    "item_tomato_seed": {
+      "x": 128,
+      "y": 1312,
+      "w": 32,
+      "h": 32
+    },
+    "item_torch": {
+      "x": 160,
+      "y": 1312,
+      "w": 32,
+      "h": 32
+    },
+    "item_traskold": {
+      "x": 192,
+      "y": 1312,
+      "w": 32,
+      "h": 32
+    },
+    "item_trough": {
+      "x": 224,
+      "y": 1312,
+      "w": 32,
+      "h": 32
+    },
+    "item_truffle": {
+      "x": 0,
+      "y": 1344,
+      "w": 32,
+      "h": 32
+    },
+    "item_truffle_pasta": {
+      "x": 32,
+      "y": 1344,
+      "w": 32,
+      "h": 32
+    },
+    "item_tyrsyxa": {
+      "x": 64,
+      "y": 1344,
+      "w": 32,
+      "h": 32
+    },
+    "item_ullrsbage": {
+      "x": 96,
+      "y": 1344,
+      "w": 32,
+      "h": 32
+    },
+    "item_ulvtand": {
+      "x": 128,
+      "y": 1344,
+      "w": 32,
+      "h": 32
+    },
+    "item_vehicle_car_blue": {
+      "x": 160,
+      "y": 1344,
+      "w": 32,
+      "h": 32
+    },
+    "item_vehicle_car_red": {
+      "x": 192,
+      "y": 1344,
+      "w": 32,
+      "h": 32
+    },
+    "item_vehicle_car_yellow": {
+      "x": 224,
+      "y": 1344,
+      "w": 32,
+      "h": 32
+    },
+    "item_vehicle_motorcycle": {
+      "x": 0,
+      "y": 1376,
+      "w": 32,
+      "h": 32
+    },
+    "item_volvastav": {
+      "x": 32,
+      "y": 1376,
+      "w": 32,
+      "h": 32
+    },
+    "item_wall_stone": {
+      "x": 64,
+      "y": 1376,
+      "w": 32,
+      "h": 32
+    },
+    "item_wall_wood": {
+      "x": 96,
+      "y": 1376,
+      "w": 32,
+      "h": 32
+    },
+    "item_well": {
+      "x": 128,
+      "y": 1376,
+      "w": 32,
+      "h": 32
+    },
+    "item_wheat": {
+      "x": 160,
+      "y": 1376,
+      "w": 32,
+      "h": 32
+    },
+    "item_wheat_seed": {
+      "x": 192,
+      "y": 1376,
+      "w": 32,
+      "h": 32
+    },
+    "item_window": {
+      "x": 224,
+      "y": 1376,
+      "w": 32,
+      "h": 32
+    },
+    "item_wisp_jar": {
+      "x": 0,
+      "y": 1408,
+      "w": 32,
+      "h": 32
+    },
+    "item_wood": {
+      "x": 32,
+      "y": 1408,
+      "w": 32,
+      "h": 32
+    },
+    "item_wool": {
+      "x": 64,
+      "y": 1408,
+      "w": 32,
+      "h": 32
+    },
+    "item_workbench": {
+      "x": 96,
+      "y": 1408,
+      "w": 32,
+      "h": 32
+    },
+    "item_xmas_tree": {
+      "x": 128,
+      "y": 1408,
+      "w": 32,
+      "h": 32
+    },
+    "item_yggdrasil": {
+      "x": 160,
+      "y": 1408,
       "w": 32,
       "h": 32
     }
@@ -4073,17 +5939,328 @@
         "ui_chat",
         "ui_aim",
         "ui_sword",
+        "item_alvdagg",
+        "item_alvklinga",
+        "item_alvlykta",
+        "item_amulet_alvsten",
+        "item_amulet_andvaranaut",
+        "item_amulet_brisingamen",
+        "item_amulet_gleipnir",
+        "item_amulet_helring",
+        "item_amulet_hjaltemarke",
+        "item_amulet_perla",
+        "item_amulet_vegvisir",
+        "item_amulet_yggdrasil",
+        "item_animal_cat",
+        "item_animal_cow",
+        "item_animal_dog",
+        "item_animal_hen",
+        "item_animal_horse",
+        "item_animal_pig",
+        "item_animal_rabbit",
+        "item_animal_sheep",
+        "item_axe",
+        "item_banana",
+        "item_barn",
+        "item_bazooka",
+        "item_bed",
+        "item_bench",
+        "item_bifrostbage",
+        "item_bifrostbit",
+        "item_bifrostskarva",
+        "item_blueberry",
+        "item_blueberry_pie",
+        "item_bookshelf",
+        "item_bow",
+        "item_bread",
+        "item_brush",
+        "item_cactus_fruit",
+        "item_can",
+        "item_carrot",
+        "item_carrot_cake",
+        "item_carrot_seed",
+        "item_chair",
+        "item_chest",
+        "item_clock",
+        "item_cloudberry",
+        "item_cloudberry_jam",
+        "item_coal",
+        "item_coop",
+        "item_crystal",
+        "item_crystal_lamp",
+        "item_dino_skeleton",
+        "item_dirt",
+        "item_door",
+        "item_dragon_egg",
         "item_drakfjall",
+        "item_draugjarn",
         "item_draugyxa",
+        "item_dress_blue",
+        "item_dress_green_belt",
+        "item_dress_lucia",
+        "item_dress_midsommar",
+        "item_dress_mint",
+        "item_dress_pink",
+        "item_dress_purple",
+        "item_dress_red_belt",
+        "item_dress_white_flowers",
+        "item_dress_yellow_flowers",
+        "item_dvargstaty",
+        "item_easter_twigs",
+        "item_egg",
+        "item_egg_basket",
+        "item_egg_pask",
+        "item_ekstav",
+        "item_fafnerstand",
+        "item_fairy_dust",
+        "item_fence",
+        "item_fenrislanka",
+        "item_fenristand",
+        "item_fiber",
+        "item_fire_crystal",
+        "item_fish_gold",
+        "item_fish_perch",
+        "item_fish_pike",
+        "item_fish_roach",
+        "item_fish_soup",
+        "item_floor_stone",
+        "item_floor_wood",
+        "item_flower_wreath_decor",
+        "item_flowerbox",
+        "item_fossil",
+        "item_frostbett",
+        "item_frostros",
+        "item_fur",
+        "item_garmklo",
+        "item_gate",
+        "item_gem",
+        "item_ghost_flag",
+        "item_glimmersten",
+        "item_glodkol",
+        "item_glowshroom",
         "item_gold",
+        "item_gown_blue",
+        "item_gown_gold",
+        "item_gravel",
+        "item_gruvhacka",
+        "item_gungner",
+        "item_hammer",
+        "item_hat_alvkrona",
+        "item_hat_beanie",
+        "item_hat_bunny",
+        "item_hat_cap_blue",
+        "item_hat_cap_red",
+        "item_hat_cowboy",
+        "item_hat_crown",
+        "item_hat_dino",
         "item_hat_draugkrona",
+        "item_hat_dvarghjalm",
+        "item_hat_explorer",
+        "item_hat_flowerwreath",
+        "item_hat_frog",
+        "item_hat_glodkrans",
+        "item_hat_helhjalm",
+        "item_hat_hornhjalm",
+        "item_hat_ice_crown",
+        "item_hat_lokeshorn",
+        "item_hat_norrskenshjalm",
+        "item_hat_oden",
+        "item_hat_party",
+        "item_hat_pirate",
+        "item_hat_runhatt",
+        "item_hat_santa",
+        "item_hat_sjokrona",
+        "item_hat_solkrona",
+        "item_hat_space",
+        "item_hat_stjarnkrona",
+        "item_hat_straw",
+        "item_hat_ulvhuva",
+        "item_hat_vaktarhjalm",
+        "item_hat_valkyria",
+        "item_hat_viking",
+        "item_hat_volvakrans",
+        "item_hat_witch",
+        "item_hay",
         "item_healing_potion",
+        "item_heartberry",
+        "item_heimdallshorn",
+        "item_hels_lykta",
+        "item_helsvard",
+        "item_hoe",
+        "item_honey",
+        "item_hutch",
+        "item_iceberry",
+        "item_idol",
+        "item_isyxa",
+        "item_jaktbage",
+        "item_jarnsvard",
+        "item_jarnyxa",
+        "item_korallspjut",
+        "item_krabbklo",
+        "item_lamp",
+        "item_lasso",
+        "item_lemonade",
+        "item_lights",
+        "item_lokesstav",
+        "item_lollipop",
+        "item_manstav",
+        "item_maypole",
+        "item_milk",
+        "item_mjolner",
         "item_monsteressens",
+        "item_moon_cheese",
+        "item_moon_rock",
+        "item_mount_fenrisulv",
+        "item_mount_gullinbursti",
+        "item_mount_havshast",
+        "item_mount_jattehjort",
+        "item_mount_ljushjort",
+        "item_mount_lokeshast",
+        "item_mount_sleipner",
+        "item_mushroom",
+        "item_mushroom_lamp",
+        "item_obsidian",
+        "item_offhand_alvlykta",
+        "item_offhand_dvargskold",
+        "item_offhand_helskold",
+        "item_offhand_koger",
+        "item_offhand_lokesmask",
+        "item_offhand_perlemorskold",
+        "item_offhand_runbok",
+        "item_offhand_tyrshandske",
         "item_old_coin",
+        "item_ormtand",
+        "item_paint_blue",
+        "item_paint_green",
+        "item_paint_pink",
+        "item_paint_red",
+        "item_paint_white",
+        "item_paint_yellow",
+        "item_painting",
+        "item_pancakes",
+        "item_pants_blue",
+        "item_pants_brown",
+        "item_pants_green",
+        "item_pants_red",
+        "item_pants_skirt_blue",
+        "item_pants_skirt_pink",
+        "item_paper",
+        "item_path_dirt",
+        "item_path_stone",
+        "item_pearl",
+        "item_pet_alvljus",
+        "item_pet_fenrisvalp",
+        "item_pet_garmvalp",
+        "item_pet_guldbagge",
         "item_pet_hugin",
+        "item_pet_lyktfe",
+        "item_pet_lysmanet",
+        "item_pet_ulvvalp",
+        "item_pick",
+        "item_pigsty",
+        "item_pizza",
+        "item_pizza_hawaii",
+        "item_pizza_kebab",
+        "item_plant",
+        "item_polkagris",
+        "item_potato",
+        "item_potato_seed",
+        "item_pumpkin",
+        "item_pumpkin_lantern",
+        "item_pumpkin_pie",
+        "item_pumpkin_seed",
+        "item_rocket",
+        "item_rod",
+        "item_rug",
         "item_runsvard",
+        "item_sand",
+        "item_scarab",
+        "item_scarecrow",
+        "item_scythe",
+        "item_sheepfold",
+        "item_shell",
+        "item_shield",
+        "item_shirt_alvmantel",
+        "item_shirt_bifrostmantel",
+        "item_shirt_bjornfall",
+        "item_shirt_bjornskinn",
+        "item_shirt_blue",
+        "item_shirt_dvargbrynja",
+        "item_shirt_easter",
+        "item_shirt_eldmantel",
+        "item_shirt_fjallrustning",
+        "item_shirt_ghost",
+        "item_shirt_glodmantel",
+        "item_shirt_gold",
+        "item_shirt_green",
+        "item_shirt_helrustning",
+        "item_shirt_knight",
+        "item_shirt_lokesmantel",
+        "item_shirt_odenmantel",
+        "item_shirt_overalls",
+        "item_shirt_pink",
+        "item_shirt_purple",
+        "item_shirt_red",
         "item_shirt_ringbrynja",
-        "item_volvastav"
+        "item_shirt_runmantel",
+        "item_shirt_space",
+        "item_shirt_star",
+        "item_shirt_stjarnmantel",
+        "item_shirt_stripes",
+        "item_shirt_ulvpals",
+        "item_shirt_vaktarrustning",
+        "item_shirt_vandrarmantel",
+        "item_shirt_volvadrakt",
+        "item_shirt_xmas",
+        "item_shirt_yellow",
+        "item_shoes_boots",
+        "item_shoes_red",
+        "item_shoes_rubber",
+        "item_snowman",
+        "item_sofa",
+        "item_solruna",
+        "item_stall",
+        "item_star_crystal",
+        "item_stenamulett",
+        "item_stone",
+        "item_stormbage",
+        "item_stove",
+        "item_strawberry",
+        "item_strawberry_jam",
+        "item_strawberry_seed",
+        "item_styrkedryck",
+        "item_sunflower",
+        "item_sunflower_seed",
+        "item_surtsvard",
+        "item_sword",
+        "item_table",
+        "item_tomato",
+        "item_tomato_seed",
+        "item_torch",
+        "item_traskold",
+        "item_trough",
+        "item_truffle",
+        "item_truffle_pasta",
+        "item_tyrsyxa",
+        "item_ullrsbage",
+        "item_ulvtand",
+        "item_vehicle_car_blue",
+        "item_vehicle_car_red",
+        "item_vehicle_car_yellow",
+        "item_vehicle_motorcycle",
+        "item_volvastav",
+        "item_wall_stone",
+        "item_wall_wood",
+        "item_well",
+        "item_wheat",
+        "item_wheat_seed",
+        "item_window",
+        "item_wisp_jar",
+        "item_wood",
+        "item_wool",
+        "item_workbench",
+        "item_xmas_tree",
+        "item_yggdrasil"
       ],
       "headroom": 0
     },

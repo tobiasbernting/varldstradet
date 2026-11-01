@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BIOME_NAMES } from '../../shared/src/biomes.ts';
-import { OBJECT_NAMES, SEASON_NAMES, T, WEATHER_EMOJI, WEATHER_NAMES } from '../../shared/src/sv.ts';
+import { OBJECT_NAMES, SEASON_NAMES, SPECIES_NAMES, T, WEATHER_EMOJI, WEATHER_NAMES } from '../../shared/src/sv.ts';
 
 const out = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../assets/sv.json');
 const data = {
@@ -16,6 +16,7 @@ const data = {
   WEATHER_EMOJI,
   BIOME_NAMES,
   OBJECT_NAMES,
+  SPECIES_NAMES,
 };
 fs.writeFileSync(out, JSON.stringify(data, null, 2) + '\n');
 console.log(`${path.relative(process.cwd(), out)}: ${Object.keys(T).length} strings`);

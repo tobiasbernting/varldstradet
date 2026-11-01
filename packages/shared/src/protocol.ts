@@ -118,6 +118,9 @@ export type ClientMsg =
    * if you had walked through its arch; a player without a class becomes a Krigare first. For the native client,
    * which has no world map yet. The server answers `error` when the switch is off. */
   | { t: 'dev'; a: 'saga'; id: string }
+  /** Development only (same switch): the day rolls over now, as the parent page's "skip day" does, so a check can
+   * wait for a crop to grow. The server answers `error` when the switch is off. */
+  | { t: 'dev'; a: 'nextDay' }
   | { t: 'ping' };
 
 export interface PlayerSnap {
