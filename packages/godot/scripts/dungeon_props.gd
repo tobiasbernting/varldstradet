@@ -189,7 +189,9 @@ static func flame(colour: Color, size: float, particles: int) -> Node3D:
 	m.emission_enabled = true
 	m.emission = colour
 	m.emission_energy_multiplier = 1.5
-	node.add_child(_mesh_node(quad, m, Vector3(0.0, size * 0.5, 0.0)))
+	var quad_node := _mesh_node(quad, m, Vector3(0.0, size * 0.5, 0.0))
+	quad_node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF # a flame throws no shadow of its own torch
+	node.add_child(quad_node)
 	if particles > 0:
 		var p := GPUParticles3D.new()
 		p.amount = particles
@@ -221,6 +223,7 @@ static func flame(colour: Color, size: float, particles: int) -> Node3D:
 		sm.emission_energy_multiplier = 2.0
 		spark.material = sm
 		p.draw_pass_1 = spark
+		p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		p.position = Vector3(0.0, size * 0.4, 0.0)
 		node.add_child(p)
 	return node

@@ -1,17 +1,30 @@
 extends Node
 ## The three quality presets of PLAN.md section 3 (and ART.md): Låg for an Intel integrated GPU, Mellan the default
 ## (a MacBook Air), Hög for a dedicated card. Everything expensive is a toggle, so a scene is built once and the
-## preset decides what runs: the 3D resolution scale, how many torches throw shadows, SSAO, global illumination,
+## preset decides what runs: the 3D resolution, how many torches throw shadows, SSAO, global illumination,
 ## volumetric fog, glow and the particle budget. Saved in user://settings.cfg (Settings.quality), applied at start.
+##
+## The 3D resolution is a pixel budget, not a fixed scale: a Retina window of 1280×720 points is 2560×1440 pixels, four
+## times what the same window costs on a 1080p screen, and what a GPU shades is pixels. A preset renders the scene at
+## `scale` of the window, but never more than `mpix` million pixels, and the engine upscales the rest (FSR 1 in
+## Forward+, which keeps the sprites' edges). Shadows are Hög only: each shadow-casting omni light is up to six extra
+## passes over the room.
 
 signal changed(preset: String)
 
 const ORDER := ["lag", "mellan", "hog"]
 const PRESETS := {
-	"lag": {"scale": 0.8, "shadows": 0, "ssao": false, "gi": false, "fog": false, "glow": false, "particles": 0},
-	"mellan": {"scale": 1.0, "shadows": 4, "ssao": true, "gi": false, "fog": false, "glow": true, "particles": 8},
-	"hog": {"scale": 1.0, "shadows": 8, "ssao": true, "gi": true, "fog": true, "glow": true, "particles": 16},
+	"lag": {"scale": 0.8, "mpix": 1.3, "shadows": 0, "ssao": false, "gi": false, "fog": false, "glow": false, "particles": 0},
+	"mellan": {"scale": 1.0, "mpix": 2.1, "shadows": 0, "ssao": true, "gi": false, "fog": false, "glow": true, "particles": 8},
+	"hog": {"scale": 1.0, "mpix": 3.7, "shadows": 6, "ssao": true, "gi": true, "fog": true, "glow": true, "particles": 16},
 }
+## The torch shadows' map: Hög only (the others have no positional shadows at all, so no atlas to clear every frame).
+const SHADOW_ATLAS := 4096
+## Torches farther than this from the camera are not lit at all, and farther than SHADOW_FADE throw no shadow
+## (the camera is ~13 m from the hero and the screen shows ~10 m round them).
+const LIGHT_FADE_BEGIN := 20.0
+const LIGHT_FADE_LENGTH := 6.0
+const SHADOW_FADE := 16.0
 
 var preset := "mellan"
 
@@ -19,6 +32,7 @@ var preset := "mellan"
 func _ready() -> void:
 	preset = Settings.quality if PRESETS.has(Settings.quality) else "mellan"
 	_apply_viewport()
+	get_window().size_changed.connect(_apply_viewport)
 
 
 func set_preset(p: String) -> void:
@@ -52,15 +66,35 @@ func apply_environment(env: Environment) -> void:
 	env.sdfgi_enabled = bool(s.get("gi", false))
 	env.volumetric_fog_enabled = bool(s.get("fog", false))
 	env.glow_enabled = bool(s.get("glow", false))
+	if env.sdfgi_enabled:
+		# a dungeon is two metres tall and the camera sees ~20 m of it: half the height in cells, and two cascades
+		# of 25 cm cells (the first covers 32 m round the camera, the second 64 m) instead of four of 20 cm
+		env.sdfgi_cascades = 2
+		env.sdfgi_min_cell_size = 0.25
+		env.sdfgi_y_scale = Environment.SDFGI_Y_SCALE_50_PERCENT
+	# the light the GI gives is soft: sample it at half the resolution (a global setting; a Retina window has 4× the pixels)
+	RenderingServer.gi_set_use_half_resolution(preset == "hog")
+	# the engine's SSAO is a global setting: low quality at half resolution is plenty for the subtle creases here
+	RenderingServer.environment_set_ssao_quality(RenderingServer.ENV_SSAO_QUALITY_MEDIUM if preset == "hog" else RenderingServer.ENV_SSAO_QUALITY_LOW, true, 0.5, 1, 50.0, 300.0)
+
+
+## The 3D scale this preset gets in a window of `pixels`: its own scale, held down to its pixel budget.
+func scale_for(pixels: Vector2) -> float:
+	var s := spec()
+	var area := maxf(1.0, pixels.x * pixels.y)
+	return clampf(minf(float(s.get("scale", 1.0)), sqrt(float(s.get("mpix", 4.0)) * 1.0e6 / area)), 0.5, 1.0)
 
 
 func _apply_viewport() -> void:
 	var vp := get_viewport()
 	if vp == null:
 		return
-	var scale_by := float(spec().get("scale", 1.0))
+	var scale_by := scale_for(Vector2(get_window().size))
 	vp.scaling_3d_scale = scale_by
-	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR if scale_by < 1.0 else Viewport.SCALING_3D_MODE_BILINEAR
+	var fsr := scale_by < 0.99 and RenderingServer.get_current_rendering_method() != "gl_compatibility"
+	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR if fsr else Viewport.SCALING_3D_MODE_BILINEAR
+	# positional (omni) shadows only on the preset that has them: no atlas to allocate and clear for the others
+	vp.positional_shadow_atlas_size = SHADOW_ATLAS if shadow_lights() > 0 else 0
 
 
 ## The preset's name as the player sees it.

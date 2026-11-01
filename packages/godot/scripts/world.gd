@@ -302,6 +302,7 @@ func _rebuild() -> void:
 	rig.position = hero.position
 	hud.set_area(str(Data.dungeon(id).get("name", key)), true)
 	fx.load_area(key)
+	fx.warm_up(hero.position)
 	hud.build_spell_bar(combat.my_class())
 	if _hint_for != key:
 		_hint_for = key

@@ -40,6 +40,7 @@ var pose := "" ## "", "down", "frozen", "web"
 var _block: Node3D = null
 var _bar: Node3D = null
 var _bar_fill: MeshInstance3D = null
+var _bar_colour := Color(-1.0, 0.0, 0.0)
 var _bar_name: Label3D = null
 var _bubble: Label3D = null
 var _bubble_icon: Sprite3D = null
@@ -104,7 +105,8 @@ func _placeholder() -> void:
 
 
 func set_label(text: String) -> void:
-	label.text = text
+	if label.text != text:
+		label.text = text
 
 
 ## The figure's height in metres (without the headroom) and its width.
@@ -300,17 +302,28 @@ func set_health(k: float, shown: bool, colour: Color, name_text := "") -> void:
 		_bar_name.position.y = 0.2
 		_bar.add_child(_bar_name)
 		add_child(_bar)
-	_bar.visible = pose != "down"
-	_bar.position.y = head_marker_y()
+	# called for every body every frame: set what changed and nothing else (a property set on a node or a material
+	# is a call into the renderer, and a Label3D's text rebuilds its mesh)
+	var vis := pose != "down"
+	if _bar.visible != vis:
+		_bar.visible = vis
+	var y := head_marker_y()
+	if _bar.position.y != y:
+		_bar.position.y = y
 	var w := maxf(0.6, width() * 1.2)
-	_bar.scale.x = w
+	if _bar.scale.x != w:
+		_bar.scale.x = w
+		_bar_name.scale.x = 1.0 / w
 	var kk := clampf(k, 0.0, 1.0)
-	_bar_fill.scale.x = maxf(0.001, kk)
-	_bar_fill.position.x = -(1.0 - kk) / 2.0
-	var mat: StandardMaterial3D = _bar_fill.material_override
-	mat.albedo_color = colour
-	_bar_name.text = name_text
-	_bar_name.scale.x = 1.0 / w
+	if _bar_fill.scale.x != maxf(0.001, kk):
+		_bar_fill.scale.x = maxf(0.001, kk)
+		_bar_fill.position.x = -(1.0 - kk) / 2.0
+	if colour != _bar_colour:
+		_bar_colour = colour
+		var mat: StandardMaterial3D = _bar_fill.material_override
+		mat.albedo_color = colour
+	if _bar_name.text != name_text:
+		_bar_name.text = name_text
 
 
 ## The health the bar shows now, 0–1; -1 when there is no bar or it is hidden (the bot checks it never rises).
