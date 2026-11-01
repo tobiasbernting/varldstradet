@@ -7,12 +7,16 @@ extends CanvasLayer
 signal resumed
 signal switch_player
 signal dev_enter(dungeon: String)
+signal fps_toggled(on: bool)
 
 var _root: Control
 var _main: VBoxContainer
 var _settings: VBoxContainer
 var _quality_buttons: Dictionary = {}
 var _hint: Label
+var _spell_buttons: Dictionary = {}
+var _spell_hint: Label
+var _fps_check: CheckButton
 
 
 func _ready() -> void:
@@ -89,8 +93,37 @@ func _ready() -> void:
 	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_hint.custom_minimum_size = Vector2(0, 60)
 	_settings.add_child(_hint)
+	# the kids' gamepads: the four spells on the face buttons, or one button and a wheel (PLAN.md section 7)
+	var spells_label := Label.new()
+	spells_label.text = Strings.t("settingsSpells")
+	_settings.add_child(spells_label)
+	var spell_row := HBoxContainer.new()
+	spell_row.add_theme_constant_override("separation", 8)
+	_settings.add_child(spell_row)
+	for mode in ["buttons", "wheel"]:
+		var b := Button.new()
+		b.text = Strings.t("spellsButtons" if mode == "buttons" else "spellsWheel")
+		b.toggle_mode = true
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.custom_minimum_size = Vector2(0, 44)
+		b.pressed.connect(func() -> void: _pick_spells(mode))
+		spell_row.add_child(b)
+		_spell_buttons[mode] = b
+	_spell_hint = Label.new()
+	_spell_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_spell_hint.custom_minimum_size = Vector2(0, 50)
+	_settings.add_child(_spell_hint)
+	_fps_check = CheckButton.new()
+	_fps_check.text = Strings.t("settingsFps")
+	_fps_check.button_pressed = Settings.show_fps
+	_fps_check.toggled.connect(func(on: bool) -> void:
+		Settings.show_fps = on
+		Settings.save()
+		fps_toggled.emit(on))
+	_settings.add_child(_fps_check)
 	_settings.add_child(_button(Strings.t("back"), func() -> void: _show_settings(false)))
 	_refresh_quality()
+	_refresh_spells()
 
 
 func _title(text: String) -> Label:
@@ -122,6 +155,7 @@ func toggle() -> void:
 
 func open() -> void:
 	visible = true
+	_fps_check.button_pressed = Settings.show_fps
 	_show_settings(false)
 
 
@@ -141,6 +175,18 @@ func _show_settings(on: bool) -> void:
 func _pick(p: String) -> void:
 	Quality.set_preset(p)
 	_refresh_quality()
+
+
+func _pick_spells(mode: String) -> void:
+	Settings.spell_input = mode
+	Settings.save()
+	_refresh_spells()
+
+
+func _refresh_spells() -> void:
+	for mode in _spell_buttons.keys():
+		_spell_buttons[mode].button_pressed = mode == Settings.spell_input
+	_spell_hint.text = Strings.t("spellsButtonsHint" if Settings.spell_input == "buttons" else "spellsWheelHint")
 
 
 func _refresh_quality() -> void:
