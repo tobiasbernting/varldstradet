@@ -160,6 +160,27 @@ func clear() -> void:
 	area = ""
 
 
+## Uses every material and every kind of text the fight draws once, tiny, for a moment at `at`, so the renderer
+## compiles their pipelines and the font rasterises its glyphs now and not in the middle of the first fight (that
+## first use was a 30–80 ms frame each, the "1 % low" of the first bench). Called when a dungeon is built.
+func warm_up(at: Vector3) -> void:
+	var f := _add(0.25, func(_fx: Fx, _k: float) -> void: pass, at)
+	var tiny := 0.01
+	var glow := _glow(Color.WHITE, tiny)
+	glow.position = at + Vector3(0.0, 0.5, 0.0)
+	var flat := _flat(disc_points(6), Color.WHITE)
+	flat.position = at
+	flat.scale = Vector3(tiny, 1.0, tiny)
+	var ring := _ring(Color.WHITE, tiny)
+	ring.position = at
+	f.nodes = [glow, flat, ring]
+	for size in [56, 48, 40]:
+		var l := _label("0123456789+-!?%.,:()/ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖabcdefghijklmnopqrstuvwxyzåäö", Color.WHITE, size)
+		l.position = at + Vector3(0.0, 0.5, 0.0)
+		l.pixel_size = tiny * 0.01
+		f.nodes.append(l)
+
+
 # ---------------------------------------------------------------------------
 # Primitives
 

@@ -26,6 +26,15 @@ func _ready() -> void:
 		_players.append(p)
 
 
+## Playing streams are still held by the audio server (until it has faded them out) when the process exits, and the
+## engine reports them as leaked: stop them and let go of the streams first (Main.quit_clean waits a moment after).
+func release() -> void:
+	for p in _players:
+		p.stop()
+		p.stream = null
+	_cache.clear()
+
+
 ## Plays a named sound (see the top of the file). `ms` is the boss's warning time for a `windup_*`.
 func play(sound_name: String, ms: float = 1500.0) -> void:
 	if muted:
@@ -41,6 +50,8 @@ func play(sound_name: String, ms: float = 1500.0) -> void:
 		_cache[key] = stream
 		if stream == null:
 			return
+	if DisplayServer.get_name() == "headless":
+		return # nothing is heard, and a playing stream is still held by the audio server when the process exits
 	var p := _players[_next]
 	_next = (_next + 1) % PLAYERS
 	p.stream = stream

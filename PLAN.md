@@ -93,7 +93,7 @@ keyboard and mouse from day one.
 - **Strings.** `packages/shared/src/sv.ts` is exported to `packages/godot/assets/sv.json` by a small script so the
   Swedish text stays in one place.
 - **Renderer and quality tiers.** Start with Forward+ with three presets: *Låg* (no shadows, no GI, no volumetric
-  fog, foliage LOD aggressive, 1080p, target 60 fps on an Intel iGPU laptop), *Mellan* (shadows, SSAO, default on the
+  fog, foliage LOD aggressive, 1080p, target 60 fps on an Intel iGPU laptop), *Mellan* (SSAO and glow, no torch shadows, default on the
   MacBook Air M4) and *Hög* (SDFGI or VoxelGI, volumetric fog, full particle budgets, for dedicated GPUs). If the Låg
   preset cannot hold 60 fps on an Intel iGPU in milestone 3, switch the project to the Mobile renderer, which costs the
   GI options in Hög but nothing the baseline needs. The decision is made with a frame-time capture, not a guess.

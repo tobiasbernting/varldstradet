@@ -82,8 +82,8 @@ jobs:
         run: |
           set -euo pipefail
           timeout 120 ~/godot/godot --headless --path . --quit-after 60 2>&1 | tee run.log
-          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate" run.log; then
-            echo "::error::running the project reported errors (see above)"; exit 1
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate|leaked at exit|still in use at exit|Pages in use exist at exit" run.log; then
+            echo "::error::running the project reported errors or leaked at exit (see above)"; exit 1
           fi
 
       - name: Run the Draugkryptan demo headless for a moment (the dungeon view, actors and HUD run on the recorded fixture)
@@ -91,7 +91,7 @@ jobs:
         run: |
           set -euo pipefail
           timeout 120 ~/godot/godot --headless --path . --quit-after 120 -- --demo 2>&1 | tee demo.log
-          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate" demo.log; then
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate|leaked at exit|still in use at exit|Pages in use exist at exit" demo.log; then
             echo "::error::the demo reported errors (see above)"; exit 1
           fi
 
@@ -100,8 +100,18 @@ jobs:
         run: |
           set -euo pipefail
           timeout 120 ~/godot/godot --headless --path . --quit-after 900 -- --demo --fight 2>&1 | tee fight.log
-          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate" fight.log; then
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate|leaked at exit|still in use at exit|Pages in use exist at exit" fight.log; then
             echo "::error::the scripted fight reported errors (see above)"; exit 1
+          fi
+
+      - name: Run the bench headless for a moment (the bench's scripts run and the process exits clean; headless frame times mean nothing)
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          timeout 120 ~/godot/godot --headless --path . -- --bench=lag 2>&1 | tee bench.log
+          grep -q "bench: done" bench.log || { echo "::error::the bench did not finish"; exit 1; }
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate|leaked at exit|still in use at exit|Pages in use exist at exit" bench.log; then
+            echo "::error::the bench reported errors or leaked at exit (see above)"; exit 1
           fi
 
       # Two headless bots fight the first pack of Draugkryptan together against a server running in memory

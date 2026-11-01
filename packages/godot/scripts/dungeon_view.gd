@@ -40,6 +40,7 @@ const FLOOR_TINT := {
 	"forge": Color(0.45, 0.4, 0.42), "bifrost": Color(1.3, 1.25, 1.4), "moss": Color(0.8, 1.1, 0.75), "stone": Color(0.95, 0.95, 0.95),
 	"gravel": Color(0.9, 0.88, 0.85), "sand": Color(1.2, 1.1, 0.85), "dirt": Color(0.9, 0.8, 0.7), "floor_wood": Color(1.1, 0.9, 0.7),
 }
+const FLICKER_EVERY := 1.0 / 30.0
 const CANDLE_COLOUR := Color(1.0, 0.78, 0.45)
 const EXIT_COLOUR := Color(1.0, 0.95, 0.82)
 const REST_COLOUR := Color(0.35, 0.92, 1.0)
@@ -63,13 +64,26 @@ var _static: Node3D
 var _objects_root: Node3D
 var _env: WorldEnvironment
 var _t := 0.0
+var _flicker_in := 0.0
+var _shadow_order: Array[OmniLight3D] = [] ## the lights with a shadow now, nearest first (update_shadows)
 var _exit_walls: Dictionary = {} ## "x,y" of wall tiles the way out's stairs go into (no cap or faces there)
 
 
 func _process(delta: float) -> void:
 	_t += delta
+	# The flicker is slow (23 rad/s at most), so 30 updates a second look the same as 60; and a light the camera
+	# is too far from to light anything (distance_fade) is not worth a call into the renderer.
+	_flicker_in -= delta
+	if _flicker_in > 0.0:
+		return
+	_flicker_in = FLICKER_EVERY
+	var cam := get_viewport().get_camera_3d()
+	var cam_at := cam.global_position if cam != null else Vector3.ZERO
+	var far2 := (Quality.LIGHT_FADE_BEGIN + Quality.LIGHT_FADE_LENGTH) * (Quality.LIGHT_FADE_BEGIN + Quality.LIGHT_FADE_LENGTH)
 	for f in _flicker:
 		var light: OmniLight3D = f[0]
+		if cam != null and light.global_position.distance_squared_to(cam_at) > far2:
+			continue
 		var phase: float = f[2]
 		var depth: float = f[3]
 		light.light_energy = f[1] * (1.0 - depth * (0.5 + 0.35 * sin(_t * 9.0 + phase) + 0.15 * sin(_t * 23.0 + phase * 1.7)))
@@ -81,6 +95,7 @@ func clear() -> void:
 	_props = {}
 	_lights = []
 	_flicker = []
+	_shadow_order = []
 	_meshes = {}
 	_materials = {}
 	_exit_walls = {}
@@ -128,18 +143,59 @@ func update_object(id: String, obj: Variant) -> void:
 		_place(id, obj)
 
 
-## The `n` torches nearest `at` throw shadows (a quality-preset matter; see quality.gd).
+## The `n` lights nearest `at` throw shadows (a quality-preset matter; see quality.gd), and the others none. With
+## n = 0 (Låg, Mellan) nothing is looked at; otherwise this runs a few times a second, picks the nearest n by one pass
+## per slot (no sorting, no new arrays) and only touches the lights whose state changes.
 func update_shadows(at: Vector3, n: int) -> void:
-	if _lights.is_empty():
+	if n <= 0 and _shadow_order.is_empty():
 		return
-	var sorted := _lights.duplicate()
-	sorted.sort_custom(func(a: OmniLight3D, b: OmniLight3D) -> bool: return a.global_position.distance_squared_to(at) < b.global_position.distance_squared_to(at))
-	for i in range(sorted.size()):
-		sorted[i].shadow_enabled = i < n
+	var want := mini(n, _lights.size())
+	var chosen: Array[OmniLight3D] = []
+	for slot in range(want):
+		var best: OmniLight3D = null
+		var best_d := INF
+		for light in _lights:
+			if chosen.has(light):
+				continue
+			var d := light.global_position.distance_squared_to(at)
+			if d < best_d:
+				best_d = d
+				best = light
+		chosen.append(best)
+	for light in _shadow_order:
+		if not chosen.has(light):
+			light.shadow_enabled = false
+	for light in chosen:
+		if not light.shadow_enabled:
+			light.shadow_enabled = true
+	_shadow_order = chosen
 
 
 func light_count() -> int:
 	return _lights.size()
+
+
+## How many lights throw shadows now.
+func shadow_light_count() -> int:
+	var n := 0
+	for light in _lights:
+		if light.shadow_enabled:
+			n += 1
+	return n
+
+
+## How many lights are within reach of the camera at `at` (a light fades out at its distance_fade_begin + length).
+func lights_near(at: Vector3) -> int:
+	var n := 0
+	for light in _lights:
+		if not light.distance_fade_enabled or light.global_position.distance_to(at) < light.distance_fade_begin + light.distance_fade_length:
+			n += 1
+	return n
+
+
+## The nodes standing in the dungeon (props, lights, the floor's and the walls' MultiMeshes).
+func object_count() -> int:
+	return _props.size() + (_static.get_child_count() if _static != null else 0)
 
 
 func tint() -> Color:
@@ -237,7 +293,7 @@ func _build_floor(d: Dictionary) -> void:
 		var mesh := _tinted_mesh(KAYKIT + gk[0], colour)
 		if mesh == null:
 			continue
-		_static.add_child(_multimesh(mesh, groups[gk]))
+		_static.add_child(_multimesh(mesh, groups[gk], false))
 
 
 func _build_walls() -> void:
@@ -275,12 +331,14 @@ func _build_walls() -> void:
 	var cap_mesh := DungeonProps.wall_cap_mesh(tint())
 	var face_mesh := _tinted_mesh(KAYKIT + "wall_half.gltf.glb", tint())
 	for chunk in caps.keys():
-		_static.add_child(_multimesh(cap_mesh, caps[chunk]))
+		# the blocks are what the torches' shadows fall from; the slabs on their sides are 1 cm from the block
+		# (they would draw the same shadow twice) and the floor is only ever lit
+		_static.add_child(_multimesh(cap_mesh, caps[chunk], true))
 		if face_mesh != null and not faces[chunk].is_empty():
-			_static.add_child(_multimesh(face_mesh, faces[chunk]))
+			_static.add_child(_multimesh(face_mesh, faces[chunk], false))
 
 
-func _multimesh(mesh: Mesh, transforms: Array) -> MultiMeshInstance3D:
+func _multimesh(mesh: Mesh, transforms: Array, casts_shadow: bool) -> MultiMeshInstance3D:
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.mesh = mesh
@@ -289,6 +347,7 @@ func _multimesh(mesh: Mesh, transforms: Array) -> MultiMeshInstance3D:
 		mm.set_instance_transform(i, transforms[i])
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
+	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if casts_shadow else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return mmi
 
 
@@ -345,8 +404,9 @@ func _make_prop(kind: String, variant: int, x: int, y: int) -> Node3D:
 		"saga_exit":
 			# stairs up into the wall beside the exit tile, and daylight falling down them
 			var wall := _exit_wall_of(x, y)
-			var model := _instance(KAYKIT + "stairs.gltf.glb", tint() * 1.15, 0.2)
-			if model != null and wall != Vector2i(0, 0):
+			# (made only when there is a wall to go into: a model that is never added to the tree is never freed)
+			var model := _instance(KAYKIT + "stairs.gltf.glb", tint() * 1.15, 0.2) if wall != Vector2i(0, 0) else null
+			if model != null:
 				model.position = Vector3(wall.x * 0.5, 0.0, wall.y * 0.5)
 				model.rotation.y = atan2(float(wall.x), float(wall.y))
 				node.add_child(model)
@@ -398,6 +458,11 @@ func _add_light(parent: Node3D, at: Vector3, colour: Color, range_m: float, ener
 	light.omni_attenuation = 1.4
 	light.light_energy = energy
 	light.shadow_enabled = false
+	# a light the camera is far from costs nothing: it fades out and is dropped from the clusters (Quality)
+	light.distance_fade_enabled = true
+	light.distance_fade_begin = Quality.LIGHT_FADE_BEGIN
+	light.distance_fade_length = Quality.LIGHT_FADE_LENGTH
+	light.distance_fade_shadow = Quality.SHADOW_FADE
 	parent.add_child(light)
 	_lights.append(light)
 	if flicker > 0.0:

@@ -91,16 +91,72 @@ Everything expensive is a toggle in `scripts/quality.gd`, so a scene is built on
 
 | | Låg | Mellan (default) | Hög |
 | --- | --- | --- | --- |
-| Resolution scale | 0.8 (FSR 1) | 1.0 | 1.0 |
-| Torch shadows | none | the 4 nearest torches | the 8 nearest torches |
-| SSAO | off | on | on |
-| Global illumination | off | off | SDFGI |
+| 3D resolution | 0.8 of the window, at most 1.3 Mpix (FSR 1) | 1.0, at most 2.1 Mpix (FSR 1 above that) | 1.0, at most 3.7 Mpix |
+| Torch shadows | none | none | the 6 nearest the camera |
+| SSAO | off | low quality | medium quality |
+| Global illumination | off | off | SDFGI: 2 cascades of 25 cm cells, half the height, half resolution |
 | Volumetric fog | off | off | on |
 | Glow | off | on | on |
 | Torch flame particles | none (a flat flame sprite) | 8 per torch | 16 per torch, plus dust motes |
 
 Låg must stay a plain forward render with a handful of unshadowed lights: that is what an Intel integrated GPU does
 at 60 fps. The decision Mobile-vs-Forward+ is made with a frame-time capture in M3b, not here.
+
+The 3D resolution is a pixel budget (`Quality.scale_for`): the preset's own scale, held down so the scene is never
+shaded at more than its Mpix. A Retina window of 1280×720 points is 2560×1440 pixels = 3.7 Mpix; Mellan renders that
+at 0.75 (1932×1087) and the engine upscales it. Lights beyond 20 m of the camera fade out (26 m: gone) and throw no
+shadow beyond 16 m. Only the wall blocks cast shadows: the floor and the wall slabs never do, and neither do flames.
+
+### Measured (M3d, performance pass)
+
+Bench: `godot --path packages/godot -- --bench` (bench.gd: 1 s settle, one unmeasured pass of the scripted fight,
+then 10 s measured, per preset). Draw calls and the other counters are the engine's own
+(`RenderingServer.get_rendering_info`), averaged over the measured window.
+
+**Baseline, before M3d: the owner's MacBook Air M4** (Godot 4.7.2, Metal, Forward+, window 1280×720 points, the demo
+scene: 65 objects, 31 lights, 21 actors; the old bench, which did not warm up or restart the fight per preset):
+
+```
+bench: Låg:    92 fps · 10.8 ms · 1 % low 81.4 ms (925 frames)
+bench: Mellan: 48 fps · 21.0 ms · 1 % low 30.1 ms (477 frames)
+bench: Hög:    27 fps · 37.1 ms · 1 % low 74.8 ms (270 frames)
+```
+
+followed at exit by "Pages in use exist at exit in PagedAllocator", "RID allocations of type … were leaked at exit",
+"16 ObjectDB instances were leaked at exit" and "4 resources still in use at exit".
+
+What the baseline most likely says: "1280×720" is the window in points, and on a Retina display Godot renders
+2560×1440 pixels, four times what the line suggests, so Mellan shaded 3.7 Mpix with four omni shadows and SSAO.
+The new bench prints the pixels (the "window … pixels, 3D … pixels" line), which settles it; the numbers below are
+from the sandbox and are not a prediction of the M4's.
+
+**After M3d, on the MacBook Air M4** (paste the output of `godot --path packages/godot -- --bench` here; the
+three "render:" lines and the three "window" lines matter as much as the frame times):
+
+```
+(owner: paste here)
+```
+
+**The sandbox**, before and after (Godot 4.7.2, Forward+ on Mesa's lavapipe, a software Vulkan, under Xvfb, window
+1280×720 on a 4-core Xeon). Frame times are quantised by the software swapchain and mean nothing; the draw, primitive
+and light counts are exact and carry over to a real GPU, and the "GPU ms" are lavapipe's own timestamps, i.e. CPU time
+spent shading: only the ratios between rows say anything. Compatibility under llvmpipe was not used for the table
+(it has no SSAO, SDFGI or FSR). Before = the bench commit alone (`cae4593`), after = the last commit.
+
+| | draw calls | primitives | lights (in reach / shadow) | GPU ms (llvmpipe) |
+| --- | --- | --- | --- | --- |
+| Låg before | 137 | 20 482 | 31 / 0 | 80 |
+| Låg after | 136 | 20 463 | 7 / 0 | 86 |
+| Mellan before | 311 | 108 002 | 31 / 4 | 242 |
+| Mellan after | 143 | 20 544 | 7 / 0 | 148 |
+| Hög before | 376 | 154 930 | 31 / 8 | 443 |
+| Hög after | 175 | 26 276 | 7 / 6 | 272 |
+
+The same Mellan in a 2560×1440-pixel window (what a Retina 1280×720 is): before 306 draw calls and 3.69 Mpix shaded
+(GPU 579 ms), after 137 draw calls and 2.10 Mpix (GPU 426 ms). Exit: before 16 leaked objects, 4 resources in use and
+RIDs leaked (bench), after none; the CI logs are grepped for it. Where the sandbox ablations put the cost (Mellan,
+GPU ms, 229 in all): the four torch shadows 83, SSAO 46, 31 lights 64, glow 31; on Hög the GI was 138 of 423.
+Script time per frame (all `_process`) is 1–2.5 ms on the sandbox's slow cores, so GDScript was not the cost.
 
 ## The fight on screen (M3b)
 

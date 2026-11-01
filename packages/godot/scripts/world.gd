@@ -302,6 +302,7 @@ func _rebuild() -> void:
 	rig.position = hero.position
 	hud.set_area(str(Data.dungeon(id).get("name", key)), true)
 	fx.load_area(key)
+	fx.warm_up(hero.position)
 	hud.build_spell_bar(combat.my_class())
 	if _hint_for != key:
 		_hint_for = key
@@ -630,7 +631,7 @@ func _process(delta: float) -> void:
 		if img != null:
 			img.save_png(_screenshot)
 			print("screenshot saved to %s" % _screenshot)
-		get_tree().quit()
+		(get_tree().current_scene as Main).quit_clean()
 
 
 ## Is this monster after me? The server keeps threat to itself, so the client reads it off the screen: a fighting

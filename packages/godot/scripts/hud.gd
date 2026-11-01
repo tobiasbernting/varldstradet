@@ -434,7 +434,7 @@ func _process(delta: float) -> void:
 
 
 ## "60 fps · 16.7 ms · 1 % low 24.1 ms · Mellan": what the frame-time overlay shows (the bench prints the same numbers).
-static func perf_text(times: Array) -> String:
+static func perf_text(times: Array, with_preset := true) -> String:
 	if times.is_empty():
 		return ""
 	var sum := 0.0
@@ -448,7 +448,8 @@ static func perf_text(times: Array) -> String:
 	for t in worst:
 		low += float(t)
 	low /= worst.size()
-	return "%d fps · %.1f ms · 1 %% low %.1f ms · %s" % [roundi(1.0 / maxf(0.0001, avg)), avg * 1000.0, low * 1000.0, Quality.label_of(Quality.preset)]
+	var text := "%d fps · %.1f ms · 1 %% low %.1f ms" % [roundi(1.0 / maxf(0.0001, avg)), avg * 1000.0, low * 1000.0]
+	return text + " · " + Quality.label_of(Quality.preset) if with_preset else text
 
 
 func set_fps_shown(on: bool) -> void:
