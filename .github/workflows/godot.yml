@@ -1,0 +1,148 @@
+name: Godot client
+
+# Exports the native client (packages/godot) for Windows x86_64, macOS universal, Linux x86_64 and Linux arm64 with a
+# pinned Godot, as a check on every pull request and, on a v* tag, as zipped downloads on a GitHub Release.
+
+on:
+  pull_request:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Pinned: the editor and the export templates must match. Checksums from the release's SHA512-SUMS.txt.
+  GODOT_VERSION: 4.6.3
+  GODOT_EDITOR_SHA512: a035258da32b77f966a5376f9fa29c30a6adde826a85ba918e1605bd1fc9823eba7d85f1dd5e748956bd2ba72827c0025ffa11bb82aec91128c407a2e723c99c
+  GODOT_TEMPLATES_SHA512: da606b61c10157844f8300172df374472665f95015495cb1a7cd132c40ede404faa96cc1016a4b9662db9909ddea69632c4948b2cd11163438dad4808881fb68
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: The Swedish strings in the client are up to date with sv.ts
+        run: |
+          pnpm godot:strings
+          git diff --exit-code -- packages/godot/assets/sv.json
+
+      - name: Cache Godot
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64-templates-4
+
+      - name: Download Godot ${{ env.GODOT_VERSION }} and its export templates (pinned, checksummed)
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          V="${GODOT_VERSION}-stable"
+          BASE="https://github.com/godotengine/godot/releases/download/${V}"
+          mkdir -p ~/godot/templates
+          curl -fsSL -o editor.zip "${BASE}/Godot_v${V}_linux.x86_64.zip"
+          echo "${GODOT_EDITOR_SHA512}  editor.zip" | sha512sum -c -
+          unzip -q editor.zip -d ~/godot
+          mv ~/godot/Godot_v${V}_linux.x86_64 ~/godot/godot
+          curl -fsSL -o templates.tpz "${BASE}/Godot_v${V}_export_templates.tpz"
+          echo "${GODOT_TEMPLATES_SHA512}  templates.tpz" | sha512sum -c -
+          unzip -q -j templates.tpz -d ~/godot/templates \
+            templates/version.txt templates/windows_release_x86_64.exe templates/linux_release.x86_64 \
+            templates/linux_release.arm64 templates/macos.zip
+          rm editor.zip templates.tpz
+
+      - name: Put the templates where Godot looks
+        run: |
+          mkdir -p ~/.local/share/godot/export_templates
+          ln -sfn ~/godot/templates ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          ~/godot/godot --version
+
+      - name: Import the project (makes the import cache and the class list the next steps need)
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          ~/godot/godot --headless --path . --import 2>&1 | tee import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource" import.log; then
+            echo "::error::the import reported errors (see above)"; exit 1
+          fi
+
+      - name: Check every script (a parse or type error fails the job)
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          for f in scripts/*.gd; do
+            echo "== $f"
+            ~/godot/godot --headless --path . --check-only --script "res://$f"
+          done
+
+      - name: Run the main scene headless for a moment (scene and runtime errors fail here)
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          timeout 120 ~/godot/godot --headless --path . --quit-after 60 2>&1 | tee run.log
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate" run.log; then
+            echo "::error::running the project reported errors (see above)"; exit 1
+          fi
+
+      - name: Export all four targets
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          OUT="$GITHUB_WORKSPACE/build"
+          mkdir -p "$OUT/windows" "$OUT/linux-x86_64" "$OUT/linux-arm64" "$OUT/macos"
+          export_one() {
+            echo "== $1"
+            ~/godot/godot --headless --path . --export-release "$1" "$2" 2>&1 | tee -a export.log
+            test -s "$2"
+          }
+          export_one "Windows x86_64" "$OUT/windows/varldstradet.exe"
+          export_one "Linux x86_64" "$OUT/linux-x86_64/varldstradet.x86_64"
+          export_one "Linux arm64" "$OUT/linux-arm64/varldstradet.arm64"
+          export_one "macOS universal" "$OUT/macos/varldstradet.zip"
+          if grep -E "^ERROR|SCRIPT ERROR|Failed" export.log; then
+            echo "::error::an export reported errors (see above)"; exit 1
+          fi
+          ls -la "$OUT"/*
+
+      - name: Zip the exports
+        run: |
+          set -euo pipefail
+          cd build
+          V="${GITHUB_REF_NAME//\//-}"
+          (cd windows && zip -q -r "../varldstradet-${V}-windows-x86_64.zip" .)
+          (cd linux-x86_64 && zip -q -r "../varldstradet-${V}-linux-x86_64.zip" .)
+          (cd linux-arm64 && zip -q -r "../varldstradet-${V}-linux-arm64.zip" .)
+          mv macos/varldstradet.zip "varldstradet-${V}-macos-universal.zip"
+          ls -la *.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: varldstradet-builds
+          path: build/*.zip
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: export
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: varldstradet-builds
+          path: build
+      - name: Attach the zips to the release for this tag
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/*.zip
+          generate_release_notes: true
