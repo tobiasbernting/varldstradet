@@ -35,7 +35,8 @@ From the owner (2026-10-31):
 
 **Core loop.** The farm is home. From the farm you walk through the arch into a *färd* (a run): a randomized chain of
 zones built from the existing biomes (forest, swamp, mountains, beach, mushroom forest, ice, volcano) that ends in a
-boss from the saga. A run takes 20–40 minutes with the family. When the party falls, nobody loses anything that is
+boss from the saga. A run takes at most 30 minutes with the family (owner's decision 2026-11-02: three zones and a
+boss, never more; a zone is 5–8 minutes). When the party falls, nobody loses anything that is
 theirs: the run ends and everyone is back at the farm with what they picked up along the way. Then you farm a little,
 upgrade something, and go again. Same rules as the saga today: nothing bleeds, monsters poof, falling costs nothing.
 
@@ -52,6 +53,10 @@ upgrade something, and go again. Same rules as the saga today: nothing bleeds, m
   Yggdrasil shoot on the farm to grow permanent upgrades. The tree visibly grows with the family's progress.
 - Chapters: the ten chapters stay the story spine. A chapter is cleared by finishing its run; later runs randomize
   harder versions of cleared chapters with modifiers (more packs, a second mid-boss, weather).
+
+**Decisions 2026-11-02.** Milestone M4 is done: the native client plays a whole farm evening. The owner confirmed
+the run shape below with the 30-minute cap, both runor and sagafrön, and that the browser client is retired from this
+repository before the runs are built.
 
 **Within a run.** Between zones the party picks one of three *runor* (boons: a spell upgrade, a passive, a party-wide
 effect) and may stop at a rest stone. Zones are assembled from hand-made room plans the way `sagamap.ts` already
