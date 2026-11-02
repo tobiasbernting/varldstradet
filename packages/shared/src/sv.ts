@@ -119,6 +119,9 @@ export const ITEM_NAMES: Record<string, string> = {
   sheepfold: 'Fårhus',
   barn: 'Lada',
   stall: 'Stall',
+  smithy: 'Smedja',
+  herb_garden: 'Örtagård',
+  longhall: 'Långhus',
   pigsty: 'Svinstia',
   flowerbox: 'Blomlåda',
   well: 'Brunn',
@@ -1151,6 +1154,9 @@ export const QUEST_TEXTS: Record<string, string[]> = {
 for (const s of SAGA_ITEMS) ITEM_NAMES[s.id] = s.name;
 OBJECT_NAMES.saga_portal = 'Valv';
 OBJECT_NAMES.saga_stone = 'Kämpastenen';
+OBJECT_NAMES.fardport = 'Färdporten';
+OBJECT_NAMES.run_exit = 'Vägen vidare';
+OBJECT_NAMES.yggdrasil = 'Yggdrasils skott';
 OBJECT_NAMES.saga_rest = 'Vilosten';
 OBJECT_NAMES.saga_chest = 'Kista';
 OBJECT_NAMES.saga_exit = 'Utgång';
@@ -1615,3 +1621,97 @@ export const WEATHER_NEWS: Record<string, string> = {
   wind: 'Nu blåser det rejält! 💨',
   fog: 'Dimman rullar in. Ser du något? 🌫️',
 };
+
+// ---------------------------------------------------------------------------
+// Runs (färdar): names and one-line texts (at most 40 characters, a number in each, for the big cards). GAME.md.
+// ---------------------------------------------------------------------------
+
+export const RUNA_NAMES: Record<string, string> = {
+  v_tjock: 'Tjock sköld', v_hugg: 'Tyngre hugg', v_ropet: 'Högt rop', v_mur: 'Järnmur', v_slag: 'Dunderslag', v_hjarta: 'Stort hjärta', v_trots: 'Trotsig', v_lugn: 'Lugn i stormen',
+  h_runa: 'Starkare läkerunor', h_ring: 'Större ring', h_pil: 'Skinande pil', h_vack: 'Mjuk väckning', h_snabb: 'Snabba händer', h_flod: 'Läkeflod', h_ro: 'Inre ro', h_skydd: 'Skyddande ljus',
+  k_yx: 'Vässad yxa', k_storm: 'Stormigare steg', k_virvel: 'Vildare virvel', k_raseri: 'Längre raseri', k_glupsk: 'Glupsk yxa', k_hjarta: 'Bärsärkens hjärta', k_kraft: 'Bärsärkens kraft', k_egg: 'Skarp egg',
+  m_eld: 'Hetare eld', m_is: 'Kallare is', m_ask: 'Åskmoln', m_blink: 'Kvickt hopp', m_snabb: 'Snabb magi', m_kraft: 'Runkraft', m_tur: 'Lyckoträff', m_skal: 'Magiskt skal',
+  p_hjarta: 'Gemensamt hjärta', p_vila: 'Vilostenarnas sång', p_kraft: 'Sagans kraft', p_flaska: 'Fler flaskor', p_vakna: 'Snabb uppvaknande', p_fro: 'Frörikedom',
+};
+export const RUNA_TEXT: Record<string, string> = {
+  v_tjock: 'Skydd +8 %', v_hugg: 'Svärdshugg +25 %', v_ropet: 'Utmana laddar 30 % snabbare', v_mur: 'Sköldmur laddar 25 % snabbare', v_slag: 'Sköldslag +40 %', v_hjarta: 'Hälsa +15 %', v_trots: 'Monstren vill slåss med dig +30 %', v_lugn: 'Du tar 10 % mindre skada',
+  h_runa: 'Läkerunan läker 25 % mer', h_ring: 'Läkekretsen läker 35 % mer', h_pil: 'Ljuspilen +40 %', h_vack: 'Väck upp! ger 25 % mer hälsa', h_snabb: 'Trollformler laddar 12 % snabbare', h_flod: 'All läkning +15 %', h_ro: 'Hälsan kommer 50 % fortare', h_skydd: 'Skydd +6 %',
+  k_yx: 'Yxhugg +30 %', k_storm: 'Stormsteg laddar 35 % snabbare', k_virvel: 'Virvelvind +35 %', k_raseri: 'Raseriet laddar 30 % snabbare', k_glupsk: 'Du läker 8 % av din skada', k_hjarta: 'Hälsa +12 %', k_kraft: 'Trollformler +10 %', k_egg: 'Fler kritiska träffar +10 %',
+  m_eld: 'Eldboll +30 %', m_is: 'Isspjut +35 %', m_ask: 'Åskregn +35 %', m_blink: 'Blink laddar 40 % snabbare', m_snabb: 'Trollformler laddar 12 % snabbare', m_kraft: 'Trollformler +10 %', m_tur: 'Fler kritiska träffar +12 %', m_skal: 'Du tar 8 % mindre skada',
+  p_hjarta: 'Allas hälsa +10 %', p_vila: 'Vilostenar läker 60 % fortare', p_kraft: 'Allas trollformler +8 %', p_flaska: '2 läkedrycker var, dryck +15 %', p_vakna: 'Fallna vaknar 40 % fortare', p_fro: 'Sagafrön +25 %',
+};
+
+export const TREE_NAMES: Record<string, string> = {
+  h1: 'Starkare skott', h2: 'Tjockare skinn', h3: 'Segerviljan', h4: 'Hård hud', h5: 'Heltens ande', h6: 'Evig låga',
+  g1: 'Starkare band', g2: 'Mjukt uppvaknande', g3: 'Omval', g4: 'Delad glädje', g5: 'Hirdens lön', g6: 'Frögåva',
+  f1: 'Större matsäck', f2: 'Gyllene skörd', f3: 'Djurens vänskap', f4: 'Extra flaskor', f5: 'Rikare kistor', f6: 'Världsträdets rot',
+};
+export const TREE_TEXT: Record<string, string> = {
+  h1: 'Trollformler +3 %', h2: 'Hälsa +5 %', h3: 'Fler kritiska träffar +4 %', h4: 'Skydd +3 %', h5: 'Läkedryck läker 10 % mer', h6: 'Trollformler laddar 4 % snabbare',
+  g1: 'Vilostenar läker 25 % fortare', g2: 'Fallna vaknar 20 % fortare', g3: 'Nya kort en gång per färd', g4: 'All läkning +8 %', g5: 'Hirdmannen är 20 % starkare', g6: 'Sagafrön +10 %',
+  f1: 'En färdkostplats till', f2: 'Färdkost 25 % starkare', f3: 'Djurens hjälp 50 % starkare', f4: 'En läkedryck till i början', f5: 'Mynt ur kistor +25 %', f6: 'Bossen ger 5 sagafrön till',
+};
+export const BRANCH_NAMES: Record<string, string> = { hjalte: 'Hjälten', gemenskap: 'Gemenskapen', gard: 'Gården' };
+
+export const MODIFIER_NAMES: Record<string, string> = { fler: 'Fler monster', segare: 'Segare monster', harda: 'Hårda slag', vakten: 'Vakten', snabba: 'Snabba fötter', dimma: 'Dimma' };
+export const MODIFIER_TEXT: Record<string, string> = {
+  fler: 'En till i varje flock', segare: 'Monstren tål 25 % mer', harda: 'Monstren slår 20 % hårdare', vakten: 'En mellanboss vaktar vägen', snabba: 'Monstren ser dig på längre håll', dimma: 'Dimma, och monstren ger inte upp',
+};
+
+export const ZONE_NAMES: Record<string, string> = { skog: 'Skogsstigen', trask: 'Kärret', berg: 'Bergspasset', strand: 'Stranden', svamp: 'Svampskogen', is: 'Isfjället', vulkan: 'Lavastigen' };
+export const ZONE_INTROS: Record<string, string> = {
+  skog: 'Träden står tätt och något prasslar bakom stammarna.',
+  trask: 'Det bubblar i kärret, och dimman ligger tung.',
+  berg: 'Stigen slingrar sig uppåt och stenarna ekar.',
+  strand: 'Vågorna slår mot stranden. Något rör sig i vattnet.',
+  svamp: 'Svamparna lyser svagt i det gröna mörkret.',
+  is: 'Isvinden viner. Snön knarrar under fötterna.',
+  vulkan: 'Marken är varm och lavan lyser i sprickorna.',
+};
+export const BOSS_ZONE_NAME = 'Bossens sal';
+/** What a dish does, in a line (the arch window). */
+export const FOOD_TEXT: Record<string, string> = {
+  bread: 'Hälsa +6 %', pancakes: 'Trollformler laddar 5 % snabbare', carrot_cake: 'Trollformler +5 %', pumpkin_pie: 'Skydd +4 %', strawberry_jam: 'Hälsan kommer 40 % fortare',
+  fish_soup: 'Du tar 6 % mindre skada', truffle_pasta: 'Trollformler +8 %', cloudberry_jam: 'Vilostenar läker 40 % fortare', blueberry_pie: 'Hälsa +8 %, läkning +5 %', healing_potion: '3 läkedrycker', styrkedryck: 'Trollformler +6 %',
+};
+export const COMPANION_NAME = 'Hirdmannen';
+
+export const RUN_T = {
+  started: 'Färden börjar! Tre zoner och en boss.',
+  needPort: 'Gå fram till färdporten först.',
+  already: 'Det pågår redan en färd. Hänga på?',
+  joined: '{name} hänger på!',
+  left: '{name} gick hem.',
+  full: 'Färden är full. Ett långhus ger plats för en fjärde.',
+  noRun: 'Det pågår ingen färd.',
+  pickTitle: 'Välj en runa!',
+  pickSub: 'Rösta på ett av tre kort.',
+  picked: 'Ni fick {runa}!',
+  voted: '{name} röstade.',
+  zoneClear: 'Vägen vidare är öppen!',
+  zoneClearSub: 'Gå till porten där borta.',
+  exitShut: 'Besegra alla flockar först.',
+  warn: 'Fem minuter kvar!',
+  warnSub: 'Ta det lugnt, ni hinner.',
+  timeUp: 'Dags att gå hem',
+  timeUpSub: 'Ni får behålla allt ni hittat.',
+  wipeSub: 'Ni går hem med allt ni har. Försök igen!',
+  win: 'Färden är klar!',
+  winSub: 'Öppna kistan, sen går vi hem.',
+  home: 'Hemma igen',
+  summary: 'Färden tog {time}. Du fick {seeds} sagafrön.',
+  seeds: '+{n} sagafrön',
+  planted: '{name} har planterats!',
+  plantNeeds: 'Du behöver {need} först.',
+  plantSeeds: 'Det behövs {n} sagafrön.',
+  plantDone: 'Det är redan planterat.',
+  companion: '{name} följer med.',
+  reroll: 'Nya kort!',
+  noReroll: 'Inga omval kvar.',
+  food: 'Matsäck: {item}',
+  foodNone: 'Du har ingen matsäck att ta med.',
+  treeGrows: 'Yggdrasil växer!',
+  ended: { win: 'Färden är klar', wipe: 'Alla föll', time: 'Tiden tog slut', leave: 'Färden är slut' } as Record<string, string>,
+};
+export const runaName = (id: string): string => RUNA_NAMES[id] ?? id;
+export const treeName = (id: string): string => TREE_NAMES[id] ?? id;
