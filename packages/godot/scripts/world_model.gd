@@ -23,6 +23,7 @@ signal error(text: String)
 ## Every change after it was applied (spell, hit, zone, yell, loot, chat, fx, xp… the fight's messages): the
 ## view draws from these. The area ones carry `area`; the view checks it against the map it draws.
 signal change(c: Dictionary)
+signal quests_changed ## the day's wishes were redrawn by the server
 
 var me := ""
 var farm: Dictionary = {}
@@ -33,6 +34,7 @@ var time_at := 0 ## Time.get_ticks_msec() when time_ms was set (the clock runs o
 var animal_snaps: Dictionary = {} ## the animals on my map only (ids are unique within one map)
 var saga: Dictionary = {} ## area key -> SagaSnap {f: {id: [hp, max, flags]}, m: {...}, b?}
 var day := 0
+var biomes: Dictionary = {} ## the biome of every map explored (welcome, and the ones I walk into)
 var time_ms := 0.0
 var season := "none"
 var weather: Variant = null ## the server's WeatherState {kind, since, until, prev?} or null
@@ -55,6 +57,12 @@ func players() -> Dictionary:
 
 func my_player() -> Dictionary:
 	return players().get(me, {})
+
+
+## The day's wishes the villagers have (Quest records), and the ones I could still do are the windows' to pick.
+func quests() -> Array:
+	var q: Variant = farm.get("quests")
+	return q if q is Array else []
 
 
 func my_area_key() -> String:
@@ -157,6 +165,7 @@ func _welcome(msg: Dictionary) -> void:
 	animal_snaps = {}
 	npc_snaps = {}
 	saga = {}
+	biomes = msg.get("biomes", {}) if msg.get("biomes") is Dictionary else {}
 	day = int(farm.get("day", 0))
 	time_ms = float(farm.get("timeMs", 0))
 	time_at = Time.get_ticks_msec()
@@ -230,6 +239,8 @@ func _change(c: Dictionary) -> void:
 				if recs.has(id):
 					inside[id] = recs[id]
 			areas[key] = w
+			if w.get("biome") != null:
+				biomes[key] = str(w.get("biome"))
 		else:
 			areas.erase(key)
 		if my_area_key() == key:
@@ -334,6 +345,9 @@ func _change(c: Dictionary) -> void:
 					zones.append(z)
 			elif i >= 0:
 				zones.remove_at(i)
+		"quests":
+			farm["quests"] = c.get("quests", [])
+			quests_changed.emit()
 		"day":
 			day = int(c.get("day", day))
 			farm["day"] = day

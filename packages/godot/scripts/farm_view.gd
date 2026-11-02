@@ -149,6 +149,18 @@ func build(w: Dictionary, k: String) -> void:
 			_chunk_at(int(p[0]), int(p[1])).crop_keys[ck] = true
 	# the map's own light: the sky works from the biome and the key
 	sky.setup(self, str(w.get("biome", "")), k)
+	if k == "farm":
+		_light_the_house()
+
+
+## The farmhouse room is a walled patch of the farm map with no roof to let the sun in at night: a warm light over the
+## room and a cool one by its back wall (the window), both on only when it is dark (the lamps' own switch, `set_dark`).
+func _light_the_house() -> void:
+	var r: Dictionary = Data.interior
+	var cx := float(r.get("x", 52)) + float(r.get("w", 10)) / 2.0
+	var cy := float(r.get("y", 55)) + float(r.get("h", 6)) / 2.0
+	_add_light(_objects_root, Vector3(cx, 2.3, cy + 0.5), Color("#ffc98a"), 9.0, 1.5, 0.05, true)
+	_add_light(_objects_root, Vector3(cx - 1.0, 1.6, float(r.get("y", 55)) - 0.2), Color("#9bb8ff"), 6.0, 0.7, 0.0, true)
 
 
 func biome() -> String:
@@ -617,11 +629,19 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 			node.position = Vector3.ZERO
 		"cave", "cave_mouth":
 			_add_light(node, Vector3(0.0, 0.8, 1.0), Color("#8aa0c8"), 3.5, 0.6, 0.0, false)
+	# windows that shine at night (the village's shop, pizzeria and station)
+	var glows: Variant = spec.get("glows")
+	if glows is Array:
+		for gp in glows:
+			var gw := assets.glow_quad(Color("#ffc977"), 0.9, 0.0)
+			gw.position = Vector3(float(gp[0]), float(gp[1]), float(gp[2]))
+			node.add_child(gw)
+			_night_glows.append([gw, 1.6])
 	var lt: Variant = spec.get("light")
 	if lt is Array:
 		var night := bool(spec.get("night", false))
 		var lcol: Color = lt[0]
-		_add_light(node, Vector3(0.0, float(lt[3]), 0.0), lcol, float(lt[1]), float(lt[2]), float(lt[4]), night)
+		_add_light(node, Vector3(0.0, float(lt[3]), 0.0), lcol, float(lt[1]), float(lt[2]), float(lt[4]), night, float(lt[5]) if lt.size() > 5 else -1.0)
 		if night:
 			var gq := assets.glow_quad(lcol, 1.4, 0.0)
 			gq.position = Vector3(0.0, float(lt[3]), 0.0)
@@ -657,7 +677,7 @@ func _landmark(kind: String, node: Node3D) -> Node3D:
 	return node
 
 
-func _add_light(parent: Node3D, at: Vector3, colour: Color, range_m: float, energy: float, flicker: float, night: bool) -> void:
+func _add_light(parent: Node3D, at: Vector3, colour: Color, range_m: float, energy: float, flicker: float, night: bool, fade_begin := -1.0) -> void:
 	var light := OmniLight3D.new()
 	light.position = at
 	light.light_color = colour
@@ -666,8 +686,9 @@ func _add_light(parent: Node3D, at: Vector3, colour: Color, range_m: float, ener
 	light.light_energy = 0.0 if night else energy
 	light.shadow_enabled = false
 	light.distance_fade_enabled = true
-	light.distance_fade_begin = Quality.LIGHT_FADE_BEGIN
-	light.distance_fade_length = Quality.LIGHT_FADE_LENGTH
+	# (a street of lamps fades sooner than a lone lamp: the village must not light more than the crypt does)
+	light.distance_fade_begin = Quality.LIGHT_FADE_BEGIN if fade_begin < 0.0 else fade_begin
+	light.distance_fade_length = Quality.LIGHT_FADE_LENGTH if fade_begin < 0.0 else 4.0
 	light.distance_fade_shadow = Quality.SHADOW_FADE
 	light.visible = not night
 	parent.add_child(light)

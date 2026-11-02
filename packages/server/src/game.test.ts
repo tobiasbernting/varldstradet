@@ -257,4 +257,35 @@ describe('cave and dropped connections', () => {
     expect(on.world.crops['3,3']!.watered).toBe(false);
     expect(on.world.crops['3,3']!.stage + on.world.crops['3,3']!.progress).toBeGreaterThan(0);
   });
+
+  it('gives the starter set with the dev message only when DEV_TELEPORT is on, and only to someone with a class', async () => {
+    const appearance = { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' };
+    const mk = async (devTeleport: boolean) => {
+      const g = new Game(new MemoryStore(), { autoStart: false, devTeleport });
+      await g.start();
+      const p = g.createPlayer('Kåre', appearance)!;
+      const link = fakeLink();
+      const h = g.connect(link);
+      h({ t: 'hello', playerId: p.id });
+      link.msgs.length = 0;
+      return { g, p, link, h };
+    };
+    const has = (g: Game, id: string, item: string) => g.world.players[id]!.inventory.some((s) => s?.item === item);
+    const off = await mk(false);
+    off.h({ t: 'saga', a: 'class', cls: 'krigare' });
+    off.h({ t: 'dev', a: 'starter' });
+    expect(has(off.g, off.p.id, 'jarnyxa')).toBe(false);
+    expect(off.link.msgs.some((m) => m.t === 'error')).toBe(true);
+
+    const on = await mk(true);
+    // no class: nothing
+    on.h({ t: 'dev', a: 'starter' });
+    expect(has(on.g, on.p.id, 'jarnyxa')).toBe(false);
+    // a Krigare gets the axe, the shield and the amulet, once
+    on.g.world.players[on.p.id]!.saga = { chapter: 0, heard: false, cleared: [], titles: [], quests: {}, done: [], found: [], cls: 'krigare' };
+    on.h({ t: 'dev', a: 'starter' });
+    on.h({ t: 'dev', a: 'starter' });
+    const inv = on.g.world.players[on.p.id]!.inventory;
+    for (const item of ['jarnyxa', 'traskold', 'stenamulett']) expect(inv.filter((s) => s?.item === item).reduce((n, s) => n + s!.count, 0)).toBe(1);
+  });
 });

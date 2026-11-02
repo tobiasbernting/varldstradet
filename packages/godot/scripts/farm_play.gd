@@ -16,7 +16,7 @@ extends Node
 
 const ARCH := "saga_portal"
 ## The objects whose `interact` is safe to ask the server for from here (it answers with changes this client draws).
-const INTERACT_OK := ["chest", "water", "feed", "saga", "loot", "fairy", "landmark"]
+const INTERACT_OK := ["chest", "water", "feed", "saga", "loot", "fairy", "landmark", "workbench", "cook", "catalogue", "sell", "wardrobe", "pizzeria", "sagaclass", "bus", "train", "sleep"]
 const ACT_GAP := 0.16
 
 var view: WorldView
@@ -26,6 +26,7 @@ var hud: HudLayer
 var hotbar: Hotbar
 var bag: BagWindow
 var namer: NameWindow
+var windows: FarmWindows
 var feed: PickupFeed
 var target: FarmTarget
 var drops: DropsView
@@ -39,7 +40,10 @@ var _lifted := false
 var _act_at := 0.0
 var _last_text := "\u0001"
 var _last_busy := false
+var _last_can := false
 var _wheel_at := 0.0
+var _sleeping := false
+var _sleep: CanvasLayer
 
 
 func setup(v: WorldView) -> void:
@@ -59,6 +63,9 @@ func setup(v: WorldView) -> void:
 	v.add_child(bag)
 	namer = NameWindow.new()
 	v.add_child(namer)
+	windows = FarmWindows.new()
+	v.add_child(windows)
+	windows.setup(v)
 	target = FarmTarget.new()
 	target.model = model
 	target.hero = hero
@@ -69,6 +76,26 @@ func setup(v: WorldView) -> void:
 	fishing.model = model
 	fishing.hero = hero
 	v.add_child(fishing)
+	_sleep = CanvasLayer.new()
+	_sleep.layer = 7
+	_sleep.visible = false
+	v.add_child(_sleep)
+	var night := ColorRect.new()
+	night.anchor_right = 1.0
+	night.anchor_bottom = 1.0
+	night.color = Color(0.02, 0.03, 0.1, 0.8)
+	night.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sleep.add_child(night)
+	var zzz := Label.new()
+	zzz.text = "💤  " + Strings.t("sleepHint")
+	zzz.anchor_left = 0.0
+	zzz.anchor_right = 1.0
+	zzz.anchor_top = 0.45
+	zzz.anchor_bottom = 0.55
+	zzz.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	zzz.add_theme_font_size_override("font_size", 30)
+	zzz.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sleep.add_child(zzz)
 	model.drop_changed.connect(func(k: String, id: String, d: Variant) -> void:
 		if active and k == view._area:
 			drops.update_drop(id, d))
@@ -77,7 +104,7 @@ func setup(v: WorldView) -> void:
 
 
 func is_busy() -> bool:
-	return bag.is_open() or namer.is_open()
+	return bag.is_open() or namer.is_open() or windows.is_busy()
 
 
 ## An outdoor map was drawn.
@@ -106,6 +133,9 @@ func leave() -> void:
 	drops.clear()
 	bag.close()
 	namer.close()
+	windows.close_all()
+	_sleeping = false
+	_sleep.visible = false
 	hero.frozen = false
 	if _lifted:
 		hero.actor.position.y = 0.0
@@ -123,6 +153,12 @@ func handle_input(event: InputEvent) -> bool:
 		return false
 	if event.is_action_pressed("bag"):
 		open_bag()
+		return true
+	if event.is_action_pressed("gear"):
+		windows.toggle_gear()
+		return true
+	if event.is_action_pressed("quests"):
+		windows.toggle_quests()
 		return true
 	if event is InputEventKey and event.pressed and not event.echo:
 		var code: int = event.physical_keycode
@@ -234,6 +270,8 @@ func on_change(c: Dictionary) -> void:
 	if str(c.get("t", "")) != "open" or str(c.get("to", "")) != model.me:
 		return
 	var ui := str(c.get("ui", ""))
+	if windows.on_open(c):
+		return
 	match ui:
 		"chest":
 			open_bag(int(c.get("id", -1)))
@@ -241,15 +279,6 @@ func on_change(c: Dictionary) -> void:
 			var a: Variant = hero.world.get("animals", {}).get(str(int(c.get("id", -1))))
 			if a is Dictionary:
 				namer.open_for(int(a.get("id", -1)), str(a.get("species", "")), str(a.get("name", "")))
-		"npc":
-			var n: Dictionary = Data.npcs.get(str(c.get("npc", "")), {})
-			hud.show_toast(Strings.t("notDrawnThing", {"name": str(n.get("name", ui))}))
-		"saga", "sagaClass":
-			hud.show_toast(Strings.t("notDrawnThing", {"name": Strings.t("sagaStoneTitle") if ui == "sagaClass" else str(Data.npcs.get(str(c.get("npc", "")), {}).get("name", ui))}))
-		"workbench":
-			hud.show_toast(Strings.t("notDrawnThing", {"name": Strings.t("craft")}))
-		"travel":
-			hud.show_toast(Strings.t("notDrawnBus"))
 		_:
 			hud.show_toast(Strings.t("notDrawnThing", {"name": Strings.t(ui)}))
 
@@ -259,6 +288,9 @@ func _on_player_changed(id: String, rec: Variant) -> void:
 		return
 	_refresh_inventory()
 	bag.refresh()
+	windows.refresh()
+	_sleeping = bool(rec.get("sleeping", false))
+	_sleep.visible = _sleeping
 	# riding: the mount's speed (a horse has no speed of its own: RIDE_SPEED_MUL)
 	_ride_mul = 1.0
 	var riding: Variant = rec.get("riding")
@@ -300,7 +332,7 @@ func _refresh_inventory() -> void:
 func tick(delta: float) -> void:
 	if not active:
 		return
-	hero.frozen = is_busy()
+	hero.frozen = is_busy() or _sleeping
 	hero.speed_mul = _ride_mul
 	if _riding != _lifted:
 		_lifted = _riding
@@ -310,7 +342,8 @@ func tick(delta: float) -> void:
 	fishing.tick(delta)
 	# the prompt is rebuilt only when what it says changed (no strings made every frame)
 	var busy := is_busy()
-	if not view.demo and (target.text != _last_text or busy != _last_busy):
+	if not view.demo and (target.text != _last_text or busy != _last_busy or target.can != _last_can):
 		_last_text = target.text
 		_last_busy = busy
-		hud.set_prompt(("%s · %s" % [Strings.t("actKey"), target.text]) if target.text != "" and not busy else "")
+		_last_can = target.can
+		hud.set_prompt(("%s · %s" % [Strings.t("actKey"), target.text] if target.can else target.text) if target.text != "" and not busy else "")

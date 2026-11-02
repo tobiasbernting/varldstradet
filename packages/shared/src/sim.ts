@@ -446,7 +446,7 @@ function finishRoom(world: WorldState, p: PlayerState, room: Room, ctx: SimCtx, 
   out.push(fx(mid % W, Math.floor(mid / W), 'sparkle'), toast(p.id, T.roomDone), playerChange(p));
 }
 
-const FLOOR_ITEMS: Record<string, Terrain> = {
+export const FLOOR_ITEMS: Record<string, Terrain> = {
   path_stone: 'path_stone',
   path_dirt: 'path_dirt',
   floor_wood: 'floor_wood',

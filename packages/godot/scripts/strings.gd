@@ -58,7 +58,10 @@ func place(biome: String) -> String:
 
 
 func object_name(kind: String) -> String:
-	return str(_objects.get(kind, kind))
+	if _objects.has(kind):
+		return str(_objects[kind])
+	# things built from an item (a fence, a path piece, a lamp) are called what the item is
+	return Data.item_name(kind) if Data.items.has(kind) else kind
 
 
 ## An animal species' Swedish name ("hen" -> "Höna").

@@ -5,7 +5,7 @@ extends Node
 ## times say nothing. Run it on the MacBook and on the Intel laptop:
 ##   godot --path packages/godot -- --bench            (all three presets)
 ##   godot --path packages/godot -- --bench=mellan     (one: lag, mellan or hog)
-##   godot --path packages/godot -- --bench=mellan --scene=farm   (the farm, or forest; the default is the crypt's fight)
+##   godot --path packages/godot -- --bench=mellan --scene=farm   (the farm, forest, house or village; the default is the crypt's fight)
 ## On the farm the hero walks to and fro along the path, so chunks and shadows are exercised.
 ## (or the exported build with `-- --bench`), and send the lines back. `--out=<file>` also writes them to a file.
 ##

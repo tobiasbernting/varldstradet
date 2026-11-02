@@ -33,6 +33,9 @@ var _send_in := 0.0
 var _map_w := 64
 var _map_h := 64
 var _travel_at := -10.0
+var _portals: Dictionary = {} ## Vector2i of a portal's `from` tile -> the portal
+var _portal_at := -10.0 ## when I last stepped through the farmhouse door (snapshots from before it are stale)
+signal portal_used(inside: bool)
 
 
 func _init() -> void:
@@ -56,6 +59,11 @@ func reset() -> void:
 func set_world(w: Dictionary, is_outdoor := false) -> void:
 	world = w
 	outdoor = is_outdoor
+	# the farm's portals (PORTALS in map.ts) belong to the farm map only: a set of tiles, so a step costs a lookup
+	_portals = {}
+	if str(w.get("area", "")).is_empty() and w.get("biome") == null:
+		for p in Data.portals:
+			_portals[Vector2i(int(p.get("from", {}).get("x", -1)), int(p.get("from", {}).get("y", -1)))] = p
 	_map_w = int(w.get("w", 64))
 	_map_h = int(w.get("h", 64))
 
@@ -72,6 +80,8 @@ func place(x: float, y: float) -> void:
 func reconcile(snap: Dictionary) -> void:
 	var sx := float(snap.get("x", px))
 	var sy := float(snap.get("y", py))
+	if Time.get_ticks_msec() / 1000.0 - _portal_at < 0.8:
+		return # the server has not heard of the door yet: its snapshot still has me outside (or inside)
 	if Vector2(sx - px, sy - py).length() > RECONCILE_PX:
 		place(sx, sy)
 
@@ -146,6 +156,8 @@ func _step(dir: Vector2, delta: float) -> void:
 		facing = "right" if ux > 0.0 else "left"
 	else:
 		facing = "down" if uy > 0.0 else "up"
+	if outdoor:
+		_apply_portal()
 	_sync_scene()
 
 
@@ -187,7 +199,7 @@ func _is_solid(tx: int, ty: int) -> bool:
 	if i < terrain.size() and Data.is_wall_terrain(str(terrain[i])):
 		return true
 	if outdoor and _is_portal_tile(tx, ty):
-		return true # the farmhouse door: the room behind it is not drawn yet (the server never sees me step on it)
+		return false # the farmhouse door is not solid (isSolidForPlayer in sim.ts): stepping on it takes me through
 	var id: Variant = world.get("occupancy", {}).get("%d,%d" % [tx, ty])
 	if id == null:
 		return false
@@ -197,13 +209,26 @@ func _is_solid(tx: int, ty: int) -> bool:
 	return bool(Data.object_def(str(obj.get("kind", ""))).get("solid", true))
 
 
+## applyPortal in sim.ts: standing on the farmhouse door (or on the way out of its room) puts me at the other end, as the
+## browser does; the next `move` tells the server, which accepts a jump between the two ends of a portal.
+func _apply_portal() -> void:
+	var tile := Data.tile()
+	var tx := floori(px / tile)
+	var ty := floori(py / tile)
+	var p: Variant = _portals.get(Vector2i(tx, ty))
+	if not (p is Dictionary):
+		return
+	var to: Dictionary = p.get("to", {})
+	px = (float(to.get("x", tx)) + 0.5) * tile
+	py = (float(to.get("y", ty)) + 0.5) * tile
+	facing = str(p.get("facing", "down"))
+	_portal_at = Time.get_ticks_msec() / 1000.0
+	_send_in = 0.0
+	portal_used.emit(Data.in_interior(int(to.get("x", tx)), int(to.get("y", ty))))
+
+
 func _is_portal_tile(tx: int, ty: int) -> bool:
-	if not str(world.get("area", "")).is_empty() or world.get("biome") != null:
-		return false # the farm's portals (PORTALS in map.ts) belong to the farm map only
-	for p in Data.portals:
-		if int(p.get("from", {}).get("x", -1)) == tx and int(p.get("from", {}).get("y", -1)) == ty:
-			return true
-	return false
+	return _portals.has(Vector2i(tx, ty))
 
 
 ## The swing of a spell: a lunge towards `at` (scene units) and a flash.

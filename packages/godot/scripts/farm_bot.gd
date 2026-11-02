@@ -25,6 +25,9 @@ var _t := 0.0
 var _done := false
 var _report := {"name": "", "ok": false, "seconds": 0.0, "steps": [], "errors": [], "toasts": [], "inventory": {}, "coins": 0, "stars": 0, "hud_coins": "", "hud_stars": "", "day": 0, "route": [], "hearts_seen": 0}
 var _plot := Vector2i.ZERO
+var _wheat_plots: Array = [] ## {tile, stand} of the wheat planted beside the carrot (for the bread)
+var _via_door := false ## walking may use the farmhouse door (it teleports): otherwise the door tile is not a floor
+var _home: FarmBotHome
 
 
 func _ready() -> void:
@@ -112,8 +115,11 @@ func _run() -> void:
 		return
 	await _wait(0.5)
 	_log("on the farm at %s as %s" % [str(_my_tile()), world.model.me])
+	_home = FarmBotHome.new(self)
 	var stages := {
-		"patch": _farm_patch, "keys": _keys_and_pets, "drop": _drop_and_pick_up, "gather": _gather, "quests": _quests, "pond": _pond_and_fishing, "bag": _bag_and_chest, "pet": _pet_wild,
+		"shop": _home.shop_buy, "patch": _farm_patch, "keys": _keys_and_pets, "drop": _drop_and_pick_up, "sell": _home.sell_crop, "gather": _gather, "quests": _quests, "pond": _pond_and_fishing, "bag": _bag_and_chest,
+		"build": _home.build, "house": _home.house_and_cook, "wardrobe": _home.wardrobe, "talk": _home.talk, "pet": _pet_wild,
+		"village": _home.class_and_chapter, "pizza": _home.pizza, "hero": _home.hero_switch, "bus": _home.bus,
 	}
 	for key in stages.keys():
 		if _done:
@@ -181,6 +187,7 @@ func _farm_patch() -> void:
 	await _act("watering")
 	var watered := await _until(func() -> bool: return _crop_at(_plot) is Dictionary and bool(_crop_at(_plot).get("watered", false)), 4.0)
 	_step("water", watered and _can_charges() == can_before - 1, "can %d -> %d charges" % [can_before, _can_charges()])
+	await _plant_wheat()
 	# the days: every morning the crop grows one step if it was watered, then the soil is dry again
 	var stages: int = int(Data.crops.get("carrot", {}).get("stages", 3))
 	var day0 := model.day
@@ -196,13 +203,64 @@ func _farm_patch() -> void:
 			grew = false
 			_error("day %d: stage %d -> %d (rolled %s)" % [i + 1, before, after, str(rolled)])
 		if i < stages - 1:
-			await _act() # (still holding the can) water it again for tomorrow
+			await _water_wheat()
+			await _goto(stand)
+			_face("down")
+			await _use_item_slot("can")
+			await _act() # water it again for tomorrow
 			await _until(func() -> bool: return _crop_at(_plot) is Dictionary and bool(_crop_at(_plot).get("watered", false)), 3.0)
 	_step("grow", grew and model.day == day0 + stages, "day %d -> %d, the crop is at stage %s of %d" % [day0, model.day, str(_crop_at(_plot).get("stage", "?")) if _crop_at(_plot) is Dictionary else "-", stages])
 	await _act() # harvest: any held thing does it
 	var harvested := await _until(func() -> bool: return _crop_at(_plot) == null, 4.0)
 	await _wait(0.4)
 	_step("harvest", harvested and model.count_item("carrot") > carrots_before and model.count_item("carrot_seed") >= seeds_before, "carrots %d -> %d, seeds %d -> %d" % [carrots_before, model.count_item("carrot"), seeds_before, model.count_item("carrot_seed")])
+	await _harvest_wheat()
+
+
+## Three wheat plants beside the carrot (the seeds came from the shop): bread for the stove later.
+func _plant_wheat() -> void:
+	_wheat_plots = []
+	if world.model.count_item("wheat_seed") < 3:
+		return
+	for i in range(3):
+		var spot := _find_patch()
+		if spot.is_empty() or not await _goto(spot["stand"]):
+			break
+		_face("down")
+		var tile: Vector2i = spot["tile"]
+		await _use_item_slot("hoe")
+		await _act()
+		await _until(func() -> bool: return _terrain_at(tile) == "soil", 3.0)
+		await _use_item_slot("wheat_seed")
+		await _act()
+		await _until(func() -> bool: return _crop_at(tile) is Dictionary, 3.0)
+		await _use_item_slot("can")
+		await _act()
+		await _until(func() -> bool: return _crop_at(tile) is Dictionary and bool(_crop_at(tile).get("watered", false)), 3.0)
+		_wheat_plots.append(spot)
+	_step("plant wheat", _wheat_plots.size() == 3, "%d wheat plants beside the carrot" % _wheat_plots.size())
+
+
+func _water_wheat() -> void:
+	for spot in _wheat_plots:
+		if not await _goto(spot["stand"]):
+			continue
+		_face("down")
+		await _use_item_slot("can")
+		await _act()
+		await _until(func() -> bool: return _crop_at(spot["tile"]) is Dictionary and bool(_crop_at(spot["tile"]).get("watered", false)), 3.0)
+
+
+func _harvest_wheat() -> void:
+	if _wheat_plots.is_empty():
+		return
+	for spot in _wheat_plots:
+		if await _goto(spot["stand"]):
+			_face("down")
+			await _act()
+			await _until(func() -> bool: return _crop_at(spot["tile"]) == null, 3.0)
+	await _wait(0.4)
+	_step("harvest wheat", world.model.count_item("wheat") >= 3, "wheat %d (bread needs 3)" % world.model.count_item("wheat"))
 
 
 ## The keys themselves, sent as input events through the engine (the Input Map, then the view, then farm_play.gd):
@@ -265,7 +323,12 @@ func _drop_and_pick_up() -> void:
 	var dropped := await _until(func() -> bool: return _drop_count() == drops_before + 1 and world.play.drops.count() == drops_before + 1, 4.0)
 	_step("drop", dropped and model.count_item("carrot") == carrots - 1, "one carrot on the ground, drawn: %d sprites" % world.play.drops.count())
 	await _wait(3.5) # the dropper may not pick it up at once (60 ticks)
-	await _goto(_plot)
+	# walk to where it lies (not to the plot: the bot may be standing elsewhere when it drops it)
+	var lies := _plot
+	for d in world.hero.world.get("drops", {}).values():
+		if d is Dictionary and str(d.get("item", "")) == "carrot":
+			lies = Vector2i(floori(float(d.get("x", 0)) / Data.tile()), floori(float(d.get("y", 0)) / Data.tile()))
+	await _goto(lies)
 	var back := await _until(func() -> bool: return model.count_item("carrot") == carrots and _drop_count() == drops_before, 4.0)
 	_step("pick up", back, "walked over it: carrots %d, drops left %d, sprites %d" % [model.count_item("carrot"), _drop_count(), world.play.drops.count()])
 
@@ -274,7 +337,7 @@ func _drop_and_pick_up() -> void:
 func _gather() -> void:
 	var model := world.model
 	var trees := 0
-	while model.count_item("wood") < 5 and trees < 5 and not _done:
+	while model.count_item("wood") < 8 and trees < 8 and not _done:
 		var t := _nearest_object(["tree", "tree_pine", "tree_apple", "bush"])
 		if t.is_empty():
 			break
@@ -282,7 +345,7 @@ func _gather() -> void:
 		if not await _break(t, "axe"):
 			_step("chop", false, "could not reach %s" % str(t))
 			return
-	_step("chop", model.count_item("wood") >= 5, "%d trees, wood %d" % [trees, model.count_item("wood")])
+	_step("chop", model.count_item("wood") >= 7, "%d trees, wood %d" % [trees, model.count_item("wood")])
 	var rocks := 0
 	while model.count_item("stone") < 5 and rocks < 6 and not _done:
 		var r := _nearest_object(["rock", "rock_small"])
@@ -294,25 +357,18 @@ func _gather() -> void:
 	_step("mine", model.count_item("stone") >= 5, "%d rocks, stone %d" % [rocks, model.count_item("stone")])
 
 
-## Elsa pays 20 kr and 2 stars for five stones; Fiskar-Sven a rod and a star for five wood.
+## Elsa pays 20 kr and 2 stars for five stones; Fiskar-Sven a rod and a star for five wood. Both are handed over through
+## the villager's window (M4c): walk to them, press the use key, press "Lämna" on the wish.
 func _quests() -> void:
 	var model := world.model
-	var coins := int(model.my_player().get("coins", 0))
-	var stars := int(model.my_player().get("stars", 0))
-	if model.count_item("stone") >= 5 and await _walk_to_npc("elsa"):
-		Net.send({"t": "quest", "id": "elsa_flowerbox"})
-		var paid := await _until(func() -> bool: return int(model.my_player().get("stars", 0)) > stars, 4.0)
-		await _wait(0.4)
-		_step("Elsas uppdrag", paid, "coins %d -> %d, stars %d -> %d, the HUD says %s / %s" % [coins, int(model.my_player().get("coins", 0)), stars, int(model.my_player().get("stars", 0)), world.hud.farm_labels["coins"].text, world.hud.farm_labels["stars"].text])
+	if model.count_item("stone") >= 5:
+		await _home.hand_over("elsa", "elsa_flowerbox", "stone")
 	else:
-		_step("Elsas uppdrag", false, "no stone or no Elsa")
-	stars = int(model.my_player().get("stars", 0))
-	if model.count_item("wood") >= 5 and await _walk_to_npc("sven"):
-		Net.send({"t": "quest", "id": "sven_rod"})
-		var got := await _until(func() -> bool: return model.count_item("rod") > 0, 4.0)
-		_step("Svens uppdrag", got, "the rod is in the bag: %s, stars %d -> %d" % [str(got), stars, int(model.my_player().get("stars", 0))])
+		_step("Elsas önskning", false, "no stone")
+	if model.count_item("wood") >= 5:
+		await _home.hand_over("sven", "sven_rod", "wood")
 	else:
-		_step("Svens uppdrag", false, "no wood or no Sven")
+		_step("Svens önskning", false, "no wood")
 
 
 ## Fill the can at the pond, then fish.
@@ -587,6 +643,8 @@ func _distance_field(from: Vector2i) -> Dictionary:
 			var nxt: Vector2i = cur + step
 			if dist.has(nxt) or world.hero._is_solid(nxt.x, nxt.y):
 				continue
+			if world._mode == "outdoor" and world._area == "farm" and not _via_door and world.hero._is_portal_tile(nxt.x, nxt.y):
+				continue # (the farmhouse door and the way out of its room teleport: only when asked)
 			dist[nxt] = d + 1
 			queue.append(nxt)
 	return dist
@@ -613,13 +671,15 @@ func _path_to(from: Vector2i, goal: Vector2i, dist: Dictionary) -> Array:
 
 
 ## Walks to the middle of a tile; false when there is no way or it takes too long.
-func _goto(goal: Vector2i, timeout := 45.0) -> bool:
+func _goto(goal: Vector2i, timeout := 120.0) -> bool:
 	var hero := world.hero
 	var tile := Data.tile()
 	hero.driven = true
 	var until := Time.get_ticks_msec() + int(timeout * 1000.0)
 	var stuck := 0.0
 	var last := Vector2(hero.px, hero.py)
+	var path_from := Vector2i(-9999, -9999) ## (the route is worked out again only when I enter a new tile: a slow window must not spend its frames on it)
+	var path: Array = []
 	while Time.get_ticks_msec() < until and not _done:
 		var start := _my_tile()
 		var here := Vector2(hero.px, hero.py)
@@ -628,7 +688,9 @@ func _goto(goal: Vector2i, timeout := 45.0) -> bool:
 			hero.drive = Vector2.ZERO
 			await _wait(0.25)
 			return true
-		var path := _path_to(start, goal, _distance_field(start))
+		if start != path_from:
+			path_from = start
+			path = _path_to(start, goal, _distance_field(start))
 		if path.is_empty() and start != goal:
 			hero.drive = Vector2.ZERO
 			return false
@@ -803,10 +865,10 @@ func _leave_by(dir: String, key: String) -> bool:
 	var w := world.hero.world
 	var mw := int(w.get("w", 64))
 	var mh := int(w.get("h", 64))
-	var goal := Vector2i(mw / 2, 1) if dir == "n" else Vector2i(mw / 2, mh - 2)
-	if not await _goto(goal, 60.0):
+	var goal := Vector2i(mw / 2, 1) if dir == "n" else (Vector2i(mw / 2, mh - 2) if dir == "s" else (Vector2i(mw - 2, mh / 2) if dir == "e" else Vector2i(1, mh / 2)))
+	if not await _goto(goal, 180.0):
 		return false
-	world.hero.drive = Vector2(0, -1) if dir == "n" else Vector2(0, 1)
+	world.hero.drive = Vector2(0, -1) if dir == "n" else (Vector2(0, 1) if dir == "s" else (Vector2(1, 0) if dir == "e" else Vector2(-1, 0)))
 	var arrived := await _until(func() -> bool: return world.model.my_area_key() == key and world._mode == "outdoor" and world._area == key, 12.0)
 	world.hero.drive = Vector2.ZERO
 	await _wait(0.8)
@@ -889,7 +951,7 @@ func _finish() -> void:
 	for s in steps:
 		if not bool(s["ok"]):
 			failed += 1
-	_report["ok"] = _report["errors"].is_empty() and failed == 0 and (steps.size() >= 16 or only != "")
+	_report["ok"] = _report["errors"].is_empty() and failed == 0 and (steps.size() >= 40 or only != "")
 	_log("%d steps, %d failed, %d errors" % [steps.size(), failed, _report["errors"].size()])
 	if report_path != "":
 		var fa := FileAccess.open(report_path, FileAccess.WRITE)

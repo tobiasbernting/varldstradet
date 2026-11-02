@@ -14,10 +14,13 @@
 // and mines rocks, does Elsa's and Fiskar-Sven's errands (coins, stars, a rod), fills the can at the pond, fishes,
 // opens the chest and moves a stack in the bag, and pets a wild animal in the forest. Its report ends with its bag, coins
 // and stars as the client shows them, and this script then asks the server (a websocket, as a client would) for its own
-// record of that player and compares the two.
+// record of that player and compares the two. Since M4c (the farm evening) the farmer also shops and sells, crafts and builds
+// (and is refused on a neighbour's fence: tools/friend.mts is a second player that builds first), goes through the farmhouse
+// door and bakes bread, changes its hat, talks to villagers, walks to Köpingen, picks a class at the stone, hears Völvan,
+// eats a pizza, equips the starter weapon (the dev message `starter`), switches to hero and back and rides the bus.
 //
 //   GODOT=~/godot/godot pnpm godot:bot            (GODOT defaults to `godot` on the PATH)
-//   BOT_SECONDS=120 BOT_PORT=8097 BOT_PACKS=1     (optional; BOT_FARM_SECONDS=200 for the farmer, BOT_ONLY=farm or walker)
+//   BOT_SECONDS=120 BOT_PORT=8097 BOT_PACKS=1     (optional; BOT_FARM_SECONDS=600 for the farmer, BOT_ONLY=farm or walker)
 //   BOT_FARM_SHOTS=dir                            (the farmer saves pictures there; needs a window: run under xvfb-run)
 import { spawn, type ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
@@ -36,7 +39,7 @@ const packs = Number(process.env.BOT_PACKS ?? 1);
 const names = ['Bot-Ask', 'Bot-Embla'];
 const walkerName = 'Bot-Vandrare';
 const farmerName = 'Bot-Bonde';
-const farmSeconds = Number(process.env.BOT_FARM_SECONDS ?? 200);
+const farmSeconds = Number(process.env.BOT_FARM_SECONDS ?? 600);
 const farmShots = process.env.BOT_FARM_SHOTS ?? '';
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'varldstradet-bot-'));
 
@@ -165,7 +168,18 @@ async function checkFarmer(r: FarmReport, farmPort: number, botLog?: string): Pr
   check(r.errors.length === 0, `${r.name}: no errors (${r.errors.join('; ') || 'none'})`);
   const exitErrors = (botLog && fs.existsSync(botLog) ? fs.readFileSync(botLog, 'utf8') : '').split('\n').filter((l) => /leaked at exit|still in use at exit|Pages in use exist at exit|SCRIPT ERROR/.test(l));
   check(exitErrors.length === 0, `${r.name}: no script errors, nothing leaked at exit (${exitErrors[0] ?? 'none'})`);
-  for (const want of ['till', 'plant', 'water', 'grow', 'harvest', 'hotbar keys', 'pets commands', 'drop', 'pick up', 'chop', 'mine', 'Elsas uppdrag', 'Svens uppdrag', 'fill the can', 'fishing', 'open the chest', 'move a stack', 'pet']) {
+  const wanted = [
+    // the farm (M4b)
+    'till', 'plant', 'water', 'grow', 'harvest', 'hotbar keys', 'pets commands', 'drop', 'pick up', 'chop', 'mine', 'fill the can', 'fishing', 'open the chest', 'move a stack', 'pet',
+    // the shop, the sell box, the wishes and the workbench (M4c)
+    'the shop opens', 'buy seeds', 'buy a hat', 'plant wheat', 'harvest wheat', 'sell a crop', 'Lilla Elsas önskning', 'Fiskar-Svens önskning',
+    'the workbench opens', 'craft fences', 'preview: no fence on water', 'place a fence', 'take my fence down', "someone else's fence is refused",
+    // the house, the stove, the wardrobe, the villagers
+    'into the farmhouse', 'the stove opens', 'cook bread', 'out of the farmhouse', 'change the hat', "a villager's window", 'start a conversation', 'a joke', 'a riddle', 'sten, sax, påse',
+    // the village: the class, Völvan, the pizzeria, the gear and the hero switch, the bus
+    'walk to Köpingen', 'pick a class', "Völvan's chapter", 'buy a pizza', 'eat the pizza', 'equip the weapon', 'the hero switch', 'back to the farm outfit', 'the bus home', 'the bus to the village',
+  ];
+  for (const want of wanted) {
     const st = r.steps.find((x) => x.name === want);
     check(!!st && st.ok, `${r.name}: ${want}${st ? ` (${st.detail})` : ' (never ran)'}`);
   }
@@ -182,7 +196,7 @@ async function checkFarmer(r: FarmReport, farmPort: number, botLog?: string): Pr
   check(r.stars === rec.stars, `${r.name}: stars ${r.stars} = the server's ${rec.stars}`);
   check(r.hud_coins.startsWith(String(rec.coins)), `${r.name}: the HUD shows the coins ("${r.hud_coins}" for ${rec.coins})`);
   check(rec.stars === 0 || r.hud_stars.includes(String(rec.stars)), `${r.name}: the HUD shows the stars ("${r.hud_stars}" for ${rec.stars})`);
-  check(rec.coins > 150 && rec.stars >= 3, `${r.name}: the errands paid (${rec.coins} kr, ${rec.stars} stars)`);
+  check(rec.stars >= 3, `${r.name}: the errands and the chapter paid in stars (${rec.coins} kr left, ${rec.stars} stars)`);
 }
 
 async function main(): Promise<void> {
@@ -222,6 +236,12 @@ async function main(): Promise<void> {
       farmServers.push(farmServer);
       await waitFor(`http://localhost:${farmPort}/api/gate`, 60_000);
       console.log(`server 2 (the farmer's): port ${farmPort}`);
+      // a second player builds three fences first: the farmer has to be refused when it tries to take one down
+      const friendReport = path.join(tmp, 'friend.json');
+      const friend = run(process.execPath, [path.join(here, 'friend.mts'), `http://127.0.0.1:${farmPort}`, friendReport], { cwd: here, log: path.join(tmp, 'friend.log') });
+      const friendCode = await exited(friend, 90_000);
+      const fr = fs.existsSync(friendReport) ? (JSON.parse(fs.readFileSync(friendReport, 'utf8')) as { ok: boolean; note: string }) : { ok: false, note: 'no report' };
+      check(friendCode === 0 && fr.ok, `the neighbour (a second player) put fences on the farm: ${fr.note}`);
       const report = path.join(tmp, `${farmerName}.json`);
       const log = path.join(tmp, `${farmerName}.log`);
       const args = ['--headless', '--path', godotDir, '--', '--farmbot', `--server=http://127.0.0.1:${farmPort}`, `--name=${farmerName}`, `--report=${report}`, `--seconds=${farmSeconds}`];

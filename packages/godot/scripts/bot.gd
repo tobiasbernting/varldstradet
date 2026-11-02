@@ -423,7 +423,7 @@ func _distance_field(from: Vector2i) -> Dictionary:
 		var d: int = dist[cur]
 		for step in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
 			var nxt: Vector2i = cur + step
-			if dist.has(nxt) or world.hero._is_solid(nxt.x, nxt.y):
+			if dist.has(nxt) or world.hero._is_solid(nxt.x, nxt.y) or world.hero._is_portal_tile(nxt.x, nxt.y):
 				continue
 			dist[nxt] = d + 1
 			queue.append(nxt)

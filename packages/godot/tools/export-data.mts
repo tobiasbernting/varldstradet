@@ -58,6 +58,35 @@ import {
   FILTER_NAMES,
   itemName,
   CATEGORY_ORDER,
+  RECIPES,
+  COOKING,
+  PAINTED_SELL,
+  T,
+  SAGA_CHAPTERS,
+  SAGA_QUESTS,
+  RARITY_POWER,
+  LEVEL_BONUS,
+  POWER_CAP,
+  ARMOR_CAP,
+  CLASS_FIT,
+  XP_LEVELS,
+  FORGE_MAX,
+  FORGE_COSTS,
+  LEVEL_REWARDS,
+  VOLVA_ID,
+  NPC_TALK,
+  JOKES,
+  RIDDLES,
+  RIGHT,
+  WRONG,
+  WEATHER_TALK,
+  HOW_REPLY,
+  PET_TALK,
+  TOPIC_HINTS,
+  BACK,
+  TRANSPORT_PRICE,
+  INTERIOR,
+  FLOOR_ITEMS,
 } from '../../shared/src/index.ts';
 
 const out = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../assets/game.json');
@@ -77,8 +106,8 @@ const animals: Record<string, { growDays: number; pet?: true; wild?: true; preda
 for (const [id, a] of Object.entries(ANIMALS)) animals[id] = { growDays: a.growDays, ...(a.pet ? { pet: true as const } : {}), ...(a.wild ? { wild: true as const } : {}), ...(a.predator ? { predator: true as const } : {}), ...(a.mob ? { mob: true as const } : {}), ...(a.product ? { product: a.product } : {}), ...(a.mount ? { mount: a.mount.speed } : {}) };
 
 /** The villagers: who they are and which map they live on (the sprite is npc_<id> in the atlas). */
-const npcs: Record<string, { name: string; area: string }> = {};
-for (const n of Object.values(NPCS)) npcs[n.id] = { name: n.name, area: n.area ?? 'farm' };
+const npcs: Record<string, { name: string; area: string; greeting: string[] }> = {};
+for (const n of Object.values(NPCS)) npcs[n.id] = { name: n.name, area: n.area ?? 'farm', greeting: n.greeting };
 
 const dungeons: Record<string, unknown> = {};
 for (const id of DUNGEON_IDS) {
@@ -110,7 +139,7 @@ for (const [id, s] of Object.entries(SPELLS)) {
 }
 
 const classes: Record<string, unknown> = {};
-for (const c of Object.values(CLASSES)) classes[c.id] = { name: c.name, roleName: c.roleName, emoji: c.emoji, hp: c.hp, color: c.color, outfit: c.outfit, spells: c.spells };
+for (const c of Object.values(CLASSES)) classes[c.id] = { name: c.name, roleName: c.roleName, emoji: c.emoji, hp: c.hp, color: c.color, outfit: c.outfit, spells: c.spells, blurb: c.blurb };
 
 /** The saga's items (the loot window), plus the farm items a chest can hold (potions, materials). */
 const items: Record<string, { name: string; rarity: string; kind: string; text: string; category?: string; stack?: number; tool?: string; food?: true }> = {};
@@ -122,6 +151,51 @@ for (const id of Object.keys(ITEMS).sort()) {
   const base = items[id] ?? { name: itemName(id), rarity: 'common', kind: d.category, text: '' };
   items[id] = { ...base, category: d.category, stack: d.stack, ...(d.tool ? { tool: d.tool } : {}), ...(d.food ? { food: true as const } : {}) };
 }
+// M4c: what the shop, the sell box, the wardrobe and the gear window need to know about an item (prices, the shop's tab,
+// the season it is sold in, what a placeable puts down, the slot of a piece of clothing, the gear's stats)
+type Extra = { buy?: number; stars?: number; sell?: number; tab?: string; season?: string; species?: string; house?: string; places?: string; slot?: string; food?: number; stats?: { power?: number; hp?: number; armor?: number }; classes?: string[]; gearKind?: string; paint?: number };
+const extras: Record<string, Extra> = {};
+for (const id of Object.keys(ITEMS).sort()) {
+  const d = ITEMS[id]!;
+  const e: Extra = {};
+  if (d.buy !== undefined) e.buy = d.buy;
+  if (d.stars !== undefined) e.stars = d.stars;
+  if (d.sell !== undefined) e.sell = d.sell;
+  if (d.tab) e.tab = d.tab;
+  if (d.season) e.season = d.season;
+  if (d.species) {
+    e.species = d.species;
+    const house = ANIMALS[d.species]?.house;
+    if (house) e.house = house;
+  }
+  if (d.places) e.places = d.places;
+  if (d.clothing) e.slot = d.clothing.slot;
+  if (d.food) e.food = d.food.boostMs;
+  if (d.paint !== undefined) e.paint = d.paint;
+  extras[id] = e;
+}
+for (const it of SAGA_ITEMS) {
+  const e = extras[it.id] ?? {};
+  if (it.stats) e.stats = it.stats;
+  if (it.classes) e.classes = it.classes;
+  if (it.kind === 'weapon' || it.kind === 'offhand' || it.kind === 'amulet') e.gearKind = it.kind;
+  if (it.kind === 'hat' || it.kind === 'shirt') e.slot = it.kind;
+  extras[it.id] = e;
+}
+for (const [id, e] of Object.entries(extras)) if (items[id]) Object.assign(items[id], e);
+
+const recipe = (r: { id: string; in: { item: string; count: number }[]; out: { item: string; count: number } }) => ({ id: r.id, in: r.in.map((i) => ({ item: i.item, count: i.count })), out: { item: r.out.item, count: r.out.count } });
+/** The shop's tabs, in the browser's order (menus.ts TABS) with their names. */
+const SHOP_TABS = ['seeds', 'animals', 'vehicles', 'feed', 'materials', 'furniture', 'clothes', 'season', 'stars'];
+const TAB_NAMES: Record<string, string> = { seeds: T.tabSeeds, animals: T.tabAnimals, feed: T.tabFeed, materials: T.tabMaterials, furniture: T.tabFurniture, clothes: T.tabClothes, season: T.tabSeason, stars: `⭐ ${T.tabStars}`, vehicles: T.tabVehicles };
+const shopTabs = SHOP_TABS.map((id) => ({ id, name: TAB_NAMES[id] ?? id }));
+
+/** Völvan's chapters (the story window) and the villagers' saga quests; the player's own progress is on the player record. */
+const chapters = SAGA_CHAPTERS.map((c) => ({ dungeon: c.dungeon, title: c.title, tell: c.tell, done: c.done, goal: c.goal, ...(c.field ? { field: c.field } : {}), reward: c.reward }));
+const sagaQuests = SAGA_QUESTS.map((q) => ({ id: q.id, npc: q.npc, dungeon: q.dungeon, title: q.title, tell: q.tell, done: q.done, goal: q.goal, kind: q.kind, target: q.target, count: q.count, reward: q.reward }));
+
+/** The villagers' talk (dialogue.ts): the whole tree, so the native client plays the same conversations. */
+const dialogue = { npcs: NPC_TALK, jokes: JOKES, riddles: RIDDLES, right: RIGHT, wrong: WRONG, weather: WEATHER_TALK, how: HOW_REPLY, pet: PET_TALK, hints: TOPIC_HINTS, back: BACK };
 /** The bag's filter chips (shared/src/filters.ts): id, emoji, the categories it keeps lit, and its name. */
 const filters = INVENTORY_FILTERS.map((f) => ({ id: f.id, emoji: f.emoji, categories: f.categories, name: FILTER_NAMES[f.id] ?? f.id }));
 
@@ -152,6 +226,22 @@ const data = {
   categoryOrder: CATEGORY_ORDER,
   rarity: { colors: RARITY_COLORS, names: RARITY_NAMES },
   chatPhrases: CHAT_PHRASES,
+  recipes: RECIPES.map(recipe),
+  cooking: COOKING.map(recipe),
+  shopTabs,
+  /** What the shop lists, in the browser's order (the order items are defined in data.ts). */
+  shopItems: Object.values(ITEMS).filter((d) => d.tab !== undefined).map((d) => d.id),
+  paintedSell: PAINTED_SELL,
+  transportPrice: TRANSPORT_PRICE,
+  interior: INTERIOR,
+  /** Placeables that change the ground instead of standing on it (FLOOR_ITEMS in sim.ts): the object kind they place. */
+  floors: Object.keys(FLOOR_ITEMS),
+  volva: VOLVA_ID,
+  chapters,
+  sagaQuests,
+  gear: { rarityPower: RARITY_POWER, levelBonus: LEVEL_BONUS, powerCap: POWER_CAP, armorCap: ARMOR_CAP, classFit: CLASS_FIT, xpLevels: XP_LEVELS, forgeMax: FORGE_MAX, slots: ['weapon', 'offhand', 'amulet'] },
+  levelRewards: LEVEL_REWARDS,
+  dialogue,
 };
 fs.writeFileSync(out, JSON.stringify(data, null, 2) + '\n');
 console.log(`${path.relative(process.cwd(), out)}: ${Object.keys(objects).length} objects, ${DUNGEON_IDS.length} dungeons, ${Object.keys(mobs).length} creatures, ${Object.keys(spells).length} spells, ${Object.keys(items).length} items`);

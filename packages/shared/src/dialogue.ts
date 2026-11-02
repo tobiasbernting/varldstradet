@@ -48,7 +48,7 @@ interface NpcTalk {
   pet?: string[];
 }
 
-const BACK: Opt = ['Prata om något annat', 'topics'];
+export const BACK: Opt = ['Prata om något annat', 'topics'];
 
 // ---------------------------------------------------------------------------
 // Shared talk
@@ -84,10 +84,10 @@ export const RIDDLES: { q: string; answers: string[]; right: number }[] = [
   { q: 'Vad är ditt, men används mest av alla andra?', answers: ['Din tandborste', 'Ditt namn', 'Din cykel'], right: 1 },
 ];
 
-const RIGHT = ['Rätt! Du är smart som en räv! 🦊', 'Helt rätt! Vilken klurig hjärna du har! 🧠', 'Ja! Precis så! ⭐'];
-const WRONG = ['Nästan! Vill du gissa en gång till?', 'Hmm, nej… Försök igen!', 'Inte riktigt. En gissning till?'];
+export const RIGHT = ['Rätt! Du är smart som en räv! 🦊', 'Helt rätt! Vilken klurig hjärna du har! 🧠', 'Ja! Precis så! ⭐'];
+export const WRONG = ['Nästan! Vill du gissa en gång till?', 'Hmm, nej… Försök igen!', 'Inte riktigt. En gissning till?'];
 
-const WEATHER_TALK: Record<WeatherKind, string[]> = {
+export const WEATHER_TALK: Record<WeatherKind, string[]> = {
   sun: ['Vilket härligt solsken! Perfekt dag att vara ute.', 'Solen värmer så skönt idag. ☀️'],
   cloudy: ['Lite grått idag, men molnen ser ut som djur om man tittar noga. Jag ser en kanin!', 'Molnigt, men det kanske klarnar upp.'],
   rain: ['Plask plask! Regnet vattnar alla blommor och grödor. Glöm inte att hoppa i vattenpölar!', 'Det regnar! Bra för åkrarna, men ta på dig stövlarna.'],
@@ -98,16 +98,16 @@ const WEATHER_TALK: Record<WeatherKind, string[]> = {
   fog: ['Så dimmigt! Det känns som att gå i ett moln.', 'I dimman ser allt lite hemligt och spännande ut.'],
 };
 
-const HOW_REPLY: Record<string, string[]> = {
+export const HOW_REPLY: Record<string, string[]> = {
   good: ['Vad roligt att höra! Då blir jag också glad. 😊', 'Härligt! Glada människor gör hela dagen finare.'],
   tired: ['Trött? Kanske dags för en liten vila. Sängen i huset är skön!', 'Alla blir trötta ibland. Ett glas mjölk och en vila brukar hjälpa.'],
   sad: ['Åh, vad tråkigt. Vill du ha en kram? 🤗 Det brukar hjälpa att klappa ett djur eller prata med någon man tycker om.', 'Det är okej att vara ledsen ibland. Jag är här om du vill prata.'],
   angry: ['Arg? Andas djupt tre gånger – in genom näsan, ut genom munnen. Bättre?', 'Ibland blir man arg, det är helt okej. Ett springlopp runt gården kanske hjälper!'],
 };
 
-const PET_TALK = ['{pet}! Vilket fint namn. Hälsa från mig!', 'Åh, {pet}! Jag har sett hen springa omkring. Så söt!', 'Klappa {pet} lite extra från mig idag. ❤️'];
+export const PET_TALK = ['{pet}! Vilket fint namn. Hälsa från mig!', 'Åh, {pet}! Jag har sett hen springa omkring. Så söt!', 'Klappa {pet} lite extra från mig idag. ❤️'];
 
-const TOPIC_HINTS = ['Vad vill du prata om?', 'Något mer du undrar?', 'Vad ska vi prata om nu?'];
+export const TOPIC_HINTS = ['Vad vill du prata om?', 'Något mer du undrar?', 'Vad ska vi prata om nu?'];
 
 // ---------------------------------------------------------------------------
 // The villagers

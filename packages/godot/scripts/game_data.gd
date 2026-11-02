@@ -25,6 +25,20 @@ var filters: Array = [] ## the bag's filter chips [{id, emoji, categories, name}
 var category_order: Array = []
 var flags: Dictionary = {"down": 1, "wall": 2, "rage": 4, "hot": 8, "slow": 16, "frozen": 32}
 var interrupt_kinds: Array = ["bash", "charge", "lance"]
+var recipes: Array = [] ## the workbench's [{id, in: [{item, count}], out: {item, count}}]
+var cooking: Array = [] ## the stove's recipes, the same shape
+var shop_tabs: Array = [] ## the shop's tabs [{id, name}]
+var shop_items: Array = [] ## the ids the shop lists, in the browser's order
+var painted_sell := 20
+var transport_price: Dictionary = {"bus": 5, "train": 15}
+var interior: Dictionary = {"x": 52, "y": 55, "w": 10, "h": 6} ## the farmhouse's room on the farm map (INTERIOR in map.ts)
+var floors: Array = []
+var volva := "sigrun"
+var chapters: Array = [] ## Völvan's chapters
+var saga_quests: Array = [] ## the villagers' saga quests
+var gear: Dictionary = {}
+var level_rewards: Dictionary = {}
+var dialogue: Dictionary = {}
 var atlas: Dictionary = {}
 var _icon_sheet: Texture2D = null
 var _icon_cache: Dictionary = {}
@@ -53,6 +67,20 @@ func _ready() -> void:
 		chat_phrases = g.get("chatPhrases", [])
 		filters = g.get("filters", [])
 		category_order = g.get("categoryOrder", [])
+		recipes = g.get("recipes", [])
+		cooking = g.get("cooking", [])
+		shop_tabs = g.get("shopTabs", [])
+		shop_items = g.get("shopItems", [])
+		painted_sell = int(g.get("paintedSell", 20))
+		transport_price = g.get("transportPrice", transport_price)
+		interior = g.get("interior", interior)
+		floors = g.get("floors", [])
+		volva = str(g.get("volva", "sigrun"))
+		chapters = g.get("chapters", [])
+		saga_quests = g.get("sagaQuests", [])
+		gear = g.get("gear", {})
+		level_rewards = g.get("levelRewards", {})
+		dialogue = g.get("dialogue", {})
 		if g.get("flags") is Dictionary:
 			flags = g.get("flags")
 		if g.get("interruptKinds") is Array:
@@ -243,3 +271,31 @@ func animal_sheet(species: String, baby: bool, jul: bool, variant: int) -> Strin
 
 func npc_sheet(id: String) -> String:
 	return str(atlas.get("npcs", {}).get(id, {}).get("sheet", ""))
+
+
+## Where the farmhouse's room is (tiles, inclusive of its wall): the camera comes closer in here.
+func in_interior(tx: int, ty: int) -> bool:
+	var x := int(interior.get("x", 52))
+	var y := int(interior.get("y", 55))
+	return tx >= x - 1 and tx <= x + int(interior.get("w", 10)) and ty >= y - 1 and ty <= y + int(interior.get("h", 6))
+
+
+## An item's catalogue price in kr (-1 when it is not for sale), in stars (-1), and what the sell box pays (-1).
+func item_buy(id: String) -> int:
+	return int(item(id).get("buy", -1))
+
+
+func item_stars(id: String) -> int:
+	return int(item(id).get("stars", -1))
+
+
+func item_sell(id: String) -> int:
+	return int(item(id).get("sell", -1))
+
+
+## catalogueAvailable in sim.ts.
+func for_sale(id: String, season: String) -> bool:
+	var d := item(id)
+	if not (d.has("buy") or d.has("stars")):
+		return false
+	return not d.has("season") or str(d.get("season")) == season

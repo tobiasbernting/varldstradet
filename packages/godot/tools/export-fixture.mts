@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ITEMS, SPAWN, addAnimal, addObject, objectAt, removeObject, chooseClass, createPlayer, generateWorld, getArea, npcState, placeIn, sagaKey, type AnimalSnap, type Change, type NpcSnap, type PlayerSnap, type ServerMsg, type WorldState } from '../../shared/src/index.ts';
+import { ITEMS, NPCS, SPAWN, addAnimal, addObject, objectAt, removeObject, chooseClass, createPlayer, generateWorld, getArea, npcState, placeIn, sagaKey, type AnimalSnap, type Change, type NpcSnap, type PlayerSnap, type ServerMsg, type WorldState } from '../../shared/src/index.ts';
 
 const out = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../assets/fixtures/draug.json');
 const key = sagaKey('draug');
@@ -164,4 +164,24 @@ function writeFixture(file: string, messages: ServerMsg[], what: string): void {
   // everyone else stays on the farm: only the hero is in the forest
   st.players = st.players.map((q) => (q.id === me.id ? q : { ...q, area: 'farm' }));
   writeFixture('forest.json', msgs, `${Object.keys(area.objects).length} objects, ${animals.length} animals, the arch at ${arch.x},${arch.y}`);
+}
+{
+  // Köpingen with the Völvan and the Kämpastenen: the map a bus or the east road brings (`areaData`), the village's own villagers
+  const { farm, me } = demoFarm();
+  const key = 'a:1,0';
+  const area = getArea(farm, key)!;
+  const changes: Change[] = [];
+  placeIn(farm, me, key, 46, 32, 'up', changes);
+  for (const c of changes) if (c.t === 'areaData' && c.world) c.world = area;
+  const msgs = farmMsgs(farm, me, key, changes);
+  const st = msgs[msgs.length - 1] as Extract<ServerMsg, { t: 'state' }>;
+  st.animals = [];
+  st.players = st.players.map((q) => (q.id === me.id ? q : { ...q, area: 'farm' }));
+  st.npcs = Object.values(NPCS)
+    .filter((n) => n.area === key)
+    .map((n) => {
+      const ns = npcState(area, n.id);
+      return { id: n.id, x: ns.x, y: ns.y, facing: ns.facing, moving: false, area: key };
+    });
+  writeFixture('village.json', msgs, `${Object.keys(area.objects).length} objects, ${st.npcs.length} villagers, the stone at 47,29`);
 }

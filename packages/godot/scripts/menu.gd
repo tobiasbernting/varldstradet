@@ -8,6 +8,7 @@ signal resumed
 signal switch_player
 signal dev_enter(dungeon: String)
 signal fps_toggled(on: bool)
+signal window_asked(which: String) ## "gear" or "quests": the windows the keys G and J open, for a pad
 
 var _root: Control
 var _main: VBoxContainer
@@ -52,6 +53,12 @@ func _ready() -> void:
 	_main.add_child(_title(Strings.t("menuTitle")))
 	_main.add_child(_button(Strings.t("menuContinue"), func() -> void: close()))
 	_main.add_child(_button(Strings.t("menuSettings"), func() -> void: _show_settings(true)))
+	_main.add_child(_button("%s (%s)" % [Strings.t("gearTitle"), Strings.t("gearKey")], func() -> void:
+		close()
+		window_asked.emit("gear")))
+	_main.add_child(_button("%s (%s)" % [Strings.t("questsTitle"), Strings.t("questsKey")], func() -> void:
+		close()
+		window_asked.emit("quests")))
 	var dev_title := _title(Strings.t("devTitle"))
 	dev_title.add_theme_font_size_override("font_size", 16)
 	dev_title.modulate = Color(1, 1, 1, 0.7)
