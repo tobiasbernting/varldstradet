@@ -107,8 +107,8 @@ keyboard and mouse from day one.
 
 - **Keep (shared and server):** saga data, classes, spells, items, loot tables, chapters, dungeon plans, boss moves,
   `sagasim.ts`, gear and levels, farming, animals, building, ownership, access control, voice, the protocol.
-- **Replace:** `packages/client` and `packages/clientljs` (rendering, HUD, menus, networking, art) with
-  `packages/godot`. The pixel sprites in `packages/client/src/art` are drawn in code; the ones we keep are rendered once
+- **Replace (done 2026-11-02, M5a):** `packages/client` and `packages/clientljs` (rendering, HUD, menus, networking, art) with
+  `packages/godot`. The pixel art, drawn in code, lives on in `packages/art`; the ones we keep are rendered once
   to sprite sheets by a script and checked in under `packages/godot/assets/sprites`.
 - **Remove first:** `packages/arcade` (44k lines, more than the rest of the game together) and its reach into the rest:
   `rally.ts`, `rallysim.ts`, `arcade.ts`, `hall.ts` in shared; `races.ts` on the server; `race`, `garage` and `arcade`
@@ -187,7 +187,7 @@ it together over the internet at 60 fps on Låg.
 **M4. The farm in Godot.** The 64×64 farm as the hub: crops, watering, animals, the house, the shop, crafting and
 building with ownership, the wardrobe, day and night, seasons. This is the biggest port because the farm stays a real
 game. 12–16 evenings. Done when the family can play a farm evening in the new client without missing the old one, and
-the web client is retired.
+the web client is retired. *(Retired in M5a, 2026-11-02; see `DESIGN.md`.)*
 
 **M5. Runs.** Server-side run generator on top of `sagamap.ts` (zone chain, room pick, packs, modifiers), boons,
 sagafrön and the Yggdrasil upgrades, färdkost and companions, the arch and the join-at-rest-stone rule, the hired
@@ -201,7 +201,7 @@ one per one or two evenings, with the existing bot balance pass rerun on each. 1
 wildlife that flees and returns, water with reflections on Mellan and up, particles, footsteps and ambience. Each is a
 toggle in the presets. 6–10 evenings.
 
-**M8. Polish and cutover.** Settings, accessibility (bigger text, colour-blind telegraph colours), the download page,
+**M8. Polish and cutover.** Settings, accessibility (bigger text, colour-blind telegraph colours), ~~the download page~~ (done in M5a, 2026-11-02),
 a release tag, the homelab role updated for the new build, `DESIGN.md` rewritten. 4–6 evenings.
 
 Total: roughly 60–90 evenings. M1 and M2 can start now and do not depend on art; the first money is spent at the start of M3.
@@ -222,6 +222,12 @@ Total: roughly 60–90 evenings. M1 and M2 can start now and do not depend on ar
 - **Scope of the farm port (M4).** The farm has seven crops, four animal kinds, cooking, fishing, villagers with
   quests, and the whole wider world with Köpingen. The hub needs the farm itself first; the wider world can come back
   as run zones. Decide the cut list at the start of M4.
+- **Voice has no native client (since M5a, 2026-11-02).** Röstprat was WebRTC in the browser; the server side
+  (`voice.ts`, `ice.ts`) stays, but with the browser client gone nobody can talk. It is the first thing to add after
+  the runs (Godot has WebRTC through the `webrtc` GDExtension).
+- **No character creator in Godot.** Characters were made in the browser (`POST /api/players`); the native client only
+  picks an existing one. With the browser gone a new family member needs a call to that route until Godot has a
+  creator (name, skin, hair, shirt). Second thing to add after the runs, or sooner.
 - **Hetzner CX23.** 2 vCPU and 4 GB is enough for a family and guests; run generation is cheap. If the server is ever
   the bottleneck, the next size up is the fix, not a rewrite.
 

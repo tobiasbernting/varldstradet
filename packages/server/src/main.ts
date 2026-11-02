@@ -1,6 +1,6 @@
 import { Game } from './game.ts';
 import { MemoryStore, PgStore } from './db/store.ts';
-import { createServers, findClientDist } from './http.ts';
+import { createServers } from './http.ts';
 import { Access } from './access.ts';
 import { MemoryAccessStore } from './db/accessStore.ts';
 import { ntfyNotifier } from './notify.ts';
@@ -52,13 +52,11 @@ async function main(): Promise<void> {
   if (devTeleport) console.warn('DEV_TELEPORT=1 – any player may jump straight into a dungeon with the dev message. Not for the real farm.');
   const game = new Game(store, { seasonOverride: seasonEnv, devTeleport, voice: { policy: () => (access ? access.voicePolicy() : 'open'), ice: ice.servers } });
   await game.start();
-  const clientDist = findClientDist();
   // ADMIN_PORT: the parent page gets its own listener (publish it only where the internet can't reach, e.g. a
   // Tailscale address) and disappears from the public one
   const adminPort = process.env.ADMIN_PORT ? Number(process.env.ADMIN_PORT) : null;
   if (adminPort && !process.env.PUBLIC_URL) console.warn('ADMIN_PORT without PUBLIC_URL: join links will point at the parent page address');
   const { server, admin } = createServers(game, {
-    clientDist,
     seasonEnv,
     access,
     trustProxy: process.env.TRUST_PROXY === '1',
@@ -71,8 +69,6 @@ async function main(): Promise<void> {
   }
   server.listen(port, '0.0.0.0', () => {
     console.log(`Lilla Gården on http://0.0.0.0:${port} (day ${game.world.day}, season ${game.season()})`);
-    if (clientDist) console.log(`serving client from ${clientDist}`);
-    else console.log('no client build found – run the Vite dev server for the client');
   });
 
   let stopping = false;

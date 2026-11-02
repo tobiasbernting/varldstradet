@@ -8,6 +8,7 @@ import { MemoryAccessStore } from './db/accessStore.ts';
 import { MemoryStore } from './db/store.ts';
 import { Game } from './game.ts';
 import { createServer, createServers } from './http.ts';
+import { DOWNLOADS, GAME_NAME, RELEASES_URL } from './pages.ts';
 import { ntfyNotifier } from './notify.ts';
 
 const PW = 'correct horse battery';
@@ -22,7 +23,7 @@ beforeAll(async () => {
   await game.start();
   access = new Access(new MemoryAccessStore(), { parentPassword: PW });
   await access.load();
-  server = createServer(game, { clientDist: null, seasonEnv: undefined, access });
+  server = createServer(game, { seasonEnv: undefined, access });
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
   host = `127.0.0.1:${(server.address() as AddressInfo).port}`;
   base = `http://${host}`;
@@ -51,7 +52,7 @@ const openSocket = (cookie: string, origin = base): Promise<{ ws: WebSocket; clo
 
 describe('the gate', () => {
   it('lets strangers see nothing but the gate page', async () => {
-    expect((await get('/')).headers.get('location')).toBe('/access');
+    expect((await get('/access')).status).toBe(200);
     expect((await get('/api/players')).status).toBe(403);
     expect((await get('/api/me')).status).toBe(403);
     expect((await get('/admin')).headers.get('location')).toBe('/admin/login');
@@ -157,7 +158,7 @@ describe('a native client (bearer token)', () => {
     await g.start();
     a = new Access(new MemoryAccessStore(), { parentPassword: PW });
     await a.load();
-    srv = createServer(g, { clientDist: null, seasonEnv: undefined, access: a });
+    srv = createServer(g, { seasonEnv: undefined, access: a });
     await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
     h = `127.0.0.1:${(srv.address() as AddressInfo).port}`;
     b = `http://${h}`;
@@ -308,7 +309,7 @@ describe('a separate parent server', () => {
     await g.start();
     const a = new Access(new MemoryAccessStore(), { parentPassword: PW });
     await a.load();
-    const { server: pub, admin } = createServers(g, { clientDist: null, seasonEnv: undefined, access: a, separateAdmin: true, publicUrl: 'https://gard.example.se' });
+    const { server: pub, admin } = createServers(g, { seasonEnv: undefined, access: a, separateAdmin: true, publicUrl: 'https://gard.example.se' });
     await new Promise<void>((r) => pub.listen(0, '127.0.0.1', r));
     await new Promise<void>((r) => admin!.listen(0, '127.0.0.1', r));
     const pubBase = `http://127.0.0.1:${(pub.address() as AddressInfo).port}`;
@@ -365,6 +366,84 @@ describe('ntfy', () => {
       expect(got[0]).toMatchObject({ auth: 'Bearer tk_secret', topic: 'lilla-garden', title: 'Någon kom in på gården', message: 'Kalles iPad kom in med koden för Kalle\n1.2.3.4' });
     } finally {
       ntfy.close();
+    }
+  });
+});
+
+describe('the download page (GET /)', () => {
+  it('is public, needs no script and links the release page and the four builds by their stable names', async () => {
+    const res = await get('/');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/html');
+    const page = await res.text();
+    expect(page).toContain(GAME_NAME);
+    expect(page).toContain(`href="${RELEASES_URL}/latest"`);
+    expect(DOWNLOADS.map((d) => d.file).sort()).toEqual(['varldstradet-linux-arm64.zip', 'varldstradet-linux-x86_64.zip', 'varldstradet-macos-universal.zip', 'varldstradet-windows-x86_64.zip']);
+    for (const d of DOWNLOADS) expect(page).toContain(`href="${RELEASES_URL}/latest/download/${d.file}"`);
+    expect(page).not.toContain('<script');
+    expect(res.headers.get('content-security-policy')).toContain("default-src 'none'");
+    expect(page).toContain(`<code>${base}</code>`);
+    expect(page).toContain('Startade du servern?');
+  });
+
+  it('has the code field for a stranger, which redeems a code and then shows the 6-digit number', async () => {
+    const page = await (await get('/')).text();
+    expect(page).toContain('action="/join"');
+    expect(page).toContain('name="code"');
+    const { code } = await access.createInvite({ label: 'Kalle', kind: 'guest', hours: 1, newPlayers: 1, maxDevices: 1, approval: 'parent' }, '1.2.3.4');
+    const joined = await post('/join', { code, name: 'Kalles telefon' });
+    expect(joined.headers.get('location')).toBe('/access');
+    const cookie = cookieFrom(joined);
+    const after = await (await get('/', cookie)).text();
+    expect(after).toContain('Väntar på en förälder');
+    expect(after).toMatch(/class="code">\d{3} \d{3}</);
+    expect(after).not.toContain('action="/join"');
+  });
+
+  it('is not served on the parent listener, which sends everything to the parent page', async () => {
+    const g = new Game(new MemoryStore(), { autoStart: false });
+    await g.start();
+    const a = new Access(new MemoryAccessStore(), { parentPassword: PW });
+    await a.load();
+    const { server: pub, admin } = createServers(g, { seasonEnv: undefined, access: a, separateAdmin: true, publicUrl: 'https://gard.example.se' });
+    await new Promise<void>((r) => pub.listen(0, '127.0.0.1', r));
+    await new Promise<void>((r) => admin!.listen(0, '127.0.0.1', r));
+    try {
+      const pubBase = `http://127.0.0.1:${(pub.address() as AddressInfo).port}`;
+      const admBase = `http://127.0.0.1:${(admin!.address() as AddressInfo).port}`;
+      const onPublic = await (await fetch(pubBase + '/')).text();
+      expect(onPublic).toContain(GAME_NAME);
+      expect(onPublic).toContain('<code>https://gard.example.se</code>');
+      expect(onPublic).not.toContain('/admin');
+      expect((await fetch(admBase + '/', { redirect: 'manual' })).headers.get('location')).toBe('/admin');
+    } finally {
+      pub.closeAllConnections();
+      admin!.closeAllConnections();
+      pub.close();
+      admin!.close();
+      await g.stop();
+    }
+  });
+});
+
+describe('the download page without access control (ACCESS=open)', () => {
+  it('is the same page without the code field', async () => {
+    const g = new Game(new MemoryStore(), { autoStart: false });
+    await g.start();
+    const open = createServer(g, { seasonEnv: undefined, access: null });
+    await new Promise<void>((r) => open.listen(0, '127.0.0.1', r));
+    try {
+      const b = `http://127.0.0.1:${(open.address() as AddressInfo).port}`;
+      const res = await fetch(b + '/');
+      expect(res.status).toBe(200);
+      const page = await res.text();
+      for (const d of DOWNLOADS) expect(page).toContain(`${RELEASES_URL}/latest/download/${d.file}`);
+      expect(page).not.toContain('name="code"');
+      expect((await fetch(b + '/nonsense')).status).toBe(404);
+    } finally {
+      open.closeAllConnections();
+      open.close();
+      await g.stop();
     }
   });
 });

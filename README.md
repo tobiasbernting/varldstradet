@@ -72,14 +72,12 @@ See [DESIGN.md](DESIGN.md) for the agreed design.
 pnpm install
 pnpm db:up          # Postgres 17 in a container on port 5435
 cp .env.example .env
-pnpm dev            # server on :8080, the game on :5173, also on your LAN IP
+pnpm dev            # the server on :8080 (the native client is the client: see "Native client" below)
 ```
 
-Open `http://<your-computer-ip>:5173` on the tablet. Röstprat (voice) needs https, which browsers demand before they
-hand out a microphone: `VITE_HTTPS=1 pnpm dev` serves the game over https with a self-signed certificate (accept the
-warning once per device) and the server then wants `PUBLIC_URL=https://<your-computer-ip>:5173` in `.env`, so the
-socket's origin check passes (or `ACCESS=open`). Two browsers on one computer land in the same room; use
-"Jag sitter i ett annat rum" in the 📞 window to hear yourself. The parent page is at `/admin`
+Open `http://localhost:8080` for the download page and `http://<your-computer-ip>:8080` from another device on the
+home network. Röstprat (voice) has no native client yet (the browser one was retired on 2026-11-02; the server side
+stays), so there is nothing to set up for it. The parent page is at `/admin`
 (log in with `PARENT_PASSWORD`; make join codes, manage devices, force a season, save, skip to the next day,
 make it evening/morning).
 
@@ -89,12 +87,13 @@ useless for a real farm.
 ## Production
 
 ```bash
-pnpm build                     # server bundle + client PWA
-DATABASE_URL=postgres://… node packages/server/dist/main.js   # serves the game (the LittleJS client) on :8080
+pnpm build                     # the server bundle (the native client is built by the Godot workflow)
+DATABASE_URL=postgres://… node packages/server/dist/server/src/main.js   # the server and the download page on :8080
 ```
 
 Or use the container image built by GitHub Actions: `ghcr.io/tobiasbernting/lilla-garden:latest`.
-It needs `DATABASE_URL` and listens on 8080. Migrations run on boot.
+It needs `DATABASE_URL` and listens on 8080; it holds only the server (no game files: the game is downloaded from the
+GitHub Release). Migrations run on boot.
 The public farm takes each new `:latest` the night after it's built (03:30 Swedish time): it dumps the database,
 starts the new version and goes back to the old one, database included, if it doesn't answer on `/health`. So a
 merge to `main` is live the next morning, and a migration must work on the real farm's data. The deploy lives in the
@@ -121,6 +120,17 @@ Environment:
 | `TURN_URLS`       | Röstprat: a TURN relay for the connections STUN can't manage (mobile data, strict NATs), with either `TURN_USERNAME` + `TURN_CREDENTIAL` (fixed login) or `TURN_SECRET` (coturn `use-auth-secret`: short-lived logins made by the server). |
 | `CLOUDFLARE_TURN_KEY_ID` | Röstprat: Cloudflare's TURN service instead of a relay of your own (`CLOUDFLARE_TURN_API_TOKEN` alongside). Short-lived logins are fetched from its API and cached. The public farm has no open ports, so this is the one that fits it. |
 
+## The download page
+
+The web page of the server, `GET /`, is the download page (since M5a, 2026-11-02; the browser game is gone from this
+repository). It is server-rendered in `packages/server/src/pages.ts`, needs no JavaScript and is open to everyone: the
+game's name, a line about it, links to the latest GitHub Release and to the four builds by stable names
+(`https://github.com/tobiasbernting/varldstradet/releases/latest/download/varldstradet-windows-x86_64.zip`, `…-macos-universal.zip`,
+`…-linux-x86_64.zip`, `…-linux-arm64.zip`; the "Godot client" workflow attaches the zips under these names when a `v*` tag is
+pushed), the server's address to type into the game, and the join-code field. A parent can redeem a code on a phone there
+and read the 6-digit number (the page shows it while the device waits to be approved). The links work once the first `v*`
+tag has been pushed. `/access`, `/join` and the parent page are unchanged.
+
 ## Native client
 
 The game is being rewritten as a native Godot client (`packages/godot`, [PLAN.md](PLAN.md) section 3). Milestone M2
@@ -129,8 +139,7 @@ gave it login with a join code; **M3a** put the first dungeon on the screen: Dra
 data the browser draws, with your hero walking in it and everyone else interpolated. **M3b** makes it a fight: the
 Krigare's four spells, the dungeon's telegraphs and bosses on screen, falling and getting up, chests with the loot
 window, chat and emotes, a gamepad setting for the kids, a frame-time overlay and a bench, and a headless bot that
-clears the first pack in CI. No farm and no world map yet. The browser game keeps working unchanged, and the two
-clients can be in the same dungeon at the same time. **M4a** draws the farm: the 64×64 map (and the wild maps beyond
+clears the first pack in CI. No farm and no world map yet. **M4a** draws the farm: the 64×64 map (and the wild maps beyond
 its edges, with the same code) from the server's data, with day and night, the seasons and the weather, other players
 in their own clothes, animals and villagers, and the real way into Draugkryptan: walk off the farm's north edge, west
 through the forest, and use the arch in the forest beyond. **M4b** makes the farm usable: the hotbar and the bag (and a
@@ -142,7 +151,7 @@ the prompt and the toast say whose it is), the farmhouse (walk through the door;
 light at night), the Gårdsbutik, the sell box and the pizzeria, the wardrobe, the gear window and the hero switch, the stove,
 the villagers (their talk, the day's önskningar and a list of them), Köpingen drawn like the farm with its buildings and
 villagers, the bus between the farm and the village, and Völvan Sigrun at the Kämpastenen, where the class is chosen. After
-this the browser client is not needed for a farm evening. `packages/godot/ART.md` has the art rules;
+this the browser client was not needed for a farm evening, and on 2026-11-02 (M5a) it was removed from this repository. `packages/godot/ART.md` has the art rules;
 `packages/godot/assets/LICENSES.md` every asset's origin.
 
 ![Draugkryptan in the native client](packages/godot/docs/m3a-draugkryptan.png)
@@ -195,8 +204,7 @@ generator. `--time=0.9` (a fraction of the day: 0 sunrise, 0.4 midday, 0.9 night
    and renderer; `--bench=mellan` runs one preset. F3 in the game shows the frame times live. It needs a window:
    headless Godot renders nothing. `packages/godot/ART.md` ("Measured") keeps the numbers.
 
-**Run it against a server.** The server is the one in `packages/server` (`pnpm dev` starts it on port 8080, and the
-browser game's Vite server on 5173 next to it). It refuses to start without a choice about access, and dies if
+**Run it against a server.** The server is the one in `packages/server` (`pnpm dev` starts it on port 8080). It refuses to start without a choice about access, and dies if
 `DATABASE_URL` points at a Postgres that is not running, so pick one of two recipes. Both set `DEV_TELEPORT=1`: the
 native client draws only Draugkryptan's way in (the arch), so the switch lets the pause menu's "Gå in i …" entries for
 the other eight dungeons ask the server to put you inside, as their arches would, making you a Krigare first if you
@@ -226,9 +234,7 @@ makes, which the gear window can then put on). Draugkryptan itself needs no swit
 
   or without a `.env`: `PARENT_PASSWORD=<12+ characters> DATABASE_URL=postgres://lilla_garden:lilla_garden@localhost:5435/lilla_garden DEV_TELEPORT=1 pnpm dev`.
   Open the parent page at **`http://localhost:8080/admin`**, log in with `PARENT_PASSWORD` and make a join code.
-  The parent page and the whole API belong to the server on **8080**; port 5173 is the browser game's development
-  server, which only forwards `/api`, `/admin` and `/ws` to 8080 for the browser (so the page also opens there while
-  `pnpm dev` runs, and nowhere on a real farm). Use 8080 for the parent page and for the native client.
+  The parent page and the whole API belong to the server on **8080**; use it for the parent page and for the native client.
 
 Then start the client:
 
@@ -241,10 +247,13 @@ Then start the client:
    the server ignores the code, but the field must not be empty (type anything); otherwise it is the join code from the
    parent page. Then what to call this computer, and press Kom in.
 3. A code the parent approves shows the 6-digit number; the client polls `/api/gate` every few seconds and goes on
-   to "Vem är du?" when the parent has approved the device. Pick a character. Characters are still created in the
-   browser for now, so on a fresh server make one first: open `http://localhost:5173` and make a person.
+   to "Vem är du?" when the parent has approved the device. Pick a character. **Characters cannot be made in the
+   native client yet** (they were made in the browser game, which is gone): on a fresh server make one with
+   `curl -X POST http://localhost:8080/api/players -H 'content-type: application/json' -d '{"name":"Kalle"}'` (with
+   `ACCESS=open`; with access control add `-H "Authorization: Bearer <the device token>"`, which the client keeps in
+   its `user://` settings). A character creator in Godot is the first thing missing after M5a.
 4. You start on the farm. Walk with WASD, the arrows or the left stick. Draugkryptan is reached the way the browser
-   reaches it, so the character needs a class first, and **it is chosen at the Kämpastenen in Köpingen** (M4c): walk out
+   did, so the character needs a class first, and **it is chosen at the Kämpastenen in Köpingen** (M4c): walk out
    of the farm through the opening in the middle of the east edge (or take the bus: the stop north-east of the farm and
    the one on the main street of the village, once you have been there), use the stone and pick a way; Völvan Sigrun
    beside it tells the chapter and gives the reward. (On a server with `DEV_TELEPORT=1` the pause menu's "Gå in i …"
@@ -293,10 +302,9 @@ Then start the client:
    *Trollformler: Knappar / Hjul* (the four spells on the face buttons, or one button, `RB`/`Q`, that opens a wheel
    you lean the stick towards); *Visa bildfrekvens (F3)*.
 
-**Two players, one in Godot and one in the browser.** Start the server with `DEV_TELEPORT=1`, log the Godot client
-in as above and go in through the menu; in the browser, log in as another character and walk to Draugkryptan's arch
-(or, with the same switch, nothing else is needed: the browser walks in the normal way). Both see each other's
-spells, the same monster health and the same telegraphs, because all of it is the server's.
+**Two players.** Start the server with `DEV_TELEPORT=1` and log two Godot clients in as above (two characters, two
+devices, or two bots) and go in through the menu or the arch. Both see each other's spells, the same monster health and
+the same telegraphs, because all of it is the server's.
 
 **Without a human (the bots).** A fourth bot, the farmer (`-- --farmbot`, `scripts/farm_bot.gd`), works a second in-memory
 server of its own (it rolls the day over with the dev message `{t:'dev',a:'nextDay'}`, which only `DEV_TELEPORT=1` accepts):
@@ -329,7 +337,7 @@ footprints and solidity, the dungeons' colours and names, the creatures, the cla
 the saga's items and the chat phrases from the shared data, and the demo fixture from the shared dungeon generator. `pnpm godot:gen` writes all three (`assets/sv.json`, `assets/game.json`,
 `assets/fixtures/draug.json`; each also has its own script, `godot:strings`, `godot:data`, `godot:fixture`). Commit
 them; the Godot workflow fails when they are out of date. `pnpm godot:sprites` renders the pixel art in
-`packages/client/src/art` to the sheets in `assets/sprites` with Playwright's Chromium (it needs one; the sheets are
+`packages/art/src` to the sheets in `assets/sprites` with Playwright's Chromium (it needs one; the sheets are
 committed, so CI does not run it), and `icons.png` with the spells' and emotes' emoji and the pictures of every item (the bag, the hotbar and the pick-up lines draw them).
 
 **Art.** Free CC0 packs only (the owner's decision of 2026-11-01): KayKit Dungeon Remastered for the crypt's walls,
@@ -389,13 +397,12 @@ There is still no text chat: players can only use emotes.
   `saga.ts` (data, forge tables) and `sagasim.ts` (rules), the wild maps' landmarks in `landmarks.ts` (the table) and
   `explore.ts` (discovery, seen, old saves). Vitest covers the sim.
 - `packages/server` – WebSocket game server (20 Hz), Postgres via Drizzle, `/api/players`, `/admin`, `/health`
-- `packages/clientljs` – the game, drawn with [LittleJS](https://github.com/KilledByAPixel/LittleJS): light and
-  shadow, animation and the cozy extras (see below). PWA, landscape. Its HUD, menus, networking, sounds and pixel art
-  come from `packages/client` (the `@v1/*` alias); the view is its own.
-- `packages/godot` – the native client (Godot 4.7, GDScript): the login screen, the socket, Draugkryptan on screen and
-  the Krigare fighting in it; `tools/` makes its generated files from the shared package
-- `packages/client` – the HTML menus, HUD, networking, client state, sounds and the pixel art generated in code
-  (once the Phaser client; that view is gone, the shared parts stay here)
+- `packages/godot` – the native client (Godot 4.7, GDScript): the login screen, the farm and the village, Draugkryptan and
+  the fights in it; `tools/` makes its generated files from the shared package, renders the sprite sheets and runs the
+  bots
+- `packages/art` – the pixel art, drawn in code (characters, animals, items, terrain); `pnpm godot:sprites` renders it to
+  `packages/godot/assets/sprites`, nothing runs it at play time. The browser clients (`packages/client`, `packages/clientljs`) were
+  removed in M5a (2026-11-02).
 
 ## Controls
 
@@ -418,35 +425,6 @@ There is still no text chat: players can only use emotes.
 
 ## Art
 
-All pixel art (terrain, objects, crops, animals, characters, icons) is generated in code at boot
-(`packages/client/src/art`). The design originally planned to use Kenney's CC0 roguelike tiles for
-terrain and objects; swapping those in later only touches `art/world.ts`.
-
-### Grafiken (LittleJS)
-
-The game is drawn by LittleJS at screen resolution (the earlier Phaser client used a 320×180 canvas), so things
-can lean and squash smoothly. There is one art style, the shaded pixel art. It needs WebGL 2
-(and says so on a screen without it).
-
-- Ljus: the light map follows the day (golden morning, white noon, orange sunset, blue night, purple at Halloween),
-  greyer under clouds and darker in storms. At night lamps, torches, stoves and lit windows shine, every player
-  carries a lantern, carts and coaches carry lanterns, and lightning flashes the whole map.
-- Skuggor: trees, houses, people and animals cast sun shadows that lean long to the west in the morning, sit behind
-  things at noon and lean east in the evening.
-- Rörelse: trees, grass, flowers and crops sway with the wind and rustle when walked through; people bob as they
-  step, squash when they use something, swing their tool and squeeze through the middle when they turn; animals
-  hop; new things pop up, removed things shrink away, crops pop when they grow and picked-up things fly to whoever
-  took them.
-- Väder: rain with ripples, snow, hail, leaves and gusts in the wind, fog banks, cloud shadows drifting over the
-  fields and a rainbow after rain. Fireflies on summer nights.
-- Årstider: autumn colours, leaves falling and lying under the trees (by the real calendar), snow on the branches
-  when the ground is white, blossom in spring.
-- Mys: light falls out of lit windows onto the ground at night, smoke rises from chimneys, the farmhouse gets
-  sunbeams with dust (moonbeams at night) and a closer camera, butterflies and sparrows, lily pads and jumping fish,
-  the moon and stars in the pond, dawn mist and dew, puddles on the paths when it rains, a soft evening glow, a
-  tilt-shift "model village" blur, and quiet sounds: crickets, an owl, birdsong at dawn, crackling fires, rain on the
-  roof indoors.
-- Each extra can be switched off from the address bar for comparing: `?fx=none`, or a list like `?fx=seasons,smoke`
-  (`seasons`, `windows`, `smoke`, `indoors`, `critters`, `pond`, `mist`, `puddles`, `glow`, `tiltshift`, `sounds`);
-  `?year=winter` previews another season. On a slow screen (under 45 fps after a few seconds) the glow and
-  tilt-shift, the one costly pass, turn themselves off; `?quality=high` keeps them.
+The pixel art (terrain, objects, crops, animals, characters, icons) is drawn in code in `packages/art/src` and rendered
+once to sprite sheets for the native client (see "Generated files" above). The 3D crypt and the farm's world come from
+the free packs listed in `packages/godot/assets/LICENSES.md`.

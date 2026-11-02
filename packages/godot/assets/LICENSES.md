@@ -37,7 +37,7 @@ may replace them later; they are complete enough to ship.
 ## Drawn for this project
 
 `sprites/*.png` and `sprites/atlas.json` are rendered by `tools/export-sprites.mts` from the game's own pixel art in
-`packages/client/src/art` (the family's characters and the saga's creatures); they are this project's own work, like
+`packages/art/src` (the family's characters and the saga's creatures); they are this project's own work, like
 the browser game. `sprites/icons.png` also holds emoji glyphs drawn by the build sandbox's Chromium with Noto Color
 Emoji (SIL Open Font License 1.1, Google), the same glyphs the browser game shows through the device's own font. `../icon.svg` is a placeholder drawn for this project.
 

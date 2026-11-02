@@ -30,7 +30,7 @@ the owner decides otherwise); `assets/LICENSES.md` has every file's origin.
 
 ## Palette
 
-Twelve named colours taken from the existing pixel art (`packages/client/src/art`). Imported 3D packs are tinted to
+Twelve named colours taken from the existing pixel art (`packages/art/src`). Imported 3D packs are tinted to
 them; new 2D art uses them directly. The sprites themselves keep their own full colours (they are the family's art).
 
 | Name | Hex | Taken from | Used for |
@@ -65,9 +65,10 @@ only palette colours and simple shapes so they sit next to the KayKit models wit
 Graveyard Kit is fetched (`tools/fetch-assets.sh`), the coffin, urn and bones can be swapped for its models in the
 `make_prop()` table without touching anything else.
 
-## Sprites from the browser's art
+## Sprites from the drawn-in-code art (packages/art)
 
-`tools/export-sprites.mts` renders the game's drawn-in-code pixel art to sheets with Playwright's Chromium, once, and
+`tools/export-sprites.mts` renders the game's drawn-in-code pixel art (the source is `packages/art/src`; the Vite build
+for it is `packages/art/vite.config.ts`) to sheets with Playwright's Chromium, once, and
 the sheets are committed under `assets/sprites/` with `atlas.json` (frame size, frame names, columns):
 
 - `hero_<class>_<skin>.png`: the hero in the class's outfit (`CLASSES[cls].outfit`: hat and shirt, brown trousers,
