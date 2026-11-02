@@ -1,8 +1,5 @@
 import http from 'node:http';
 import crypto from 'node:crypto';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { T, WEATHER_NAMES, isSeason, isWeatherKind, type ClientMsg, type ServerMsg } from '../../shared/src/index.ts';
 import type { Game, Link } from './game.ts';
@@ -11,34 +8,8 @@ import { DEVICE_COOKIE, PARENT_COOKIE, bearerToken, type Access, type AccessMode
 import { COPY_SCRIPT, accessPage, accessSections, joinPage, loginPage } from './pages.ts';
 import { newTotpSecret } from './totp.ts';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-
-const MIME: Record<string, string> = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.png': 'image/png',
-  '.svg': 'image/svg+xml',
-  '.webmanifest': 'application/manifest+json',
-  '.ico': 'image/x-icon',
-  '.woff2': 'font/woff2',
-  '.txt': 'text/plain; charset=utf-8',
-};
-
-/** Fetched by the browser without cookies (app manifest and its icons); nothing private in them. */
-const PUBLIC_FILES = new Set(['/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png']);
-
 /** WebSocket close code that tells the client to go to the gate page instead of reconnecting. */
 export const CLOSE_NO_ACCESS = 4003;
-
-export function findClientDist(): string | null {
-  const env = process.env.CLIENT_DIST;
-  // the game's build (from src/ in dev, from dist/server/src/ built)
-  const builds = [path.resolve(here, '../../clientljs/dist'), path.resolve(here, '../../../../clientljs/dist')];
-  const candidates = [env, ...builds].filter((c): c is string => !!c);
-  return candidates.find((c) => fs.existsSync(path.join(c, 'index.html'))) ?? null;
-}
 
 const readBody = (req: http.IncomingMessage, limit = 64 * 1024): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -66,10 +37,6 @@ const redirect = (res: http.ServerResponse, to: string): void => {
   res.end();
 };
 
-const GAME_CSP =
-  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; " +
-  "connect-src 'self'; worker-src 'self' blob:; media-src 'self' data: blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; " +
-  "frame-ancestors 'none'; form-action 'self'";
 const pageCsp = (nonce: string): string =>
   `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'`;
 
@@ -85,7 +52,6 @@ export function parseCookies(header: string | undefined): Record<string, string>
 }
 
 export interface ServerOptions {
-  clientDist: string | null;
   seasonEnv: string | undefined;
   /** null: no access control at all (ACCESS=open, home network only) */
   access?: Access | null;
@@ -403,7 +369,7 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
             cookie(req, res, PARENT_COOKIE, '', 0, '/admin', surface);
             return redirect(res, surface === 'admin' ? '/admin/login' : '/access');
           }
-        } else if (access.gate(device) !== 'ok' && !PUBLIC_FILES.has(p)) {
+        } else if (access.gate(device) !== 'ok') {
           // Everything else is the game: only for approved devices, right now
           if (p.startsWith('/api/')) return json(res, 403, { gate: access.gate(device) });
           if (req.method === 'GET') return redirect(res, '/access');
@@ -466,10 +432,6 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
           m = 'Tiden ändrad';
         }
         return redirect(res, `/admin?m=${encodeURIComponent(m)}`);
-      }
-      if (opts.clientDist && req.method === 'GET') {
-        res.setHeader('content-security-policy', GAME_CSP);
-        return serveStatic(opts.clientDist, p, res);
       }
       res.writeHead(404, { 'content-type': 'text/plain' });
       res.end('not found');
@@ -545,23 +507,4 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
   };
 
   return { server, admin };
-}
-
-function serveStatic(root: string, urlPath: string, res: http.ServerResponse): void {
-  let rel = decodeURIComponent(urlPath);
-  if (rel.endsWith('/')) rel += 'index.html';
-  let file = path.normalize(path.join(root, rel));
-  if (file !== root && !file.startsWith(root.endsWith(path.sep) ? root : root + path.sep)) {
-    res.writeHead(403);
-    res.end();
-    return;
-  }
-  if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) file = path.join(root, 'index.html'); // SPA fallback
-  const ext = path.extname(file);
-  const immutable = rel.startsWith('/assets/') && /-[A-Za-z0-9_-]{8,}\./.test(rel);
-  res.writeHead(200, {
-    'content-type': MIME[ext] ?? 'application/octet-stream',
-    'cache-control': immutable ? 'private, max-age=31536000, immutable' : 'no-cache',
-  });
-  fs.createReadStream(file).pipe(res);
 }

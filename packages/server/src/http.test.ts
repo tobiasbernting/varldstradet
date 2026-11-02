@@ -22,7 +22,7 @@ beforeAll(async () => {
   await game.start();
   access = new Access(new MemoryAccessStore(), { parentPassword: PW });
   await access.load();
-  server = createServer(game, { clientDist: null, seasonEnv: undefined, access });
+  server = createServer(game, { seasonEnv: undefined, access });
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
   host = `127.0.0.1:${(server.address() as AddressInfo).port}`;
   base = `http://${host}`;
@@ -157,7 +157,7 @@ describe('a native client (bearer token)', () => {
     await g.start();
     a = new Access(new MemoryAccessStore(), { parentPassword: PW });
     await a.load();
-    srv = createServer(g, { clientDist: null, seasonEnv: undefined, access: a });
+    srv = createServer(g, { seasonEnv: undefined, access: a });
     await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
     h = `127.0.0.1:${(srv.address() as AddressInfo).port}`;
     b = `http://${h}`;
@@ -308,7 +308,7 @@ describe('a separate parent server', () => {
     await g.start();
     const a = new Access(new MemoryAccessStore(), { parentPassword: PW });
     await a.load();
-    const { server: pub, admin } = createServers(g, { clientDist: null, seasonEnv: undefined, access: a, separateAdmin: true, publicUrl: 'https://gard.example.se' });
+    const { server: pub, admin } = createServers(g, { seasonEnv: undefined, access: a, separateAdmin: true, publicUrl: 'https://gard.example.se' });
     await new Promise<void>((r) => pub.listen(0, '127.0.0.1', r));
     await new Promise<void>((r) => admin!.listen(0, '127.0.0.1', r));
     const pubBase = `http://127.0.0.1:${(pub.address() as AddressInfo).port}`;

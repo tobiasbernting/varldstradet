@@ -36,5 +36,5 @@ jobs:
           # The cloud farm's deploy script names versions by this in its pushes
           labels: |
             org.opencontainers.image.revision=${{ github.sha }}
-          cache-from: type=gha,scope=clientljs
-          cache-to: type=gha,mode=max,scope=clientljs
+          cache-from: type=gha,scope=server
+          cache-to: type=gha,mode=max,scope=server
