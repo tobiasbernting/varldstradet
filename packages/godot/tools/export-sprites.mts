@@ -3,7 +3,7 @@
 // dungeons listed below (two walk frames), and for the farm (M4a): the character layers Godot composes (checked here
 // against drawCharacter pixel for pixel), the villagers, and the pets, farm, wild and roaming animals. The art needs a canvas, so tools/sprites-page.ts is bundled with Vite
 // (packages/art/vite.config.ts) and run in Playwright's Chromium; the sheets and assets/sprites/atlas.json are committed.
-// Run `pnpm godot:sprites` after changing the art or adding a dungeon. See ART.md, "Sprites from the browser's art".
+// Run `pnpm godot:sprites` after changing the art or adding a dungeon. See ART.md, "Sprites from the drawn-in-code art".
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
