@@ -214,11 +214,11 @@ jobs:
         run: |
           set -euo pipefail
           cd build
-          V="${GITHUB_REF_NAME//\//-}"
-          (cd windows && zip -q -r "../varldstradet-${V}-windows-x86_64.zip" .)
-          (cd linux-x86_64 && zip -q -r "../varldstradet-${V}-linux-x86_64.zip" .)
-          (cd linux-arm64 && zip -q -r "../varldstradet-${V}-linux-arm64.zip" .)
-          mv macos/varldstradet.zip "varldstradet-${V}-macos-universal.zip"
+          # Stable names, no version in them: the server's download page links to releases/latest/download/<name>
+          (cd windows && zip -q -r "../varldstradet-windows-x86_64.zip" .)
+          (cd linux-x86_64 && zip -q -r "../varldstradet-linux-x86_64.zip" .)
+          (cd linux-arm64 && zip -q -r "../varldstradet-linux-arm64.zip" .)
+          mv macos/varldstradet.zip "varldstradet-macos-universal.zip"
           ls -la *.zip
 
       - uses: actions/upload-artifact@v4

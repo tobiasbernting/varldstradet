@@ -5,7 +5,7 @@ import { T, WEATHER_NAMES, isSeason, isWeatherKind, type ClientMsg, type ServerM
 import type { Game, Link } from './game.ts';
 import { adminPage } from './admin.ts';
 import { DEVICE_COOKIE, PARENT_COOKIE, bearerToken, type Access, type AccessMode, type Device } from './access.ts';
-import { COPY_SCRIPT, accessPage, accessSections, joinPage, loginPage } from './pages.ts';
+import { COPY_SCRIPT, accessPage, downloadPage, accessSections, joinPage, loginPage } from './pages.ts';
 import { newTotpSecret } from './totp.ts';
 
 /** WebSocket close code that tells the client to go to the gate page instead of reconnecting. */
@@ -243,6 +243,11 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
           return redirect(res, access.gate(r.device) === 'ok' ? '/' : '/access');
         }
 
+        // the web page of the game is the download page: public, it shows the code field to a device without access
+        if (p === '/' && req.method === 'GET') {
+          return html(res, 200, downloadPage(nonce, { origin: origin(req), access: { device }, parentLink: surface === 'all' }));
+        }
+
         // ---- parent ----
         if (p === '/admin/login' && req.method === 'GET') return html(res, 200, loginPage(nonce, access.totpEnabled()));
         if (p === '/admin/login' && req.method === 'POST') {
@@ -378,6 +383,7 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
       }
 
       // no access control (ACCESS=open): every device is in, a native client needs no token
+      if (p === '/' && req.method === 'GET') return html(res, 200, downloadPage(nonce, { origin: origin(req), access: null, parentLink: false }));
       if (p === '/api/me' || p === '/api/gate') return json(res, 200, { gate: 'ok', canCreate: true });
       if (p === '/api/join' && req.method === 'POST') return json(res, 200, { gate: 'ok' });
       if (p === '/api/players' && req.method === 'GET') {
