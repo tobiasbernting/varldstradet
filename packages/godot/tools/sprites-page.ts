@@ -1,12 +1,12 @@
 // The browser side of export-sprites.mts: bundled by Vite, run in Playwright's Chromium, draws the game's pixel art
-// (packages/client/src/art, which needs a canvas) and hands back PNG data for every sheet. Nothing here runs in Node.
+// (packages/art/src, which needs a canvas) and hands back PNG data for every sheet. Nothing here runs in Node.
 import { ANIMALS, CLASSES, DUNGEONS, ITEMS, NPCS, SAGA_BOSSES, SAGA_LOOT, SAGA_TREASURE, SPELLS, T, sagaItem, type Appearance, type ClassId, type Outfit } from '@lilla-garden/shared';
 // (the world's art first: the art modules form a cycle, and the browser's own entry loads them in this order)
-import { EMOTE_GLYPH } from '../../client/src/art/world.ts';
-import { getArt } from '../../client/src/art/textures.ts';
-import { drawAnimal, ANIMAL_SIZE, ANIMAL_VARIANTS, RIDE_LIFT } from '../../client/src/art/animals.ts';
-import { CHAR_H, CHAR_LAYERS, CHAR_W, drawCharacter, HAIR_COLORS, HAIR_STYLES, HEADROOM, isDress, lookOf, SKIN_TONES, type CharLayer, type Dir } from '../../client/src/art/characters.ts';
-import { Px } from '../../client/src/art/px.js';
+import { EMOTE_GLYPH } from '../../art/src/world.ts';
+import { getArt } from '../../art/src/textures.ts';
+import { drawAnimal, ANIMAL_SIZE, ANIMAL_VARIANTS, RIDE_LIFT } from '../../art/src/animals.ts';
+import { CHAR_H, CHAR_LAYERS, CHAR_W, drawCharacter, HAIR_COLORS, HAIR_STYLES, HEADROOM, isDress, lookOf, SKIN_TONES, type CharLayer, type Dir } from '../../art/src/characters.ts';
+import { Px } from '../../art/src/px.js';
 
 export interface Sheet {
   file: string;

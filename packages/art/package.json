@@ -1,0 +1,17 @@
+{
+  "name": "@lilla-garden/art",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The pixel art, drawn in code (characters, animals, items, terrain). packages/godot/tools renders it to the sprite sheets the native client uses; nothing else runs it.",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@lilla-garden/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^7.1.7"
+  }
+}
