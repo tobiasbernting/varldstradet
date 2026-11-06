@@ -120,10 +120,14 @@ been tested on the MacBook yet; PR 11, 12, 13 and 14 each carry a "what to check
 - **GitHub does not run the `pull_request` workflow on a PR that conflicts with its base.** After every merge to main,
   check `mergeable_state` of the open PRs and have the child merge `origin/main` into its branch (plain merge, no
   force). Two PRs touching `bot-check.mts`, `sv.ts`, README, DESIGN.md or PLAN.md will conflict with each other.
-- **Known CI flake:** the farmer bot's bus step under Xvfb ("the bus: the stop did not open the window" or "could
-  not walk to bus_stop") failed twice out of about eight runs today on a slow runner and passed on re-run; nothing in
-  the diffs touched it (checked twice). Re-run the failed job once (`actions_run_trigger` rerun_failed_jobs); a third
-  failure in a row on the same head is real.
+- **Known CI flake:** the farmer bot's walks in the village under Xvfb (twice "the bus: the stop did not open the
+  window" / "could not walk to bus_stop", once "could not walk to saga_stone" after 304 s) failed three times out of
+  about ten runs today on slow runners and passed on other runs; nothing in the diffs touched it (checked twice).
+  Since PR 15 the windowed farmer only runs in the manual `pictures` job, so it no longer blocks PR checks; re-run
+  the job once. Steps that come after it in the `pictures` job are skipped when it fails (the M5c run-pair pictures
+  were, 18:59 UTC): keep such steps before it or on `if: always()`. The headless run-pair check in the `export` job
+  is also intermittent on contended runners (passed and failed on the same head 7a3884f at the same time); the M5c
+  fix-up child is making the bot tolerate slow frames rather than loosening the check.
 - Pushes to `main` of `HANDOFF.md` from the orchestrating session work; a force push, a branch deletion and pushes
   from the lilla-garden clone were refused by the permission classifier.
 - The owner tests on the MacBook and reports in chat; questions for the owner go in the chat report, one at a time.
