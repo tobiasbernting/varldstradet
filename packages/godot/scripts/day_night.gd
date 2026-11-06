@@ -24,6 +24,8 @@ const AUTUMN := [Color("#d8841f"), Color("#b8501c"), Color("#d8b02a")]
 const BROWN := Color("#8a6a3a")
 
 var view: FarmView
+var grade: ScreenGrade ## the full-screen grade (world.gd sets it): saturation, vignette, night tint, lightning flash
+var indoors := 0.0 ## 0..1, how far the hero is inside the farmhouse (world.gd sets it): no night tint there
 var sun: DirectionalLight3D
 var env: Environment
 var world_env: WorldEnvironment
@@ -43,6 +45,10 @@ var _flakes: GPUParticles3D
 var _leaves: GPUParticles3D
 var _rainbow: MeshInstance3D
 var _bolt := 0.0
+var _flash := 0.0 ## the whole-screen flash of a bolt, 1 -> 0 in a quarter of a second
+var _flash_again := -1.0 ## seconds until the second, smaller flash (the browser's double flash)
+var _gtint := Color.WHITE
+var _dusk := 0.0
 var _bolt_in := 4.0
 var _t := 0.0
 var _season := "none"
@@ -218,6 +224,7 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 	var tw := _dark * _dark
 	# at dusk the green of the grass is pulled back, so the light reads mauve and not just dim
 	var dusk := smoothstep(0.69, 0.76, f) * (1.0 - smoothstep(0.8, 0.86, f)) * (1.0 - float(_wvis["rain"]) * 0.5)
+	_dusk = dusk
 	var amb_l := _ambient * Color(1.0 + 0.1 * dusk, 1.0 - 0.2 * dusk, 1.0 + 0.12 * dusk)
 	env.ambient_light_color = amb_l.lerp(Color(0.2, 0.3, 0.7), tw * 0.5)
 	env.ambient_light_energy = lerpf(0.5, 0.64, _dark) * lerpf(1.0, 0.82, clampf(1.0 - sun_share, 0.0, 1.0) * (1.0 - _dark))
@@ -248,15 +255,24 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 		env.volumetric_fog_albedo = sky_color
 	# lightning
 	_bolt = maxf(0.0, _bolt - delta * 3.0)
+	_flash = maxf(0.0, _flash - delta * 4.0)
+	if _flash_again >= 0.0:
+		_flash_again -= delta
+		if _flash_again < 0.0:
+			_flash = 0.55
+			_bolt = maxf(_bolt, 0.6)
 	if kind == "storm":
 		_bolt_in -= delta
 		if _bolt_in <= 0.0:
 			_bolt = 1.0
+			_flash = 1.0
+			_flash_again = 0.12 + _rng.randf() * 0.1
 			_bolt_in = _rng.randf_range(4.0, 11.0)
 	if _bolt > 0.0:
 		sun.light_energy += _bolt * 2.5
 		env.ambient_light_energy += _bolt * 1.2
 	_update_weather(delta, kind)
+	_update_grade(delta, w)
 	_update_materials(delta, kind, w, elevation, sun_share)
 	view.set_dark(_dark)
 	var cam := get_viewport().get_camera_3d()
@@ -278,6 +294,25 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 		(_rainbow.material_override as ShaderMaterial).set_shader_parameter("amount", _rainbow_k)
 	if cam == null:
 		return
+
+
+## The full-screen grade and the glow from the light of the moment: less colour in fog and rain and at night, a cooler cast
+## under rain clouds, a vignette that closes in with the dark, and (never indoors) the blue of night and the flash.
+func _update_grade(delta: float, w: Array) -> void:
+	var fog := float(_wvis["fog"])
+	var rain := float(_wvis["rain"])
+	var open := 1.0 - indoors
+	env.glow_hdr_threshold = lerpf(1.0, 0.7, _dark)
+	env.glow_intensity = 0.2 + 0.5 * _dark
+	env.glow_bloom = 0.04 + 0.1 * _dark
+	if grade == null:
+		return
+	var cast: Color = w[1]
+	var peak := maxf(cast.r, maxf(cast.g, cast.b))
+	var want := Color.WHITE.lerp(Color(cast.r / peak, cast.g / peak, cast.b / peak), 0.7 * open)
+	_gtint = _gtint.lerp(want, 1.0 - pow(0.12, delta))
+	var sat := lerpf(0.9, 0.8, _dark) * (1.0 - 0.16 * fog - 0.1 * rain)
+	grade.set_look(sat, smoothstep(0.35, 0.85, _dark) * open, 0.3 + 0.22 * _dark, _gtint, _flash * open, 1.0 - 0.12 * fog, 1.0, _dusk * open)
 
 
 func _local_weather(kind: String) -> String:

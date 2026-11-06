@@ -50,6 +50,7 @@ var _people3d := OS.get_cmdline_user_args().has("--people3d")
 var _mode := "" ## "dungeon", "outdoor" (the farm and the wild maps) or "" (nothing drawn)
 var _demo_time := -1.0 ## --time=<0..1>: a fixed time of day for pictures
 var _demo_rain := false
+var grade := ScreenGrade.new() ## the last pass over the 3D picture (under the HUD)
 var _area := "" ## the map drawn right now ("" when none)
 var _actors: Dictionary = {} ## "p:<id>" or "a:<id>" -> Actor
 var _prev_pos: Dictionary = {} ## actor key -> last scene position (facing from velocity)
@@ -70,6 +71,7 @@ func _ready() -> void:
 	fx.name = "Fx"
 	add_child(fx)
 	fx.setup(model, _find_actor)
+	add_child(grade)
 	hud = HudLayer.new()
 	add_child(hud)
 	menu = PauseMenu.new()
@@ -728,7 +730,11 @@ func _process(delta: float) -> void:
 	if _area == "":
 		return
 	if _mode == "outdoor":
+		farm.sky.grade = grade
+		farm.sky.indoors = _cam_k
 		farm.sky.update_sky(delta, _clock_ms(), model.season, model.weather, model.server_now())
+	elif _mode == "dungeon":
+		grade.dungeon_look()
 	combat.tick()
 	fx.tick(delta)
 	play.tick(delta)
