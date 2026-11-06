@@ -337,7 +337,9 @@ bag when the run starts. Nothing chosen is fine.
 * Every card has an `icon` (an emoji, drawn by the client's emoji sheet) and a `text` (at most 40 characters).
 * Falling, the wipe and the time-out say "Ni vaknar vid vilostenen" and "Dags att gå hem" and never anything about losing.
 * The same safety as the saga: nothing bleeds, monsters poof, the party is always at the farm again with what it has.
-* A parent's play hours, pause and remove work as before and end a run as a leave.
+* A parent's play hours, pause and remove work as before: they take the member's device offline, and the run treats that as a
+  dropped connection (section 7). It goes on for the others with that member offline, and ends after 60 seconds with no
+  human online. They are not a `leave`: the member stays in the run's party until it ends.
 
 ---
 
