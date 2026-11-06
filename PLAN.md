@@ -222,9 +222,9 @@ Total: roughly 60–90 evenings. M1 and M2 can start now and do not depend on ar
 - **Scope of the farm port (M4).** The farm has seven crops, four animal kinds, cooking, fishing, villagers with
   quests, and the whole wider world with Köpingen. The hub needs the farm itself first; the wider world can come back
   as run zones. Decide the cut list at the start of M4.
-- **Voice has no native client (since M5a, 2026-11-02).** Röstprat was WebRTC in the browser; the server side
-  (`voice.ts`, `ice.ts`) stays, but with the browser client gone nobody can talk. It is the first thing to add after
-  the runs (Godot has WebRTC through the `webrtc` GDExtension).
+- ~~**Voice has no native client.**~~ **Done (2026-11-06), pending the owner's test on two devices:** Röstprat is back
+  in the Godot client over the `webrtc-native` GDExtension, with the sound as mu-law packets on a data channel
+  (Godot has no WebRTC audio tracks); see `DESIGN.md` "Godot client: Röstprat". The server and `shared` are unchanged.
 - ~~**No character creator in Godot.**~~ **Done (2026-11-06):** the login screen has "Ny karaktär", a creator window
   (name, skin, hair colour, hair style, shirt, a live preview) that posts to `/api/players` with the device token; see
   `DESIGN.md` "Godot client: the character creator". Nothing on the server changed.

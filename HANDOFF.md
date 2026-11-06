@@ -25,8 +25,12 @@ This file is only what the next agent needs: state, decisions, how the work is r
 | 10 | M5a | Browser client retired; pixel art moved to `packages/art`; `/` is the download page; voice and character-creator gaps recorded |
 | 11 | M5b | `GAME.md`; the run generator, rules and bot brain (`run.ts`, `runmap.ts`, `runsim.ts`, `runbot.ts`), the hired companion, sagafrön and the sagaträd, färdkost, the three buildings, server handlers, data export; a review fix-up round (seven findings) and the soft 30-minute clock; merged 12:04 UTC as bd01a91 |
 | 12 | backlog 3 | The character creator in the Godot client: "Ny karaktär" on the login screen, a creator window with the look composer, `POST /api/players` from the client, a headless creator check, `docs/creator.png`; merged 14:52 UTC as 70dac5a |
+| 15 | CI | By the owner's other session (`session_01KTh22pJ2K85r8267Nim4Fy`, Opus): the Godot workflow split into a fast `export` job (headless checks, bots, exports, about 6 minutes, on every PR) and a `pictures` job (Xvfb pictures, benches, the windowed farmer) that runs only on a manual `workflow_dispatch`; shared setup in `.github/actions/setup-godot`; job timeouts; superseded PR runs cancelled; merged 18:32 UTC as 3707985 |
+| 14 | backlog 2 | Röstprat in the Godot client: mu-law audio over a WebRTC data channel (`webrtc-native` 1.2.2-stable fetched by `tools/fetch-webrtc.sh`, not committed), `voice.gd`/`voice_peer.gd`/`voice_codec.gd`/`voice_window.gd`, push-to-talk default, a headless voice check and a two-bot signalling check, `docs/voice.png`; reviewed, seven findings fixed by a fix-up child; merged 19:28 UTC as 2873377. Not yet heard by the owner. |
 
-- **Open pull requests (the next agent's first job):**
+- **Open pull requests (the next agent's first job).** Both conflict with main since PR 15 (in the table above) in
+  `.github/workflows/godot.yml` only; each needs `origin/main` merged in and its workflow steps moved into the new
+  job structure before CI runs again.
   - **PR 13, M5c: runs in the Godot client**, branch `m5c-runs-client`, draft. Everything is built and pushed: the
     färdport arch, the Yggdrasil shoot in five stages, the smithy, herb garden and longhouse drawn; the arch window;
     the zones drawn with the biome looks; the run HUD with the soft clock; the three runor cards and the vote; the end
@@ -45,33 +49,21 @@ This file is only what the next agent needs: state, decisions, how the work is r
     18:13 UTC (the `build` job green; `export` in progress, the Xvfb steps next); the child is idle waiting for it.
     Still to do by that child when CI is green: fetch the `m5c-*.png` pictures from the `farm-screenshots` artifact
     into `packages/godot/docs/`, write the real PR body (per deliverable, commands, what to check on the MacBook,
-    pictures, unsure), mark the PR ready. GitHub showed `mergeable_state: dirty` at 18:45 although `git merge-tree`
-    against main found no conflict (main only gained HANDOFF.md commits): recheck before merging. Do not merge until
-    all of that is in and CI is green including both run-pair steps. Local checks on the branch were green at every
+    pictures, unsure), mark the PR ready. **Since PR 15 (18:32 UTC) the branch conflicts with main in
+    `.github/workflows/godot.yml`** (the branch added two run-pair steps and reordered steps in the old single job;
+    main restructured the file). The child must merge `origin/main` into the branch and move its steps into the new
+    structure: the headless run pair (`BOT_ONLY=run BOT_RUN_SECONDS=480 pnpm godot:bot`) into the `export` job after
+    the two-bot step, and the Xvfb run pair with the pictures into the `pictures` job. GitHub runs no PR workflow
+    while the conflict stands, and the `m5c-*.png` pictures now only come from a manual run of the workflow on the
+    branch (Actions -> Godot client -> Run workflow, or `actions_run_trigger` run_workflow with `ref:
+    m5c-runs-client`), whose `farm-screenshots` artifact holds them. The child was told this at 18:55 UTC. Do not merge
+    until the conflict is resolved, the `export` job is green on the merged head, the manual `pictures` run has
+    produced the run pictures and they are committed, and the PR body and ready state are in. Local checks on the branch were green at every
     head so far (297 shared, 47 server tests, `pnpm godot:gen` clean).
-  - **PR 14, Röstprat (voice) in the Godot client**, branch `godot-voice`, **ready for review, CI green, no
-    conflicts with main at 17:50 UTC**, child `session_01KTh22ouaSJXMfDZvpaPHMt` (done). Design: Godot's
-    WebRTC has no media tracks, so sound is 16 kHz mono 8-bit mu-law over an unordered data channel (16 kB/s per
-    peer), push-to-talk (key C) default, open mic a setting, no echo cancellation; the `webrtc-native` 1.2.2-stable
-    GDExtension is not committed but fetched by `packages/godot/tools/fetch-webrtc.sh` (pinned, sha256-checked) in
-    the workflow and by developers; all four exports have a binary; macOS export has the microphone text and
-    entitlement and library validation off. Reviewed in the orchestrating session (local checks green, the picture
-    `docs/voice.png` fine, an independent review found **no blocker**). Findings to hand to a fix-up child or to
-    accept with a backlog note before merging: (a) medium: a push-to-talk tap shorter than 150 ms leaves the server
-    stuck on "talking" because the server drops a report within 150 ms of the last one (`voice.gd` ~485-491):
-    hold the "off" report until 150 ms have passed; (b) low: on every first offer the answerer throws away the
-    peer it already opened in `_sync` (`voice.gd` ~378): drop only when that peer has a remote description;
-    (c) low-medium on Låg: the microphone is captured and resampled every frame for any speaker even with no
-    peers or the mic off (`_mic_start`, `voice.gd` ~396): clear the buffer and skip the resampling when not
-    transmitting; (d) low: the generator buffer accounting assumes 8000 frames but Godot likely rounds to 8192
-    (`voice_peer.gd` ~170), costing about 60 ms of latency; (e) the "Röstprat finns inte i den här versionen"
-    text is unreachable because the button and menu entry are hidden without the extension, and `voiceNoMicNative`
-    is unused (a denied macOS microphone permission is not detected); (f) `_early` is not cleared in `_drop`/`_sync`,
-    `open_window` checks null rather than `is_instance_valid`; (g) `fetch-webrtc.sh` uses `"${auth[@]}"` with an
-    empty array under `set -u`, which fails on macOS's bash 3.2 (CI is fine); the bot-check voice check exercises the
-    server with bare sockets, not the Godot client. Merge order: PR 13 and PR 14 both touch `bot-check.mts`,
-    `sv.ts`/`sv.json`, README, DESIGN.md, PLAN.md; whichever merges second must merge main into its branch first
-    (GitHub does not run the workflow on a conflicting PR).
+  - **PR 14 is merged** (see the table). What the next agent should know: the MacBook test recipe is in the PR
+    body (two devices in different places, the microphone prompt, hold C to talk); the extension is fetched by
+    `packages/godot/tools/fetch-webrtc.sh` once per checkout; the voice bot check exercises the server with bare
+    sockets, not the Godot client; audio itself has never been heard.
 - Not yet done: M6 (the other eight dungeons and chapters as zone sets in the client), M7 (alive world), M8 (polish,
   release tag, homelab deploy of the v2 server, `DESIGN.md` rewrite).
 
@@ -128,10 +120,14 @@ been tested on the MacBook yet; PR 11, 12, 13 and 14 each carry a "what to check
 - **GitHub does not run the `pull_request` workflow on a PR that conflicts with its base.** After every merge to main,
   check `mergeable_state` of the open PRs and have the child merge `origin/main` into its branch (plain merge, no
   force). Two PRs touching `bot-check.mts`, `sv.ts`, README, DESIGN.md or PLAN.md will conflict with each other.
-- **Known CI flake:** the farmer bot's bus step under Xvfb ("the bus: the stop did not open the window" or "could
-  not walk to bus_stop") failed twice out of about eight runs today on a slow runner and passed on re-run; nothing in
-  the diffs touched it (checked twice). Re-run the failed job once (`actions_run_trigger` rerun_failed_jobs); a third
-  failure in a row on the same head is real.
+- **Known CI flake:** the farmer bot's walks in the village under Xvfb (twice "the bus: the stop did not open the
+  window" / "could not walk to bus_stop", once "could not walk to saga_stone" after 304 s) failed three times out of
+  about ten runs today on slow runners and passed on other runs; nothing in the diffs touched it (checked twice).
+  Since PR 15 the windowed farmer only runs in the manual `pictures` job, so it no longer blocks PR checks; re-run
+  the job once. Steps that come after it in the `pictures` job are skipped when it fails (the M5c run-pair pictures
+  were, 18:59 UTC): keep such steps before it or on `if: always()`. The headless run-pair check in the `export` job
+  is also intermittent on contended runners (passed and failed on the same head 7a3884f at the same time); the M5c
+  fix-up child is making the bot tolerate slow frames rather than loosening the check.
 - Pushes to `main` of `HANDOFF.md` from the orchestrating session work; a force push, a branch deletion and pushes
   from the lilla-garden clone were refused by the permission classifier.
 - The owner tests on the MacBook and reports in chat; questions for the owner go in the chat report, one at a time.
@@ -191,7 +187,8 @@ been tested on the MacBook yet; PR 11, 12, 13 and 14 each carry a "what to check
   M5b soft clock `session_01KTh22qjEejiGHLyJoPWc7W`, creator `session_01KTh22pn3nY1PwSd9U6Gv3B`, M5c
   `session_01KTh22riKcXRQssJpT6nmes` (stood down), **M5c fix-up `session_01KTh22s4VK2T6Mc1ipSsM5W` (running at
   18:00 UTC)**, voice `session_01KTh22ouaSJXMfDZvpaPHMt` (done).
-- One pause-mode check-in pending in the old orchestrating session (about 19:30 UTC): it only records the fix-up
-  child's result here and merges nothing.
+- One pause-mode check-in pending in the old orchestrating session (19:29 UTC, `trig_016hPae4dtYsGZNgBnbuQWNR`):
+  it only records the fix-up child's result here and merges nothing. The owner's other session
+  (`session_01KTh22pJ2K85r8267Nim4Fy`, Opus) made PR 15 and also edited section 3 of this file.
 - Homelab repo `tobiasbernting/homelab`: `cloud/` (Hetzner + Cloudflare + Tailscale, running), `server/roles/lilla-garden`
   and `lilla-garden-cloud`.

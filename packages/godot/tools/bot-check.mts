@@ -28,6 +28,13 @@
 // the färdport, the lead presses "Starta färden", the other is taken along (or presses "Följ med"), both fight zone 1, use the
 // exit, vote on a runa card and enter zone 2. With `--full` (local use) they play on to the boss and home. The checks: no errors,
 // both reached zone 2, both voted, a runa was taken, the sagafrön counted.
+// A voice check (Röstprat, no Godot needed): two bots join voice on the in-memory server, one in a room of its own (two
+// devices on this machine share an address, so they would be one room that hears nothing), and the check is that the
+// server names each as the other's peer, sends the ice servers to the speakers, relays a `signal` from the one that
+// offers (`offers()`) to the other and refuses one the other way round when they are in the same room. Audio itself
+// (microphone, speakers, the WebRTC data channel) cannot be checked headless: `--voicecheck` (voice_check.gd) covers the
+// codec and, with the webrtc-native extension, two peers in one process; the rest is for two real machines.
+// BOT_ONLY=voice runs only this.
 //
 //   GODOT=~/godot/godot pnpm godot:bot            (GODOT defaults to `godot` on the PATH)
 //   BOT_ONLY=run BOT_RUN_SECONDS=480 pnpm godot:bot [-- --full]   (the run pair alone; --full plays to the boss: BOT_RUN_SECONDS=2400)
@@ -143,6 +150,71 @@ interface CreatorReport {
   choice: { name: string; appearance: { skin: string; hair: string; hairStyle: string }; shirt: string };
   steps: { name: string; ok: boolean; detail: string }[];
   errors: string[];
+}
+
+/** Röstprat on the server: two bots join, are named as each other's peers and exchange a signal through the server. */
+async function checkVoice(base: string): Promise<void> {
+  const WebSocket = createRequire(path.join(root, 'packages/server/package.json'))('ws') as typeof import('ws').WebSocket;
+  type Msg = { t: string; ev?: string; state?: { room: string; joined: boolean; rooms: { id: string; speaker: string | null }[] }; from?: string; data?: unknown; servers?: unknown[]; you?: string };
+  const player = async (name: string): Promise<string> => {
+    const list = (await (await fetch(`${base}/api/players`)).json()) as { id: string; name: string }[];
+    const have = list.find((p) => p.name === name);
+    if (have) return have.id;
+    const made = (await (await fetch(`${base}/api/players`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name, appearance: { skin: '#8d5a32', hair: '#2b2119', hairStyle: 'ponytail' } }) })).json()) as { id: string };
+    return made.id;
+  };
+  const open = async (name: string) => {
+    const id = await player(name);
+    const ws = new WebSocket(base.replace(/^http/, 'ws') + '/ws');
+    const msgs: Msg[] = [];
+    ws.on('message', (raw: Buffer) => msgs.push(JSON.parse(raw.toString())));
+    await new Promise<void>((res, rej) => {
+      ws.on('open', () => res());
+      ws.on('error', rej);
+    });
+    ws.send(JSON.stringify({ t: 'hello', playerId: id }));
+    const send = (m: unknown): void => ws.send(JSON.stringify(m));
+    const state = (): NonNullable<Msg['state']> | undefined => msgs.findLast((m) => m.t === 'voice' && m.ev === 'state')?.state;
+    return { id, ws, msgs, send, state };
+  };
+  const until = async (cond: () => boolean, ms: number): Promise<boolean> => {
+    const t = Date.now() + ms;
+    while (Date.now() < t) {
+      if (cond()) return true;
+      await sleep(100);
+    }
+    return cond();
+  };
+  const a = await open('Bot-Rost-A');
+  const b = await open('Bot-Rost-B');
+  try {
+    check(await until(() => !!a.state() && !!b.state(), 15_000), 'voice: both bots got the voice state after the welcome');
+    b.send({ t: 'voice', a: 'room', mode: 'alone' });
+    a.send({ t: 'voice', a: 'join' });
+    b.send({ t: 'voice', a: 'join' });
+    const named = (x: typeof a, other: typeof a): boolean => !!x.state()?.joined && x.state()!.rooms.some((r) => r.id !== x.state()!.room && r.speaker === other.id);
+    check(await until(() => named(a, b) && named(b, a), 10_000), 'voice: each bot has the other as a speaker of another room (its peer)');
+    check(await until(() => a.msgs.some((m) => m.ev === 'ice') && b.msgs.some((m) => m.ev === 'ice'), 10_000), 'voice: both speakers were sent the ice servers');
+    // the one that makes the offer (offers(): the smaller id) sends; the other receives it, then answers
+    const [offerer, answerer] = a.id < b.id ? [a, b] : [b, a];
+    offerer.send({ t: 'voice', a: 'signal', to: answerer.id, data: { k: 'sdp', type: 'offer', sdp: 'v=0 test' } });
+    check(await until(() => answerer.msgs.some((m) => m.ev === 'signal' && m.from === offerer.id && (m.data as { type?: string })?.type === 'offer'), 5_000), 'voice: the offer reached the other speaker through the server, from the right player');
+    answerer.send({ t: 'voice', a: 'signal', to: offerer.id, data: { k: 'sdp', type: 'answer', sdp: 'v=0 test' } });
+    answerer.send({ t: 'voice', a: 'signal', to: offerer.id, data: { k: 'ice', media: '0', index: 0, name: 'candidate:1' } });
+    check(await until(() => offerer.msgs.filter((m) => m.ev === 'signal' && m.from === answerer.id).length >= 2, 5_000), 'voice: the answer and a candidate came back');
+    // the same room hears nothing: put B back with A and a signal must not pass
+    b.send({ t: 'voice', a: 'room', mode: 'auto' });
+    await sleep(500);
+    const before = a.msgs.filter((m) => m.ev === 'signal').length;
+    b.send({ t: 'voice', a: 'signal', to: a.id, data: { k: 'ice', media: '0', index: 0, name: 'candidate:2' } });
+    await sleep(500);
+    check(a.msgs.filter((m) => m.ev === 'signal').length === before, 'voice: a signal between two devices of the same room is not relayed');
+    a.send({ t: 'voice', a: 'leave' });
+    check(await until(() => !a.state()?.joined, 5_000), 'voice: hanging up takes the bot off the phone');
+  } finally {
+    a.ws.close();
+    b.ws.close();
+  }
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
@@ -279,6 +351,12 @@ async function main(): Promise<void> {
   try {
     await waitFor(`http://localhost:${port}/api/gate`, 60_000);
     console.log('server: up');
+    if ((process.env.BOT_ONLY ?? '') === 'voice' || (process.env.BOT_ONLY ?? '') === '') await checkVoice(`http://127.0.0.1:${port}`);
+    if ((process.env.BOT_ONLY ?? '') === 'voice') {
+      server.kill('SIGTERM');
+      finish();
+      return;
+    }
     // BOT_ONLY: nothing (everyone), `walker` (the arch walker alone) or `farm` (the farmer alone)
     const mode = process.env.BOT_ONLY ?? '';
     const only = mode === 'walker' || mode === 'creator';
@@ -439,6 +517,11 @@ async function main(): Promise<void> {
     await sleep(500);
     if (server.exitCode === null) server.kill('SIGKILL');
   }
+  finish();
+}
+
+/** The end of a run: where the logs are, the failures with every log, and the exit code. */
+function finish(): void {
   console.log(`\nlogs and reports in ${tmp}`);
   if (failures.length) {
     // the whole story, for a failure nobody can reproduce by hand (CI)

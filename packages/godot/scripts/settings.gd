@@ -14,6 +14,12 @@ var quality: String = "mellan"
 ## "buttons": the four spells on X, Y, B and RB (the browser's layout); "wheel": one button opens a radial wheel.
 var spell_input: String = "buttons"
 var show_fps: bool = false
+## Röstprat (voice.gd): ring up when the game starts; "ptt" (hold the key) or "open" (the microphone is always on);
+## the microphone on or off; how loud the others are, 0 to 1.
+var voice_auto: bool = true
+var voice_mode: String = "ptt"
+var voice_mic: bool = true
+var voice_volume: float = 1.0
 
 
 func _ready() -> void:
@@ -27,6 +33,10 @@ func _ready() -> void:
 	quality = str(cfg.get_value("graphics", "quality", "mellan"))
 	spell_input = str(cfg.get_value("input", "spells", "buttons"))
 	show_fps = bool(cfg.get_value("graphics", "fps", false))
+	voice_auto = bool(cfg.get_value("voice", "auto", true))
+	voice_mode = str(cfg.get_value("voice", "mode", "ptt"))
+	voice_mic = bool(cfg.get_value("voice", "mic", true))
+	voice_volume = clampf(float(cfg.get_value("voice", "volume", 1.0)), 0.0, 1.0)
 
 
 func save() -> void:
@@ -38,6 +48,10 @@ func save() -> void:
 	cfg.set_value("graphics", "quality", quality)
 	cfg.set_value("input", "spells", spell_input)
 	cfg.set_value("graphics", "fps", show_fps)
+	cfg.set_value("voice", "auto", voice_auto)
+	cfg.set_value("voice", "mode", voice_mode)
+	cfg.set_value("voice", "mic", voice_mic)
+	cfg.set_value("voice", "volume", voice_volume)
 	var err := cfg.save(FILE)
 	if err != OK:
 		push_warning("could not save %s: %s" % [FILE, error_string(err)])

@@ -170,6 +170,12 @@ clear zone 1, vote and enter zone 2. Pictures: [the arch window](packages/godot/
 [the cards](packages/godot/docs/m5c-cards.png), [the end of a run](packages/godot/docs/m5c-end.png), [the sagaträd](packages/godot/docs/m5c-tree.png),
 [the arch and the tree on the farm](packages/godot/docs/m5c-farm-run.png) and [the new buildings](packages/godot/docs/m5c-smithy.png).
 
+**Röstprat** (voice chat) is back in the native client (2026-11-06). Open it from the pause menu ("Röstprat") or the small button at the top right of the HUD. The game picks up the phone for you when you log in (the window's "Lägg på" hangs up and keeps it hung up). Hold **C** (or the window's "Håll här för att prata" button) to talk: push-to-talk is the default, for the kids; "Öppen mikrofon" in the window keeps the microphone open, "Tysta mikrofonen" turns it off, and "Volym" sets how loud the others are (all of it is remembered in `settings.cfg`). Everything about rooms is as before: devices behind the same address are one room and do not hear each other, one device per room is the speakerphone. Sound goes straight between the rooms' speakers as small mu-law packets on a WebRTC data channel (Godot has no WebRTC audio tracks), 16 kB/s a peer.
+
+![Röstprat](packages/godot/docs/voice.png)
+
+Röstprat needs the `webrtc-native` GDExtension, which is not committed: the Godot workflow fetches it, and a developer runs `packages/godot/tools/fetch-webrtc.sh` once after cloning (then the import step). Without it the game runs and says "Röstprat finns inte i den här versionen" and never picks up the phone. `godot --headless --path packages/godot -- --voicecheck --require-webrtc` checks the codec, the room rules and two peers exchanging packets; `BOT_ONLY=voice pnpm godot:bot` checks the server side with two bots. **What to check by hand** (headless cannot hear): two devices in different places (one on mobile data if possible) hear each other; on a Mac the microphone prompt comes the first time the phone is picked up; two devices at the same Wi-Fi do not hear each other; hanging up and a dropped connection let go.
+
 The character creator (login screen, "Ny karaktär"): ![The character creator](packages/godot/docs/creator.png)
 
 Home and village (M4c): [the workbench](packages/godot/docs/m4c-workbench.png), [a fence that is not yours](packages/godot/docs/m4c-not-yours.png),

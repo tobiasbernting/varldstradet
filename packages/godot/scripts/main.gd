@@ -9,6 +9,7 @@ extends Node
 ##                       frame times, draw calls, lights and the render timings (bench.gd)
 ##   --farmbot           a headless player that farms against a local server (farm_bot.gd, M4b)
 ##   --runbot            a headless player that walks to the färdport, starts (or joins) a run and fights through its zones (run_bot.gd, M5c)
+##   --voicecheck        Röstprat's codec, rules and (with the webrtc extension) a connection between two peers (voice_check.gd)
 ##   --bot               a headless player that logs in against a local server (ACCESS=open, DEV_TELEPORT=1), walks
 ##                       to the first pack, fights it and writes a report (bot.gd)
 
@@ -38,6 +39,11 @@ func _ready() -> void:
 		runner.name = "Bot"
 		runner.world = world
 		add_child(runner)
+	elif args.has("--voicecheck"):
+		login.visible = false
+		var vc := VoiceCheck.new()
+		vc.name = "VoiceCheck"
+		add_child(vc)
 	elif args.has("--bot"):
 		login.visible = false
 		_set_world(true)
@@ -153,6 +159,7 @@ func quit_clean(code := 0) -> void:
 	_quitting = true
 	Net.disconnect_now()
 	Sfx.release()
+	Voice.release()
 	for child in get_children():
 		child.queue_free()
 	await get_tree().process_frame

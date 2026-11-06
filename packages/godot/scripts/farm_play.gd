@@ -104,7 +104,7 @@ func setup(v: WorldView) -> void:
 
 
 func is_busy() -> bool:
-	return bag.is_open() or namer.is_open() or windows.is_busy()
+	return bag.is_open() or namer.is_open() or windows.is_busy() or Voice.window_open()
 
 
 ## An outdoor map was drawn.
