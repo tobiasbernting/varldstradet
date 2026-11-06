@@ -619,8 +619,7 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 				_night_glows.append([g, 1.6])
 			_add_light(node, Vector3(0.0, 1.0, 2.8), Color("#ffc977"), 6.0, 1.3, 0.12, true)
 		"saga_portal":
-			var colours: Array = DungeonView.TORCH_COLOURS
-			var col: Color = colours[variant % colours.size()]
+			var col: Color = DungeonLook.portal_colour(variant)
 			var g2 := assets.glow_quad(col, 1.8, 1.4)
 			g2.position = Vector3(0.0, 1.05, 0.2)
 			node.add_child(g2)

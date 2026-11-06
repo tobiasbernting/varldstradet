@@ -15,31 +15,6 @@ const CHUNK := 8
 const KAYKIT := "res://assets/kaykit/"
 const FLOOR_MODELS := ["floor_tile_small.gltf.glb", "floor_tile_small_broken_A.gltf.glb", "floor_tile_small_weeds_A.gltf.glb"]
 const FLOOR_BOSS := "floor_tile_small_decorated.gltf.glb"
-## The stone tint per look (the dungeon's `wall` index): ART.md, "Recolouring imported packs".
-const STONE_TINT := [
-	Color(0.78, 0.84, 0.76), # Draugkryptan: Kryptsten
-	Color(0.82, 0.9, 1.0), # Frostjättens borg
-	Color(0.55, 0.5, 0.52), # Surts smedja
-	Color(0.6, 0.78, 0.76), # Helheim
-	Color(0.7, 0.7, 0.76), # Svartalfheims gruvor
-	Color(0.6, 0.76, 0.9), # Havsormens tempel
-	Color(0.72, 0.62, 0.82), # Alvernas lund
-	Color(0.78, 0.82, 0.9), # Fenrisklyftan
-	Color(0.9, 0.86, 1.0), # Bifrost
-]
-## The torches' light per look, from the browser's SAGA_TORCH (lighting.ts): the first three are copied, the rest
-## are the dungeons' moods as that file describes them (ghost-light, lanterns, pearls, fairy lights, cold fire, rainbow).
-const TORCH_COLOURS := [
-	Color(0.62, 1.0, 0.55), Color(0.6, 0.86, 1.0), Color(1.0, 0.58, 0.26), Color(0.6, 1.0, 0.82), Color(1.0, 0.86, 0.6),
-	Color(0.7, 0.92, 1.0), Color(0.82, 0.7, 1.0), Color(0.62, 0.8, 1.0), Color(1.0, 0.82, 0.9),
-]
-## What the floor models are tinted with per terrain (the dungeons' floors: crypt flagstones, the boss halls' stone,
-## snow, ice, the forge's black stone, Bifrost's glass; the rest in case a plan uses them).
-const FLOOR_TINT := {
-	"crypt": Color(1.0, 1.0, 1.0), "floor_stone": Color(1.1, 1.08, 1.05), "snow": Color(1.3, 1.35, 1.45), "ice": Color(0.9, 1.2, 1.4),
-	"forge": Color(0.45, 0.4, 0.42), "bifrost": Color(1.3, 1.25, 1.4), "moss": Color(0.8, 1.1, 0.75), "stone": Color(0.95, 0.95, 0.95),
-	"gravel": Color(0.9, 0.88, 0.85), "sand": Color(1.2, 1.1, 0.85), "dirt": Color(0.9, 0.8, 0.7), "floor_wood": Color(1.1, 0.9, 0.7),
-}
 ## The ground of a run's zones (the biome's own floor: GAME.md section 1.1), drawn flat in the biome's colour with a little
 ## variation per tile; the walls, torches and decor are the dungeon's the biome borrows from.
 const FLAT_FLOOR := {
@@ -54,7 +29,7 @@ const PLATE_COLOUR := Color(1.0, 0.9, 0.5)
 
 var key := ""
 var dungeon_id := ""
-var look := 0
+var look: Dictionary = DungeonLook.NEUTRAL ## the dungeon's row of the look table (dungeon_look.gd)
 var world: Dictionary = {}
 var map_w := 64
 var map_h := 64
@@ -79,6 +54,7 @@ var look_name := "" ## which look this was built with (the biome, or the dungeon
 var _vc_mat: StandardMaterial3D ## the vertex-colour material of the zone props (zone_props.gd)
 var _weather := ""
 var _weather_node: GPUParticles3D
+var _motes_node: GPUParticles3D ## what drifts through the air of this look (snow, embers, wisps), following the hero
 
 
 func _process(delta: float) -> void:
@@ -114,6 +90,7 @@ func clear() -> void:
 	_vc_mat = null
 	_weather = ""
 	_weather_node = null
+	_motes_node = null
 	world = {}
 	key = ""
 	dungeon_id = ""
@@ -132,7 +109,9 @@ func build(w: Dictionary, k: String, zone_look: Dictionary = {}) -> void:
 	var d: Dictionary = zone_look if not zone_look.is_empty() else Data.dungeon(dungeon_id)
 	flat_floor = zone and d.has("biome")
 	look_name = str(d.get("biome", d.get("name", dungeon_id)))
-	look = int(d.get("wall", 0)) % STONE_TINT.size()
+	look = DungeonLook.resolve(dungeon_id, d)
+	if flat_floor:
+		look = DungeonLook.plain_air(look)
 	map_w = int(w.get("w", 64))
 	map_h = int(w.get("h", 64))
 	_static = Node3D.new()
@@ -142,6 +121,7 @@ func build(w: Dictionary, k: String, zone_look: Dictionary = {}) -> void:
 	_objects_root.name = "Objects"
 	add_child(_objects_root)
 	_make_environment(d)
+	_make_motes()
 	var objects: Dictionary = w.get("objects", {})
 	for obj in objects.values():
 		if str(obj.get("kind", "")) == "saga_exit":
@@ -220,11 +200,11 @@ func object_count() -> int:
 
 
 func tint() -> Color:
-	return STONE_TINT[look]
+	return look["stone"]
 
 
 func torch_colour() -> Color:
-	return TORCH_COLOURS[look % TORCH_COLOURS.size()]
+	return look["torch"]
 
 
 # ---------------------------------------------------------------------------
@@ -239,15 +219,15 @@ func _make_environment(d: Dictionary) -> void:
 	env.background_color = amb * 0.12
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = amb
-	env.ambient_light_energy = 0.7 # the browser's dungeonAmbient: the dungeon's colour turned down, so torches pool light
+	env.ambient_light_energy = float(look["ambient_energy"]) # the browser's dungeonAmbient: the dungeon's colour turned down, so torches pool light
 	env.fog_enabled = true
-	env.fog_light_color = amb * 0.45
-	env.fog_density = 0.035
+	env.fog_light_color = amb * float(look["fog_k"])
+	env.fog_density = float(look["fog_density"])
 	env.fog_sky_affect = 0.0
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.volumetric_fog_albedo = amb
 	env.volumetric_fog_density = 0.03
-	env.glow_intensity = 0.5
+	env.glow_intensity = float(look["glow"])
 	env.glow_bloom = 0.05
 	# Screen-space occlusion (Mellan and Hög; Forward+ only) darkens creases. Its defaults (a 1 m radius, intensity 2)
 	# are made for rooms: on 2 m walls seen from above they paint a dark band along every wall's foot and halos at the
@@ -313,7 +293,7 @@ func _build_floor(d: Dictionary) -> void:
 				groups[gk] = []
 			groups[gk].append(Transform3D(Basis.from_scale(Vector3.ONE * SCALE), Vector3(x + 0.5, 0.0, y + 0.5)))
 	for gk in groups.keys():
-		var colour: Color = tint() * FLOOR_TINT.get(gk[1], Color(1, 1, 1))
+		var colour: Color = DungeonLook.floor_tint(look, str(gk[1]))
 		var mesh := _tinted_mesh(KAYKIT + gk[0], colour)
 		if mesh == null:
 			continue
@@ -654,7 +634,7 @@ func set_weather(kind: String) -> void:
 		_weather_node.queue_free()
 		_weather_node = null
 	if _env != null and _env.environment != null:
-		var fog := 0.035
+		var fog: float = float(look["fog_density"])
 		match kind:
 			"fog":
 				fog = 0.095
@@ -729,7 +709,78 @@ func set_weather(kind: String) -> void:
 	_weather_node = p
 
 
-## The falling weather goes where the hero goes.
+## The falling weather and the look's motes go where the hero goes.
 func follow_weather(at: Vector3) -> void:
+	if _motes_node != null:
+		_motes_node.position = at + Vector3(0.0, 3.0, 0.0)
 	if _weather_node != null:
 		_weather_node.position = at + Vector3(0.0, 7.0, 0.0)
+
+
+# ---------------------------------------------------------------------------
+# What drifts through a dungeon's air (the look's `motes`): Mellan and Hög only, a quarter of the weather budget
+
+
+func _make_motes() -> void:
+	var kind := str(look.get("motes", ""))
+	var budget := int(Quality.spec().get("weather", 0)) / 4 if Quality.preset != "lag" else 0
+	if kind == "" or budget <= 0:
+		return
+	var quad := QuadMesh.new()
+	var pm := ParticleProcessMaterial.new()
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	pm.emission_box_extents = Vector3(10.0, 2.5, 8.0)
+	var colour := Color(1, 1, 1, 0.8)
+	var life := 6.0
+	var additive := false
+	match kind:
+		"snow":
+			# slow flakes falling through the cold air
+			quad.size = Vector2(0.06, 0.06)
+			pm.direction = Vector3(0.15, -1.0, 0.0)
+			pm.spread = 35.0
+			pm.initial_velocity_min = 0.35
+			pm.initial_velocity_max = 0.7
+			life = 8.0
+		"embers":
+			# sparks lifting off the forge's fires
+			quad.size = Vector2(0.05, 0.05)
+			pm.direction = Vector3(0.1, 1.0, 0.0)
+			pm.spread = 30.0
+			pm.initial_velocity_min = 0.4
+			pm.initial_velocity_max = 1.0
+			colour = Color(1.0, 0.55, 0.2, 0.9)
+			life = 5.0
+			additive = true
+		_:
+			# wisps: soft pale-green lights drifting sideways, slowly
+			quad.size = Vector2(0.16, 0.16)
+			pm.direction = Vector3(1.0, 0.1, 0.3)
+			pm.spread = 60.0
+			pm.initial_velocity_min = 0.15
+			pm.initial_velocity_max = 0.4
+			colour = Color(0.6, 1.0, 0.8, 0.5)
+			life = 7.0
+			additive = true
+			budget = budget / 2
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	if additive:
+		m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		m.albedo_texture = DungeonProps._glow_texture()
+	m.albedo_color = colour
+	quad.material = m
+	var p := GPUParticles3D.new()
+	p.name = "Motes"
+	p.amount = maxi(8, budget)
+	p.lifetime = life
+	p.preprocess = life
+	p.local_coords = false
+	p.process_material = pm
+	p.draw_pass_1 = quad
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	p.visibility_aabb = AABB(Vector3(-14, -6, -12), Vector3(28, 12, 24))
+	add_child(p)
+	_motes_node = p
