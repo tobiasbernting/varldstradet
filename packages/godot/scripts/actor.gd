@@ -19,6 +19,8 @@ const FOOT_LIFT := 0.03
 ## themselves by where they stand.
 const PULL := Vector3(0.0, 0.38, 0.33)
 const WALK_FPS := 6.0
+## How far a voxel body turns toward a walk up or down the screen (radians), at most.
+const VOXEL_TURN := 0.61
 const BAR_BACK_PRIORITY := 10
 const BAR_FILL_PRIORITY := 11
 const SWING_TIME := 0.26
@@ -64,6 +66,16 @@ var _anim: AnimationPlayer = null
 var _model_h := 0.0
 var _yaw := 0.0
 static var _anim_libs: Array = [] ## AnimationLibrary, loaded once from the pack's two rig files
+## The voxel body (`--people3d`, voxel_body.gd): a creature's sprite frames extruded into meshes, or null.
+var voxel: MeshInstance3D = null
+var _vframes: Array[ArrayMesh] = []
+var _vmat: ShaderMaterial = null
+var _vframe := -1
+var _vyaw := 0.0
+var _vt := 0.0
+var _vh := 0.0 ## the body's height, its width and its greatest half-depth, metres
+var _vw := 0.0
+var _vd := 0.0
 
 
 func _init() -> void:
@@ -171,6 +183,71 @@ func set_figure(figure: Node3D, key: String, height_m := 1.5) -> bool:
 	return true
 
 
+## The 3D trial for creatures: a body of voxels (VoxelBody.frames()) in place of the sprite, with the frames of the
+## sheet in order (walking swaps between them). `key` names the sheet, so the same body is not set twice. An empty
+## list keeps the sprite and returns false.
+func set_voxel(frames: Array[ArrayMesh], key: String) -> bool:
+	if voxel != null and voxel.get_meta("key", "") == key:
+		return true
+	if frames.is_empty():
+		return false
+	if voxel == null:
+		voxel = MeshInstance3D.new()
+		_vmat = VoxelBody.material()
+		voxel.material_override = _vmat
+		add_child(voxel)
+	voxel.set_meta("key", key)
+	_vframes = frames
+	_vh = 0.0
+	_vw = 0.0
+	_vd = 0.0
+	for f in frames:
+		var bb := f.get_aabb()
+		_vh = maxf(_vh, bb.end.y)
+		_vw = maxf(_vw, bb.size.x)
+		_vd = maxf(_vd, bb.end.z)
+	_vframe = -1
+	_show_voxel(0)
+	voxel.position = Vector3(0.0, FOOT_LIFT, 0.0)
+	sprite.visible = false
+	label.position.y = _vh + 0.3
+	return true
+
+
+func has_voxel(key: String) -> bool:
+	return voxel != null and voxel.get_meta("key", "") == key
+
+
+func _show_voxel(i: int) -> void:
+	if i != _vframe:
+		_vframe = i
+		voxel.mesh = _vframes[i]
+
+
+## The voxel body turned toward where it faces: the sprites are side views facing right, so it yaws to right or left
+## (a mirror by yaw, not by scale) and turns at most VOXEL_TURN further toward a walk up or down the screen, so a
+## pillow never shows its head-on end.
+func _animate_voxel(facing: String, moving: bool, delta: float) -> void:
+	if pose == "down":
+		return
+	if facing == "left" or facing == "right":
+		_last_facing = facing
+	var want := 0.0 if _last_facing == "right" else PI
+	if moving:
+		# toward the camera (down) or away (up): +z is the way the camera sits
+		var s := 1.0 if _last_facing == "left" else -1.0
+		if facing == "down":
+			want += s * VOXEL_TURN
+		elif facing == "up":
+			want -= s * VOXEL_TURN
+	_vyaw = lerp_angle(_vyaw, want, 1.0 - pow(0.001, delta))
+	_vt += delta
+	_show_voxel(int(_anim_t * WALK_FPS) % _vframes.size() if moving else 0)
+	# standing breathes: the height swells and settles by 2 %
+	var breath := 0.0 if moving else 0.02 * sin(_vt * 2.4)
+	voxel.basis = Basis(Vector3.UP, _vyaw) * Basis.from_scale(Vector3(1.0, 1.0 + breath, 1.0))
+
+
 func has_figure(key: String) -> bool:
 	return model != null and model.get_meta("key", "") == key
 
@@ -218,10 +295,14 @@ func set_label(text: String) -> void:
 func height() -> float:
 	if model != null:
 		return _model_h
+	if voxel != null:
+		return _vh
 	return (_frame_h - _headroom) * PIXEL
 
 
 func width() -> float:
+	if voxel != null:
+		return _vw
 	return _frame_w * PIXEL
 
 
@@ -256,6 +337,9 @@ func animate(facing: String, moving: bool, delta: float) -> void:
 	if model != null:
 		_animate_model(facing, moving, delta)
 		return
+	if voxel != null:
+		_animate_voxel(facing, moving, delta)
+		return
 	if _frames.is_empty():
 		return
 	if pose == "down":
@@ -276,18 +360,29 @@ func _tick_looks(delta: float) -> void:
 	var lift := night_lift if (_flash_t <= 0.0 and pose != "down") else 0.0
 	if not is_equal_approx(lift, _lift):
 		_lift = lift
-		_mat.emission_energy_multiplier = lift * NIGHT_EMISSION
+		if voxel != null:
+			_vmat.set_shader_parameter("night", lift)
+		else:
+			_mat.emission_energy_multiplier = lift * NIGHT_EMISSION
 	if _flash_t > 0.0:
 		_flash_t -= delta
 		var k := clampf(_flash_t / 0.12, 0.0, 1.0)
-		sprite.modulate = (FALLEN_TINT if pose == "down" else Color.WHITE).lerp(_flash_colour, k)
+		if voxel != null:
+			_vmat.set_shader_parameter("flash_colour", _flash_colour)
+			_vmat.set_shader_parameter("flash", k)
+		else:
+			sprite.modulate = (FALLEN_TINT if pose == "down" else Color.WHITE).lerp(_flash_colour, k)
 	if _lunge_t > 0.0:
 		_lunge_t -= delta
 		var k := clampf(_lunge_t / 0.18, 0.0, 1.0)
-		var base := Vector3(0.0, _frame_h * PIXEL / 2.0 + FOOT_LIFT, 0.0) + PULL
-		sprite.position = base + _lunge * sin(k * PI)
-		if _lunge_t <= 0.0:
-			sprite.position = base
+		if voxel != null:
+			if pose != "down":
+				voxel.position = Vector3(0.0, FOOT_LIFT, 0.0) + (_lunge * sin(k * PI) if _lunge_t > 0.0 else Vector3.ZERO)
+		else:
+			var base := Vector3(0.0, _frame_h * PIXEL / 2.0 + FOOT_LIFT, 0.0) + PULL
+			sprite.position = base + _lunge * sin(k * PI)
+			if _lunge_t <= 0.0:
+				sprite.position = base
 	if _swing_t > 0.0:
 		_swing_t -= delta
 		if _swing_t <= 0.0:
@@ -364,6 +459,9 @@ func set_pose(p: String) -> void:
 	if _block != null:
 		_block.queue_free()
 		_block = null
+	if voxel != null:
+		_voxel_pose(p)
+		return
 	if p == "down":
 		# lying on the ground: the billboard goes, the sprite is laid flat with its feet where it stood
 		sprite.billboard = BaseMaterial3D.BILLBOARD_DISABLED
@@ -379,6 +477,27 @@ func set_pose(p: String) -> void:
 	sprite.rotation = Vector3.ZERO
 	sprite.position = Vector3(0.0, _frame_h * PIXEL / 2.0 + FOOT_LIFT, 0.0) + PULL
 	sprite.modulate = Color.WHITE
+	if p == "frozen":
+		_block = _ice_block()
+		add_child(_block)
+	elif p == "web":
+		_block = _web()
+		add_child(_block)
+
+
+## The voxel body's poses: lying on its side with its feet where it stood (grey), or up again; the ice block and the
+## web are the same as the billboard's.
+func _voxel_pose(p: String) -> void:
+	_vmat.set_shader_parameter("tint", FALLEN_TINT if p == "down" else Color.WHITE)
+	if p == "down":
+		# rolled onto its flank: the pillow's side faces up, and it rests on the floor by its half-depth
+		voxel.basis = Basis(Vector3.UP, _vyaw) * Basis(Vector3.RIGHT, -PI / 2.0)
+		voxel.position = Vector3(0.0, FOOT_LIFT + _vd, 0.0)
+		if _bar != null:
+			_bar.visible = false
+		return
+	voxel.position = Vector3(0.0, FOOT_LIFT, 0.0)
+	voxel.basis = Basis(Vector3.UP, _vyaw)
 	if p == "frozen":
 		_block = _ice_block()
 		add_child(_block)

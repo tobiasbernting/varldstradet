@@ -44,8 +44,10 @@ var wheel: Wheel
 var play: FarmPlay
 var demo := false
 var looks: LookComposer
-## The 3D trial: `--people3d` draws players as chibi figures put together from KayKit Adventurers parts and
-## dressed in their look (figure_3d.gd) instead of pixel sprites.
+## The 3D trial: `--people3d` gives people and creatures 3D bodies: players and villagers as chibi figures put
+## together from KayKit Adventurers parts and dressed in their look (figure_3d.gd), animals and monsters as voxel
+## bodies extruded from their own sprites (voxel_body.gd), instead of pixel sprites. Vehicles stay billboards.
+const VEHICLES: Array[String] = ["bus", "car", "train", "motorcycle"]
 var _people3d := OS.get_cmdline_user_args().has("--people3d")
 var _mode := "" ## "dungeon", "outdoor" (the farm and the wild maps) or "" (nothing drawn)
 var _demo_time := -1.0 ## --time=<0..1>: a fixed time of day for pictures
@@ -636,6 +638,8 @@ func _sync_actors() -> void:
 				var grow := int(Data.animals.get(species, {}).get("growDays", 3))
 				sheet = Data.animal_sheet(species, int(rec.get("age", 99)) < grow, model.season == "jul", int(rec.get("variant", 0)))
 			actor.set_sheet(sheet)
+			if _people3d and not VEHICLES.has(species) and sheet != "":
+				actor.set_voxel(VoxelBody.frames(sheet), sheet)
 			# dungeon monsters show their own bars instead of the name labels (the browser's ownsLabel)
 			actor.set_label("" if (_mode == "dungeon" and not Data.mob(species).is_empty()) else str(rec.get("name", Data.mob_name(species))))
 		actor.position = _scene_of(float(rec.get("x", 0)), float(rec.get("y", 0)))
