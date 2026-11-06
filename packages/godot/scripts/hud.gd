@@ -120,7 +120,7 @@ func _ready() -> void:
 	fps_label.anchor_right = 1.0
 	fps_label.offset_left = -300
 	fps_label.offset_right = -16
-	fps_label.offset_top = 84
+	fps_label.offset_top = 150
 	fps_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	fps_label.visible = false
 	add_child(fps_label)

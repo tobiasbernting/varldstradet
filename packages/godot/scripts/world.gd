@@ -40,6 +40,7 @@ var hud: HudLayer
 var menu: PauseMenu
 var loot: LootWindow
 var chat: ChatUi
+var run_hud: RunHud
 var wheel: Wheel
 var play: FarmPlay
 var demo := false
@@ -69,6 +70,9 @@ func _ready() -> void:
 	fx.setup(model, _find_actor)
 	hud = HudLayer.new()
 	add_child(hud)
+	run_hud = RunHud.new()
+	run_hud.model = model
+	add_child(run_hud)
 	menu = PauseMenu.new()
 	add_child(menu)
 	loot = LootWindow.new()
