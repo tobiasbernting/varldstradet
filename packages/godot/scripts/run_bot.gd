@@ -21,6 +21,9 @@ var _exited: Dictionary = {} ## zone -> true once the run reached the pick (the 
 var _pressed: Dictionary = {} ## zone -> true once I pressed a card
 var _confirmed: Dictionary = {} ## zone -> true once the server's offer showed my vote
 var _beat := 5.0
+var _rest_t := 0.0
+var _wipes := 0
+const MAX_WIPES := 2
 var _kit_t := -1.0
 var _kit_sent := false
 var _started := false
@@ -53,6 +56,42 @@ func _ready() -> void:
 	super._ready()
 	_report["run"] = {"role": role, "zones": [], "exits": 0, "presses": 0, "picks": 0, "runor": [], "started": false, "joined": false, "ended": null, "boss_down": false, "seeds": 0}
 	world.model.run_ended.connect(_on_run_ended)
+	world.model.toast.connect(func(text: String) -> void:
+		if text.contains("har fallit"):
+			_forgive_until = Time.get_ticks_msec() + 10000.0)
+
+
+var _forgive_until := 0.0 ## local ms until which a monster's health may rise: a fall sends the monsters home, and they mend on the way
+
+## A monster sent home by the server (the party fell, or one was dragged past its leash while the other lay down) is at full health
+## again, and mends on its way there: that is the server's word, for 10 s after a fall. Any other rise is still a client error.
+func _rose(where: String, id: Variant, from: float, to: float) -> void:
+	if to >= 0.999 or Time.get_ticks_msec() < _forgive_until:
+		_log("monster %s is home again (%s)" % [str(id), where])
+		return
+	super._rose(where, id, from, to)
+
+
+## Is everyone in the party (a fallen one counts as not) at 85 % health or more?
+func _party_rested() -> bool:
+	var f: Dictionary = world.model.saga.get(world.model.my_area_key(), {}).get("f", {})
+	for id in f.keys():
+		var hp: Variant = f[id]
+		if not (hp is Array and hp.size() >= 2) or float(hp[0]) < 0.85 * float(hp[1]):
+			return false
+	return not f.is_empty()
+
+
+## How many monsters of this map stand within 6 tiles of me (the snapshot's positions; the map's own record before the first snapshot).
+func _enemy_near() -> int:
+	var n := 0
+	var me := Vector2(world.hero.px, world.hero.py)
+	var animals: Dictionary = world.model.areas.get(world.model.my_area_key(), {}).get("animals", {})
+	for id in animals.keys():
+		var at: Variant = world.combat.pos_of(int(id))
+		if at != null and (at as Vector2).distance_to(me) < 6.0 * Data.tile():
+			n += 1
+	return n
 
 
 func _process(delta: float) -> void:
@@ -179,6 +218,13 @@ func _rb_tick(delta: float) -> void:
 			_leave_sent = true
 			_log("the boss is down")
 			Net.send({"t": "run", "a": "leave"})
+	if _phase == "rb_rest":
+		world.hero.drive = Vector2.ZERO
+		_rest_t += delta
+		if _enemy_near() > 0:
+			_phase = "plan" # (another pack joined the fight: resting under its claws is how a pair wipes)
+		elif _rest_t > 25.0 or (_rest_t > 1.0 and _party_rested()):
+			_phase = "plan"
 	# walking to the exit
 	if _phase == "rb_exit":
 		_walk_to_exit(delta)
@@ -309,8 +355,22 @@ func _on_run_ended(summary: Dictionary) -> void:
 	_ended = summary
 	_report["run"]["ended"] = summary
 	_log("run ended: %s" % str(summary))
+	if str(summary.get("outcome", "")) == "wipe" and _wipes < MAX_WIPES and not _leave_sent:
+		# the pair fell: a game outcome, not a client defect (and at 2-3 fps in a window nobody can step out of a telegraph). Back to the arch.
+		_wipes += 1
+		_report["run"]["wipes"] = _wipes
+		_log("the pair fell (%d of %d tries): back to the arch" % [_wipes, MAX_WIPES])
+		_started = false
+		_window_t = 0.0
+		_to_exit = false
+		_pack_ids = []
+		_path = []
+		_after_run = false
+		world.hero.drive = Vector2.ZERO
+		_phase = "route_plan"
+		return
 	_after_run = true
-	if shots_dir != "":
+	if shots_dir != "" and str(summary.get("outcome", "")) != "wipe":
 		return # (the picture sequence finishes the bot)
 	if full and str(summary.get("outcome", "")) == "win":
 		_success()
@@ -326,7 +386,9 @@ func _pack_done() -> void:
 	_packs_done += 1
 	_report["packs_beaten"] = _packs_done
 	world.hero.drive = Vector2.ZERO
-	_phase = "plan"
+	# health comes back by itself out of a fight (3 % a second after a calm); pulling the next pack on a sliver of it is how a pair wipes
+	_rest_t = 0.0
+	_phase = "rb_rest" if _enemy_near() == 0 else "plan"
 
 
 func _success() -> void:
