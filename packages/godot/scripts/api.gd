@@ -1,6 +1,6 @@
 class_name Api
 extends Node
-## The server's JSON routes for a native client: POST /api/join, GET /api/gate, GET /api/players. The device token
+## The server's JSON routes for a native client: POST /api/join, GET /api/gate, GET /api/players, POST /api/players. The device token
 ## goes as a bearer header; there are no cookies and no Origin header.
 
 
@@ -44,3 +44,11 @@ func gate() -> Dictionary:
 
 func players() -> Dictionary:
 	return await request_json(HTTPClient.METHOD_GET, "/api/players")
+
+
+## A new character for this device (POST /api/players, the same body the browser's creator sent). `appearance` is
+## {skin, hair, hairStyle} (skin and hair as #rrggbb); `shirt` one of the starter shirts. The answer's body is the new
+## player ({id, name, appearance, outfit}) on 201; on failure its `error` is "name" (400), "create" or "access" (403)
+## or "full" (409).
+func create_player(player_name: String, appearance: Dictionary, shirt: String) -> Dictionary:
+	return await request_json(HTTPClient.METHOD_POST, "/api/players", {"name": player_name, "appearance": appearance, "shirt": shirt})

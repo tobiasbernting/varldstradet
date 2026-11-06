@@ -30,6 +30,8 @@ const POLL_SECONDS := 3.0
 @onready var cards: VBoxContainer = %Cards
 @onready var forget_button: Button = %Forget
 
+var new_button: Button
+var _creator: CreatorWindow
 var _api: Api
 var _polling := false
 var _poll_in := 0.0
@@ -56,6 +58,23 @@ func _ready() -> void:
 	join_button.pressed.connect(_on_join)
 	code.text_submitted.connect(func(_text: String) -> void: _on_join())
 	forget_button.pressed.connect(_on_forget)
+	# "Ny karaktär", under the list of characters; the creator window sits on top of the login
+	new_button = Button.new()
+	new_button.text = Strings.t("creatorNewCharacter")
+	new_button.custom_minimum_size = Vector2(0, 56)
+	new_button.add_theme_font_size_override("font_size", 22)
+	BagWindow.style_button(new_button)
+	new_button.pressed.connect(_on_new_character)
+	picker.add_child(new_button)
+	_creator = CreatorWindow.new()
+	add_child(_creator)
+	_creator.created.connect(_on_created)
+	_creator.cancelled.connect(func() -> void: new_button.grab_focus())
+	if OS.get_cmdline_user_args().has("--creatorcheck"):
+		var check := CreatorCheck.new() # tools/bot-check.mts: a headless run of the creator
+		check.name = "CreatorCheck"
+		check.login = self
+		add_child(check)
 	open()
 
 
@@ -136,6 +155,7 @@ func _apply_gate(body: Dictionary) -> void:
 	_polling = false
 	match gate:
 		"ok":
+			new_button.visible = bool(body.get("canCreate", true)) # (the server checks again on Skapa)
 			_show("picker", "")
 			_load_players()
 		"pending":
@@ -191,6 +211,18 @@ func _load_players() -> void:
 		hint.text = Strings.t("noCharactersYet")
 		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		cards.add_child(hint)
+
+
+func _on_new_character() -> void:
+	_polling = false
+	_creator.open()
+
+
+## A character was made: the list is fetched again and the new one is the one selected (its card has the focus).
+func _on_created(id: String) -> void:
+	Settings.player_id = id
+	Settings.save()
+	_load_players()
 
 
 func _pick(id: String) -> void:
