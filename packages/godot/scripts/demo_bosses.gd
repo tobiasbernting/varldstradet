@@ -17,6 +17,7 @@ var _q: Array = [] ## [at seconds, Callable]
 var _qi := 0
 var _show_t := 0.0
 var _ids: Dictionary = {} ## species -> animal id
+var _helpers: Array = [] ## the helpers the show called (ids), taken away when their boss is beaten
 var _held: Array = [] ## the zone changes kept fresh in a held picture
 var _spare := 1000 ## ids for the things the demo makes up (zones, blocks, helpers)
 var _tile := 16.0
@@ -90,7 +91,12 @@ func _boss_show(sp: String, t0: float) -> float:
 	t += 0.8
 	_at(t, func() -> void:
 		_yell(str(b.get("yells", {}).get("death", "")))
-		_warp(id, 2.0 * _tile, 2.0 * _tile)
+		# beaten: the boss and its helpers are gone (the server removes the animals), not parked somewhere
+		_remove(id)
+		for h in _helpers:
+			_remove(h)
+		_expect_actor(id, false, "%s beaten" % sp)
+		_helpers = []
 		print("bosses: %s done" % sp))
 	return t + 1.0
 
@@ -241,6 +247,7 @@ func _helper(species: String, x: float, y: float) -> void:
 	if species == "":
 		return
 	_spare += 1
+	_helpers.append(_spare)
 	var a := {"id": _spare, "species": species, "x": x, "y": y, "facing": "down", "moving": false, "name": Data.mob_name(species)}
 	world.model.areas.get(_area, {}).get("animals", {})[str(_spare)] = a
 	_changes([{"t": "animal", "id": _spare, "animal": a, "area": _area}])
@@ -275,6 +282,12 @@ func _expect_actor(id: int, present: bool, what: String) -> void:
 		if world._actors.has("a:" + str(id)) != present:
 			_fails += 1
 			print("bosses: FAIL %s (animal %d: %s)" % [what, id, "not drawn" if present else "still drawn"])])
+
+
+## An animal leaves the map (poofed): out of the world's record and a `null` animal change, as the server sends it.
+func _remove(id: int) -> void:
+	world.model.areas.get(_area, {}).get("animals", {}).erase(str(id))
+	_changes([{"t": "animal", "id": id, "animal": null, "area": _area}])
 
 
 func _at(t: float, f: Callable) -> void:
