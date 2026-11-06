@@ -67,6 +67,44 @@ This file is only what the next agent needs: state, decisions, how the work is r
 - Not yet done: M6 (the other eight dungeons and chapters as zone sets in the client), M7 (alive world), M8 (polish,
   release tag, homelab deploy of the v2 server, `DESIGN.md` rewrite).
 
+## 1b. Art pass (session `session_01KTh22oagteA1US6DqRwXHt`, 2026-11-06, branch `claude/inspiring-hypatia-txeupy`)
+
+The owner asked for nicer assets than the code-generated placeholders. Pushed to `claude/inspiring-hypatia-txeupy`,
+**no pull request opened yet**; `main` merged in at the end (clean). `pnpm godot:bot` passed on every commit up to the
+landmarks (369dc85); the rock-wall commit's run was still going when this was written. Pictures were shared in chat
+only, none are in `packages/godot/docs/` yet. `packages/godot/ASSET_MAP.md` maps every object kind to a pack model
+and says what is wired.
+
+| Commit | What |
+| --- | --- |
+| a5b86a9 | `ASSET_MAP.md`; `fetch-assets.sh` also clones KayKit Furniture, Halloween and Restaurant Bits |
+| 2936848 | KayKit Halloween Bits: the crypt's coffins, bones and rest shrines (generated meshes stay as fallbacks), dead trees, pumpkins, jack-o'-lanterns, lamps and lanterns; KayKit Furniture Bits: bed, table, chairs, sofa, plant, painting. `_baked()` got a pivot, an offset and a "lamp" glow mode; `downloads/` gets a `.gdignore` |
+| 0dbd90d, 403e38a | Kenney Nature Kit (uploaded by the owner) for bushes, berry bushes, grass, flowers, mushrooms, fern, palm, cactus; KayKit Forest (uploaded) for the oaks and apple trees (the owner's pick: KayKit trees with Kenney bushes and grass). Recolour modes "leaf" (Kenney, by material name) and "forest" (by colour) keep the season, wind and snow; `_with_fruit()` hangs apples and berries |
+| a70b26b, d00df72, 1b388bb | `--people3d` (off by default): players and villagers as chibi KayKit Adventurers figures put together from parts by `figure_3d.gd` and recoloured from the creator's look (`LookComposer.colours_for()`); in a dungeon the class's outfit. `export-data.mts` now exports the villagers' appearance and outfit |
+| 369dc85 | All 26 landmarks from pack parts (`landmark_models.gd`), lantern night glows, fires; the cave mouth is the Kenney cave cliff. The baker reads vertex colours (Kenney's real colours); recolour "kenney"/"cliff" by material |
+| dd2cb18 | Rock walls: Kenney cliff faces on every side facing land, boulders at the foot, no sky seams between wall tiles |
+
+Owner decisions in this session (do not re-ask):
+- Art stays free CC0. Quaternius characters are **not the right style**; KayKit's chibi look is.
+- Köpingen is **skipped** for now (it may come back later); the focus is the landmarks and the wild maps.
+- The 3D people stay behind `--people3d`; animals and monsters get 3D later. Proposed and not yet chosen: KayKit
+  Skeletons and KayKit Character Animations (both free, same rig) for the crypt and combat animations, and either a
+  pack or voxel figures extruded from the pixel art for the ~150 animals and monsters.
+
+Open in this line of work:
+1. Open a PR for the branch (or hand it to the orchestrating session), with the pictures in `packages/godot/docs/`.
+2. Rock-wall tops are still flat squares; small rocks and tufts on top or rounded corners would help.
+3. Still generated on the wild maps: reed, shell, dig spot, the white flower, wisps. On the farm: fences, gates,
+   mailbox, sell box, chest, workbench, trough, scarecrow, bench, flower box, the animal sheds, torch, snowman,
+   Christmas tree, maypole, runestone; the farmhouse's walls, door, window, rug, bookshelf, clock, stove, wardrobe.
+   `ASSET_MAP.md` has candidates for most (Kenney Nature fences, Hexagon props, Dungeon and Restaurant pieces).
+4. Landmarks that read weakly: Klocktornet (a red church in the sand), Apkungens tron, Den förstenade jätten; the two
+   bone landmarks look alike.
+5. In the Godot client Köpingen still has asphalt and zebra crossings and modern generated buildings; the street lamps
+   (`post_lantern` at ×1.1) are far too big there. Only matters if Köpingen comes back.
+6. `--people3d` gaps: no hit flash, lunge, swing, frozen or webbed pose on figures; "bald" uses the barbarian head,
+   whose beard takes the hair colour.
+
 ## 2. The owner's decisions (do not re-ask)
 
 | Topic | Decision |
@@ -145,6 +183,15 @@ been tested on the MacBook yet; PR 11, 12, 13 and 14 each carry a "what to check
 - Dev-only messages behind `DEV_TELEPORT=1`: `dev saga` (into a dungeon), `dev nextDay`, `dev starter` (a class's
   starter gear). All tested both ways in `game.test.ts`.
 - Godot `WebSocketPeer` needs an 8 MiB inbound buffer for the `welcome` message (set in `net.gd`).
+- Godot 4.7.2 downloads fine in the sandbox from `github.com/godotengine/godot/releases` (check it against
+  `GODOT_EDITOR_SHA512` in `.github/workflows/godot.yml`). Xvfb shots: `xvfb-run -a godot --path packages/godot
+  --rendering-driver opengl3 -- --demo=forest --at=x,y --time=0.4 --screenshot=f.png`.
+- A new `class_name` script is unknown until an editor import (`--import`) registers it. Autoloads (`Data`,
+  `Strings`) are not loaded under `--script`; a throwaway `.tscn` run as the main scene has them.
+- Packs the owner uploads land in `/root/.claude/uploads/<session>/`; unpack them into `packages/godot/downloads/`
+  (gitignored, with a `.gdignore` so Godot does not import them) and commit only the files used under `assets/`. They
+  are gone in a new container: KayKit Forest, KayKit Adventurers and the Kenney Nature Kit are not on GitHub, so ask
+  the owner again for more of them. Scripting itch.io's download flow is refused by the permission classifier.
 - Bots: `pnpm godot:bot` runs an in-memory server and the fighter, walker, farmer and creator bots (`BOT_ONLY=walker`
   / `farm` / `creator` / `run` / `voice` for one of them); CI runs them on every PR.
 - `pnpm -r run test` sometimes prints a vitest `Timeout calling "onTaskUpdate"` during the 24 s generator test; every
@@ -167,8 +214,8 @@ been tested on the MacBook yet; PR 11, 12, 13 and 14 each carry a "what to check
 7. M8: the homelab role for the v2 server (second instance on the Hetzner box, `spel.<domain>` through the same
    tunnel, its own database), importing the family's save from lilla-garden (migration 0004 drops the minigame prize
    decor), the README's Controls section still describes the browser keys.
-8. Deferred art purchases (Synty Vikings 30 USD, Minifantasy Creatures 3 USD, weather bundle 10 USD) need a new
-   decision; AI generation was never used.
+8. Art: the art pass of section 1b (branch `claude/inspiring-hypatia-txeupy`, no PR yet). Deferred purchases (Synty
+   Vikings 30 USD, Minifantasy Creatures 3 USD, weather bundle 10 USD) need a new decision; AI generation was never used.
 9. In lilla-garden, branch `claude/trusting-brown-z2omlt` holds the original `PLAN.md` and `HANDOFF.md` seed; it is
    superseded by this repository. The orchestrating session's `git push origin --delete` was refused by the
    permission classifier: the owner deletes it by hand.
@@ -176,6 +223,8 @@ been tested on the MacBook yet; PR 11, 12, 13 and 14 each carry a "what to check
     bag of the seven existing crops' seeds; PgStore loading of a player saved mid-run is written but not tested.
 
 ## 6. Identifiers
+
+- Art pass session: `session_01KTh22oagteA1US6DqRwXHt` (section 1b).
 
 - Orchestrating sessions: `session_01KTh22pPGKmMmYJxTLXzyqs` (2026-11-06 09:55–18:00 UTC, paused), before that
   `session_01KTh22nak5ip5cq8vST7H9Q`.
