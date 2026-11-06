@@ -67,8 +67,8 @@ jobs:
           ~/godot/godot --version
 
       # Röstprat's WebRTC (Godot has the classes, the webrtc-native GDExtension the implementation). Not committed: the
-      # script resolves the pinned release (WEBRTC_TAG, WEBRTC_ASSET, WEBRTC_SHA256 in the env above; unpinned it lists
-      # the latest release, every asset and its digest) and unpacks it into packages/godot/addons/webrtc.
+      # script downloads the release pinned in it (webrtc-native 1.2.2-stable, checked against its sha256) and unpacks it
+      # into packages/godot/addons/webrtc.
       - name: Fetch the webrtc-native GDExtension (Röstprat)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

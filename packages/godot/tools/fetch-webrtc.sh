@@ -6,15 +6,18 @@
 #
 #   packages/godot/tools/fetch-webrtc.sh            (needs curl, unzip, sha256sum and node; set GITHUB_TOKEN to avoid API limits)
 #
-# The release is PINNED below (tag, asset name, sha256 of the asset). While PIN_TAG is empty the script is in "discover"
-# mode: it resolves releases/latest through the GitHub API, prints the tag, every asset's name, size and the API's sha256
-# digest, and downloads the asset anyway, so that one CI log shows what to pin. Once pinned, a different file is an error.
+# The release is PINNED below (tag, asset name, sha256 of the asset): a different file is an error. With the pin variables
+# set empty the script is in "discover" mode: it resolves releases/latest through the GitHub API, prints the tag, every
+# asset's name, size and the API's sha256 digest, and downloads the asset anyway, to see what a newer release holds.
 # Everything the zip holds that is not for a target we ship is harmless; the zip's layout is printed.
 set -euo pipefail
 
-PIN_TAG="${WEBRTC_TAG:-}"
-PIN_ASSET="${WEBRTC_ASSET:-}"
-PIN_SHA256="${WEBRTC_SHA256:-}"
+# webrtc-native 1.2.2-stable (its libraries: Windows x86_64/x86_32/arm64, Linux x86_64/x86_32/arm64/arm32, macOS universal,
+# Android, iOS). To move to a newer release: run with WEBRTC_TAG= WEBRTC_SHA256= (empty: discover mode), read the output,
+# and change these three lines.
+PIN_TAG="${WEBRTC_TAG-1.2.2-stable}"
+PIN_ASSET="${WEBRTC_ASSET-godot-extension-webrtc_native.zip}"
+PIN_SHA256="${WEBRTC_SHA256-98e9446921740d995bd9ca1be48798dc3c2ceed51e044a25ce18b3cff11f56e5}"
 
 here="$(cd "$(dirname "$0")" && pwd)"
 dest="$here/../addons/webrtc"

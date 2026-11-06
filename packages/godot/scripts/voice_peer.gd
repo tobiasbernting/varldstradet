@@ -183,9 +183,13 @@ func _play(data: PackedByteArray) -> void:
 
 
 func close() -> void:
+	if _chan != null:
+		_chan.close()
 	if _pc != null:
 		_pc.close()
-		_pc = null
 	_chan = null
+	_pc = null
+	_playback = null
 	if _player != null:
 		_player.stop()
+		_player.stream = null

@@ -20,7 +20,7 @@ actually uses are committed; `tools/fetch-assets.sh` fetches the whole packs for
 
 | Component | Author | Licence | Source | Use |
 | --- | --- | --- | --- | --- |
-| webrtc-native (GDExtension, `addons/webrtc/`) | The Godot Foundation and contributors (built on libdatachannel) | MIT (the release's `LICENSE` files; libdatachannel is MPL-2.0) | https://github.com/godotengine/webrtc-native, the release pinned in `.github/workflows/godot.yml` and fetched by `tools/fetch-webrtc.sh` | Röstprat (`scripts/voice.gd`): the WebRTC implementation behind Godot's `WebRTCPeerConnection`. **The licence text must be checked against the pinned release's files when it is pinned** (written without access to the release). |
+| webrtc-native 1.2.2-stable (GDExtension, `addons/webrtc/`) | The Godot Foundation and contributors | MIT (`LICENSE.webrtc-native`); it ships libdatachannel and libjuice (MPL-2.0), libsrtp and usrsctp (BSD), mbedtls (Apache-2.0) and plog (MIT), each with its `LICENSE.*` file in the addon folder | https://github.com/godotengine/webrtc-native/releases/tag/1.2.2-stable, asset `godot-extension-webrtc_native.zip` (sha256 `98e9446921740d995bd9ca1be48798dc3c2ceed51e044a25ce18b3cff11f56e5`), fetched by `tools/fetch-webrtc.sh`, not committed | Röstprat (`scripts/voice.gd`): the WebRTC implementation behind Godot's `WebRTCPeerConnection`. The licence files travel inside the addon folder into every export. |
 
 ## Generated for this project (no third-party licence)
 

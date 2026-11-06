@@ -89,6 +89,9 @@ func _connection() -> void:
 	while Time.get_ticks_msec() < until and not (a.is_open() and b.is_open()):
 		await get_tree().process_frame
 	_check("the data channel opens on both sides", a.is_open() and b.is_open())
+	until = Time.get_ticks_msec() + 5000
+	while Time.get_ticks_msec() < until and not (a.state == "connected" and b.state == "connected"):
+		await get_tree().process_frame
 	_check("both peers say connected", a.state == "connected" and b.state == "connected", "%s %s" % [a.state, b.state])
 	if a.is_open() and b.is_open():
 		var samples := PackedFloat32Array()
@@ -103,3 +106,4 @@ func _connection() -> void:
 	b.close()
 	a.queue_free()
 	b.queue_free()
+	await get_tree().create_timer(1.0).timeout # (the extension lets go of a connection a moment after close)
