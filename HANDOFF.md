@@ -108,7 +108,7 @@ Open in this line of work:
 ## 1c. Atmosphere pass (session `session_01KTh22rMH5UutKMoSA5XCUG`, 2026-11-06, branch `claude/eloquent-rubin-0r5o0h`)
 
 The owner asked for the browser game's cosiness, its changing light and weather, in the Godot client. The branch starts
-from the art pass (section 1b merged in at 59a6366) and adds eight commits, all under `packages/godot/` plus `ART.md`
+from the art pass (section 1b merged in at 59a6366) and adds ten commits, all under `packages/godot/` plus `ART.md`
 ("Atmosphere") and `DESIGN.md` ("Godot client: the atmosphere pass"). **No pull request opened yet**, awaiting the
 owner's approval of the pictures (`packages/godot/docs/atm-*.png`) and a time-lapse video shared in chat.
 `pnpm godot:bot` green on every commit; nothing in the bots, the workflow, the server or shared was touched.
@@ -122,6 +122,8 @@ owner's approval of the pictures (`packages/godot/docs/atm-*.png`) and a time-la
 | 6a71e02 | Fireflies (warm months or midsommar, dark > 0.5), dew sparkles in the morning sun, chimney smoke, the pond at night (sky colour and star glints), autumn leaves |
 | 6150bc7 | Demo-only `--daylapse=<s>`, `--weathers=a,b,c`, `--weather-every=<s>` for videos |
 | 7f21c3c | ART.md, DESIGN.md, the docs pictures |
+| e5ee223 | The owner found the first result washed out: re-tuned rich and warm to measured targets (`scratchpad` script `meas2.py`: mean HSV saturation at or above the pre-pass pictures: noon S 0.75, golden 0.93, night Forward+ S 0.57 V 0.29); no desaturation anywhere, no black lift, contrast 1.06 by day, vignette 0.18/0.32, night as a navy multiply (0.5, 0.66, 1.25) with warm lamps masked, lamps and pools more orange, ambient cooler than the sun, no depth fog in clear weather, ambient 0.2 / sun 0.34 at noon (the higher energies clipped the grass to yellow-white) |
+| d4a935f | Dusk violet, not pink: multiply (0.76, 0.74, 1.0) at 0.8, saturation boost only on blues and violets, darker (V 0.23) |
 | 441a5b5 | Review fixes: `fog_disabled` on every additive quad shader (the depth fog made them squares on Compatibility in rain and fog), no cloud shadows at night, smaller darker puddles, weather budget mellan 900 / hög 2000 with `preprocess`, thinner day fog, actor sprites lifted at night by emission (`Actor.night_lift`, off indoors and in dungeons), softer pools, fog banks that fade |
 
 How the pictures were judged: the retired browser client (commit 620e395) was built in a worktree and screenshotted
