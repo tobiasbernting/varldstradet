@@ -303,6 +303,11 @@ func _hold(spec: String) -> void:
 	_boss_id = id
 	_boss_name = str(b.get("name", sp))
 	_hp = max_hp * 0.8
+	# a move that comes with a later phase is held in that phase (the snapshot's `b.phase`, and the health under its threshold)
+	var phases: Array = b.get("phases", [])
+	_phase = int(mv.get("phase", 0))
+	if _phase > 0 and _phase <= phases.size():
+		_hp = max_hp * float(phases[_phase - 1]) * 0.95
 	_at(0.3, func() -> void:
 		_state({str(id): [_hp, max_hp]}, {}, null)
 		_warp(id, _bx, _by))
