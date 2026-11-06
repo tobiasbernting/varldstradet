@@ -372,7 +372,7 @@ async function main(): Promise<void> {
       return { name, report, log, child: run(godot, args, { cwd: godotDir, log }) };
     };
     const bots = mode === '' || mode === 'dungeon' ? names.map((name) => spawnBot(name, [`--packs=${packs}`, `--dungeon=${dungeon}`])) : [];
-    const walker = mode === '' || mode === 'walker' ? [spawnBot(walkerName, ['--route=arch'])] : [];
+    const walker = mode === '' || mode === 'walker' ? [spawnBot(walkerName, ['--route=arch', `--dungeon=${dungeon}`])] : [];
     // the creator check: the login screen's way to a new character (its own empty HOME: it saves settings there, not in yours)
     const creators: { name: string; report: string; log: string; child: ChildProcess }[] = [];
     if (mode === '' || mode === 'creator') {
@@ -471,9 +471,12 @@ async function main(): Promise<void> {
       check(r.area === `saga:${dungeon}`, `${r.name}: entered the dungeon saga:${dungeon} (${r.area || 'never'})`);
       if (r.name === walkerName) {
         // the real way in: across the farm, through two forests, through the arch; the dev message never sent
-        const want = ['farm', 'a:0,-1', 'a:-1,-1', 'saga:draug'];
-        check(JSON.stringify(r.route) === JSON.stringify(want), `${r.name}: walked ${r.route.join(' → ')}`);
-        check(r.area === 'saga:draug', `${r.name}: arrived in saga:draug through the arch (${r.area || 'never'}) after ${r.seconds.toFixed(0)} s`);
+        // (Draugkryptan's arch is two forests away; another dungeon's route is whatever the walker found, ending in it)
+        if (dungeon === 'draug') {
+          const want = ['farm', 'a:0,-1', 'a:-1,-1', 'saga:draug'];
+          check(JSON.stringify(r.route) === JSON.stringify(want), `${r.name}: walked ${r.route.join(' → ')}`);
+        } else check(r.route.at(-1) === `saga:${dungeon}`, `${r.name}: walked ${r.route.join(' → ')}`);
+        check(r.area === `saga:${dungeon}`, `${r.name}: arrived in saga:${dungeon} through the arch (${r.area || 'never'}) after ${r.seconds.toFixed(0)} s`);
         check(r.arrived_via_arch && !r.dev_sent, `${r.name}: the dev way was never used (dev_sent ${r.dev_sent})`);
         continue;
       }
