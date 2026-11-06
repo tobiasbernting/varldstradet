@@ -45,6 +45,9 @@ var _flakes: GPUParticles3D
 var _leaves: GPUParticles3D
 var _flakes2: GPUParticles3D ## the big soft flakes (the small sharp ones are `_flakes`)
 var _rings: GPUParticles3D ## splash rings on the ground in rain
+var _flies: Array = [] ## fireflies: little green-yellow glows that blink and drift round the hero on warm nights
+var _fly_k := 0.0
+var _dew: GPUParticles3D ## sparkles on the morning grass
 var _banks: Array = [] ## fog banks / dawn mist: big soft flat patches drifting over the ground
 var _bank_k := 0.0
 var _puddle := 0.0 ## puddles fill in rain and linger ~40 s after it
@@ -106,6 +109,7 @@ func setup(v: FarmView, biome: String, key: String) -> void:
 	_apply_quality()
 	_make_particles()
 	_make_banks()
+	_make_extras()
 	_make_rainbow()
 
 
@@ -119,6 +123,8 @@ func _clear_children() -> void:
 	_flakes2 = null
 	_rings = null
 	_banks = []
+	_flies = []
+	_dew = null
 
 
 func follow(target: Node3D) -> void:
@@ -212,6 +218,73 @@ func _make_rings(amount: int) -> GPUParticles3D:
 
 
 ## Fog banks and dawn mist: a handful of big soft patches lying over the ground that drift slowly and wrap round the hero.
+## The cozy extras that are not weather: fireflies and the morning's dew sparkle.
+func _make_extras() -> void:
+	for i in 14:
+		var g := view.assets.glow_quad(Color(0.75, 1.0, 0.35), 0.28, 0.0)
+		g.rotation_degrees = Vector3(-51.0, 0.0, 0.0)
+		g.visible = false
+		g.set_meta("phase", _rng.randf() * 6.28)
+		g.set_meta("ox", _rng.randf_range(-8.0, 8.0))
+		g.set_meta("oz", _rng.randf_range(-6.0, 6.0))
+		g.set_meta("h", _rng.randf_range(0.3, 1.2))
+		add_child(g)
+		_flies.append(g)
+	_dew = GPUParticles3D.new()
+	_dew.amount = 60
+	_dew.lifetime = 1.1
+	_dew.local_coords = false
+	_dew.visibility_aabb = AABB(Vector3(-14, -1, -12), Vector3(28, 3, 24))
+	var pm := ParticleProcessMaterial.new()
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	pm.emission_box_extents = Vector3(9.0, 0.0, 7.0)
+	pm.gravity = Vector3.ZERO
+	pm.initial_velocity_min = 0.0
+	pm.initial_velocity_max = 0.0
+	var grad := Gradient.new()
+	grad.set_color(0, Color(1, 1, 1, 0.0))
+	grad.add_point(0.5, Color(1, 1, 1, 1.0))
+	grad.set_color(grad.get_point_count() - 1, Color(1, 1, 1, 0.0))
+	var gt := GradientTexture1D.new()
+	gt.gradient = grad
+	pm.color_ramp = gt
+	_dew.process_material = pm
+	var q := QuadMesh.new()
+	q.size = Vector2(0.09, 0.09)
+	var sh := Shader.new()
+	sh.code = "shader_type spatial;\nrender_mode unshaded, blend_add, depth_draw_never, cull_disabled, fog_disabled;\nvoid vertex() {\n\tMODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);\n}\nvoid fragment() {\n\tfloat k = clamp(1.0 - length(UV * 2.0 - 1.0), 0.0, 1.0);\n\tALBEDO = vec3(1.0, 0.98, 0.9) * k * COLOR.a * 2.0;\n}\n"
+	var m := ShaderMaterial.new()
+	m.shader = sh
+	q.material = m
+	_dew.draw_pass_1 = q
+	_dew.emitting = false
+	add_child(_dew)
+
+
+## Fireflies and dew each frame: `warm_night` (May to September, the midsummer season) and the morning sun.
+func _update_extras(delta: float, kind: String, f: float, up: bool, at: Vector3) -> void:
+	var month := int(Time.get_datetime_dict_from_system().get("month", 6))
+	var warm_night := (month >= 5 and month <= 9) or _season == "midsommar"
+	var calm := kind == "sun" or kind == "cloudy" or kind == "wind"
+	var want := 1.0 if (warm_night and calm and _dark > 0.5 and indoors < 0.5 and not _under) else 0.0
+	_fly_k = lerpf(_fly_k, want, 1.0 - pow(0.3, delta))
+	for g in _flies:
+		var mi := g as MeshInstance3D
+		mi.visible = _fly_k > 0.02
+		if not mi.visible:
+			continue
+		var ph: float = mi.get_meta("phase")
+		var blink := maxf(0.0, sin(_t * 2.3 + ph * 7.0))
+		var drift := Vector3(sin(_t * 0.3 + ph * 3.0) * 1.2, 0.0, cos(_t * 0.25 + ph * 2.0) * 1.2)
+		mi.global_position = Vector3(at.x + float(mi.get_meta("ox")) + drift.x, float(mi.get_meta("h")) + 0.25 * sin(_t * 0.7 + ph), at.z + float(mi.get_meta("oz")) + drift.z)
+		(mi.material_override as ShaderMaterial).set_shader_parameter("energy", blink * _fly_k * 1.6)
+	if _dew != null:
+		var morning := up and f < 0.17 and (kind == "sun" or kind == "wind") and indoors < 0.5 and not _under
+		_dew.emitting = morning
+		_dew.amount_ratio = clampf(1.0 - f / 0.17, 0.1, 1.0) if morning else 0.1
+		_dew.global_position = Vector3(at.x, 0.08, at.z)
+
+
 func _make_banks() -> void:
 	if Quality.spec().get("weather", 0) <= 0:
 		return
@@ -376,6 +449,8 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 	_update_grade(delta, w)
 	_update_materials(delta, kind, w, elevation, sun_share)
 	view.set_dark(_dark)
+	var winter := 0.3 if _year == "winter" or _season == "jul" else 0.0
+	view.set_smoke(0.3 + 0.5 * _dark + winter, float(w[2]) * 0.5, Color(0.72, 0.72, 0.74).lerp(lit, 0.5))
 	var cam := get_viewport().get_camera_3d()
 	if _target != null:
 		var at := _target.global_position
@@ -385,6 +460,7 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 		if _rings != null:
 			_rings.global_position = Vector3(at.x, 0.06, at.z)
 		_drift_banks(delta, at)
+		_update_extras(delta, kind, f, up, at)
 		if _rainbow != null:
 			_rainbow.global_position = at + Vector3(0.0, 4.5, -15.0)
 			_rainbow.rotation_degrees = Vector3(-8.0, 0.0, 0.0)
@@ -588,6 +664,8 @@ func _update_materials(delta: float, kind: String, w: Array, elevation: float, s
 	var glint := clampf(elevation * sun_share + 0.15, 0.0, 1.0)
 	for m in [a.water_mat, a.bog_mat, a.choco_mat]:
 		m.set_shader_parameter("glint", glint)
+		m.set_shader_parameter("night", _dark)
+		m.set_shader_parameter("sky_colour", Vector3(sky_color.r, sky_color.g, sky_color.b))
 		m.set_shader_parameter("frozen", _snow * 0.55 if m == a.water_mat else 0.0)
 
 

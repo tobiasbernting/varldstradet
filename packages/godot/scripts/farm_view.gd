@@ -55,6 +55,7 @@ var _night_glows: Array = [] ## [MeshInstance3D glow, base energy]
 var _flicker_in := 0.0
 var _t := 0.0
 var _dark := 0.0
+var _smoke: Array[GPUParticles3D] = [] ## chimney smoke (the farmhouse's)
 var _dirty_ground: Dictionary = {}
 var _crops: Dictionary = {} ## "x,y" -> crop dictionary
 var _drawn_counts := {"instances": 0, "multimeshes": 0}
@@ -114,6 +115,7 @@ func clear() -> void:
 	_nodes = {}
 	_ground = {}
 	_lights = []
+	_smoke.clear()
 	_flicker = []
 	_night_glows = []
 	_crops = {}
@@ -685,6 +687,7 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 			_night_glows.append([gw, 1.8])
 			_add_beam(node, Vector3(0.0, 0.04, 1.95), Vector2(2.6, 3.4), 0.7)
 			_add_light(node, Vector3(0.0, 1.0, 2.8), FarmAssets.WARM, 7.0, 1.4, 0.12, true)
+			_add_smoke(node, Vector3(0.0, 4.0, -0.8))
 		"saga_portal":
 			var colours: Array = DungeonView.TORCH_COLOURS
 			var col: Color = colours[variant % colours.size()]
@@ -722,6 +725,60 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 			node.add_child(pool)
 			_night_glows.append([pool, 0.55])
 	return node
+
+
+## Chimney smoke: ~12 soft grey puffs that rise, grow, thin out and drift with the wind (`set_smoke`).
+func _add_smoke(parent: Node3D, at: Vector3) -> void:
+	var p := GPUParticles3D.new()
+	p.amount = 12
+	p.lifetime = 5.0
+	p.position = at
+	p.local_coords = false
+	p.visibility_aabb = AABB(Vector3(-4, -1, -4), Vector3(8, 8, 8))
+	var pm := ParticleProcessMaterial.new()
+	pm.direction = Vector3(0.0, 1.0, 0.0)
+	pm.spread = 8.0
+	pm.initial_velocity_min = 0.5
+	pm.initial_velocity_max = 0.8
+	pm.gravity = Vector3(0.3, 0.0, 0.0)
+	pm.scale_min = 0.9
+	pm.scale_max = 1.3
+	var curve := Curve.new()
+	curve.add_point(Vector2(0.0, 0.4))
+	curve.add_point(Vector2(1.0, 1.6))
+	var ct := CurveTexture.new()
+	ct.curve = curve
+	pm.scale_curve = ct
+	var grad := Gradient.new()
+	grad.set_color(0, Color(1, 1, 1, 0.0))
+	grad.add_point(0.15, Color(1, 1, 1, 0.9))
+	grad.set_color(grad.get_point_count() - 1, Color(1, 1, 1, 0.0))
+	var gt := GradientTexture1D.new()
+	gt.gradient = grad
+	pm.color_ramp = gt
+	p.process_material = pm
+	var q := QuadMesh.new()
+	q.size = Vector2(0.6, 0.6)
+	var sh := Shader.new()
+	sh.code = "shader_type spatial;\nrender_mode unshaded, depth_draw_never, cull_disabled;\nuniform vec3 colour = vec3(0.7, 0.7, 0.72);\nvoid vertex() {\n\tMODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0] * length(MODEL_MATRIX[0].xyz), INV_VIEW_MATRIX[1] * length(MODEL_MATRIX[1].xyz), INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);\n}\nvoid fragment() {\n\tfloat k = clamp(1.0 - length(UV * 2.0 - 1.0), 0.0, 1.0);\n\tALBEDO = colour;\n\tALPHA = k * k * COLOR.a * 0.8;\n}\n"
+	var m := ShaderMaterial.new()
+	m.shader = sh
+	q.material = m
+	p.draw_pass_1 = q
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(p)
+	_smoke.append(p)
+
+
+## The chimney smoke from the sky: thicker at night and in winter, thinner by day, leaning with the wind; colour follows the light.
+func set_smoke(thick: float, wind: float, light: Color) -> void:
+	for p in _smoke:
+		if not is_instance_valid(p):
+			continue
+		p.amount_ratio = clampf(thick, 0.15, 1.0)
+		var pm := p.process_material as ParticleProcessMaterial
+		pm.gravity = Vector3(0.2 + 0.9 * wind, 0.0, 0.0)
+		((p.draw_pass_1 as QuadMesh).material as ShaderMaterial).set_shader_parameter("colour", Vector3(light.r, light.g, light.b))
 
 
 ## A warm beam of light on the ground in front of a lit window or door, fading away from the wall (it lies along +Z
