@@ -157,7 +157,7 @@ for (const [species, b] of Object.entries(SAGA_BOSSES)) {
     title: b.title,
     phases: b.phases,
     ...(b.mini ? { mini: true } : {}),
-    moves: b.moves.map((m) => ({ move: m.move, name: m.name, warn: m.warn, radius: m.radius, dmg: m.dmg, ...(m.arc !== undefined ? { arc: m.arc } : {}), ...(m.width !== undefined ? { width: m.width } : {}), ...(m.interrupt ? { interrupt: true } : {}), ...(m.linger !== undefined ? { linger: m.linger } : {}), ...(m.block ? { block: m.block } : {}), text: m.text })),
+    moves: b.moves.map((m) => ({ move: m.move, name: m.name, warn: m.warn, radius: m.radius, dmg: m.dmg, ...(m.arc !== undefined ? { arc: m.arc } : {}), ...(m.width !== undefined ? { width: m.width } : {}), ...(m.interrupt ? { interrupt: true } : {}), ...(m.linger !== undefined ? { linger: m.linger } : {}), ...(m.block ? { block: m.block } : {}), ...(m.count !== undefined ? { count: m.count } : {}), ...(m.add ? { add: m.add } : {}), ...(m.phase ? { phase: m.phase } : {}), text: m.text })),
     yells: b.yells,
   };
 }
