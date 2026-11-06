@@ -975,6 +975,8 @@ export const DUNGEONS: Record<DungeonId, SagaDungeonDef> = {
 
 export const sagaKey = (id: DungeonId): string => `saga:${id}`;
 export const isSagaKey = (k: string | undefined): boolean => !!k && k.startsWith('saga:');
+/** A zone of a run (`saga:run<n>z<i>`), not a dungeon. */
+export const isRunKey = (k: string | undefined): boolean => !!k && k.startsWith('saga:run');
 export const dungeonOfKey = (k: string): DungeonId | null => {
   const id = k.slice('saga:'.length);
   return isDungeonId(id) ? id : null;
@@ -2057,7 +2059,67 @@ export interface SagaInstance {
   emptySince?: number;
   /** When the first fighter came into this (fresh) instance: the clock of the family's best time. */
   startedAt?: number;
+  /** A zone of a run (färd) rather than a dungeon: the run's numbers for this map (see runsim.ts). Not saved. */
+  run?: SagaRunLink;
   seq: number;
+}
+
+/**
+ * What the run adds to a fighter, all as fractions that start at zero (runor, the sagaträd, färdkost and companions are
+ * added up into this by runsim.ts; the combat rules in sagasim.ts only read it). `spell` and `spellCd` are by spell id.
+ */
+export interface RunBuffs {
+  /** More power for every spell, and for single spells. */
+  power: number;
+  spell: Record<string, number>;
+  /** Shorter cooldowns for every spell, and for single spells (a fraction taken off). */
+  cd: number;
+  spellCd: Record<string, number>;
+  /** More health, more armor, less damage taken. */
+  hp: number;
+  armor: number;
+  taken: number;
+  /** More healing done by this fighter, and from their potions. */
+  heal: number;
+  potion: number;
+  /** Faster health regeneration out of a fight, and by rest stones. */
+  regen: number;
+  rest: number;
+  /** More threat from this fighter's attacks; health back from the damage they do; more critical hits. */
+  threat: number;
+  leech: number;
+  crit: number;
+  /** A fallen friend gets up this much sooner (a fraction off DOWN_MS), and a revive gives this much more health. */
+  down: number;
+  reviveHp: number;
+  /** More coins from the chests of a run. */
+  coins: number;
+}
+
+export const noBuffs = (): RunBuffs => ({ power: 0, spell: {}, cd: 0, spellCd: {}, hp: 0, armor: 0, taken: 0, heal: 0, potion: 0, regen: 0, rest: 0, threat: 0, leech: 0, crit: 0, down: 0, reviveHp: 0, coins: 0 });
+
+/** A zone's link to its run. */
+export interface SagaRunLink {
+  run: string;
+  /** 0..2 the zones, 3 the boss. */
+  zone: number;
+  /** Shown when you walk in. */
+  name: string;
+  intro: string;
+  /** Monster health and damage, the boss's health, how far monsters notice you and how far they are followed. */
+  hpMul: number;
+  dmgMul: number;
+  bossMul: number;
+  sight: number;
+  leash: number;
+  /** A boss: the attacks that are unlocked in this run (indices into its moves); left out, all of them. */
+  moves?: number[];
+  /** Per player id. A player without an entry has none. */
+  buffs: Record<string, RunBuffs>;
+  /** The line under "Alla föll…" (a run ends there instead of getting up). */
+  wipeSub: string;
+  /** The packs (indices in `packs`) that must fall before the gate to the exit room opens. */
+  required: number[];
 }
 
 /** Nobody inside for this long: the dungeon starts over (monsters back, chests closed). */

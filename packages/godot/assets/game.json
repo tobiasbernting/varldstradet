@@ -369,6 +369,13 @@
       "flat": true,
       "interact": "fairy"
     },
+    "fardport": {
+      "w": 3,
+      "h": 2,
+      "solid": true,
+      "light": true,
+      "interact": "fardport"
+    },
     "fence": {
       "w": 1,
       "h": 1,
@@ -496,6 +503,12 @@
       "h": 1,
       "solid": true,
       "light": true,
+      "breakWith": "hammer"
+    },
+    "herb_garden": {
+      "w": 2,
+      "h": 2,
+      "solid": true,
       "breakWith": "hammer"
     },
     "house": {
@@ -724,6 +737,13 @@
       "breakWith": "hammer",
       "harvest": true
     },
+    "longhall": {
+      "w": 4,
+      "h": 3,
+      "solid": true,
+      "light": true,
+      "breakWith": "hammer"
+    },
     "loot_chest": {
       "w": 1,
       "h": 1,
@@ -881,6 +901,14 @@
       "w": 1,
       "h": 1,
       "solid": true
+    },
+    "run_exit": {
+      "w": 1,
+      "h": 1,
+      "solid": false,
+      "flat": true,
+      "light": true,
+      "interact": "runexit"
     },
     "runestone": {
       "w": 1,
@@ -1189,6 +1217,13 @@
       "h": 1,
       "solid": true
     },
+    "smithy": {
+      "w": 3,
+      "h": 2,
+      "solid": true,
+      "light": true,
+      "breakWith": "hammer"
+    },
     "snowman": {
       "w": 1,
       "h": 1,
@@ -1429,6 +1464,7 @@
       "h": 1,
       "solid": true,
       "light": true,
+      "interact": "yggdrasil",
       "breakWith": "hammer"
     }
   },
@@ -5683,6 +5719,16 @@
       "stack": 99,
       "sell": 20
     },
+    "herb_garden": {
+      "name": "Örtagård",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99,
+      "sell": 30,
+      "places": "herb_garden"
+    },
     "hoe": {
       "name": "Hacka",
       "rarity": "common",
@@ -5784,6 +5830,16 @@
       "stack": 99,
       "food": 30000,
       "sell": 10
+    },
+    "longhall": {
+      "name": "Långhus",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99,
+      "sell": 120,
+      "places": "longhall"
     },
     "maypole": {
       "name": "Midsommarstång",
@@ -6492,6 +6548,16 @@
       "buy": 40,
       "tab": "clothes",
       "slot": "shoes"
+    },
+    "smithy": {
+      "name": "Smedja",
+      "rarity": "common",
+      "kind": "placeable",
+      "text": "",
+      "category": "placeable",
+      "stack": 99,
+      "sell": 80,
+      "places": "smithy"
     },
     "snowman": {
       "name": "Snögubbe",
@@ -7313,6 +7379,61 @@
       ],
       "out": {
         "item": "stall",
+        "count": 1
+      }
+    },
+    {
+      "id": "smithy",
+      "in": [
+        {
+          "item": "stone",
+          "count": 30
+        },
+        {
+          "item": "wood",
+          "count": 10
+        },
+        {
+          "item": "gold",
+          "count": 3
+        }
+      ],
+      "out": {
+        "item": "smithy",
+        "count": 1
+      }
+    },
+    {
+      "id": "herb_garden",
+      "in": [
+        {
+          "item": "wood",
+          "count": 10
+        },
+        {
+          "item": "fiber",
+          "count": 20
+        }
+      ],
+      "out": {
+        "item": "herb_garden",
+        "count": 1
+      }
+    },
+    {
+      "id": "longhall",
+      "in": [
+        {
+          "item": "wood",
+          "count": 60
+        },
+        {
+          "item": "stone",
+          "count": 20
+        }
+      ],
+      "out": {
+        "item": "longhall",
         "count": 1
       }
     },
@@ -10056,5 +10177,738 @@
       "Prata om något annat",
       "topics"
     ]
+  },
+  "run": {
+    "constants": {
+      "maxMs": 1800000,
+      "warnMs": 1500000,
+      "pickMs": 20000,
+      "victoryMs": 90000,
+      "joinRadius": 6,
+      "partyMax": 3,
+      "partyMaxLonghall": 4,
+      "cards": 3,
+      "zones": 3,
+      "modifierSeeds": 0.15
+    },
+    "seeds": {
+      "pack": 1,
+      "zone": 4,
+      "chest": 2,
+      "guard": 3,
+      "bossFirst": 20,
+      "bossReplay": 12
+    },
+    "runor": [
+      {
+        "id": "v_tjock",
+        "cls": "vaktare",
+        "icon": "🛡️",
+        "name": "Tjock sköld",
+        "text": "Skydd +8 %"
+      },
+      {
+        "id": "v_hugg",
+        "cls": "vaktare",
+        "icon": "🗡️",
+        "name": "Tyngre hugg",
+        "text": "Svärdshugg +25 %"
+      },
+      {
+        "id": "v_ropet",
+        "cls": "vaktare",
+        "icon": "📣",
+        "name": "Högt rop",
+        "text": "Utmana laddar 30 % snabbare"
+      },
+      {
+        "id": "v_mur",
+        "cls": "vaktare",
+        "icon": "🧱",
+        "name": "Järnmur",
+        "text": "Sköldmur laddar 25 % snabbare"
+      },
+      {
+        "id": "v_slag",
+        "cls": "vaktare",
+        "icon": "💥",
+        "name": "Dunderslag",
+        "text": "Sköldslag +40 %"
+      },
+      {
+        "id": "v_hjarta",
+        "cls": "vaktare",
+        "icon": "❤️",
+        "name": "Stort hjärta",
+        "text": "Hälsa +15 %"
+      },
+      {
+        "id": "v_trots",
+        "cls": "vaktare",
+        "icon": "😤",
+        "name": "Trotsig",
+        "text": "Monstren vill slåss med dig +30 %"
+      },
+      {
+        "id": "v_lugn",
+        "cls": "vaktare",
+        "icon": "🌊",
+        "name": "Lugn i stormen",
+        "text": "Du tar 10 % mindre skada"
+      },
+      {
+        "id": "h_runa",
+        "cls": "helare",
+        "icon": "💚",
+        "name": "Starkare läkerunor",
+        "text": "Läkerunan läker 25 % mer"
+      },
+      {
+        "id": "h_ring",
+        "cls": "helare",
+        "icon": "🌿",
+        "name": "Större ring",
+        "text": "Läkekretsen läker 35 % mer"
+      },
+      {
+        "id": "h_pil",
+        "cls": "helare",
+        "icon": "✨",
+        "name": "Skinande pil",
+        "text": "Ljuspilen +40 %"
+      },
+      {
+        "id": "h_vack",
+        "cls": "helare",
+        "icon": "🌅",
+        "name": "Mjuk väckning",
+        "text": "Väck upp! ger 25 % mer hälsa"
+      },
+      {
+        "id": "h_snabb",
+        "cls": "helare",
+        "icon": "⚡",
+        "name": "Snabba händer",
+        "text": "Trollformler laddar 12 % snabbare"
+      },
+      {
+        "id": "h_flod",
+        "cls": "helare",
+        "icon": "💧",
+        "name": "Läkeflod",
+        "text": "All läkning +15 %"
+      },
+      {
+        "id": "h_ro",
+        "cls": "helare",
+        "icon": "🍃",
+        "name": "Inre ro",
+        "text": "Hälsan kommer 50 % fortare"
+      },
+      {
+        "id": "h_skydd",
+        "cls": "helare",
+        "icon": "🕊️",
+        "name": "Skyddande ljus",
+        "text": "Skydd +6 %"
+      },
+      {
+        "id": "k_yx",
+        "cls": "krigare",
+        "icon": "🪓",
+        "name": "Vässad yxa",
+        "text": "Yxhugg +30 %"
+      },
+      {
+        "id": "k_storm",
+        "cls": "krigare",
+        "icon": "💨",
+        "name": "Stormigare steg",
+        "text": "Stormsteg laddar 35 % snabbare"
+      },
+      {
+        "id": "k_virvel",
+        "cls": "krigare",
+        "icon": "🌪️",
+        "name": "Vildare virvel",
+        "text": "Virvelvind +35 %"
+      },
+      {
+        "id": "k_raseri",
+        "cls": "krigare",
+        "icon": "🔥",
+        "name": "Längre raseri",
+        "text": "Raseriet laddar 30 % snabbare"
+      },
+      {
+        "id": "k_glupsk",
+        "cls": "krigare",
+        "icon": "🍖",
+        "name": "Glupsk yxa",
+        "text": "Du läker 8 % av din skada"
+      },
+      {
+        "id": "k_hjarta",
+        "cls": "krigare",
+        "icon": "💪",
+        "name": "Bärsärkens hjärta",
+        "text": "Hälsa +12 %"
+      },
+      {
+        "id": "k_kraft",
+        "cls": "krigare",
+        "icon": "⚔️",
+        "name": "Bärsärkens kraft",
+        "text": "Trollformler +10 %"
+      },
+      {
+        "id": "k_egg",
+        "cls": "krigare",
+        "icon": "🎯",
+        "name": "Skarp egg",
+        "text": "Fler kritiska träffar +10 %"
+      },
+      {
+        "id": "m_eld",
+        "cls": "magiker",
+        "icon": "☄️",
+        "name": "Hetare eld",
+        "text": "Eldboll +30 %"
+      },
+      {
+        "id": "m_is",
+        "cls": "magiker",
+        "icon": "❄️",
+        "name": "Kallare is",
+        "text": "Isspjut +35 %"
+      },
+      {
+        "id": "m_ask",
+        "cls": "magiker",
+        "icon": "⚡",
+        "name": "Åskmoln",
+        "text": "Åskregn +35 %"
+      },
+      {
+        "id": "m_blink",
+        "cls": "magiker",
+        "icon": "🌀",
+        "name": "Kvickt hopp",
+        "text": "Blink laddar 40 % snabbare"
+      },
+      {
+        "id": "m_snabb",
+        "cls": "magiker",
+        "icon": "🪄",
+        "name": "Snabb magi",
+        "text": "Trollformler laddar 12 % snabbare"
+      },
+      {
+        "id": "m_kraft",
+        "cls": "magiker",
+        "icon": "🔮",
+        "name": "Runkraft",
+        "text": "Trollformler +10 %"
+      },
+      {
+        "id": "m_tur",
+        "cls": "magiker",
+        "icon": "🍀",
+        "name": "Lyckoträff",
+        "text": "Fler kritiska träffar +12 %"
+      },
+      {
+        "id": "m_skal",
+        "cls": "magiker",
+        "icon": "🫧",
+        "name": "Magiskt skal",
+        "text": "Du tar 8 % mindre skada"
+      },
+      {
+        "id": "p_hjarta",
+        "icon": "🧡",
+        "name": "Gemensamt hjärta",
+        "text": "Allas hälsa +10 %"
+      },
+      {
+        "id": "p_vila",
+        "icon": "🪨",
+        "name": "Vilostenarnas sång",
+        "text": "Vilostenar läker 60 % fortare"
+      },
+      {
+        "id": "p_kraft",
+        "icon": "🌟",
+        "name": "Sagans kraft",
+        "text": "Allas trollformler +8 %"
+      },
+      {
+        "id": "p_flaska",
+        "icon": "🧪",
+        "name": "Fler flaskor",
+        "text": "2 läkedrycker var, dryck +15 %"
+      },
+      {
+        "id": "p_vakna",
+        "icon": "🌄",
+        "name": "Snabb uppvaknande",
+        "text": "Fallna vaknar 40 % fortare"
+      },
+      {
+        "id": "p_fro",
+        "icon": "🌱",
+        "name": "Frörikedom",
+        "text": "Sagafrön +25 %"
+      }
+    ],
+    "tree": [
+      {
+        "id": "h1",
+        "branch": "hjalte",
+        "cost": 10,
+        "name": "Starkare skott",
+        "text": "Trollformler +3 %"
+      },
+      {
+        "id": "h2",
+        "branch": "hjalte",
+        "cost": 12,
+        "needs": "h1",
+        "name": "Tjockare skinn",
+        "text": "Hälsa +5 %"
+      },
+      {
+        "id": "h3",
+        "branch": "hjalte",
+        "cost": 20,
+        "needs": "h1",
+        "name": "Segerviljan",
+        "text": "Fler kritiska träffar +4 %"
+      },
+      {
+        "id": "h4",
+        "branch": "hjalte",
+        "cost": 25,
+        "needs": "h2",
+        "name": "Hård hud",
+        "text": "Skydd +3 %"
+      },
+      {
+        "id": "h5",
+        "branch": "hjalte",
+        "cost": 30,
+        "needs": "h3",
+        "name": "Heltens ande",
+        "text": "Läkedryck läker 10 % mer"
+      },
+      {
+        "id": "h6",
+        "branch": "hjalte",
+        "cost": 45,
+        "needs": "h4",
+        "name": "Evig låga",
+        "text": "Trollformler laddar 4 % snabbare"
+      },
+      {
+        "id": "g1",
+        "branch": "gemenskap",
+        "cost": 10,
+        "name": "Starkare band",
+        "text": "Vilostenar läker 25 % fortare"
+      },
+      {
+        "id": "g2",
+        "branch": "gemenskap",
+        "cost": 15,
+        "needs": "g1",
+        "name": "Mjukt uppvaknande",
+        "text": "Fallna vaknar 20 % fortare"
+      },
+      {
+        "id": "g3",
+        "branch": "gemenskap",
+        "cost": 30,
+        "needs": "g1",
+        "name": "Omval",
+        "text": "Nya kort en gång per färd"
+      },
+      {
+        "id": "g4",
+        "branch": "gemenskap",
+        "cost": 25,
+        "needs": "g2",
+        "name": "Delad glädje",
+        "text": "All läkning +8 %"
+      },
+      {
+        "id": "g5",
+        "branch": "gemenskap",
+        "cost": 35,
+        "needs": "g3",
+        "name": "Hirdens lön",
+        "text": "Hirdmannen är 20 % starkare"
+      },
+      {
+        "id": "g6",
+        "branch": "gemenskap",
+        "cost": 40,
+        "needs": "g4",
+        "name": "Frögåva",
+        "text": "Sagafrön +10 %"
+      },
+      {
+        "id": "f1",
+        "branch": "gard",
+        "cost": 15,
+        "name": "Större matsäck",
+        "text": "En färdkostplats till"
+      },
+      {
+        "id": "f2",
+        "branch": "gard",
+        "cost": 20,
+        "needs": "f1",
+        "name": "Gyllene skörd",
+        "text": "Färdkost 25 % starkare"
+      },
+      {
+        "id": "f3",
+        "branch": "gard",
+        "cost": 30,
+        "needs": "f1",
+        "name": "Djurens vänskap",
+        "text": "Djurens hjälp 50 % starkare"
+      },
+      {
+        "id": "f4",
+        "branch": "gard",
+        "cost": 15,
+        "name": "Extra flaskor",
+        "text": "En läkedryck till i början"
+      },
+      {
+        "id": "f5",
+        "branch": "gard",
+        "cost": 35,
+        "needs": "f2",
+        "name": "Rikare kistor",
+        "text": "Mynt ur kistor +25 %"
+      },
+      {
+        "id": "f6",
+        "branch": "gard",
+        "cost": 50,
+        "needs": "f3",
+        "name": "Världsträdets rot",
+        "text": "Bossen ger 5 sagafrön till"
+      }
+    ],
+    "treeStages": [
+      0,
+      3,
+      8,
+      14,
+      24
+    ],
+    "branches": {
+      "hjalte": "Hjälten",
+      "gemenskap": "Gemenskapen",
+      "gard": "Gården"
+    },
+    "modifiers": [
+      {
+        "id": "fler",
+        "name": "Fler monster",
+        "text": "En till i varje flock"
+      },
+      {
+        "id": "segare",
+        "name": "Segare monster",
+        "text": "Monstren tål 25 % mer"
+      },
+      {
+        "id": "harda",
+        "name": "Hårda slag",
+        "text": "Monstren slår 20 % hårdare"
+      },
+      {
+        "id": "vakten",
+        "name": "Vakten",
+        "text": "En mellanboss vaktar vägen"
+      },
+      {
+        "id": "snabba",
+        "name": "Snabba fötter",
+        "text": "Monstren ser dig på längre håll"
+      },
+      {
+        "id": "dimma",
+        "name": "Dimma",
+        "text": "Dimma, och monstren ger inte upp"
+      }
+    ],
+    "food": [
+      {
+        "id": "bread",
+        "text": "Hälsa +6 %"
+      },
+      {
+        "id": "pancakes",
+        "text": "Trollformler laddar 5 % snabbare"
+      },
+      {
+        "id": "carrot_cake",
+        "text": "Trollformler +5 %"
+      },
+      {
+        "id": "pumpkin_pie",
+        "text": "Skydd +4 %"
+      },
+      {
+        "id": "strawberry_jam",
+        "text": "Hälsan kommer 40 % fortare"
+      },
+      {
+        "id": "fish_soup",
+        "text": "Du tar 6 % mindre skada"
+      },
+      {
+        "id": "truffle_pasta",
+        "text": "Trollformler +8 %"
+      },
+      {
+        "id": "cloudberry_jam",
+        "text": "Vilostenar läker 40 % fortare"
+      },
+      {
+        "id": "blueberry_pie",
+        "text": "Hälsa +8 %, läkning +5 %"
+      },
+      {
+        "id": "healing_potion",
+        "text": "3 läkedrycker"
+      },
+      {
+        "id": "styrkedryck",
+        "text": "Trollformler +6 %"
+      }
+    ],
+    "zones": [
+      {
+        "biome": "skog",
+        "name": "Skogsstigen",
+        "intro": "Träden står tätt och något prasslar bakom stammarna.",
+        "floor": "grass",
+        "solid": "rock",
+        "wall": 6,
+        "ambient": [
+          0.42,
+          0.55,
+          0.42
+        ],
+        "decor": [
+          "saga_fairylight",
+          "saga_cobweb",
+          "saga_bones",
+          "saga_urn"
+        ],
+        "weather": [
+          "sun",
+          "cloudy",
+          "rain",
+          "fog",
+          "wind"
+        ]
+      },
+      {
+        "biome": "trask",
+        "name": "Kärret",
+        "intro": "Det bubblar i kärret, och dimman ligger tung.",
+        "floor": "mud",
+        "solid": "rock",
+        "wall": 3,
+        "ambient": [
+          0.4,
+          0.55,
+          0.5
+        ],
+        "decor": [
+          "saga_gravestone",
+          "saga_skullpile",
+          "saga_ghostlight",
+          "saga_deadtree"
+        ],
+        "weather": [
+          "fog",
+          "rain",
+          "cloudy"
+        ]
+      },
+      {
+        "biome": "berg",
+        "name": "Bergspasset",
+        "intro": "Stigen slingrar sig uppåt och stenarna ekar.",
+        "floor": "gravel",
+        "solid": "rock",
+        "wall": 4,
+        "ambient": [
+          0.6,
+          0.5,
+          0.35
+        ],
+        "decor": [
+          "saga_minecart",
+          "saga_goldpile",
+          "saga_dwarfstatue",
+          "saga_minelamp"
+        ],
+        "weather": [
+          "wind",
+          "cloudy",
+          "sun",
+          "hail"
+        ]
+      },
+      {
+        "biome": "strand",
+        "name": "Stranden",
+        "intro": "Vågorna slår mot stranden. Något rör sig i vattnet.",
+        "floor": "sand",
+        "solid": "water",
+        "wall": 5,
+        "ambient": [
+          0.35,
+          0.55,
+          0.7
+        ],
+        "decor": [
+          "saga_coral",
+          "saga_anchor",
+          "saga_seaweed",
+          "saga_pearl"
+        ],
+        "weather": [
+          "sun",
+          "wind",
+          "rain",
+          "storm"
+        ]
+      },
+      {
+        "biome": "svamp",
+        "name": "Svampskogen",
+        "intro": "Svamparna lyser svagt i det gröna mörkret.",
+        "floor": "moss",
+        "solid": "rock",
+        "wall": 6,
+        "ambient": [
+          0.45,
+          0.4,
+          0.65
+        ],
+        "decor": [
+          "saga_glowshroom",
+          "saga_fairylight",
+          "saga_cobweb",
+          "saga_elfstatue"
+        ],
+        "weather": [
+          "fog",
+          "cloudy",
+          "rain"
+        ]
+      },
+      {
+        "biome": "is",
+        "name": "Isfjället",
+        "intro": "Isvinden viner. Snön knarrar under fötterna.",
+        "floor": "snow",
+        "solid": "rock",
+        "wall": 1,
+        "ambient": [
+          0.55,
+          0.65,
+          0.85
+        ],
+        "decor": [
+          "saga_icecrystal",
+          "saga_frozenpillar",
+          "saga_icecrystal",
+          "saga_snowdrift"
+        ],
+        "weather": [
+          "snow",
+          "wind",
+          "fog",
+          "hail"
+        ]
+      },
+      {
+        "biome": "vulkan",
+        "name": "Lavastigen",
+        "intro": "Marken är varm och lavan lyser i sprickorna.",
+        "floor": "ash",
+        "solid": "basalt",
+        "wall": 2,
+        "ambient": [
+          0.75,
+          0.42,
+          0.3
+        ],
+        "decor": [
+          "saga_anvil",
+          "saga_brazier",
+          "saga_lavacrack",
+          "saga_brazier"
+        ],
+        "weather": [
+          "wind",
+          "cloudy",
+          "sun"
+        ]
+      }
+    ],
+    "companion": "Hirdmannen",
+    "texts": {
+      "started": "Färden börjar! Tre zoner och en boss.",
+      "needPort": "Gå fram till färdporten först.",
+      "already": "Det pågår redan en färd. Hänga på?",
+      "joined": "{name} hänger på!",
+      "left": "{name} gick hem.",
+      "full": "Färden är full. Ett långhus ger plats för en fjärde.",
+      "noRun": "Det pågår ingen färd.",
+      "pickTitle": "Välj en runa!",
+      "pickSub": "Rösta på ett av tre kort.",
+      "picked": "Ni fick {runa}!",
+      "voted": "{name} röstade.",
+      "zoneClear": "Vägen vidare är öppen!",
+      "zoneClearSub": "Gå till porten där borta.",
+      "exitShut": "Besegra alla flockar först.",
+      "warn": "Snart dags att gå hem",
+      "warnSub": "Ta det lugnt. Ni får behålla allt ni hittat.",
+      "late": "Dags att gå hem?",
+      "lateSub": "Gör klart det ni håller på med. Sen kan ni gå hem från nästa vilosten eller bossen.",
+      "wipeSub": "Ni går hem med allt ni har. Försök igen!",
+      "win": "Färden är klar!",
+      "winSub": "Öppna kistan, sen går vi hem.",
+      "home": "Hemma igen",
+      "summary": "Färden tog {time}. Du fick {seeds} sagafrön.",
+      "seeds": "+{n} sagafrön",
+      "planted": "{name} har planterats!",
+      "plantNeeds": "Du behöver {need} först.",
+      "plantSeeds": "Det behövs {n} sagafrön.",
+      "plantDone": "Det är redan planterat.",
+      "companion": "{name} följer med.",
+      "reroll": "Nya kort!",
+      "noReroll": "Inga omval kvar.",
+      "food": "Matsäck: {item}",
+      "foodNone": "Du har ingen matsäck att ta med.",
+      "treeGrows": "Yggdrasil växer!",
+      "ended": {
+        "win": "Färden är klar",
+        "wipe": "Alla föll",
+        "leave": "Färden är slut"
+      }
+    }
   }
 }

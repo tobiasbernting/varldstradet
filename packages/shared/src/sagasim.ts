@@ -47,15 +47,18 @@ import {
   isDungeonId,
   dungeonOfKey,
   isClassId,
+  isRunKey,
   isSagaKey,
   mobDmgScale,
   mobHpScale,
   newSagaProgress,
+  noBuffs,
   portalFront,
   previousDungeon,
   sagaItem,
   sagaKey,
   sagaQuest,
+  type ClassId,
   type DungeonId,
   type SagaFighter,
   type SagaInstance,
@@ -68,6 +71,7 @@ import {
   type BossAbility,
   type LevelReward,
   type SagaBest,
+  type RunBuffs,
   ESSENS_CHANCE,
   FORGE_COSTS,
   FORGE_CRAFTS,
@@ -76,6 +80,7 @@ import {
   forgeLevel,
   type ForgeCost,
 } from './saga.ts';
+import { runHooks } from './runhooks.ts';
 import { sagaCheckpoint, spawnSagaMob } from './sagamap.ts';
 import {
   ATTACK_GAP,
@@ -96,6 +101,8 @@ import {
   openTileNear,
   placeIn,
   playerChange,
+  PLAYER_HALF_H,
+  PLAYER_HALF_W,
   resolveMove,
   tagArea,
   toast,
@@ -133,6 +140,13 @@ function hereOf(world: WorldState, p: PlayerState): Here | null {
 
 /** The players in a dungeon right now (online, with a class). */
 const partyOf = (h: Here): PlayerState[] => Object.values(h.area.players).filter((p) => p.online && p.area === h.key && !!h.inst.fighters[p.id]);
+/** What a run adds to this player in this map (all zeros in a dungeon and for anyone without runor). */
+const ZERO_BUFFS: RunBuffs = noBuffs();
+const buffsOf = (h: Here, id: string): RunBuffs => h.inst.run?.buffs[id] ?? ZERO_BUFFS;
+/** Cooldown left after the run's reductions (never below 40 %). */
+const cdOf = (rb: RunBuffs, spellId: string, cd: number): number => cd * (1 - Math.min(0.6, rb.cd + (rb.spellCd[spellId] ?? 0)));
+
+
 const upright = (h: Here, p: PlayerState): boolean => {
   const f = h.inst.fighters[p.id];
   return !!f && f.down === undefined;
@@ -160,6 +174,13 @@ const yell = (h: Here, species: string, text: string): Change => ({ t: 'yell', a
 // In and out
 // ---------------------------------------------------------------------------
 
+/** A fighter's full health: gear and level, and in a run the run's hp buff (bit-identical to `fighterMax` without one). */
+function maxHealth(h: Here | undefined, p: PlayerState, cls: ClassId): number {
+  const base = fighterMax(p, cls);
+  const hp = h ? buffsOf(h, p.id).hp : 0;
+  return hp ? Math.round(base * (1 + hp)) : base;
+}
+
 /** A fresh fighter for a player with a class (full health). */
 function makeFighter(h: Here, p: PlayerState): SagaFighter | null {
   const cls = p.saga?.cls;
@@ -167,7 +188,7 @@ function makeFighter(h: Here, p: PlayerState): SagaFighter | null {
   ensureGear(p);
   const old = h.inst.fighters[p.id];
   if (old && old.cls === cls) return old;
-  const max = fighterMax(p, cls);
+  const max = maxHealth(h, p, cls);
   const f: SagaFighter = { cls, hp: max, max, cd: {}, gcd: 0, fightAt: 0 };
   h.inst.fighters[p.id] = f;
   return f;
@@ -178,7 +199,7 @@ function joined(h: Here, p: PlayerState, out: Change[], greet: boolean): void {
   makeFighter(h, p);
   delete h.inst.emptySince;
   if (greet) {
-    const d = DUNGEONS[h.inst.id];
+    const d = h.inst.run ?? DUNGEONS[h.inst.id];
     out.push({ t: 'banner', to: p.id, area: h.key, text: d.name, sub: d.intro, kind: 'enter' });
   }
 }
@@ -272,6 +293,8 @@ export function jumpTo(world: WorldState, playerId: string, toId: string): Chang
   const q = farm.players[toId];
   if (!p || !q || p.id === q.id || !q.online || p.sleeping) return [];
   if (p.area === 'dungeon' || q.area === 'dungeon') return [toast(p.id, T.jumpNo)];
+  // a run's zone is entered at the arch and left by leaving the run, never by a jump
+  if (isRunKey(p.area) || isRunKey(q.area)) return [toast(p.id, T.jumpNo)];
   const qid = dungeonOfKey(q.area);
   if (qid && !p.saga?.cls) return [toast(p.id, T.sagaNeedClass)];
   const leaving = hereOf(world, p);
@@ -524,6 +547,7 @@ export function sagaAct(world: WorldState, p: PlayerState, tx: number, ty: numbe
   if (!h) return [];
   const obj = objectAt(h.area, tx, ty);
   if (obj?.kind === 'saga_exit') return leaveSaga(world, p);
+  if (obj?.kind === 'run_exit') return runHooks.exit?.(world, p, obj, ctx) ?? [];
   if (obj?.kind === 'saga_chest') return openChest(h, p, obj, ctx);
   if (obj?.kind === 'saga_rest') return [toast(p.id, T.sagaRestHint)];
   if (obj?.kind === 'saga_gate' && h.inst.puzzleGate.some((g) => g.x === obj.x && g.y === obj.y)) return [toast(p.id, T.sagaPuzzleShut)];
@@ -552,7 +576,7 @@ export function drinkPotion(world: WorldState, playerId: string, ctx: SimCtx): C
   if (!removeItem(p.inventory, 'healing_potion', 1)) return [toast(p.id, T.sagaNoPotion)];
   f.potionAt = ctx.now + POTION_CD;
   const out: Change[] = [];
-  heal(h, p, f, f.max * POTION_HEAL, out);
+  heal(h, p, f, f.max * (POTION_HEAL + buffsOf(h, p.id).potion), out);
   out.push(spellFx(h, p.id, 'potion', p), playerChange(p));
   return out;
 }
@@ -578,6 +602,8 @@ export function drinkStrength(world: WorldState, playerId: string, ctx: SimCtx):
 
 /** Opens a chest: everyone gets their own loot from it once. */
 function openChest(h: Here, p: PlayerState, chest: WorldObject, ctx: SimCtx): Change[] {
+  // the hired companion of a run never takes loot
+  if (p.bot) return [];
   const looted = (h.inst.looted[chest.id] ??= []);
   if (looted.includes(p.id)) return [toast(p.id, T.sagaLooted)];
   const d = DUNGEONS[h.inst.id];
@@ -633,7 +659,8 @@ const unique = (id: string): boolean => {
 function rollLoot(h: Here, p: PlayerState, table: SagaLoot, from: string, ctx: SimCtx, out: Change[], extra: { item: string; count: number }[] = []): void {
   const prog = progressOf(p);
   const items: { item: string; count: number }[] = [];
-  const coins = randInt(ctx.rnd, table.coins[0], table.coins[1]);
+  const base = randInt(ctx.rnd, table.coins[0], table.coins[1]);
+  const coins = base + Math.round(base * buffsOf(h, p.id).coins);
   const fresh = table.gear.filter((g) => !unique(g.item) || !prog.found.includes(g.item));
   const pool = fresh.length ? fresh : table.gear;
   const total = pool.reduce((n, g) => n + g.weight, 0);
@@ -678,6 +705,9 @@ const CRIT_CHANCE = 0.12;
 const RAGE_LEECH = 0.3;
 /** Sköldmur also gives back a little health. */
 const WALL_HEAL = 0.15;
+
+/** Can a player stand with the middle of their body here (no corner of it in a wall)? Blink and charge land only where it fits. */
+const bodyFits = (area: WorldState, x: number, y: number): boolean => ![-1, 1].some((sx) => [-1, 1].some((sy) => isSolidForPlayer(area, tileOf(x + sx * PLAYER_HALF_W), tileOf(y + sy * PLAYER_HALF_H))));
 
 /** A monster a spell can hit: in a fight or waiting (not on its way home), close enough, in sight for ranged spells. */
 function pickMob(h: Here, p: PlayerState, f: SagaFighter, range: number, wanted: number | undefined, sight: boolean): SagaMob | null {
@@ -742,17 +772,19 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
   const now = ctx.now;
   if (f.down !== undefined || f.frozen !== undefined || now < f.gcd || now < (f.cd[spellId] ?? 0)) return [];
   const out: Change[] = [];
-  const gear = spellPower(p, f.strong, now);
+  const rb = buffsOf(h, p.id);
+  const gear = spellPower(p, f.strong, now) * (1 + rb.power + (rb.spell[spellId] ?? 0));
   const power = (base: number): { n: number; crit: boolean } => {
-    const crit = ctx.rnd() < CRIT_CHANCE;
+    const crit = ctx.rnd() < CRIT_CHANCE + rb.crit;
     return { n: base * gear * (f.rage !== undefined && now < f.rage ? 1.5 : 1) * (crit ? 1.5 : 1), crit };
   };
   const raging = f.rage !== undefined && now < f.rage;
   const strike = (m: SagaMob, base: number): void => {
     const pw = power(base);
-    hurtMob(h, m, p.id, pw.n, sp.threat ?? 1, pw.crit, ctx, out);
+    hurtMob(h, m, p.id, pw.n, (sp.threat ?? 1) * (1 + rb.threat), pw.crit, ctx, out);
     // a raging berserker heals a little from every blow
     if (raging) heal(h, p, f, pw.n * RAGE_LEECH, out);
+    if (rb.leech) heal(h, p, f, pw.n * rb.leech, out);
   };
   const mobAt = (m: SagaMob): { x: number; y: number } => h.area.animals[m.id] ?? m.home;
   const noTarget = (): Change[] => (opts.quiet ? [] : [toast(p.id, T.sagaNoTarget)]);
@@ -784,7 +816,7 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
       const d = Math.max(1, Math.hypot(p.x - a.x, p.y - a.y));
       const to = { x: a.x + ((p.x - a.x) / d) * TILE, y: a.y + ((p.y - a.y) / d) * TILE };
       const from = { x: p.x, y: p.y };
-      if (!isSolidForPlayer(h.area, tileOf(to.x), tileOf(to.y))) warp(h, p, 0, 0, out, to);
+      if (bodyFits(h.area, to.x, to.y)) warp(h, p, 0, 0, out, to);
       out.push(spellFx(h, p.id, sp.id, from, a, m.id));
       strike(m, sp.power);
       if (h.inst.mobs[m.id]) stun(h, m, sp.ms ?? 1000, now, out);
@@ -821,7 +853,7 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
       if (!q) return [toast(p.id, T.sagaAllWell)];
       out.push(spellFx(h, p.id, sp.id, p, q, q.id));
       const pw = power(sp.power);
-      heal(h, q, h.inst.fighters[q.id]!, pw.n, out, pw.crit);
+      heal(h, q, h.inst.fighters[q.id]!, pw.n * (1 + rb.heal), out, pw.crit);
       healThreat(h, p.id, pw.n);
       break;
     }
@@ -830,7 +862,7 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
       const ms = sp.ms ?? 6000;
       for (const q of partyOf(h)) {
         const qf = h.inst.fighters[q.id]!;
-        if (qf.down === undefined && dist(q, p) <= (sp.radius ?? 4)) qf.hot = { until: now + ms, per: (sp.power * gear) / (ms / 1000) };
+        if (qf.down === undefined && dist(q, p) <= (sp.radius ?? 4)) qf.hot = { until: now + ms, per: (sp.power * gear * (1 + rb.heal)) / (ms / 1000) };
       }
       healThreat(h, p.id, sp.power / 2);
       break;
@@ -840,7 +872,7 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
       if (!q) return [toast(p.id, T.sagaNoneDown)];
       const qf = h.inst.fighters[q.id]!;
       delete qf.down;
-      qf.hp = Math.max(1, Math.round((qf.max * sp.power) / 100));
+      qf.hp = Math.max(1, Math.round(qf.max * (sp.power / 100 + rb.reviveHp)));
       qf.fightAt = now;
       out.push(spellFx(h, p.id, sp.id, p, q, q.id), hit(h, q.id, qf.hp, 'heal'), playerChange(q));
       toEveryone(h, out, fmt(T.sagaUp, { name: q.name }));
@@ -862,7 +894,8 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
       for (let s = 0.5; s <= sp.range; s += 0.5) {
         const nx = p.x + dir[0]! * s * TILE;
         const ny = p.y + dir[1]! * s * TILE;
-        if (isSolidForPlayer(h.area, tileOf(nx), tileOf(ny))) break;
+        // the whole body must fit (a spot whose middle is free but whose edge is in the wall would trap the player)
+        if (!bodyFits(h.area, nx, ny)) break;
         to = { x: nx, y: ny };
       }
       out.push(spellFx(h, p.id, sp.id, p, to));
@@ -871,7 +904,7 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
     }
   }
   f.gcd = now + GCD_MS;
-  f.cd[spellId] = now + sp.cd;
+  f.cd[spellId] = now + cdOf(rb, spellId, sp.cd);
   if (inFight(h)) f.fightAt = now;
   return out;
 }
@@ -917,8 +950,9 @@ function hurtFighter(h: Here, p: PlayerState, amount: number, by: SagaMob | null
   const f = h.inst.fighters[p.id];
   // the ice that holds a frozen player keeps everything else out too
   if (!f || f.down !== undefined || f.frozen !== undefined) return;
-  const armor = gearStats(p).armor;
-  let n = Math.max(1, Math.round(amount * mobDmgScale(partyOf(h).length) * (1 - armor) * (f.wall !== undefined && now < f.wall ? 0.4 : 1)));
+  const rb = buffsOf(h, p.id);
+  const armor = Math.min(0.6, gearStats(p).armor + rb.armor);
+  let n = Math.max(1, Math.round(amount * mobDmgScale(partyOf(h).length) * (h.inst.run?.dmgMul ?? 1) * (1 - armor) * (1 - Math.min(0.5, rb.taken)) * (f.wall !== undefined && now < f.wall ? 0.4 : 1)));
   if (n >= f.hp && f.hp > f.max * 0.5 && n < f.max) n = f.hp - 1; // one hit from full health never knocks you down
   f.hp -= n;
   f.fightAt = now;
@@ -970,7 +1004,8 @@ function pull(h: Here, m: SagaMob, by: string, now: number, out: Change[]): void
     if (g.hp >= g.max && (g.kind === 'mob' || g.kind === 'boss' || g.kind === 'mini')) {
       // tougher the more of the family is here
       const base = SAGA_BOSSES[g.species]?.hp ?? SAGA_MOBS[g.species]?.hp ?? g.max;
-      g.max = Math.round(base * (g.kind === 'mob' ? mobHpScale(n) : bossHpScale(n)));
+      const run = h.inst.run;
+      g.max = Math.round(base * (g.kind === 'mob' ? mobHpScale(n) * (run?.hpMul ?? 1) : bossHpScale(n) * (run?.bossMul ?? 1)));
       g.hp = g.max;
     }
     g.pulledAt = now;
@@ -1049,7 +1084,7 @@ function mobDown(h: Here, m: SagaMob, by: string, ctx: SimCtx, out: Change[]): v
   }
   if (m.kind === 'mob') {
     const killer = h.farm.players[by];
-    if (killer && ctx.rnd() < ESSENS_CHANCE) {
+    if (killer && !killer.bot && ctx.rnd() < ESSENS_CHANCE) {
       giveItems(h.area, killer, ESSENS, 1, out);
       out.push(toast(killer.id, T.sagaEssens));
     }
@@ -1100,6 +1135,8 @@ function mobDown(h: Here, m: SagaMob, by: string, ctx: SimCtx, out: Change[]): v
     h.inst.bossDown = true;
     const names: string[] = [];
     for (const p of party) {
+      // a run's chapter is cleared for its party by runsim.ts (offline members too); the hired companion has no record
+      if (p.bot) continue;
       const prog = progressOf(p);
       if (!prog.cleared.includes(h.inst.id)) {
         prog.cleared.push(h.inst.id);
@@ -1109,7 +1146,8 @@ function mobDown(h: Here, m: SagaMob, by: string, ctx: SimCtx, out: Change[]): v
       out.push({ t: 'banner', to: p.id, area: h.key, text: fmt(T.sagaBossDown, { boss: boss.name }), sub: fmt(T.sagaCleared, { dungeon: d.name }), kind: 'cleared' });
     }
     out.push(toast(null, fmt(T.sagaFamilyWin, { names: names.join(' och '), boss: boss.name })));
-    bestTime(h, names, ctx.now, out);
+    // a run keeps its own records (the dungeon's best time is the dungeon's)
+    if (!h.inst.run) bestTime(h, names, ctx.now, out);
   }
   for (const p of party) out.push(playerChange(p));
 }
@@ -1128,7 +1166,7 @@ function bestTime(h: Here, names: string[], now: number, out: Change[]): void {
 }
 
 /** The achievement stat for clearing each dungeon. */
-const CLEARED_STAT: Record<DungeonId, string> = { draug: 'sagaDraug', frost: 'sagaFrost', surt: 'sagaSurt', hel: 'sagaHel', dvarg: 'sagaDvarg', orm: 'sagaOrm', alv: 'sagaAlv', fenrir: 'sagaFenrir', loke: 'sagaLoke' };
+export const CLEARED_STAT: Record<DungeonId, string> = { draug: 'sagaDraug', frost: 'sagaFrost', surt: 'sagaSurt', hel: 'sagaHel', dvarg: 'sagaDvarg', orm: 'sagaOrm', alv: 'sagaAlv', fenrir: 'sagaFenrir', loke: 'sagaLoke' };
 
 /** Kill quests count the monster; collect quests may find what the villager wants on it (in a dungeon). */
 function questCredit(area: WorldState, p: PlayerState, species: string, ctx: SimCtx, out: Change[], collect: boolean): void {
@@ -1305,7 +1343,7 @@ function tickMob(h: Here, m: SagaMob, dtMs: number, ctx: SimCtx, fields: Map<str
   if (!stats) return;
   if (m.state === 'idle') {
     a.moving = false;
-    const sight = boss ? 5 : (def?.aggro ?? 4);
+    const sight = (boss ? 5 : (def?.aggro ?? 4)) * (h.inst.run?.sight ?? 1);
     for (const p of partyOf(h)) {
       if (!upright(h, p) || dist(p, a) > sight || !lineOfSight(h.area, a.x, a.y, p.x, p.y)) continue;
       pull(h, m, p.id, now, out);
@@ -1326,7 +1364,9 @@ function tickMob(h: Here, m: SagaMob, dtMs: number, ctx: SimCtx, fields: Map<str
     return;
   }
   // fighting: a monster dragged too far gives up; a boss keeps to its hall and gives up only when everyone has left it
-  if (boss ? !partyOf(h).some((p) => upright(h, p) && dist(p, m.home) <= LEASH_TILES) : dist(a, m.home) > LEASH_TILES) {
+  // the fog of a run (dimma) lets monsters in packs hold on longer; a boss keeps its hall as before
+  const leash = LEASH_TILES + (m.kind === 'mob' ? (h.inst.run?.leash ?? 0) : 0);
+  if (boss ? !partyOf(h).some((p) => upright(h, p) && dist(p, m.home) <= leash) : dist(a, m.home) > leash) {
     resetMob(h, m, out);
     return;
   }
@@ -1406,7 +1446,8 @@ function dropZone(h: Here, id: string, out: Change[]): void {
 function startCast(h: Here, m: SagaMob, a: { x: number; y: number; facing: string }, ctx: SimCtx, out: Change[]): boolean {
   const boss = SAGA_BOSSES[m.species]!;
   const now = ctx.now;
-  const i = boss.moves.findIndex((mv, k) => (mv.phase ?? 0) <= (m.phase ?? 0) && now >= m.next![k]!);
+  const unlocked = h.inst.run?.moves;
+  const i = boss.moves.findIndex((mv, k) => (mv.phase ?? 0) <= (m.phase ?? 0) && now >= m.next![k]! && (!unlocked || unlocked.includes(k)));
   if (i < 0) return false;
   const mv = boss.moves[i]!;
   m.next![i] = now + mv.every + mv.warn;
@@ -1474,7 +1515,7 @@ function startCast(h: Here, m: SagaMob, a: { x: number; y: number; facing: strin
   return true;
 }
 
-const inZone = (z: SagaZone, p: { x: number; y: number }): boolean => {
+export const inZone = (z: SagaZone, p: { x: number; y: number }): boolean => {
   if (z.shape === 'line') {
     // along the strip (from a little behind the boss to its far end) and no further to the side than half its width
     const dx = (p.x - z.x) / TILE;
@@ -1632,7 +1673,7 @@ export function tickSaga(area: WorldState, key: string, dtMs: number, ctx: SimCt
   for (const p of party) {
     const f = inst.fighters[p.id]!;
     if (f.down !== undefined) {
-      if (!inst.wipeAt && now - f.down >= DOWN_MS) standUp(h, p, now, out);
+      if (!inst.wipeAt && now - f.down >= DOWN_MS * (1 - Math.min(0.8, buffsOf(h, p.id).down))) standUp(h, p, now, out);
       continue;
     }
     // the healing ring
@@ -1653,10 +1694,10 @@ export function tickSaga(area: WorldState, key: string, dtMs: number, ctx: SimCt
         }
         for (const q of party) out.push({ t: 'banner', to: q.id, area: key, text: T.sagaRestLit, sub: T.sagaRestSub, kind: 'rest' });
       }
-      if (!fighting) f.hp = Math.min(f.max, f.hp + f.max * REST_REGEN * sec);
+      if (!fighting) f.hp = Math.min(f.max, f.hp + f.max * REST_REGEN * (1 + buffsOf(h, p.id).rest) * sec);
     });
     // out of the fight, health slowly comes back
-    if (!fighting && now - f.fightAt > CALM_MS) f.hp = Math.min(f.max, f.hp + f.max * REGEN * sec);
+    if (!fighting && now - f.fightAt > CALM_MS) f.hp = Math.min(f.max, f.hp + f.max * REGEN * (1 + buffsOf(h, p.id).regen) * sec);
   }
   // a puzzle room's plates light up under anyone standing on them; all of them lit opens the way on
   if (!inst.puzzleOpen) {
@@ -1692,8 +1733,8 @@ export function tickSaga(area: WorldState, key: string, dtMs: number, ctx: SimCt
       inst.wipeAt = now + WIPE_MS;
       const boss = Object.values(inst.mobs).find((m) => (m.kind === 'boss' || m.kind === 'mini') && m.state === 'fight');
       if (boss) out.push(yell(h, boss.species, SAGA_BOSSES[boss.species]!.yells.wipe));
-      for (const p of party) out.push({ t: 'banner', to: p.id, area: key, text: T.sagaWipe, sub: T.sagaWipeSub, kind: 'wipe' });
-    } else if (now >= inst.wipeAt) {
+      for (const p of party) out.push({ t: 'banner', to: p.id, area: key, text: T.sagaWipe, sub: inst.run?.wipeSub ?? T.sagaWipeSub, kind: 'wipe' });
+    } else if (now >= inst.wipeAt && !inst.run) {
       delete inst.wipeAt;
       for (const m of Object.values(inst.mobs)) if (m.state === 'fight') resetMob(h, m, out);
       for (const z of [...inst.zones]) dropZone(h, z.id, out);
@@ -1718,7 +1759,8 @@ function openPuzzle(h: Here, out: Change[]): void {
 /** A dungeon nobody is in: after a while it starts over. Returns true when it should be thrown away. */
 export function idleSaga(farm: WorldState, key: string, area: WorldState, now: number): boolean {
   const inst = area.saga;
-  if (!inst) return false;
+  // a run's zones live and die with the run (runsim.ts)
+  if (!inst || inst.run) return false;
   inst.emptySince ??= now;
   if (now - inst.emptySince < SAGA_RESET_MS) return false;
   // anyone still inside (offline) waits in front of the arch instead
@@ -1799,8 +1841,8 @@ export function ensureGear(p: PlayerState): boolean {
 }
 
 /** A fighter's full health follows their gear and level (they keep what they gained or lost). */
-function refreshMax(p: PlayerState, f: SagaFighter): void {
-  const max = fighterMax(p, f.cls);
+function refreshMax(p: PlayerState, f: SagaFighter, h?: Here): void {
+  const max = maxHealth(h, p, f.cls);
   if (max === f.max) return;
   if (f.down === undefined) f.hp = Math.max(1, Math.min(max, f.hp + Math.max(0, max - f.max)));
   f.max = max;
@@ -1841,7 +1883,7 @@ export function equipGear(world: WorldState, playerId: string, slot: string, ite
       out.push(toast(null, fmt(T.sagaLegendaryOn, { name: p.name, item: itemName(itemId) })));
     }
   }
-  if (f) refreshMax(p, f);
+  if (f) refreshMax(p, f, h ?? undefined);
   out.push(playerChange(p));
   return out;
 }
@@ -1870,7 +1912,7 @@ export function giveXp(p: PlayerState, n: number, out: Change[], h?: Here): void
     fxOn(p.area, tileOf(p.x), tileOf(p.y), 'sparkle'),
   );
   const f = h?.inst.fighters[p.id];
-  if (f) refreshMax(p, f);
+  if (f) refreshMax(p, f, h);
 }
 
 /** What the level banner says about a level's reward ("Du får Glödkransen!", "Ny titel: Vandrare"). */

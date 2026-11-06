@@ -4,11 +4,11 @@
 // dungeon starts over, so nothing of it is saved. Every dungeon is drawn for a 64×64 map (STANDARD_MAP).
 import { addObject, emptyWorld, inBounds, tileIndex } from './map.ts';
 import { mulberry32, randInt } from './rng.ts';
-import { DUNGEONS, SAGA_BOSSES, SAGA_MOBS, sagaKey, type DungeonId, type SagaInstance, type SagaMob, type SagaRoom } from './saga.ts';
+import { DUNGEONS, SAGA_BOSSES, SAGA_MOBS, sagaKey, type DungeonId, type SagaDungeonDef, type SagaInstance, type SagaMob, type SagaRoom } from './saga.ts';
 import { MAP_H, MAP_W, STANDARD_MAP, TILE, type AnimalState, type Terrain, type WorldState } from './types.ts';
 
 /** What is outside the rooms: rock nobody walks on (the sea around the temple, the starry sky under Bifrost). */
-const SOLID: Record<DungeonId, Terrain> = { draug: 'rock', frost: 'rock', surt: 'basalt', hel: 'rock', dvarg: 'rock', orm: 'water', alv: 'rock', fenrir: 'rock', loke: 'space' };
+export const SOLID: Record<DungeonId, Terrain> = { draug: 'rock', frost: 'rock', surt: 'basalt', hel: 'rock', dvarg: 'rock', orm: 'water', alv: 'rock', fenrir: 'rock', loke: 'space' };
 /** Members of a monster group stand around its middle like this. */
 const PACK_SPOTS: [number, number][] = [
   [0, 0],
@@ -140,14 +140,21 @@ export function spawnSagaMob(world: WorldState, inst: SagaInstance, species: str
 
 /** Builds dungeon `id` with all its monsters, ready for the family to walk in. */
 export function generateSaga(id: DungeonId): WorldState {
-  const def = DUNGEONS[id];
-  const rnd = mulberry32(0x5a6a + DUNGEONS[id].chapter * 7919);
+  return buildDungeon(DUNGEONS[id], mulberry32(0x5a6a + DUNGEONS[id].chapter * 7919), SOLID[id], sagaKey(id));
+}
+
+/**
+ * Builds any dungeon plan (`def`): a saga dungeon from the table above, or a zone of a run (`runmap.ts` makes the plan
+ * from a template). `solid` is what lies outside the rooms, `key` the map's area key, `rnd` the decor's random stream.
+ */
+export function buildDungeon(def: SagaDungeonDef, rnd: () => number, solid: Terrain, key: string): WorldState {
+  const id = def.id;
   const world = emptyWorld();
-  world.area = sagaKey(id);
+  world.area = key;
   world.biome = 'saga';
   world.players = {};
   const T = world.terrain;
-  T.fill(SOLID[id]);
+  T.fill(solid);
   /** 0 rock, 1 room, 2 corridor. */
   const floor = new Uint8Array(MAP_W * MAP_H);
   const roomOf = new Int16Array(MAP_W * MAP_H).fill(-1);

@@ -158,6 +158,10 @@ place('hutch', { sell: 15 });
 place('sheepfold', { sell: 30 });
 place('barn', { sell: 50 });
 place('stall', { sell: 60 });
+// The run's buildings (M5b, GAME.md section 4): the forge house, the herb garden and the longhouse
+place('smithy', { sell: 80 });
+place('herb_garden', { sell: 30 });
+place('longhall', { sell: 120 });
 place('pigsty', { sell: 25 });
 place('flowerbox', { sell: 5 });
 place('well', { sell: 20 });
@@ -456,6 +460,9 @@ addO(O('saga_rest', { interact: 'rest', breakWith: undefined, light: true }));
 addO(O('saga_chest', { interact: 'sagachest', breakWith: undefined }));
 addO(O('saga_portal', { w: 3, h: 2, interact: 'saga', breakWith: undefined, light: true }));
 addO(O('saga_stone', { interact: 'sagaclass', breakWith: undefined, light: true }));
+// Runs (M5b): the arch on the farm that starts one, and the way on at the end of a zone
+addO(O('fardport', { w: 3, h: 2, interact: 'fardport', breakWith: undefined, light: true }));
+addO(O('run_exit', { solid: false, flat: true, interact: 'runexit', breakWith: undefined, light: true }));
 addO(O('saga_coffin', { breakWith: undefined }));
 addO(O('saga_bones', { solid: false, flat: true, breakWith: undefined }));
 addO(O('saga_candles', { solid: false, breakWith: undefined, light: true }));
@@ -467,7 +474,7 @@ addO(O('saga_anvil', { breakWith: undefined }));
 addO(O('saga_brazier', { breakWith: undefined, light: true }));
 addO(O('saga_lavacrack', { solid: false, flat: true, breakWith: undefined, light: true }));
 built('solruna', { light: true });
-built('yggdrasil', { light: true });
+built('yggdrasil', { light: true, interact: 'yggdrasil' });
 // Act II: the puzzle rooms' plates (variant 0 dark, 1 lit) and each new dungeon's things to see
 addO(O('saga_plate', { solid: false, flat: true, breakWith: undefined, light: true }));
 // Helheim
@@ -509,6 +516,9 @@ built('hutch', { w: 1, h: 1, houses: { species: 'rabbit', capacity: 2 } });
 built('sheepfold', { w: 2, h: 2, houses: { species: 'sheep', capacity: 3 } });
 built('barn', { w: 3, h: 2, houses: { species: 'cow', capacity: 2 } });
 built('stall', { w: 3, h: 2, houses: { species: 'horse', capacity: 2 } });
+built('smithy', { w: 3, h: 2, light: true });
+built('herb_garden', { w: 2, h: 2 });
+built('longhall', { w: 4, h: 3, light: true });
 built('pigsty', { w: 2, h: 2, houses: { species: 'pig', capacity: 3 } });
 built('pumpkin_lantern');
 built('ghost_flag', { solid: false });
@@ -696,6 +706,9 @@ export const RECIPES: RecipeDef[] = [
   R('sheepfold', 1, ['wood', 25], ['stone', 6]),
   R('barn', 1, ['wood', 40], ['stone', 15]),
   R('stall', 1, ['wood', 45], ['stone', 10]),
+  R('smithy', 1, ['stone', 30], ['wood', 10], ['gold', 3]),
+  R('herb_garden', 1, ['wood', 10], ['fiber', 20]),
+  R('longhall', 1, ['wood', 60], ['stone', 20]),
   R('pigsty', 1, ['wood', 24], ['stone', 8]),
   R('hay', 2, ['fiber', 3]),
   R('chair', 1, ['wood', 3]),

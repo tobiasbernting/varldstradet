@@ -87,6 +87,35 @@ import {
   TRANSPORT_PRICE,
   INTERIOR,
   FLOOR_ITEMS,
+  RUNOR,
+  SEED_TREE,
+  MODIFIERS,
+  ZONE_TEMPLATES,
+  FARDKOST,
+  TREE_STAGES,
+  RUNA_NAMES,
+  RUNA_TEXT,
+  TREE_NAMES,
+  TREE_TEXT,
+  MODIFIER_NAMES,
+  MODIFIER_TEXT,
+  ZONE_NAMES,
+  ZONE_INTROS,
+  FOOD_TEXT,
+  BRANCH_NAMES,
+  RUN_SEEDS,
+  RUN_MAX_MS,
+  RUN_WARN_MS,
+  RUN_PICK_MS,
+  RUN_VICTORY_MS,
+  RUN_JOIN_RADIUS,
+  RUN_PARTY_MAX,
+  RUN_PARTY_MAX_LONGHALL,
+  RUNA_CARDS,
+  ZONES_PER_RUN,
+  MODIFIER_SEEDS,
+  RUN_T,
+  COMPANION_NAME,
 } from '../../shared/src/index.ts';
 
 const out = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../assets/game.json');
@@ -199,6 +228,22 @@ const dialogue = { npcs: NPC_TALK, jokes: JOKES, riddles: RIDDLES, right: RIGHT,
 /** The bag's filter chips (shared/src/filters.ts): id, emoji, the categories it keeps lit, and its name. */
 const filters = INVENTORY_FILTERS.map((f) => ({ id: f.id, emoji: f.emoji, categories: f.categories, name: FILTER_NAMES[f.id] ?? f.id }));
 
+/** Runs (M5b, GAME.md): the runor with their pictures, names and one-line texts (the three big cards), the sagaträd, the
+ * modifiers, the dishes, the zones' looks and the run's numbers. The effects are the server's business; the client shows names. */
+const run = {
+  constants: { maxMs: RUN_MAX_MS, warnMs: RUN_WARN_MS, pickMs: RUN_PICK_MS, victoryMs: RUN_VICTORY_MS, joinRadius: RUN_JOIN_RADIUS, partyMax: RUN_PARTY_MAX, partyMaxLonghall: RUN_PARTY_MAX_LONGHALL, cards: RUNA_CARDS, zones: ZONES_PER_RUN, modifierSeeds: MODIFIER_SEEDS },
+  seeds: RUN_SEEDS,
+  runor: RUNOR.map((r) => ({ id: r.id, ...(r.cls ? { cls: r.cls } : {}), icon: r.icon, name: RUNA_NAMES[r.id], text: RUNA_TEXT[r.id] })),
+  tree: SEED_TREE.map((n) => ({ id: n.id, branch: n.branch, cost: n.cost, ...(n.needs ? { needs: n.needs } : {}), name: TREE_NAMES[n.id], text: TREE_TEXT[n.id] })),
+  treeStages: TREE_STAGES,
+  branches: BRANCH_NAMES,
+  modifiers: MODIFIERS.map((m) => ({ id: m.id, name: MODIFIER_NAMES[m.id], text: MODIFIER_TEXT[m.id] })),
+  food: Object.keys(FARDKOST).map((id) => ({ id, text: FOOD_TEXT[id] })),
+  zones: Object.values(ZONE_TEMPLATES).map((t) => ({ biome: t.biome, name: ZONE_NAMES[t.biome], intro: ZONE_INTROS[t.biome], floor: t.floor, solid: t.solid, wall: t.wall, ambient: t.ambient, decor: t.decor, weather: t.weather })),
+  companion: COMPANION_NAME,
+  texts: { ...RUN_T },
+};
+
 const data = {
   _comment: 'Generated from packages/shared by `pnpm godot:data`. Do not edit; edit the shared data and run the script.',
   constants: { TILE, MAP_W, MAP_H, MAX_HEARTS, DAY_LENGTH_MS, EDGE_GAP, REACH, PICKUP_RADIUS, RIDE_SPEED_MUL, WATERING_CAN_CHARGES, HOTBAR_SIZE, INVENTORY_SIZE, CHEST_SIZE, MAX_STACK, PLAYER_SPEED, PLAYER_HALF_W, PLAYER_HALF_H, SLOW_MUL, GCD_MS, DOWN_MS, WIPE_MS, POTION_CD, CHAT_MAX_LEN, CHAT_BUBBLE_MS, EMOTE_MS },
@@ -242,6 +287,7 @@ const data = {
   gear: { rarityPower: RARITY_POWER, levelBonus: LEVEL_BONUS, powerCap: POWER_CAP, armorCap: ARMOR_CAP, classFit: CLASS_FIT, xpLevels: XP_LEVELS, forgeMax: FORGE_MAX, slots: ['weapon', 'offhand', 'amulet'] },
   levelRewards: LEVEL_REWARDS,
   dialogue,
+  run,
 };
 fs.writeFileSync(out, JSON.stringify(data, null, 2) + '\n');
 console.log(`${path.relative(process.cwd(), out)}: ${Object.keys(objects).length} objects, ${DUNGEON_IDS.length} dungeons, ${Object.keys(mobs).length} creatures, ${Object.keys(spells).length} spells, ${Object.keys(items).length} items`);
