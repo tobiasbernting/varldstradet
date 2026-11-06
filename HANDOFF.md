@@ -23,16 +23,25 @@ only what a new session needs to continue: state, decisions, how the work is run
 | 9 | M4c | Building with ownership, the farmhouse, shop and sell box, wardrobe, gear window and hero switch, cooking, villagers, Köpingen, the bus, Völvan's class pick; dev `starter` |
 | 10 | M5a | Browser client retired; pixel art moved to `packages/art`; `/` is the download page; voice and character-creator gaps recorded |
 | 11 | M5b | `GAME.md`; the run generator, rules and bot brain (`run.ts`, `runmap.ts`, `runsim.ts`, `runbot.ts`), the hired companion, sagafrön and the sagaträd, färdkost, the three buildings, server handlers, data export; reviewed with a fix-up round and the soft 30-minute clock; merged 2026-11-06 12:04 UTC as bd01a91 |
+| 12 | backlog 3 | The character creator in the Godot client: "Ny karaktär" on the login screen, a creator window with the look composer, `POST /api/players` from the client, a headless creator check in `bot-check.mts`, `docs/creator.png`; merged 2026-11-06 14:52 UTC as 70dac5a |
 
-- **In progress (started 2026-11-06 12:06 UTC, both Sonnet, both from main):**
-  - **M5c**, branch `m5c-runs-client`, child `session_01KTh22riKcXRQssJpT6nmes`: the runs in the Godot client (the
-    färdport arch and window, the zones drawn with the biome looks, the run HUD with the soft clock, the three runor
-    cards and the vote, the end summary, the sagaträd window and the shoot's five variants, the three buildings, the
-    hired companion drawn, a run bot and a two-bot CI check, pictures `m5c-*.png`, docs).
-  - **Character creator**, branch `godot-character-creator`, child `session_01KTh22pn3nY1PwSd9U6Gv3B` (backlog item 3):
-    "Ny karaktär" on the login screen, a creator window with the look composer, `POST /api/players` from the client,
-    a headless check, docs. Told to stay out of the world, HUD, farm and dungeon views so it does not collide with M5c.
-  - Merge order if both are ready: the creator first, then M5c (rebase if needed).
+- **In progress:**
+  - **M5c**, branch `m5c-runs-client`, **PR 13** (draft), child `session_01KTh22riKcXRQssJpT6nmes` (Sonnet, started 12:06 UTC):
+    steps 1–10 pushed (head 213d985: the arch, the shoot's five stages, the buildings, the arch window, zones, the run
+    HUD, the cards, the summary, the sagaträd window, the companion, a run bot with a two-bot CI check, docs). Left: the
+    `m5c-*.png` pictures (taken by the CI workflow into the `farm-screenshots` artifact; the child fetches them into
+    `packages/godot/docs/`), the PR body, marking the PR ready. The child goes idle while waiting for CI and does not
+    always wake on its own: nudge it with a message about CI on its own PR. The export job failed once on this branch on
+    the farmer bot's bus step ("the stop did not open the window"), re-run 14:50 UTC; a third failure on that step
+    counts as real. An independent review of the client diff was started in the orchestrating session 14:58 UTC.
+  - **Röstprat (voice)**, branch `godot-voice`, child `session_01KTh22ouaSJXMfDZvpaPHMt` (Sonnet, started 14:57 UTC,
+    backlog item 2): the `webrtc-native` GDExtension for the four targets, a voice client over the existing `voice`
+    messages, a window and a HUD button, a two-bot signalling check, docs and `docs/voice.png`. Told to stay out of
+    the run code. Merge after M5c, or ask it to rebase.
+- **Review of PR 12 (the creator, 2026-11-06):** CI green, local checks green, an independent review found no bug;
+  two nits left for later: the "Inga karaktärer än" hint says to press Ny karaktär even on a guest device that may
+  not create characters (`login.gd`, `noCharactersYet`), and the creator check sets the look indexes directly, so the
+  arrow buttons and the server's 400/403/409 answers are untested.
 - **How PR 11 was reviewed (the recipe that worked, 2026-11-06):** CI and the local checks first; then an independent
   Sonnet review agent given GAME.md and the diff, asked for correctness bugs and mismatches with the design (it found
   seven real ones: the health buff lost on level-up, jump into run zones, sagafrön rounded away on 1-seed packs, chapter
@@ -103,8 +112,8 @@ after-M3d bench, the house and village benches and an Intel laptop bench were ne
 
 1. M5c (in progress, see section 1), then M6. The owner approved `GAME.md` on 2026-11-06 with one change: the 30
    minutes is a soft target (section 2).
-2. Voice: Röstprat was browser WebRTC; server side kept; Godot needs the `webrtc` GDExtension.
-3. A character creator in Godot (in progress, see section 1).
+2. Voice: Röstprat was browser WebRTC; server side kept; Godot needs the `webrtc` GDExtension (in progress, see section 1).
+3. ~~A character creator in Godot~~ done (PR 12); two nits recorded in section 1.
 4. Farm leftovers: the weapon in the hero's hand, Smedjan (forge), the journal, the bath house, caves, the paint
    screen, the rocket; sprites and icons only exist for Draugkryptan's creatures and loot.
 5. The threat indicator is a client heuristic; `SagaSnap.m` could carry the target id (additive).
@@ -123,9 +132,10 @@ after-M3d bench, the house and village benches and an Intel laptop bench were ne
 
 - Orchestrating session (from 2026-11-06 09:55 UTC): `session_01KTh22pPGKmMmYJxTLXzyqs`; before that
   `session_01KTh22nak5ip5cq8vST7H9Q`. M5b children, all done: `session_01KTh22qkzZkRx6UToLHSTLk` (the milestone),
-  `session_01KTh22ovyHfUYGF3frNYrnr` (review fixes), `session_01KTh22qjEejiGHLyJoPWc7W` (the soft clock).
-  M5c child: `session_01KTh22riKcXRQssJpT6nmes`. Character-creator child: `session_01KTh22pn3nY1PwSd9U6Gv3B`.
-- One check-in pending at 14:45 UTC (`trig_011wFzz6amNKxbAwMyFfLKwe`): review and merge the M5c and creator PRs,
-  then start M6 (and voice in parallel once the creator is merged).
+  `session_01KTh22ovyHfUYGF3frNYrnr` (review fixes), `session_01KTh22qjEejiGHLyJoPWc7W` (the soft clock). Creator
+  child, done: `session_01KTh22pn3nY1PwSd9U6Gv3B`. M5c child: `session_01KTh22riKcXRQssJpT6nmes`. Voice child:
+  `session_01KTh22ouaSJXMfDZvpaPHMt`.
+- One check-in pending at 15:43 UTC (`trig_014xvFvvDPpyzYanYjMUTfdJ`): PR 13's CI and the child's finish, merge M5c,
+  then M6; the voice child.
 - Homelab repo `tobiasbernting/homelab`: `cloud/` (Hetzner + Cloudflare + Tailscale, running), `server/roles/lilla-garden`
   and `lilla-garden-cloud`.
