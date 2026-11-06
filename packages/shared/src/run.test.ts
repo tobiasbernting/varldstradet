@@ -27,6 +27,9 @@ import {
   TREE_TEXT,
   TREE_TOTAL,
   WIPE_MS,
+  XP_LEVELS,
+  equipGear,
+  fighterMax,
   ZONE_INTROS,
   ZONE_NAMES,
   ZONE_TEMPLATES,
@@ -405,6 +408,52 @@ describe('every effect', () => {
     // monsters hit harder in a run with a damage modifier
     const l = lab({});
     expect(l.inst.run!.dmgMul).toBe(1);
+  });
+
+  it('the run’s health buff survives a level-up and a change of gear, for the hero and the hired companion', () => {
+    const party = makeParty(['magiker'], { seed: 3, longhall: true, level: 3 });
+    const p = party.players[0]!;
+    startRun(party.world, p.id, { seed: 3 }, party.ctx());
+    const run = runOf(party.world)!;
+    const area = party.world.areas![run.key]!;
+    const inst = area.saga!;
+    const cid = run.companions[0]!;
+    const c = party.world.players[cid]!;
+    inst.run!.buffs = { [p.id]: buffsOf({ hp: 0.15 }), [cid]: buffsOf({ hp: 0.15 }) };
+    for (let i = 0; i < 4; i++) step(party, false, []);
+    delete inst.fighters[p.id];
+    delete inst.fighters[cid];
+    placeIn(party.world, p, run.key, inst.start.x, inst.start.y, 'up', []);
+    placeIn(party.world, c, run.key, inst.start.x + 1, inst.start.y, 'up', []);
+    for (let i = 0; i < 4; i++) step(party, false, []);
+    const f = inst.fighters[p.id]!;
+    const fc = inst.fighters[cid]!;
+    const want = (q: typeof p): number => Math.round(fighterMax(q, q.saga!.cls!) * 1.15);
+    expect(f.max).toBe(want(p));
+    expect(fc.max).toBe(want(c));
+    // gear: taking the amulet off changes the base, the buff stays
+    equipGear(party.world, p.id, 'amulet', null);
+    expect(f.max).toBe(want(p));
+    expect(f.max).toBeLessThan(fighterMax({ ...p, saga: { ...p.saga!, gear: { ...p.saga!.gear, amulet: 'stenamulett' } } } as typeof p, 'magiker') * 1.15);
+    // a level-up from a kill (both of them get the experience)
+    p.saga!.xp = XP_LEVELS[3]! - 1;
+    c.saga!.xp = XP_LEVELS[3]! - 1;
+    const mob = spawnSagaMob(area, inst, 'skelett', p.x + TILE, p.y, 'mob', -1);
+    inst.mobs[mob.id]!.hp = 1;
+    inst.mobs[mob.id]!.state = 'fight';
+    castSpell(party.world, p.id, 'eldboll', mob.id, party.ctx());
+    expect(inst.mobs[mob.id]).toBeUndefined();
+    expect(f.max).toBe(want(p));
+    expect(fc.max).toBe(want(c));
+    // and without a run buff nothing changes: a plain number
+    inst.run!.buffs = {};
+    p.saga!.xp = XP_LEVELS[4]! - 1;
+    const mob2 = spawnSagaMob(area, inst, 'skelett', p.x + TILE, p.y, 'mob', -1);
+    inst.mobs[mob2.id]!.hp = 1;
+    inst.mobs[mob2.id]!.state = 'fight';
+    party.now += 5000;
+    castSpell(party.world, p.id, 'eldboll', mob2.id, party.ctx());
+    expect(f.max).toBe(fighterMax(p, 'magiker'));
   });
 
   it('heal, potion and reviveHp make healing and potions stronger, and a revived friend wake with more health', () => {

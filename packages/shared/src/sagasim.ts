@@ -57,6 +57,7 @@ import {
   sagaItem,
   sagaKey,
   sagaQuest,
+  type ClassId,
   type DungeonId,
   type SagaFighter,
   type SagaInstance,
@@ -172,6 +173,13 @@ const yell = (h: Here, species: string, text: string): Change => ({ t: 'yell', a
 // In and out
 // ---------------------------------------------------------------------------
 
+/** A fighter's full health: gear and level, and in a run the run's hp buff (bit-identical to `fighterMax` without one). */
+function maxHealth(h: Here | undefined, p: PlayerState, cls: ClassId): number {
+  const base = fighterMax(p, cls);
+  const hp = h ? buffsOf(h, p.id).hp : 0;
+  return hp ? Math.round(base * (1 + hp)) : base;
+}
+
 /** A fresh fighter for a player with a class (full health). */
 function makeFighter(h: Here, p: PlayerState): SagaFighter | null {
   const cls = p.saga?.cls;
@@ -179,7 +187,7 @@ function makeFighter(h: Here, p: PlayerState): SagaFighter | null {
   ensureGear(p);
   const old = h.inst.fighters[p.id];
   if (old && old.cls === cls) return old;
-  const max = Math.round(fighterMax(p, cls) * (1 + buffsOf(h, p.id).hp));
+  const max = maxHealth(h, p, cls);
   const f: SagaFighter = { cls, hp: max, max, cd: {}, gcd: 0, fightAt: 0 };
   h.inst.fighters[p.id] = f;
   return f;
@@ -1825,8 +1833,8 @@ export function ensureGear(p: PlayerState): boolean {
 }
 
 /** A fighter's full health follows their gear and level (they keep what they gained or lost). */
-function refreshMax(p: PlayerState, f: SagaFighter): void {
-  const max = fighterMax(p, f.cls);
+function refreshMax(p: PlayerState, f: SagaFighter, h?: Here): void {
+  const max = maxHealth(h, p, f.cls);
   if (max === f.max) return;
   if (f.down === undefined) f.hp = Math.max(1, Math.min(max, f.hp + Math.max(0, max - f.max)));
   f.max = max;
@@ -1867,7 +1875,7 @@ export function equipGear(world: WorldState, playerId: string, slot: string, ite
       out.push(toast(null, fmt(T.sagaLegendaryOn, { name: p.name, item: itemName(itemId) })));
     }
   }
-  if (f) refreshMax(p, f);
+  if (f) refreshMax(p, f, h ?? undefined);
   out.push(playerChange(p));
   return out;
 }
@@ -1896,7 +1904,7 @@ export function giveXp(p: PlayerState, n: number, out: Change[], h?: Here): void
     fxOn(p.area, tileOf(p.x), tileOf(p.y), 'sparkle'),
   );
   const f = h?.inst.fighters[p.id];
-  if (f) refreshMax(p, f);
+  if (f) refreshMax(p, f, h);
 }
 
 /** What the level banner says about a level's reward ("Du får Glödkransen!", "Ny titel: Vandrare"). */
