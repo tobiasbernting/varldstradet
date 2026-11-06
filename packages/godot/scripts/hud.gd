@@ -623,6 +623,10 @@ func set_connection(status: String) -> void:
 
 ## Big words across the screen; a second banner waits for the first (the browser's queue). `kind` picks the sound.
 func show_banner(text: String, sub: String, kind := "") -> void:
+	# The run pick window draws its own "Välj en runa!"; the server's banner with the same words would sit under it.
+	if kind == "reward" and text == Data.run_text("pickTitle"):
+		Sfx.play("fanfare") # (the zone-cleared sound stays; only the doubled words go)
+		return
 	if _banner_t > 0.0:
 		_banner_queue.append([text, sub, kind])
 		return

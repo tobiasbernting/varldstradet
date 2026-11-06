@@ -11,7 +11,8 @@ extends Bot
 ## `--shots=dir` (needs a window): pictures of the arch window, a zone, the cards, the end summary and the tree window.
 ##
 ##   godot --headless --path packages/godot -- --runbot --route=run --server=http://localhost:8080 --name=Bot-Ask --role=lead \
-##         --report=/tmp/run.json [--seconds=420] [--full] [--shots=/tmp/dir]
+##         --report=/tmp/run.json [--seconds=420] [--full] [--max-wipes=2] [--shots=/tmp/dir]
+## `--max-wipes=N`: how many wipes the bot retries from the arch (default 2, the CI's tolerance; 0 makes a wipe fail the run).
 
 var role := "lead"
 var full := false
@@ -23,7 +24,8 @@ var _confirmed: Dictionary = {} ## zone -> true once the server's offer showed m
 var _beat := 5.0
 var _rest_t := 0.0
 var _wipes := 0
-const MAX_WIPES := 2
+const DEFAULT_MAX_WIPES := 2
+var max_wipes := DEFAULT_MAX_WIPES
 var _kit_t := -1.0
 var _kit_sent := false
 var _started := false
@@ -49,6 +51,13 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--role="):
 			role = arg.substr(7)
+		elif arg.begins_with("--max-wipes="):
+			var v := arg.substr(12)
+			if not v.is_valid_int() or int(v) < 0:
+				push_error("--max-wipes needs a whole number, 0 or more (got '%s')" % v)
+				get_tree().quit(2)
+				return
+			max_wipes = int(v)
 		elif arg == "--full":
 			full = true
 		elif arg.begins_with("--shots="):
@@ -355,11 +364,11 @@ func _on_run_ended(summary: Dictionary) -> void:
 	_ended = summary
 	_report["run"]["ended"] = summary
 	_log("run ended: %s" % str(summary))
-	if str(summary.get("outcome", "")) == "wipe" and _wipes < MAX_WIPES and not _leave_sent:
+	if str(summary.get("outcome", "")) == "wipe" and _wipes < max_wipes and not _leave_sent:
 		# the pair fell: a game outcome, not a client defect (and at 2-3 fps in a window nobody can step out of a telegraph). Back to the arch.
 		_wipes += 1
 		_report["run"]["wipes"] = _wipes
-		_log("the pair fell (%d of %d tries): back to the arch" % [_wipes, MAX_WIPES])
+		_log("the pair fell (%d of %d tries): back to the arch" % [_wipes, max_wipes])
 		_started = false
 		_window_t = 0.0
 		_to_exit = false

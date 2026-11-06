@@ -167,8 +167,7 @@ counting in a warmer colour), zone n of 3 or the boss, and the runor taken; afte
 pad's A or the keys 1-3; the end of a run shows a summary; and the shoot opens **the sagaträd** with its 18 nodes. The hired Hirdmannen is a hero
 sprite. `pnpm godot:bot` has a run pair (`BOT_ONLY=run`; `-- --full` plays to the boss, `BOT_RUN_SECONDS=2400`): two bots walk to the arch, start,
 clear zone 1, vote and enter zone 2. Pictures: [the arch window](packages/godot/docs/m5c-arch.png), [a zone](packages/godot/docs/m5c-zone.png),
-[the cards](packages/godot/docs/m5c-cards.png), [the end of a run](packages/godot/docs/m5c-end.png), [the sagaträd](packages/godot/docs/m5c-tree.png),
-[the arch and the tree on the farm](packages/godot/docs/m5c-farm-run.png) and [the new buildings](packages/godot/docs/m5c-smithy.png).
+[the cards](packages/godot/docs/m5c-cards.png), [the end of a run](packages/godot/docs/m5c-end.png) and [the sagaträd](packages/godot/docs/m5c-tree.png).
 
 **M6a** (chapters 2-4) makes the client handle any saga dungeon and finishes the first three after Draugkryptan: **Frostjättens borg**,
 **Surts smedja** and **Helheim**. Each has its own look from one table (`scripts/dungeon_look.gd`: stone and floor palette, torch colour,
