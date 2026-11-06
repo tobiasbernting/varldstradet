@@ -1529,8 +1529,8 @@ describe('the clock, the wipe and the end', () => {
     expect(readRun(b).seeds).toBe(before[1]! + RUN_SEEDS.bossFirst);
   });
 
-  it('a win is a win once: a clock or a wipe tick after the boss fell shows no time-up banner and counts no timeout or wipe', () => {
-    for (const how of ['time', 'wipe'] as const) {
+  it('a win is a win once: the clock passing 30:00 or a wipe tick after the boss fell shows no nudge and counts no timeout or wipe', () => {
+    for (const how of ['late', 'wipe'] as const) {
       const party = makeParty(['magiker'], { seed: 6 });
       const p = party.players[0]!;
       startRun(party.world, p.id, { seed: 6 }, party.ctx());
@@ -1543,10 +1543,10 @@ describe('the clock, the wipe and the end', () => {
       }
       expect(run.phase).toBe('victory');
       expect(readRun(p).wins).toBe(1);
-      // the clock runs out, or the last one standing falls and the wipe pause runs out
-      if (how === 'time') run.elapsed = RUN_MAX_MS - 20;
+      // the clock passes the 30-minute mark (the chest's 90 seconds run out with it), or the last one standing falls and the wipe pause runs out
+      if (how === 'late') run.elapsed = RUN_MAX_MS - 20;
       else inst.fighters[p.id]!.down = party.now;
-      for (let i = 0; i < (how === 'time' ? 4 : 120); i++) {
+      for (let i = 0; i < (how === 'late' ? 4 : 120); i++) {
         party.now += 50;
         out.push(...tick(party.world, 50, party.ctx()));
       }
@@ -1555,7 +1555,7 @@ describe('the clock, the wipe and the end', () => {
       expect(readRun(p).wins).toBe(1);
       expect(readRun(p).timeouts).toBe(0);
       expect(readRun(p).wipes).toBe(0);
-      expect(out.some((c) => c.t === 'banner' && c.text === RUN_T.timeUp)).toBe(false);
+      expect(out.some((c) => c.t === 'banner' && c.text === RUN_T.late)).toBe(false);
       expect(out.filter((c) => c.t === 'run' && c.ev === 'ended' && c.outcome === 'win')).toHaveLength(1);
       expect(out.some((c) => c.t === 'run' && c.ev === 'ended' && c.outcome !== 'win')).toBe(false);
     }

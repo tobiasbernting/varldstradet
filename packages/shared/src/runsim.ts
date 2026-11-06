@@ -804,7 +804,7 @@ export function tickRuns(world: WorldState, dtMs: number, ctx: SimCtx): Change[]
     for (const p of people) out.push(banner(p.id, run.key, RUN_T.warn, RUN_T.warnSub));
   }
   // past the 30 minutes the run goes on; a kind reminder now and then (once per slot, even if the clock jumps)
-  if (run.elapsed >= RUN_MAX_MS) {
+  if (run.elapsed >= RUN_MAX_MS && run.phase !== 'victory') {
     const due = Math.floor((run.elapsed - RUN_MAX_MS) / RUN_NUDGE_MS) + 1;
     if (due > run.nudges) {
       if (run.nudges === 0) for (const p of people) runSaveOf(p).timeouts++;
