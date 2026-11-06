@@ -13,6 +13,7 @@ import {
   DUNGEON_IDS,
   XP_LEVELS,
   heroLevel,
+  isRunKey,
   newSagaProgress,
   type ClassId,
 } from './saga.ts';
@@ -116,7 +117,6 @@ let counter = 0;
 
 /** The run going on in this world's farm, if any. */
 export const runOf = (world: WorldState): RunState | undefined => RUNS.get(farmOf(world));
-export const isRunKey = (k: string | undefined): boolean => !!k && k.startsWith('saga:run');
 const zoneKey = (id: string, i: number): string => `saga:${id}z${i}`;
 const humans = (farm: WorldState, run: RunState): PlayerState[] => run.party.map((id) => farm.players[id]).filter((p): p is PlayerState => !!p);
 const members = (farm: WorldState, run: RunState): PlayerState[] => [...humans(farm, run), ...run.companions.map((id) => farm.players[id]).filter((p): p is PlayerState => !!p)];

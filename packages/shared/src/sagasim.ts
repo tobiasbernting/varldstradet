@@ -47,6 +47,7 @@ import {
   isDungeonId,
   dungeonOfKey,
   isClassId,
+  isRunKey,
   isSagaKey,
   mobDmgScale,
   mobHpScale,
@@ -292,6 +293,8 @@ export function jumpTo(world: WorldState, playerId: string, toId: string): Chang
   const q = farm.players[toId];
   if (!p || !q || p.id === q.id || !q.online || p.sleeping) return [];
   if (p.area === 'dungeon' || q.area === 'dungeon') return [toast(p.id, T.jumpNo)];
+  // a run's zone is entered at the arch and left by leaving the run, never by a jump
+  if (isRunKey(p.area) || isRunKey(q.area)) return [toast(p.id, T.jumpNo)];
   const qid = dungeonOfKey(q.area);
   if (qid && !p.saga?.cls) return [toast(p.id, T.sagaNeedClass)];
   const leaving = hereOf(world, p);

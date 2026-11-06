@@ -975,6 +975,8 @@ export const DUNGEONS: Record<DungeonId, SagaDungeonDef> = {
 
 export const sagaKey = (id: DungeonId): string => `saga:${id}`;
 export const isSagaKey = (k: string | undefined): boolean => !!k && k.startsWith('saga:');
+/** A zone of a run (`saga:run<n>z<i>`), not a dungeon. */
+export const isRunKey = (k: string | undefined): boolean => !!k && k.startsWith('saga:run');
 export const dungeonOfKey = (k: string): DungeonId | null => {
   const id = k.slice('saga:'.length);
   return isDungeonId(id) ? id : null;

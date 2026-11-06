@@ -53,6 +53,7 @@ import {
   getArea,
   isSolidForPlayer,
   joinRun,
+  jumpTo,
   leaveRun,
   newRunSave,
   noBuffs,
@@ -708,6 +709,29 @@ describe('starting, joining and leaving', () => {
     area.saga!.checkpoint = 0;
     joinRun(party.world, c.id, party.ctx());
     expect(Math.hypot(c.x - px(rest.x), c.y - px(rest.y))).toBeLessThan(3 * TILE);
+  });
+
+  it('nobody jumps into a run’s zone or out of it', () => {
+    const party = makeParty(['vaktare', 'helare', 'krigare']);
+    const [a, b, c] = party.players as [import('./index.ts').PlayerState, import('./index.ts').PlayerState, import('./index.ts').PlayerState];
+    placeIn(party.world, c, 'a:0,1', 5, 5, 'down', []);
+    startRun(party.world, a.id, { seed: 4 }, party.ctx());
+    const run = runOf(party.world)!;
+    expect(run.party).toEqual([a.id, b.id]);
+    // from outside, to a member inside
+    const into = jumpTo(party.world, c.id, a.id);
+    expect(into.some((x) => x.t === 'toast')).toBe(true);
+    expect(c.area).toBe('a:0,1');
+    expect(run.party).not.toContain(c.id);
+    // from inside, to someone outside
+    const before = b.area;
+    const out = jumpTo(party.world, b.id, c.id);
+    expect(out.some((x) => x.t === 'toast')).toBe(true);
+    expect(b.area).toBe(before);
+    expect(b.area).toBe(run.key);
+    expect(run.party).toContain(b.id);
+    // and from inside to someone else inside
+    expect(jumpTo(party.world, b.id, a.id).every((x) => x.t === 'toast')).toBe(true);
   });
 
   it('is full at three, or four with a longhouse', () => {
