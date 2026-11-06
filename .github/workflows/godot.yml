@@ -66,6 +66,14 @@ jobs:
           ln -sfn ~/godot/templates ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
           ~/godot/godot --version
 
+      # Röstprat's WebRTC (Godot has the classes, the webrtc-native GDExtension the implementation). Not committed: the
+      # script resolves the pinned release (WEBRTC_TAG, WEBRTC_ASSET, WEBRTC_SHA256 in the env above; unpinned it lists
+      # the latest release, every asset and its digest) and unpacks it into packages/godot/addons/webrtc.
+      - name: Fetch the webrtc-native GDExtension (Röstprat)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: packages/godot/tools/fetch-webrtc.sh
+
       - name: Import the project (makes the import cache and the class list the next steps need)
         working-directory: packages/godot
         run: |
@@ -85,6 +93,16 @@ jobs:
           if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate|leaked at exit|still in use at exit|Pages in use exist at exit" run.log; then
             echo "::error::running the project reported errors or leaked at exit (see above)"; exit 1
           fi
+
+      - name: Röstprat's codec, rules and two WebRTC peers exchanging sound packets (headless; the extension must be loaded)
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          timeout 120 ~/godot/godot --headless --path . -- --voicecheck --require-webrtc 2>&1 | tee voicecheck.log
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|voicecheck: FAIL|leaked at exit|still in use at exit|Pages in use exist at exit" voicecheck.log; then
+            echo "::error::the voice check reported errors (see above)"; exit 1
+          fi
+          grep -q "voicecheck: all ok" voicecheck.log
 
       - name: Run the Draugkryptan demo headless for a moment (the dungeon view, actors and HUD run on the recorded fixture)
         working-directory: packages/godot
