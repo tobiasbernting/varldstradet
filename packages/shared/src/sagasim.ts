@@ -98,6 +98,8 @@ import {
   openTileNear,
   placeIn,
   playerChange,
+  PLAYER_HALF_H,
+  PLAYER_HALF_W,
   resolveMove,
   tagArea,
   toast,
@@ -645,7 +647,8 @@ const unique = (id: string): boolean => {
 function rollLoot(h: Here, p: PlayerState, table: SagaLoot, from: string, ctx: SimCtx, out: Change[], extra: { item: string; count: number }[] = []): void {
   const prog = progressOf(p);
   const items: { item: string; count: number }[] = [];
-  const coins = randInt(ctx.rnd, table.coins[0], table.coins[1]);
+  const base = randInt(ctx.rnd, table.coins[0], table.coins[1]);
+  const coins = base + Math.round(base * buffsOf(h, p.id).coins);
   const fresh = table.gear.filter((g) => !unique(g.item) || !prog.found.includes(g.item));
   const pool = fresh.length ? fresh : table.gear;
   const total = pool.reduce((n, g) => n + g.weight, 0);
@@ -690,6 +693,9 @@ const CRIT_CHANCE = 0.12;
 const RAGE_LEECH = 0.3;
 /** Sköldmur also gives back a little health. */
 const WALL_HEAL = 0.15;
+
+/** Can a player stand with the middle of their body here (no corner of it in a wall)? Blink and charge land only where it fits. */
+const bodyFits = (area: WorldState, x: number, y: number): boolean => ![-1, 1].some((sx) => [-1, 1].some((sy) => isSolidForPlayer(area, tileOf(x + sx * PLAYER_HALF_W), tileOf(y + sy * PLAYER_HALF_H))));
 
 /** A monster a spell can hit: in a fight or waiting (not on its way home), close enough, in sight for ranged spells. */
 function pickMob(h: Here, p: PlayerState, f: SagaFighter, range: number, wanted: number | undefined, sight: boolean): SagaMob | null {
@@ -798,7 +804,7 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
       const d = Math.max(1, Math.hypot(p.x - a.x, p.y - a.y));
       const to = { x: a.x + ((p.x - a.x) / d) * TILE, y: a.y + ((p.y - a.y) / d) * TILE };
       const from = { x: p.x, y: p.y };
-      if (!isSolidForPlayer(h.area, tileOf(to.x), tileOf(to.y))) warp(h, p, 0, 0, out, to);
+      if (bodyFits(h.area, to.x, to.y)) warp(h, p, 0, 0, out, to);
       out.push(spellFx(h, p.id, sp.id, from, a, m.id));
       strike(m, sp.power);
       if (h.inst.mobs[m.id]) stun(h, m, sp.ms ?? 1000, now, out);
@@ -876,7 +882,8 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
       for (let s = 0.5; s <= sp.range; s += 0.5) {
         const nx = p.x + dir[0]! * s * TILE;
         const ny = p.y + dir[1]! * s * TILE;
-        if (isSolidForPlayer(h.area, tileOf(nx), tileOf(ny))) break;
+        // the whole body must fit (a spot whose middle is free but whose edge is in the wall would trap the player)
+        if (!bodyFits(h.area, nx, ny)) break;
         to = { x: nx, y: ny };
       }
       out.push(spellFx(h, p.id, sp.id, p, to));
@@ -1493,7 +1500,7 @@ function startCast(h: Here, m: SagaMob, a: { x: number; y: number; facing: strin
   return true;
 }
 
-const inZone = (z: SagaZone, p: { x: number; y: number }): boolean => {
+export const inZone = (z: SagaZone, p: { x: number; y: number }): boolean => {
   if (z.shape === 'line') {
     // along the strip (from a little behind the boss to its far end) and no further to the side than half its width
     const dx = (p.x - z.x) / TILE;

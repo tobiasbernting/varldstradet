@@ -40,7 +40,7 @@ export const MODIFIER_SEEDS = 0.15;
 /**
  * Additions as fractions. The first block is combat (it ends up in `RunBuffs` and is read by sagasim.ts), the second
  * block is the rest of the run: potions handed out, more sagafrön, a new offer, a second dish slot, stronger dishes and
- * animals, a stronger companion, more coins from chests and more sagafrön for the boss.
+ * animals, a stronger companion and more sagafrön for the boss. (`coins`, more coins from the run's chests, is combat's.)
  */
 export interface RunEffect extends Partial<Omit<RunBuffs, 'spell' | 'spellCd'>> {
   spell?: Record<string, number>;
@@ -52,12 +52,11 @@ export interface RunEffect extends Partial<Omit<RunBuffs, 'spell' | 'spellCd'>> 
   food?: number;
   animal?: number;
   companion?: number;
-  coins?: number;
   bossSeeds?: number;
 }
 
-const COMBAT_KEYS = ['power', 'cd', 'hp', 'armor', 'taken', 'heal', 'potion', 'regen', 'rest', 'threat', 'leech', 'crit', 'down', 'reviveHp'] as const;
-const META_KEYS = ['potions', 'seeds', 'reroll', 'slots', 'food', 'animal', 'companion', 'coins', 'bossSeeds'] as const;
+const COMBAT_KEYS = ['power', 'cd', 'hp', 'armor', 'taken', 'heal', 'potion', 'regen', 'rest', 'threat', 'leech', 'crit', 'down', 'reviveHp', 'coins'] as const;
+const META_KEYS = ['potions', 'seeds', 'reroll', 'slots', 'food', 'animal', 'companion', 'bossSeeds'] as const;
 /** Every number an effect can carry (the tests make sure each one does something). */
 export const EFFECT_KEYS: readonly string[] = [...COMBAT_KEYS, ...META_KEYS, 'spell', 'spellCd'];
 
@@ -265,11 +264,12 @@ export interface RunSave {
   wipes: number;
   timeouts: number;
   zones: number;
-  /** The fastest win per chapter's boss (ms of run time). */
+  /** The fastest win per chapter's boss (ms of run time), and how many times each was won. */
   best: Partial<Record<DungeonId, number>>;
+  clears: Partial<Record<DungeonId, number>>;
 }
 
-export const newRunSave = (): RunSave => ({ seeds: 0, earned: 0, tree: [], runs: 0, wins: 0, wipes: 0, timeouts: 0, zones: 0, best: {} });
+export const newRunSave = (): RunSave => ({ seeds: 0, earned: 0, tree: [], runs: 0, wins: 0, wipes: 0, timeouts: 0, zones: 0, best: {}, clears: {} });
 
 /** Why a node cannot be planted now (null: it can). */
 export function plantError(save: RunSave | undefined, id: string): 'unknown' | 'planted' | 'needs' | 'seeds' | null {
@@ -456,17 +456,61 @@ export const ZONE_TEMPLATES: Record<RunBiome, ZoneTemplate> = {
 export const BOSS_ZONE = {
   start: { x: 3, y: 46, w: 10, h: 10 },
   pack: { x: 18, y: 44, w: 12, h: 12 },
-  rest: { x: 34, y: 48, w: 9, h: 9 },
-  guard: { x: 46, y: 40, w: 13, h: 13 },
+  rest: { x: 36, y: 48, w: 9, h: 9 },
+  guard: { x: 36, y: 22, w: 13, h: 13 },
   hall: { x: 4, y: 4, w: 24, h: 22 },
 };
 
 /** Health of a zone's monsters by zone (0..2): the later zones are tougher. Tuned by the bots. */
-export const ZONE_HP: readonly number[] = [1.0, 1.15, 1.3];
+export const ZONE_HP: readonly number[] = [1.25, 1.5, 1.75];
 
-/** Packs per room (and members), by zone. `tuned by run.test.ts` — see GAME.md. */
+/** One human alone (with the hired companion, who counts as a fighter for the monsters' health): monsters tolerate this much less. */
+export const SOLO_MERCY = 0.75;
+
+/** Packs per room (and members), by zone. Tuned by the bots (run.test.ts), see GAME.md. */
 export const ZONE_PACKS = [
-  { a: [1, 1], b: [2, 2], size: [2, 3], big: 0 },
-  { a: [2, 2], b: [2, 2], size: [3, 3], big: 0 },
-  { a: [2, 2], b: [2, 2], size: [3, 4], big: 1 },
+  { a: [2, 2], b: [2, 3], size: [3, 3], big: 0 },
+  { a: [2, 3], b: [3, 3], size: [3, 4], big: 0 },
+  { a: [3, 3], b: [3, 3], size: [3, 4], big: 1 },
 ] as const;
+
+// ---------------------------------------------------------------------------
+// What the clients are told (protocol.ts carries these)
+// ---------------------------------------------------------------------------
+
+export type RunOutcome = 'win' | 'wipe' | 'time' | 'leave';
+export type RunPhase = 'zone' | 'pick' | 'victory' | 'ended';
+
+/** The run as the arch window, the HUD and the road picture need it. */
+export interface RunSnap {
+  id: string;
+  phase: RunPhase;
+  /** The map now: 0..2 the zones, 3 the boss's. */
+  zone: number;
+  /** The area key of the map now. */
+  area: string;
+  /** The biome of each of the three zones (null for the boss). */
+  biomes: (RunBiome | null)[];
+  boss: DungeonId;
+  weather: WeatherKind;
+  modifiers: string[];
+  /** Run time so far and the longest it may be (ms). */
+  elapsed: number;
+  max: number;
+  party: { id: string; name: string; bot?: true }[];
+  /** The runor taken so far, and the sagafrön each player has earned in this run. */
+  runor: string[];
+  earned: Record<string, number>;
+}
+
+/** The three cards being voted on. */
+export interface RunOfferSnap {
+  /** The map the party just left (the pick comes after it). */
+  zone: number;
+  cards: string[];
+  /** Player id -> index of the card they tapped. */
+  votes: Record<string, number>;
+  /** Time left to vote (ms), and new offers the party may still ask for. */
+  left: number;
+  rerolls: number;
+}

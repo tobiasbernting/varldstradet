@@ -16,6 +16,7 @@ import type {
 import type { DungeonId, SagaBest, SagaZone } from './saga.ts';
 import type { SagaSnap } from './sagasim.ts';
 import type { IceServer, VoiceState } from './voice.ts';
+import type { RunOfferSnap, RunOutcome, RunSnap } from './run.ts';
 
 /** A change to the world that the server broadcasts after applying. `area` marks dungeon changes. */
 export type Change =
@@ -28,7 +29,7 @@ export type Change =
   | { t: 'player'; id: string; player: PlayerState | null }
   | { t: 'day'; day: number }
   | { t: 'toast'; to: string | null; text: string }
-  | { t: 'open'; to: string; ui: 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'nameAnimal' | 'npc' | 'cook' | 'paint' | 'pizzeria' | 'travel' | 'saga' | 'sagaClass'; id?: number; npc?: string }
+  | { t: 'open'; to: string; ui: 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'nameAnimal' | 'npc' | 'cook' | 'paint' | 'pizzeria' | 'travel' | 'saga' | 'sagaClass' | 'run' | 'seed'; id?: number; npc?: string }
   /** Private: the rider boards a bus, a train or the rocket (the client plays the trip). */
   | { t: 'ride'; to: string; via: 'bus' | 'train' | 'rocket'; place: string }
   | { t: 'quests'; quests: Quest[] }
@@ -55,7 +56,18 @@ export type Change =
   /** The family beat its best time through a dungeon (also on the farm WorldState's sagaBest). */
   | { t: 'sagaBest'; dungeon: DungeonId; best: SagaBest }
   /** Hero experience gained (anywhere): the client floats "+n xp" from where the player stood (pixels; area left out on the farm). */
-  | { t: 'xp'; to: string; n: number; x: number; y: number; area?: string };
+  | { t: 'xp'; to: string; n: number; x: number; y: number; area?: string }
+  /**
+   * Runs (M5b, GAME.md): the run as it is now (`run` null: none), the three cards being voted on (`offer` null: the vote is
+   * over), and how a run ended for one player. `to` null is everyone.
+   */
+  | { t: 'run'; ev: 'state'; to: string | null; run: RunSnap | null }
+  | { t: 'run'; ev: 'offer'; to: string | null; offer: RunOfferSnap | null }
+  | { t: 'run'; ev: 'ended'; to: string; outcome: RunOutcome; ms: number; seeds: number; zones: number; runor: string[] }
+  /** Runs: one player's sagafrön, the nodes they have planted, and how grown the family's tree is (0..4). */
+  | { t: 'seed'; ev: 'tree'; to: string; seeds: number; earned: number; tree: string[]; stage: number }
+  /** Runs: the dishes this player has chosen to bring and how many they may bring. */
+  | { t: 'fardkost'; to: string; items: string[]; slots: number };
 
 /** A slot in the player's own inventory (chest undefined) or in a chest object. */
 export interface SlotRef {
@@ -117,6 +129,22 @@ export type ClientMsg =
   /** Development only (the server must run with DEV_TELEPORT=1): straight into a dungeon from wherever you are, as
    * if you had walked through its arch; a player without a class becomes a Krigare first. For the native client,
    * which has no world map yet. The server answers `error` when the switch is off. */
+  /**
+   * Runs (GAME.md): whoever stands at the färdport starts a run (`replay`: a cleared boss at random instead of the next
+   * chapter's; `companion: false` goes without the hired Hirdmannen; `fardkost`: the dishes to bring), anyone joins or
+   * leaves, the party votes on a card of the offer (`card` is its index 0..2) and may ask for a new offer once.
+   */
+  | { t: 'run'; a: 'start'; replay?: boolean; companion?: boolean; fardkost?: string[] }
+  | { t: 'run'; a: 'join' }
+  | { t: 'run'; a: 'pick'; card: number }
+  | { t: 'run'; a: 'reroll' }
+  | { t: 'run'; a: 'leave' }
+  | { t: 'run'; a: 'state' }
+  /** The Yggdrasil shoot: plant a node of the sagaträd with sagafrön, or ask for the tree's state. */
+  | { t: 'seed'; a: 'plant'; node: string }
+  | { t: 'seed'; a: 'state' }
+  /** At the färdport: choose the dishes to bring on the run (item ids from the bag; the server takes them when it starts). */
+  | { t: 'fardkost'; items: string[] }
   | { t: 'dev'; a: 'saga'; id: string }
   /** Development only (same switch): the day rolls over now, as the parent page's "skip day" does, so a check can
    * wait for a crop to grow. The server answers `error` when the switch is off. */

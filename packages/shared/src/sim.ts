@@ -12,6 +12,7 @@ import { driveVehicle, isVehicle, vehicleBlocks } from './city.ts';
 import { DUNGEONS, VOLVA_ID, dungeonOfKey, isSagaKey, sagaItem } from './saga.ts';
 import { generateSaga } from './sagamap.ts';
 import { discoverLandmark } from './explore.ts';
+import { openFardport, openYggdrasil, tickRuns } from './runsim.ts';
 import { enterSaga, ensureSagaPlaces, heroAction, idleSaga, isSagaMob, killXp, roamingDown, sagaAct, sagaRooted, tickSaga } from './sagasim.ts';
 import { addItem, countItem, hasSpace, makeInventory, makeStack, moveStack, quickStack, removeItem, sortInventory, takeFromSlot } from './inventory.ts';
 import { PORTALS, SPAWN, addObject, generateWorld, inBounds, inInterior, mapH, mapW, objectAt, portalAt, removeObject, tileIndex } from './map.ts';
@@ -915,6 +916,12 @@ function interactObject(world: WorldState, p: PlayerState, obj: WorldObject, hel
       return;
     case 'saga':
       out.push(...enterSaga(world, p, obj));
+      return;
+    case 'fardport':
+      out.push(...openFardport(world, p));
+      return;
+    case 'yggdrasil':
+      out.push(...openYggdrasil(world, p));
       return;
     case 'sagaclass':
       out.push({ t: 'open', to: p.id, ui: 'sagaClass', id: obj.id });
@@ -2830,6 +2837,7 @@ export function tick(world: WorldState, dtMs: number, ctx: SimCtx): Change[] {
   tickSleep(world, ctx, out);
   tickWeather(world, ctx, out);
   tickOtherAreas(world, dtMs, ctx, out);
+  out.push(...tickRuns(world, dtMs, ctx));
   for (const p of Object.values(world.players)) {
     if (p.emote && p.emote.until < ctx.now) delete p.emote;
     if (p.moveLock && --p.moveLock <= 0) delete p.moveLock;

@@ -8,7 +8,7 @@ import { DUNGEONS, SAGA_BOSSES, SAGA_MOBS, sagaKey, type DungeonId, type SagaDun
 import { MAP_H, MAP_W, STANDARD_MAP, TILE, type AnimalState, type Terrain, type WorldState } from './types.ts';
 
 /** What is outside the rooms: rock nobody walks on (the sea around the temple, the starry sky under Bifrost). */
-const SOLID: Record<DungeonId, Terrain> = { draug: 'rock', frost: 'rock', surt: 'basalt', hel: 'rock', dvarg: 'rock', orm: 'water', alv: 'rock', fenrir: 'rock', loke: 'space' };
+export const SOLID: Record<DungeonId, Terrain> = { draug: 'rock', frost: 'rock', surt: 'basalt', hel: 'rock', dvarg: 'rock', orm: 'water', alv: 'rock', fenrir: 'rock', loke: 'space' };
 /** Members of a monster group stand around its middle like this. */
 const PACK_SPOTS: [number, number][] = [
   [0, 0],

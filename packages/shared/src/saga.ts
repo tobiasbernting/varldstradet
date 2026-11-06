@@ -2090,9 +2090,11 @@ export interface RunBuffs {
   /** A fallen friend gets up this much sooner (a fraction off DOWN_MS), and a revive gives this much more health. */
   down: number;
   reviveHp: number;
+  /** More coins from the chests of a run. */
+  coins: number;
 }
 
-export const noBuffs = (): RunBuffs => ({ power: 0, spell: {}, cd: 0, spellCd: {}, hp: 0, armor: 0, taken: 0, heal: 0, potion: 0, regen: 0, rest: 0, threat: 0, leech: 0, crit: 0, down: 0, reviveHp: 0 });
+export const noBuffs = (): RunBuffs => ({ power: 0, spell: {}, cd: 0, spellCd: {}, hp: 0, armor: 0, taken: 0, heal: 0, potion: 0, regen: 0, rest: 0, threat: 0, leech: 0, crit: 0, down: 0, reviveHp: 0, coins: 0 });
 
 /** A zone's link to its run. */
 export interface SagaRunLink {
