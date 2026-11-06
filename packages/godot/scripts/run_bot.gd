@@ -17,7 +17,8 @@ var role := "lead"
 var full := false
 var shots_dir := ""
 var _zones: Array = []
-var _voted: Dictionary = {} ## zone -> true
+var _exited: Dictionary = {} ## zone -> true once the run reached the pick (the server let me through)
+var _confirmed: Dictionary = {} ## zone -> true once the server's offer showed my vote
 var _kit_t := -1.0
 var _kit_sent := false
 var _started := false
@@ -31,6 +32,9 @@ var _wait_t := 0.0
 var _after_run := false
 var _ended: Variant = null
 var _to_exit := false
+var _exit_tile := Vector2i.ZERO
+var _replan_t := 0.0
+var _replans := 0
 var _leave_sent := false
 var _goal_override := Vector2i(-1, -1)
 var _tree_shot := false
@@ -45,7 +49,7 @@ func _ready() -> void:
 		elif arg.begins_with("--shots="):
 			shots_dir = arg.substr(8)
 	super._ready()
-	_report["run"] = {"role": role, "zones": [], "exits": 0, "picks": 0, "runor": [], "started": false, "joined": false, "ended": null, "boss_down": false, "seeds": 0}
+	_report["run"] = {"role": role, "zones": [], "exits": 0, "presses": 0, "picks": 0, "runor": [], "started": false, "joined": false, "ended": null, "boss_down": false, "seeds": 0}
 	world.model.run_ended.connect(_on_run_ended)
 
 
@@ -126,20 +130,26 @@ func _rb_tick(delta: float) -> void:
 		return
 	if _started and not m.in_run() and _t - _started_at > 10.0 and m.run == null:
 		_started = false # the server did not take it (a toast): try again
-	# the pick
+	# the pick: press the real first card (the button a player would press) and count the vote when the server's offer shows it
 	if m.offer is Dictionary and world.run_pick.is_open():
 		_vote_t += delta
 		var zone := int(m.offer.get("zone", 0))
-		if _vote_t > 0.9 and not _cards_shot and not _voted.has(zone):
+		var mine: Variant = m.offer.get("votes", {}).get(m.me)
+		if mine != null and int(mine) == 0 and not _confirmed.has(zone):
+			_confirmed[zone] = true
+			_report["run"]["picks"] = int(_report["run"]["picks"]) + 1
+			_log("the server shows my vote on card 0 after zone %d" % zone)
+		if _vote_t > 0.9 and not _cards_shot and not _confirmed.has(zone):
 			_cards_shot = true
 			_shot("m5c-cards", 0.0)
-		if _vote_t > 1.6 and not _voted.has(zone):
-			_voted[zone] = true
-			_report["run"]["picks"] = int(_report["run"]["picks"]) + 1
-			_log("voting on card 0 after zone %d" % zone)
-			world.run_pick._vote(0)
+		if _vote_t > 1.6 and not _confirmed.has(zone) and fmod(_vote_t, 2.0) < delta and not world.run_pick.buttons.is_empty():
+			_log("pressing card 0 after zone %d" % zone)
+			(world.run_pick.buttons[0] as Button).pressed.emit()
 	else:
 		_vote_t = 0.0
+	if m.run is Dictionary and str(m.run.get("phase", "")) == "pick" and not _exited.has(int(m.run.get("zone", 0))):
+		_exited[int(m.run.get("zone", 0))] = true
+		_report["run"]["exits"] = int(_report["run"]["exits"]) + 1
 	if m.run is Dictionary:
 		_report["run"]["runor"] = m.run.get("runor", [])
 		_report["run"]["seeds"] = int(m.run.get("earned", {}).get(m.me, 0))
@@ -228,7 +238,9 @@ func _no_pack_left() -> void:
 		return
 	for o in w.get("objects", {}).values():
 		if o is Dictionary and str(o.get("kind", "")) == "run_exit":
-			_path = _path_to(_my_tile(), Vector2i(int(o.get("x", 0)), int(o.get("y", 0))), _distance_field(_my_tile()))
+			_exit_tile = Vector2i(int(o.get("x", 0)), int(o.get("y", 0)))
+			_path = _path_to(_my_tile(), _exit_tile, _distance_field(_my_tile()))
+			_replans = 0
 			_phase = "rb_exit"
 			_to_exit = true
 			_exit_t = 0.0
@@ -251,11 +263,24 @@ func _walk_to_exit(delta: float) -> void:
 		_drive_towards(target)
 		return
 	world.hero.drive = Vector2.ZERO
+	if _my_tile() != _exit_tile:
+		# not on the rune disc (no way yet: the gate may still be solid in the model, or I was pushed): plan again, for a while
+		_replan_t += delta
+		if _replan_t > 0.5:
+			_replan_t = 0.0
+			_replans += 1
+			_path = _path_to(_my_tile(), _exit_tile, _distance_field(_my_tile()))
+			_log("no path to the exit %s from %s, planning again (%d)" % [str(_exit_tile), str(_my_tile()), _replans])
+			if _replans > 20:
+				_error("could not reach the exit at %s" % str(_exit_tile))
+				_finish()
+		return
+	_replans = 0
 	# standing on the rune disc: use it every second and a half until the server lets us through (the gate opens when the packs are down)
 	_exit_t -= delta
 	if _exit_t <= 0.0:
 		_exit_t = 1.5
-		_report["run"]["exits"] = int(_report["run"]["exits"]) + 1
+		_report["run"]["presses"] = int(_report["run"]["presses"]) + 1
 		world._act()
 
 

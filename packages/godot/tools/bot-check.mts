@@ -84,7 +84,7 @@ interface Report {
   arrived_via_arch: boolean;
   dev_sent: boolean;
   summary?: string;
-  run?: { role: string; zones: number[]; exits: number; picks: number; runor: string[]; started: boolean; joined: boolean; ended: { outcome: string } | null; boss_down: boolean; seeds: number };
+  run?: { role: string; zones: number[]; exits: number; presses: number; picks: number; runor: string[]; started: boolean; joined: boolean; ended: { outcome: string } | null; boss_down: boolean; seeds: number };
 }
 
 interface FarmReport {
@@ -219,12 +219,12 @@ function checkRunner(r: Report, botLog?: string): void {
   check(exitErrors.length === 0, `${r.name}: no script errors, nothing leaked at exit (${exitErrors[0] ?? 'none'})`);
   check(!!run, `${r.name}: the run report is there`);
   if (!run) return;
-  console.log(`     ${r.name} (${run.role}): zones ${JSON.stringify(run.zones)}, exits used ${run.exits}, picks ${run.picks}, runor ${JSON.stringify(run.runor)}, sagafrön ${run.seeds}, started ${run.started}, joined ${run.joined}, ended ${JSON.stringify(run.ended)}`);
+  console.log(`     ${r.name} (${run.role}): zones ${JSON.stringify(run.zones)}, exits taken ${run.exits} (${run.presses} presses), votes the server showed ${run.picks}, runor ${JSON.stringify(run.runor)}, sagafrön ${run.seeds}, started ${run.started}, joined ${run.joined}, ended ${JSON.stringify(run.ended)}`);
   if (run.role === 'lead') check(run.started, `${r.name}: pressed "Starta färden" at the arch window`);
   check(run.zones.includes(0), `${r.name}: entered zone 1 (${JSON.stringify(run.zones)})`);
   check(run.zones.includes(1), `${r.name}: cleared zone 1, used the exit, voted and entered zone 2 (${JSON.stringify(run.zones)}) after ${r.seconds.toFixed(0)} s`);
-  check(run.exits >= 1, `${r.name}: used the way on (${run.exits} presses)`);
-  check(run.picks >= 1, `${r.name}: voted on a runa card (${run.picks})`);
+  check(run.exits >= 1, `${r.name}: the server let it through the way on (${run.exits} exits, ${run.presses} presses)`);
+  check(run.picks >= 1, `${r.name}: voted on a runa card and the server's offer showed the vote (${run.picks})`);
   check(run.runor.length >= 1, `${r.name}: the pick gave the party a runa (${run.runor.join(', ') || 'none'})`);
   check(run.seeds >= 1, `${r.name}: earned sagafrön in the run (${run.seeds})`);
   if (fullRun) {
