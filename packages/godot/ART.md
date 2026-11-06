@@ -277,10 +277,10 @@ frame; the camera's move into the room is one `Transform3D` a frame while it eas
 All generated in code with the farm's mesh builder (`run_meshes.gd`, `zone_props.gd`), in the palette above; nothing new is imported except one more use of the
 KayKit Hexagon blacksmith.
 - **Färdport** (3 × 2): two carved pillars with rune bands, a curved lintel of ten blocks, a gold keystone with a leaf, roots, steps, a dark doorway; a teal glow
-  quad in the doorway and one light (Mellan and Hög and Låg alike: one light, as the saga portal has).
+  quad in the doorway and one light that is on at night only (the farm's lamp rule); the zone's exit rune has its glow on every preset and its light on Mellan and Hög.
 - **Yggdrasil shoot**, stage 0-4 by `variant`: mound and stones with two leaves; sapling; young tree; big tree with blossoms; the Världsträd with a gold trunk, cyan runes,
-  teal-gold crowns and gold motes, one glow billboard and one light (stage 4 only).
-- **Smithy** (KayKit blacksmith, fitted to 3 × 2, an anvil and coals in front, an ember light), **herb garden** (2 × 2: four raised beds, drying rack), **longhouse**
+  teal-gold crowns and gold motes, one glow billboard and one night-only light (stage 4 only).
+- **Smithy** (KayKit blacksmith, fitted to 3 × 2, an anvil and coals in front, a night-only ember light), **herb garden** (2 × 2: four raised beds, drying rack), **longhouse**
   (4 × 3: timber walls, turf roof, dragon heads, shields, door; windows glow at night).
 - **Zone decor** (22 kinds: gravestone, skull pile, ghost light, dead tree, mine cart, gold pile, dwarf statue, mine lamp, coral, anchor, seaweed, pearl, glow mushroom,
   elf statue, ice crystal, frozen pillar, snow drift, anvil, brazier, lava crack, fairy light, cobweb): primitive meshes, one shared vertex-colour material. Lights:

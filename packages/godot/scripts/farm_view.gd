@@ -638,7 +638,7 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 			var fg2 := assets.glow_quad(Color("#f0e27a"), 0.7, 1.0)
 			fg2.position = Vector3(0.0, 2.55, 0.5)
 			node.add_child(fg2)
-			_add_light(node, Vector3(0.0, 1.4, 1.2), fcol, 5.5, 1.6, 0.25, false)
+			_add_light(node, Vector3(0.0, 1.4, 1.2), fcol, 5.5, 1.6, 0.25, true)
 		"yggdrasil":
 			# only the Världsträd itself (stage 4) shines
 			if variant >= 4:
@@ -647,7 +647,7 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 				yg.position = Vector3(0.0, 3.4, 0.0)
 				_billboard(yg)
 				node.add_child(yg)
-				_add_light(node, Vector3(0.0, 3.0, 0.8), ycol, 7.0, 1.4, 0.2, false)
+				_add_light(node, Vector3(0.0, 3.0, 0.8), ycol, 7.0, 1.4, 0.2, true)
 		"smithy":
 			var ex := assets.mesh("smithy_extras")
 			if ex != null:

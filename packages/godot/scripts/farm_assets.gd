@@ -94,7 +94,7 @@ const SPECS := {
 	# --- M5c: the runs. The färdport (3 × 2) and the Yggdrasil shoot, five stages by the object's variant, and the three buildings.
 	"fardport": {"m": ["fardport"], "node": true},
 	"yggdrasil": {"m": ["ygg_0", "ygg_1", "ygg_2", "ygg_3", "ygg_4"], "node": true, "by_variant": true},
-	"smithy": {"m": ["smithy"], "node": true, "front": true, "light": [Color("#ff8a3a"), 4.5, 1.1, 1.1, 0.3]},
+	"smithy": {"m": ["smithy"], "node": true, "front": true, "light": [Color("#ff8a3a"), 4.5, 1.1, 1.1, 0.3], "night": true},
 	"herb_garden": {"m": ["herb_garden"], "front": true},
 	"longhall": {"m": ["longhall"], "node": true, "front": true, "glows": [[-1.3, 0.62, 1.3], [1.3, 0.62, 1.3]], "light": [Color("#ffc977"), 6.0, 1.2, 1.4, 0.1], "night": true},
 	"scarecrow": {"m": ["scarecrow"]},

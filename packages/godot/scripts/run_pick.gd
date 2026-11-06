@@ -17,6 +17,7 @@ var _open := false
 var _focus := 1
 var _opened_at := 0
 var buttons: Array = []
+var _sig := "" ## what the cards show now (cards, votes, rerolls): the cards are rebuilt only when it changes
 
 
 func _ready() -> void:
@@ -90,7 +91,11 @@ func _on_offer() -> void:
 			visible = true
 			_focus = 1
 			Sfx.play("banner")
-		_build(offer)
+			_sig = ""
+		var sig := JSON.stringify([offer.get("cards"), offer.get("votes"), offer.get("rerolls")])
+		if sig != _sig:
+			_sig = sig
+			_build(offer)
 	elif _open:
 		_open = false
 		visible = false

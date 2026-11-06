@@ -19,6 +19,7 @@ var _zone: Label
 var _runor: HBoxContainer
 var _runor_key := ""
 var _shown_sec := -1
+var _zone_shown := -1
 
 
 func _ready() -> void:
@@ -84,6 +85,8 @@ func _process(_delta: float) -> void:
 	visible = live
 	if not live:
 		_shown_sec = -1
+		_zone_shown = -1
+		_runor_key = ""
 		return
 	var run: Dictionary = model.run
 	var elapsed := model.run_elapsed()
@@ -103,13 +106,16 @@ func _process(_delta: float) -> void:
 		_fill.bg_color = colour
 		_bar.value = minf(1.0, elapsed / max_ms)
 	var zone := int(run.get("zone", 0))
-	var dots: Array = []
-	for i in range(3):
-		dots.append("◉" if i == zone else ("●" if i < zone else "○"))
-	dots.append("👑" if zone == 3 else "♔")
-	var label := Strings.t("runBossZone") if zone >= 3 else Strings.t("runZone", {"n": zone + 1})
-	_zone.text = "%s   %s" % [" ".join(dots), label]
-	var key := ",".join(PackedStringArray(run.get("runor", [])))
+	if zone != _zone_shown:
+		_zone_shown = zone
+		var dots: Array = []
+		for i in range(3):
+			dots.append("◉" if i == zone else ("●" if i < zone else "○"))
+		dots.append("👑" if zone == 3 else "♔")
+		var label := Strings.t("runBossZone") if zone >= 3 else Strings.t("runZone", {"n": zone + 1})
+		_zone.text = "%s   %s" % [" ".join(dots), label]
+	var taken: Array = run.get("runor", [])
+	var key := str(taken.size()) + (str(taken[taken.size() - 1]) if not taken.is_empty() else "")
 	if key != _runor_key:
 		_runor_key = key
 		for c in _runor.get_children():

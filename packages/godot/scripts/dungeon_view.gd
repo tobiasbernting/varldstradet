@@ -513,7 +513,8 @@ func _make_prop(kind: String, variant: int, x: int, y: int) -> Node3D:
 			var beam := DungeonProps.flame(Color(0.55, 1.0, 0.9), 2.2, mini(Quality.particles(), 8))
 			beam.position = Vector3(0.0, 0.1, 0.0)
 			node.add_child(beam)
-			_add_light(node, Vector3(0.0, 1.3, 0.0), Color(0.6, 1.0, 0.9), 5.5, 2.0, 0.15)
+			if Quality.preset != "lag":
+				_add_light(node, Vector3(0.0, 1.3, 0.0), Color(0.6, 1.0, 0.9), 5.5, 2.0, 0.15)
 		_:
 			var made := ZoneProps.make(kind, variant, _vertex_material())
 			if made != null:

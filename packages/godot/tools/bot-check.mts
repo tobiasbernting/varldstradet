@@ -19,7 +19,7 @@
 // door and bakes bread, changes its hat, talks to villagers, walks to Köpingen, picks a class at the stone, hears Völvan,
 // eats a pizza, equips the starter weapon (the dev message `starter`), switches to hero and back and rides the bus.
 //
-// A fifth pair (M5c, BOT_ONLY=run) plays a run through the client on a server of its own: two bots (scripts/run_bot.gd) walk to
+// A fifth pair (M5c, only with BOT_ONLY=run: three servers and six Godot processes would starve the farmer's timed waits) plays a run through the client on a server of its own: two bots (scripts/run_bot.gd) walk to
 // the färdport, the lead presses "Starta färden", the other is taken along (or presses "Följ med"), both fight zone 1, use the
 // exit, vote on a runa card and enter zone 2. With `--full` (local use) they play on to the boss and home. The checks: no errors,
 // both reached zone 2, both voted, a runa was taken, the sagafrön counted.
@@ -288,7 +288,7 @@ async function main(): Promise<void> {
     }
     // the run pair gets a server of its own, too (a run takes the party off the farm for minutes)
     const runBots: { name: string; report: string; log: string; child: ChildProcess }[] = [];
-    if (mode === '' || mode === 'run') {
+    if (mode === 'run') {
       const runPort = port + 2;
       const runServer = run(tsx, ['src/main.ts'], {
         cwd: path.join(root, 'packages/server'),
