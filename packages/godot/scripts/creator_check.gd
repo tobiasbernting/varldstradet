@@ -79,7 +79,8 @@ func _run() -> void:
 		(row["prev"] as Button).pressed.emit()
 		var wrapped: int = win.get(row_id + "_i")
 		(row["next"] as Button).pressed.emit()
-		_step("the %s arrows step the choice" % row_id, n < 2 or (after == (before + 1) % n and back == before and wrapped == posmod(before - 1, n) and win.get(row_id + "_i") == before), "%d -> %d -> %d -> %d of %d" % [before, after, back, wrapped, n])
+		_step("the %s row has something to choose from" % row_id, n >= 2, str(n))
+		_step("the %s arrows step the choice" % row_id, n >= 2 and (after == (before + 1) % n and back == before and wrapped == posmod(before - 1, n) and win.get(row_id + "_i") == before), "%d -> %d -> %d -> %d of %d" % [before, after, back, wrapped, n])
 	# a look: the 4th skin, the 7th hair colour, curly, the green shirt (through the arrow buttons' own step)
 	win._input.text = "  " + char_name + "  "
 	win.skin_i = 3
