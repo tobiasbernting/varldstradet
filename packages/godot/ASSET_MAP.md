@@ -129,3 +129,17 @@ opened here.
 | `saga_wall` cap | DUN `wall` (a whole tile) instead of `wall_half` + box |
 | `saga_gate` | HAL `fence_gate` / `arch_gate` scaled to 1 tile, or keep the bars |
 | other `saga_*` decor | DUN `barrel_large`, `crates_stacked`, `column`, `rubble_half`, `banner_*`, `candle_lit`, `skull_candle` (HAL), `post_skull` (HAL) |
+
+## The undead in 3D (`skeleton_figure.gd`, `--people3d`)
+
+KayKit Character Pack: Skeletons (`assets/kaykit_skeletons`). The creatures it does not suit stay voxel bodies
+(`voxel_body.gd`, ART.md "Creatures in 3D").
+
+| Creature | Character | Colour, size |
+| --- | --- | --- |
+| `skelett` | Skeleton_Warrior, sword and small shield | 1.45 m |
+| `draugkung` | Skeleton_Rogue, blade | 2.75 m, hood and cape tinted toward purple `#6a3a8a`, green eyes `#9cff8a` |
+| `gravvaktare` | Skeleton_Warrior (horns), sword and small shield | 2.5 m |
+| `vandrardraug`, `sjodraug` | Skeleton_Minion | 1.5 m, tinted brown and sea green after their sprites |
+| `gengangare` | Skeleton_Minion | 1.5 m, 40 % opaque (a ghost) |
+| `gravrotta` (a rat), `draugbage` (a beetle), `benspindel`, `gruvtroll`, everything else | none | voxel body |

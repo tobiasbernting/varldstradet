@@ -55,8 +55,47 @@ by the kind of shirt (plain, armour, mantle with cape, fur), skirt or trousers, 
 pointed hat, fur hood; other hats are not shown). The pack's textures are one 8 × 4 grid of gradient swatches, so a
 look repaints the skin, hair, cloth, trouser and boot swatches with the colours of the creator's palettes and of the
 items' pixel layers (`LookComposer.colours_for()`), keeping their shading. In a dungeon the figure wears the class's
-hat and shirt. Off by default: villagers, animals and monsters stay pixels, and hits, lunges and the frozen and
-webbed poses are not drawn on the figures.
+hat and shirt. Off by default. The figures show the fight too: a white or red flash laid over their meshes
+(`material_overlay`), a lunge, the Throw animation on a swing (the pack's basic rigs have no melee swing) and
+Interact on a tool, Hit_A when hit, a blue tint when frozen (inside the ice block), grey when fallen (Death_A), and
+the web. Villagers wear figures too; animals and monsters: see "Creatures in 3D".
+
+### Creatures in 3D (`--people3d`)
+
+The flag means 3D bodies for people and creatures. Without it nothing changes; vehicles (`bus`, `car`, `train`,
+`motorcycle`) stay billboards. Every other animal and monster has one of two bodies, and the billboard stays the
+fallback for a creature with no sheet (the placeholder), so this can grow piece by piece.
+
+- **Voxel bodies** (`scripts/voxel_body.gd`, `assets/shaders/voxel_body.gdshader`) for everything without a figure: each
+  frame of the creature's own sheet becomes a mesh of cubes, one per opaque pixel (`pixel` 16 px = 1 m, so a 20 × 14
+  wolf is 1.25 × 0.9 m, as big as its billboard; bosses are bigger sprites). The depth is a pillow: on each row the
+  opaque span gives a half-depth that follows a circle over the span (`DEPTH_K`), on each column likewise, and the
+  body is as deep as the shallower of the two and never deeper than `DEPTH_MAX` pixels, so a wide row under a narrow
+  one is not a ledge. Faces between boxes are only emitted where the neighbour is shorter; the colour is the pixel's
+  (stored linear; the shader undoes the Compatibility renderer's second sRGB conversion with `vcol_fix` as the props
+  do), but the dark outline pixels keep their colour on the front and back only: the faces that stand out (top, sides,
+  underside) take the colour of the body behind them, else every creature seen from above wears a black cap. The mesh
+  stands on the feet row, centred, facing +x. One mesh per (sheet, frame) is built once and shared by every actor of
+  that sheet; each actor has its own `ShaderMaterial` with a flash, a tint and a night-lift uniform. All the sheets of
+  the atlas work, so babies, winter hats, tame and colour variants need nothing extra; the 44 mobs have `mob_<id>`
+  sheets since `pnpm godot:sprites` exports every entry of `SAGA_MOBS` and `SAGA_BOSSES`.
+- **How it behaves** (`Actor.set_voxel`): walking swaps the two frames at the billboard's 6 fps; standing shows frame 0
+  with a slow breath (height ±2 %). The sprites face right, so the body yaws to face right or left (a mirror by yaw,
+  not by scale) and turns 35° further toward a walk up or down the screen, so a creature walking away still shows its
+  side. The hit flash is the material's flash uniform (white, or the spell's colour); the lunge moves the mesh; fallen
+  rolls the body onto its flank, grey, feet where it stood; frozen and webbed are the same ice block and threads as the
+  billboards'; the night lift is the actor's `night_lift` through the material.
+- **The undead** (`scripts/skeleton_figure.gd`, `assets/kaykit_skeletons`, KayKit Skeletons, CC0) are rigged figures
+  through `set_figure` with the pack's animations: `skelett` the Warrior (sword and small shield, 1.45 m), `gravvaktare` the Warrior at 2.5 m, `draugkung` the Rogue at 2.75 m (hood and cape tinted purple `#6a3a8a`, green eyes `#9cff8a`), `vandrardraug` and `sjodraug`
+  the Minion tinted brown and sea green, `gengangare` the Minion at 40 % opacity. `gravrotta` (a rat) and `draugbage` (a
+  beetle) stay voxel. Idle, the pack's Walking_D_Skeletons, an attack animation per weapon on the swing, Hit_A on the
+  flash and Death_A when fallen. The Skeletons' texture is not the Adventurers' swatch grid (its swatches are bone,
+  cloth, metal and leather), so a creature's colour is the material's albedo over the texture, not a swatch repaint.
+  Only the Warrior's file keeps the pack's 95 animations; the Rogue's and the Minion's are stripped with
+  `tools/strip_glb_animations.py` (4.8 MB to 0.3 MB) and play the Warrior's.
+- **Pictures** (all with `--people3d`): `docs/creatures-farm.png`, `docs/creatures-fight.png`,
+  `docs/creatures-forest.png`. Look: a creature that is mostly one thin row (the wolf) reads worse than a body (cow, bear,
+  hen, slime); the pillow is a trial, `DEPTH_K`, `DEPTH_MAX` and `COLUMN_K` in `voxel_body.gd` are its knobs.
 
 ## Palette
 
