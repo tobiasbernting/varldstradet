@@ -56,7 +56,7 @@ import {
   type RunSnap,
 } from './run.ts';
 import { buildZone, chapterBoss, generateRun, type RunPlan } from './runmap.ts';
-import { COMPANION_NAME, RUNA_NAMES, RUN_T, T, fmt, fmtDuration, itemName } from './sv.ts';
+import { COMPANION_NAME, RUNA_NAMES, RUN_T, T, TREE_NAMES, fmt, fmtDuration, itemName } from './sv.ts';
 import {
   farmOf,
   getArea,
@@ -392,8 +392,8 @@ export function chooseFardkost(world: WorldState, playerId: string, items: strin
   if (!p) return [];
   const have = new Map<string, number>();
   const chosen: string[] = [];
-  for (const id of items.slice(0, foodSlots(p))) {
-    if (!(id in FARDKOST)) continue;
+  for (const id of items) {
+    if (chosen.length >= foodSlots(p) || !(id in FARDKOST)) continue;
     const n = (have.get(id) ?? 0) + 1;
     if (countItem(p.inventory, id) < n) continue;
     have.set(id, n);
@@ -406,8 +406,8 @@ export function chooseFardkost(world: WorldState, playerId: string, items: strin
 /** Takes the chosen dishes out of the bag and adds up what the farm gives this player (and hands out the start potions). */
 function bring(farm: WorldState, run: RunState, p: PlayerState, items: string[] | undefined, out: Change[]): void {
   const dishes: string[] = [];
-  for (const id of (items ?? choicesOf(farm).get(p.id) ?? []).slice(0, foodSlots(p))) {
-    if (id in FARDKOST && removeItem(p.inventory, id, 1)) {
+  for (const id of items ?? choicesOf(farm).get(p.id) ?? []) {
+    if (dishes.length < foodSlots(p) && id in FARDKOST && removeItem(p.inventory, id, 1)) {
       dishes.push(id);
       out.push(toast(p.id, fmt(RUN_T.food, { item: itemName(id) })));
     }
@@ -897,7 +897,7 @@ export function plantNode(world: WorldState, playerId: string, nodeId: string): 
   const n = treeNode(nodeId);
   if (err === 'unknown' || !n) return [];
   if (err === 'planted') return [toast(p.id, RUN_T.plantDone)];
-  if (err === 'needs') return [toast(p.id, fmt(RUN_T.plantNeeds, { need: nodeId }))];
+  if (err === 'needs') return [toast(p.id, fmt(RUN_T.plantNeeds, { need: TREE_NAMES[n.needs ?? ''] ?? '' }))];
   if (err === 'seeds') return [toast(p.id, fmt(RUN_T.plantSeeds, { n: n.cost }))];
   const s = runSaveOf(p);
   s.seeds -= n.cost;
