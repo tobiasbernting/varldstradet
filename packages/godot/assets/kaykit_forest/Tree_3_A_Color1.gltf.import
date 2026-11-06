@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://b1k8q4l0qtpms"
-path="res://.godot/imported/tree_oak.glb-d6d431782cabe4027059f8af3fae6936.scn"
+uid="uid://dleqqhmrco008"
+path="res://.godot/imported/Tree_3_A_Color1.gltf-1e31afbd7682154ddd6f09b0874ad0a8.scn"
 
 [deps]
 
-source_file="res://assets/kenney_nature/tree_oak.glb"
-dest_files=["res://.godot/imported/tree_oak.glb-d6d431782cabe4027059f8af3fae6936.scn"]
+source_file="res://assets/kaykit_forest/Tree_3_A_Color1.gltf"
+dest_files=["res://.godot/imported/Tree_3_A_Color1.gltf-1e31afbd7682154ddd6f09b0874ad0a8.scn"]
 
 [params]
 

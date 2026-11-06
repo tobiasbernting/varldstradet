@@ -17,6 +17,7 @@ const DUNGEON_KAYKIT := "res://assets/kaykit/"
 const HALLOWEEN := "res://assets/kaykit_halloween/"
 const FURNITURE := "res://assets/kaykit_furniture/"
 const NATURE := "res://assets/kenney_nature/"
+const FOREST := "res://assets/kaykit_forest/"
 const PROP_SHADER := "res://assets/shaders/farm_prop.gdshader"
 const GROUND_SHADER := "res://assets/shaders/farm_ground.gdshader"
 const WATER_SHADER := "res://assets/shaders/farm_water.gdshader"
@@ -255,11 +256,11 @@ func _make(n: String) -> ArrayMesh:
 		var parts := n.split("_")
 		return _crop(parts[1], int(parts[2]))
 	match n:
-		"oak_a": return _baked(NATURE + "tree_oak.glb", 2.0, "leaf")
-		"oak_b": return _baked(NATURE + "tree_default.glb", 1.6, "leaf")
-		"oak_c": return _baked(NATURE + "tree_detailed.glb", 1.9, "leaf")
-		"apple_a": return _with_fruit(_baked(NATURE + "tree_fat.glb", 2.0, "leaf"), 8, 0.09, Color("#b02a2a"), Color("#e8483a"), 4)
-		"apple_b": return _with_fruit(_baked(NATURE + "tree_oak.glb", 1.9, "leaf"), 8, 0.09, Color("#b02a2a"), Color("#e8483a"), 5)
+		"oak_a": return _baked(FOREST + "Tree_1_A_Color1.gltf", 0.0, "forest", Vector2(1.6, 1.6))
+		"oak_b": return _baked(FOREST + "Tree_2_A_Color1.gltf", 0.0, "forest", Vector2(1.5, 1.5))
+		"oak_c": return _baked(FOREST + "Tree_3_A_Color1.gltf", 0.0, "forest", Vector2(1.5, 1.5))
+		"apple_a": return _with_fruit(_baked(FOREST + "Tree_1_B_Color1.gltf", 0.0, "forest", Vector2(1.5, 1.5)), 8, 0.09, Color("#b02a2a"), Color("#e8483a"), 4)
+		"apple_b": return _with_fruit(_baked(FOREST + "Tree_3_B_Color1.gltf", 0.0, "forest", Vector2(1.5, 1.5)), 8, 0.09, Color("#b02a2a"), Color("#e8483a"), 5)
 		"pine_a": return _baked(KENNEY + "tree-large.glb", 1.6, "pine")
 		"pine_b": return _baked(KENNEY + "tree-small.glb", 1.8, "pine")
 		"stump": return _baked(HEX + "tree_single_A_cut.gltf", 2.6, "wood")
@@ -515,6 +516,13 @@ func _recolour(c: Color, mode: String, mat_name := "") -> Color:
 		out = out.lerp(STONE, 0.3)
 	elif mode == "wood":
 		out = c.lerp(WOOD, 0.25)
+	elif mode == "forest":
+		# KayKit Forest: one gradient texture. Its greens are the leaves (foliage, recoloured by the season); its
+		# red-brown trunks lean to the palette's wood.
+		if c.g > c.r * 1.2 and c.g > c.b * 1.2:
+			return FarmMesh.lin(c, 1.0)
+		if c.r > c.g * 1.3:
+			out = c.lerp(WOOD, 0.6)
 	elif mode == "leaf" or mode == "plant":
 		# Kenney Nature Kit: one flat colour per material. Leaves and grass take the palette's greens (and, for
 		# "leaf", the foliage mask, so the season and the wind act on them); bark leans to the palette's wood.

@@ -8,7 +8,7 @@ models already are.
 ## Wired in
 
 KayKit Halloween Bits and Furniture Bits are in the game (`assets/kaykit_halloween/`, `assets/kaykit_furniture/`):
-the crypt's coffins, bones and rest shrines; the Kenney Nature Kit (`assets/kenney_nature/`) for the oaks, apple trees, palms, bushes, berry bushes, grass, flowers, mushrooms, fern and cactus; on the farm the dead trees, wild pumpkins, jack-o'-lanterns, lamps,
+the crypt's coffins, bones and rest shrines; KayKit Forest (`assets/kaykit_forest/`) for the oaks and apple trees; the Kenney Nature Kit (`assets/kenney_nature/`) for the palms, bushes, berry bushes, grass, flowers, mushrooms, fern and cactus; on the farm the dead trees, wild pumpkins, jack-o'-lanterns, lamps,
 street lamps and lanterns, and the farmhouse's bed, table, chairs, sofa, plant and painting. The rows below with
 those models are done; the rest are still suggestions. Rejected after a look: the Halloween fence and bench (graveyard
 iron and too low for the farm), the furniture cabinets and shelves (too low for the wardrobe and bookshelf), the
