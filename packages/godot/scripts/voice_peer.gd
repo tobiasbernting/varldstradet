@@ -33,6 +33,7 @@ var _player: AudioStreamPlayer
 var _playback: AudioStreamGeneratorPlayback
 var _last_seq := -1
 var _started := false
+var _capacity := 0 ## the generator's real ring buffer size in frames (Godot rounds buffer_length up to a power of two)
 
 
 ## Opens the connection. `ice` is the server's list ({urls, username?, credential?}). False without the extension.
@@ -77,6 +78,8 @@ func _build_player() -> void:
 	add_child(_player)
 	_player.play()
 	_playback = _player.get_stream_playback() as AudioStreamGeneratorPlayback
+	# nothing is pushed yet, so everything is free: that is the real capacity, not buffer_length * RATE
+	_capacity = _playback.get_frames_available() if _playback != null else int(gen.buffer_length * VoiceCodec.RATE)
 
 
 func set_volume(v: float) -> void:
@@ -93,6 +96,11 @@ func _on_description(type: String, sdp: String) -> void:
 
 func _on_candidate(media: String, index: int, candidate_name: String) -> void:
 	signal_out.emit({"k": "ice", "media": media, "index": index, "name": candidate_name})
+
+
+## Whether the other side's description has arrived (an offer that comes again then means it started over).
+func has_remote() -> bool:
+	return _have_remote
 
 
 ## A handshake message from the other speaker.
@@ -167,8 +175,7 @@ func _play(data: PackedByteArray) -> void:
 	_last_seq = seq
 	packets_in += 1
 	var samples: PackedFloat32Array = p["samples"]
-	var total := int(1.0 * ((_player.stream as AudioStreamGenerator).buffer_length * VoiceCodec.RATE))
-	var buffered := total - _playback.get_frames_available()
+	var buffered := _capacity - _playback.get_frames_available()
 	if buffered > int(MAX_BUFFER * VoiceCodec.RATE):
 		return
 	var frames := PackedVector2Array()
