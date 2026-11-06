@@ -20,7 +20,10 @@ const FOOT_LIFT := 0.03
 const PULL := Vector3(0.0, 0.38, 0.33)
 const WALK_FPS := 6.0
 ## The Adventurers' figures: their rig's animations (names are `library/animation`; the libraries are _libs()).
-const DEFAULT_RIG := {"idle": "General/Idle_A", "walk": "Move/Walking_A", "death": "General/Death_A", "attack": "", "hit": ""}
+## The Adventurers' basic rigs have no melee swing: the throw stands in for a lunge, the interaction for a tool.
+const DEFAULT_RIG := {"idle": "General/Idle_A", "walk": "Move/Walking_A", "death": "General/Death_A", "attack": "General/Throw", "hit": "General/Hit_A", "use": "General/Interact"}
+const ICE_TINT := Color(0.55, 0.8, 1.0, 0.4)
+const FALLEN_FX := Color(0.3, 0.3, 0.4, 0.38)
 ## How far a voxel body turns toward a walk up or down the screen (radians), at most.
 const VOXEL_TURN := 0.61
 const BAR_BACK_PRIORITY := 10
@@ -68,6 +71,9 @@ var _anim: AnimationPlayer = null
 var _model_h := 0.0
 var _yaw := 0.0
 var _rig := {} ## the animations this figure plays: idle, walk, death, attack, hit (set_figure's `rig`)
+var _fx_mat: StandardMaterial3D = null ## the flash and tint laid over a figure's meshes (material_overlay)
+var _fx_colour := Color(0.0, 0.0, 0.0, 0.0)
+var _model_meshes: Array = []
 var _once_t := 0.0 ## seconds left of a one-shot animation (attack, hit), during which idle and walk wait
 static var _anim_libs: Array = [] ## AnimationLibrary, loaded once from the pack's two rig files
 ## The voxel body (`--people3d`, voxel_body.gd): a creature's sprite frames extruded into meshes, or null.
@@ -174,6 +180,7 @@ func set_figure(figure: Node3D, key: String, height_m := 1.5, rig := {}) -> bool
 		top = maxf(top, (mi as MeshInstance3D).get_aabb().end.y)
 	var k := height_m / maxf(0.1, top)
 	model.scale = Vector3.ONE * k
+	_model_meshes = model.find_children("*", "MeshInstance3D", true, false)
 	_model_h = height_m
 	add_child(model)
 	_anim = AnimationPlayer.new()
@@ -389,10 +396,14 @@ func _tick_looks(delta: float) -> void:
 			_vmat.set_shader_parameter("flash", k)
 		else:
 			sprite.modulate = (FALLEN_TINT if pose == "down" else Color.WHITE).lerp(_flash_colour, k)
+	if model != null:
+		_tick_model_fx()
 	if _lunge_t > 0.0:
 		_lunge_t -= delta
 		var k := clampf(_lunge_t / 0.18, 0.0, 1.0)
-		if voxel != null:
+		if model != null:
+			model.position = _lunge * sin(k * PI) if _lunge_t > 0.0 and pose != "down" else Vector3.ZERO
+		elif voxel != null:
 			if pose != "down":
 				voxel.position = Vector3(0.0, FOOT_LIFT, 0.0) + (_lunge * sin(k * PI) if _lunge_t > 0.0 else Vector3.ZERO)
 		else:
@@ -420,6 +431,28 @@ func _tick_looks(delta: float) -> void:
 
 # ---------------------------------------------------------------------------
 # A fight on this body
+
+
+## The figure's flash and tints: one translucent unshaded overlay over all its meshes, the hit's colour fading out,
+## else blue while frozen, else grey while fallen.
+func _tick_model_fx() -> void:
+	var c := Color(0.0, 0.0, 0.0, 0.0)
+	if _flash_t > 0.0:
+		c = Color(_flash_colour.r, _flash_colour.g, _flash_colour.b, 0.8 * clampf(_flash_t / 0.12, 0.0, 1.0))
+	elif pose == "frozen":
+		c = ICE_TINT
+	elif pose == "down":
+		c = FALLEN_FX
+	if c == _fx_colour:
+		return
+	_fx_colour = c
+	if _fx_mat == null:
+		_fx_mat = StandardMaterial3D.new()
+		_fx_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_fx_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_fx_mat.albedo_color = c
+	for mi in _model_meshes:
+		(mi as MeshInstance3D).material_overlay = _fx_mat if c.a > 0.0 else null
 
 
 ## A quick flash of colour (hit: white, hurt: red, healed: green).
@@ -465,6 +498,7 @@ func swing(icon: Texture2D, facing: String) -> void:
 			dir = Vector3(0, 0, 1)
 			_swing_side = 1.0
 	lunge(dir, 0.2)
+	_play_once(str(_rig.get("use", "")), 1.5)
 	if icon != null:
 		_tool.texture = icon
 		_tool.visible = true
