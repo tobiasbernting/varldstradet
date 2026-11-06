@@ -125,6 +125,21 @@ const zoneKey = (id: string, i: number): string => `saga:${id}z${i}`;
 const humans = (farm: WorldState, run: RunState): PlayerState[] => run.party.map((id) => farm.players[id]).filter((p): p is PlayerState => !!p);
 const members = (farm: WorldState, run: RunState): PlayerState[] => [...humans(farm, run), ...run.companions.map((id) => farm.players[id]).filter((p): p is PlayerState => !!p)];
 
+/**
+ * Gives items into the world the player stands in (the zone's, while in a zone): what does not fit in the bag lands on the
+ * ground there, and the `drop` change names that area.
+ */
+function giveHere(farm: WorldState, p: PlayerState, item: string, count: number, out: Change[]): void {
+  const world = p.area === 'farm' ? farm : (getArea(farm, p.area) ?? farm);
+  const from = out.length;
+  giveItems(world, p, item, count, out);
+  if (p.area === 'farm') return;
+  for (let i = from; i < out.length; i++) {
+    const c = out[i]!;
+    if (c.t === 'drop' && c.area === undefined) out[i] = { ...c, area: p.area };
+  }
+}
+
 /** A player's run record, made when needed (old saves have none). */
 export const runSaveOf = (p: PlayerState): RunSave => (p.run = { ...newRunSave(), ...p.run });
 export const readRun = (p: PlayerState | undefined): RunSave => ({ ...newRunSave(), ...p?.run });
@@ -425,7 +440,7 @@ function bring(farm: WorldState, run: RunState, p: PlayerState, items: string[] 
   const e = farmEffect(farm, p, dishes);
   run.base[p.id] = e;
   // potions come as items: the dishes', the herb garden's and the tree's
-  if (e.potions) giveItems(farm, p, 'healing_potion', Math.round(e.potions), out);
+  if (e.potions) giveHere(farm, p, 'healing_potion', Math.round(e.potions), out);
   delete e.potions;
   out.push(playerChange(p));
 }
@@ -737,12 +752,10 @@ function settleVote(farm: WorldState, run: RunState, ctx: SimCtx, late: boolean)
   run.runor.push(id);
   const out: Change[] = [];
   const r = runa(id);
-  for (const q of humans(farm, run)) {
-    if (r?.effect.potions && (!r.cls || r.cls === q.saga?.cls)) giveItems(farm, q, 'healing_potion', r.effect.potions, out);
-    out.push(banner(q.id, run.key, fmt(RUN_T.picked, { runa: RUNA_NAMES[id] ?? id }), undefined, 'reward'));
-  }
-  const next = run.zone + 1;
-  out.push(...enterZone(farm, run, next, ctx));
+  for (const q of humans(farm, run)) out.push(banner(q.id, run.key, fmt(RUN_T.picked, { runa: RUNA_NAMES[id] ?? id }), undefined, 'reward'));
+  out.push(...enterZone(farm, run, run.zone + 1, ctx));
+  // the potions of p_flaska go into the zone the player now stands in (the old one is gone)
+  for (const q of humans(farm, run)) if (r?.effect.potions && (!r.cls || r.cls === q.saga?.cls)) giveHere(farm, q, 'healing_potion', r.effect.potions, out);
   return out;
 }
 
@@ -866,7 +879,7 @@ function victory(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
     s.wins++;
     s.clears[boss] = (s.clears[boss] ?? 0) + 1;
     s.best[boss] = Math.min(s.best[boss] ?? Infinity, Math.round(run.elapsed));
-    giveItems(farm, p, `${crops[randInt(ctx.rnd, 0, crops.length - 1)]}_seed`, randInt(ctx.rnd, 3, 6), out);
+    giveHere(farm, p, `${crops[randInt(ctx.rnd, 0, crops.length - 1)]}_seed`, randInt(ctx.rnd, 3, 6), out);
     out.push(banner(p.id, run.key, RUN_T.win, RUN_T.winSub, 'cleared'), playerChange(p));
   }
   out.push(stateChange(farm, run));

@@ -27,6 +27,7 @@ import {
   TREE_TEXT,
   TREE_TOTAL,
   SOLO_MERCY,
+  ITEMS,
   WIPE_MS,
   XP_LEVELS,
   equipGear,
@@ -1122,6 +1123,23 @@ describe('the vote on a runa', () => {
     expect(rich.gained).toBeGreaterThanOrEqual(plain.gained + Math.floor(plain.gained * 0.5));
   });
 
+  it('a full bag: the potions of p_flaska land in the zone the player stands in, with the area on the change', () => {
+    const party = atTheVote(['krigare']);
+    const run = runOf(party.world)!;
+    const p = party.players[0]!;
+    const ids = Object.keys(ITEMS).filter((k) => k !== 'healing_potion');
+    p.inventory = p.inventory.map((_, i) => ({ item: ids[i]!, count: 1 }));
+    run.offer!.cards = ['p_flaska', 'p_fro', 'p_kraft'];
+    const farmDrops = Object.keys(party.world.drops).length;
+    const out = pickRuna(party.world, p.id, 0, party.ctx());
+    expect(run.zone).toBe(1);
+    const drop = out.find((c) => c.t === 'drop' && c.drop?.item === 'healing_potion');
+    expect(drop).toBeTruthy();
+    expect(drop!.t === 'drop' && drop!.area).toBe(run.key);
+    expect(Object.values(party.world.areas![run.key]!.drops).some((d) => d.item === 'healing_potion' && d.count === 2)).toBe(true);
+    expect(Object.keys(party.world.drops)).toHaveLength(farmDrops);
+  });
+
   it('the tree’s fourth branch: the party may ask for new cards once, and only with the node g3', () => {
     const party = atTheVote(['krigare']);
     const run = runOf(party.world)!;
@@ -1370,6 +1388,28 @@ describe('the clock, the wipe and the end', () => {
     expect(c.coins).toBe(coins);
     expect(JSON.stringify(c.inventory)).toBe(bag);
     expect(readRun(c).seeds).toBe(0);
+  });
+
+  it('a full bag at the boss’s fall: the crop seeds land in the zone, not in the farm', () => {
+    const party = makeParty(['magiker'], { seed: 6 });
+    startRun(party.world, party.players[0]!.id, { seed: 6 }, party.ctx());
+    const { run, inst } = atTheBoss(party);
+    const p = party.players[0]!;
+    const ids = Object.keys(ITEMS).filter((k) => !k.endsWith('_seed'));
+    p.inventory = p.inventory.map((_, i) => ({ item: ids[i]!, count: 1 }));
+    const farmDrops = Object.keys(party.world.drops).length;
+    const out: Change[] = [];
+    out.push(...castSpell(party.world, p.id, 'eldboll', inst.boss, party.ctx()));
+    for (let i = 0; i < 4; i++) {
+      party.now += 50;
+      out.push(...tick(party.world, 50, party.ctx()));
+    }
+    expect(run.phase).toBe('victory');
+    const drop = out.find((c) => c.t === 'drop' && c.drop?.item.endsWith('_seed'));
+    expect(drop).toBeTruthy();
+    expect(drop!.t === 'drop' && drop!.area).toBe(run.key);
+    expect(Object.values(party.world.areas![run.key]!.drops).some((d) => d.item.endsWith('_seed'))).toBe(true);
+    expect(Object.keys(party.world.drops)).toHaveLength(farmDrops);
   });
 
   it('a dropped connection: the player comes back to the zone, or home when the run is over', () => {
