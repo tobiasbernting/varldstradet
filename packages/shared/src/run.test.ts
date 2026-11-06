@@ -919,8 +919,8 @@ describe('the farm feeds the run', () => {
 
 describe('the vote on a runa', () => {
   /** A party whose first zone is cleared and who stand at the exit, the vote on. */
-  function atTheVote(classes: ClassId[] = ['vaktare', 'helare', 'magiker']): Party {
-    const party = makeParty(classes, { seed: 6 });
+  function atTheVote(classes: ClassId[] = ['vaktare', 'helare', 'magiker'], longhall = false): Party {
+    const party = makeParty(classes, { seed: 6, longhall });
     startRun(party.world, party.players[0]!.id, { seed: 6 }, party.ctx());
     const run = runOf(party.world)!;
     const inst = party.world.areas![run.key]!.saga!;
@@ -942,6 +942,21 @@ describe('the vote on a runa', () => {
     expect(run.phase).toBe('pick');
     return party;
   }
+
+  it('a solo player with the hired companion sees their own class and the party-wide runor, not the companion’s', () => {
+    const party = atTheVote(['krigare'], true);
+    const run = runOf(party.world)!;
+    expect(run.companions).toHaveLength(1);
+    const comp = party.world.players[run.companions[0]!]!;
+    expect(comp.saga!.cls).toBe('helare');
+    const cards = run.offer!.cards;
+    expect(cards).toHaveLength(3);
+    for (const id of cards) {
+      const r = RUNOR.find((x) => x.id === id)!;
+      expect(r.cls === undefined || r.cls === 'krigare').toBe(true);
+    }
+    expect(cards.some((id) => RUNOR.find((x) => x.id === id)!.cls === 'krigare')).toBe(true);
+  });
 
   it('shuts the exit until the packs are down, and the sagafrön for the packs and the zone are paid', () => {
     const party = makeParty(['vaktare', 'helare', 'magiker'], { seed: 6 });

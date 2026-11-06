@@ -695,7 +695,8 @@ function useRunExit(world: WorldState, p: PlayerState, _obj: WorldObject, ctx: S
 runHooks.exit = useRunExit;
 
 function makeOffer(farm: WorldState, run: RunState, ctx: SimCtx, avoid: string[]): NonNullable<RunState['offer']> {
-  const classes = members(farm, run).map((m) => m.saga!.cls!).filter(Boolean);
+  // the hired companion's class is not offered: a solo player sees their own class and the party-wide runor
+  const classes = humans(farm, run).map((m) => m.saga!.cls!).filter(Boolean);
   return { cards: offerRunor(ctx.rnd, classes, [...run.runor, ...avoid]), votes: {}, order: [], until: run.elapsed + RUN_PICK_MS, from: run.zone };
 }
 
