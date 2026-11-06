@@ -1,6 +1,6 @@
 # Handoff: Världsträdet, where the work stands
 
-Written 2026-11-06 for a fresh session that takes over the orchestration. `PLAN.md` is the plan of record,
+Written 2026-11-06 for a fresh session that takes over the orchestration; updated the same day after the review of PR 11. `PLAN.md` is the plan of record,
 `DESIGN.md` the record of the game as built, `GAME.md` (arriving with milestone M5b) the run design. This file is
 only what a new session needs to continue: state, decisions, how the work is run, what is open.
 
@@ -23,16 +23,25 @@ only what a new session needs to continue: state, decisions, how the work is run
 | 9 | M4c | Building with ownership, the farmhouse, shop and sell box, wardrobe, gear window and hero switch, cooking, villagers, Köpingen, the bus, Völvan's class pick; dev `starter` |
 | 10 | M5a | Browser client retired; pixel art moved to `packages/art`; `/` is the download page; voice and character-creator gaps recorded |
 
-- **In progress: M5b**, branch `m5b-runs-server`, child session `session_01KTh22qkzZkRx6UToLHSTLk` (Sonnet). Brief:
-  `GAME.md` (run shape, runor lists, sagafrön tree, farm-to-run table, co-op and the hired companion) plus
-  `packages/shared/src/run.ts`, `runmap.ts`, `runsim.ts`, additive protocol messages `run`, `seed`, `fardkost`,
-  optional save fields, `run.test.ts` with 200 seeded runs and bot parties, server handlers, data export. The session
-  was blocked by the account's weekly usage limit from 2 Nov to 6 Nov 05:26 UTC and resumed then. No PR open as of
-  05:27 UTC; **PR 11 opened 05:52 UTC, CI green on head a2f078c, not merged.** The owner asked to pause here: a
-  fresh session reviews PR 11 (section 3 recipe) and waits for the owner's verdict on `GAME.md` before M5c. The PR
-  body lists the seven design decisions, the bot minutes per run and six points the child was unsure about; the
-  one to settle with the owner is whether the 30-minute cap should be measured against clumsy (kid-like) bots at
-  21 minutes for three players, as the child chose, or against careful bots.
+- **In progress: M5b**, branch `m5b-runs-server`, **PR 11** (opened 2026-11-06 05:52 UTC by child
+  `session_01KTh22qkzZkRx6UToLHSTLk`, Sonnet). Brief: `GAME.md` (run shape, runor lists, sagafrön tree, farm-to-run
+  table, co-op and the hired companion) plus `packages/shared/src/run.ts`, `runmap.ts`, `runsim.ts`, `runbot.ts`,
+  additive protocol messages `run`, `seed`, `fardkost`, optional save fields, `run.test.ts` with 200 seeded runs and
+  bot parties, server handlers, data export. The PR body lists the seven design decisions, the bot minutes per run and
+  six points the child was unsure about; the one to settle with the owner is whether the 30-minute cap should be
+  measured against clumsy (kid-like) bots at 21 minutes for three players, as the child chose, or against careful bots.
+- **Review of PR 11 (2026-11-06, orchestrating session):** CI green on head a2f078c; locally typecheck, 284 shared and
+  47 server tests and `pnpm godot:gen` green with a clean tree. **Not merged**: an independent read of the run code
+  found bugs that need tests, handed to a fix-up child `session_01KTh22ovyHfUYGF3frNYrnr` (Sonnet) on the same branch,
+  so PR 11 updates in place. The findings: (1) `refreshMax` drops the run's health buff on every level-up or gear
+  change; (2) `jumpTo` lets players into and out of run zones; (3) `pay()` rounds the sagafrön bonuses away on 1-seed
+  packs; (4) chapter clear only for online members, and the companion rolls loot; (5) solo mercy keys on party size,
+  not on the companion; (6) `giveItems(farm, ...)` while in a zone drops overflow into the farm world; (7) smaller
+  GAME.md mismatches (`ZONE_PACKS` wording, the companion's class in the offer, `f6` paid to everyone, `dimma` leash
+  on bosses, end banner after a win, double `bring()` on rejoin, the parent-pause sentence). Accepted as-is: the
+  `bodyFits` change to Blink and Stormsteg also applies in the nine dungeons (it fixes a real wall trap). A check-in is
+  scheduled 90 minutes after the child started (10:09 UTC). After its push: review again, merge, then ask the owner
+  for the verdict on `GAME.md` before M5c.
 - Not yet done: M5c (runs in the Godot client), M6 (the other eight dungeons and chapters), M7 (alive world), M8
   (polish, release tag, homelab deploy of the v2 server, `DESIGN.md` rewrite).
 
@@ -112,7 +121,9 @@ after-M3d bench, the house and village benches and an Intel laptop bench were ne
 
 ## 6. Identifiers
 
-- Orchestrating session: `session_01KTh22nak5ip5cq8vST7H9Q`. M5b child: `session_01KTh22qkzZkRx6UToLHSTLk`.
-- No check-in is pending; the M5b check-in has fired and reported.
+- Orchestrating session (from 2026-11-06 09:55 UTC): `session_01KTh22pPGKmMmYJxTLXzyqs`; before that
+  `session_01KTh22nak5ip5cq8vST7H9Q`. M5b child: `session_01KTh22qkzZkRx6UToLHSTLk`. M5b fix-up child:
+  `session_01KTh22ovyHfUYGF3frNYrnr`.
+- One check-in pending for the fix-up child (90 minutes from 10:09 UTC).
 - Homelab repo `tobiasbernting/homelab`: `cloud/` (Hetzner + Cloudflare + Tailscale, running), `server/roles/lilla-garden`
   and `lilla-garden-cloud`.
