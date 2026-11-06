@@ -275,6 +275,14 @@ func _on_run_ended(summary: Dictionary) -> void:
 		_finish()
 
 
+## A pack is down: a run bot never stops for that (the combat bot would after `packs_wanted`); it plans the next pack, or the exit.
+func _pack_done() -> void:
+	_packs_done += 1
+	_report["packs_beaten"] = _packs_done
+	world.hero.drive = Vector2.ZERO
+	_phase = "plan"
+
+
 func _success() -> void:
 	_report["ok"] = _report["errors"].is_empty()
 	_finish()
