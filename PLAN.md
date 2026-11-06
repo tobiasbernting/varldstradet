@@ -189,7 +189,7 @@ building with ownership, the wardrobe, day and night, seasons. This is the bigge
 game. 12–16 evenings. Done when the family can play a farm evening in the new client without missing the old one, and
 the web client is retired. *(Retired in M5a, 2026-11-02; see `DESIGN.md`.)*
 
-**M5. Runs.** *(M5b done 2026-11-06: `GAME.md`, the generator, the run rules, the hired companion and the server, played end to end by bots; the Godot side is M5c.)* Server-side run generator on top of `sagamap.ts` (zone chain, room pick, packs, modifiers), boons,
+**M5. Runs.** *(M5b done 2026-11-06: `GAME.md`, the generator, the run rules, the hired companion and the server, played end to end by bots; the Godot side, M5c, is done 2026-11-06: the arch, the shoot and the buildings on the farm, the arch window, the zones, the run HUD, the runor cards, the end summary, the sagaträd and the run bots.)* Server-side run generator on top of `sagamap.ts` (zone chain, room pick, packs, modifiers), boons,
 sagafrön and the Yggdrasil upgrades, färdkost and companions, the arch and the join-at-rest-stone rule, the hired
 companion for solo play. All four classes. 10–14 evenings. Done when a chapter can be run three times and feels
 different each time, and a solo run is winnable.

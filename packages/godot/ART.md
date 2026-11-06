@@ -273,3 +273,17 @@ frame; the camera's move into the room is one `Transform3D` a frame while it eas
   them. The monster after you carries the ⚠️ icon, bobbing.
 - **Sound** is code-generated into PCM (`sfx.gd`), one recipe per spell, move and HUD event, the browser's.
 
+## Runs (M5c)
+All generated in code with the farm's mesh builder (`run_meshes.gd`, `zone_props.gd`), in the palette above; nothing new is imported except one more use of the
+KayKit Hexagon blacksmith.
+- **Färdport** (3 × 2): two carved pillars with rune bands, a curved lintel of ten blocks, a gold keystone with a leaf, roots, steps, a dark doorway; a teal glow
+  quad in the doorway and one light (Mellan and Hög and Låg alike: one light, as the saga portal has).
+- **Yggdrasil shoot**, stage 0-4 by `variant`: mound and stones with two leaves; sapling; young tree; big tree with blossoms; the Världsträd with a gold trunk, cyan runes,
+  teal-gold crowns and gold motes, one glow billboard and one light (stage 4 only).
+- **Smithy** (KayKit blacksmith, fitted to 3 × 2, an anvil and coals in front, an ember light), **herb garden** (2 × 2: four raised beds, drying rack), **longhouse**
+  (4 × 3: timber walls, turf roof, dragon heads, shields, door; windows glow at night).
+- **Zone decor** (22 kinds: gravestone, skull pile, ghost light, dead tree, mine cart, gold pile, dwarf statue, mine lamp, coral, anchor, seaweed, pearl, glow mushroom,
+  elf statue, ice crystal, frozen pillar, snow drift, anvil, brazier, lava crack, fairy light, cobweb): primitive meshes, one shared vertex-colour material. Lights:
+  `ZoneProps.LIGHTS`, none on Låg (the glow billboards stay). The zone floor is flat coloured quads (grass `#5f9a44`, mud, gravel, sand, moss, snow, ash).
+- **Zone weather**: fog density by kind in every preset; particles (rain 0.02 × 0.55 m streaks, snow flakes, hail, dust) only on Mellan and Hög, `weather` budget / 3, none on Låg.
+- Everything in a window (cards, summary, HUD clock) is Control nodes: no frame cost beyond the HUD's.

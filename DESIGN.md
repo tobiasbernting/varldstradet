@@ -553,3 +553,25 @@ in `packages/shared`, before any client draws them (M5c). Every fight rule is th
   as the companion for everyone but the healer. Two bugs found on the way: a mage's blink (and a warrior's stormsteg) could land
   with the body in a wall so no move was accepted again (a real player could have been trapped; fixed in `sagasim.ts`), and a bot
   with two equally near targets dithered between them forever.
+
+## Godot client: runs (2026-11-06)
+Milestone M5c of `PLAN.md`: the client draws the runs of `GAME.md` (the rules are the server's, see "Runs: Sagan som färd"). Nothing here decides anything: it
+sends `run`, `seed` and `fardkost` and draws the `run`, `seed` and `fardkost` changes.
+- **World model** (`world_model.gd`): `run` (the RunSnap, its clock `elapsed` runs on locally between messages), `offer` (the three cards, `left` counted down
+  locally), `ended`, `fardkost_items`/`fardkost_slots` and `tree` (my sagafrön and nodes), each with a signal. At login the view asks `run state` and `seed state`.
+- **Farm**: `run_meshes.gd` makes the färdport, the shoot in five stages (picked by the object's `variant`), the herb garden and the longhouse in the farm's
+  palette; the smithy is KayKit's blacksmith with generated extras. Only the Världsträd (stage 4) and the arch have a light.
+- **Windows**: `run_window.gd` (the arch: class picture, `fardkost` slots, "Starta färden" sends `fardkost` then `run start`, "Följ med" sends `run join`; focus
+  lands on the one big button for a pad) and `seed_window.gd` (the tree by branch, planted / plantable / locked, `seed plant`), opened by the server's `open`.
+- **Zones** (`dungeon_view.gd`, `zone_props.gd`): a `saga:run<n>z<i>` map is drawn with the look `Data.zone_look` picks from game.json `run.zones` by the RunSnap's
+  biome (the boss's map uses the boss's own dungeon): flat biome ground per chunk, the borrowed dungeon's walls, torches and ambient light, 22 decor kinds drawn
+  in code, the `run_exit` as a rune disc with a beam (the use key takes the exit you stand on, since it is flat and not solid), and the zone's weather: fog in every
+  preset, falling rain, snow, hail or dust on Mellan and Hög only (a third of the preset's weather budget). Prop lights are left out on Låg. A zone drawn before the
+  snapshot arrives is redrawn when it does.
+- **HUD** (`run_hud.gd`): the clock against `max` (cool, amber from `warnMs`, warm past `max`; the clock never stops), zone dots and the crown, the runor taken. The
+  party's hearts are the dungeon HUD's party list (the Hirdmannen included); the server's banners are the usual banner changes.
+- **Pick** (`run_pick.gd`): three cards (emoji at 96 px, name, one line), a vote is `run pick` with the index; the card with most votes glows gold; the bar counts down
+  `pickMs`; "Omval" when `rerolls` > 0; the hero stands still while it is open so the pad moves the focus. **End** (`run_end.gd`): outcome word, time, sagafrön, zones, runor for eight seconds.
+- **Bots**: `run_bot.gd` extends `bot.gd` (new hook `_no_pack_left`); `tools/bot-check.mts` plays a pair on a third in-memory server; `--full` for the boss. The workflow
+  runs it headless and under Xvfb for the pictures.
+- Strings: the new ones are in `sv.ts` (`pnpm godot:strings`); the run texts come from game.json.
