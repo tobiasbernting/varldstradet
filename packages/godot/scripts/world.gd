@@ -473,6 +473,7 @@ func _place_name(key: String, w: Dictionary) -> String:
 
 ## My own figure: on the farm in my outfit, in a dungeon in my class's.
 func _dress_hero(me: Dictionary) -> void:
+	hero.actor.night_exempt = true
 	if _people3d and _dress_figure(hero.actor, me):
 		return
 	if _mode == "outdoor" and looks.available():

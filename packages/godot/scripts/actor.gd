@@ -35,6 +35,11 @@ const FALLEN_TINT := Color(0.62, 0.62, 0.72)
 ## dungeons, whose darkness is by design). The sprite's own emission, about 40 % of its day brightness at full dark.
 static var night_lift := 0.0
 const NIGHT_EMISSION := 0.4
+## A figure's night lift is a small part of the sprite's: the pack's textures are bright, the lantern lights them, and
+## the emission must stay far below the glow pass's threshold (albedo × energy well under 0.5).
+const FIGURE_NIGHT_EMISSION := NIGHT_EMISSION * 0.12
+## The hero's own figure takes no night lift: the lantern lights them.
+var night_exempt := false
 
 var sprite: Sprite3D
 var _mat: StandardMaterial3D ## the sprite's material, so it can glow a little at night
@@ -416,7 +421,7 @@ func _tick_looks(delta: float) -> void:
 			_vmat.set_shader_parameter("night", lift)
 		elif model != null:
 			for fm in _model_mats:
-				(fm as StandardMaterial3D).emission_energy_multiplier = lift * NIGHT_EMISSION
+				(fm as StandardMaterial3D).emission_energy_multiplier = 0.0 if night_exempt else lift * FIGURE_NIGHT_EMISSION
 		else:
 			_mat.emission_energy_multiplier = lift * NIGHT_EMISSION
 	if _flash_t > 0.0:
