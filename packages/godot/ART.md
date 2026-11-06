@@ -86,8 +86,7 @@ fallback for a creature with no sheet (the placeholder), so this can grow piece 
   rolls the body onto its flank, grey, feet where it stood; frozen and webbed are the same ice block and threads as the
   billboards'; the night lift is the actor's `night_lift` through the material.
 - **The undead** (`scripts/skeleton_figure.gd`, `assets/kaykit_skeletons`, KayKit Skeletons, CC0) are rigged figures
-  through `set_figure` with the pack's animations: `skelett` and `draugkung` the Warrior (sword and small shield; the king
-  1.9 m, bone colours 40 % toward `#9cff8a`, green eyes), `gravvaktare` the Rogue (2.2 m), `vandrardraug` and `sjodraug`
+  through `set_figure` with the pack's animations: `skelett` the Warrior (sword and small shield, 1.45 m), `gravvaktare` the Warrior at 2.5 m, `draugkung` the Rogue at 2.75 m (hood and cape tinted purple `#6a3a8a`, green eyes `#9cff8a`), `vandrardraug` and `sjodraug`
   the Minion tinted brown and sea green, `gengangare` the Minion at 40 % opacity. `gravrotta` (a rat) and `draugbage` (a
   beetle) stay voxel. Idle, the pack's Walking_D_Skeletons, an attack animation per weapon on the swing, Hit_A on the
   flash and Death_A when fallen. The Skeletons' texture is not the Adventurers' swatch grid (its swatches are bone,

@@ -74,6 +74,7 @@ var _rig := {} ## the animations this figure plays: idle, walk, death, attack, h
 var _fx_mat: StandardMaterial3D = null ## the flash and tint laid over a figure's meshes (material_overlay)
 var _fx_colour := Color(0.0, 0.0, 0.0, 0.0)
 var _model_meshes: Array = []
+var _model_mats: Array = [] ## this figure's own copies of its materials, glowing a little at night
 var _once_t := 0.0 ## seconds left of a one-shot animation (attack, hit), during which idle and walk wait
 static var _anim_libs: Array = [] ## AnimationLibrary, loaded once from the pack's two rig files
 ## The voxel body (`--people3d`, voxel_body.gd): a creature's sprite frames extruded into meshes, or null.
@@ -181,6 +182,7 @@ func set_figure(figure: Node3D, key: String, height_m := 1.5, rig := {}) -> bool
 	var k := height_m / maxf(0.1, top)
 	model.scale = Vector3.ONE * k
 	_model_meshes = model.find_children("*", "MeshInstance3D", true, false)
+	_own_materials()
 	_model_h = height_m
 	add_child(model)
 	_anim = AnimationPlayer.new()
@@ -258,6 +260,32 @@ func _animate_voxel(facing: String, moving: bool, delta: float) -> void:
 	# standing breathes: the height swells and settles by 2 %
 	var breath := 0.0 if moving else 0.02 * sin(_vt * 2.4)
 	voxel.basis = Basis(Vector3.UP, _vyaw) * Basis.from_scale(Vector3(1.0, 1.0 + breath, 1.0))
+
+
+## Gives the figure its own copy of every material (the looks share them between actors), with the texture as an
+## emission map at no strength: the night lift raises it.
+func _own_materials() -> void:
+	_model_mats = []
+	for mi in _model_meshes:
+		var m := mi as MeshInstance3D
+		if m.material_override is StandardMaterial3D:
+			m.material_override = _glow_copy(m.material_override as StandardMaterial3D)
+		elif m.mesh != null:
+			for i in range(m.mesh.get_surface_count()):
+				var src := m.get_active_material(i) as StandardMaterial3D
+				if src != null:
+					m.set_surface_override_material(i, _glow_copy(src))
+
+
+func _glow_copy(src: StandardMaterial3D) -> StandardMaterial3D:
+	var d := src.duplicate() as StandardMaterial3D
+	if not d.emission_enabled and d.albedo_texture != null:
+		d.emission_enabled = true
+		d.emission = Color.WHITE
+		d.emission_texture = d.albedo_texture
+		d.emission_energy_multiplier = 0.0
+		_model_mats.append(d)
+	return d
 
 
 func has_figure(key: String) -> bool:
@@ -386,6 +414,9 @@ func _tick_looks(delta: float) -> void:
 		_lift = lift
 		if voxel != null:
 			_vmat.set_shader_parameter("night", lift)
+		elif model != null:
+			for fm in _model_mats:
+				(fm as StandardMaterial3D).emission_energy_multiplier = lift * NIGHT_EMISSION
 		else:
 			_mat.emission_energy_multiplier = lift * NIGHT_EMISSION
 	if _flash_t > 0.0:

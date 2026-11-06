@@ -138,8 +138,8 @@ KayKit Character Pack: Skeletons (`assets/kaykit_skeletons`). The creatures it d
 | Creature | Character | Colour, size |
 | --- | --- | --- |
 | `skelett` | Skeleton_Warrior, sword and small shield | 1.45 m |
-| `draugkung` | Skeleton_Warrior, sword and small shield | 1.9 m, bone colours 40 % toward the crypt's green `#9cff8a`, green eyes |
-| `gravvaktare` | Skeleton_Rogue, blade | 2.2 m |
+| `draugkung` | Skeleton_Rogue, blade | 2.75 m, hood and cape tinted toward purple `#6a3a8a`, green eyes `#9cff8a` |
+| `gravvaktare` | Skeleton_Warrior (horns), sword and small shield | 2.5 m |
 | `vandrardraug`, `sjodraug` | Skeleton_Minion | 1.5 m, tinted brown and sea green after their sprites |
 | `gengangare` | Skeleton_Minion | 1.5 m, 40 % opaque (a ghost) |
 | `gravrotta` (a rat), `draugbage` (a beetle), `benspindel`, `gruvtroll`, everything else | none | voxel body |

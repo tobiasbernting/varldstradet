@@ -14,8 +14,8 @@ const SKY := "res://assets/kaykit_skeletons/skeleton_texture.png"
 ## species -> character, height in metres, tint (white: none), opacity, hand items and the animations it uses
 const KINDS := {
 	"skelett": {"char": "Warrior", "height": 1.45, "sword": true, "shield": true, "attack": "1H_Melee_Attack_Chop"},
-	"draugkung": {"char": "Warrior", "height": 1.9, "tint": Color("#9cff8a"), "tint_k": 0.4, "glow": Color("#9cff8a"), "sword": true, "shield": true, "attack": "1H_Melee_Attack_Slice_Horizontal"},
-	"gravvaktare": {"char": "Rogue", "height": 2.2, "sword": true, "attack": "1H_Melee_Attack_Stab"},
+	"draugkung": {"char": "Rogue", "height": 2.75, "cloak": Color("#6a3a8a"), "glow": Color("#9cff8a"), "sword": true, "attack": "1H_Melee_Attack_Slice_Horizontal"},
+	"gravvaktare": {"char": "Warrior", "height": 2.5, "sword": true, "shield": true, "attack": "1H_Melee_Attack_Chop"},
 	"vandrardraug": {"char": "Minion", "height": 1.5, "tint": Color("#a8805a"), "tint_k": 0.8, "attack": "Unarmed_Melee_Attack_Punch_A"},
 	"sjodraug": {"char": "Minion", "height": 1.5, "tint": Color("#7fd6b4"), "tint_k": 0.8, "attack": "Unarmed_Melee_Attack_Punch_A"},
 	"gengangare": {"char": "Minion", "height": 1.5, "alpha": 0.4, "attack": "Unarmed_Melee_Attack_Punch_B"},
@@ -89,7 +89,9 @@ static func _colour(root: Node3D, k: Dictionary) -> void:
 			var src := m.get_active_material(s) as StandardMaterial3D
 			if src == null:
 				continue
-			if not copies.has(src):
+			var is_cloak: bool = k.has("cloak") and (m.name.contains("Cape") or m.name.contains("Hood") or m.name.contains("Cloak"))
+			var ck: Variant = [src, is_cloak]
+			if not copies.has(ck):
 				var d := src.duplicate() as StandardMaterial3D
 				d.roughness = 1.0
 				if src.emission_enabled:
@@ -97,13 +99,13 @@ static func _colour(root: Node3D, k: Dictionary) -> void:
 						d.emission = k["glow"]
 						d.albedo_color = k["glow"]
 				else:
-					d.albedo_color = paint
+					d.albedo_color = Color.WHITE.lerp(k["cloak"], 0.75) if is_cloak else paint
 					d.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 				if paint.a < 1.0:
 					d.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 					d.albedo_color.a = paint.a
-				copies[src] = d
-			m.set_surface_override_material(s, copies[src])
+				copies[ck] = d
+			m.set_surface_override_material(s, copies[ck])
 
 
 ## A hand item of the pack on a hand slot of the skeleton.

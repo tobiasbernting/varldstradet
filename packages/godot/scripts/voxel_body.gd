@@ -26,6 +26,14 @@ const ALPHA_MIN := 0.5
 ## cap every creature in black when seen from above.
 const OUTLINE_LUMA := 0.22
 const OUTLINE_REACH := 3
+## No pixel of a row at least FLOOR_ROW pixels wide is thinner than FLOOR_HALF (half-depth, pixels): a thin row
+## (a wolf's back) still has a body.
+const FLOOR_HALF := 1.5
+const FLOOR_ROW := 3
+## Baked per-face shading, so the volume reads under flat light: top, front and back, sides, underside.
+const SHADE_TOP := 1.06
+const SHADE_SIDE := 0.82
+const SHADE_BOTTOM := 0.7
 
 static var _cache: Dictionary = {} ## "sheet:frame" -> ArrayMesh
 static var _sizes: Dictionary = {} ## sheet -> Vector2 (width, height in metres)
@@ -41,6 +49,8 @@ static func build(image: Image, rect: Rect2i, pixel_m: float) -> ArrayMesh:
 	half.resize(w * h)
 	var cols := PackedColorArray()
 	cols.resize(w * h)
+	var row_w := PackedInt32Array()
+	row_w.resize(h)
 	for y in range(h):
 		var l := -1
 		var r := -1
@@ -54,6 +64,7 @@ static func build(image: Image, rect: Rect2i, pixel_m: float) -> ArrayMesh:
 				half[y * w + x] = -1.0 # opaque, depth to come
 		if l < 0:
 			continue
+		row_w[y] = r - l + 1
 		var ctr := (l + r) / 2.0
 		var hw := (r - l + 1) / 2.0
 		for x in range(l, r + 1):
@@ -78,7 +89,7 @@ static func build(image: Image, rect: Rect2i, pixel_m: float) -> ArrayMesh:
 			if half[y * w + x] != 0.0:
 				var v := (y - cy) / hh
 				var colk := DEPTH_K * hh * sqrt(maxf(0.0, 1.0 - v * v))
-				half[y * w + x] = clampf(minf(half[y * w + x], colk * COLUMN_K), 0.5, DEPTH_MAX) * pixel_m
+				half[y * w + x] = clampf(minf(half[y * w + x], colk * COLUMN_K), FLOOR_HALF if row_w[y] >= FLOOR_ROW else 0.5, DEPTH_MAX) * pixel_m
 	var vs := PackedVector3Array()
 	var ns := PackedVector3Array()
 	var cs := PackedColorArray()
@@ -147,6 +158,8 @@ static func _is_dark(linear: Color) -> bool:
 ## One flat face: four corners in a cyclic order, wound so that it faces `n` (Godot's front is clockwise).
 static func _quad(vs: PackedVector3Array, ns: PackedVector3Array, cs: PackedColorArray, idx: PackedInt32Array, p: Array, n: Vector3, col: Color) -> void:
 	var o := vs.size()
+	var shade := SHADE_TOP if n.y > 0.5 else (SHADE_BOTTOM if n.y < -0.5 else (SHADE_SIDE if absf(n.x) > 0.5 else 1.0))
+	col = Color(col.r * shade, col.g * shade, col.b * shade, 1.0)
 	for q in p:
 		vs.append(q)
 		ns.append(n)

@@ -6,6 +6,7 @@ extends Node
 ##                       --fight a scripted fight runs on it), the farm, or the forest with the dungeon's arch;
 ##                       --time=0.7 --weather=rain --season=jul set the sky, --at=x,y where to stand
 ##                       --people3d 3D bodies for people and creatures (figure_3d.gd, voxel_body.gd, skeleton_figure.gd)
+##   --demo=lineup       the 3D bodies side by side on green, no world (demo_lineup.gd; --set=undead|animals, --zoom=0.9)
 ##   --bench[=preset]    the demo scene on each quality preset (or one: lag, mellan, hog) in steady state, printing
 ##                       frame times, draw calls, lights and the render timings (bench.gd)
 ##   --farmbot           a headless player that farms against a local server (farm_bot.gd, M4b)
@@ -60,6 +61,11 @@ func _ready() -> void:
 		bench.world = world
 		bench.fight = fight
 		add_child(bench)
+	elif _flag(args, "--demo") and _demo_name(args) == "lineup":
+		# the 3D bodies side by side (demo_lineup.gd): no world, no server
+		login.visible = false
+		world.queue_free()
+		add_child((load("res://scenes/lineup.tscn") as PackedScene).instantiate())
 	elif _flag(args, "--demo"):
 		login.visible = false
 		_set_world(true)
