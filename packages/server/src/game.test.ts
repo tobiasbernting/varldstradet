@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DUNGEONS, TICK_HZ, TILE, VILLAGE_KEY, addItem, areaKey, enterCave, getArea, landmarkOfKind, npcState, objectDef, placeIn, sagaKey, type Change, type ServerMsg } from '../../shared/src/index.ts';
+import { DUNGEONS, RUN_MAX_MS, TICK_HZ, TILE, VILLAGE_KEY, addItem, archFrontOf, areaKey, enterCave, fardportOf, getArea, landmarkOfKind, npcState, objectDef, placeIn, runOf, sagaKey, shootOf, type Change, type ServerMsg } from '../../shared/src/index.ts';
 import { Game, type Link } from './game.ts';
 import { MemoryStore } from './db/store.ts';
 
@@ -287,5 +287,137 @@ describe('cave and dropped connections', () => {
     on.h({ t: 'dev', a: 'starter' });
     const inv = on.g.world.players[on.p.id]!.inventory;
     for (const item of ['jarnyxa', 'traskold', 'stenamulett']) expect(inv.filter((s) => s?.item === item).reduce((n, s) => n + s!.count, 0)).toBe(1);
+  });
+});
+
+describe('runs over the socket', () => {
+  const look = { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' as const };
+  const changesOf = (l: ReturnType<typeof fakeLink>): Change[] => l.msgs.flatMap((m) => (m.t === 'changes' ? m.changes : []));
+
+  it('puts the färdport and the shoot on a new farm', async () => {
+    const game = new Game(new MemoryStore(), { autoStart: false });
+    await game.start();
+    expect(fardportOf(game.world)).toBeTruthy();
+    expect(shootOf(game.world)).toBeTruthy();
+    game.createPlayer('Astrid', look);
+    expect(game.playerSummaries().map((p) => p.name)).toEqual(['Astrid']);
+  });
+
+  it('starts, is joined, votes, loses a connection and ends, with the messages going where they belong', async () => {
+    const game = new Game(new MemoryStore(), { autoStart: false });
+    await game.start();
+    const a = game.createPlayer('Astrid', look)!;
+    const b = game.createPlayer('Bo', look)!;
+    const la = fakeLink();
+    const lb = fakeLink();
+    const ha = game.connect(la);
+    const hb = game.connect(lb);
+    ha({ t: 'hello', playerId: a.id });
+    hb({ t: 'hello', playerId: b.id });
+    const pa = game.world.players[a.id]!;
+    const pb = game.world.players[b.id]!;
+    for (const [p, cls] of [[pa, 'vaktare'], [pb, 'helare']] as const) p.saga = { cls, chapter: 1, heard: true, cleared: [], titles: [], quests: {}, done: [], found: [] };
+    const front = archFrontOf(game.world);
+    // far from the arch: told to go there
+    pa.x = TILE * 3;
+    pa.y = TILE * 3;
+    ha({ t: 'run', a: 'start' });
+    expect(runOf(game.world)).toBeUndefined();
+    expect(changesOf(la).some((c) => c.t === 'toast' && c.text.includes('färdporten'))).toBe(true);
+    // at the arch: the run starts, Astrid goes in, Bo stays (he is far away)
+    pa.x = TILE * front.x + TILE / 2;
+    pa.y = TILE * front.y + TILE / 2;
+    pb.x = TILE * 3;
+    pb.y = TILE * 3;
+    la.msgs.length = 0;
+    lb.msgs.length = 0;
+    ha({ t: 'fardkost', items: [] });
+    ha({ t: 'run', a: 'start' });
+    const run = runOf(game.world)!;
+    expect(run).toBeTruthy();
+    expect(run.party).toEqual([a.id]);
+    expect(pa.area).toBe(run.key);
+    // everyone hears the state of the run, only Astrid the banner of the zone
+    for (const l of [la, lb]) expect(changesOf(l).some((c) => c.t === 'run' && c.ev === 'state' && c.run?.id === run.id)).toBe(true);
+    expect(changesOf(la).some((c) => c.t === 'banner' && c.to === a.id)).toBe(true);
+    expect(changesOf(lb).some((c) => c.t === 'banner' && c.to === a.id)).toBe(false);
+    // Bo walks to the arch and joins
+    pb.x = TILE * front.x + TILE / 2;
+    pb.y = TILE * front.y + TILE / 2;
+    hb({ t: 'run', a: 'join' });
+    expect(run.party).toEqual([a.id, b.id]);
+    expect(pb.area).toBe(run.key);
+    // the world ticks with the run in it; the snapshot carries the fighters of the zone
+    for (let i = 0; i < 40; i++) game.tick(50);
+    game.broadcastState();
+    const state = [...la.msgs].reverse().find((m) => m.t === 'state');
+    expect(state && state.t === 'state' && !!state.saga?.[run.key]).toBe(true);
+    // a vote: put the party at the vote, one card each
+    const inst = game.world.areas![run.key]!.saga!;
+    run.phase = 'pick';
+    run.offer = { cards: ['p_hjarta', 'p_kraft', 'p_fro'], votes: {}, order: [], until: run.elapsed + 20_000, from: 0 };
+    ha({ t: 'run', a: 'pick', card: 1 });
+    expect(run.runor).toEqual([]);
+    hb({ t: 'run', a: 'pick', card: 1 });
+    expect(run.runor).toEqual(['p_kraft']);
+    expect(run.zone).toBe(1);
+    expect(changesOf(la).some((c) => c.t === 'banner' && c.text.includes('Sagans kraft'))).toBe(true);
+    void inst;
+    // Bo's connection drops: he is still in the run; he comes back into the zone
+    game.disconnect(lb);
+    expect(pb.online).toBe(false);
+    expect(pb.area).toBe(run.key);
+    const lb2 = fakeLink();
+    game.connect(lb2)({ t: 'hello', playerId: b.id });
+    expect(pb.area).toBe(run.key);
+    expect(changesOf(lb2).some((c) => c.t === 'areaData' && c.key === run.key)).toBe(true);
+    // the clock: the server ends the run at 30 minutes and sends everyone home
+    run.elapsed = RUN_MAX_MS - 60;
+    la.msgs.length = 0;
+    for (let i = 0; i < 4; i++) game.tick(50);
+    expect(runOf(game.world)).toBeUndefined();
+    expect(pa.area).toBe('farm');
+    expect(pb.area).toBe('farm');
+    expect(changesOf(la).some((c) => c.t === 'run' && c.ev === 'ended' && c.outcome === 'time' && c.to === a.id)).toBe(true);
+    expect(changesOf(lb2).some((c) => c.t === 'run' && c.ev === 'ended' && c.to === b.id)).toBe(true);
+    // the tree: sagafrön are planted over the socket
+    game.world.players[a.id]!.run!.seeds = 30;
+    la.msgs.length = 0;
+    ha({ t: 'seed', a: 'plant', node: 'h1' });
+    expect(game.world.players[a.id]!.run!.tree).toEqual(['h1']);
+    expect(changesOf(la).some((c) => c.t === 'seed' && c.ev === 'tree' && c.seeds === 20)).toBe(true);
+    ha({ t: 'seed', a: 'state' });
+    expect(changesOf(la).filter((c) => c.t === 'seed').length).toBeGreaterThanOrEqual(2);
+    await game.stop();
+  });
+
+  it('a run with one player and a longhouse has a companion that is no character: not listed, not counted, gone afterwards', async () => {
+    const game = new Game(new MemoryStore(), { autoStart: false });
+    await game.start();
+    const a = game.createPlayer('Astrid', look)!;
+    const la = fakeLink();
+    const ha = game.connect(la);
+    ha({ t: 'hello', playerId: a.id });
+    const pa = game.world.players[a.id]!;
+    pa.saga = { cls: 'krigare', chapter: 1, heard: true, cleared: [], titles: [], quests: {}, done: [], found: [] };
+    const front = archFrontOf(game.world);
+    const { addObject } = await import('../../shared/src/index.ts');
+    for (let r = 4; r < 20 && !Object.values(game.world.objects).some((o) => o.kind === 'longhall'); r++) for (let dx = -r; dx <= r; dx++) addObject(game.world, 'longhall', front.x + dx, front.y + r);
+    pa.x = TILE * front.x + TILE / 2;
+    pa.y = TILE * front.y + TILE / 2;
+    ha({ t: 'run', a: 'start' });
+    const run = runOf(game.world)!;
+    expect(run.companions).toHaveLength(1);
+    expect(game.playerSummaries().map((p) => p.name)).toEqual(['Astrid']);
+    expect(game.onlinePlayers()).toEqual(['Astrid']);
+    for (let i = 0; i < 100; i++) game.tick(50);
+    game.broadcastState();
+    const state = [...la.msgs].reverse().find((m) => m.t === 'state');
+    expect(state && state.t === 'state' && state.players.length).toBe(2);
+    ha({ t: 'run', a: 'leave' });
+    expect(runOf(game.world)).toBeUndefined();
+    expect(Object.values(game.world.players).some((p) => p.bot)).toBe(false);
+    expect(pa.area).toBe('farm');
+    await game.stop();
   });
 });
