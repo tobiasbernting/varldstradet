@@ -19,6 +19,7 @@ var shots_dir := ""
 var _zones: Array = []
 var _exited: Dictionary = {} ## zone -> true once the run reached the pick (the server let me through)
 var _confirmed: Dictionary = {} ## zone -> true once the server's offer showed my vote
+var _beat := 5.0
 var _kit_t := -1.0
 var _kit_sent := false
 var _started := false
@@ -92,6 +93,15 @@ func _partner_near() -> bool:
 
 func _rb_tick(delta: float) -> void:
 	var m := world.model
+	# a heartbeat every ten seconds, so a log says where the bot waits (the bot logs only events, and a long walk or fight is silent)
+	_beat -= delta
+	if _beat <= 0.0:
+		_beat = 10.0
+		var f := m.my_fighter()
+		var alive := _pack_alive() if not _pack_ids.is_empty() else -1
+		_log("tick %.0f s: phase %s, area %s, tile %s, hp %s, pack %s alive %d, target %s, %d fps, driven %s frozen %s speed %.1f, packs beaten %d, zones %s" % [
+			_t, _phase, m.my_area_key(), str(_my_tile()), str(f), str(_pack_ids), alive, str(world.combat.live_target()), Engine.get_frames_per_second(),
+			str(world.hero.driven), str(world.hero.frozen), world.hero.speed_mul, _packs_done, str(_zones)])
 	# the starter weapon (once the class took), then wear it
 	if not _kit_sent and Gear.cls_of(m.my_player()) != "":
 		_kit_sent = true

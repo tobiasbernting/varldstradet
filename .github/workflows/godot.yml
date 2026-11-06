@@ -116,6 +116,13 @@ jobs:
             grep -q "drawn (outdoor)" "demo-$demo.log" || { echo "::error::the $demo demo drew nothing"; exit 1; }
           done
 
+      # Two headless bots play a run through the client against a server in memory: they walk to the färdport, the lead starts,
+      # both clear zone 1, use the exit, vote on a runa and enter zone 2 (tools/bot-check.mts; `--full` plays to the boss, locally).
+      - name: Two bots play the start of a run (the arch window, zone 1, the exit, the cards, zone 2)
+        run: |
+          set -euo pipefail
+          GODOT=~/godot/godot BOT_ONLY=run BOT_RUN_SECONDS=480 pnpm godot:bot 2>&1 | tee runbots.log
+
       - name: Pictures of the farm under Xvfb (day, night, rain; software GL) and the farm bench
         working-directory: packages/godot
         run: |
@@ -204,13 +211,6 @@ jobs:
         run: |
           set -euo pipefail
           GODOT=~/godot/godot BOT_SECONDS=150 pnpm godot:bot 2>&1 | tee bot.log
-
-      # Two headless bots play a run through the client against a server in memory: they walk to the färdport, the lead starts,
-      # both clear zone 1, use the exit, vote on a runa and enter zone 2 (tools/bot-check.mts; `--full` plays to the boss, locally).
-      - name: Two bots play the start of a run (the arch window, zone 1, the exit, the cards, zone 2)
-        run: |
-          set -euo pipefail
-          GODOT=~/godot/godot BOT_ONLY=run BOT_RUN_SECONDS=480 pnpm godot:bot 2>&1 | tee runbots.log
 
       - name: Export all four targets
         working-directory: packages/godot
