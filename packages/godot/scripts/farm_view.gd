@@ -594,7 +594,7 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 	var mname := ""
 	var list: Array = spec.get("m", [])
 	if not list.is_empty():
-		mname = str(list[0])
+		mname = str(list[variant % list.size()]) if bool(spec.get("by_variant", false)) else str(list[0])
 	if kind.begins_with("lm_"):
 		return _landmark(kind, node)
 	var m := assets.mesh(mname) if mname != "" else null
@@ -629,6 +629,33 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 			node.position = Vector3.ZERO
 		"cave", "cave_mouth":
 			_add_light(node, Vector3(0.0, 0.8, 1.0), Color("#8aa0c8"), 3.5, 0.6, 0.0, false)
+		"fardport":
+			# the run arch: a teal-gold glow in the doorway (the saga portal's, in the Världsträd's colours) and its light
+			var fcol := Color("#7fe8c0")
+			var fg := assets.glow_quad(fcol, 1.8, 1.4)
+			fg.position = Vector3(0.0, 1.0, 0.1)
+			node.add_child(fg)
+			var fg2 := assets.glow_quad(Color("#f0e27a"), 0.7, 1.0)
+			fg2.position = Vector3(0.0, 2.55, 0.5)
+			node.add_child(fg2)
+			_add_light(node, Vector3(0.0, 1.4, 1.2), fcol, 5.5, 1.6, 0.25, true)
+		"yggdrasil":
+			# only the Världsträd itself (stage 4) shines
+			if variant >= 4:
+				var ycol := Color("#bff7d8")
+				var yg := assets.glow_quad(ycol, 4.5, 0.9)
+				yg.position = Vector3(0.0, 3.4, 0.0)
+				_billboard(yg)
+				node.add_child(yg)
+				_add_light(node, Vector3(0.0, 3.0, 0.8), ycol, 7.0, 1.4, 0.2, true)
+		"smithy":
+			var ex := assets.mesh("smithy_extras")
+			if ex != null:
+				var emi := MeshInstance3D.new()
+				emi.mesh = ex
+				emi.material_override = assets.prop_mat
+				emi.position = Vector3(1.0, 0.0, 1.2)
+				node.add_child(emi)
 	# windows that shine at night (the village's shop, pizzeria and station)
 	var glows: Variant = spec.get("glows")
 	if glows is Array:

@@ -20,6 +20,8 @@ var talk: TalkWindow
 var klass: ClassWindow
 var travel: TravelWindow
 var quests: QuestsWindow
+var run_arch: RunWindow
+var seed_tree: SeedWindow
 var _all: Array = []
 
 
@@ -42,7 +44,12 @@ func setup(v: WorldView) -> void:
 	klass = _add(ClassWindow.new())
 	travel = _add(TravelWindow.new())
 	quests = _add(QuestsWindow.new())
+	run_arch = _add(RunWindow.new())
+	seed_tree = _add(SeedWindow.new())
 	model.quests_changed.connect(refresh)
+	model.fardkost_changed.connect(refresh)
+	model.tree_changed.connect(refresh)
+	model.run_changed.connect(refresh)
 
 
 func _add(w: GameWindow) -> GameWindow:
@@ -91,6 +98,10 @@ func on_open(c: Dictionary) -> bool:
 			talk.open_npc(str(c.get("npc", "")))
 		"sagaClass":
 			klass.open_window()
+		"run":
+			run_arch.open_window()
+		"seed":
+			seed_tree.open_window()
 		"travel":
 			var o: Variant = model.world_for(model.my_area_key()).get("objects", {}).get(str(int(c.get("id", -1))))
 			travel.open_for("train" if o is Dictionary and str(o.get("kind", "")) == "train_station" else "bus")

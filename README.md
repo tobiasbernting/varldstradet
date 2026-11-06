@@ -158,6 +158,18 @@ this the browser client was not needed for a farm evening, and on 2026-11-02 (M5
 
 ![The farm in the native client](packages/godot/docs/m4a-farm-day.png)
 
+**M5c** puts the runs (färder) on screen. On the farm the **färdport** is a real 3 × 2 arch with a teal-gold glow, the **Yggdrasil shoot**
+grows in five stages with the family's tree (a mound, a sapling, a young tree, a big tree, the glowing Världsträd), and the smithy, herb garden
+and longhouse are buildings. Using the arch opens **the arch window** (your class as a picture, the färdkost slots with the dishes from your
+bag, one big "Starta färden", or "Följ med" when a run lives); the zones are drawn by the dungeon view with the biome's own ground, the walls and
+decor of the dungeon it borrows from, its weather and a glowing exit; the HUD has the clock against the 30-minute target (past it the clock keeps
+counting in a warmer colour), zone n of 3 or the boss, and the runor taken; after each zone **three big cards** are voted on by tap, click, the
+pad's A or the keys 1-3; the end of a run shows a summary; and the shoot opens **the sagaträd** with its 18 nodes. The hired Hirdmannen is a hero
+sprite. `pnpm godot:bot` has a run pair (`BOT_ONLY=run`; `-- --full` plays to the boss, `BOT_RUN_SECONDS=2400`): two bots walk to the arch, start,
+clear zone 1, vote and enter zone 2. Pictures: [the arch window](packages/godot/docs/m5c-arch.png), [a zone](packages/godot/docs/m5c-zone.png),
+[the cards](packages/godot/docs/m5c-cards.png), [the end of a run](packages/godot/docs/m5c-end.png), [the sagaträd](packages/godot/docs/m5c-tree.png),
+[the arch and the tree on the farm](packages/godot/docs/m5c-farm-run.png) and [the new buildings](packages/godot/docs/m5c-smithy.png).
+
 **Röstprat** (voice chat) is back in the native client (2026-11-06). Open it from the pause menu ("Röstprat") or the small button at the top right of the HUD. The game picks up the phone for you when you log in (the window's "Lägg på" hangs up and keeps it hung up). Hold **C** (or the window's "Håll här för att prata" button) to talk: push-to-talk is the default, for the kids; "Öppen mikrofon" in the window keeps the microphone open, "Tysta mikrofonen" turns it off, and "Volym" sets how loud the others are (all of it is remembered in `settings.cfg`). Everything about rooms is as before: devices behind the same address are one room and do not hear each other, one device per room is the speakerphone. Sound goes straight between the rooms' speakers as small mu-law packets on a WebRTC data channel (Godot has no WebRTC audio tracks), 16 kB/s a peer.
 
 ![Röstprat](packages/godot/docs/voice.png)

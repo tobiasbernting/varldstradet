@@ -24,6 +24,13 @@ signal error(text: String)
 ## view draws from these. The area ones carry `area`; the view checks it against the map it draws.
 signal change(c: Dictionary)
 signal quests_changed ## the day's wishes were redrawn by the server
+## Runs (M5c): the run as the server last said it (null: none), the three cards being voted on (null: none), how a run ended
+## for me, the dishes I will bring and the sagaträd (my sagafrön and the nodes I planted).
+signal run_changed
+signal offer_changed
+signal run_ended(summary: Dictionary)
+signal fardkost_changed
+signal tree_changed
 
 var me := ""
 var farm: Dictionary = {}
@@ -40,6 +47,14 @@ var season := "none"
 var weather: Variant = null ## the server's WeatherState {kind, since, until, prev?} or null
 var server_offset_ms := 0.0 ## this clock minus the server's
 var last_now := 0.0 ## the server's clock on the latest `state` (the bot keys its health samples by it)
+var run: Variant = null ## the RunSnap {id, phase, zone, area, biomes, boss, weather, modifiers, elapsed, max, party, runor, earned}, or null
+var run_at := 0 ## Time.get_ticks_msec() when `run` arrived (its clock, elapsed, runs on between messages)
+var offer: Variant = null ## the RunOfferSnap {zone, cards, votes, left, rerolls}, or null
+var offer_at := 0
+var ended: Variant = null ## {outcome, ms, seeds, zones, runor} of the run I was in last
+var fardkost_items: Array = [] ## the dishes I have chosen to bring (item ids)
+var fardkost_slots := 1
+var tree: Dictionary = {"seeds": 0, "earned": 0, "tree": [], "stage": 0}
 
 
 func reset() -> void:
@@ -49,6 +64,12 @@ func reset() -> void:
 	player_snaps = {}
 	animal_snaps = {}
 	saga = {}
+	run = null
+	offer = null
+	ended = null
+	fardkost_items = []
+	fardkost_slots = 1
+	tree = {"seeds": 0, "earned": 0, "tree": [], "stage": 0}
 
 
 func players() -> Dictionary:
@@ -63,6 +84,38 @@ func my_player() -> Dictionary:
 func quests() -> Array:
 	var q: Variant = farm.get("quests")
 	return q if q is Array else []
+
+
+## Am I inside a run's zone?
+func in_run() -> bool:
+	return Data.is_run_key(my_area_key())
+
+
+## The run's clock now (ms): the server's last word plus what has passed here since (the server counts while someone is online).
+func run_elapsed() -> float:
+	if not (run is Dictionary):
+		return 0.0
+	var base := float(run.get("elapsed", 0))
+	if str(run.get("phase", "")) == "ended":
+		return base
+	return base + float(Time.get_ticks_msec() - run_at)
+
+
+## Time left to vote (ms), counted down here between the server's messages.
+func offer_left() -> float:
+	if not (offer is Dictionary):
+		return 0.0
+	return maxf(0.0, float(offer.get("left", 0)) - float(Time.get_ticks_msec() - offer_at))
+
+
+## Is a human or the companion of this run me? (the party list of the RunSnap)
+func in_run_party() -> bool:
+	if not (run is Dictionary):
+		return false
+	for m in run.get("party", []):
+		if m is Dictionary and str(m.get("id", "")) == me:
+			return true
+	return false
 
 
 func my_area_key() -> String:
@@ -348,6 +401,17 @@ func _change(c: Dictionary) -> void:
 		"quests":
 			farm["quests"] = c.get("quests", [])
 			quests_changed.emit()
+		"run":
+			_run_change(c)
+		"seed":
+			if str(c.get("to", "")) == me:
+				tree = {"seeds": int(c.get("seeds", 0)), "earned": int(c.get("earned", 0)), "tree": c.get("tree", []), "stage": int(c.get("stage", 0))}
+				tree_changed.emit()
+		"fardkost":
+			if str(c.get("to", "")) == me:
+				fardkost_items = c.get("items", [])
+				fardkost_slots = int(c.get("slots", 1))
+				fardkost_changed.emit()
 		"day":
 			day = int(c.get("day", day))
 			farm["day"] = day
@@ -359,6 +423,26 @@ func _change(c: Dictionary) -> void:
 			var here: bool = c.get("area") == null or str(c.get("area")) == my_area_key()
 			if mine and here:
 				banner.emit(str(c.get("text", "")), str(c.get("sub", "")), str(c.get("kind", "")))
+
+
+func _run_change(c: Dictionary) -> void:
+	match str(c.get("ev", "")):
+		"state":
+			var r: Variant = c.get("run")
+			run = r if r is Dictionary else null
+			run_at = Time.get_ticks_msec()
+			if run == null:
+				offer = null
+			run_changed.emit()
+		"offer":
+			var o: Variant = c.get("offer")
+			offer = o if o is Dictionary else null
+			offer_at = Time.get_ticks_msec()
+			offer_changed.emit()
+		"ended":
+			if str(c.get("to", "")) == me:
+				ended = {"outcome": str(c.get("outcome", "leave")), "ms": float(c.get("ms", 0)), "seeds": int(c.get("seeds", 0)), "zones": int(c.get("zones", 0)), "runor": c.get("runor", [])}
+				run_ended.emit(ended)
 
 
 func _player_change(c: Dictionary) -> void:
