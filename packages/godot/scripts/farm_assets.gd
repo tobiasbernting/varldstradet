@@ -33,7 +33,7 @@ const BONE := Color("#e2d6b8")
 const EMBER := Color("#ffa040")
 const RUNE := Color("#38d8f0")
 ## The browser's lamp colours (lighting.ts): a lamp's warm light, a fire's.
-const WARM := Color(1.0, 0.72, 0.42)
+const WARM := Color(1.0, 0.66, 0.35)
 const FIRE := Color(1.0, 0.58, 0.26)
 const STONE := Color("#7c7d78")
 const STONE_DARK := Color("#5f625f")
@@ -112,7 +112,7 @@ const SPECS := {
 	"stall": {"m": ["stall"], "front": true},
 	"pigsty": {"m": ["pigsty"], "front": true},
 	"lamp": {"m": ["lamp"], "node": true, "light": [WARM, 7.5, 1.6, 1.5, 0.15], "night": true},
-	"street_lamp": {"m": ["street_lamp"], "node": true, "light": [Color(1.0, 0.86, 0.6), 9.0, 1.7, 2.2, 0.1, 12.0], "night": true},
+	"street_lamp": {"m": ["street_lamp"], "node": true, "light": [Color(1.0, 0.78, 0.5), 9.0, 1.7, 2.2, 0.1, 12.0], "night": true},
 	"lantern": {"m": ["lantern"], "node": true, "light": [WARM, 6.0, 1.4, 0.6, 0.25], "night": true},
 	"torch": {"m": ["torch"], "node": true, "light": [FIRE, 6.0, 1.7, 1.3, 0.35], "night": true},
 	"crystal_lamp": {"m": ["lantern"], "node": true, "light": [Color("#9fe8ff"), 5.0, 1.0, 0.6, 0.1]},
@@ -141,7 +141,7 @@ const SPECS := {
 	"sellstall": {"m": ["sell_stall"], "front": true},
 	"pizzeria": {"m": ["pizzeria"], "node": true, "front": true, "glows": [[-0.8, 0.75, 0.9], [0.8, 0.75, 0.9]], "light": [WARM, 6.0, 1.4, 1.2, 0.15], "night": true},
 	"bathhouse": {"m": ["bathhouse"], "front": true},
-	"train_station": {"m": ["station"], "node": true, "front": true, "glows": [[-0.8, 0.7, 0.75], [0.8, 0.7, 0.75]], "light": [Color(1.0, 0.86, 0.6), 7.0, 1.3, 1.6, 0.1], "night": true},
+	"train_station": {"m": ["station"], "node": true, "front": true, "glows": [[-0.8, 0.7, 0.75], [0.8, 0.7, 0.75]], "light": [Color(1.0, 0.78, 0.5), 7.0, 1.3, 1.6, 0.1], "night": true},
 	"traffic_light": {"m": ["traffic_light"]},
 	"parked_car": {"m": ["car_0", "car_1", "car_2"], "by_variant": true},
 	"banner_pole": {"m": ["banner_0", "banner_1", "banner_2"], "by_variant": true},

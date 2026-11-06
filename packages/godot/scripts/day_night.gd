@@ -394,18 +394,20 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 	# at dusk the green of the grass is pulled back, so the light reads mauve and not just dim
 	var dusk := smoothstep(0.69, 0.76, f) * (1.0 - smoothstep(0.8, 0.86, f)) * (1.0 - float(_wvis["rain"]) * 0.5)
 	_dusk = dusk
-	var amb_l := _ambient * Color(1.0 + 0.04 * dusk, 1.0 - 0.08 * dusk, 1.0 + 0.05 * dusk)
-	env.ambient_light_color = amb_l.lerp(Color(0.2, 0.3, 0.7), tw * 0.5)
-	env.ambient_light_energy = lerpf(0.5, 0.64, _dark) * lerpf(1.0, 0.82, clampf(1.0 - sun_share, 0.0, 1.0) * (1.0 - _dark))
+	# the ambient is a touch cooler than the sun, so a shadow is slightly blue
+	var cool := 1.0 - _dark
+	var amb_l := _ambient * Color(1.0 + 0.12 * dusk - 0.22 * cool, 1.0 - 0.1 * dusk - 0.04 * cool, 1.0 + 0.2 * dusk)
+	env.ambient_light_color = amb_l.lerp(Color(0.22, 0.32, 0.95), tw * 0.9)
+	env.ambient_light_energy = (lerpf(0.2, 0.28, _dark) + 0.1 * dusk) * lerpf(1.0, 2.2, clampf(1.0 - sun_share, 0.0, 1.0) * (1.0 - _dark))
 	# the sun climbs in the east, stands south at noon and sets in the west; at night a pale moon takes its place
 	if up:
 		var low := clampf(1.0 - elevation * 2.2, 0.0, 1.0)
-		var warm := Color(1.0, 0.94, 0.84).lerp(Color(1.0, 0.72, 0.46), low)
+		var warm := Color(1.0, 0.94, 0.8).lerp(Color(1.0, 0.72, 0.46), low)
 		sun.light_color = warm * Color(lit.r * 0.5 + 0.5, lit.g * 0.5 + 0.5, lit.b * 0.5 + 0.5).lerp(lit, low)
-		sun.light_energy = 0.1 + 0.5 * sun_share * smoothstep(0.0, 0.25, elevation) + 0.18 * sun_share * low * (1.0 - _dark)
+		sun.light_energy = 0.05 + 0.34 * sun_share * smoothstep(0.0, 0.25, elevation) + 0.18 * sun_share * low * (1.0 - _dark)
 	else:
 		sun.light_color = Color(0.5, 0.6, 0.95)
-		sun.light_energy = 0.24 * (1.0 - _wet * 0.5)
+		sun.light_energy = 0.18 * (1.0 - _wet * 0.5)
 	var el := deg_to_rad(lerpf(9.0, 62.0, elevation)) if up else deg_to_rad(48.0)
 	var az2 := (az - PI * 0.5) if up else 0.6
 	sun.rotation = Vector3(-el, az2 + PI, 0.0)
@@ -417,7 +419,7 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 	env.background_color = sky_color
 	env.fog_light_color = sky_color
 	var fog_k := _wvis["fog"] as float
-	env.fog_density = 0.0006 + 0.03 * fog_k + 0.006 * _wvis["rain"]
+	env.fog_density = 0.03 * fog_k + 0.004 * _wvis["rain"]
 	env.volumetric_fog_enabled = Quality.spec().get("fog", false) and fog_k > 0.1
 	if env.volumetric_fog_enabled:
 		env.volumetric_fog_density = 0.02 * fog_k
@@ -493,8 +495,12 @@ func _update_grade(delta: float, w: Array) -> void:
 	var peak := maxf(cast.r, maxf(cast.g, cast.b))
 	var want := Color.WHITE.lerp(Color(cast.r / peak, cast.g / peak, cast.b / peak), 0.7 * open)
 	_gtint = _gtint.lerp(want, 1.0 - pow(0.12, delta))
-	var sat := lerpf(0.9, 0.8, _dark) * (1.0 - 0.16 * fog - 0.1 * rain)
-	grade.set_look(sat, smoothstep(0.35, 0.85, _dark) * open, 0.3 + 0.22 * _dark, _gtint, _flash * open, 1.0 - 0.12 * fog, 1.0, _dusk * open)
+	# rich, not pastel: a little more colour than the render by day, never less than 0.9 even in fog
+	var sat := lerpf(1.08, 1.0, _dark)
+	sat = lerpf(sat, 0.95, rain)
+	sat = lerpf(sat, 0.9, fog)
+	var contrast := lerpf(1.06, 1.0, _dark) * (1.0 - 0.06 * fog)
+	grade.set_look(sat, smoothstep(0.35, 0.85, _dark) * open, 0.18 + 0.14 * _dark, _gtint, _flash * open, contrast, 1.0, _dusk * open)
 
 
 func _local_weather(kind: String) -> String:

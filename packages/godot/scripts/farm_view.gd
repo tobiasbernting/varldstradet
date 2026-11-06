@@ -785,7 +785,7 @@ func set_smoke(thick: float, wind: float, light: Color) -> void:
 ## A warm beam of light on the ground in front of a lit window or door, fading away from the wall (it lies along +Z
 ## from `at`, which is on the wall). It is lit by `set_dark` like the glows.
 func _add_beam(parent: Node3D, at: Vector3, size: Vector2, energy: float) -> void:
-	var b := assets.pool_quad(Color(1.0, 0.72, 0.4), size, energy, true)
+	var b := assets.pool_quad(Color(1.0, 0.66, 0.35), size, energy, true)
 	b.position = at + Vector3(0.0, 0.0, size.y * 0.5)
 	parent.add_child(b)
 	_night_glows.append([b, energy])
