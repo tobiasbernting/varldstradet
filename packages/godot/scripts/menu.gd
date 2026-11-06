@@ -63,6 +63,11 @@ func _ready() -> void:
 		_main.add_child(_button(Strings.t("voiceWindow"), func() -> void:
 			close()
 			Voice.open_window()))
+	else:
+		# without the webrtc-native extension: shown greyed, with the reason, rather than hidden
+		var off := _button(Strings.t("voiceUnavailable"), func() -> void: pass)
+		off.disabled = true
+		_main.add_child(off)
 	var dev_title := _title(Strings.t("devTitle"))
 	dev_title.add_theme_font_size_override("font_size", 16)
 	dev_title.modulate = Color(1, 1, 1, 0.7)
