@@ -28,6 +28,15 @@ the owner decides otherwise); `assets/LICENSES.md` has every file's origin.
 - **Names and numbers.** `Label3D` billboards over heads, white with a dark outline, 2 px of outline per 16 px of text.
   Text is never drawn into a sprite.
 
+### Rock walls
+
+The wild maps' rock, sandstone and basalt walls (`farm_view.gd`, `_cliff_tile`) keep their flat tops at varying
+heights, but every side that faces land is a Kenney cliff face (`cliff_large_rock` or `cliff_rock`, picked per tile)
+turned outward and stretched to the wall's height, in one MultiMesh per chunk; about one side in five gets a boulder at
+its foot. The faces take the terrain's colour by material (`CLIFF_FACE` in `farm_assets.gd`, recolour `cliff_<terrain>`).
+A step down to a lower wall tile is closed, so no sky shows between tiles. Sides over water and lava keep a plain face
+down to the bed.
+
 ### The landmarks (lm_*)
 
 The 26 landmarks of the wild maps are put together from pack parts in `scripts/landmark_models.gd`: a list per kind of

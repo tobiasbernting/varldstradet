@@ -31,7 +31,7 @@ const GROUND := {
 	"forge": [Color("#3a3438"), 0.0, 0.0], "bifrost": [Color("#d8d0e8"), 0.0, 0.0],
 }
 ## Cliffs: the top colour; they stand CLIFF_H tall.
-const CLIFF := {"rock": Color("#6c7076"), "sandstone": Color("#b8764a"), "basalt": Color("#3c3a40")}
+const CLIFF := {"rock": Color("#7a7f86"), "sandstone": Color("#b8764a"), "basalt": Color("#3c3a40")}
 ## Liquids: which material draws them and the colour of the bed (lava has none: it glows at ground level).
 const LIQUID := {"water": "water", "pool": "water", "bog": "bog", "choco": "choco", "lava": "lava"}
 const BED := {"water": Color("#3c6270"), "pool": Color("#6aa8c0"), "bog": Color("#2a3320"), "choco": Color("#3a2010"), "lava": Color("#8a2a10")}
@@ -299,6 +299,7 @@ func _build_ground_chunk(ck: Vector2i) -> void:
 	var y0 := ck.y * CHUNK
 	var g := _Surf.new()
 	var liquids: Dictionary = {} ## material name -> _Surf
+	var panels: Dictionary = {} ## mesh name -> Array of Transform3D (the rock walls' Kenney cliff faces)
 	for y in range(y0, mini(y0 + CHUNK, map_h)):
 		for x in range(x0, mini(x0 + CHUNK, map_w)):
 			var t := _terrain_at(x, y)
@@ -306,7 +307,7 @@ func _build_ground_chunk(ck: Vector2i) -> void:
 				continue
 			var vary := 0.93 + 0.14 * _h2(x, y)
 			if CLIFF.has(t):
-				_cliff_tile(g, x, y, t, vary)
+				_cliff_tile(g, panels, x, y, t, vary)
 			elif LIQUID.has(t):
 				_liquid_tile(g, liquids, x, y, t)
 			else:
@@ -343,6 +344,25 @@ func _build_ground_chunk(ck: Vector2i) -> void:
 		mi2.material_override = _liquid_material(str(mname))
 		mi2.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(mi2)
+	for pname in panels.keys():
+		var m := assets.mesh(str(pname))
+		if m == null:
+			continue
+		var list: Array = panels[pname]
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.use_colors = true
+		mm.use_custom_data = true
+		mm.mesh = m
+		mm.instance_count = list.size()
+		for i in range(list.size()):
+			mm.set_instance_transform(i, list[i])
+			mm.set_instance_color(i, Color.WHITE)
+			mm.set_instance_custom_data(i, Color(_h2(int(list[i].origin.x * 7.0), int(list[i].origin.z * 7.0), 12), 0.0, 0.0, 0.0))
+		var mmi := MultiMeshInstance3D.new()
+		mmi.multimesh = mm
+		mmi.material_override = assets.prop_mat
+		root.add_child(mmi)
 	_ground_root.add_child(root)
 	_ground[ck] = root
 
@@ -358,7 +378,10 @@ func _liquid_material(n: String) -> ShaderMaterial:
 	return assets.water_mat
 
 
-func _cliff_tile(g: _Surf, x: int, y: int, t: String, vary: float) -> void:
+## A rock wall tile: a flat top at its height, and on each side that faces land a Kenney cliff face (two shapes,
+## picked by the tile) turned outward and stretched to the height, so the wall's edge is rough rock, not a box.
+## Sides over water or lava keep a plain face down to the bed.
+func _cliff_tile(g: _Surf, panels: Dictionary, x: int, y: int, t: String, vary: float) -> void:
 	var top: Color = CLIFF[t]
 	var h := CLIFF_H * (0.85 + 0.3 * _h2(x, y, 3))
 	var col := Color(top.r * vary, top.g * vary, top.b * vary)
@@ -367,9 +390,34 @@ func _cliff_tile(g: _Surf, x: int, y: int, t: String, vary: float) -> void:
 	var dirs := [Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 0), Vector2i(-1, 0)]
 	for d in dirs:
 		var n := _terrain_at(x + d.x, y + d.y)
-		if n == "" or CLIFF.has(n):
+		if n == "":
 			continue
-		var depth := BED_Y if LIQUID.has(n) else 0.0
+		if CLIFF.has(n):
+			# a step down to a lower wall tile: close it, else the gap shows the sky (white seams)
+			var nh := CLIFF_H * (0.85 + 0.3 * _h2(x + d.x, y + d.y, 3))
+			if nh < h:
+				_step(g, x, y, d, nh, h, side)
+			continue
+		if not LIQUID.has(n):
+			var shape := int(_h2(x + d.x, y + d.y, 13) * 2.0)
+			var pname := "cliffwall_%s_%d" % [t, shape]
+			var inset := 0.29 if shape == 0 else 0.415 # the panel's half depth, so its face sits on the tile's edge
+			var yaw := atan2(-float(d.x), -float(d.y))
+			var at := Vector3(x + 0.5 + d.x * inset, 0.0, y + 0.5 + d.y * inset)
+			if not panels.has(pname):
+				panels[pname] = []
+			# 2 cm under the top, so the face's own top does not fight the tile's top
+			panels[pname].append(Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(1.04, h - 0.02, 1.04)), at))
+			# now and then a boulder at the foot of the wall, so its edge is not a straight line
+			if _h2(x + d.x, y + d.y, 14) < 0.22:
+				var bname := "cliffboulder_%s_%d" % [t, int(_h2(x, y, 15) * 3.0)]
+				if not panels.has(bname):
+					panels[bname] = []
+				var k := 0.7 + 0.5 * _h2(x, y, 16)
+				var foot := Vector3(x + 0.5 + d.x * 0.62 + (_h2(x, y, 17) - 0.5) * 0.5 * abs(d.y), 0.0, y + 0.5 + d.y * 0.62 + (_h2(x, y, 17) - 0.5) * 0.5 * abs(d.x))
+				panels[bname].append(Transform3D(Basis(Vector3.UP, _h2(x, y, 18) * TAU).scaled(Vector3.ONE * k), foot))
+			continue
+		var depth := BED_Y
 		var a := Vector3(x, 0.0, y)
 		var b := Vector3(x + 1, 0.0, y)
 		var c := Vector3(x + 1, 0.0, y + 1)
@@ -384,6 +432,23 @@ func _cliff_tile(g: _Surf, x: int, y: int, t: String, vary: float) -> void:
 			g.quad(c + hv, c + dv, b + dv, b + hv, side, 0.0, 0.0)
 		else:
 			g.quad(a + hv, a + dv, e + dv, e + hv, side, 0.0, 0.0)
+
+
+func _step(g: _Surf, x: int, y: int, d: Vector2i, lo: float, hi: float, col: Color) -> void:
+	var a := Vector3(x, 0.0, y)
+	var b := Vector3(x + 1, 0.0, y)
+	var c := Vector3(x + 1, 0.0, y + 1)
+	var e := Vector3(x, 0.0, y + 1)
+	var hv := Vector3(0.0, hi, 0.0)
+	var lv := Vector3(0.0, lo, 0.0)
+	if d == Vector2i(0, 1):
+		g.quad(e + hv, e + lv, c + lv, c + hv, col, 0.0, 0.0)
+	elif d == Vector2i(0, -1):
+		g.quad(b + hv, b + lv, a + lv, a + hv, col, 0.0, 0.0)
+	elif d == Vector2i(1, 0):
+		g.quad(c + hv, c + lv, b + lv, b + hv, col, 0.0, 0.0)
+	else:
+		g.quad(a + hv, a + lv, e + lv, e + hv, col, 0.0, 0.0)
 
 
 func _liquid_tile(g: _Surf, liquids: Dictionary, x: int, y: int, t: String) -> void:

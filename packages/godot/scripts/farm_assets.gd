@@ -37,6 +37,8 @@ const STONE_DARK := Color("#5f625f")
 const THATCH := Color("#c9a24d")
 const ROOF_RED := Color("#a83a2c")
 const CLOTH := Color("#d9d2c0")
+## The rock walls' faces (Kenney cliffs) by terrain, a little lighter than their tops so the edge reads.
+const CLIFF_FACE := {"cliff_rock": Color("#9a9ea3"), "cliff_sandstone": Color("#c88a5a"), "cliff_basalt": Color("#5e5a62")}
 
 ## kind -> how it is drawn. m: mesh name (or a list the tile's hash picks from); s: scale; fit: [w, d] metres to
 ## scale an imported model into; yaw: "free" (a random turn per tile), "none"; lift: metres; node: its own node
@@ -253,6 +255,16 @@ func _make(n: String) -> ArrayMesh:
 		# a landmark's part (landmark_models.gd): "pk:<path under assets>|<recolour>|<scale>"
 		var pk := n.substr(3).split("|")
 		return _baked("res://assets/" + pk[0], float(pk[2]), pk[1])
+	if n.begins_with("cliffwall_"):
+		# a rock wall's face (farm_view.gd): "cliffwall_<terrain>_<shape>", 1 m wide and 1 m tall, facing -Z
+		var cw := n.split("_")
+		var piece := "cliff_large_rock.glb" if cw[2] == "0" else "cliff_rock.glb"
+		return _baked(NATURE + piece, 1.0, "cliff_" + cw[1])
+	if n.begins_with("cliffboulder_"):
+		# a boulder at a rock wall's foot: "cliffboulder_<terrain>_<0..2>"
+		var cb := n.split("_")
+		var rock := ["rock_tallB.glb", "rock_tallE.glb", "rock_largeC.glb"][int(cb[2])] as String
+		return _baked(NATURE + rock, 1.0, "cliff_" + cb[1])
 	if n.begins_with("gen:"):
 		return _landmark_mesh(n.substr(4))
 	if n.begins_with("ph_"):
@@ -540,7 +552,7 @@ func _recolour(c: Color, mode: String, mat_name := "") -> Color:
 			return FarmMesh.lin(c, 1.0)
 		if c.r > c.g * 1.3:
 			out = c.lerp(WOOD, 0.6)
-	elif mode == "leaf" or mode == "plant" or mode == "kenney" or mode == "cliff":
+	elif mode == "leaf" or mode == "plant" or mode == "kenney" or mode.begins_with("cliff"):
 		# Kenney Nature Kit: one flat (pale) colour per material, so each material takes a palette colour by name.
 		# Leaves and grass take the palette's greens (and, for "leaf", the foliage mask, so the season and the wind
 		# act on them).
@@ -551,7 +563,7 @@ func _recolour(c: Color, mode: String, mat_name := "") -> Color:
 		elif mat_name.begins_with("leafs"):
 			out = GRASS
 		elif mat_name.begins_with("grass"):
-			out = GRASS.lightened(0.08)
+			out = CLIFF_FACE.get(mode, STONE).lightened(0.12) if mode.begins_with("cliff_") else GRASS.lightened(0.08)
 		elif mat_name.begins_with("woodInner"):
 			out = Color("#d8b48a")
 		elif mat_name.begins_with("woodBark") or mat_name.begins_with("woodDark"):
@@ -561,9 +573,9 @@ func _recolour(c: Color, mode: String, mat_name := "") -> Color:
 		elif mat_name.begins_with("stoneDark"):
 			out = STONE_DARK
 		elif mat_name.begins_with("stone"):
-			out = STONE.lightened(0.25)
+			out = CLIFF_FACE.get(mode, STONE.lightened(0.25)) if mode.begins_with("cliff_") else STONE.lightened(0.25)
 		elif mat_name.begins_with("dirt"):
-			out = STONE_DARK if mode == "cliff" else Color("#9a8e7e") # ("cliff": the grey of the map's rock walls)
+			out = CLIFF_FACE.get(mode, STONE_DARK) if mode.begins_with("cliff") else Color("#9a8e7e") # (the walls' rock)
 		elif mat_name.begins_with("water"):
 			out = Color("#5ab4de")
 		elif mat_name.begins_with("colorRed"):
