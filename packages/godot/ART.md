@@ -28,6 +28,14 @@ the owner decides otherwise); `assets/LICENSES.md` has every file's origin.
 - **Names and numbers.** `Label3D` billboards over heads, white with a dark outline, 2 px of outline per 16 px of text.
   Text is never drawn into a sprite.
 
+### Trial: people in 3D (`--people3d`)
+
+`godot --path packages/godot -- --demo=farm --people3d` draws the players as KayKit Adventurers figures by class
+(krigare Barbarian, väktare Knight, magiker Mage, helare Rogue_Hooded) with the pack's idle, walk and death
+animations (`Actor.set_model()`). It is a look to judge, off by default: villagers, animals and monsters stay pixels,
+a player's outfit and look from the creator do not show, and hits, lunges and the frozen and webbed poses are not
+drawn on the figures.
+
 ## Palette
 
 Twelve named colours taken from the existing pixel art (`packages/art/src`). Imported 3D packs are tinted to

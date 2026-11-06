@@ -51,6 +51,12 @@ var _marker_t := 0.0
 var _tool: Sprite3D = null
 var _swing_t := 0.0
 var _swing_side := 1.0
+## The 3D trial (`--people3d`): a KayKit Adventurers figure in place of the pixel sprite, or null.
+var model: Node3D = null
+var _anim: AnimationPlayer = null
+var _model_h := 0.0
+var _yaw := 0.0
+static var _anim_libs: Array = [] ## AnimationLibrary, loaded once from the pack's two rig files
 
 
 func _init() -> void:
@@ -113,6 +119,70 @@ func _placeholder() -> void:
 	_headroom = 0
 
 
+## The 3D trial: shows the KayKit Adventurers figure `path` (a .glb on the shared Rig_Medium skeleton) instead of
+## the sprite, `height_m` tall, with the pack's idle, walk and death animations. false (the sprite stays) if missing.
+func set_model(path: String, height_m := 1.5) -> bool:
+	if model != null and model.get_meta("path", "") == path:
+		return true
+	var scene: Variant = load(path) if ResourceLoader.exists(path) else null
+	if not (scene is PackedScene):
+		return false
+	if model != null:
+		model.queue_free()
+	model = (scene as PackedScene).instantiate()
+	model.set_meta("path", path)
+	var top := 0.0
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		top = maxf(top, (mi as MeshInstance3D).get_aabb().end.y)
+	var k := height_m / maxf(0.1, top)
+	model.scale = Vector3.ONE * k
+	_model_h = height_m
+	add_child(model)
+	_anim = AnimationPlayer.new()
+	model.add_child(_anim)
+	_anim.root_node = NodePath("..")
+	for lib in _libs():
+		_anim.add_animation_library(str(lib.get_meta("name")), lib)
+	sprite.visible = false
+	label.position.y = height_m + 0.3
+	_play("General/Idle_A")
+	return true
+
+
+static func _libs() -> Array:
+	if _anim_libs.is_empty():
+		for pair in [["General", "res://assets/kaykit_adventurers/Rig_Medium_General.glb"], ["Move", "res://assets/kaykit_adventurers/Rig_Medium_MovementBasic.glb"]]:
+			var scene: Variant = load(pair[1]) if ResourceLoader.exists(pair[1]) else null
+			if not (scene is PackedScene):
+				continue
+			var root: Node = (scene as PackedScene).instantiate()
+			var src := root.find_child("AnimationPlayer", true, false) as AnimationPlayer
+			if src != null:
+				var lib: AnimationLibrary = src.get_animation_library("").duplicate(true)
+				for n in ["Idle_A", "Walking_A", "Running_A"]:
+					if lib.has_animation(n):
+						lib.get_animation(n).loop_mode = Animation.LOOP_LINEAR
+				lib.set_meta("name", pair[0])
+				_anim_libs.append(lib)
+			root.free()
+	return _anim_libs
+
+
+func _play(anim_name: String) -> void:
+	if _anim != null and _anim.has_animation(anim_name) and _anim.current_animation != anim_name:
+		_anim.play(anim_name, 0.15)
+
+
+func _animate_model(facing: String, moving: bool, delta: float) -> void:
+	if pose == "down":
+		_play("General/Death_A")
+		return
+	var want: float = {"down": 0.0, "up": PI, "right": PI / 2.0, "left": -PI / 2.0}.get(facing, _yaw)
+	_yaw = lerp_angle(_yaw, want, 1.0 - pow(0.001, delta))
+	model.rotation.y = _yaw
+	_play("Move/Walking_A" if moving else "General/Idle_A")
+
+
 func set_label(text: String) -> void:
 	if label.text != text:
 		label.text = text
@@ -120,6 +190,8 @@ func set_label(text: String) -> void:
 
 ## The figure's height in metres (without the headroom) and its width.
 func height() -> float:
+	if model != null:
+		return _model_h
 	return (_frame_h - _headroom) * PIXEL
 
 
@@ -150,6 +222,9 @@ func animate(facing: String, moving: bool, delta: float) -> void:
 	else:
 		_anim_t = 0.0
 	_tick_looks(delta)
+	if model != null:
+		_animate_model(facing, moving, delta)
+		return
 	if _frames.is_empty():
 		return
 	if pose == "down":

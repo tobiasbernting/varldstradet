@@ -44,6 +44,9 @@ var wheel: Wheel
 var play: FarmPlay
 var demo := false
 var looks: LookComposer
+## The 3D trial: `--people3d` draws players as KayKit Adventurers figures by class instead of pixel sprites.
+var _people3d := OS.get_cmdline_user_args().has("--people3d")
+const PEOPLE_3D := {"krigare": "Barbarian", "vaktare": "Knight", "magiker": "Mage", "helare": "Rogue_Hooded"}
 var _mode := "" ## "dungeon", "outdoor" (the farm and the wild maps) or "" (nothing drawn)
 var _demo_time := -1.0 ## --time=<0..1>: a fixed time of day for pictures
 var _demo_rain := false
@@ -421,6 +424,8 @@ func _place_name(key: String, w: Dictionary) -> String:
 
 ## My own figure: on the farm in my outfit, in a dungeon in my class's.
 func _dress_hero(me: Dictionary) -> void:
+	if _people3d and hero.actor.set_model(_model_of(me)):
+		return
 	if _mode == "outdoor" and looks.available():
 		hero.actor.set_texture(looks.texture_for(me), looks.frames(), 16, 32, 8)
 		hero.actor.set_meta("look", _look_key(me))
@@ -495,6 +500,11 @@ func _on_change(c: Dictionary) -> void:
 				for it in c.get("items", []):
 					names.append(Data.item_name(str(it.get("item", ""))))
 				hud.show_toast(Strings.t("sagaLootToast", {"from": str(c.get("from", "")), "items": ", ".join(names)}))
+
+
+func _model_of(p: Dictionary) -> String:
+	var cls := str(p.get("saga", {}).get("cls", "krigare")) if p.get("saga") is Dictionary else "krigare"
+	return "res://assets/kaykit_adventurers/%s.glb" % PEOPLE_3D.get(cls, "Barbarian")
 
 
 func _hero_sheet_of(p: Dictionary) -> String:
@@ -572,6 +582,8 @@ func _sync_actors() -> void:
 
 
 func _dress(actor: Actor, rec: Dictionary) -> void:
+	if _people3d and actor.set_model(_model_of(rec)):
+		return
 	if _mode == "outdoor" and looks.available():
 		actor.set_texture(looks.texture_for(rec), looks.frames(), 16, 32, 8)
 		actor.set_meta("look", _look_key(rec))
