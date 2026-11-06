@@ -28,7 +28,11 @@ only what a new session needs to continue: state, decisions, how the work is run
   `packages/shared/src/run.ts`, `runmap.ts`, `runsim.ts`, additive protocol messages `run`, `seed`, `fardkost`,
   optional save fields, `run.test.ts` with 200 seeded runs and bot parties, server handlers, data export. The session
   was blocked by the account's weekly usage limit from 2 Nov to 6 Nov 05:26 UTC and resumed then. No PR open as of
-  this writing. **The owner asked to pause when its PR is up: review and report, do not merge, do not start M5c.**
+  05:27 UTC; **PR 11 opened 05:52 UTC, CI green on head a2f078c, not merged.** The owner asked to pause here: a
+  fresh session reviews PR 11 (section 3 recipe) and waits for the owner's verdict on `GAME.md` before M5c. The PR
+  body lists the seven design decisions, the bot minutes per run and six points the child was unsure about; the
+  one to settle with the owner is whether the 30-minute cap should be measured against clumsy (kid-like) bots at
+  21 minutes for three players, as the child chose, or against careful bots.
 - Not yet done: M5c (runs in the Godot client), M6 (the other eight dungeons and chapters), M7 (alive world), M8
   (polish, release tag, homelab deploy of the v2 server, `DESIGN.md` rewrite).
 
@@ -109,6 +113,6 @@ after-M3d bench, the house and village benches and an Intel laptop bench were ne
 ## 6. Identifiers
 
 - Orchestrating session: `session_01KTh22nak5ip5cq8vST7H9Q`. M5b child: `session_01KTh22qkzZkRx6UToLHSTLk`.
-- Pending check-in for M5b: `trig_01LxayHFQTASMNz9yYJL7dN7` (report only, no merge).
+- No check-in is pending; the M5b check-in has fired and reported.
 - Homelab repo `tobiasbernting/homelab`: `cloud/` (Hetzner + Cloudflare + Tailscale, running), `server/roles/lilla-garden`
   and `lilla-garden-cloud`.
