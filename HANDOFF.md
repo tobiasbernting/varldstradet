@@ -141,6 +141,28 @@ Open in this line of work (not blocking):
 5. Nothing of this has been seen on the MacBook (Forward+, Metal) yet: check the night on the farm, the rain, and that
    Mellan holds its frame rate with 900 weather particles and the extra full-screen pass.
 
+## 1d. Creatures in 3D (session `session_01KTh22rMH5UutKMoSA5XCUG`, 2026-11-06, same branch)
+
+The owner asked for the mobs and villagers in 3D like the players ("if you find a good solution go with it"). Built by
+a Sonnet child in a worktree (`creatures-wip`, merged at 4ac4499 and 2d218d3), all behind the existing `--people3d`
+flag, the billboard as the fallback; `pnpm godot:bot` green on the merged head. `ART.md` "Creatures in 3D",
+`DESIGN.md` "Godot client: creatures in 3D (2026-11-06)", `ASSET_MAP.md`, `LICENSES.md`. Pictures
+`packages/godot/docs/creatures-{farm,forest,fight,undead}.png`; `--demo=lineup --set=undead|animals` draws a lineup
+without a server (`scenes/lineup.tscn`, `scripts/demo_lineup.gd`).
+
+| Commit | What |
+| --- | --- |
+| 4032327 | All 44 mobs and bosses exported as `mob_<id>` sheets (39 were missing) |
+| 56b9718 | `voxel_body.gd` + `voxel_body.gdshader`: a creature mesh extruded from a sprite frame (pillow depth profile, the shallower of row and column, floor 1.5 px, cap 3.5 px; outline pixels only on the front and back; per-face shading baked into the vertex colours), cached per sheet and frame |
+| e827ce2 | `Actor.set_voxel`: frame swapping, yaw facing (at most 35° toward a walk up or down the screen), breathing, hit flash, lunge, lying on its side when fallen, the night lift; `world.gd` gives every animal and monster a voxel body under the flag; vehicles stay billboards |
+| 7cf12f7 | KayKit Skeletons (CC0, GitHub `KayKit-Character-Pack-Skeletons-1.0`, 5.5 MB, the Rogue's and Minion's animations stripped by `tools/strip_glb_animations.py`): `skelett` Warrior 1.45 m, `gravvaktare` Warrior 2.5 m, `draugkung` Rogue 2.75 m with a purple cloak and green eyes, `vandrardraug`/`sjodraug` tinted Minions, `gengangare` a 40 % Minion; idle, walk, attack on the swing, Hit_A on the flash, Death_A when fallen (`skeleton_figure.gd`, the `KINDS` table) |
+| c9e759b | The people's figures: hit flash and fallen tint (a material overlay), lunge, `Throw`/`Interact` on the swing (the Adventurers rig has no melee swing), blue frozen tint, Death_A |
+| 334abbf, 2d218d3 | Review fixes; the figures' night lift a tenth of the sprites', the hero's figure none (it blew out white under Forward+ glow) |
+| (this) | The voxel night lift warm-neutral (white animals went electric blue under the navy grade) |
+
+Open: the wolf and other thin side-view sprites are the weakest voxels; `draugkung` reads as a hooded figure rather
+than a crowned king; `creatures-fight.png` is a lineup, not a frame of the real fight; nothing seen on the MacBook.
+
 ## 2. The owner's decisions (do not re-ask)
 
 | Topic | Decision |
