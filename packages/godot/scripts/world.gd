@@ -50,6 +50,11 @@ var _people3d := OS.get_cmdline_user_args().has("--people3d")
 var _mode := "" ## "dungeon", "outdoor" (the farm and the wild maps) or "" (nothing drawn)
 var _demo_time := -1.0 ## --time=<0..1>: a fixed time of day for pictures
 var _demo_rain := false
+var _lapse := 0.0 ## --daylapse=<s>: a whole day in that many real seconds (demo only)
+var _weathers := PackedStringArray() ## --weathers=sun,rain,...: the demo steps through them every --weather-every seconds
+var _weather_every := 20.0
+var _weather_i := 0
+var _weather_t := 0.0
 var _lantern: OmniLight3D ## the hero's lantern outdoors after dark (the browser's: "a lantern only outdoors after dark")
 var _lantern_glow: MeshInstance3D
 var grade := ScreenGrade.new() ## the last pass over the 3D picture (under the HUD)
@@ -177,6 +182,16 @@ func start_demo(fixture := "draug") -> void:
 			model.weather = {"kind": arg.substr(10), "since": model.server_now() - 60000.0, "until": model.server_now() + 600000.0}
 		elif arg.begins_with("--season="):
 			model.season = arg.substr(9)
+		elif arg.begins_with("--daylapse="):
+			_lapse = maxf(float(arg.substr(11)), 1.0)
+			if _demo_time < 0.0:
+				_demo_time = fposmod(model.time_ms / Data.constant("DAY_LENGTH_MS", 600000.0), 1.0)
+		elif arg.begins_with("--weathers="):
+			_weathers = arg.substr(11).split(",", false)
+		elif arg.begins_with("--weather-every="):
+			_weather_every = maxf(float(arg.substr(16)), 1.0)
+	if _weathers.size() > 0:
+		model.weather = {"kind": _weathers[0], "since": model.server_now() - 60000.0, "until": model.server_now() + 600000.0}
 	# --at=x,y (tiles) after --demo: stand somewhere else, for looking around and for screenshots
 	if house and _area != "":
 		var tile_px := Data.tile()
@@ -757,6 +772,8 @@ func _clear_actors() -> void:
 
 
 func _process(delta: float) -> void:
+	if demo:
+		_demo_clock(delta)
 	if _area == "":
 		return
 	if _mode == "outdoor":
@@ -889,6 +906,20 @@ func _frame_camera(delta: float) -> void:
 		return
 	_cam_k = lerpf(_cam_k, want, 1.0 - pow(0.02, delta))
 	_aim_camera(CAMERA_OFFSET.lerp(INSIDE_OFFSET, _cam_k))
+
+
+## The demo's running clock and weather (--daylapse, --weathers): off unless the flags are there.
+func _demo_clock(delta: float) -> void:
+	if _lapse > 0.0 and _demo_time >= 0.0:
+		_demo_time = fposmod(_demo_time + delta / _lapse, 1.0)
+	if _weathers.size() > 1:
+		_weather_t += delta
+		if _weather_t >= _weather_every:
+			_weather_t = 0.0
+			var prev := str((model.weather as Dictionary).get("kind", "sun")) if model.weather is Dictionary else "sun"
+			_weather_i = (_weather_i + 1) % _weathers.size()
+			var now := model.server_now()
+			model.weather = {"kind": _weathers[_weather_i], "prev": prev, "since": now, "until": now + 600000.0}
 
 
 ## The time of day (ms into the day): the server's, running on between its snapshots; fixed in the demo's --time.
