@@ -104,6 +104,12 @@ function demoFarm(): { farm: WorldState; me: ReturnType<typeof createPlayer> } {
     a.x = 26 * 16 + ((a.id * 37) % 90);
     a.y = 23 * 16 + ((a.id * 53) % 60);
   }
+  // M5c: the färdport and the Yggdrasil shoot (stage 3, a big tree), and the three buildings that came with the runs
+  addObject(farm, 'yggdrasil', 14, 20, { variant: 3 });
+  addObject(farm, 'fardport', 17, 20);
+  addObject(farm, 'smithy', 28, 13);
+  addObject(farm, 'herb_garden', 31, 16);
+  addObject(farm, 'longhall', 12, 24);
   const dog = addAnimal(farm, 'dog', 0, 'Fido');
   dog.owner = me.id;
   dog.x = me.x + 24;

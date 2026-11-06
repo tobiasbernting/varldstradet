@@ -91,6 +91,12 @@ const SPECS := {
 	"cave": {"m": ["cave_mouth"], "node": true},
 	"cave_mouth": {"m": ["cave_mouth"], "node": true},
 	"saga_portal": {"m": ["arch"], "node": true},
+	# --- M5c: the runs. The färdport (3 × 2) and the Yggdrasil shoot, five stages by the object's variant, and the three buildings.
+	"fardport": {"m": ["fardport"], "node": true},
+	"yggdrasil": {"m": ["ygg_0", "ygg_1", "ygg_2", "ygg_3", "ygg_4"], "node": true, "by_variant": true},
+	"smithy": {"m": ["smithy"], "node": true, "front": true, "light": [Color("#ff8a3a"), 4.5, 1.1, 1.1, 0.3]},
+	"herb_garden": {"m": ["herb_garden"], "front": true},
+	"longhall": {"m": ["longhall"], "node": true, "front": true, "glows": [[-1.3, 0.62, 1.3], [1.3, 0.62, 1.3]], "light": [Color("#ffc977"), 6.0, 1.2, 1.4, 0.1], "night": true},
 	"scarecrow": {"m": ["scarecrow"]},
 	"bench": {"m": ["bench"], "front": true},
 	"flowerbox": {"m": ["flowerbox"]},
@@ -308,6 +314,16 @@ func _make(n: String) -> ArrayMesh:
 		"bus_stop": return _bus_stop()
 		"cave_mouth": return _cave()
 		"arch": return _arch()
+		"fardport": return RunMeshes.fardport()
+		"ygg_0": return RunMeshes.yggdrasil(0)
+		"ygg_1": return RunMeshes.yggdrasil(1)
+		"ygg_2": return RunMeshes.yggdrasil(2)
+		"ygg_3": return RunMeshes.yggdrasil(3)
+		"ygg_4": return RunMeshes.yggdrasil(4)
+		"smithy": return _baked(HEX + "building_blacksmith_red.gltf", 0.0, "house", Vector2(2.8, 1.9))
+		"smithy_extras": return RunMeshes.smithy_extras()
+		"herb_garden": return RunMeshes.herb_garden()
+		"longhall": return RunMeshes.longhall()
 		"scarecrow": return _scarecrow()
 		"bench": return _bench()
 		"flowerbox": return _flowerbox()
