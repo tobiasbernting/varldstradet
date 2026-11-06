@@ -41,10 +41,11 @@ void fragment() {
 	col *= 1.0 - 0.28 * wet;
 	// drifting cloud shadows on a bright day
 	float cs = vnoise(v_wp.xz * 0.09 + vec2(TIME * 0.35, TIME * 0.12));
-	col *= 1.0 - cloud * smoothstep(0.5, 0.75, cs) * 0.3;
+	col *= 1.0 - cloud * smoothstep(0.45, 0.85, cs) * 0.26;
 	// puddles: low spots where the ground (grass, earth, paths) holds water and mirrors the sky
-	float pd = smoothstep(0.68, 0.76, vnoise(v_wp.xz * 0.5)) * puddle * step(0.5, UV.x);
-	col = mix(col, sky_colour * 0.6, pd * 0.7);
+	float pd = smoothstep(0.78, 0.83, vnoise(v_wp.xz * 0.9 + 17.0)) * puddle * step(0.5, UV.x);
+	col = mix(col, col * 0.7, pd); // wet ground first
+	col = mix(col, sky_colour * 0.5, pd * 0.35); // then a little of the sky
 	ALBEDO = col;
 	ROUGHNESS = mix(1.0, 0.3, pd);
 	SPECULAR = pd * 0.2;

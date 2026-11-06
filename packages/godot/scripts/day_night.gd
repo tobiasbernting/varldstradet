@@ -150,16 +150,16 @@ func _make_particles() -> void:
 	var n := int(Quality.spec().get("weather", 0))
 	if n <= 0:
 		return
-	_rain = _particles(n, 1.1, Vector3(0.0, -18.0, 0.0), Color(0.75, 0.85, 1.0, 0.45), Vector3(0.014, 0.6, 0.014))
+	_rain = _particles(n, 1.1, Vector3(0.0, -18.0, 0.0), Color(0.75, 0.85, 1.0, 0.5), Vector3(0.014, 0.6, 0.014))
 	(_rain.process_material as ParticleProcessMaterial).particle_flag_align_y = true
-	_flakes = _particles(int(n * 0.6), 6.0, Vector3(0.0, -1.4, 0.0), Color(1, 1, 1, 0.95), Vector3(0.05, 0.05, 0.05), 0.9)
-	_flakes2 = _particles(int(n * 0.25), 7.0, Vector3(0.0, -1.0, 0.0), Color(1, 1, 1, 0.5), Vector3(0.2, 0.2, 0.2), 0.9)
+	_flakes = _particles(int(n * 0.6), 6.0, Vector3(0.0, -1.4, 0.0), Color(1, 1, 1, 1.0), Vector3(0.08, 0.08, 0.08), 0.9)
+	_flakes2 = _particles(int(n * 0.25), 7.0, Vector3(0.0, -1.0, 0.0), Color(1, 1, 1, 0.5), Vector3(0.14, 0.14, 0.14), 0.9)
 	var qm := QuadMesh.new()
-	qm.size = Vector2(0.2, 0.2)
+	qm.size = Vector2(0.14, 0.14)
 	var smat := ShaderMaterial.new()
 	smat.shader = _soft_shader()
 	smat.set_shader_parameter("colour", Vector3(1.0, 1.0, 1.0))
-	smat.set_shader_parameter("alpha", 0.55)
+	smat.set_shader_parameter("alpha", 0.9)
 	qm.material = smat
 	_flakes2.draw_pass_1 = qm
 	_leaves = _particles(maxi(8, n / 24), 5.0, Vector3(-3.0, -0.4, 0.6), Color(0.85, 0.6, 0.2, 0.9), Vector3(0.1, 0.02, 0.1), 0.6)
@@ -233,6 +233,7 @@ func _make_extras() -> void:
 	_dew = GPUParticles3D.new()
 	_dew.amount = 60
 	_dew.lifetime = 1.1
+	_dew.preprocess = 3.0
 	_dew.local_coords = false
 	_dew.visibility_aabb = AABB(Vector3(-14, -1, -12), Vector3(28, 3, 24))
 	var pm := ParticleProcessMaterial.new()
@@ -314,6 +315,7 @@ func _particles(amount: int, life: float, vel: Vector3, col: Color, size: Vector
 	p.visibility_aabb = AABB(Vector3(-20, -12, -20), Vector3(40, 24, 40))
 	p.local_coords = false
 	p.draw_order = GPUParticles3D.DRAW_ORDER_INDEX
+	p.preprocess = minf(4.0, life * 3.0) # the sky is already full when a picture is taken or the weather turns
 	var pm := ParticleProcessMaterial.new()
 	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
 	pm.emission_box_extents = Vector3(15.0, 0.5, 11.0)
@@ -340,7 +342,7 @@ func _make_rainbow() -> void:
 	q.size = Vector2(30.0, 15.0)
 	_rainbow.mesh = q
 	var s := Shader.new()
-	s.code = "shader_type spatial;\nrender_mode unshaded, blend_add, depth_draw_never, cull_disabled, depth_test_disabled;\nuniform float amount = 0.0;\nvoid fragment() {\n\tvec2 p = (UV - vec2(0.5, 1.0)) * vec2(2.0, 2.0);\n\tfloat d = length(p);\n\tfloat band = (d - 0.72) / 0.26;\n\tif (band < 0.0 || band > 1.0 || UV.y < 0.0) discard;\n\tvec3 c = 0.5 + 0.5 * cos(6.2831 * (vec3(0.0, 0.33, 0.67) + (1.0 - band) * 0.75));\n\tALBEDO = c * amount * 0.5 * sin(band * 3.1416);\n}\n"
+	s.code = "shader_type spatial;\nrender_mode unshaded, blend_add, depth_draw_never, cull_disabled, depth_test_disabled, fog_disabled;\nuniform float amount = 0.0;\nvoid fragment() {\n\tvec2 p = (UV - vec2(0.5, 1.0)) * vec2(2.0, 2.0);\n\tfloat d = length(p);\n\tfloat band = (d - 0.72) / 0.26;\n\tif (band < 0.0 || band > 1.0 || UV.y < 0.0) discard;\n\tvec3 c = 0.5 + 0.5 * cos(6.2831 * (vec3(0.0, 0.33, 0.67) + (1.0 - band) * 0.75));\n\tALBEDO = c * amount * 0.5 * sin(band * 3.1416);\n}\n"
 	var m := ShaderMaterial.new()
 	m.shader = s
 	_rainbow.material_override = m
@@ -415,7 +417,7 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 	env.background_color = sky_color
 	env.fog_light_color = sky_color
 	var fog_k := _wvis["fog"] as float
-	env.fog_density = 0.0006 + 0.045 * fog_k + 0.006 * _wvis["rain"]
+	env.fog_density = 0.0006 + 0.03 * fog_k + 0.006 * _wvis["rain"]
 	env.volumetric_fog_enabled = Quality.spec().get("fog", false) and fog_k > 0.1
 	if env.volumetric_fog_enabled:
 		env.volumetric_fog_density = 0.02 * fog_k
@@ -440,9 +442,9 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 		env.ambient_light_energy += _bolt * 1.2
 	# dawn mist: builds before sunrise and burns off as the sun climbs, never in rain, storm, wind or hail
 	var mist_want := smoothstep(0.0, 1.0, (f - 0.9) / 0.08) if f > 0.9 else 1.0 - smoothstep(0.0, 1.0, (f - 0.04) / 0.1)
-	if kind == "rain" or kind == "storm" or kind == "wind" or kind == "hail" or _under:
+	if kind == "rain" or kind == "storm" or kind == "wind" or kind == "hail" or kind == "snow" or _under:
 		mist_want = 0.0
-	_mist = lerpf(_mist, mist_want, 1.0 - pow(0.3, delta))
+	_mist = move_toward(_mist, mist_want, delta * 0.25)
 	if _t < 0.2:
 		_mist = mist_want
 	_update_weather(delta, kind, w)
@@ -553,39 +555,48 @@ func _update_weather(delta: float, kind: String, w: Array) -> void:
 	_slant = lerpf(_slant, 0.12 + 0.2 * wind + (0.15 if kind == "storm" else 0.0), k)
 	if _rain != null:
 		var storm := kind == "storm"
-		_rain.emitting = _wvis["rain"] > 0.05
+		_emit(_rain, _wvis["rain"] > 0.05)
 		# a storm is twice the rain
-		_rain.amount_ratio = clampf(_wvis["rain"] * (1.0 if storm else 0.85), 0.05, 1.0)
+		_rain.amount_ratio = clampf(_wvis["rain"], 0.05, 1.0)
 		var rpm := _rain.process_material as ParticleProcessMaterial
 		var hail := kind == "hail"
 		rpm.direction = Vector3(-_slant, -1.0, 0.0).normalized()
 		rpm.initial_velocity_min = 20.0 if hail else 16.0
 		rpm.initial_velocity_max = 24.0 if hail else 20.0
-		(_rain.draw_pass_1 as BoxMesh).size = Vector3(0.05, 0.08, 0.05) if hail else Vector3(0.014, 0.6, 0.014)
-		(_rain.draw_pass_1.material as StandardMaterial3D).albedo_color = Color(0.9, 0.95, 1.0, 0.95) if hail else Color(0.75, 0.85, 1.0, 0.45)
-		_rings.emitting = _wvis["rain"] > 0.1 and not hail
+		(_rain.draw_pass_1 as BoxMesh).size = Vector3(0.05, 0.08, 0.05) if hail else Vector3(0.02, 1.2 if storm else 0.6, 0.02)
+		(_rain.draw_pass_1.material as StandardMaterial3D).albedo_color = Color(0.9, 0.95, 1.0, 0.95) if hail else Color(0.75, 0.85, 1.0, 0.5)
+		_emit(_rings, _wvis["rain"] > 0.1 and not hail)
 		_rings.amount_ratio = clampf(_wvis["rain"] * (1.0 if storm else 0.6), 0.05, 1.0)
 		var snow_on: bool = _wvis["snow"] > 0.05 or (_season == "jul" and _is_farm())
 		var snow_k: float = clampf(maxf(_wvis["snow"], 0.35 if _season == "jul" else 0.0), 0.05, 1.0)
-		_flakes.emitting = snow_on
+		_emit(_flakes, snow_on)
 		_flakes.amount_ratio = snow_k
-		_flakes2.emitting = snow_on
+		_emit(_flakes2, snow_on)
 		_flakes2.amount_ratio = snow_k
 		# flakes drift sideways in the wind
 		for fp in [_flakes, _flakes2]:
 			(fp.process_material as ParticleProcessMaterial).direction = Vector3(-0.25 * wind - 0.05, -1.0, 0.1).normalized()
 		# leaves: always a few in autumn, more in wind
 		var autumn := _year == "autumn" and kind != "rain" and kind != "storm" and kind != "snow"
-		_leaves.emitting = kind == "wind" or autumn
+		_emit(_leaves, kind == "wind" or autumn)
 		_leaves.amount_ratio = 1.0 if kind == "wind" else 0.2
 		(_leaves.draw_pass_1.material as StandardMaterial3D).albedo_color = Color(0.85, 0.62, 0.22, 0.9) if _year != "spring" else Color(0.95, 0.75, 0.85, 0.9)
+
+
+## Start or stop a particle system; a start restarts it so its preprocess fills the sky at once.
+func _emit(p: GPUParticles3D, on: bool) -> void:
+	if on and not p.emitting:
+		p.emitting = true
+		p.restart()
+	elif not on and p.emitting:
+		p.emitting = false
 
 
 ## The fog banks: pale flat patches that drift across the ground and wrap round the hero. Their strength is the fog
 ## weather's (eased) plus the dawn mist, so a change of weather fades them in and out.
 func _drift_banks(delta: float, at: Vector3) -> void:
-	var amount := float(_wvis["fog"]) * 0.6 + _mist * 0.6
-	_bank_k = lerpf(_bank_k, amount, 1.0 - pow(0.2, delta))
+	var amount := float(_wvis["fog"]) * 0.3 + _mist * 0.6
+	_bank_k = move_toward(_bank_k, amount, delta * 0.1) # ~6 s from full to nothing
 	if _t < 0.2:
 		_bank_k = amount
 	var span := 30.0
@@ -656,7 +667,7 @@ func _update_materials(delta: float, kind: String, w: Array, elevation: float, s
 	a.ground_mat.set_shader_parameter("snow", _snow)
 	a.ground_mat.set_shader_parameter("wet", _wet)
 	# cloud shadows: faint in sun, slow and big under cloudy skies; props darken with the ground
-	var cloud := 0.0 if Quality.preset == "lag" else clampf(0.35 * sun_share + 0.6 * _cloudy, 0.0, 0.7) * clampf(elevation * 2.0, 0.0, 1.0)
+	var cloud := 0.0 if Quality.preset == "lag" else clampf(0.35 * sun_share + 0.6 * _cloudy, 0.0, 0.7) * clampf(elevation * 2.0, 0.0, 1.0) * (1.0 - _dark)
 	a.ground_mat.set_shader_parameter("cloud", cloud)
 	a.prop_mat.set_shader_parameter("cloud", cloud)
 	a.ground_mat.set_shader_parameter("puddle", _puddle)

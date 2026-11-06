@@ -720,10 +720,10 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 			node.add_child(gq)
 			_night_glows.append([gq, 0.9])
 			# and the pool it makes on the ground, which is what shows on Låg (the OmniLight is cheap there)
-			var pool := assets.pool_quad(lcol, Vector2.ONE * float(lt[1]) * 0.95, 0.55)
+			var pool := assets.pool_quad(lcol, Vector2.ONE * float(lt[1]) * 0.95, 0.41)
 			pool.position = Vector3(0.0, 0.04, 0.0)
 			node.add_child(pool)
-			_night_glows.append([pool, 0.55])
+			_night_glows.append([pool, 0.41])
 	return node
 
 
@@ -732,6 +732,7 @@ func _add_smoke(parent: Node3D, at: Vector3) -> void:
 	var p := GPUParticles3D.new()
 	p.amount = 12
 	p.lifetime = 5.0
+	p.preprocess = 4.0
 	p.position = at
 	p.local_coords = false
 	p.visibility_aabb = AABB(Vector3(-4, -1, -4), Vector3(8, 8, 8))
@@ -760,7 +761,7 @@ func _add_smoke(parent: Node3D, at: Vector3) -> void:
 	var q := QuadMesh.new()
 	q.size = Vector2(0.6, 0.6)
 	var sh := Shader.new()
-	sh.code = "shader_type spatial;\nrender_mode unshaded, depth_draw_never, cull_disabled;\nuniform vec3 colour = vec3(0.7, 0.7, 0.72);\nvoid vertex() {\n\tMODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0] * length(MODEL_MATRIX[0].xyz), INV_VIEW_MATRIX[1] * length(MODEL_MATRIX[1].xyz), INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);\n}\nvoid fragment() {\n\tfloat k = clamp(1.0 - length(UV * 2.0 - 1.0), 0.0, 1.0);\n\tALBEDO = colour;\n\tALPHA = k * k * COLOR.a * 0.8;\n}\n"
+	sh.code = "shader_type spatial;\nrender_mode unshaded, depth_draw_never, cull_disabled, fog_disabled;\nuniform vec3 colour = vec3(0.7, 0.7, 0.72);\nvoid vertex() {\n\tMODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0] * length(MODEL_MATRIX[0].xyz), INV_VIEW_MATRIX[1] * length(MODEL_MATRIX[1].xyz), INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);\n}\nvoid fragment() {\n\tfloat k = clamp(1.0 - length(UV * 2.0 - 1.0), 0.0, 1.0);\n\tALBEDO = colour;\n\tALPHA = k * k * COLOR.a * 0.8;\n}\n"
 	var m := ShaderMaterial.new()
 	m.shader = sh
 	q.material = m

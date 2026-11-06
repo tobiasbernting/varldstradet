@@ -209,7 +209,7 @@ func _water(shallow: Color, deep: Color, alpha: float) -> ShaderMaterial:
 
 func _glow_shader() -> Shader:
 	var s := Shader.new()
-	s.code = "shader_type spatial;\nrender_mode unshaded, blend_add, depth_draw_never, cull_disabled;\nuniform vec3 colour : source_color = vec3(1.0);\nuniform float energy = 1.0;\nvoid fragment() { float d = length(UV - vec2(0.5)) * 2.0; float k = clamp(1.0 - d, 0.0, 1.0); ALBEDO = colour * energy * k * k; }\n"
+	s.code = "shader_type spatial;\nrender_mode unshaded, blend_add, depth_draw_never, cull_disabled, fog_disabled;\nuniform vec3 colour : source_color = vec3(1.0);\nuniform float energy = 1.0;\nvoid fragment() { float d = length(UV - vec2(0.5)) * 2.0; float k = clamp(1.0 - d, 0.0, 1.0); ALBEDO = colour * energy * k * k; }\n"
 	return s
 
 

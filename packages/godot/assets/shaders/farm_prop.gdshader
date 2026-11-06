@@ -67,7 +67,7 @@ void fragment() {
 	float s = snow * smoothstep(0.3, 0.75, up);
 	col = mix(col, vec3(0.86, 0.9, 0.96), s);
 	col *= 1.0 - 0.22 * wet;
-	col *= 1.0 - cloud * smoothstep(0.5, 0.75, vnoise(v_wp.xz * 0.09 + vec2(TIME * 0.35, TIME * 0.12))) * 0.3;
+	col *= 1.0 - cloud * smoothstep(0.45, 0.85, vnoise(v_wp.xz * 0.09 + vec2(TIME * 0.35, TIME * 0.12))) * 0.3;
 	ALBEDO = col;
 	ROUGHNESS = 1.0;
 	if (v_fol < 0.6 && v_fol > 0.4) {

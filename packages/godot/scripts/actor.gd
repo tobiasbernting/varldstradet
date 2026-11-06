@@ -24,7 +24,14 @@ const BAR_FILL_PRIORITY := 11
 const SWING_TIME := 0.26
 const FALLEN_TINT := Color(0.62, 0.62, 0.72)
 
+## How far the people outdoors are lifted at night, 0..1 (world.gd sets it from the dark: 0 by day, indoors and in
+## dungeons, whose darkness is by design). The sprite's own emission, about 40 % of its day brightness at full dark.
+static var night_lift := 0.0
+const NIGHT_EMISSION := 0.4
+
 var sprite: Sprite3D
+var _mat: StandardMaterial3D ## the sprite's material, so it can glow a little at night
+var _lift := -1.0
 var label: Label3D
 var _frames: Array = []
 var _frame_w := 16
@@ -66,6 +73,17 @@ func _init() -> void:
 	sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
 	sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	sprite.pixel_size = PIXEL
+	_mat = StandardMaterial3D.new()
+	_mat.billboard_mode = BaseMaterial3D.BILLBOARD_FIXED_Y
+	_mat.billboard_keep_scale = true
+	_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+	_mat.alpha_scissor_threshold = 0.5
+	_mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_mat.vertex_color_use_as_albedo = true
+	_mat.emission_enabled = true
+	_mat.emission_energy_multiplier = 0.0
+	sprite.material_override = _mat
 	add_child(sprite)
 	label = Label3D.new()
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -100,6 +118,7 @@ func set_texture(tex: Texture2D, frame_names: Array, fw: int, fh: int, headroom:
 	_headroom = headroom
 	_side_only = not _frames.has("down0")
 	sprite.texture = tex
+	_set_mat_texture(tex)
 	sprite.region_enabled = true
 	sprite.position = Vector3(0.0, _frame_h * PIXEL / 2.0 + FOOT_LIFT, 0.0) + PULL
 	label.position.y = (_frame_h - _headroom) * PIXEL + 0.3
@@ -110,6 +129,7 @@ func _placeholder() -> void:
 	var img := Image.create(16, 24, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0.8, 0.3, 0.8))
 	sprite.texture = ImageTexture.create_from_image(img)
+	_set_mat_texture(sprite.texture)
 	sprite.region_enabled = false
 	sprite.position = Vector3(0.0, 24 * PIXEL / 2.0 + FOOT_LIFT, 0.0) + PULL
 	label.position.y = 24 * PIXEL + 0.3
@@ -214,6 +234,11 @@ func head_position() -> Vector3:
 	return global_position + Vector3(0.0, height() + 0.1, 0.0)
 
 
+func _set_mat_texture(tex: Texture2D) -> void:
+	_mat.albedo_texture = tex
+	_mat.emission_texture = tex
+
+
 func _show(frame_name: String) -> void:
 	var i := _frames.find(frame_name)
 	if i < 0:
@@ -247,6 +272,11 @@ func animate(facing: String, moving: bool, delta: float) -> void:
 
 
 func _tick_looks(delta: float) -> void:
+	# a light floor at night; off while the sprite flashes or lies fallen (their tints must read as they are)
+	var lift := night_lift if (_flash_t <= 0.0 and pose != "down") else 0.0
+	if not is_equal_approx(lift, _lift):
+		_lift = lift
+		_mat.emission_energy_multiplier = lift * NIGHT_EMISSION
 	if _flash_t > 0.0:
 		_flash_t -= delta
 		var k := clampf(_flash_t / 0.12, 0.0, 1.0)
@@ -337,6 +367,7 @@ func set_pose(p: String) -> void:
 	if p == "down":
 		# lying on the ground: the billboard goes, the sprite is laid flat with its feet where it stood
 		sprite.billboard = BaseMaterial3D.BILLBOARD_DISABLED
+		_mat.billboard_mode = BaseMaterial3D.BILLBOARD_DISABLED
 		sprite.rotation = Vector3(-PI / 2.0, 0.0, PI / 2.0)
 		sprite.position = Vector3(0.0, 0.06, -height() / 2.0 + 0.2)
 		sprite.modulate = FALLEN_TINT
@@ -344,6 +375,7 @@ func set_pose(p: String) -> void:
 			_bar.visible = false
 		return
 	sprite.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
+	_mat.billboard_mode = BaseMaterial3D.BILLBOARD_FIXED_Y
 	sprite.rotation = Vector3.ZERO
 	sprite.position = Vector3(0.0, _frame_h * PIXEL / 2.0 + FOOT_LIFT, 0.0) + PULL
 	sprite.modulate = Color.WHITE

@@ -780,12 +780,15 @@ func _process(delta: float) -> void:
 		farm.sky.grade = grade
 		farm.sky.indoors = _cam_k
 		_light_lantern(farm.sky.dark_now(), 1.0 - _cam_k)
+		Actor.night_lift = smoothstep(0.3, 0.8, farm.sky.dark_now()) * (1.0 - _cam_k)
 		farm.sky.update_sky(delta, _clock_ms(), model.season, model.weather, model.server_now())
 	elif _mode == "dungeon":
 		grade.dungeon_look()
+		Actor.night_lift = 0.0
 		_light_lantern(0.0, 0.0)
 	else:
 		_light_lantern(0.0, 0.0)
+		Actor.night_lift = 0.0
 	combat.tick()
 	fx.tick(delta)
 	play.tick(delta)
