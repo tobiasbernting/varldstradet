@@ -378,8 +378,8 @@ func _on_signal(from: String, data: Variant) -> void:
 	if not (data is Dictionary) or not is_speaker() or not voice_peers(state).has(from):
 		return
 	var d: Dictionary = data
-	if str(d.get("k", "")) == "sdp" and str(d.get("type", "")) == "offer" and peers.has(from):
-		_drop(from) # the other side starts over: so do we
+	if str(d.get("k", "")) == "sdp" and str(d.get("type", "")) == "offer" and peers.has(from) and peers[from].has_remote():
+		_drop(from) # the other side starts over: so do we (a peer with nothing from it yet is simply waiting for this offer)
 	var p: VoicePeer = peers.get(from)
 	if p == null:
 		if _ice_ready and available and not _retry.has(from):
