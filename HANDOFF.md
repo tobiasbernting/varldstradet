@@ -25,19 +25,21 @@ only what a new session needs to continue: state, decisions, how the work is run
 | 11 | M5b | `GAME.md`; the run generator, rules and bot brain (`run.ts`, `runmap.ts`, `runsim.ts`, `runbot.ts`), the hired companion, sagafrön and the sagaträd, färdkost, the three buildings, server handlers, data export; reviewed with a fix-up round and the soft 30-minute clock; merged 2026-11-06 12:04 UTC as bd01a91 |
 | 12 | backlog 3 | The character creator in the Godot client: "Ny karaktär" on the login screen, a creator window with the look composer, `POST /api/players` from the client, a headless creator check in `bot-check.mts`, `docs/creator.png`; merged 2026-11-06 14:52 UTC as 70dac5a |
 
-- **In progress:**
-  - **M5c**, branch `m5c-runs-client`, **PR 13** (draft), child `session_01KTh22riKcXRQssJpT6nmes` (Sonnet, started 12:06 UTC):
-    steps 1–10 pushed (head 213d985: the arch, the shoot's five stages, the buildings, the arch window, zones, the run
-    HUD, the cards, the summary, the sagaträd window, the companion, a run bot with a two-bot CI check, docs). Left: the
-    `m5c-*.png` pictures (taken by the CI workflow into the `farm-screenshots` artifact; the child fetches them into
-    `packages/godot/docs/`), the PR body, marking the PR ready. The child goes idle while waiting for CI and does not
-    always wake on its own: nudge it with a message about CI on its own PR. The export job failed once on this branch on
-    the farmer bot's bus step ("the stop did not open the window"), re-run 14:50 UTC; a third failure on that step
-    counts as real. An independent review of the client diff was started in the orchestrating session 14:58 UTC.
-  - **Röstprat (voice)**, branch `godot-voice`, child `session_01KTh22ouaSJXMfDZvpaPHMt` (Sonnet, started 14:57 UTC,
-    backlog item 2): the `webrtc-native` GDExtension for the four targets, a voice client over the existing `voice`
-    messages, a window and a HUD button, a two-bot signalling check, docs and `docs/voice.png`. Told to stay out of
-    the run code. Merge after M5c, or ask it to rebase.
+- **In progress (state at 2026-11-06 16:55 UTC):**
+  - **M5c**, branch `m5c-runs-client`, **PR 13** (draft), child `session_01KTh22riKcXRQssJpT6nmes` (Sonnet). All ten
+    steps pushed, the six review findings fixed (fce9c78, 4c29285, 99cc09f), main merged in (b09cf97). CI then reached
+    the run-pair step for the first time and both run bots stalled after planning the path to the first pack (no
+    walking, no fight, no report for 900 s); the child was told at 16:52 UTC to install Godot in the sandbox, reproduce
+    headless with `BOT_ONLY=run`, fix, then fetch the `m5c-*.png` pictures from the `farm-screenshots` artifact, fill
+    the PR body and mark the PR ready. The child goes idle while waiting for CI and does not always wake on its own:
+    nudge it with a message about CI on its own PR, which it acts on. GitHub does not run the workflow on a PR that
+    conflicts with main, so after every merge to main check `mergeable_state` of the open PRs.
+  - **Röstprat (voice)**, branch `godot-voice`, **PR 14** (draft), child `session_01KTh22ouaSJXMfDZvpaPHMt` (Sonnet,
+    backlog item 2). Decisions taken by the orchestrating session on 2026-11-06: Godot's WebRTC has no media tracks, so
+    sound goes as 16 kHz mono 8-bit mu-law over an unordered data channel (16 kB/s per peer), no echo cancellation,
+    push-to-talk default; the sandbox cannot reach the `webrtc-native` release, so the workflow downloads it on the
+    CI runner (`packages/godot/tools/fetch-webrtc.sh`, pinned to 1.2.2-stable with sha256 after a discover run) and
+    the repository holds no binaries. Merge after M5c.
 - **Review of PR 12 (the creator, 2026-11-06):** CI green, local checks green, an independent review found no bug;
   two nits left for later: the "Inga karaktärer än" hint says to press Ny karaktär even on a guest device that may
   not create characters (`login.gd`, `noCharactersYet`), and the creator check sets the look indexes directly, so the
@@ -135,7 +137,6 @@ after-M3d bench, the house and village benches and an Intel laptop bench were ne
   `session_01KTh22ovyHfUYGF3frNYrnr` (review fixes), `session_01KTh22qjEejiGHLyJoPWc7W` (the soft clock). Creator
   child, done: `session_01KTh22pn3nY1PwSd9U6Gv3B`. M5c child: `session_01KTh22riKcXRQssJpT6nmes`. Voice child:
   `session_01KTh22ouaSJXMfDZvpaPHMt`.
-- One check-in pending at 15:43 UTC (`trig_014xvFvvDPpyzYanYjMUTfdJ`): PR 13's CI and the child's finish, merge M5c,
-  then M6; the voice child.
+- One check-in pending at 17:52 UTC: PR 13's run-bot fix and finish, merge M5c, then M6; PR 14's review after M5c.
 - Homelab repo `tobiasbernting/homelab`: `cloud/` (Hetzner + Cloudflare + Tailscale, running), `server/roles/lilla-garden`
   and `lilla-garden-cloud`.
