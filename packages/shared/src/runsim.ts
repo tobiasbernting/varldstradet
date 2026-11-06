@@ -891,14 +891,17 @@ function victory(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
 /** The end of a run, for any reason: everyone home in front of the arch with everything, the zone and the companion gone. */
 export function endRun(farm: WorldState, run: RunState, outcome: RunOutcome, ctx: SimCtx, except?: string): Change[] {
   const out: Change[] = [];
-  const won = run.outcome === 'win';
+  // a boss that has fallen is a win, whatever ends the run afterwards (the clock, a wipe tick, the chest's 90 seconds)
+  const result: RunOutcome = run.outcome === 'win' ? 'win' : outcome;
   run.phase = 'ended';
-  run.outcome = won ? 'win' : outcome;
+  run.outcome = result;
   for (const p of humans(farm, run)) {
     const s = runSaveOf(p);
-    if (outcome === 'wipe') s.wipes++;
-    if (outcome === 'time' && !won) s.timeouts++;
-    if (outcome === 'time') out.push(banner(p.id, run.key, RUN_T.timeUp, RUN_T.timeUpSub));
+    if (result === 'wipe') s.wipes++;
+    if (result === 'time') {
+      s.timeouts++;
+      out.push(banner(p.id, run.key, RUN_T.timeUp, RUN_T.timeUpSub));
+    }
     sendHome(farm, p, out);
     if (p.id !== except)
       out.push(
