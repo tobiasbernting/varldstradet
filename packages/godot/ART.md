@@ -60,10 +60,12 @@ material, one tint per dungeon look. Emissive parts (flames, runes, glow) take t
 ## What is generated and why
 
 Where a pack the sandbox could reach had nothing (the Kenney kits answered 403 on 2026-11-01), the prop is made in
-code: coffin, bones, urn, rest stone, gate, wall caps (`scripts/dungeon_props.gd`, listed in `LICENSES.md`). They use
-only palette colours and simple shapes so they sit next to the KayKit models without clashing. When the Kenney
-Graveyard Kit is fetched (`tools/fetch-assets.sh`), the coffin, urn and bones can be swapped for its models in the
-`make_prop()` table without touching anything else.
+code: urn, gate, wall caps (`scripts/dungeon_props.gd`, listed in `LICENSES.md`). They use only palette colours and
+simple shapes so they sit next to the KayKit models without clashing. The coffins, bones and rest shrine are KayKit
+Halloween Bits (`assets/kaykit_halloween/`), tinted like the Dungeon models; the generated ones are only drawn when
+that pack is missing. On the farm, KayKit Halloween Bits and Furniture Bits replace the dead trees, pumpkins, lamps
+and lanterns and the farmhouse's bed, table, chairs, sofa, plant and painting, baked like the Hexagon models.
+`ASSET_MAP.md` lists a pack model for each prop that is still generated.
 
 ## Sprites from the drawn-in-code art (packages/art)
 

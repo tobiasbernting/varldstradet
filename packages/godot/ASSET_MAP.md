@@ -5,6 +5,15 @@ CC0 pack model that could replace it. Paths are relative to each pack's `Assets/
 with a gradient palette texture, so they can be baked to vertex colours with `_baked()` exactly like the Hexagon
 models already are.
 
+## Wired in
+
+KayKit Halloween Bits and Furniture Bits are in the game (`assets/kaykit_halloween/`, `assets/kaykit_furniture/`):
+the crypt's coffins, bones and rest shrines; on the farm the dead trees, wild pumpkins, jack-o'-lanterns, lamps,
+street lamps and lanterns, and the farmhouse's bed, table, chairs, sofa, plant and painting. The rows below with
+those models are done; the rest are still suggestions. Rejected after a look: the Halloween fence and bench (graveyard
+iron and too low for the farm), the furniture cabinets and shelves (too low for the wardrobe and bookshelf), the
+`crypt` for the portal (4 m deep, the portal is 2 tiles), and the furniture rugs (plain yellow).
+
 ## The packs
 
 | Short | Pack | Licence | Where | In `downloads/`? |

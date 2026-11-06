@@ -13,6 +13,7 @@ const SCALE := 0.5
 ## only (the Compatibility renderer lights at most eight lights per mesh; Forward+ has no such limit).
 const CHUNK := 8
 const KAYKIT := "res://assets/kaykit/"
+const HALLOWEEN := "res://assets/kaykit_halloween/" ## KayKit Halloween Bits: coffins, bones, the rest shrine
 const FLOOR_MODELS := ["floor_tile_small.gltf.glb", "floor_tile_small_broken_A.gltf.glb", "floor_tile_small_weeds_A.gltf.glb"]
 const FLOOR_BOSS := "floor_tile_small_decorated.gltf.glb"
 ## The stone tint per look (the dungeon's `wall` index): ART.md, "Recolouring imported packs".
@@ -417,8 +418,10 @@ func _make_prop(kind: String, variant: int, x: int, y: int) -> Node3D:
 			if not (_is_open(x, y - 1) or _is_open(x, y + 1)):
 				node.rotation.y = PI / 2.0
 		"saga_rest":
+			# a stone shrine; lit, it carries burning candles (the generated runestone if the pack is missing)
 			var lit := variant == 1
-			node.add_child(DungeonProps.rest_stone(lit, tint()))
+			var shrine := _instance(HALLOWEEN + ("shrine_candles.gltf" if lit else "shrine.gltf"), tint() * 1.1, 0.55)
+			node.add_child(shrine if shrine != null else DungeonProps.rest_stone(lit, tint()))
 			if lit:
 				_add_light(node, Vector3(0.0, 1.2, 0.0), REST_COLOUR, 5.0, 2.0, 0.1)
 		"saga_chest":
@@ -435,9 +438,16 @@ func _make_prop(kind: String, variant: int, x: int, y: int) -> Node3D:
 			if lit:
 				_add_light(node, Vector3(0.0, 0.6, 0.0), PLATE_COLOUR, 2.4, 0.9, 0.1)
 		"saga_coffin":
-			node.add_child(DungeonProps.coffin(variant, tint()))
+			# closed coffins, and every third one open with its skull showing
+			var coffin := _instance(HALLOWEEN + ("coffin_decorated.gltf" if variant % 3 == 2 else "coffin.gltf"), tint(), 0.32)
+			if coffin != null:
+				coffin.rotation.y = [0.0, PI / 2.0, PI / 7.0][variant % 3]
+				node.add_child(coffin)
+			else:
+				node.add_child(DungeonProps.coffin(variant, tint()))
 		"saga_bones":
-			node.add_child(DungeonProps.bones(variant, tint()))
+			var heap := _bones(variant)
+			node.add_child(heap if heap != null else DungeonProps.bones(variant, tint()))
 		"saga_urn":
 			node.add_child(DungeonProps.urn(variant, tint()))
 		_:
@@ -448,6 +458,32 @@ func _make_prop(kind: String, variant: int, x: int, y: int) -> Node3D:
 			if Data.object_def(kind).get("light", false):
 				_add_light(node, Vector3(0.0, 0.8, 0.0), Color(1.0, 0.85, 0.6), 2.8, 0.8, 0.2)
 	return node
+
+
+## A heap of bones on the floor from the Halloween pack: a skull, two or three bones and (on some) a ribcage, laid
+## out by the variant. The bone models are centred on their middle, so each is lifted by half its height. null when
+## the pack is missing.
+func _bones(variant: int) -> Node3D:
+	var heap := Node3D.new()
+	# [model, scale, x, z, turn, lift (model units)]
+	var parts := [
+		["skull.gltf", 0.24, 0.18, -0.15, 0.4, 0.0],
+		["bone_A.gltf", 0.4, -0.12, 0.12, 0.3, 0.14],
+		["bone_C.gltf", 0.32, 0.05, 0.25, -0.6, 0.14],
+		["bone_B.gltf", 0.4, -0.22, -0.18, 1.4, 0.09],
+	]
+	if variant % 2 == 1:
+		parts.append(["ribcage.gltf", 0.38, -0.05, -0.05, 0.9, 0.39])
+	for p in parts:
+		var part := _instance(HALLOWEEN + str(p[0]), tint())
+		if part == null:
+			heap.free()
+			return null
+		part.scale = Vector3.ONE * float(p[1])
+		part.position = Vector3(float(p[2]), float(p[5]) * float(p[1]), float(p[3]))
+		part.rotation.y = float(p[4]) + variant * 1.3
+		heap.add_child(part)
+	return heap
 
 
 func _add_light(parent: Node3D, at: Vector3, colour: Color, range_m: float, energy: float, flicker: float) -> void:

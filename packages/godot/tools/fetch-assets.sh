@@ -9,6 +9,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DL="$HERE/../downloads"
 mkdir -p "$DL"
+touch "$DL/.gdignore" # the packs are not part of the Godot project: only the files copied into assets/ are
 cd "$DL"
 
 echo "== KayKit Dungeon Remastered (CC0): git, the same files as the itch.io download"

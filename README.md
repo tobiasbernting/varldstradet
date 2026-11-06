@@ -343,8 +343,8 @@ them; the Godot workflow fails when they are out of date. `pnpm godot:sprites` r
 committed, so CI does not run it), and `icons.png` with the spells' and emotes' emoji and the pictures of every item (the bag, the hotbar and the pick-up lines draw them).
 
 **Art.** Free CC0 packs only (the owner's decision of 2026-11-01): KayKit Dungeon Remastered for the crypt's walls,
-floor, torches, stairs, chests and candles, tinted to the palette in `ART.md`; what no reachable pack had (coffin,
-bones, urn, rest stone, gate) is made in code. `packages/godot/tools/fetch-assets.sh` downloads the whole packs,
+floor, torches, stairs, chests and candles, tinted to the palette in `ART.md`; KayKit Halloween Bits for the coffins, bones and rest shrines, and with Furniture
+Bits for some of the farm's props; what no reachable pack had (urn, gate) is made in code. `packages/godot/tools/fetch-assets.sh` downloads the whole packs,
 including the Kenney kits the build sandbox could not reach.
 
 **Builds.** `.github/workflows/godot.yml` checks the generated files, imports the project, runs the login scene, the

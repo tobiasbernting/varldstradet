@@ -14,6 +14,8 @@ extends RefCounted
 const KENNEY := "res://assets/kenney_castle/"
 const HEX := "res://assets/kaykit_hex/"
 const DUNGEON_KAYKIT := "res://assets/kaykit/"
+const HALLOWEEN := "res://assets/kaykit_halloween/"
+const FURNITURE := "res://assets/kaykit_furniture/"
 const PROP_SHADER := "res://assets/shaders/farm_prop.gdshader"
 const GROUND_SHADER := "res://assets/shaders/farm_ground.gdshader"
 const WATER_SHADER := "res://assets/shaders/farm_water.gdshader"
@@ -44,8 +46,8 @@ const SPECS := {
 	"tree_pine": {"m": ["pine_a", "pine_b"], "yaw": "free", "grow": [0.85, 1.2]},
 	"tree_snow": {"m": ["pine_a", "pine_b"], "yaw": "free", "grow": [0.85, 1.2]},
 	"stump": {"m": ["stump"], "yaw": "free"},
-	"dead_tree": {"m": ["dead_a", "dead_b"], "yaw": "free", "grow": [0.9, 1.2]},
-	"saga_deadtree": {"m": ["dead_a", "dead_b"], "yaw": "free"},
+	"dead_tree": {"m": ["dead_a", "dead_b", "dead_c"], "yaw": "free", "grow": [0.9, 1.2]},
+	"saga_deadtree": {"m": ["dead_a", "dead_b", "dead_c"], "yaw": "free"},
 	"palm": {"m": ["palm"], "yaw": "free", "grow": [0.9, 1.15]},
 	"jungle_tree": {"m": ["oak_a", "oak_c"], "yaw": "free", "s": 1.3},
 	"rock": {"m": ["rock_big_a", "rock_big_b", "rock_big_c"], "yaw": "free", "grow": [0.9, 1.15]},
@@ -103,7 +105,7 @@ const SPECS := {
 	"stall": {"m": ["stall"], "front": true},
 	"pigsty": {"m": ["pigsty"], "front": true},
 	"lamp": {"m": ["lamp"], "node": true, "light": [Color("#ffc977"), 6.0, 1.4, 1.5, 0.15], "night": true},
-	"street_lamp": {"m": ["lamp"], "node": true, "light": [Color("#ffc977"), 7.0, 1.5, 2.2, 0.1, 12.0], "night": true},
+	"street_lamp": {"m": ["street_lamp"], "node": true, "light": [Color("#ffc977"), 7.0, 1.5, 2.2, 0.1, 12.0], "night": true},
 	"lantern": {"m": ["lantern"], "node": true, "light": [Color("#ffb55a"), 5.0, 1.2, 0.6, 0.25], "night": true},
 	"torch": {"m": ["torch"], "node": true, "light": [Color("#ff9a3c"), 5.5, 1.5, 1.3, 0.35], "night": true},
 	"crystal_lamp": {"m": ["lantern"], "node": true, "light": [Color("#9fe8ff"), 5.0, 1.0, 0.6, 0.1]},
@@ -123,7 +125,7 @@ const SPECS := {
 	"snowman": {"m": ["snowman"]},
 	"xmas_tree": {"m": ["xmas_tree"]},
 	"maypole": {"m": ["maypole"]},
-	"pumpkin_lantern": {"m": ["pumpkin"], "node": true, "light": [Color("#ff9a3c"), 3.0, 0.9, 0.4, 0.3]},
+	"pumpkin_lantern": {"m": ["jack_o_lantern"], "node": true, "light": [Color("#ff9a3c"), 3.0, 0.9, 0.4, 0.3]},
 	# --- Köpingen (city.ts): the Norse market town; its streets are ground, these are what stands on them
 	"house_small": {"m": ["house_b"], "front": true},
 	"apartment": {"m": ["apartment"], "front": true},
@@ -260,8 +262,9 @@ func _make(n: String) -> ArrayMesh:
 		"pine_a": return _baked(KENNEY + "tree-large.glb", 1.6, "pine")
 		"pine_b": return _baked(KENNEY + "tree-small.glb", 1.8, "pine")
 		"stump": return _baked(HEX + "tree_single_A_cut.gltf", 2.6, "wood")
-		"dead_a": return _dead(1.0, 1)
-		"dead_b": return _dead(1.2, 2)
+		"dead_a": return _baked(HALLOWEEN + "tree_dead_large.gltf", 0.5, "keep")
+		"dead_b": return _baked(HALLOWEEN + "tree_dead_medium.gltf", 0.55, "keep")
+		"dead_c": return _baked(HALLOWEEN + "tree_dead_small.gltf", 0.7, "keep")
 		"palm": return _palm()
 		"rock_big_a": return _baked(KENNEY + "rocks-large.glb", 1.1, "stone")
 		"rock_big_b": return _baked(HEX + "rock_single_E.gltf", 3.2, "stone")
@@ -274,7 +277,8 @@ func _make(n: String) -> ArrayMesh:
 		"berry_blue": return _bush(Color("#4a7e3c"), 3, Color("#4a5fd0"))
 		"berry_cloud": return _bush(Color("#6b9a4a"), 4, Color("#f0a640"), 0.6)
 		"berry_ice": return _bush(Color("#6fa4a0"), 5, Color("#9fd8ff"), 0.7)
-		"pumpkin": return _pumpkin()
+		"pumpkin": return _baked(HALLOWEEN + "pumpkin_orange.gltf", 0.55, "keep")
+		"jack_o_lantern": return _baked(HALLOWEEN + "pumpkin_orange_jackolantern.gltf", 0.4, "lamp")
 		"tuft_a": return _tuft(1)
 		"tuft_b": return _tuft(2)
 		"tuft_c": return _tuft(3)
@@ -316,18 +320,21 @@ func _make(n: String) -> ArrayMesh:
 		"hutch": return _shed(1, 1, Color("#a8793f"), Color("#7a5230"), 0.55, 0.3)
 		"sheepfold": return _shed(2, 2, Color("#c9b28a"), Color("#7a6a50"), 0.8, 0.45)
 		"pigsty": return _shed(2, 2, Color("#b27a5a"), Color("#8a4a3a"), 0.8, 0.45)
-		"lamp": return _lamp()
-		"lantern": return _lantern()
+		# the post's lantern hangs 1 unit south of the post: the pivot puts it over the tile's middle, where the light is
+		"lamp": return _baked(HALLOWEEN + "post_lantern.gltf", 0.75, "lamp", Vector2.ZERO, Vector3(0.0, 0.0, 1.0))
+		"street_lamp": return _baked(HALLOWEEN + "post_lantern.gltf", 1.1, "lamp", Vector2.ZERO, Vector3(0.0, 0.0, 1.0))
+		"lantern": return _baked(HALLOWEEN + "lantern_standing.gltf", 0.6, "lamp")
 		"torch": return _torch()
 		"wisp": return _wisp()
 		"rug": return _rug()
-		"bed": return _bed()
-		"table": return _table()
-		"chair": return _chair()
-		"sofa": return _sofa()
+		"bed": return _baked(FURNITURE + "bed_single_A.gltf", 0.0, "keep", Vector2(0.95, 1.95))
+		"table": return _baked(FURNITURE + "table_small.gltf", 0.75, "keep")
+		"chair": return _baked(FURNITURE + "chair_A_wood.gltf", 0.6, "keep")
+		"sofa": return _baked(FURNITURE + "couch_pillows.gltf", 0.0, "keep", Vector2(1.95, 0.95))
 		"bookshelf": return _bookshelf()
-		"houseplant": return _houseplant()
-		"painting": return _painting()
+		"houseplant": return _baked(FURNITURE + "cactus_medium_A.gltf", 0.8, "keep")
+		# hung by its back (the model's origin) with its middle 1.3 m up, as the generated one was
+		"painting": return _baked(FURNITURE + "pictureframe_large_A.gltf", 0.7, "keep", Vector2.ZERO, Vector3.ZERO, Vector3(0.0, 1.3, -0.03))
 		"clock": return _clock()
 		"stove": return _stove()
 		"hay_cart": return _hay_cart()
@@ -362,7 +369,10 @@ func _make(n: String) -> ArrayMesh:
 ## middle on the origin) and scales it: by `scale`, or to fit `fit` metres (width, depth) when that is given.
 ## `recolour`: "pine" turns the pack's teal into the pine green, "stone" greys the blue, "wood" and "house" keep
 ## the pack's colours (the house gets a snow-catching roof by being plain vertex colour like the rest).
-func _baked(path: String, scale: float, recolour: String, fit := Vector2.ZERO) -> ArrayMesh:
+## `pivot` (model units), when given, is the point put at the origin instead of the foot of the middle (a frame
+## hung on a wall, a lamp post whose lantern must sit where the light is); `offset` (metres) moves the result.
+## recolour "lamp" also marks a lantern's candle flame (bright yellow and orange) as a night glow (the window mask, 0.5).
+func _baked(path: String, scale: float, recolour: String, fit := Vector2.ZERO, pivot: Variant = null, offset := Vector3.ZERO) -> ArrayMesh:
 	var scene: Variant = load(path) if ResourceLoader.exists(path) else null
 	if not (scene is PackedScene):
 		warn_once(path, "farm: could not load %s (is the project imported?)" % path)
@@ -386,9 +396,13 @@ func _baked(path: String, scale: float, recolour: String, fit := Vector2.ZERO) -
 	if fit != Vector2.ZERO:
 		k = minf(fit.x / maxf(0.001, size.x), fit.y / maxf(0.001, size.z))
 	var mid := Vector3((lo.x + hi.x) * 0.5, lo.y, (lo.z + hi.z) * 0.5)
+	if pivot is Vector3:
+		mid = pivot
 	for i in range(verts.size()):
-		verts[i] = (verts[i] - mid) * k
-		uvs.append(Vector2.ZERO)
+		verts[i] = (verts[i] - mid) * k + offset
+		var c := cols[i]
+		var lit := recolour == "lamp" and c.r > 0.8 and c.g > 0.18 and c.b < c.g * 0.6
+		uvs.append(Vector2(0.5 if lit else 0.0, 0.0))
 	var arrays: Array = []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = verts
@@ -487,17 +501,6 @@ func _oak(size_k: float, seed_v: int, apples := false) -> ArrayMesh:
 	return b.build()
 
 
-func _dead(size_k: float, seed_v: int) -> ArrayMesh:
-	var b := FarmMesh.new()
-	var col := Color("#6a5848")
-	b.cylinder(Vector3.ZERO, 0.17 * size_k, 0.08 * size_k, 1.5 * size_k, 5, col.darkened(0.2), col, 0.0)
-	for i in range(4):
-		var a := TAU * (i + _rnd(seed_v, i)) / 4.0
-		var y := (0.7 + 0.25 * i) * size_k
-		b.blade(Vector3(0.0, y, 0.0), Vector3(cos(a) * 0.7, y + 0.55, sin(a) * 0.7) * size_k * Vector3(1, 1, 1), 0.1, col, col.lightened(0.1), 0.0, a)
-	return b.build()
-
-
 func _palm() -> ArrayMesh:
 	var b := FarmMesh.new()
 	b.cylinder(Vector3.ZERO, 0.14, 0.09, 1.7, 5, Color("#8a6a40"), Color("#a8844e"), 0.0)
@@ -515,13 +518,6 @@ func _bush(col: Color, seed_v: int, berry := Color(-1, 0, 0), berry_k := 0.5) ->
 		for i in range(7):
 			var a := TAU * (i + _rnd(seed_v, i)) / 7.0
 			b.blob(Vector3(cos(a) * 0.4, 0.2 + 0.25 * _rnd(seed_v, i + 4), sin(a) * 0.4), Vector3.ONE * 0.05 * (1.0 + berry_k), 4, 2, berry.darkened(0.2), berry, 0.0, 0.0)
-	return b.build()
-
-
-func _pumpkin() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.blob(Vector3(0.0, 0.18, 0.0), Vector3(0.28, 0.2, 0.28), 8, 4, Color("#c8561a"), Color("#f08a2a"), 0.0, 0.0)
-	b.cylinder(Vector3(0.0, 0.36, 0.0), 0.04, 0.03, 0.1, 4, Color("#4a7a2a"), Color("#4a7a2a"), 0.0)
 	return b.build()
 
 
@@ -834,22 +830,6 @@ func _shed(w: int, d: int, wall: Color, roof: Color, height: float, door_h: floa
 	return b.build()
 
 
-func _lamp() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.cylinder(Vector3.ZERO, 0.06, 0.04, 1.9, 5, IRON, IRON, 0.0)
-	b.box(Vector3(0.0, 2.0, 0.0), Vector3(0.26, 0.26, 0.26), Color("#ffd98a"), 0.5)
-	b.cone(Vector3(0.0, 2.13, 0.0), 0.22, 0.14, 4, IRON, IRON, 0.0)
-	return b.build()
-
-
-func _lantern() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.box(Vector3(0.0, 0.2, 0.0), Vector3(0.24, 0.4, 0.24), Color("#ffd98a"), 0.5)
-	b.box(Vector3(0.0, 0.02, 0.0), Vector3(0.3, 0.05, 0.3), IRON, 0.0)
-	b.cone(Vector3(0.0, 0.4, 0.0), 0.2, 0.12, 4, IRON, IRON, 0.0)
-	return b.build()
-
-
 func _torch() -> ArrayMesh:
 	var b := FarmMesh.new()
 	b.cylinder(Vector3.ZERO, 0.05, 0.04, 1.2, 5, WOOD.darkened(0.1), WOOD, 0.0)
@@ -870,41 +850,6 @@ func _rug() -> ArrayMesh:
 	return b.build()
 
 
-func _bed() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.box(Vector3(0.0, 0.2, 0.0), Vector3(0.9, 0.4, 1.9), WOOD, 0.0, 0.0, WOOD.lightened(0.1))
-	b.box(Vector3(0.0, 0.5, 0.15), Vector3(0.8, 0.22, 1.5), Color("#4a78c8"), 0.0, 0.0, Color("#6a98e0"))
-	b.box(Vector3(0.0, 0.58, -0.7), Vector3(0.6, 0.14, 0.34), CLOTH, 0.0)
-	return b.build()
-
-
-func _table() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.box(Vector3(0.0, 0.68, 0.0), Vector3(0.95, 0.08, 0.95), WOOD_LIGHT, 0.0, 0.0, WOOD_LIGHT.lightened(0.08))
-	for x in [-0.4, 0.4]:
-		for z in [-0.4, 0.4]:
-			b.box(Vector3(x, 0.32, z), Vector3(0.08, 0.64, 0.08), WOOD.darkened(0.1), 0.0)
-	return b.build()
-
-
-func _chair() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.box(Vector3(0.0, 0.34, 0.0), Vector3(0.44, 0.06, 0.44), WOOD_LIGHT, 0.0)
-	b.box(Vector3(0.0, 0.62, -0.2), Vector3(0.44, 0.5, 0.05), WOOD_LIGHT.darkened(0.08), 0.0)
-	for x in [-0.18, 0.18]:
-		for z in [-0.18, 0.18]:
-			b.box(Vector3(x, 0.16, z), Vector3(0.05, 0.32, 0.05), WOOD.darkened(0.1), 0.0)
-	return b.build()
-
-
-func _sofa() -> ArrayMesh:
-	var b := FarmMesh.new()
-	var c := Color("#6a8a5a")
-	b.box(Vector3(0.0, 0.3, 0.0), Vector3(1.9, 0.5, 0.8), c, 0.0, 0.0, c.lightened(0.1))
-	b.box(Vector3(0.0, 0.7, -0.3), Vector3(1.9, 0.5, 0.22), c.darkened(0.1), 0.0)
-	return b.build()
-
-
 func _bookshelf() -> ArrayMesh:
 	var b := FarmMesh.new()
 	b.box(Vector3(0.0, 0.95, 0.0), Vector3(0.95, 1.9, 0.4), WOOD.darkened(0.1), 0.0, 0.0, WOOD)
@@ -912,23 +857,6 @@ func _bookshelf() -> ArrayMesh:
 	for row in range(4):
 		for i in range(6):
 			b.box(Vector3(-0.38 + 0.15 * i, 0.3 + 0.42 * row, 0.2), Vector3(0.1, 0.3, 0.05), cols[(i + row) % 4], 0.0)
-	return b.build()
-
-
-func _houseplant() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.cylinder(Vector3.ZERO, 0.18, 0.14, 0.3, 6, Color("#a8602a"), Color("#c8783a"), 0.0)
-	for i in range(6):
-		var a := TAU * i / 6.0
-		b.blade(Vector3(0.0, 0.3, 0.0), Vector3(cos(a) * 0.3, 0.75, sin(a) * 0.3), 0.14, Color("#2f6a2c"), Color("#6aa84a"), 0.0, a)
-	return b.build()
-
-
-func _painting() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.box(Vector3(0.0, 1.3, 0.0), Vector3(0.8, 0.6, 0.06), WOOD, 0.0)
-	b.box(Vector3(0.0, 1.3, 0.03), Vector3(0.64, 0.46, 0.04), Color("#7ab0d8"), 0.0)
-	b.box(Vector3(0.0, 1.18, 0.05), Vector3(0.64, 0.2, 0.02), Color("#4f8a3a"), 0.0)
 	return b.build()
 
 
