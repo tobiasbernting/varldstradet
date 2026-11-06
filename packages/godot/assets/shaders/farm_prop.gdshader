@@ -20,10 +20,23 @@ uniform vec3 leaf_c : source_color = vec3(0.39, 0.66, 0.28);
 uniform float glow = 0.0; // night glow of lit windows (vertices with a mask of 0.5)
 uniform vec3 glow_colour : source_color = vec3(1.0, 0.8, 0.45);
 
+uniform float cloud = 0.0; // the same drifting cloud shadows as the ground
+varying vec3 v_wp;
+float hash(vec2 p) {
+	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+float vnoise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+
 varying float v_var;
 varying float v_fol;
 
 void vertex() {
+	v_wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	v_var = INSTANCE_CUSTOM.x;
 	v_fol = UV.x;
 	if (UV.x > 0.9 && wind > 0.0) {
@@ -54,6 +67,7 @@ void fragment() {
 	float s = snow * smoothstep(0.3, 0.75, up);
 	col = mix(col, vec3(0.86, 0.9, 0.96), s);
 	col *= 1.0 - 0.22 * wet;
+	col *= 1.0 - cloud * smoothstep(0.5, 0.75, vnoise(v_wp.xz * 0.09 + vec2(TIME * 0.35, TIME * 0.12))) * 0.3;
 	ALBEDO = col;
 	ROUGHNESS = 1.0;
 	if (v_fol < 0.6 && v_fol > 0.4) {

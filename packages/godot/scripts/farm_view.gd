@@ -101,7 +101,7 @@ func _process(delta: float) -> void:
 			continue
 		var depth: float = f[3]
 		var wobble := 1.0 - depth * (0.5 + 0.35 * sin(_t * 9.0 + float(f[2])) + 0.15 * sin(_t * 23.0 + float(f[2]) * 1.7))
-		var night_k: float = _dark if bool(f[4]) else 1.0
+		var night_k: float = smoothstep(0.35, 0.75, _dark) if bool(f[4]) else 1.0
 		light.light_energy = float(f[1]) * wobble * night_k
 		light.visible = night_k > 0.02
 
@@ -796,7 +796,7 @@ func set_dark(dark: float) -> void:
 	for g in _night_glows:
 		var mi: MeshInstance3D = g[0]
 		if is_instance_valid(mi):
-			var k := smoothstep(0.4, 0.9, dark)
+			var k := smoothstep(0.35, 0.75, dark)
 			(mi.material_override as ShaderMaterial).set_shader_parameter("energy", float(g[1]) * k)
 			mi.visible = k > 0.02
 

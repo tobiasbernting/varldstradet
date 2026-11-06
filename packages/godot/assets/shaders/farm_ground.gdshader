@@ -2,7 +2,7 @@
 // settles on it (grass and earth 1, paths 0.7, stone 0.35, water 0), UV.y how glowing it is (lava). `snow` is the
 // whole map's snow cover 0..1, which comes in patches so the first flakes do not whiten everything at once.
 shader_type spatial;
-render_mode diffuse_lambert, specular_disabled, cull_back;
+render_mode diffuse_lambert, cull_back;
 
 uniform float snow = 0.0;
 uniform float wet = 0.0;
@@ -11,6 +11,8 @@ vec3 lin_to_srgb(vec3 c) {
 	return mix(c * 12.92, 1.055 * pow(max(c, vec3(0.0031308)), vec3(1.0 / 2.4)) - 0.055, step(vec3(0.0031308), c));
 }
 uniform float cloud = 0.0;
+uniform float puddle = 0.0; // how full the puddles are 0..1 (they linger after the rain)
+uniform vec3 sky_colour = vec3(0.6, 0.75, 0.9); // what a puddle mirrors
 varying vec3 v_wp;
 
 float hash(vec2 p) {
@@ -39,8 +41,12 @@ void fragment() {
 	col *= 1.0 - 0.28 * wet;
 	// drifting cloud shadows on a bright day
 	float cs = vnoise(v_wp.xz * 0.09 + vec2(TIME * 0.35, TIME * 0.12));
-	col *= 1.0 - cloud * smoothstep(0.55, 0.8, cs) * 0.22;
+	col *= 1.0 - cloud * smoothstep(0.5, 0.75, cs) * 0.3;
+	// puddles: low spots where the ground (grass, earth, paths) holds water and mirrors the sky
+	float pd = smoothstep(0.68, 0.76, vnoise(v_wp.xz * 0.5)) * puddle * step(0.5, UV.x);
+	col = mix(col, sky_colour * 0.6, pd * 0.7);
 	ALBEDO = col;
-	ROUGHNESS = 1.0;
+	ROUGHNESS = mix(1.0, 0.3, pd);
+	SPECULAR = pd * 0.2;
 	EMISSION = col * UV.y * 1.6;
 }

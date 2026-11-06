@@ -21,9 +21,10 @@ void fragment() {
 	c = mix(vec3(0.5), c, contrast);
 	c *= tint;
 	// night: toward blue-teal, with a little lift in the darks so the shadows are blue and not black
-	vec3 blue = c * vec3(1.14, 0.9, 1.5) + vec3(0.0, 0.012, 0.045) * (1.0 - luma);
+	vec3 blue = mix(vec3(luma), c, 0.55) * vec3(0.72, 0.86, 1.3) + vec3(0.0, 0.012, 0.045) * (1.0 - luma);
 	c = mix(c, blue, night_tint * (1.0 - smoothstep(0.35, 0.8, luma))); // lamps and windows keep their warmth
-	c = mix(c, c * vec3(1.1, 0.9, 1.12), dusk);
+	c = mix(c, c * vec3(1.1, 0.9, 1.12), dusk * 0.4);
+	c = mix(vec3(luma), c, 1.0 - 0.25 * dusk); // dusty, not candy
 	float d = length(SCREEN_UV - vec2(0.5)) * 1.4142;
 	c *= 1.0 - vignette * pow(d, 2.4);
 	c = mix(c, vec3(0.88, 0.92, 1.0), flash * 0.85);

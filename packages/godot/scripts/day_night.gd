@@ -43,6 +43,14 @@ var _target: Node3D ## what the particles and the rainbow follow
 var _rain: GPUParticles3D
 var _flakes: GPUParticles3D
 var _leaves: GPUParticles3D
+var _flakes2: GPUParticles3D ## the big soft flakes (the small sharp ones are `_flakes`)
+var _rings: GPUParticles3D ## splash rings on the ground in rain
+var _banks: Array = [] ## fog banks / dawn mist: big soft flat patches drifting over the ground
+var _bank_k := 0.0
+var _puddle := 0.0 ## puddles fill in rain and linger ~40 s after it
+var _mist := 0.0 ## dawn mist 0..1
+var _cloudy := 0.0
+var _slant := 0.2 ## how far the rain leans (the wind's)
 var _rainbow: MeshInstance3D
 var _bolt := 0.0
 var _flash := 0.0 ## the whole-screen flash of a bolt, 1 -> 0 in a quarter of a second
@@ -97,6 +105,7 @@ func setup(v: FarmView, biome: String, key: String) -> void:
 	add_child(sun)
 	_apply_quality()
 	_make_particles()
+	_make_banks()
 	_make_rainbow()
 
 
@@ -107,6 +116,9 @@ func _clear_children() -> void:
 	_flakes = null
 	_leaves = null
 	_rainbow = null
+	_flakes2 = null
+	_rings = null
+	_banks = []
 
 
 func follow(target: Node3D) -> void:
@@ -132,12 +144,94 @@ func _make_particles() -> void:
 	var n := int(Quality.spec().get("weather", 0))
 	if n <= 0:
 		return
-	_rain = _particles(n, 1.1, Vector3(0.0, -18.0, 0.0), Color(0.75, 0.85, 1.0, 0.55), Vector3(0.02, 0.45, 0.02))
-	_flakes = _particles(int(n * 0.8), 6.0, Vector3(0.0, -1.4, 0.0), Color(1, 1, 1, 0.9), Vector3(0.07, 0.07, 0.07), 0.9)
+	_rain = _particles(n, 1.1, Vector3(0.0, -18.0, 0.0), Color(0.75, 0.85, 1.0, 0.45), Vector3(0.014, 0.6, 0.014))
+	(_rain.process_material as ParticleProcessMaterial).particle_flag_align_y = true
+	_flakes = _particles(int(n * 0.6), 6.0, Vector3(0.0, -1.4, 0.0), Color(1, 1, 1, 0.95), Vector3(0.05, 0.05, 0.05), 0.9)
+	_flakes2 = _particles(int(n * 0.25), 7.0, Vector3(0.0, -1.0, 0.0), Color(1, 1, 1, 0.5), Vector3(0.2, 0.2, 0.2), 0.9)
+	var qm := QuadMesh.new()
+	qm.size = Vector2(0.2, 0.2)
+	var smat := ShaderMaterial.new()
+	smat.shader = _soft_shader()
+	smat.set_shader_parameter("colour", Vector3(1.0, 1.0, 1.0))
+	smat.set_shader_parameter("alpha", 0.55)
+	qm.material = smat
+	_flakes2.draw_pass_1 = qm
 	_leaves = _particles(maxi(8, n / 24), 5.0, Vector3(-3.0, -0.4, 0.6), Color(0.85, 0.6, 0.2, 0.9), Vector3(0.1, 0.02, 0.1), 0.6)
-	for p in [_rain, _flakes, _leaves]:
+	_rings = _make_rings(maxi(12, n / 5))
+	for p in [_rain, _flakes, _flakes2, _leaves, _rings]:
 		p.emitting = false
 		add_child(p)
+
+
+## A soft round patch: alpha falls off from the middle (a flake, a fog bank), blended, not added.
+func _soft_shader() -> Shader:
+	var sh := Shader.new()
+	sh.code = "shader_type spatial;\nrender_mode unshaded, depth_draw_never, cull_disabled, fog_disabled;\nuniform vec3 colour = vec3(1.0);\nuniform float alpha = 0.3;\nuniform float seed = 0.0;\nfloat hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat vnoise(vec2 p) { vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }\nvoid fragment() {\n\tvec2 p = UV * 2.0 - 1.0;\n\tfloat k = clamp(1.0 - length(p), 0.0, 1.0);\n\tk = k * k * (3.0 - 2.0 * k);\n\tk *= 0.65 + 0.35 * vnoise(p * 2.5 + vec2(seed, seed * 1.7));\n\tALBEDO = colour;\n\tALPHA = alpha * k;\n}\n"
+	return sh
+
+
+## Splash rings: small flat rings on the ground round the hero that grow from 10 to 35 cm and fade in a third of a second.
+func _make_rings(amount: int) -> GPUParticles3D:
+	var p := GPUParticles3D.new()
+	p.amount = amount
+	p.lifetime = 0.35
+	p.explosiveness = 0.0
+	p.visibility_aabb = AABB(Vector3(-20, -2, -20), Vector3(40, 4, 40))
+	p.local_coords = false
+	var pm := ParticleProcessMaterial.new()
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	pm.emission_box_extents = Vector3(10.0, 0.0, 8.0)
+	pm.gravity = Vector3.ZERO
+	pm.initial_velocity_min = 0.0
+	pm.initial_velocity_max = 0.0
+	pm.scale_min = 0.3
+	pm.scale_max = 0.4
+	var curve := Curve.new()
+	curve.add_point(Vector2(0.0, 0.3))
+	curve.add_point(Vector2(1.0, 1.0))
+	var ct := CurveTexture.new()
+	ct.curve = curve
+	pm.scale_curve = ct
+	var grad := Gradient.new()
+	grad.set_color(0, Color(1, 1, 1, 0.9))
+	grad.set_color(1, Color(1, 1, 1, 0.0))
+	var gt := GradientTexture1D.new()
+	gt.gradient = grad
+	pm.color_ramp = gt
+	p.process_material = pm
+	var q := QuadMesh.new()
+	q.size = Vector2(0.8, 0.8)
+	q.orientation = PlaneMesh.FACE_Y
+	var sh := Shader.new()
+	sh.code = "shader_type spatial;\nrender_mode unshaded, depth_draw_never, cull_disabled, fog_disabled;\nvoid fragment() {\n\tfloat d = length(UV * 2.0 - 1.0);\n\tfloat ring = smoothstep(0.62, 0.8, d) * (1.0 - smoothstep(0.86, 1.0, d));\n\tALBEDO = vec3(0.85, 0.92, 1.0);\n\tALPHA = ring * COLOR.a * 0.55;\n}\n"
+	var m := ShaderMaterial.new()
+	m.shader = sh
+	q.material = m
+	p.draw_pass_1 = q
+	return p
+
+
+## Fog banks and dawn mist: a handful of big soft patches lying over the ground that drift slowly and wrap round the hero.
+func _make_banks() -> void:
+	if Quality.spec().get("weather", 0) <= 0:
+		return
+	var n := 8
+	for i in n:
+		var mi := MeshInstance3D.new()
+		var q := QuadMesh.new()
+		q.size = Vector2.ONE * (9.0 + 5.0 * fmod(float(i) * 0.37, 1.0))
+		q.orientation = PlaneMesh.FACE_Y
+		mi.mesh = q
+		var m := ShaderMaterial.new()
+		m.shader = _soft_shader()
+		m.set_shader_parameter("seed", float(i) * 3.7)
+		mi.material_override = m
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mi.visible = false
+		mi.set_meta("phase", float(i) / float(n))
+		mi.set_meta("row", float(i % 4))
+		add_child(mi)
+		_banks.append(mi)
 
 
 func _particles(amount: int, life: float, vel: Vector3, col: Color, size: Vector3, spread := 0.08) -> GPUParticles3D:
@@ -225,7 +319,7 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 	# at dusk the green of the grass is pulled back, so the light reads mauve and not just dim
 	var dusk := smoothstep(0.69, 0.76, f) * (1.0 - smoothstep(0.8, 0.86, f)) * (1.0 - float(_wvis["rain"]) * 0.5)
 	_dusk = dusk
-	var amb_l := _ambient * Color(1.0 + 0.1 * dusk, 1.0 - 0.2 * dusk, 1.0 + 0.12 * dusk)
+	var amb_l := _ambient * Color(1.0 + 0.04 * dusk, 1.0 - 0.08 * dusk, 1.0 + 0.05 * dusk)
 	env.ambient_light_color = amb_l.lerp(Color(0.2, 0.3, 0.7), tw * 0.5)
 	env.ambient_light_energy = lerpf(0.5, 0.64, _dark) * lerpf(1.0, 0.82, clampf(1.0 - sun_share, 0.0, 1.0) * (1.0 - _dark))
 	# the sun climbs in the east, stands south at noon and sets in the west; at night a pale moon takes its place
@@ -271,16 +365,26 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 	if _bolt > 0.0:
 		sun.light_energy += _bolt * 2.5
 		env.ambient_light_energy += _bolt * 1.2
-	_update_weather(delta, kind)
+	# dawn mist: builds before sunrise and burns off as the sun climbs, never in rain, storm, wind or hail
+	var mist_want := smoothstep(0.0, 1.0, (f - 0.9) / 0.08) if f > 0.9 else 1.0 - smoothstep(0.0, 1.0, (f - 0.04) / 0.1)
+	if kind == "rain" or kind == "storm" or kind == "wind" or kind == "hail" or _under:
+		mist_want = 0.0
+	_mist = lerpf(_mist, mist_want, 1.0 - pow(0.3, delta))
+	if _t < 0.2:
+		_mist = mist_want
+	_update_weather(delta, kind, w)
 	_update_grade(delta, w)
 	_update_materials(delta, kind, w, elevation, sun_share)
 	view.set_dark(_dark)
 	var cam := get_viewport().get_camera_3d()
 	if _target != null:
 		var at := _target.global_position
-		for p in [_rain, _flakes, _leaves]:
+		for p in [_rain, _flakes, _flakes2, _leaves]:
 			if p != null:
 				p.global_position = at + Vector3(0.0, 11.0, -1.0)
+		if _rings != null:
+			_rings.global_position = Vector3(at.x, 0.06, at.z)
+		_drift_banks(delta, at)
 		if _rainbow != null:
 			_rainbow.global_position = at + Vector3(0.0, 4.5, -15.0)
 			_rainbow.rotation_degrees = Vector3(-8.0, 0.0, 0.0)
@@ -355,7 +459,7 @@ func _year_season(season: String) -> String:
 	return "autumn"
 
 
-func _update_weather(delta: float, kind: String) -> void:
+func _update_weather(delta: float, kind: String, w: Array) -> void:
 	var k := 1.0 - pow(0.12, delta)
 	var wet := kind == "rain" or kind == "storm" or kind == "hail"
 	var snowy := kind == "snow"
@@ -366,14 +470,66 @@ func _update_weather(delta: float, kind: String) -> void:
 	_wvis["snow"] = lerpf(_wvis["snow"], want_snow, k)
 	_wvis["fog"] = lerpf(_wvis["fog"], want_fog, k)
 	_wet = lerpf(_wet, want_rain * 0.8, 1.0 - pow(0.3, delta))
+	# puddles fill in a few seconds of rain and dry out over ~40 s
+	_puddle = move_toward(_puddle, want_rain, delta / (7.0 if wet else 40.0))
+	_cloudy = lerpf(_cloudy, 1.0 if kind == "cloudy" else 0.0, k)
+	var wind := float(w[2])
+	_slant = lerpf(_slant, 0.12 + 0.2 * wind + (0.15 if kind == "storm" else 0.0), k)
 	if _rain != null:
+		var storm := kind == "storm"
 		_rain.emitting = _wvis["rain"] > 0.05
-		_rain.amount_ratio = clampf(_wvis["rain"] * (1.0 if kind != "storm" else 1.0), 0.05, 1.0)
-		(_rain.draw_pass_1.material as StandardMaterial3D).albedo_color = Color(0.75, 0.85, 1.0, 0.55) if kind != "hail" else Color(0.9, 0.95, 1.0, 0.9)
-		_flakes.emitting = _wvis["snow"] > 0.05 or (_season == "jul" and _is_farm())
-		_flakes.amount_ratio = clampf(maxf(_wvis["snow"], 0.35 if _season == "jul" else 0.0), 0.05, 1.0)
-		_leaves.emitting = kind == "wind"
+		# a storm is twice the rain
+		_rain.amount_ratio = clampf(_wvis["rain"] * (1.0 if storm else 0.85), 0.05, 1.0)
+		var rpm := _rain.process_material as ParticleProcessMaterial
+		var hail := kind == "hail"
+		rpm.direction = Vector3(-_slant, -1.0, 0.0).normalized()
+		rpm.initial_velocity_min = 20.0 if hail else 16.0
+		rpm.initial_velocity_max = 24.0 if hail else 20.0
+		(_rain.draw_pass_1 as BoxMesh).size = Vector3(0.05, 0.08, 0.05) if hail else Vector3(0.014, 0.6, 0.014)
+		(_rain.draw_pass_1.material as StandardMaterial3D).albedo_color = Color(0.9, 0.95, 1.0, 0.95) if hail else Color(0.75, 0.85, 1.0, 0.45)
+		_rings.emitting = _wvis["rain"] > 0.1 and not hail
+		_rings.amount_ratio = clampf(_wvis["rain"] * (1.0 if storm else 0.6), 0.05, 1.0)
+		var snow_on: bool = _wvis["snow"] > 0.05 or (_season == "jul" and _is_farm())
+		var snow_k: float = clampf(maxf(_wvis["snow"], 0.35 if _season == "jul" else 0.0), 0.05, 1.0)
+		_flakes.emitting = snow_on
+		_flakes.amount_ratio = snow_k
+		_flakes2.emitting = snow_on
+		_flakes2.amount_ratio = snow_k
+		# flakes drift sideways in the wind
+		for fp in [_flakes, _flakes2]:
+			(fp.process_material as ParticleProcessMaterial).direction = Vector3(-0.25 * wind - 0.05, -1.0, 0.1).normalized()
+		# leaves: always a few in autumn, more in wind
+		var autumn := _year == "autumn" and kind != "rain" and kind != "storm" and kind != "snow"
+		_leaves.emitting = kind == "wind" or autumn
+		_leaves.amount_ratio = 1.0 if kind == "wind" else 0.2
 		(_leaves.draw_pass_1.material as StandardMaterial3D).albedo_color = Color(0.85, 0.62, 0.22, 0.9) if _year != "spring" else Color(0.95, 0.75, 0.85, 0.9)
+
+
+## The fog banks: pale flat patches that drift across the ground and wrap round the hero. Their strength is the fog
+## weather's (eased) plus the dawn mist, so a change of weather fades them in and out.
+func _drift_banks(delta: float, at: Vector3) -> void:
+	var amount := float(_wvis["fog"]) * 0.6 + _mist * 0.6
+	_bank_k = lerpf(_bank_k, amount, 1.0 - pow(0.2, delta))
+	if _t < 0.2:
+		_bank_k = amount
+	var span := 30.0
+	var col := sky_color.lerp(Color.WHITE, 0.25 * (1.0 - _dark))
+	for mi in _banks:
+		var b := mi as MeshInstance3D
+		b.visible = _bank_k > 0.01
+		if not b.visible:
+			continue
+		var ph: float = b.get_meta("phase")
+		var row: float = b.get_meta("row")
+		var drift := fposmod(_t * (0.35 + 0.1 * row) + ph * span, span)
+		var x := at.x - span * 0.5 + drift
+		var z := at.z + (row - 1.5) * 5.0 + sin(_t * 0.05 + ph * 6.0) * 2.0
+		b.global_position = Vector3(x, 0.55 + 0.1 * row, z)
+		var m := b.material_override as ShaderMaterial
+		# fade at the wrap so a bank never pops
+		var edge := minf(drift, span - drift) / 6.0
+		m.set_shader_parameter("alpha", _bank_k * clampf(edge, 0.0, 1.0))
+		m.set_shader_parameter("colour", Vector3(col.r, col.g, col.b))
 
 
 func _is_farm() -> bool:
@@ -423,7 +579,12 @@ func _update_materials(delta: float, kind: String, w: Array, elevation: float, s
 	a.prop_mat.set_shader_parameter("wind", float(w[2]))
 	a.ground_mat.set_shader_parameter("snow", _snow)
 	a.ground_mat.set_shader_parameter("wet", _wet)
-	a.ground_mat.set_shader_parameter("cloud", 0.0 if Quality.preset == "lag" else sun_share * elevation)
+	# cloud shadows: faint in sun, slow and big under cloudy skies; props darken with the ground
+	var cloud := 0.0 if Quality.preset == "lag" else clampf(0.35 * sun_share + 0.6 * _cloudy, 0.0, 0.7) * clampf(elevation * 2.0, 0.0, 1.0)
+	a.ground_mat.set_shader_parameter("cloud", cloud)
+	a.prop_mat.set_shader_parameter("cloud", cloud)
+	a.ground_mat.set_shader_parameter("puddle", _puddle)
+	a.ground_mat.set_shader_parameter("sky_colour", Vector3(sky_color.r, sky_color.g, sky_color.b))
 	var glint := clampf(elevation * sun_share + 0.15, 0.0, 1.0)
 	for m in [a.water_mat, a.bog_mat, a.choco_mat]:
 		m.set_shader_parameter("glint", glint)
