@@ -16,6 +16,12 @@ actually uses are committed; `tools/fetch-assets.sh` fetches the whole packs for
 | Quaternius Stylized Nature MegaKit | Quaternius | CC0 1.0 | https://quaternius.com/packs/stylizednaturemegakit.html | None: the download is behind Patreon/itch with no stable link the sandbox can reach. The oaks, apple trees, bushes, flowers and tufts are generated (below). |
 | Kenney Nature Kit | Kenney | CC0 1.0 | https://kenney.nl/assets/nature-kit | None (403 from the sandbox, no mirror found). |
 
+## Code that is shipped with the game but not committed
+
+| Component | Author | Licence | Source | Use |
+| --- | --- | --- | --- | --- |
+| webrtc-native (GDExtension, `addons/webrtc/`) | The Godot Foundation and contributors (built on libdatachannel) | MIT (the release's `LICENSE` files; libdatachannel is MPL-2.0) | https://github.com/godotengine/webrtc-native, the release pinned in `.github/workflows/godot.yml` and fetched by `tools/fetch-webrtc.sh` | Röstprat (`scripts/voice.gd`): the WebRTC implementation behind Godot's `WebRTCPeerConnection`. **The licence text must be checked against the pinned release's files when it is pinned** (written without access to the release). |
+
 ## Generated for this project (no third-party licence)
 
 The farm's generated props (`scripts/farm_assets.gd`, built with `scripts/farm_mesh.gd`, coloured from the palette in `ART.md`) are listed at the end of this section.
