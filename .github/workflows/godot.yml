@@ -122,18 +122,27 @@ jobs:
           GODOT=~/godot/godot BOT_ONLY=run BOT_RUN_SECONDS=480 pnpm godot:bot 2>&1 | tee runbots.log
 
       # M6a: the same fighter pair in Frostjättens borg, Surts smedja and Helheim (the dev way in: DEV_TELEPORT=1, `dev saga`):
-      # each clears its first two packs against a server in memory (about 25 s each).
+      # each clears its first two packs against a server in memory. The three run side by side, each on ports of its own
+      # (a run uses its port and the next two).
       - name: Two bots clear the first packs of Frostjättens borg, Surts smedja and Helheim (the dev way in)
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          port=8100
           for d in frost surt hel; do
-            echo "== $d"
-            GODOT=~/godot/godot BOT_ONLY=dungeon BOT_DUNGEON=$d BOT_PACKS=2 BOT_SECONDS=240 pnpm godot:bot 2>&1 | tee "bot-$d.log"
+            (GODOT=~/godot/godot BOT_ONLY=dungeon BOT_DUNGEON=$d BOT_PORT=$port BOT_PACKS=2 BOT_SECONDS=240 pnpm godot:bot > "bot-$d.log" 2>&1; echo $? > "bot-$d.code") &
+            port=$((port + 3))
           done
+          wait
+          bad=0
+          for d in frost surt hel; do
+            echo "== $d"; cat "bot-$d.log"
+            test "$(cat "bot-$d.code")" = 0 || { echo "::error::the $d bot pair failed"; bad=1; }
+          done
+          exit $bad
 
       # M6a: every move of the mid-boss and the boss of each of the three plays on the recorded dungeon, from the data
       # (scripts/demo_bosses.gd): the cast bar, the marks on the floor, the landing, the ice block, the burning ground, the
-      # helpers, the pull. The three run side by side (about 40 s).
+      # helpers, the pull. The three run side by side (about 15 s).
       - name: Play the bosses' moves of Frostjättens borg, Surts smedja and Helheim headless (telegraphs, cast bars, what they leave)
         working-directory: packages/godot
         run: |

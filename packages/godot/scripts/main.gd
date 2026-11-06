@@ -86,6 +86,7 @@ func _ready() -> void:
 			show.world = world
 			show.only = _arg(args, "--boss-move", "")
 			show.quit_when_done = args.has("--once")
+			show.speed = 3.0 if show.quit_when_done else 1.0
 			add_child(show)
 	else:
 		_show_login()

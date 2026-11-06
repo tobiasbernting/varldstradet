@@ -11,6 +11,7 @@ extends DemoFight
 ## `--boss-move=<species>:<move>:after` holds what it leaves behind (the ice block, the burning ground, the helpers).
 
 var quit_when_done := false ## `--once`: leave the program when the show has played (the CI run)
+var speed := 1.0 ## the show runs this many times faster (`--once` in CI: 3): show time, and the warning times of the marks
 var only := "" ## "<species>:<move>[:after]", or "" for the whole show
 var _q: Array = [] ## [at seconds, Callable]
 var _qi := 0
@@ -120,11 +121,11 @@ func _move_show(sp: String, id: int, mv: Dictionary, max_hp: float, phase: int, 
 		ids.append("dz%d" % _spare)
 	_at(t, func() -> void:
 		print("bosses: %s %s (%s) casts, %d marks" % [sp, move, str(mv.get("name", "")), zones.size()])
-		_state({str(id): [_hp, max_hp]}, {}, _cast(str(mv.get("name", "")), warn, bool(mv.get("interrupt", false))))
+		_state({str(id): [_hp, max_hp]}, {}, _cast(str(mv.get("name", "")), warn / speed, bool(mv.get("interrupt", false))))
 		_spell(id, "cast_" + move, _bx, _by)
 		for k in range(zones.size()):
 			var z: Dictionary = zones[k]
-			_zone(ids[k], str(z["shape"]), float(z["x"]), float(z["y"]), float(z["r"]), warn * 1000.0, z.get("extra", {}))
+			_zone(ids[k], str(z["shape"]), float(z["x"]), float(z["y"]), float(z["r"]), warn * 1000.0 / speed, z.get("extra", {}))
 		_expect_zones(ids, true, "%s %s: marked on the floor" % [sp, move]))
 	t += warn + 0.05
 	var after := 0.6
@@ -258,7 +259,8 @@ func _warp(id: int, x: float, y: float) -> void:
 
 ## Checks, a few frames from now, that the fx view holds (or no longer holds) each of these zones.
 func _expect_zones(ids: Array, present: bool, what: String) -> void:
-	_pending.append([4, func() -> void:
+	# (a mark is looked for two frames after it was fed, and a missing one four: a fast show lands them soon)
+	_pending.append([2 if present else 4, func() -> void:
 		for zid in ids:
 			_checks += 1
 			if world.fx._zones.has(zid) != present:
@@ -349,7 +351,7 @@ func _process(delta: float) -> void:
 		else:
 			left.append(c)
 	_pending = left
-	_show_t += delta
+	_show_t += delta * speed
 	while _qi < _q.size() and _show_t >= float(_q[_qi][0]):
 		_q[_qi][1].call()
 		_qi += 1
