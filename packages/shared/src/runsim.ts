@@ -316,9 +316,10 @@ function refresh(farm: WorldState, run: RunState): void {
 }
 
 /** Sagafrön to every human in the run (`n` before the bonuses of runor, the tree and modifiers). */
-function pay(farm: WorldState, run: RunState, n: number, out: Change[], quiet = false): void {
-  if (n <= 0) return;
+function pay(farm: WorldState, run: RunState, base: number | ((p: PlayerState) => number), out: Change[], quiet = false): void {
   for (const p of humans(farm, run)) {
+    const n = typeof base === 'function' ? base(p) : base;
+    if (n <= 0) continue;
     const bonus = (effectFor(farm, run, p).seeds ?? 0) + MODIFIER_SEEDS * run.plan.modifiers.length;
     // the bonuses are added exactly: whole seeds are paid and the remainder is carried to the next payment
     const exact = n * (1 + bonus) + (run.carry[p.id] ?? 0);
@@ -866,8 +867,8 @@ function victory(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
   run.victoryAt = run.elapsed;
   run.outcome = 'win';
   const boss = run.plan.boss;
-  const bonus = Math.max(0, ...humans(farm, run).map((p) => effectFor(farm, run, p).bossSeeds ?? 0));
-  pay(farm, run, (run.plan.replay ? RUN_SEEDS.bossReplay : RUN_SEEDS.bossFirst) + bonus, out);
+  // f6 is the planter's own: only the member who planted it gets the five extra
+  pay(farm, run, (p) => (run.plan.replay ? RUN_SEEDS.bossReplay : RUN_SEEDS.bossFirst) + (effectFor(farm, run, p).bossSeeds ?? 0), out);
   const crops = ['carrot', 'potato', 'strawberry', 'tomato', 'pumpkin', 'sunflower', 'wheat'];
   for (const p of humans(farm, run)) {
     // the chapter is cleared for everyone in the party, offline members too (sagasim already did it for those standing in the zone)

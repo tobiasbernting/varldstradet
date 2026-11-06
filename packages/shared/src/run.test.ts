@@ -28,6 +28,7 @@ import {
   TREE_TOTAL,
   SOLO_MERCY,
   ITEMS,
+  LEASH_TILES,
   WIPE_MS,
   XP_LEVELS,
   equipGear,
@@ -605,6 +606,29 @@ describe('every effect', () => {
     }
     expect([...seen]).toEqual([0]);
     expect(plan.moves).toBeDefined();
+  });
+
+  it('the leash bonus of the fog (dimma) is for monsters in packs, not for bosses', () => {
+    const state = (kind: 'mob' | 'boss', leash: number): string => {
+      const l = lab({});
+      l.inst.run!.leash = leash;
+      l.inst.run!.dmgMul = 0;
+      const { animal, mob } = kind === 'boss' ? l.place('draugkung', 4, 'boss') : l.place('skelett', 4);
+      // home is three tiles past the plain leash from whoever the monster is judged by: the hero for a boss, itself for a pack monster
+      const far = (LEASH_TILES + 3) * TILE;
+      mob.state = 'fight';
+      mob.threat[l.p.id] = 5;
+      mob.target = l.p.id;
+      mob.home = kind === 'boss' ? { x: l.p.x - far, y: l.p.y } : { x: animal.x - far, y: animal.y };
+      l.go(100);
+      return l.inst.mobs[mob.id]!.state;
+    };
+    // a pack monster holds on in the fog and gives up without it
+    expect(state('mob', 6)).toBe('fight');
+    expect(state('mob', 0)).not.toBe('fight');
+    // a boss gives up when everyone is past the plain leash, fog or not
+    expect(state('boss', 6)).not.toBe('fight');
+    expect(state('boss', 0)).not.toBe('fight');
   });
 
   it('every runa and node changes something: a combat number in the buffs or one of the run’s own', () => {
@@ -1425,6 +1449,20 @@ describe('the clock, the wipe and the end', () => {
     expect(drop!.t === 'drop' && drop!.area).toBe(run.key);
     expect(Object.values(party.world.areas![run.key]!.drops).some((d) => d.item.endsWith('_seed'))).toBe(true);
     expect(Object.keys(party.world.drops)).toHaveLength(farmDrops);
+  });
+
+  it('f6 pays its five extra sagafrön to the planter only, not to the whole party', () => {
+    const duo = makeParty(['magiker', 'vaktare'], { seed: 6 });
+    const [a, b] = duo.players as [import('./index.ts').PlayerState, import('./index.ts').PlayerState];
+    runSaveOf(a).tree = ['f1', 'f3', 'f6'];
+    startRun(duo.world, a.id, { seed: 6 }, duo.ctx());
+    const { inst } = atTheBoss(duo);
+    const before = [readRun(a).seeds, readRun(b).seeds];
+    castSpell(duo.world, a.id, 'eldboll', inst.boss, duo.ctx());
+    for (let i = 0; i < 4; i++) step(duo, false, []);
+    expect(inst.bossDown).toBe(true);
+    expect(readRun(a).seeds).toBe(before[0]! + RUN_SEEDS.bossFirst + 5);
+    expect(readRun(b).seeds).toBe(before[1]! + RUN_SEEDS.bossFirst);
   });
 
   it('a dropped connection: the player comes back to the zone, or home when the run is over', () => {

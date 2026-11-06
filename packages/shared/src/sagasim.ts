@@ -1364,7 +1364,8 @@ function tickMob(h: Here, m: SagaMob, dtMs: number, ctx: SimCtx, fields: Map<str
     return;
   }
   // fighting: a monster dragged too far gives up; a boss keeps to its hall and gives up only when everyone has left it
-  const leash = LEASH_TILES + (h.inst.run?.leash ?? 0);
+  // the fog of a run (dimma) lets monsters in packs hold on longer; a boss keeps its hall as before
+  const leash = LEASH_TILES + (m.kind === 'mob' ? (h.inst.run?.leash ?? 0) : 0);
   if (boss ? !partyOf(h).some((p) => upright(h, p) && dist(p, m.home) <= leash) : dist(a, m.home) > leash) {
     resetMob(h, m, out);
     return;

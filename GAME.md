@@ -237,7 +237,7 @@ turn what the farm makes into more for the run.
 | `f3` | Gård | Djurens vänskap | 30 | f1 | animal buffs 50 % stronger |
 | `f4` | Gård | Extra flaskor | 15 | – | one more healing potion at the start |
 | `f5` | Gård | Rikare kistor | 35 | f2 | coins from the run's chests +25 % |
-| `f6` | Gård | Världsträdets rot | 50 | f3 | the boss gives 5 more sagafrön |
+| `f6` | Gård | Världsträdets rot | 50 | f3 | the boss gives 5 more sagafrön *(to the planter only)* |
 
 Total 462 sagafrön for everything.
 
