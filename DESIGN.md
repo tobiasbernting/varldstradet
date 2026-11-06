@@ -514,7 +514,7 @@ this repository (it lives on in `tobiasbernting/lilla-garden`, which is not touc
   first thing to add after the runs, through the `webrtc` GDExtension.
 - **No character creator in Godot.** `POST /api/players` is unchanged, but the browser's creator is gone and the native
   client only picks an existing character; until it has a creator a new character is made with that route (README,
-  "Native client").
+  "Native client"). (Done: see "Godot client: the character creator", 2026-11-06.)
 
 ## Runs: Sagan som färd (2026-11-06)
 Milestone M5b of `PLAN.md`: the design is `GAME.md` (read it first); this is the record of the rules as built, on the server and
@@ -575,3 +575,31 @@ sends `run`, `seed` and `fardkost` and draws the `run`, `seed` and `fardkost` ch
 - **Bots**: `run_bot.gd` extends `bot.gd` (new hook `_no_pack_left`); `tools/bot-check.mts` plays a pair on a third in-memory server; `--full` for the boss. The workflow
   runs it headless and under Xvfb for the pictures.
 - Strings: the new ones are in `sv.ts` (`pnpm godot:strings`); the run texts come from game.json.
+
+## Godot client: the character creator (2026-11-06)
+Closes the "no character creator in Godot" gap that M5a left.
+- **The way in.** The login screen's picker ("Vem är du?") has a "Ny karaktär" button under the list, shown once the gate
+  says `ok` (and hidden when `/api/gate` says `canCreate: false`; the server checks again). It opens `CreatorWindow`
+  (`creator_window.gd`, a `CanvasLayer` like the other windows: dimmed backdrop, dark panel, lit buttons). "Avbryt" and
+  Escape close it; the focus goes back to the button.
+- **The window.** A name field (up to 16 characters, trimmed, not empty: the rules `POST /api/players` applies) and four
+  rows, each a big left arrow, a picture and a big right arrow: skin and hair colour show a swatch, hair style and
+  shirt a small picture of that choice drawn by the look composer plus its Swedish name. The choices are the ones the
+  browser's creator had: the six skin tones and eight hair colours of the farm atlas, hair styles short, long, curly,
+  ponytail and bald, and the four starter shirts (red, blue, green, yellow; `STARTER_WARDROBE`). To the left a
+  preview of the whole character (standing, facing the viewer) at 8x with nearest filtering, from `LookComposer`, so it
+  is the same pixels the farm will draw. Arrows are ordinary focusable buttons: mouse, touch and pad work, and the
+  pad's left and right move between them.
+- **Skapa.** `Api.create_player` posts `{name, appearance: {skin, hair, hairStyle}, shirt}` with the device's bearer
+  token (the route already took the header: no server change). On 201 the window closes, `Settings.player_id` is set,
+  the picker is fetched again and the new character's card is the focused, selected one; the player presses it to play.
+  Errors are shown in the window in Swedish (`sv.ts` `creatorErr*`, exported to `sv.json`): an empty name (400, also
+  caught before anything is sent), "this device may not make more characters" (403 `create`: a guest used up its
+  allowance), "not let in" (403 otherwise), "the farm is full" (409: `MAX_PLAYERS`, 8) and "the server does not answer".
+- **No unique names.** The server has never refused a name that is already used (two Annas are allowed, each their own
+  character), so there is no "name taken" message; adding one would be a server change the owner has not asked for.
+- **The check.** `--creatorcheck` (`creator_check.gd`, run by `tools/bot-check.mts` and so by CI) drives the real login
+  screen headless: the gate, the button, the window, an empty name refused, a chosen look, Skapa, the picker listing and
+  selecting the new character, and the game welcoming it; the script then reads the character back from the server and
+  compares the look. `BOT_ONLY=creator pnpm godot:bot` runs just this. `--creatorcheck --shot=file.png` (with a window,
+  under Xvfb) saves the picture `packages/godot/docs/creator.png`.

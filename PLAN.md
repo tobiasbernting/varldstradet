@@ -225,9 +225,9 @@ Total: roughly 60–90 evenings. M1 and M2 can start now and do not depend on ar
 - **Voice has no native client (since M5a, 2026-11-02).** Röstprat was WebRTC in the browser; the server side
   (`voice.ts`, `ice.ts`) stays, but with the browser client gone nobody can talk. It is the first thing to add after
   the runs (Godot has WebRTC through the `webrtc` GDExtension).
-- **No character creator in Godot.** Characters were made in the browser (`POST /api/players`); the native client only
-  picks an existing one. With the browser gone a new family member needs a call to that route until Godot has a
-  creator (name, skin, hair, shirt). Second thing to add after the runs, or sooner.
+- ~~**No character creator in Godot.**~~ **Done (2026-11-06):** the login screen has "Ny karaktär", a creator window
+  (name, skin, hair colour, hair style, shirt, a live preview) that posts to `/api/players` with the device token; see
+  `DESIGN.md` "Godot client: the character creator". Nothing on the server changed.
 - **Hetzner CX23.** 2 vCPU and 4 GB is enough for a family and guests; run generation is cheap. If the server is ever
   the bottleneck, the next size up is the fix, not a rewrite.
 

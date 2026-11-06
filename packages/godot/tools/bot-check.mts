@@ -9,6 +9,11 @@
 // beyond to Draugkryptan's arch and uses it, and the check is that it arrives in saga:draug through the server's normal
 // path (travel at the edges, `act` on the arch) with the dev message never sent.
 //
+// A creator check (scripts/creator_check.gd, `--creatorcheck`) takes the login screen's way to a new character: "Ny karaktär",
+// a name and a look in the creator window, "Skapa" (POST /api/players through api.gd), the picker lists and selects the new
+// character, and the game welcomes it. This script then asks the server for the character and compares the look. BOT_ONLY=creator
+// runs only this (it needs no window and takes a minute).
+//
 // A fourth bot (M4b, the farmer) works a second server of its own (it rolls the day over, which would disturb the
 // fights): it tills, plants, waters, waits for the carrot to grow, harvests, drops and picks up a carrot, chops trees
 // and mines rocks, does Elsa's and Fiskar-Sven's errands (coins, stars, a rod), fills the can at the pond, fishes,
@@ -46,6 +51,7 @@ const packs = Number(process.env.BOT_PACKS ?? 1);
 const names = ['Bot-Ask', 'Bot-Embla'];
 const walkerName = 'Bot-Vandrare';
 const farmerName = 'Bot-Bonde';
+const creatorName = 'Bot-Skapare';
 const farmSeconds = Number(process.env.BOT_FARM_SECONDS ?? 600);
 const farmShots = process.env.BOT_FARM_SHOTS ?? '';
 const fullRun = process.argv.includes('--full');
@@ -128,6 +134,15 @@ async function serverRecord(url: string, playerId: string): Promise<{ inventory:
       resolve(null);
     });
   });
+}
+
+interface CreatorReport {
+  name: string;
+  ok: boolean;
+  id: string;
+  choice: { name: string; appearance: { skin: string; hair: string; hairStyle: string }; shirt: string };
+  steps: { name: string; ok: boolean; detail: string }[];
+  errors: string[];
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
@@ -233,6 +248,25 @@ function checkRunner(r: Report, botLog?: string): void {
   }
 }
 
+/** The creator check's steps, and the character as the server keeps it against what the creator window sent. */
+async function checkCreator(r: CreatorReport, botLog?: string): Promise<void> {
+  console.log(`\n--- ${r.name} steps ---`);
+  for (const st of r.steps) console.log(`${st.ok ? 'ok  ' : 'FAIL'} ${st.name}: ${st.detail}`);
+  check(r.errors.length === 0, `${r.name}: no errors (${r.errors.join('; ') || 'none'})`);
+  const exitErrors = (botLog && fs.existsSync(botLog) ? fs.readFileSync(botLog, 'utf8') : '').split('\n').filter((l) => /leaked at exit|still in use at exit|Pages in use exist at exit|SCRIPT ERROR/.test(l));
+  check(exitErrors.length === 0, `${r.name}: no script errors, nothing leaked at exit (${exitErrors[0] ?? 'none'})`);
+  for (const want of ['the picker shows', 'the creator window opens', 'an empty name is refused', 'Skapa makes the character', 'the picker lists the new character', 'the new character is the selected one', 'the game welcomes the new character']) {
+    const st = r.steps.find((x) => x.name.startsWith(want));
+    check(!!st && st.ok, `${r.name}: ${want}${st ? '' : ' (never ran)'}`);
+  }
+  const res = await fetch(`http://127.0.0.1:${port}/api/players`);
+  const list = (await res.json()) as { id: string; name: string; appearance: { skin: string; hair: string; hairStyle: string }; outfit: { shirt?: string } }[];
+  const mine = list.find((p) => p.id === r.id);
+  check(!!mine && mine.name === creatorName, `${r.name}: the server lists the new character as ${mine?.name ?? 'nothing'} (${r.id})`);
+  const ap = r.choice.appearance;
+  check(mine?.appearance.skin === ap.skin && mine?.appearance.hair === ap.hair && mine?.appearance.hairStyle === ap.hairStyle && mine?.outfit.shirt === r.choice.shirt, `${r.name}: the server kept the look the window sent (${JSON.stringify(mine?.appearance)}, ${mine?.outfit.shirt})`);
+}
+
 async function main(): Promise<void> {
   const serverLog = path.join(tmp, 'server.log');
   const tsx = path.join(root, 'packages/server/node_modules/.bin/tsx');
@@ -247,7 +281,7 @@ async function main(): Promise<void> {
     console.log('server: up');
     // BOT_ONLY: nothing (everyone), `walker` (the arch walker alone) or `farm` (the farmer alone)
     const mode = process.env.BOT_ONLY ?? '';
-    const only = mode === 'walker';
+    const only = mode === 'walker' || mode === 'creator';
     const spawnBot = (name: string, extra: string[]) => {
       const report = path.join(tmp, `${name}.json`);
       const log = path.join(tmp, `${name}.log`);
@@ -258,6 +292,16 @@ async function main(): Promise<void> {
     };
     const bots = mode === '' ? names.map((name) => spawnBot(name, [`--packs=${packs}`])) : [];
     const walker = mode === '' || mode === 'walker' ? [spawnBot(walkerName, ['--route=arch'])] : [];
+    // the creator check: the login screen's way to a new character (its own empty HOME: it saves settings there, not in yours)
+    const creators: { name: string; report: string; log: string; child: ChildProcess }[] = [];
+    if (mode === '' || mode === 'creator') {
+      const report = path.join(tmp, `${creatorName}.json`);
+      const log = path.join(tmp, `${creatorName}.log`);
+      const home = fs.mkdtempSync(path.join(tmp, 'home-'));
+      const args = ['--headless', '--path', godotDir, '--', '--creatorcheck', `--server=http://127.0.0.1:${port}`, `--name=${creatorName}`, `--report=${report}`];
+      console.log(`${creatorName}: ${godot} ${args.join(' ')}`);
+      creators.push({ name: creatorName, report, log, child: run(godot, args, { cwd: godotDir, log, env: { HOME: home, XDG_DATA_HOME: path.join(home, 'data') } }) });
+    }
     // the farmer gets a server of its own (the day rolls over for everyone on a server)
     const farmPort = port + 1;
     const farmers: { name: string; report: string; log: string; child: ChildProcess }[] = [];
@@ -311,7 +355,7 @@ async function main(): Promise<void> {
         runBots.push({ name, report, log, child: run(godot, args, { cwd: godotDir, log }) });
       });
     }
-    const all = [...bots, ...walker, ...farmers, ...runBots];
+    const all = [...bots, ...walker, ...farmers, ...creators, ...runBots];
     const codes = await Promise.all(all.map((b) => exited(b.child, ((b.name === farmerName ? farmSeconds : runNames.includes(b.name) ? runSeconds : seconds) + 40) * 1000)));
     const reports: (Report | FarmReport | null)[] = all.map((b, i) => {
       console.log(`\n--- ${b.name} (exit ${codes[i] === null ? 'killed' : codes[i]}) ---`);
@@ -326,6 +370,10 @@ async function main(): Promise<void> {
     console.log('\n--- checks ---');
     for (const rr of reports) {
       if (!rr) continue;
+      if (rr.name === creatorName) {
+        await checkCreator(rr as unknown as CreatorReport, all.find((b) => b.name === creatorName)?.log);
+        continue;
+      }
       if (rr.name === farmerName) {
         await checkFarmer(rr as FarmReport, farmPort, all.find((b) => b.name === farmerName)?.log);
         continue;

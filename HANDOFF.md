@@ -22,33 +22,36 @@ only what a new session needs to continue: state, decisions, how the work is run
 | 8 | M4b | Bag and hotbar, tools on tiles, crops, drops, animals and pets, fishing, coins and stars; dev `nextDay` |
 | 9 | M4c | Building with ownership, the farmhouse, shop and sell box, wardrobe, gear window and hero switch, cooking, villagers, Köpingen, the bus, Völvan's class pick; dev `starter` |
 | 10 | M5a | Browser client retired; pixel art moved to `packages/art`; `/` is the download page; voice and character-creator gaps recorded |
+| 11 | M5b | `GAME.md`; the run generator, rules and bot brain (`run.ts`, `runmap.ts`, `runsim.ts`, `runbot.ts`), the hired companion, sagafrön and the sagaträd, färdkost, the three buildings, server handlers, data export; reviewed with a fix-up round and the soft 30-minute clock; merged 2026-11-06 12:04 UTC as bd01a91 |
+| 12 | backlog 3 | The character creator in the Godot client: "Ny karaktär" on the login screen, a creator window with the look composer, `POST /api/players` from the client, a headless creator check in `bot-check.mts`, `docs/creator.png`; merged 2026-11-06 14:52 UTC as 70dac5a |
 
-- **In progress: M5b**, branch `m5b-runs-server`, **PR 11** (opened 2026-11-06 05:52 UTC by child
-  `session_01KTh22qkzZkRx6UToLHSTLk`, Sonnet). Brief: `GAME.md` (run shape, runor lists, sagafrön tree, farm-to-run
-  table, co-op and the hired companion) plus `packages/shared/src/run.ts`, `runmap.ts`, `runsim.ts`, `runbot.ts`,
-  additive protocol messages `run`, `seed`, `fardkost`, optional save fields, `run.test.ts` with 200 seeded runs and
-  bot parties, server handlers, data export. The PR body lists the seven design decisions, the bot minutes per run and
-  six points the child was unsure about; the one to settle with the owner is whether the 30-minute cap should be
-  measured against clumsy (kid-like) bots at 21 minutes for three players, as the child chose, or against careful bots.
-- **Review of PR 11 (2026-11-06, orchestrating session):** CI green on head a2f078c; locally typecheck, 284 shared and
-  47 server tests and `pnpm godot:gen` green with a clean tree. **Not merged**: an independent read of the run code
-  found bugs that need tests, handed to a fix-up child `session_01KTh22ovyHfUYGF3frNYrnr` (Sonnet) on the same branch,
-  so PR 11 updates in place. The findings: (1) `refreshMax` drops the run's health buff on every level-up or gear
-  change; (2) `jumpTo` lets players into and out of run zones; (3) `pay()` rounds the sagafrön bonuses away on 1-seed
-  packs; (4) chapter clear only for online members, and the companion rolls loot; (5) solo mercy keys on party size,
-  not on the companion; (6) `giveItems(farm, ...)` while in a zone drops overflow into the farm world; (7) smaller
-  GAME.md mismatches (`ZONE_PACKS` wording, the companion's class in the offer, `f6` paid to everyone, `dimma` leash
-  on bosses, end banner after a win, double `bring()` on rejoin, the parent-pause sentence). Accepted as-is: the
-  `bodyFits` change to Blink and Stormsteg also applies in the nine dungeons (it fixes a real wall trap). A check-in is
-  scheduled 90 minutes after the child started (10:09 UTC). The fix-up child finished 10:31 UTC: 13 commits on the
-  branch (head 99639b2), each finding with a test, 296 shared and 47 server tests green locally in the orchestrating
-  session. CI on 99639b2: `build` green, `export` red only in the headless two-bot check (the farmer's walk to the
-  village bus stop timed out after 376 s; the Xvfb run of the same step passed minutes earlier; nothing in the fix-up
-  touches the village), re-run queued 11:16 UTC as a flake test. The owner then decided the 30 minutes is a soft
-  target (section 2): a third child, "M5b: the 30 minutes is a soft target, not a wall" (Sonnet, same branch), turns
-  the forced end into nudges. Check-in at 12:20 UTC: review the head, merge PR 11 when CI is green, then start M5c.
-- Not yet done: M5c (runs in the Godot client), M6 (the other eight dungeons and chapters), M7 (alive world), M8
-  (polish, release tag, homelab deploy of the v2 server, `DESIGN.md` rewrite).
+- **In progress:**
+  - **M5c**, branch `m5c-runs-client`, **PR 13** (draft), child `session_01KTh22riKcXRQssJpT6nmes` (Sonnet, started 12:06 UTC):
+    steps 1–10 pushed (head 213d985: the arch, the shoot's five stages, the buildings, the arch window, zones, the run
+    HUD, the cards, the summary, the sagaträd window, the companion, a run bot with a two-bot CI check, docs). Left: the
+    `m5c-*.png` pictures (taken by the CI workflow into the `farm-screenshots` artifact; the child fetches them into
+    `packages/godot/docs/`), the PR body, marking the PR ready. The child goes idle while waiting for CI and does not
+    always wake on its own: nudge it with a message about CI on its own PR. The export job failed once on this branch on
+    the farmer bot's bus step ("the stop did not open the window"), re-run 14:50 UTC; a third failure on that step
+    counts as real. An independent review of the client diff was started in the orchestrating session 14:58 UTC.
+  - **Röstprat (voice)**, branch `godot-voice`, child `session_01KTh22ouaSJXMfDZvpaPHMt` (Sonnet, started 14:57 UTC,
+    backlog item 2): the `webrtc-native` GDExtension for the four targets, a voice client over the existing `voice`
+    messages, a window and a HUD button, a two-bot signalling check, docs and `docs/voice.png`. Told to stay out of
+    the run code. Merge after M5c, or ask it to rebase.
+- **Review of PR 12 (the creator, 2026-11-06):** CI green, local checks green, an independent review found no bug;
+  two nits left for later: the "Inga karaktärer än" hint says to press Ny karaktär even on a guest device that may
+  not create characters (`login.gd`, `noCharactersYet`), and the creator check sets the look indexes directly, so the
+  arrow buttons and the server's 400/403/409 answers are untested.
+- **How PR 11 was reviewed (the recipe that worked, 2026-11-06):** CI and the local checks first; then an independent
+  Sonnet review agent given GAME.md and the diff, asked for correctness bugs and mismatches with the design (it found
+  seven real ones: the health buff lost on level-up, jump into run zones, sagafrön rounded away on 1-seed packs, chapter
+  clear only for online members and the companion rolling loot, solo mercy keyed on party size, items given into the
+  wrong world, and smaller doc mismatches); the findings handed to a Sonnet fix-up child on the same branch with one
+  commit and one test per finding; the owner's decision on the clock built by a third child on the same branch; local
+  checks again, CI green, merge. The headless two-bot CI check timed out once on the farmer's walk to the village bus
+  stop and passed on the next run: a slow-runner flake, re-run once before treating it as real.
+- Not yet done: M6 (the other eight dungeons and chapters as zone sets in the client), M7 (alive world), M8 (polish,
+  release tag, homelab deploy of the v2 server, `DESIGN.md` rewrite).
 
 ## 2. The owner's decisions (do not re-ask)
 
@@ -107,10 +110,10 @@ after-M3d bench, the house and village benches and an Intel laptop bench were ne
 
 ## 5. Open items and backlog, in rough order
 
-1. M5b review and the owner's approval of `GAME.md`, then M5c (runs in the Godot client: the fardport arch, zone
-   chain, runor cards, the end of a run, the Yggdrasil shoot).
-2. Voice: Röstprat was browser WebRTC; server side kept; Godot needs the `webrtc` GDExtension.
-3. A character creator in Godot (today only the picker; a new person needs `POST /api/players`, see README).
+1. M5c (in progress, see section 1), then M6. The owner approved `GAME.md` on 2026-11-06 with one change: the 30
+   minutes is a soft target (section 2).
+2. Voice: Röstprat was browser WebRTC; server side kept; Godot needs the `webrtc` GDExtension (in progress, see section 1).
+3. ~~A character creator in Godot~~ done (PR 12); two nits recorded in section 1.
 4. Farm leftovers: the weapon in the hero's hand, Smedjan (forge), the journal, the bath house, caves, the paint
    screen, the rocket; sprites and icons only exist for Draugkryptan's creatures and loot.
 5. The threat indicator is a client heuristic; `SagaSnap.m` could carry the target id (additive).
@@ -122,13 +125,17 @@ after-M3d bench, the house and village benches and an Intel laptop bench were ne
 9. Deferred art purchases (Synty Vikings 30 USD, Minifantasy Creatures 3 USD, weather bundle 10 USD) need a new
    decision; AI generation was never used.
 10. In lilla-garden, branch `claude/trusting-brown-z2omlt` holds the original `PLAN.md` and `HANDOFF.md` seed; it is
-    superseded by this repository and can be deleted.
+    superseded by this repository and can be deleted. The orchestrating session's `git push origin --delete` was
+    refused by the permission classifier (2026-11-06): the owner deletes it by hand or adds a permission rule.
 
 ## 6. Identifiers
 
 - Orchestrating session (from 2026-11-06 09:55 UTC): `session_01KTh22pPGKmMmYJxTLXzyqs`; before that
-  `session_01KTh22nak5ip5cq8vST7H9Q`. M5b child: `session_01KTh22qkzZkRx6UToLHSTLk`. M5b fix-up child:
-  `session_01KTh22ovyHfUYGF3frNYrnr`.
-- One check-in pending at 12:20 UTC (`trig_011wFzz6amNKxbAwMyFfLKwe`): the soft-cap child, CI on PR 11, merge, then M5c.
+  `session_01KTh22nak5ip5cq8vST7H9Q`. M5b children, all done: `session_01KTh22qkzZkRx6UToLHSTLk` (the milestone),
+  `session_01KTh22ovyHfUYGF3frNYrnr` (review fixes), `session_01KTh22qjEejiGHLyJoPWc7W` (the soft clock). Creator
+  child, done: `session_01KTh22pn3nY1PwSd9U6Gv3B`. M5c child: `session_01KTh22riKcXRQssJpT6nmes`. Voice child:
+  `session_01KTh22ouaSJXMfDZvpaPHMt`.
+- One check-in pending at 15:43 UTC (`trig_014xvFvvDPpyzYanYjMUTfdJ`): PR 13's CI and the child's finish, merge M5c,
+  then M6; the voice child.
 - Homelab repo `tobiasbernting/homelab`: `cloud/` (Hetzner + Cloudflare + Tailscale, running), `server/roles/lilla-garden`
   and `lilla-garden-cloud`.
