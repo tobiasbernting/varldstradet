@@ -137,6 +137,10 @@ jobs:
           shot farm-bag --demo=farm --at=18,14 --time=0.4 --bag
           shot house-night --demo=house --time=0.9
           shot house-day --demo=house --time=0.4
+          shot farm-run --demo=farm --at=16,23 --time=0.4
+          shot farm-run-night --demo=farm --at=16,23 --time=0.9
+          shot farm-smithy --demo=farm --at=28,16 --time=0.4
+          shot farm-longhall --demo=farm --at=14,27 --time=0.4
           shot village-day --demo=village --time=0.4
           shot village-night --demo=village --time=0.9
           xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- --bench=mellan --scene=farm 2>&1 | tee bench-farm.log
@@ -165,12 +169,23 @@ jobs:
             xvfb-run -a -s "-screen 0 1280x720x24" pnpm godot:bot 2>&1 | tee farmer.log
           for f in watering bag-open fishing-bite pet shop workbench not-yours house cook wardrobe talk village class volva gear bus; do test "$(stat -c %s "$GITHUB_WORKSPACE/shots/farmer/$f.png")" -gt 20000; done
 
+      # M5c: two bots play a run through the client under Xvfb and take the pictures of the arch window, a zone, the three
+      # cards, the end summary and the tree window (software GL, so slowly: the same run is checked headless by the step below)
+      - name: The run pair in a window under Xvfb (pictures of the arch window, a zone, the cards, the end of a run and the tree)
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/shots/run"
+          GODOT=~/godot/godot BOT_ONLY=run BOT_RUN_SECONDS=900 BOT_RUN_SHOTS="$GITHUB_WORKSPACE/shots/run" \
+            xvfb-run -a -s "-screen 0 1280x720x24" pnpm godot:bot 2>&1 | tee runpair.log
+          for f in m5c-arch m5c-zone m5c-cards m5c-end m5c-tree; do test "$(stat -c %s "$GITHUB_WORKSPACE/shots/run/$f.png")" -gt 20000; done
+
       - uses: actions/upload-artifact@v4
         with:
           name: farm-screenshots
           path: |
             shots/*.png
             shots/farmer/*.png
+            shots/run/*.png
           if-no-files-found: error
 
       - name: Run the bench headless for a moment (the bench's scripts run and the process exits clean; headless frame times mean nothing)
@@ -189,6 +204,13 @@ jobs:
         run: |
           set -euo pipefail
           GODOT=~/godot/godot BOT_SECONDS=150 pnpm godot:bot 2>&1 | tee bot.log
+
+      # Two headless bots play a run through the client against a server in memory: they walk to the färdport, the lead starts,
+      # both clear zone 1, use the exit, vote on a runa and enter zone 2 (tools/bot-check.mts; `--full` plays to the boss, locally).
+      - name: Two bots play the start of a run (the arch window, zone 1, the exit, the cards, zone 2)
+        run: |
+          set -euo pipefail
+          GODOT=~/godot/godot BOT_ONLY=run BOT_RUN_SECONDS=480 pnpm godot:bot 2>&1 | tee runbots.log
 
       - name: Export all four targets
         working-directory: packages/godot

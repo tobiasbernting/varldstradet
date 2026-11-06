@@ -282,7 +282,7 @@ func _plan() -> void:
 				best_pack = i
 	if best_pack < 0:
 		_log("no pack left to fight")
-		_finish()
+		_no_pack_left()
 		return
 	_pack_ids = []
 	for mid in packs[best_pack].get("members", []):
@@ -298,6 +298,11 @@ func _plan() -> void:
 	_phase = "walk"
 	world.hero.driven = true
 	_stuck_t = 0.0
+
+
+## Nothing left to fight here: the combat bot is done. (RunBot goes on to the exit instead.)
+func _no_pack_left() -> void:
+	_finish()
 
 
 ## A new map while walking the route: note it, finish in the dungeon, plan again in an outdoor map.

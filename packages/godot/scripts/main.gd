@@ -8,6 +8,7 @@ extends Node
 ##   --bench[=preset]    the demo scene on each quality preset (or one: lag, mellan, hog) in steady state, printing
 ##                       frame times, draw calls, lights and the render timings (bench.gd)
 ##   --farmbot           a headless player that farms against a local server (farm_bot.gd, M4b)
+##   --runbot            a headless player that walks to the färdport, starts (or joins) a run and fights through its zones (run_bot.gd, M5c)
 ##   --bot               a headless player that logs in against a local server (ACCESS=open, DEV_TELEPORT=1), walks
 ##                       to the first pack, fights it and writes a report (bot.gd)
 
@@ -30,6 +31,13 @@ func _ready() -> void:
 		farmer.name = "FarmBot"
 		farmer.world = world
 		add_child(farmer)
+	elif args.has("--runbot"):
+		login.visible = false
+		_set_world(true)
+		var runner := RunBot.new()
+		runner.name = "Bot"
+		runner.world = world
+		add_child(runner)
 	elif args.has("--bot"):
 		login.visible = false
 		_set_world(true)
