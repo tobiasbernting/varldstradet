@@ -1,0 +1,70 @@
+name: Set up Godot and the project
+description: pnpm and Node, the pinned Godot editor and export templates (cached), and the project imported.
+
+inputs:
+  version:
+    required: true
+  editor-sha512:
+    required: true
+  templates-sha512:
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: pnpm
+    - run: pnpm install --frozen-lockfile
+      shell: bash
+
+    - name: Cache Godot
+      id: godot-cache
+      uses: actions/cache@v4
+      with:
+        path: ~/godot
+        key: godot-${{ inputs.version }}-linux-x86_64-templates-5
+
+    - name: Download Godot ${{ inputs.version }} and its export templates (pinned, checksummed)
+      if: steps.godot-cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        GODOT_VERSION: ${{ inputs.version }}
+        GODOT_EDITOR_SHA512: ${{ inputs.editor-sha512 }}
+        GODOT_TEMPLATES_SHA512: ${{ inputs.templates-sha512 }}
+      run: |
+        set -euo pipefail
+        V="${GODOT_VERSION}-stable"
+        BASE="https://github.com/godotengine/godot/releases/download/${V}"
+        mkdir -p ~/godot/templates
+        curl -fsSL -o editor.zip "${BASE}/Godot_v${V}_linux.x86_64.zip"
+        echo "${GODOT_EDITOR_SHA512}  editor.zip" | sha512sum -c -
+        unzip -q editor.zip -d ~/godot
+        mv ~/godot/Godot_v${V}_linux.x86_64 ~/godot/godot
+        curl -fsSL -o templates.tpz "${BASE}/Godot_v${V}_export_templates.tpz"
+        echo "${GODOT_TEMPLATES_SHA512}  templates.tpz" | sha512sum -c -
+        unzip -q -j templates.tpz -d ~/godot/templates \
+          templates/version.txt templates/windows_release_x86_64.exe templates/linux_release.x86_64 \
+          templates/linux_release.arm64 templates/macos.zip
+        rm editor.zip templates.tpz
+
+    - name: Put the templates where Godot looks
+      shell: bash
+      env:
+        GODOT_VERSION: ${{ inputs.version }}
+      run: |
+        mkdir -p ~/.local/share/godot/export_templates
+        ln -sfn ~/godot/templates ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+        ~/godot/godot --version
+
+    - name: Import the project (makes the import cache and the class list the next steps need)
+      shell: bash
+      working-directory: packages/godot
+      run: |
+        set -euo pipefail
+        ~/godot/godot --headless --path . --import 2>&1 | tee import.log
+        if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource" import.log; then
+          echo "::error::the import reported errors (see above)"; exit 1
+        fi
