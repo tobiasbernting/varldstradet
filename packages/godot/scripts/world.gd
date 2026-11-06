@@ -50,6 +50,8 @@ var _people3d := OS.get_cmdline_user_args().has("--people3d")
 var _mode := "" ## "dungeon", "outdoor" (the farm and the wild maps) or "" (nothing drawn)
 var _demo_time := -1.0 ## --time=<0..1>: a fixed time of day for pictures
 var _demo_rain := false
+var _lantern: OmniLight3D ## the hero's lantern outdoors after dark (the browser's: "a lantern only outdoors after dark")
+var _lantern_glow: MeshInstance3D
 var grade := ScreenGrade.new() ## the last pass over the 3D picture (under the HUD)
 var _area := "" ## the map drawn right now ("" when none)
 var _actors: Dictionary = {} ## "p:<id>" or "a:<id>" -> Actor
@@ -85,6 +87,7 @@ func _ready() -> void:
 	play = FarmPlay.new()
 	add_child(play)
 	play.setup(self)
+	_make_lantern()
 	hud.menu_asked.connect(menu.open)
 	menu.switch_player.connect(func() -> void: left.emit())
 	menu.dev_enter.connect(_on_dev_enter)
@@ -187,6 +190,33 @@ func start_demo(fixture := "draug") -> void:
 				hero.place((float(parts[0]) + 0.5) * tile, (float(parts[1]) + 0.5) * tile)
 				rig.position = hero.position
 	print("demo: %s drawn (%s) with %d objects, %d lights and %d actors" % [_area, _mode, (farm.object_count() if _mode == "outdoor" else (dungeon.get_node("Objects").get_child_count() if _area != "" else 0)), (farm.light_count() if _mode == "outdoor" else dungeon.light_count()), _actors.size()])
+
+
+## The hero's lantern: a warm light that follows them outdoors after dark so the wild stays readable near them. No shadow
+## (a budget), no lantern for the other players. Off by day, indoors and in dungeons (`_light_lantern`).
+func _make_lantern() -> void:
+	_lantern = OmniLight3D.new()
+	_lantern.name = "Lantern"
+	_lantern.light_color = Color(1.0, 0.78, 0.5)
+	_lantern.omni_range = 5.5
+	_lantern.omni_attenuation = 1.1
+	_lantern.shadow_enabled = false
+	_lantern.position = Vector3(0.3, 1.0, 0.3)
+	_lantern.visible = false
+	hero.add_child(_lantern)
+	_lantern_glow = farm.assets.glow_quad(Color(1.0, 0.78, 0.5), 0.9, 0.0)
+	_lantern_glow.position = Vector3(0.3, 0.9, 0.35)
+	_lantern_glow.rotation_degrees = Vector3(-51.0, 0.0, 0.0)
+	_lantern_glow.visible = false
+	hero.add_child(_lantern_glow)
+
+
+func _light_lantern(dark: float, open: float) -> void:
+	var k := smoothstep(0.45, 0.8, dark) * open
+	_lantern.visible = k > 0.01
+	_lantern.light_energy = 1.5 * k * (0.94 + 0.06 * sin(Time.get_ticks_msec() * 0.011))
+	_lantern_glow.visible = k > 0.01
+	(_lantern_glow.material_override as ShaderMaterial).set_shader_parameter("energy", 0.8 * k)
 
 
 ## A message as if from the server (the demo's scripted fight in bench and screenshot runs).
@@ -732,9 +762,13 @@ func _process(delta: float) -> void:
 	if _mode == "outdoor":
 		farm.sky.grade = grade
 		farm.sky.indoors = _cam_k
+		_light_lantern(farm.sky.dark_now(), 1.0 - _cam_k)
 		farm.sky.update_sky(delta, _clock_ms(), model.season, model.weather, model.server_now())
 	elif _mode == "dungeon":
 		grade.dungeon_look()
+		_light_lantern(0.0, 0.0)
+	else:
+		_light_lantern(0.0, 0.0)
 	combat.tick()
 	fx.tick(delta)
 	play.tick(delta)

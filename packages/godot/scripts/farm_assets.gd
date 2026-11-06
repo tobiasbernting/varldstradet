@@ -32,6 +32,9 @@ const GOLD := Color("#e8b830")
 const BONE := Color("#e2d6b8")
 const EMBER := Color("#ffa040")
 const RUNE := Color("#38d8f0")
+## The browser's lamp colours (lighting.ts): a lamp's warm light, a fire's.
+const WARM := Color(1.0, 0.72, 0.42)
+const FIRE := Color(1.0, 0.58, 0.26)
 const STONE := Color("#7c7d78")
 const STONE_DARK := Color("#5f625f")
 const THATCH := Color("#c9a24d")
@@ -108,10 +111,10 @@ const SPECS := {
 	"barn": {"m": ["barn"], "front": true},
 	"stall": {"m": ["stall"], "front": true},
 	"pigsty": {"m": ["pigsty"], "front": true},
-	"lamp": {"m": ["lamp"], "node": true, "light": [Color("#ffc977"), 6.0, 1.4, 1.5, 0.15], "night": true},
-	"street_lamp": {"m": ["street_lamp"], "node": true, "light": [Color("#ffc977"), 7.0, 1.5, 2.2, 0.1, 12.0], "night": true},
-	"lantern": {"m": ["lantern"], "node": true, "light": [Color("#ffb55a"), 5.0, 1.2, 0.6, 0.25], "night": true},
-	"torch": {"m": ["torch"], "node": true, "light": [Color("#ff9a3c"), 5.5, 1.5, 1.3, 0.35], "night": true},
+	"lamp": {"m": ["lamp"], "node": true, "light": [WARM, 7.5, 1.6, 1.5, 0.15], "night": true},
+	"street_lamp": {"m": ["street_lamp"], "node": true, "light": [Color(1.0, 0.86, 0.6), 9.0, 1.7, 2.2, 0.1, 12.0], "night": true},
+	"lantern": {"m": ["lantern"], "node": true, "light": [WARM, 6.0, 1.4, 0.6, 0.25], "night": true},
+	"torch": {"m": ["torch"], "node": true, "light": [FIRE, 6.0, 1.7, 1.3, 0.35], "night": true},
 	"crystal_lamp": {"m": ["lantern"], "node": true, "light": [Color("#9fe8ff"), 5.0, 1.0, 0.6, 0.1]},
 	"mushroom_lamp": {"m": ["mushroom"], "node": true, "light": [Color("#ffd27a"), 4.0, 0.9, 0.5, 0.1]},
 	"wisp": {"m": ["wisp"], "node": true, "light": [Color("#bfe8ff"), 3.5, 0.9, 1.0, 0.3]},
@@ -133,12 +136,12 @@ const SPECS := {
 	# --- Köpingen (city.ts): the Norse market town; its streets are ground, these are what stands on them
 	"house_small": {"m": ["house_b"], "front": true},
 	"apartment": {"m": ["apartment"], "front": true},
-	"shop": {"m": ["village_shop"], "node": true, "front": true, "glows": [[-0.8, 0.8, 0.95], [0.8, 0.8, 0.95]], "light": [Color("#ffc977"), 5.5, 1.2, 1.2, 0.1], "night": true},
+	"shop": {"m": ["village_shop"], "node": true, "front": true, "glows": [[-0.8, 0.8, 0.95], [0.8, 0.8, 0.95]], "light": [WARM, 6.0, 1.3, 1.2, 0.1], "night": true},
 	"market": {"m": ["market"], "front": true},
 	"sellstall": {"m": ["sell_stall"], "front": true},
-	"pizzeria": {"m": ["pizzeria"], "node": true, "front": true, "glows": [[-0.8, 0.75, 0.9], [0.8, 0.75, 0.9]], "light": [Color("#ffb55a"), 5.5, 1.3, 1.2, 0.15], "night": true},
+	"pizzeria": {"m": ["pizzeria"], "node": true, "front": true, "glows": [[-0.8, 0.75, 0.9], [0.8, 0.75, 0.9]], "light": [WARM, 6.0, 1.4, 1.2, 0.15], "night": true},
 	"bathhouse": {"m": ["bathhouse"], "front": true},
-	"train_station": {"m": ["station"], "node": true, "front": true, "glows": [[-0.8, 0.7, 0.75], [0.8, 0.7, 0.75]], "light": [Color("#ffd98a"), 6.0, 1.2, 1.6, 0.1], "night": true},
+	"train_station": {"m": ["station"], "node": true, "front": true, "glows": [[-0.8, 0.7, 0.75], [0.8, 0.7, 0.75]], "light": [Color(1.0, 0.86, 0.6), 7.0, 1.3, 1.6, 0.1], "night": true},
 	"traffic_light": {"m": ["traffic_light"]},
 	"parked_car": {"m": ["car_0", "car_1", "car_2"], "by_variant": true},
 	"banner_pole": {"m": ["banner_0", "banner_1", "banner_2"], "by_variant": true},
@@ -158,6 +161,7 @@ var choco_mat: ShaderMaterial
 var glow_mat: ShaderMaterial ## unshaded additive glows (arch, windows' light pool)
 var _gtex: Dictionary = {}
 var _glow_tex: Texture2D
+var pool_mat: ShaderMaterial ## the light on the ground: a lamp's pool, a window's beam
 
 
 func _init() -> void:
@@ -176,6 +180,8 @@ func _init() -> void:
 	choco_mat = _water(Color("#7a4a2a"), Color("#4a2a16"), 0.95)
 	glow_mat = ShaderMaterial.new()
 	glow_mat.shader = _glow_shader()
+	pool_mat = ShaderMaterial.new()
+	pool_mat.shader = load("res://assets/shaders/light_pool.gdshader")
 
 
 func release() -> void:
@@ -189,6 +195,7 @@ func release() -> void:
 	lava_mat = null
 	choco_mat = null
 	glow_mat = null
+	pool_mat = null
 
 
 func _water(shallow: Color, deep: Color, alpha: float) -> ShaderMaterial:
@@ -217,6 +224,22 @@ func glow_quad(colour: Color, size: float, energy: float, flat := false) -> Mesh
 	var m := glow_mat.duplicate() as ShaderMaterial
 	m.set_shader_parameter("colour", colour)
 	m.set_shader_parameter("energy", energy)
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return mi
+
+
+## Light on the ground: a round pool of `size` metres across, or (`beam`) a strip of `size` (width, length) that fades
+## away from the wall it starts at (its near edge is the quad's -Z edge). Laid flat; the caller puts it just above the ground.
+func pool_quad(colour: Color, size: Vector2, energy: float, beam := false) -> MeshInstance3D:
+	var q := PlaneMesh.new()
+	q.size = size
+	var mi := MeshInstance3D.new()
+	mi.mesh = q
+	var m := pool_mat.duplicate() as ShaderMaterial
+	m.set_shader_parameter("colour", colour)
+	m.set_shader_parameter("energy", energy)
+	m.set_shader_parameter("beam", 1.0 if beam else 0.0)
 	mi.material_override = m
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return mi

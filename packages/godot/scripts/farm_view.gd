@@ -677,12 +677,14 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 			if node.get_child_count() > 0:
 				var d := node.get_child(0) as Node3D
 				d.position = Vector3(0.0, 0.0, 0.2)
-			for wx in [-1.0, 1.2]:
-				var g := assets.glow_quad(Color("#ffc977"), 0.9, 0.0)
-				g.position = Vector3(wx, 1.1, 1.9)
-				node.add_child(g)
-				_night_glows.append([g, 1.6])
-			_add_light(node, Vector3(0.0, 1.0, 2.8), Color("#ffc977"), 6.0, 1.3, 0.12, true)
+			# the one real window is the round-topped one in the front gable; its light lies on the ground in front of
+			# the door (the browser's `beam`)
+			var gw := assets.glow_quad(Color("#ffc977"), 0.7, 0.0)
+			gw.position = Vector3(-0.1, 2.0, 1.88)
+			node.add_child(gw)
+			_night_glows.append([gw, 1.8])
+			_add_beam(node, Vector3(0.0, 0.04, 1.95), Vector2(2.6, 3.4), 0.7)
+			_add_light(node, Vector3(0.0, 1.0, 2.8), FarmAssets.WARM, 7.0, 1.4, 0.12, true)
 		"saga_portal":
 			var colours: Array = DungeonView.TORCH_COLOURS
 			var col: Color = colours[variant % colours.size()]
@@ -702,6 +704,7 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 			gw.position = Vector3(float(gp[0]), float(gp[1]), float(gp[2]))
 			node.add_child(gw)
 			_night_glows.append([gw, 1.6])
+			_add_beam(node, Vector3(float(gp[0]), 0.04, float(gp[2]) + 0.05), Vector2(1.5, 2.4), 0.55)
 	var lt: Variant = spec.get("light")
 	if lt is Array:
 		var night := bool(spec.get("night", false))
@@ -713,7 +716,21 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 			_billboard(gq)
 			node.add_child(gq)
 			_night_glows.append([gq, 0.9])
+			# and the pool it makes on the ground, which is what shows on Låg (the OmniLight is cheap there)
+			var pool := assets.pool_quad(lcol, Vector2.ONE * float(lt[1]) * 0.95, 0.55)
+			pool.position = Vector3(0.0, 0.04, 0.0)
+			node.add_child(pool)
+			_night_glows.append([pool, 0.55])
 	return node
+
+
+## A warm beam of light on the ground in front of a lit window or door, fading away from the wall (it lies along +Z
+## from `at`, which is on the wall). It is lit by `set_dark` like the glows.
+func _add_beam(parent: Node3D, at: Vector3, size: Vector2, energy: float) -> void:
+	var b := assets.pool_quad(Color(1.0, 0.72, 0.4), size, energy, true)
+	b.position = at + Vector3(0.0, 0.0, size.y * 0.5)
+	parent.add_child(b)
+	_night_glows.append([b, energy])
 
 
 func _billboard(mi: MeshInstance3D) -> void:
@@ -759,7 +776,7 @@ func _add_light(parent: Node3D, at: Vector3, colour: Color, range_m: float, ener
 	light.position = at
 	light.light_color = colour
 	light.omni_range = range_m
-	light.omni_attenuation = 1.4
+	light.omni_attenuation = 1.1 if night else 1.4
 	light.light_energy = 0.0 if night else energy
 	light.shadow_enabled = false
 	light.distance_fade_enabled = true
