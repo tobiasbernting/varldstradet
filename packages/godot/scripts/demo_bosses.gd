@@ -19,6 +19,9 @@ var _ids: Dictionary = {} ## species -> animal id
 var _held: Array = [] ## the zone changes kept fresh in a held picture
 var _spare := 1000 ## ids for the things the demo makes up (zones, blocks, helpers)
 var _tile := 16.0
+var _fails := 0 ## what the show fed the world and the world did not show (printed at the end as `bosses: ok` or `bosses: FAIL`)
+var _checks := 0
+var _pending: Array = [] ## [frames left, Callable]: checks made a few frames after something was fed, when the views have had their turn
 
 
 func _ready() -> void:
@@ -45,9 +48,11 @@ func _ready() -> void:
 	for sp in order:
 		t = _boss_show(sp, t)
 	_at(t, func() -> void:
-		print("bosses: show finished (%s)" % ", ".join(order))
-		if quit_when_done:
-			(get_tree().current_scene as Main).quit_clean())
+		_pending.append([5, func() -> void:
+			print("bosses: %s (%d checks, %d failed)" % ["ok" if _fails == 0 and _checks > 0 else "FAIL", _checks, _fails])
+			print("bosses: show finished (%s)" % ", ".join(order))
+			if quit_when_done:
+				(get_tree().current_scene as Main).quit_clean()]))
 
 
 ## One boss's turn on the timeline: it comes, shouts, plays each move (and a shout at each phase), and is beaten.
@@ -115,17 +120,21 @@ func _move_show(sp: String, id: int, mv: Dictionary, max_hp: float, phase: int, 
 		_spell(id, "cast_" + move, _bx, _by)
 		for k in range(zones.size()):
 			var z: Dictionary = zones[k]
-			_zone(ids[k], str(z["shape"]), float(z["x"]), float(z["y"]), float(z["r"]), warn * 1000.0, z.get("extra", {})))
+			_zone(ids[k], str(z["shape"]), float(z["x"]), float(z["y"]), float(z["r"]), warn * 1000.0, z.get("extra", {}))
+		_expect_zones(ids, true, "%s %s: marked on the floor" % [sp, move]))
 	t += warn + 0.05
 	var after := 0.6
 	_at(t, func() -> void:
 		_state({str(id): [_hp, max_hp]}, {}, null)
-		_land_move(sp, id, mv, zones, ids))
+		_land_move(sp, id, mv, zones, ids)
+		# a landed mark is gone; burning ground stays
+		_expect_zones(ids, move == "pools", "%s %s: %s after the landing" % [sp, move, "burning on" if move == "pools" else "gone"]))
 	if move == "pools":
 		after = 3.2
 		_at(t + 2.8, func() -> void:
 			for k in range(ids.size()):
-				_zone_gone(ids[k]))
+				_zone_gone(ids[k])
+			_expect_zones(ids, false, "%s %s: the burning ground put out" % [sp, move]))
 	elif move == "freeze":
 		after = 3.0
 		_at(t + 2.6, func() -> void: _unfreeze())
@@ -201,6 +210,7 @@ func _freeze(block: String) -> void:
 	w.get("animals", {})[str(_ice_id)] = a
 	_changes([{"t": "animal", "id": _ice_id, "animal": a, "area": _area}])
 	_state({str(_boss_id): [_hp, float(Data.mob(_species_now()).get("hp", 1000))], str(_ice_id): [45, 45]}, {"me": [135, 150, Data.flag("frozen")]}, null)
+	_expect_actor(_ice_id, true, "the ice block round a friend")
 
 
 var _ice_id := -1
@@ -210,6 +220,7 @@ func _unfreeze() -> void:
 	if _ice_id < 0:
 		return
 	_changes([{"t": "animal", "id": _ice_id, "animal": null, "area": _area}])
+	_expect_actor(_ice_id, false, "the ice block broken")
 	_ice_id = -1
 	_state({str(_boss_id): [_hp, float(Data.mob(_species_now()).get("hp", 1000))]}, {"me": [135, 150, 0]}, null)
 
@@ -229,6 +240,7 @@ func _helper(species: String, x: float, y: float) -> void:
 	world.model.areas.get(_area, {}).get("animals", {})[str(_spare)] = a
 	_changes([{"t": "animal", "id": _spare, "animal": a, "area": _area}])
 	_changes([{"t": "fx", "kind": "poof", "x": x, "y": y, "area": _area}])
+	_expect_actor(_spare, true, "a helper (%s) called" % species)
 
 
 func _warp(id: int, x: float, y: float) -> void:
@@ -238,6 +250,25 @@ func _warp(id: int, x: float, y: float) -> void:
 		a["x"] = x
 		a["y"] = y
 		_changes([{"t": "animal", "id": id, "animal": a, "area": _area}])
+
+
+## Checks, a few frames from now, that the fx view holds (or no longer holds) each of these zones.
+func _expect_zones(ids: Array, present: bool, what: String) -> void:
+	_pending.append([4, func() -> void:
+		for zid in ids:
+			_checks += 1
+			if world.fx._zones.has(zid) != present:
+				_fails += 1
+				print("bosses: FAIL %s (%s: %s)" % [what, zid, "not drawn" if present else "still drawn"])])
+
+
+## The same for an animal of the map (a helper or an ice block) in the world view's actors.
+func _expect_actor(id: int, present: bool, what: String) -> void:
+	_pending.append([4, func() -> void:
+		_checks += 1
+		if world._actors.has("a:" + str(id)) != present:
+			_fails += 1
+			print("bosses: FAIL %s (animal %d: %s)" % [what, id, "not drawn" if present else "still drawn"])])
 
 
 func _at(t: float, f: Callable) -> void:
@@ -306,6 +337,14 @@ func _refresh_held() -> void:
 
 
 func _process(delta: float) -> void:
+	var left: Array = []
+	for c in _pending:
+		c[0] -= 1
+		if c[0] <= 0:
+			c[1].call()
+		else:
+			left.append(c)
+	_pending = left
 	_show_t += delta
 	while _qi < _q.size() and _show_t >= float(_q[_qi][0]):
 		_q[_qi][1].call()

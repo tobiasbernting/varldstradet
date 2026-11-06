@@ -144,16 +144,18 @@ jobs:
           wait
           for d in frost surt hel; do
             cat "bosses-$d.log"
-            if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate|leaked at exit|still in use at exit|Pages in use exist at exit" "bosses-$d.log"; then
+            if grep -E "^ERROR:|SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate|bosses: FAIL|leaked at exit|still in use at exit|Pages in use exist at exit" "bosses-$d.log"; then
               echo "::error::the $d boss show reported errors or leaked at exit (see above)"; exit 1
             fi
             test "$(cat "bosses-$d.code")" = 0 || { echo "::error::the $d boss show did not end cleanly"; exit 1; }
             grep -q "bosses: show finished" "bosses-$d.log" || { echo "::error::the $d boss show did not play to its end"; exit 1; }
+            # (the show checks what it fed: each mark is in the fx view after the cast, gone after the landing, a helper or an ice block is an actor)
+            grep -q "^bosses: ok" "bosses-$d.log" || { echo "::error::the $d boss show's own checks did not pass"; exit 1; }
           done
           # every move of each boss cast once: the mid-boss's and the boss's, 1 + 4 (frost), 2 + 3 (surt), 2 + 3 (hel)
-          test "$(cat bosses-frost.log | grep -c 'casts,')" = 5
-          test "$(cat bosses-surt.log | grep -c 'casts,')" = 5
-          test "$(cat bosses-hel.log | grep -c 'casts,')" = 5
+          test "$(grep -c 'casts,' bosses-frost.log)" = 5 || { echo "::error::the frost boss show did not cast every move"; exit 1; }
+          test "$(grep -c 'casts,' bosses-surt.log)" = 5 || { echo "::error::the surt boss show did not cast every move"; exit 1; }
+          test "$(grep -c 'casts,' bosses-hel.log)" = 5 || { echo "::error::the hel boss show did not cast every move"; exit 1; }
 
       - name: Export all four targets
         working-directory: packages/godot
