@@ -158,7 +158,7 @@ this the browser client was not needed for a farm evening, and on 2026-11-02 (M5
 
 ![The farm in the native client](packages/godot/docs/m4a-farm-day.png)
 
-**M5c** puts the runs (færder) on screen. On the farm the **färdport** is a real 3 × 2 arch with a teal-gold glow, the **Yggdrasil shoot**
+**M5c** puts the runs (färder) on screen. On the farm the **färdport** is a real 3 × 2 arch with a teal-gold glow, the **Yggdrasil shoot**
 grows in five stages with the family's tree (a mound, a sapling, a young tree, a big tree, the glowing Världsträd), and the smithy, herb garden
 and longhouse are buildings. Using the arch opens **the arch window** (your class as a picture, the färdkost slots with the dishes from your
 bag, one big "Starta färden", or "Följ med" when a run lives); the zones are drawn by the dungeon view with the biome's own ground, the walls and
