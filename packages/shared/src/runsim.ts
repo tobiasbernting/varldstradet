@@ -32,6 +32,7 @@ import {
   PET_EFFECT,
   RUN_JOIN_RADIUS,
   RUN_MAX_MS,
+  RUN_NUDGE_MS,
   RUN_OFFLINE_END_MS,
   RUN_PARTY_MAX,
   RUN_PARTY_MAX_LONGHALL,
@@ -97,6 +98,8 @@ export interface RunState {
   elapsed: number;
   offlineFor: number;
   warned: boolean;
+  /** How many "Dags att gå hem?" nudges have gone out (the first at 30:00, then one every 10 minutes). */
+  nudges: number;
   /** The runor taken so far. */
   runor: string[];
   offer?: { cards: string[]; votes: Record<string, number>; order: string[]; until: number; from: number };
@@ -489,6 +492,7 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
     elapsed: 0,
     offlineFor: 0,
     warned: false,
+    nudges: 0,
     runor: [],
     rerolled: false,
     base: {},
@@ -799,7 +803,15 @@ export function tickRuns(world: WorldState, dtMs: number, ctx: SimCtx): Change[]
     run.warned = true;
     for (const p of people) out.push(banner(p.id, run.key, RUN_T.warn, RUN_T.warnSub));
   }
-  if (run.elapsed >= RUN_MAX_MS) return [...out, ...endRun(farm, run, 'time', ctx)];
+  // past the 30 minutes the run goes on; a kind reminder now and then (once per slot, even if the clock jumps)
+  if (run.elapsed >= RUN_MAX_MS) {
+    const due = Math.floor((run.elapsed - RUN_MAX_MS) / RUN_NUDGE_MS) + 1;
+    if (due > run.nudges) {
+      if (run.nudges === 0) for (const p of people) runSaveOf(p).timeouts++;
+      run.nudges = due;
+      for (const p of people) out.push(banner(p.id, run.key, RUN_T.late, RUN_T.lateSub));
+    }
+  }
   // the hired companion plays
   for (const id of run.companions) {
     const mind = run.minds.get(id);
@@ -905,10 +917,6 @@ export function endRun(farm: WorldState, run: RunState, outcome: RunOutcome, ctx
   for (const p of humans(farm, run)) {
     const s = runSaveOf(p);
     if (result === 'wipe') s.wipes++;
-    if (result === 'time') {
-      s.timeouts++;
-      out.push(banner(p.id, run.key, RUN_T.timeUp, RUN_T.timeUpSub));
-    }
     sendHome(farm, p, out);
     if (p.id !== except)
       out.push(

@@ -1691,10 +1691,10 @@ export const RUN_T = {
   zoneClear: 'Vägen vidare är öppen!',
   zoneClearSub: 'Gå till porten där borta.',
   exitShut: 'Besegra alla flockar först.',
-  warn: 'Fem minuter kvar!',
-  warnSub: 'Ta det lugnt, ni hinner.',
-  timeUp: 'Dags att gå hem',
-  timeUpSub: 'Ni får behålla allt ni hittat.',
+  warn: 'Snart dags att gå hem',
+  warnSub: 'Ta det lugnt. Ni får behålla allt ni hittat.',
+  late: 'Dags att gå hem?',
+  lateSub: 'Gör klart det ni håller på med. Sen kan ni gå hem från nästa vilosten eller bossen.',
   wipeSub: 'Ni går hem med allt ni har. Försök igen!',
   win: 'Färden är klar!',
   winSub: 'Öppna kistan, sen går vi hem.',
@@ -1711,7 +1711,7 @@ export const RUN_T = {
   food: 'Matsäck: {item}',
   foodNone: 'Du har ingen matsäck att ta med.',
   treeGrows: 'Yggdrasil växer!',
-  ended: { win: 'Färden är klar', wipe: 'Alla föll', time: 'Tiden tog slut', leave: 'Färden är slut' } as Record<string, string>,
+  ended: { win: 'Färden är klar', wipe: 'Alla föll', leave: 'Färden är slut' } as Record<string, string>,
 };
 export const runaName = (id: string): string => RUNA_NAMES[id] ?? id;
 export const treeName = (id: string): string => TREE_NAMES[id] ?? id;

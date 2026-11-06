@@ -15,6 +15,7 @@ import {
   RUNA_TEXT,
   RUN_BIOMES,
   RUN_MAX_MS,
+  RUN_NUDGE_MS,
   RUN_PICK_MS,
   RUN_SEEDS,
   RUN_T,
@@ -1226,40 +1227,71 @@ describe('the vote on a runa', () => {
 });
 
 describe('the clock, the wipe and the end', () => {
-  it('warns at 25 minutes, once, and ends gracefully at 30 with everything the party earned', () => {
+  it('nudges at 25 minutes, at 30 and every 10 minutes after, and never ends the run because of the clock', () => {
     const party = makeParty(['vaktare', 'helare']);
     startRun(party.world, party.players[0]!.id, { seed: 6 }, party.ctx());
     const run = runOf(party.world)!;
     const [a, b] = party.players as [import('./index.ts').PlayerState, import('./index.ts').PlayerState];
     a.coins = 321;
-    a.inventory[10] = { item: 'gold', count: 4 };
     runSaveOf(a).seeds = 17;
+    const ticks = (ms: number): Change[] => {
+      const out: Change[] = [];
+      for (let t = 0; t < ms; t += 50) {
+        party.now += 50;
+        out.push(...tick(party.world, 50, party.ctx()));
+      }
+      return out;
+    };
+    const count = (cs: Change[], text: string): number => cs.filter((c) => c.t === 'banner' && c.text === text).length;
     run.elapsed = RUN_WARN_MS - 100;
-    const warned: Change[] = [];
-    for (let i = 0; i < 6; i++) {
-      party.now += 50;
-      warned.push(...tick(party.world, 50, party.ctx()));
-    }
-    expect(warned.filter((c) => c.t === 'banner' && c.text === RUN_T.warn)).toHaveLength(2);
-    for (let i = 0; i < 20; i++) expect(listen(tick(party.world, 50, party.ctx()), RUN_T.warn)).toBe(false);
+    const warned = ticks(300);
+    expect(count(warned, RUN_T.warn)).toBe(2);
+    expect(count(ticks(1000), RUN_T.warn)).toBe(0);
+    expect(count(warned, RUN_T.late)).toBe(0);
+    // 30:00: still alive, everyone told, counted once
     run.elapsed = RUN_MAX_MS - 100;
-    const end: Change[] = [];
-    for (let i = 0; i < 6; i++) {
-      party.now += 50;
-      end.push(...tick(party.world, 50, party.ctx()));
-    }
-    expect(runOf(party.world)).toBeUndefined();
-    expect(run.outcome).toBe('time');
-    expect(end.some((c) => c.t === 'banner' && c.text === RUN_T.timeUp)).toBe(true);
-    expect(end.filter((c) => c.t === 'run' && c.ev === 'ended' && c.outcome === 'time')).toHaveLength(2);
-    for (const p of [a, b]) expect(p.area).toBe('farm');
-    expect(a.coins).toBe(321);
-    expect(a.inventory[10]).toEqual({ item: 'gold', count: 4 });
-    expect(readRun(a).seeds).toBe(17);
+    const at30 = ticks(300);
+    expect(runOf(party.world)).toBe(run);
+    expect(run.phase).not.toBe('ended');
+    expect(count(at30, RUN_T.late)).toBe(2);
+    expect(at30.some((c) => c.t === 'run' && c.ev === 'ended')).toBe(false);
+    for (const p of [a, b]) expect(p.area).toBe(run.key);
     expect(readRun(a).timeouts).toBe(1);
-    // the zone is gone, the chapter not cleared
-    expect(Object.keys(party.world.areas ?? {}).filter((k) => k.startsWith('saga:'))).toEqual([]);
-    expect(a.saga!.cleared).toEqual([]);
+    expect(readRun(b).timeouts).toBe(1);
+    expect(count(ticks(2000), RUN_T.late)).toBe(0);
+    // the second one comes ten minutes later and not before
+    run.elapsed = RUN_MAX_MS + RUN_NUDGE_MS - 1000;
+    expect(count(ticks(500), RUN_T.late)).toBe(0);
+    run.elapsed = RUN_MAX_MS + RUN_NUDGE_MS - 100;
+    expect(count(ticks(300), RUN_T.late)).toBe(2);
+    expect(readRun(a).timeouts).toBe(1);
+    run.elapsed = RUN_MAX_MS + 2 * RUN_NUDGE_MS - 100;
+    expect(count(ticks(300), RUN_T.late)).toBe(2);
+    expect(runOf(party.world)).toBe(run);
+    expect(a.coins).toBe(321);
+    expect(readRun(a).seeds).toBe(17);
+    // and a run that went past the mark still ends with its own outcome: here a player walks home, the other stays
+    leaveRun(party.world, a.id, party.ctx());
+    expect(a.area).toBe('farm');
+    expect(runOf(party.world)).toBe(run);
+  });
+
+  it('a run past 30 minutes that is then wiped ends as a wipe, and one that wins ends as a win', () => {
+    for (const how of ['wipe', 'win'] as const) {
+      const party = makeParty(['vaktare', 'helare']);
+      startRun(party.world, party.players[0]!.id, { seed: 6 }, party.ctx());
+      const run = runOf(party.world)!;
+      run.elapsed = RUN_MAX_MS + 3 * RUN_NUDGE_MS;
+      party.now += 50;
+      tick(party.world, 50, party.ctx());
+      expect(runOf(party.world)).toBe(run);
+      const end = endRun(party.world, run, how, party.ctx());
+      expect(run.outcome).toBe(how);
+      expect(end.filter((c) => c.t === 'run' && c.ev === 'ended' && c.outcome === how)).toHaveLength(2);
+      expect(runOf(party.world)).toBeUndefined();
+      for (const p of party.players) expect(p.area).toBe('farm');
+      expect(readRun(party.players[0]!).timeouts).toBe(1);
+    }
   });
 
   it('the clock stops while nobody is online, and a run nobody returns to ends after a minute', () => {
@@ -1697,7 +1729,7 @@ describe('bot parties play whole runs', () => {
         for (const seed of SEEDS) {
           const party = makeParty(classes, { style, seed, longhall: longhall || classes.length === 4, level: 3 });
           const r = playRun(party, { seed });
-          // a run never runs out of time: it ends in a win or a wipe, and nothing is ever stuck
+          // the tuning target: no party takes more than the 30 minutes to the boss, and nothing is ever stuck
           expect(['win', 'wipe']).toContain(r.outcome);
           expect(r.ms).toBeLessThan(RUN_MAX_MS);
           if (r.outcome === 'win') {

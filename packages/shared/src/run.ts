@@ -10,9 +10,14 @@ import type { Terrain, WeatherKind } from './types.ts';
 // Constants
 // ---------------------------------------------------------------------------
 
-/** The longest a run may take (server time while someone is in it), and when everyone is warned. */
+/**
+ * The 30 minutes is a target the numbers are tuned to, not a wall (owner, 2026-11-06: "should not be a hard cap, we can
+ * adjust later"). Server time while someone is in the run: a gentle banner at RUN_WARN_MS, "Dags att gå hem?" at
+ * RUN_MAX_MS and again every RUN_NUDGE_MS after that. Nothing ends a run because of the clock.
+ */
 export const RUN_MAX_MS = 30 * 60_000;
 export const RUN_WARN_MS = 25 * 60_000;
+export const RUN_NUDGE_MS = 10 * 60_000;
 export const ZONES_PER_RUN = 3;
 /** The vote on a runa ends after this long at the latest. */
 export const RUN_PICK_MS = 20_000;
@@ -258,7 +263,7 @@ export interface RunSave {
   earned: number;
   /** The nodes planted (SEED_TREE ids). */
   tree: string[];
-  /** Runs started, won, ended by a wipe, ended by the clock, and zones cleared. */
+  /** Runs started, won, ended by a wipe, runs that went past the 30-minute mark (`timeouts`: the name is kept so old saves load unchanged), and zones cleared. */
   runs: number;
   wins: number;
   wipes: number;
@@ -478,7 +483,7 @@ export const ZONE_PACKS = [
 // What the clients are told (protocol.ts carries these)
 // ---------------------------------------------------------------------------
 
-export type RunOutcome = 'win' | 'wipe' | 'time' | 'leave';
+export type RunOutcome = 'win' | 'wipe' | 'leave';
 export type RunPhase = 'zone' | 'pick' | 'victory' | 'ended';
 
 /** The run as the arch window, the HUD and the road picture need it. */

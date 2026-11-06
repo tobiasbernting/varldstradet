@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DUNGEONS, RUN_MAX_MS, TICK_HZ, TILE, VILLAGE_KEY, addItem, archFrontOf, areaKey, enterCave, fardportOf, getArea, landmarkOfKind, npcState, objectDef, placeIn, runOf, sagaKey, shootOf, type Change, type ServerMsg } from '../../shared/src/index.ts';
+import { DUNGEONS, RUN_MAX_MS, RUN_NUDGE_MS, RUN_T, TICK_HZ, TILE, VILLAGE_KEY, addItem, archFrontOf, areaKey, enterCave, fardportOf, getArea, landmarkOfKind, npcState, objectDef, placeIn, runOf, sagaKey, shootOf, type Change, type ServerMsg } from '../../shared/src/index.ts';
 import { Game, type Link } from './game.ts';
 import { MemoryStore } from './db/store.ts';
 
@@ -368,18 +368,40 @@ describe('runs over the socket', () => {
     expect(pb.online).toBe(false);
     expect(pb.area).toBe(run.key);
     const lb2 = fakeLink();
-    game.connect(lb2)({ t: 'hello', playerId: b.id });
+    const hb2 = game.connect(lb2);
+    hb2({ t: 'hello', playerId: b.id });
     expect(pb.area).toBe(run.key);
     expect(changesOf(lb2).some((c) => c.t === 'areaData' && c.key === run.key)).toBe(true);
-    // the clock: the server ends the run at 30 minutes and sends everyone home
+    // the clock: at 30 minutes the run goes on, everyone gets the nudge once, and the next one comes ten minutes later
+    const nudge = (l: typeof la): number => changesOf(l).filter((c) => c.t === 'banner' && c.text === RUN_T.late).length;
     run.elapsed = RUN_MAX_MS - 60;
     la.msgs.length = 0;
+    lb2.msgs.length = 0;
     for (let i = 0; i < 4; i++) game.tick(50);
-    expect(runOf(game.world)).toBeUndefined();
-    expect(pa.area).toBe('farm');
+    expect(runOf(game.world)).toBe(run);
+    expect(pa.area).toBe(run.key);
+    expect(pb.area).toBe(run.key);
+    expect(nudge(la)).toBe(1);
+    expect(nudge(lb2)).toBe(1);
+    expect(changesOf(la).some((c) => c.t === 'run' && c.ev === 'ended')).toBe(false);
+    expect(pa.run!.timeouts).toBe(1);
+    la.msgs.length = 0;
+    for (let i = 0; i < 20; i++) game.tick(50);
+    expect(nudge(la)).toBe(0);
+    run.elapsed = RUN_MAX_MS + RUN_NUDGE_MS - 60;
+    for (let i = 0; i < 4; i++) game.tick(50);
+    expect(nudge(la)).toBe(1);
+    expect(pa.run!.timeouts).toBe(1);
+    // leaving on your own is the way home: Bo walks home, Ada stays; then Ada leaves too and the run is over
+    lb2.msgs.length = 0;
+    hb2({ t: 'run', a: 'leave' });
     expect(pb.area).toBe('farm');
-    expect(changesOf(la).some((c) => c.t === 'run' && c.ev === 'ended' && c.outcome === 'time' && c.to === a.id)).toBe(true);
-    expect(changesOf(lb2).some((c) => c.t === 'run' && c.ev === 'ended' && c.to === b.id)).toBe(true);
+    expect(runOf(game.world)).toBe(run);
+    la.msgs.length = 0;
+    ha({ t: 'run', a: 'leave' });
+    expect(pa.area).toBe('farm');
+    expect(runOf(game.world)).toBeUndefined();
+    expect(changesOf(la).some((c) => c.t === 'run' && c.ev === 'offer' && c.offer === null)).toBe(true);
     // the tree: sagafrön are planted over the socket
     game.world.players[a.id]!.run!.seeds = 30;
     la.msgs.length = 0;
