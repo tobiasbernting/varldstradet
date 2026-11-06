@@ -336,7 +336,8 @@ beyond to the arch and uses it, and the check is that it arrives in `saga:draug`
 `DEV_TELEPORT=1`, no Postgres), runs two headless clients in bot mode (`-- --bot`: log in, enter, walk to the first
 pack, cast the four spells on cooldown, step out of telegraphs) and checks their reports against each other: casts
 acknowledged, each other's casts seen, monsters beaten, the same monster health at the same server tick. The Godot
-workflow runs it on every pull request.
+workflow runs it on every pull request. The pictures and benches under Xvfb (software GL, 20+ minutes) are a separate
+`pictures` job that runs only when the workflow is started by hand (Actions → Godot client → Run workflow).
 
 The client stores the server address, its device token, the quality preset and the input settings in `user://settings.cfg`
 (`~/.local/share/godot/app_userdata/Sagan om Världsträdet/` on Linux, `~/Library/Application Support/Godot/app_userdata/…`
