@@ -54,6 +54,16 @@ else
 fi
 echo "   models: kaykit-medieval-hexagon-pack/addons/kaykit_medieval_hexagon_pack/Assets/gltf"
 
+echo "== KayKit Furniture, Halloween and Restaurant Bits (CC0): git (ASSET_MAP.md maps them to object kinds)"
+for repo in KayKit-Furniture-Bits-1.0 KayKit-Halloween-Bits-1.0 KayKit-Restaurant-Bits-1.0; do
+  if [ ! -d "$repo" ]; then
+    git clone --depth 1 "https://github.com/KayKit-Game-Assets/$repo" "$repo"
+  else
+    echo "   $repo already here"
+  fi
+done
+echo "   KayKit Forest Nature Pack is on itch.io only: download it by hand from https://kaylousberg.itch.io/kaykit-forest"
+
 fetch_kenney graveyard-kit
 fetch_kenney mini-dungeon
 fetch_kenney nature-kit
