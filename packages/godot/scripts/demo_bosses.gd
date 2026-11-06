@@ -101,7 +101,11 @@ func _phase_shout(sp: String, id: int, max_hp: float, phase: int, phases: Array,
 		_hp = max_hp * float(phases[phase - 1])
 		_state({str(id): [_hp, max_hp]}, {}, null)
 		if phase - 1 < yells.size():
-			_yell(str(yells[phase - 1])))
+			_yell(str(yells[phase - 1]))
+		# the helpers each new phase calls (sagasim's phase change spawns `phaseAdds` next to the boss)
+		var adds: Dictionary = Data.boss(sp).get("phaseAdds", {})
+		for k in range(int(adds.get("count", 0))):
+			_helper(str(adds.get("species", "")), _bx + (float(k) - 0.5) * 2.0 * _tile, _by + 1.5 * _tile))
 	return t + 1.2
 
 

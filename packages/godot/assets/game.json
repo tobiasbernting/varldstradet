@@ -2507,6 +2507,10 @@
       "phases": [
         0.5
       ],
+      "phaseAdds": {
+        "species": "gravrotta",
+        "count": 3
+      },
       "mini": true,
       "moves": [
         {
@@ -2535,6 +2539,10 @@
         0.66,
         0.33
       ],
+      "phaseAdds": {
+        "species": "skelett",
+        "count": 2
+      },
       "moves": [
         {
           "move": "cleave",
@@ -2582,6 +2590,10 @@
       "phases": [
         0.5
       ],
+      "phaseAdds": {
+        "species": "isvarg",
+        "count": 2
+      },
       "mini": true,
       "moves": [
         {
@@ -2609,6 +2621,10 @@
       "phases": [
         0.5
       ],
+      "phaseAdds": {
+        "species": "isande",
+        "count": 2
+      },
       "moves": [
         {
           "move": "cleave",
@@ -2663,6 +2679,10 @@
       "phases": [
         0.5
       ],
+      "phaseAdds": {
+        "species": "eldimp",
+        "count": 3
+      },
       "mini": true,
       "moves": [
         {
@@ -2700,6 +2720,10 @@
         0.7,
         0.4
       ],
+      "phaseAdds": {
+        "species": "eldimp",
+        "count": 3
+      },
       "moves": [
         {
           "move": "cleave",
@@ -2747,6 +2771,10 @@
       "phases": [
         0.5
       ],
+      "phaseAdds": {
+        "species": "helhund",
+        "count": 2
+      },
       "mini": true,
       "moves": [
         {
@@ -2785,6 +2813,10 @@
         0.66,
         0.33
       ],
+      "phaseAdds": {
+        "species": "gengangare",
+        "count": 2
+      },
       "moves": [
         {
           "move": "pull",
@@ -2831,6 +2863,10 @@
       "phases": [
         0.5
       ],
+      "phaseAdds": {
+        "species": "guldbagge",
+        "count": 3
+      },
       "mini": true,
       "moves": [
         {
@@ -2868,6 +2904,10 @@
         0.6,
         0.3
       ],
+      "phaseAdds": {
+        "species": "guldbagge",
+        "count": 3
+      },
       "moves": [
         {
           "move": "cleave",
@@ -2915,6 +2955,10 @@
       "phases": [
         0.5
       ],
+      "phaseAdds": {
+        "species": "manet",
+        "count": 2
+      },
       "mini": true,
       "moves": [
         {
@@ -2953,6 +2997,10 @@
         0.66,
         0.33
       ],
+      "phaseAdds": {
+        "species": "sjodraug",
+        "count": 2
+      },
       "moves": [
         {
           "move": "line",
@@ -3008,6 +3056,10 @@
       "phases": [
         0.5
       ],
+      "phaseAdds": {
+        "species": "jattespindel",
+        "count": 2
+      },
       "mini": true,
       "moves": [
         {
@@ -3046,6 +3098,10 @@
         0.6,
         0.3
       ],
+      "phaseAdds": {
+        "species": "skuggalv",
+        "count": 2
+      },
       "moves": [
         {
           "move": "nova",
@@ -3104,6 +3160,10 @@
       "phases": [
         0.5
       ],
+      "phaseAdds": {
+        "species": "ulv",
+        "count": 2
+      },
       "mini": true,
       "moves": [
         {
@@ -3141,6 +3201,10 @@
         0.7,
         0.4
       ],
+      "phaseAdds": {
+        "species": "ulv",
+        "count": 2
+      },
       "moves": [
         {
           "move": "charge",
@@ -3198,6 +3262,10 @@
       "phases": [
         0.5
       ],
+      "phaseAdds": {
+        "species": "skelett",
+        "count": 2
+      },
       "mini": true,
       "moves": [
         {
@@ -3238,6 +3306,10 @@
         0.4,
         0.2
       ],
+      "phaseAdds": {
+        "species": "isvarg",
+        "count": 2
+      },
       "moves": [
         {
           "move": "cleave",
