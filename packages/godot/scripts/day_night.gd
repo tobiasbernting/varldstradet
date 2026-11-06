@@ -396,9 +396,9 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 	_dusk = dusk
 	# the ambient is a touch cooler than the sun, so a shadow is slightly blue
 	var cool := 1.0 - _dark
-	var amb_l := _ambient * Color(1.0 + 0.12 * dusk - 0.22 * cool, 1.0 - 0.1 * dusk - 0.04 * cool, 1.0 + 0.2 * dusk)
+	var amb_l := _ambient * Color(1.0 - 0.12 * dusk - 0.22 * cool, 1.0 - 0.02 * dusk - 0.04 * cool, 1.0 + 0.2 * dusk)
 	env.ambient_light_color = amb_l.lerp(Color(0.22, 0.32, 0.95), tw * 0.9)
-	env.ambient_light_energy = (lerpf(0.2, 0.28, _dark) + 0.1 * dusk) * lerpf(1.0, 2.2, clampf(1.0 - sun_share, 0.0, 1.0) * (1.0 - _dark))
+	env.ambient_light_energy = (lerpf(0.2, 0.28, _dark) + 0.03 * dusk) * lerpf(1.0, 2.2, clampf(1.0 - sun_share, 0.0, 1.0) * (1.0 - _dark))
 	# the sun climbs in the east, stands south at noon and sets in the west; at night a pale moon takes its place
 	if up:
 		var low := clampf(1.0 - elevation * 2.2, 0.0, 1.0)

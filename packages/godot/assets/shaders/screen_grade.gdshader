@@ -23,8 +23,10 @@ void fragment() {
 	// night: multiplied toward a saturated navy (the browser's night ambient is 0.21, 0.24, 0.43), lamps keep their warmth
 	vec3 navy = c * vec3(0.5, 0.66, 1.25) + vec3(0.008, 0.02, 0.06) * (1.0 - luma);
 	c = mix(c, navy, night_tint * (1.0 - smoothstep(0.35, 0.8, luma)));
-	c = mix(c, c * vec3(1.1, 0.9, 1.12), dusk * 0.6);
-	c = mix(vec3(luma), c, 1.0 + 0.45 * dusk); // rich mauve, not grey
+	// dusk: violet, with the red held back (an orange path goes dusty violet-brown, not pink); the extra colour is for blues and violets only
+	c = mix(c, c * vec3(0.76, 0.74, 1.0), dusk * 0.8);
+	float redness = clamp((c.r - c.b) * 4.0, 0.0, 1.0);
+	c = mix(vec3(luma), c, 1.0 + 0.18 * dusk * (1.0 - redness));
 	float d = length(SCREEN_UV - vec2(0.5)) * 1.4142;
 	c *= 1.0 - vignette * pow(d, 2.4);
 	c = mix(c, vec3(0.88, 0.92, 1.0), flash * 0.85);
