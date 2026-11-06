@@ -42,8 +42,9 @@ the rest can join (section 6).
 * **Time.** The clock runs on the server while at least one party member is online and is 30:00 at the most. At 25:00
   everyone gets a banner ("Fem minuter kvar!"). At 30:00 the run ends gracefully: "Dags att gå hem", everyone is carried
   home with what they have. A run that ends on time gives its sagafrön and loot but does not clear the chapter.
-  A kid-paced family (2.5 times slower than the careful bots) takes about 28 minutes at the numbers below, so the
-  cap is a safety net and not a wall.
+  The numbers were tuned with bot parties (section 9): the careful bots reach the boss in 8–12 minutes, the clumsy
+  bots, who are about as slow as kids (2.2–2.5 times the careful ones), in 14–25 minutes, plus a short vote at each
+  exit. So the cap is a safety net and not a wall.
 * **Rooms are not saved.** Like a dungeon, a run exists only while it is played: a server restart puts everyone back on
   the farm, and what they earned was already paid out.
 
@@ -75,9 +76,9 @@ can be **flipped** left-right and top-bottom by the seed, which gives four versi
    starter has cleared all nine, it is a **replay**: a random cleared boss, picked by the seed.
 2. Three different biomes are drawn from the seven (never repeating; the biome of the boss's own dungeon may appear).
 3. For each zone the seed picks the flip, which of the optional rooms (the side room, a second pack in the third room)
-   are kept, and the packs from the biome's list: zone 1 uses small and medium monsters in groups of 2–3, zone 2 medium
-   in groups of 3, zone 3 medium and big in groups of 3–4. Health multipliers climb with the zone (*(tuned)*: 1.0, 1.15,
-   1.3).
+   are kept, and the packs from the biome's list: the first pack room has two or three packs, the second two or three,
+   in groups of 3–4 (a modifier adds members), and the third zone puts one big monster in one of the second room's
+   packs. Monster health climbs with the zone *(tuned)*: × 1.35, × 1.5, × 1.7 on top of the saga's own party scaling.
 4. The seed also picks the **weather** of each zone (sun, cloudy, rain, fog, wind; snow in the ice zone, ash wind in
    the volcano): it is carried in the run state for the client to draw (M5c) and has no effect on the rules.
 5. The boss's attacks: the first attack and the first stoppable attack are always unlocked; the seed locks one of the
@@ -198,8 +199,9 @@ on the player (`PlayerState.run.seeds`), so a wipe, a time-out, a dropped connec
 | the boss, first clear of the chapter | 20 |
 | the boss, a replay | 12 |
 
-Bonuses are added to these: `p_fro` +25 %, each modifier +15 %, tree nodes (section 3.1). A normal run gives about 40
-sagafrön; the whole tree costs about 520, so it is some twelve runs of growing, not a grind.
+Bonuses are added to these: `p_fro` +25 %, each modifier +15 %, tree nodes (section 3.1). A normal run gives about 50
+sagafrön (the bots, who skip the side rooms, got 49–51); the whole tree costs 462, so it is some nine runs of growing,
+not a grind.
 
 ### The Yggdrasil shoot
 
@@ -234,7 +236,7 @@ turn what the farm makes into more for the run.
 | `f5` | Gård | Rikare kistor | 35 | f2 | coins from the run's chests +25 % |
 | `f6` | Gård | Världsträdets rot | 50 | f3 | the boss gives 5 more sagafrön |
 
-Total 460 sagafrön for everything.
+Total 462 sagafrön for everything.
 
 ### How the tree looks
 
@@ -299,7 +301,8 @@ bag when the run starts. Nothing chosen is fine.
 * **Leaving.** `leave` at any time puts you back at the farm in front of the arch with everything you have. A run with no
   human left ends.
 * **Scaling.** Exactly the saga's: `mobHpScale`, `bossHpScale`, `addCount`, `mobDmgScale` by the number of fighters in
-  the zone.
+  the zone. One human with the hired companion counts as two fighters, so monsters get `SOLO_MERCY` = 0.75 of their
+  health on top, which made a solo run winnable with every class *(tuned)*.
 * **The hired companion** (longhouse built, exactly one human): **Hirdmannen**, a fighter the server runs with the same
   brain as the test bots (`runbot.ts`). It takes the class the human lacks (a healer for a tank or a damage dealer,
   a tank for a healer), is the human's level, wears the starter set, and counts as a party member for monster scaling.
@@ -332,3 +335,23 @@ bag when the run starts. Nothing chosen is fine.
 * Falling, the wipe and the time-out say "Ni vaknar vid vilostenen" and "Dags att gå hem" and never anything about losing.
 * The same safety as the saga: nothing bleeds, monsters poof, the party is always at the farm again with what it has.
 * A parent's play hours, pause and remove work as before and end a run as a leave.
+
+---
+
+## 9. What the bots found (the numbers behind the numbers)
+
+Bot parties (`runbot.ts`, played by `runplay.ts`, checked in `run.test.ts`) play whole runs at hero level 3 in the starter
+set, chapter 1. *Careful* bots step out of telegraphs and stop the boss's big attacks; *clumsy* bots do neither, think for
+a moment between moves and miss a third of their chances, which makes them about 2.2–2.5 times slower, like the kids.
+Minutes until the boss falls (3 runs each):
+
+| Party | Careful | Clumsy |
+| --- | --- | --- |
+| 1 player + Hirdmannen | 6–7 min | 12–16 min |
+| 2 players | 11–13 min | 22–27 min |
+| 3 players | 9–12 min | 19–26 min |
+| 4 players (longhouse) | 7–9 min | 15–19 min |
+
+The exact table from the last run of the tests is in the pull request. Tuned: `ZONE_HP`, `ZONE_PACKS`, `SOLO_MERCY` and
+the hired companion's class (a healer for everyone but the healer). The tests fail if a careful party ever stops
+winning, if any party gets stuck or runs out of the 30 minutes, or if the careful trio's time leaves 4–15 minutes.

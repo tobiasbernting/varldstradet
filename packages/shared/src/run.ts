@@ -462,14 +462,14 @@ export const BOSS_ZONE = {
 };
 
 /** Health of a zone's monsters by zone (0..2): the later zones are tougher. Tuned by the bots. */
-export const ZONE_HP: readonly number[] = [1.25, 1.5, 1.75];
+export const ZONE_HP: readonly number[] = [1.35, 1.5, 1.7];
 
 /** One human alone (with the hired companion, who counts as a fighter for the monsters' health): monsters tolerate this much less. */
 export const SOLO_MERCY = 0.75;
 
 /** Packs per room (and members), by zone. Tuned by the bots (run.test.ts), see GAME.md. */
 export const ZONE_PACKS = [
-  { a: [2, 2], b: [2, 3], size: [3, 3], big: 0 },
+  { a: [2, 2], b: [3, 3], size: [3, 4], big: 0 },
   { a: [2, 3], b: [3, 3], size: [3, 4], big: 0 },
   { a: [3, 3], b: [3, 3], size: [3, 4], big: 1 },
 ] as const;

@@ -515,3 +515,40 @@ this repository (it lives on in `tobiasbernting/lilla-garden`, which is not touc
 - **No character creator in Godot.** `POST /api/players` is unchanged, but the browser's creator is gone and the native
   client only picks an existing character; until it has a creator a new character is made with that route (README,
   "Native client").
+
+## Runs: Sagan som färd (2026-11-06)
+Milestone M5b of `PLAN.md`: the design is `GAME.md` (read it first); this is the record of the rules as built, on the server and
+in `packages/shared`, before any client draws them (M5c). Every fight rule is the saga's: a run only hands fighters their buffs.
+- **A run** (`runsim.ts`) is at most 30 minutes (server clock, counted while someone in the party is online; a banner at 25:00,
+  a graceful end at 30:00): three zones and the chapter's boss. Started with `{t:'run', a:'start'}` at the **färdport**
+  (`fardport`, 3 × 2, placed by `ensureRunPlaces` beside the **Yggdrasil shoot** `yggdrasil`, which the family may already have
+  planted; the same function puts both back every 20 s of play, on load and at server start). Family members within 6 tiles come
+  along; others `join` and appear at the last lit rest stone of the zone. Three players, four with a longhouse; one human with a
+  longhouse gets the hired **Hirdmannen** (a `PlayerState` with `bot: true`, created by `createPlayer`, played by `botStep`, never
+  saved, listed, or counted against `MAX_PLAYERS`).
+- **A zone** is a `saga:run<n>z<i>` area (`isRunKey`) built by `runmap.ts` with `sagamap.ts`'s new `buildDungeon(def, rnd, solid,
+  key)` (`generateSaga` calls it, output unchanged): a template per biome (`ZONE_TEMPLATES`, six rooms, 4–6 kept, four flips),
+  `run_exit` in the last room behind a `saga_gate` that `tickRuns` opens when the packs on the way are down. Zones are never saved
+  and are thrown away when the party leaves them. `SagaInstance.run` (`SagaRunLink`: health, damage and sight multipliers, the
+  unlocked boss moves, a `RunBuffs` per fighter, the wipe line, the packs that must fall) is read at the few places a run changes
+  a fight in `sagasim.ts`; with no `run` every value is what it was (`saga.test.ts` is unchanged and passes).
+- **Buffs** (`RunBuffs`, all fractions from zero): spell power (all and per spell), cooldowns, health, armor, damage taken, healing
+  done, potion, regeneration and rest-stone healing, threat, leech, critical chance, time down, revive health and coins from
+  chests. Sources added up by `effectFor`: the farm (`farmEffect`: tree, dishes, animals, joy, smithy, herb garden), the party's tree
+  (the strongest of each effect among members), and the runor taken (class runor only for the class).
+- **Runor**: after a zone's exit a vote on three cards (`offerRunor`): strict majority at once, everyone voted, or 20 s; ties go to
+  the card voted first; the node `g3` allows one new offer. **Sagafrön** are paid to every human in the run when earned (`RUN_SEEDS`,
+  +15 % per modifier, +runor and tree bonuses) into `PlayerState.run` (`RunSave`, optional; old saves load unchanged; `readRun`/
+  `runSaveOf`), planted with `{t:'seed', a:'plant'}` into `SEED_TREE` (18 nodes, 462 in all). The shoot's `variant` is the tree's
+  stage from all nodes planted by the family (0, 3, 8, 14, 24).
+- **Ending**: the boss falling pays and clears the chapter (sagasim's own `cleared`) and starts 90 s for the chest; a wipe (the
+  saga's four-second pause, but the zone does not reset) ends the run; so does the clock, the last human leaving, or a minute with
+  nobody online. Everyone is back in front of the arch with everything; sagafrön were paid as earned.
+- **Protocol** (additive): client `run` (`start`, `join`, `pick`, `reroll`, `leave`, `state`), `seed` (`plant`, `state`),
+  `fardkost`; server `Change`s `run` (`state`, `offer`, `ended`), `seed` (`tree`), `fardkost`, and `open` with `run` and `seed`.
+  The store sends anyone saved inside a run home to the arch; the companion never reaches the database.
+- **Balance** (bots, level 3, three runs each): 1 player + companion 6–7 / 12–16 min (careful / clumsy), 2 players 11–13 / 22–27,
+  3 players 9–12 / 19–26, 4 players 7–9 / 15–19. Tuned: monster health × 1.35 / 1.5 / 1.7 by zone, packs of 3–4, `SOLO_MERCY` 0.75, a healer
+  as the companion for everyone but the healer. Two bugs found on the way: a mage's blink (and a warrior's stormsteg) could land
+  with the body in a wall so no move was accepted again (a real player could have been trapped; fixed in `sagasim.ts`), and a bot
+  with two equally near targets dithered between them forever.
