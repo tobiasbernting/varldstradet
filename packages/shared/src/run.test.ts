@@ -40,6 +40,7 @@ import {
   FOOD_TEXT,
   MODIFIER_NAMES,
   addEffect,
+  addItem,
   addObject,
   applyMove,
   archFrontOf,
@@ -781,6 +782,37 @@ describe('starting, joining and leaving', () => {
     startRun(duo.world, duo.players[0]!.id, { seed: 6 }, duo.ctx());
     const run = runOf(duo.world)!;
     expect(duo.world.areas![run.key]!.saga!.run!.hpMul).toBe(run.plan.zones[0]!.hpMul);
+  });
+
+  it('leaving and joining again does not bring the player in twice: one run counted, the potions once, the dishes kept', () => {
+    const party = makeParty(['vaktare', 'helare', 'krigare']);
+    const [a, b, c] = party.players as [import('./index.ts').PlayerState, import('./index.ts').PlayerState, import('./index.ts').PlayerState];
+    placeIn(party.world, c, 'a:0,1', 5, 5, 'down', []);
+    addItem(c.inventory, 'bread', 1);
+    startRun(party.world, a.id, { seed: 4 }, party.ctx());
+    const run = runOf(party.world)!;
+    void b;
+    const potions = (): number => c.inventory.reduce((n, s) => n + (s?.item === 'healing_potion' ? s.count : 0), 0);
+    // she joins with bread chosen: used up once
+    const front = archFrontOf(party.world);
+    placeIn(party.world, c, 'farm', front.x, front.y, 'down', []);
+    chooseFardkost(party.world, c.id, ['bread']);
+    joinRun(party.world, c.id, party.ctx());
+    expect(readRun(c).runs).toBe(1);
+    expect(run.food[c.id]).toEqual(['bread']);
+    const hp = run.base[c.id]!.hp;
+    expect(hp).toBeGreaterThan(0);
+    const bag = potions();
+    // out and in again
+    leaveRun(party.world, c.id, party.ctx());
+    placeIn(party.world, c, 'farm', front.x, front.y, 'down', []);
+    joinRun(party.world, c.id, party.ctx());
+    expect(run.party).toContain(c.id);
+    expect(readRun(c).runs).toBe(1);
+    expect(potions()).toBe(bag);
+    expect(run.base[c.id]!.hp).toBe(hp);
+    expect(run.food[c.id]).toEqual(['bread']);
+    expect(party.world.areas![run.key]!.saga!.run!.buffs[c.id]!.hp).toBeCloseTo(hp!);
   });
 
   it('is full at three, or four with a longhouse', () => {

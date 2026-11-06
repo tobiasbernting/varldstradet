@@ -104,6 +104,8 @@ export interface RunState {
   /** What each player brings from the farm (tree, dishes, animals, buildings): added up once at the start or on joining. */
   base: Record<string, RunEffect>;
   food: Record<string, string[]>;
+  /** Who has been brought in for this run (their dishes, potions and the run count): a rejoiner is not brought twice. Never saved. */
+  brought: Set<string>;
   earned: Record<string, number>;
   /** The fraction of a sagafrö each player is owed by the bonuses (whole seeds are paid; never saved). */
   carry: Record<string, number>;
@@ -438,6 +440,7 @@ function bring(farm: WorldState, run: RunState, p: PlayerState, items: string[] 
   }
   choicesOf(farm).delete(p.id);
   run.food[p.id] = dishes;
+  run.brought.add(p.id);
   const e = farmEffect(farm, p, dishes);
   run.base[p.id] = e;
   // potions come as items: the dishes', the herb garden's and the tree's
@@ -490,6 +493,7 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
     rerolled: false,
     base: {},
     food: {},
+    brought: new Set(),
     earned: {},
     carry: {},
     paid: new Set(),
@@ -602,8 +606,11 @@ export function joinRun(world: WorldState, playerId: string, ctx: SimCtx): Chang
   // a lone player's hired companion steps aside for a real friend
   if (run.companions.length) dismissCompanions(farm, run, out);
   run.party.push(p.id);
-  bring(farm, run, p, undefined, out);
-  runSaveOf(p).runs++;
+  // someone who left and comes back is not brought in again: no second run counted, no second potions, and the dishes of the first time still count
+  if (!run.brought.has(p.id)) {
+    bring(farm, run, p, undefined, out);
+    runSaveOf(p).runs++;
+  }
   refresh(farm, run);
   for (const q of humans(farm, run)) if (q.id !== p.id) out.push(toast(q.id, fmt(RUN_T.joined, { name: p.name })));
   if (run.phase === 'pick') {
