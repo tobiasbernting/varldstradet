@@ -63,6 +63,13 @@ for repo in KayKit-Furniture-Bits-1.0 KayKit-Halloween-Bits-1.0 KayKit-Restauran
     echo "   $repo already here"
   fi
 done
+echo "== KayKit Character Pack: Skeletons (CC0): git (the crypt's undead for --people3d; assets/kaykit_skeletons)"
+if [ ! -d kaykit-skeletons ]; then
+  git clone --depth 1 https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0 kaykit-skeletons
+else
+  echo "   already here"
+fi
+echo "   models: kaykit-skeletons/addons/kaykit_character_pack_skeletons/Characters/gltf and Assets/gltf (tools/strip_glb_animations.py makes the animation-free copies)"
 echo "   KayKit Forest Nature Pack is on itch.io only: download it by hand from https://kaylousberg.itch.io/kaykit-forest"
 
 fetch_kenney graveyard-kit

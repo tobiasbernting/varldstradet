@@ -19,6 +19,8 @@ const FOOT_LIFT := 0.03
 ## themselves by where they stand.
 const PULL := Vector3(0.0, 0.38, 0.33)
 const WALK_FPS := 6.0
+## The Adventurers' figures: their rig's animations (names are `library/animation`; the libraries are _libs()).
+const DEFAULT_RIG := {"idle": "General/Idle_A", "walk": "Move/Walking_A", "death": "General/Death_A", "attack": "", "hit": ""}
 ## How far a voxel body turns toward a walk up or down the screen (radians), at most.
 const VOXEL_TURN := 0.61
 const BAR_BACK_PRIORITY := 10
@@ -65,6 +67,8 @@ var model: Node3D = null
 var _anim: AnimationPlayer = null
 var _model_h := 0.0
 var _yaw := 0.0
+var _rig := {} ## the animations this figure plays: idle, walk, death, attack, hit (set_figure's `rig`)
+var _once_t := 0.0 ## seconds left of a one-shot animation (attack, hit), during which idle and walk wait
 static var _anim_libs: Array = [] ## AnimationLibrary, loaded once from the pack's two rig files
 ## The voxel body (`--people3d`, voxel_body.gd): a creature's sprite frames extruded into meshes, or null.
 var voxel: MeshInstance3D = null
@@ -154,7 +158,7 @@ func _placeholder() -> void:
 ## The 3D trial: shows a figure on the shared Rig_Medium skeleton (Figure3D.build()) instead of the sprite,
 ## `height_m` tall, with the pack's idle, walk and death animations. `key` names the look, so the same look is not
 ## rebuilt; a null figure keeps the sprite and returns false.
-func set_figure(figure: Node3D, key: String, height_m := 1.5) -> bool:
+func set_figure(figure: Node3D, key: String, height_m := 1.5, rig := {}) -> bool:
 	if model != null and model.get_meta("key", "") == key:
 		if figure != null:
 			figure.free()
@@ -175,11 +179,12 @@ func set_figure(figure: Node3D, key: String, height_m := 1.5) -> bool:
 	_anim = AnimationPlayer.new()
 	model.add_child(_anim)
 	_anim.root_node = NodePath("..")
-	for lib in _libs():
+	_rig = DEFAULT_RIG.merged(rig, true)
+	for lib in (_rig["libs"] if _rig.has("libs") else _libs()):
 		_anim.add_animation_library(str(lib.get_meta("name")), lib)
 	sprite.visible = false
 	label.position.y = height_m + 0.3
-	_play("General/Idle_A")
+	_play(_rig["idle"])
 	return true
 
 
@@ -276,14 +281,26 @@ func _play(anim_name: String) -> void:
 		_anim.play(anim_name, 0.15)
 
 
+## A one-shot animation (the swing, the hit) at `speed`; idle and walk wait until it is done.
+func _play_once(anim_name: String, speed := 1.0) -> void:
+	if _anim == null or anim_name == "" or not _anim.has_animation(anim_name) or pose == "down":
+		return
+	_anim.play(anim_name, 0.05, speed)
+	_anim.seek(0.0, true)
+	_once_t = _anim.get_animation(anim_name).length / speed
+
+
 func _animate_model(facing: String, moving: bool, delta: float) -> void:
 	if pose == "down":
-		_play("General/Death_A")
+		_play(_rig["death"])
 		return
 	var want: float = {"down": 0.0, "up": PI, "right": PI / 2.0, "left": -PI / 2.0}.get(facing, _yaw)
 	_yaw = lerp_angle(_yaw, want, 1.0 - pow(0.001, delta))
 	model.rotation.y = _yaw
-	_play("Move/Walking_A" if moving else "General/Idle_A")
+	if _once_t > 0.0:
+		_once_t -= delta
+		return
+	_play(_rig["walk"] if moving else _rig["idle"])
 
 
 func set_label(text: String) -> void:
@@ -409,6 +426,8 @@ func _tick_looks(delta: float) -> void:
 func flash(colour: Color = Color(1.0, 1.0, 1.0), seconds := 0.12) -> void:
 	_flash_colour = colour
 	_flash_t = seconds
+	if colour.r >= colour.g: # a hit (white) or hurt (red), not a heal (green)
+		_play_once(str(_rig.get("hit", "")), 1.6)
 
 
 ## A short lunge in a direction (the swing of a melee spell), scene units.
@@ -416,6 +435,7 @@ func lunge(dir: Vector3, dist := 0.25) -> void:
 	var d := Vector3(dir.x, 0.0, dir.z)
 	_lunge = d.normalized() * dist if d.length() > 0.01 else Vector3(0.0, 0.0, -dist)
 	_lunge_t = 0.18
+	_play_once(str(_rig.get("attack", "")), 1.8)
 
 
 ## The farm's use animation: a lunge towards the tile and the tool's picture swinging past (the browser squashes the

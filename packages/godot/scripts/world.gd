@@ -638,7 +638,9 @@ func _sync_actors() -> void:
 				var grow := int(Data.animals.get(species, {}).get("growDays", 3))
 				sheet = Data.animal_sheet(species, int(rec.get("age", 99)) < grow, model.season == "jul", int(rec.get("variant", 0)))
 			actor.set_sheet(sheet)
-			if _people3d and not VEHICLES.has(species) and sheet != "":
+			if _people3d and SkeletonFigure.has(species):
+				actor.set_figure(SkeletonFigure.build(species), "skel:" + species, SkeletonFigure.height_of(species), SkeletonFigure.rig(species))
+			elif _people3d and not VEHICLES.has(species) and sheet != "":
 				actor.set_voxel(VoxelBody.frames(sheet), sheet)
 			# dungeon monsters show their own bars instead of the name labels (the browser's ownsLabel)
 			actor.set_label("" if (_mode == "dungeon" and not Data.mob(species).is_empty()) else str(rec.get("name", Data.mob_name(species))))
