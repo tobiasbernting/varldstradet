@@ -3,8 +3,9 @@ extends RefCounted
 ## A creature's 3D body, extruded from its own pixel art (the `--people3d` trial, ART.md "Creatures in 3D"): every
 ## opaque pixel of a sprite frame becomes a box `pixel_m` wide and tall, and its depth follows a rounded profile so
 ## the body is a pillow and not a slab. On each row the opaque span (left..right, centre c, half-width h) gives the
-## pixel at x a half-depth of max(0.5, DEPTH_K * h * sqrt(1 - ((x - c) / h)^2)) pixels (a row one pixel wide gets
-## 0.5). Faces between two neighbouring boxes are only emitted where the neighbour is shorter (or missing), so the
+## pixel at x a half-depth of DEPTH_K * h * sqrt(1 - ((x - c) / h)^2) pixels (at least 0.5: a row one pixel wide gets
+## 0.5), the same down each column, and the pixel takes the shallower of the two, never more than DEPTH_MAX. Faces
+## between two neighbouring boxes are only emitted where the neighbour is shorter (or missing), so the
 ## mesh stays small. The vertex colour is the pixel's colour, the pixel-art outline included.
 ##
 ## The mesh stands on the origin: x centred on the frame, y up from the feet row (the bottom of the frame), z the
@@ -14,9 +15,11 @@ extends RefCounted
 
 const SHADER := "res://assets/shaders/voxel_body.gdshader"
 ## How round the pillow is: the half-depth of a row's middle pixel in half-widths of the row.
-const DEPTH_K := 0.4
+const DEPTH_K := 0.5
 ## ... and no body is thicker than this (half-depth, pixels), however long its rows are.
 const DEPTH_MAX := 3.5
+## The column profile is this much rounder than the row's (columns are shorter than rows, so it would be thin).
+const COLUMN_K := 1.6
 const ALPHA_MIN := 0.5
 ## A pixel at least this dark is outline: kept on the front and back faces (the pixel art's look), but the faces
 ## that stand out of the body (top, sides, underside) take the colour of the body behind it, or the dark rim would
@@ -56,7 +59,26 @@ static func build(image: Image, rect: Rect2i, pixel_m: float) -> ArrayMesh:
 		for x in range(l, r + 1):
 			if half[y * w + x] < 0.0:
 				var u := (x - ctr) / hw
-				half[y * w + x] = clampf(DEPTH_K * hw * sqrt(maxf(0.0, 1.0 - u * u)), 0.5, DEPTH_MAX) * pixel_m
+				half[y * w + x] = DEPTH_K * hw * sqrt(maxf(0.0, 1.0 - u * u)) # (pixels; the column's profile and the clamp below)
+	# the same profile down each column, and the body is as deep as the shallower of the two: a pillow rounded
+	# in both directions, so a wide row under a narrow one does not stand out as a ledge
+	for x in range(w):
+		var t := -1
+		var b := -1
+		for y in range(h):
+			if half[y * w + x] != 0.0:
+				if t < 0:
+					t = y
+				b = y
+		if t < 0:
+			continue
+		var cy := (t + b) / 2.0
+		var hh := (b - t + 1) / 2.0
+		for y in range(t, b + 1):
+			if half[y * w + x] != 0.0:
+				var v := (y - cy) / hh
+				var colk := DEPTH_K * hh * sqrt(maxf(0.0, 1.0 - v * v))
+				half[y * w + x] = clampf(minf(half[y * w + x], colk * COLUMN_K), 0.5, DEPTH_MAX) * pixel_m
 	var vs := PackedVector3Array()
 	var ns := PackedVector3Array()
 	var cs := PackedColorArray()

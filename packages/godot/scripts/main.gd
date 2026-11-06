@@ -5,6 +5,7 @@ extends Node
 ##   --demo[=farm|forest] the world plays a recorded fixture (no server needed): Draugkryptan (the default; with
 ##                       --fight a scripted fight runs on it), the farm, or the forest with the dungeon's arch;
 ##                       --time=0.7 --weather=rain --season=jul set the sky, --at=x,y where to stand
+##                       --people3d 3D bodies for people and creatures (figure_3d.gd, voxel_body.gd, skeleton_figure.gd)
 ##   --bench[=preset]    the demo scene on each quality preset (or one: lag, mellan, hog) in steady state, printing
 ##                       frame times, draw calls, lights and the render timings (bench.gd)
 ##   --farmbot           a headless player that farms against a local server (farm_bot.gd, M4b)
