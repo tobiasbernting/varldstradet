@@ -18,6 +18,7 @@ vec3 lin_to_srgb(vec3 c) {
 void fragment() {
 	vec3 col = mix(COLOR.rgb, lin_to_srgb(COLOR.rgb), vcol_fix) * tint;
 	ALBEDO = mix(col, flash_colour, flash);
-	EMISSION = col * night * 0.4 + flash_colour * flash * 0.6;
+	// the lift is warm-neutral and a touch stronger than the sprites' so a white cow reads pale under the navy night grade, not electric blue
+	EMISSION = col * vec3(1.0, 0.9, 0.72) * night * 0.5 + flash_colour * flash * 0.6;
 	ROUGHNESS = 1.0;
 }
