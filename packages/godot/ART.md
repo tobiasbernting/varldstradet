@@ -22,7 +22,7 @@ the owner decides otherwise); `assets/LICENSES.md` has every file's origin.
 - **Light.** A dungeon is dark in its own colour: `WorldEnvironment.ambient_light_color` is
   `DUNGEONS[id].ambient × 0.6` (the browser's `dungeonAmbient`), the background the same colour darker. Every
   `saga_torch` is an `OmniLight3D` with the dungeon's torch colour (Draugkryptan's is the green `#9cff8a`, the frost
-  castle's pale blue, Surt's fire; see `TORCH_COLOURS` in `dungeon_view.gd`, copied from the browser's `SAGA_TORCH`),
+  castle's pale blue, Surt's fire; see `LOOKS[id]["torch"]` in `dungeon_look.gd`, from the browser's `SAGA_TORCH`),
   range 4 m, a slow flicker. Candles, a lit rest stone and the exit carry smaller lights. Shadows are a quality-preset
   matter (below), never baked.
 - **Names and numbers.** `Label3D` billboards over heads, white with a dark outline, 2 px of outline per 16 px of text.

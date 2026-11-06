@@ -10,7 +10,7 @@ extends RefCounted
 ##   wall      the dungeon's `wall` index in the shared data (a run's zones borrow a dungeon's look by that index)
 ##   stone     tint on the KayKit stone (floor tiles, wall faces, props): ART.md, "Recolouring imported packs"
 ##   torch     the colour of the wall torches' flame and light
-##   floors    terrain -> multiplier on `stone` for the floor tiles of that terrain (on top of FLOORS)
+##   floors    terrain -> multiplier on `stone` for the floor tiles of that terrain (replaces FLOORS' entry for it)
 ##   boss_decor  the boss hall's floor tiles are KayKit's decorated tile (false: the plain one; the crypt's own hall has the decor)
 ##   weeds     some floor tiles are the weedy variant (false: only the broken one, for stone and ice that has no weeds)
 ##   ambient_energy  strength of the ambient light (the dungeon's colour turned down so torches pool light)
