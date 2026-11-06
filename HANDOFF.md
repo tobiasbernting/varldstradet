@@ -40,8 +40,13 @@ only what a new session needs to continue: state, decisions, how the work is run
   GAME.md mismatches (`ZONE_PACKS` wording, the companion's class in the offer, `f6` paid to everyone, `dimma` leash
   on bosses, end banner after a win, double `bring()` on rejoin, the parent-pause sentence). Accepted as-is: the
   `bodyFits` change to Blink and Stormsteg also applies in the nine dungeons (it fixes a real wall trap). A check-in is
-  scheduled 90 minutes after the child started (10:09 UTC). After its push: review again, merge, then ask the owner
-  for the verdict on `GAME.md` before M5c.
+  scheduled 90 minutes after the child started (10:09 UTC). The fix-up child finished 10:31 UTC: 13 commits on the
+  branch (head 99639b2), each finding with a test, 296 shared and 47 server tests green locally in the orchestrating
+  session. CI on 99639b2: `build` green, `export` red only in the headless two-bot check (the farmer's walk to the
+  village bus stop timed out after 376 s; the Xvfb run of the same step passed minutes earlier; nothing in the fix-up
+  touches the village), re-run queued 11:16 UTC as a flake test. The owner then decided the 30 minutes is a soft
+  target (section 2): a third child, "M5b: the 30 minutes is a soft target, not a wall" (Sonnet, same branch), turns
+  the forced end into nudges. Check-in at 12:20 UTC: review the head, merge PR 11 when CI is green, then start M5c.
 - Not yet done: M5c (runs in the Godot client), M6 (the other eight dungeons and chapters), M7 (alive world), M8
   (polish, release tag, homelab deploy of the v2 server, `DESIGN.md` rewrite).
 
@@ -57,7 +62,7 @@ only what a new session needs to continue: state, decisions, how the work is run
 | Server | Reuse the running Hetzner + Cloudflare tunnel setup from the homelab repo (`cloud/`), join codes, parent page over Tailscale |
 | Repository | New repo `varldstradet`, seeded with full history; lilla-garden untouched |
 | Models | All child sessions on Sonnet (`claude-sonnet-5-5`) to spare the weekly limit; review and merge in the orchestrating session |
-| Runs | At most 30 minutes: three zones and a boss; runor (per-run boons) and sagafrön (permanent upgrades at the Yggdrasil shoot) both kept |
+| Runs | Three zones and a boss; runor (per-run boons) and sagafrön (permanent upgrades at the Yggdrasil shoot) both kept. The 30 minutes is a **soft target** the numbers are tuned to (clumsy, kid-like bots: about 21 minutes for three players), with nudges at 25:00 and 30:00 and never a forced end: "should not be a hard cap, do what is best, we can adjust later" (owner, 2026-11-06). `GAME.md` approved as it stands otherwise. |
 | Browser client | Retired from varldstradet (done in M5a) |
 
 Owner feedback from the MacBook: the crypt runs over Metal; health bars jumped and walls had smears (fixed in M3c);
@@ -124,6 +129,6 @@ after-M3d bench, the house and village benches and an Intel laptop bench were ne
 - Orchestrating session (from 2026-11-06 09:55 UTC): `session_01KTh22pPGKmMmYJxTLXzyqs`; before that
   `session_01KTh22nak5ip5cq8vST7H9Q`. M5b child: `session_01KTh22qkzZkRx6UToLHSTLk`. M5b fix-up child:
   `session_01KTh22ovyHfUYGF3frNYrnr`.
-- One check-in pending for the fix-up child (90 minutes from 10:09 UTC).
+- One check-in pending at 12:20 UTC (`trig_011wFzz6amNKxbAwMyFfLKwe`): the soft-cap child, CI on PR 11, merge, then M5c.
 - Homelab repo `tobiasbernting/homelab`: `cloud/` (Hetzner + Cloudflare + Tailscale, running), `server/roles/lilla-garden`
   and `lilla-garden-cloud`.
