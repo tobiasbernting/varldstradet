@@ -158,6 +158,8 @@ this the browser client was not needed for a farm evening, and on 2026-11-02 (M5
 
 ![The farm in the native client](packages/godot/docs/m4a-farm-day.png)
 
+The character creator (login screen, "Ny karaktär"): ![The character creator](packages/godot/docs/creator.png)
+
 Home and village (M4c): [the workbench](packages/godot/docs/m4c-workbench.png), [a fence that is not yours](packages/godot/docs/m4c-not-yours.png),
 [the farmhouse at night](packages/godot/docs/m4c-house-night.png), [the shop](packages/godot/docs/m4c-shop.png),
 [the wardrobe](packages/godot/docs/m4c-wardrobe.png), [Köpingen](packages/godot/docs/m4c-village.png),
@@ -247,11 +249,11 @@ Then start the client:
    the server ignores the code, but the field must not be empty (type anything); otherwise it is the join code from the
    parent page. Then what to call this computer, and press Kom in.
 3. A code the parent approves shows the 6-digit number; the client polls `/api/gate` every few seconds and goes on
-   to "Vem är du?" when the parent has approved the device. Pick a character. **Characters cannot be made in the
-   native client yet** (they were made in the browser game, which is gone): on a fresh server make one with
-   `curl -X POST http://localhost:8080/api/players -H 'content-type: application/json' -d '{"name":"Kalle"}'` (with
-   `ACCESS=open`; with access control add `-H "Authorization: Bearer <the device token>"`, which the client keeps in
-   its `user://` settings). A character creator in Godot is the first thing missing after M5a.
+   to "Vem är du?" when the parent has approved the device. Pick a character, or press **Ny karaktär** to make one: a
+   name (up to 16 letters), skin, hair colour, hair style and shirt, each with the arrow buttons (mouse, touch or pad),
+   a live picture of the character, then **Skapa**. The new character is listed and selected; press its card to play
+   (the creator in [the picture](packages/godot/docs/creator.png)). A guest device may only make as many characters as
+   the parent allowed, and the farm holds eight; the creator says so in Swedish when it is refused.
 4. You start on the farm. Walk with WASD, the arrows or the left stick. Draugkryptan is reached the way the browser
    did, so the character needs a class first, and **it is chosen at the Kämpastenen in Köpingen** (M4c): walk out
    of the farm through the opening in the middle of the east edge (or take the bus: the stop north-east of the farm and
