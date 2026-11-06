@@ -8,7 +8,7 @@ models already are.
 ## Wired in
 
 KayKit Halloween Bits and Furniture Bits are in the game (`assets/kaykit_halloween/`, `assets/kaykit_furniture/`):
-the crypt's coffins, bones and rest shrines; on the farm the dead trees, wild pumpkins, jack-o'-lanterns, lamps,
+the crypt's coffins, bones and rest shrines; the Kenney Nature Kit (`assets/kenney_nature/`) for the oaks, apple trees, palms, bushes, berry bushes, grass, flowers, mushrooms, fern and cactus; on the farm the dead trees, wild pumpkins, jack-o'-lanterns, lamps,
 street lamps and lanterns, and the farmhouse's bed, table, chairs, sofa, plant and painting. The rows below with
 those models are done; the rest are still suggestions. Rejected after a look: the Halloween fence and bench (graveyard
 iron and too low for the farm), the furniture cabinets and shelves (too low for the wardrobe and bookshelf), the
@@ -24,7 +24,7 @@ iron and too low for the farm), the furniture cabinets and shelves (too low for 
 | **RES** | KayKit Restaurant Bits 1.0 | CC0 | https://github.com/KayKit-Game-Assets/KayKit-Restaurant-Bits-1.0 | Yes |
 | **HEX** | KayKit Medieval Hexagon Pack (already used) | CC0 | https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack | Yes |
 | **DUN** | KayKit Dungeon Remastered (already used) | CC0 | https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered | Yes |
-| **KNA** | Kenney Nature Kit | CC0 | https://kenney.nl/assets/nature-kit | No: kenney.nl is blocked from the sandbox |
+| **KNA** | Kenney Nature Kit (in the game: trees, bushes, grass, flowers, mushrooms, fern, palm, cactus) | CC0 | https://kenney.nl/assets/nature-kit | Uploaded by the owner into `downloads/kenney_nature-kit/` |
 | **KCS** | Kenney City Kit (Suburban) | CC0 | https://kenney.nl/assets/city-kit-suburban | No: same |
 | **KTR** | Kenney Train Kit | CC0 | https://kenney.nl/assets/train-kit | No: same |
 

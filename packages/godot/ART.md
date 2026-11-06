@@ -64,7 +64,9 @@ code: urn, gate, wall caps (`scripts/dungeon_props.gd`, listed in `LICENSES.md`)
 simple shapes so they sit next to the KayKit models without clashing. The coffins, bones and rest shrine are KayKit
 Halloween Bits (`assets/kaykit_halloween/`), tinted like the Dungeon models; the generated ones are only drawn when
 that pack is missing. On the farm, KayKit Halloween Bits and Furniture Bits replace the dead trees, pumpkins, lamps
-and lanterns and the farmhouse's bed, table, chairs, sofa, plant and painting, baked like the Hexagon models.
+and lanterns and the farmhouse's bed, table, chairs, sofa, plant and painting, baked like the Hexagon models. The Kenney Nature
+Kit gives the trees, bushes, grass, flowers and mushrooms; its leaf and grass materials become the palette's greens
+and carry the foliage mask, so the season and the wind still act on them (recolour mode "leaf" in `_baked()`).
 `ASSET_MAP.md` lists a pack model for each prop that is still generated.
 
 ## Sprites from the drawn-in-code art (packages/art)
