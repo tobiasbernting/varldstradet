@@ -632,6 +632,10 @@ func _sync_actors() -> void:
 
 
 func _dress(actor: Actor, rec: Dictionary) -> void:
+	# the hired Hirdmannen (a player record with bot: true) is always a hero sprite of its class, never a composed outfit
+	if bool(rec.get("bot", false)):
+		actor.set_sheet(_hero_sheet_of(rec))
+		return
 	if _mode == "outdoor" and looks.available():
 		actor.set_texture(looks.texture_for(rec), looks.frames(), 16, 32, 8)
 		actor.set_meta("look", _look_key(rec))
