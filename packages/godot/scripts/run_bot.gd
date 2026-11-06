@@ -52,7 +52,12 @@ func _ready() -> void:
 		if arg.begins_with("--role="):
 			role = arg.substr(7)
 		elif arg.begins_with("--max-wipes="):
-			max_wipes = maxi(0, int(arg.substr(12)))
+			var v := arg.substr(12)
+			if not v.is_valid_int() or int(v) < 0:
+				push_error("--max-wipes needs a whole number, 0 or more (got '%s')" % v)
+				get_tree().quit(2)
+				return
+			max_wipes = int(v)
 		elif arg == "--full":
 			full = true
 		elif arg.begins_with("--shots="):

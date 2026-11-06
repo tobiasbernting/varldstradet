@@ -65,6 +65,10 @@ const farmShots = process.env.BOT_FARM_SHOTS ?? '';
 const fullRun = process.argv.includes('--full');
 const runSeconds = Number(process.env.BOT_RUN_SECONDS ?? (fullRun ? 2400 : 480));
 const runMaxWipes = process.env.BOT_RUN_MAX_WIPES ?? ''; // (unset: the bot's own default of 2; 0 makes a wipe fail the check)
+if (runMaxWipes !== '' && !/^\d+$/.test(runMaxWipes)) {
+  console.error(`BOT_RUN_MAX_WIPES must be a whole number, 0 or more (got '${runMaxWipes}')`);
+  process.exit(2);
+}
 const runShots = process.env.BOT_RUN_SHOTS ?? '';
 const runNames = ['Run-Ask', 'Run-Embla'];
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'varldstradet-bot-'));
