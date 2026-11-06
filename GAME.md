@@ -33,8 +33,8 @@ the rest can join (section 6).
  färdkost                                                                       the chest, the run ends
 ```
 
-* **Zone.** A walled map of 4–6 rooms built by `sagamap.ts` (the same builder as the nine dungeons): a start room, two
-  or three rooms of monster packs, one **rest stone** room, an **exit** room and sometimes a side room with a treasure
+* **Zone.** A walled map of 4–6 rooms built by `sagamap.ts` (the same builder as the nine dungeons): a start room, one
+  or two rooms of monster packs, one **rest stone** room, an **exit** room and sometimes a side room with a treasure
   chest guarded by a pack. When every pack on the way is down, the **gate** in front of the exit room opens, exactly as
   the dungeon's gate opens when the mid-boss falls. Using the exit starts the pick.
 * **Boss zone.** A start room, one pack room, a rest stone and the boss's hall. The boss is the chapter's boss with all
@@ -75,10 +75,11 @@ can be **flipped** left-right and top-bottom by the seed, which gives four versi
 1. The boss is the **chapter's boss**: the first dungeon the starter has not cleared (the same order as the saga). If the
    starter has cleared all nine, it is a **replay**: a random cleared boss, picked by the seed.
 2. Three different biomes are drawn from the seven (never repeating; the biome of the boss's own dungeon may appear).
-3. For each zone the seed picks the flip, which of the optional rooms (the side room, a second pack in the third room)
-   are kept, and the packs from the biome's list: the first pack room has two or three packs, the second two or three,
-   in groups of 3–4 (a modifier adds members), and the third zone puts one big monster in one of the second room's
-   packs. Monster health climbs with the zone *(tuned)*: × 1.35, × 1.5, × 1.7 on top of the saga's own party scaling.
+3. For each zone the seed picks the flip, which of the optional rooms (the side room, and in the first zone the first
+   pack room) are kept, and the packs from the biome's list *(tuned, `ZONE_PACKS`)*: the first pack room has 2 packs in
+   the first zone, 2 or 3 in the second and 3 in the third; the second pack room has 3 packs in every zone (so does a
+   lone pack room, when the first was dropped). Packs are groups of 3–4 (a modifier adds members; the side room's guard is
+   2–3), and the third zone puts one big monster in one of the second room's packs. Monster health climbs with the zone *(tuned)*: × 1.35, × 1.5, × 1.7 on top of the saga's own party scaling.
 4. The seed also picks the **weather** of each zone (sun, cloudy, rain, fog, wind; snow in the ice zone, ash wind in
    the volcano): it is carried in the run state for the client to draw (M5c) and has no effect on the rules.
 5. The boss's attacks: the first attack and the first stoppable attack are always unlocked; the seed locks one of the
