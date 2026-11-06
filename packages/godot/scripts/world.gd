@@ -41,6 +41,7 @@ var menu: PauseMenu
 var loot: LootWindow
 var chat: ChatUi
 var run_hud: RunHud
+var run_pick: RunPick
 var wheel: Wheel
 var play: FarmPlay
 var demo := false
@@ -73,6 +74,9 @@ func _ready() -> void:
 	run_hud = RunHud.new()
 	run_hud.model = model
 	add_child(run_hud)
+	run_pick = RunPick.new()
+	run_pick.model = model
+	add_child(run_pick)
 	menu = PauseMenu.new()
 	add_child(menu)
 	loot = LootWindow.new()
@@ -226,7 +230,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		hud.set_fps_shown(Settings.show_fps)
 		get_viewport().set_input_as_handled()
 		return
-	if menu.is_open() or chat.is_open() or loot.is_open() or wheel.is_open() or _area == "" or play.is_busy():
+	if menu.is_open() or chat.is_open() or loot.is_open() or wheel.is_open() or run_pick.is_open() or _area == "" or play.is_busy():
 		return
 	if event.is_action_pressed("chat"):
 		chat.open()
@@ -845,6 +849,7 @@ func _process(delta: float) -> void:
 		dungeon.update_shadows(camera.global_position, Quality.shadow_lights())
 	if _mode == "dungeon":
 		dungeon.follow_weather(hero.position)
+		hero.frozen = run_pick.is_open()
 	hud.tick_spell_bar(combat, snap.get("b") is Dictionary and snap["b"].get("cast") is Dictionary and bool(snap["b"]["cast"].get("kick", false)))
 	_frames += 1
 	if _screenshot != "" and _frames == 90:
