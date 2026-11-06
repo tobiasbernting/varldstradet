@@ -114,6 +114,9 @@ func _apply_quality() -> void:
 	var mode := int(s.get("sun_shadow", 0))
 	sun.shadow_enabled = mode > 0
 	sun.directional_shadow_max_distance = 26.0 if mode == 1 else 38.0
+	# soft edges: the browser's sun shadows are a quarter-strength smudge, not a cut-out
+	sun.light_angular_distance = 2.0 if mode <= 1 else 2.5
+	sun.shadow_blur = 1.5 if mode <= 1 else 2.2
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL if mode <= 1 else DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 	if mode > 0:
 		RenderingServer.directional_shadow_atlas_set_size(1024 if mode == 1 else 2048, false)
@@ -210,12 +213,24 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 	_ambient = _ambient.lerp(amb, 1.0 - pow(0.05, delta))
 	_dark = lerpf(_dark, dark, 1.0 - pow(0.05, delta))
 	var lit := amb
-	env.ambient_light_color = _ambient.lerp(Color(0.35, 0.4, 0.6), _dark * 0.4)
-	env.ambient_light_energy = 0.28 + 0.14 * (1.0 - _dark)
+	# The browser multiplies the whole picture by `amb`; in 3D that is the ambient light, the sun and the fog all
+	# carrying the tint, with enough ambient that a sun shadow is a quarter darker than lit ground, not black.
+	var tw := _dark * _dark
+	# at dusk the green of the grass is pulled back, so the light reads mauve and not just dim
+	var dusk := smoothstep(0.69, 0.76, f) * (1.0 - smoothstep(0.8, 0.86, f)) * (1.0 - float(_wvis["rain"]) * 0.5)
+	var amb_l := _ambient * Color(1.0 + 0.1 * dusk, 1.0 - 0.2 * dusk, 1.0 + 0.12 * dusk)
+	env.ambient_light_color = amb_l.lerp(Color(0.2, 0.3, 0.7), tw * 0.5)
+	env.ambient_light_energy = lerpf(0.5, 0.64, _dark) * lerpf(1.0, 0.82, clampf(1.0 - sun_share, 0.0, 1.0) * (1.0 - _dark))
 	# the sun climbs in the east, stands south at noon and sets in the west; at night a pale moon takes its place
-	sun.light_color = (Color(1.0, 0.92, 0.8).lerp(Color(1.0, 0.7, 0.45), clampf(1.0 - elevation * 2.2, 0.0, 1.0)) if up else Color(0.55, 0.62, 0.9))
-	sun.light_energy = (0.12 + 0.62 * sun_share * smoothstep(0.0, 0.25, elevation)) if up else 0.22 * (1.0 - _wet * 0.5)
-	var el := deg_to_rad(lerpf(14.0, 62.0, elevation)) if up else deg_to_rad(48.0)
+	if up:
+		var low := clampf(1.0 - elevation * 2.2, 0.0, 1.0)
+		var warm := Color(1.0, 0.94, 0.84).lerp(Color(1.0, 0.72, 0.46), low)
+		sun.light_color = warm * Color(lit.r * 0.5 + 0.5, lit.g * 0.5 + 0.5, lit.b * 0.5 + 0.5).lerp(lit, low)
+		sun.light_energy = 0.1 + 0.5 * sun_share * smoothstep(0.0, 0.25, elevation) + 0.18 * sun_share * low * (1.0 - _dark)
+	else:
+		sun.light_color = Color(0.5, 0.6, 0.95)
+		sun.light_energy = 0.24 * (1.0 - _wet * 0.5)
+	var el := deg_to_rad(lerpf(9.0, 62.0, elevation)) if up else deg_to_rad(48.0)
 	var az2 := (az - PI * 0.5) if up else 0.6
 	sun.rotation = Vector3(-el, az2 + PI, 0.0)
 	# the horizon colour is the background and the fog: it carries the time of day to the edge of the map

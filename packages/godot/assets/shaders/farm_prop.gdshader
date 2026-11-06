@@ -8,6 +8,10 @@ render_mode diffuse_lambert, specular_disabled, cull_back;
 
 uniform float snow = 0.0;
 uniform float wet = 0.0;
+uniform float vcol_fix = 0.0; // 1 on the Compatibility renderer, which converts vertex colours from sRGB a second time: undone here
+vec3 lin_to_srgb(vec3 c) {
+	return mix(c * 12.92, 1.055 * pow(max(c, vec3(0.0031308)), vec3(1.0 / 2.4)) - 0.055, step(vec3(0.0031308), c));
+}
 uniform float wind = 0.3;
 uniform float leaf_mix = 0.0;
 uniform vec3 leaf_a : source_color = vec3(0.39, 0.66, 0.28);
@@ -33,6 +37,7 @@ void vertex() {
 
 void fragment() {
 	vec3 col = COLOR.rgb;
+	col = mix(col, lin_to_srgb(col), vcol_fix);
 	float var_k = 0.9 + 0.2 * v_var;
 	if (v_fol > 0.9) {
 		float lum = dot(col, vec3(0.30, 0.59, 0.11));

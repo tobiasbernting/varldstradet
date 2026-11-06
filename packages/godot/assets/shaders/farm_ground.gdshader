@@ -6,6 +6,10 @@ render_mode diffuse_lambert, specular_disabled, cull_back;
 
 uniform float snow = 0.0;
 uniform float wet = 0.0;
+uniform float vcol_fix = 0.0; // 1 on the Compatibility renderer, which converts vertex colours from sRGB a second time: undone here
+vec3 lin_to_srgb(vec3 c) {
+	return mix(c * 12.92, 1.055 * pow(max(c, vec3(0.0031308)), vec3(1.0 / 2.4)) - 0.055, step(vec3(0.0031308), c));
+}
 uniform float cloud = 0.0;
 varying vec3 v_wp;
 
@@ -25,6 +29,7 @@ void vertex() {
 
 void fragment() {
 	vec3 col = COLOR.rgb;
+	col = mix(col, lin_to_srgb(col), vcol_fix);
 	// a little grain so a field of one colour is not a flat sheet
 	float grain = vnoise(v_wp.xz * 3.1) * 0.5 + vnoise(v_wp.xz * 9.0) * 0.5;
 	col *= 0.93 + 0.14 * grain;

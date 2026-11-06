@@ -165,6 +165,10 @@ func _init() -> void:
 	prop_mat.shader = load(PROP_SHADER)
 	ground_mat = ShaderMaterial.new()
 	ground_mat.shader = load(GROUND_SHADER)
+	# the Compatibility renderer converts vertex colours from sRGB once more: the shaders undo it
+	var vfix := 1.0 if RenderingServer.get_current_rendering_method() == "gl_compatibility" else 0.0
+	prop_mat.set_shader_parameter("vcol_fix", vfix)
+	ground_mat.set_shader_parameter("vcol_fix", vfix)
 	water_mat = _water(Color("#52a8d1"), Color("#1f5788"), 0.84)
 	bog_mat = _water(Color("#5d6b3a"), Color("#2f3a22"), 0.9)
 	lava_mat = _water(Color("#ff8a2a"), Color("#c03a12"), 1.0)
