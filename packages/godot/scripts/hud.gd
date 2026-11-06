@@ -308,6 +308,7 @@ func _build_voice_button(parent: Control) -> void:
 	voice_button.pressed.connect(Voice.open_window)
 	parent.add_child(voice_button)
 	Voice.changed.connect(_voice_changed)
+	Voice.mic_silent.connect(func() -> void: show_toast(Strings.t("voiceNoMicNative")))
 	Voice.rang.connect(func(who: String) -> void:
 		show_toast(Strings.t("voiceRang", {"name": who}))
 		Sfx.play("target"))

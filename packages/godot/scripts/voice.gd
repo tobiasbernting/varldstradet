@@ -14,12 +14,15 @@ extends Node
 signal changed ## the state, the peers or the microphone changed: the window and the HUD button redraw
 signal window_asked ## the pause menu or the HUD button wants the Röstprat window
 signal rang(player_name: String) ## a speaker in another room picked up
+signal mic_silent ## the microphone delivered nothing but silence while the player held to talk (not allowed to use it?)
 
 const THRESHOLD := 0.02 ## the RMS (of -1..1) above which a frame is speech
 const HOLD := 0.4 ## seconds the microphone stays "talking" after the last loud frame
 const FRAME_SECONDS := 0.02
 const RETRY_SECONDS := 3.0
 const TALKING_MIN_MSEC := 150 ## the server ignores a `talking` report this soon after the last one it took (VOICE_TALKING_MIN_MS)
+const SILENT_RMS := 0.0002 ## below this a frame is digital silence, not a quiet room
+const SILENT_SECONDS := 3.0
 const BUS := "VoiceIn"
 
 var available := false ## webrtc-native is loaded
@@ -44,6 +47,8 @@ var _acc := PackedFloat32Array()
 var _carry := {}
 var _seq := 0
 var _hold := 0.0
+var _silent := 0.0
+var _warned_silent := false
 var _talking_sent := false ## what the server has accepted as my room's talking state
 var _talking_want := false ## what it should be: sent as soon as TALKING_MIN_MSEC have passed since the last report
 var _talking_at := -TALKING_MIN_MSEC ## Time.get_ticks_msec() of the last report sent
@@ -230,6 +235,7 @@ func set_room(mode: String, with := "") -> void:
 func set_mic(on: bool) -> void:
 	Settings.voice_mic = on
 	Settings.save()
+	_mic_update()
 	changed.emit()
 
 
@@ -338,7 +344,7 @@ func _sync() -> void:
 		for id in want:
 			if not peers.has(id) and not _retry.has(id):
 				_open_peer(id)
-	_mic_start()
+	_mic_update()
 
 
 func _open_peer(id: String) -> VoicePeer:
@@ -400,6 +406,15 @@ func _on_signal(from: String, data: Variant) -> void:
 
 # ---------------------------------------------------------------------------
 # The microphone
+
+
+## The microphone is open only while it can be used: this device is the speakerphone, somebody is in another room to
+## hear it, and the player has not muted it. Otherwise it is closed (and the OS's microphone indicator is off).
+func _mic_update() -> void:
+	if is_speaker() and available and Settings.voice_mic and not voice_peers(state).is_empty():
+		_mic_start()
+	else:
+		_mic_stop()
 
 
 func _mic_start() -> void:
@@ -466,7 +481,15 @@ func _process(delta: float) -> void:
 			_sync()
 	if _mic_on and _capture != null:
 		var n := _capture.get_frames_available()
-		if n > 0:
+		if n > 0 and not transmitting():
+			# nothing goes out now: throw the sound away without resampling it
+			_capture.clear_buffer()
+			_acc.clear()
+			_carry = {}
+			_hold = 0.0
+			_silent = 0.0
+			_set_talking(false, true)
+		elif n > 0:
 			_acc.append_array(VoiceCodec.to_mono_16k(_capture.get_buffer(n), AudioServer.get_mix_rate(), _carry))
 			while _acc.size() >= VoiceCodec.FRAME:
 				_frame(_acc.slice(0, VoiceCodec.FRAME))
@@ -478,6 +501,7 @@ func _frame(samples: PackedFloat32Array) -> void:
 		_hold = 0.0
 		_set_talking(false, true)
 		return
+	_check_silence(samples)
 	if VoiceCodec.rms(samples) > THRESHOLD:
 		_hold = HOLD
 	else:
@@ -490,6 +514,20 @@ func _frame(samples: PackedFloat32Array) -> void:
 	var packet := VoiceCodec.pack(_seq, samples)
 	for p in peers.values():
 		p.send_packet(packet)
+
+
+## A microphone the system did not let the game use (macOS without the permission) delivers digital silence. While the
+## player holds to talk and nothing but silence comes in for SILENT_SECONDS, say so, once.
+func _check_silence(samples: PackedFloat32Array) -> void:
+	if _warned_silent or Settings.voice_mode != "ptt":
+		return
+	if VoiceCodec.rms(samples) > SILENT_RMS:
+		_silent = 0.0
+		return
+	_silent += FRAME_SECONDS
+	if _silent >= SILENT_SECONDS:
+		_warned_silent = true
+		mic_silent.emit()
 
 
 func _set_talking(on: bool, report: bool) -> void:
