@@ -14,6 +14,8 @@ those models are done; the rest are still suggestions. Rejected after a look: th
 iron and too low for the farm), the furniture cabinets and shelves (too low for the wardrobe and bookshelf), the
 `crypt` for the portal (4 m deep, the portal is 2 tiles), and the furniture rugs (plain yellow).
 
+All 26 landmarks and the cave mouths are wired too (`scripts/landmark_models.gd`).
+
 ## The packs
 
 | Short | Pack | Licence | Where | In `downloads/`? |

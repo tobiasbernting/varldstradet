@@ -664,16 +664,28 @@ func _billboard(mi: MeshInstance3D) -> void:
 ## A landmark (lm_*) is a 3 × 3 (or 4 × 3) feature of the wild maps: a standing-stone circle, a giant's ribs, a bridge.
 ## Until each has a mesh of its own it is a dressed placeholder: a cairn of rocks in its footprint.
 func _landmark(kind: String, node: Node3D) -> Node3D:
-	assets.warn_once(kind, "farm: no model for landmark '%s' yet, a cairn is shown" % kind)
 	var def := Data.object_def(kind)
-	var m := assets.mesh("ph_%dx%d" % [int(def.get("w", 3)), int(def.get("h", 3))])
-	if m != null:
-		var mi := MeshInstance3D.new()
-		mi.mesh = m
-		mi.material_override = assets.prop_mat
-		node.add_child(mi)
-	if def.get("light", false):
-		_add_light(node, Vector3(0.0, 1.4, 0.0), Color("#cfe8ff"), 5.0, 1.0, 0.1, false)
+	if not LandmarkModels.build(kind, node, assets):
+		assets.warn_once(kind, "farm: no model for landmark '%s' yet, a cairn is shown" % kind)
+		var m := assets.mesh("ph_%dx%d" % [int(def.get("w", 3)), int(def.get("h", 3))])
+		if m != null:
+			var mi := MeshInstance3D.new()
+			mi.mesh = m
+			mi.material_override = assets.prop_mat
+			node.add_child(mi)
+	for at in LandmarkModels.lamps(kind):
+		var g := assets.glow_quad(Color("#ffc977"), 0.9, 0.0)
+		g.position = at
+		node.add_child(g)
+		_night_glows.append([g, 1.4])
+	var fire: Variant = LandmarkModels.FIRE.get(kind)
+	if fire is Vector3:
+		var flame := DungeonProps.flame(Color("#ff9a3c"), 0.7, Quality.particles())
+		flame.position = fire
+		node.add_child(flame)
+		_add_light(node, fire + Vector3(0.0, 0.5, 0.0), Color("#ff9a3c"), 6.0, 1.6, 0.3, false)
+	elif def.get("light", false):
+		_add_light(node, LandmarkModels.LIGHT_AT.get(kind, Vector3(0.0, 1.4, 0.0)), Color("#cfe8ff"), 5.0, 1.0, 0.1, false)
 	return node
 
 

@@ -28,6 +28,15 @@ the owner decides otherwise); `assets/LICENSES.md` has every file's origin.
 - **Names and numbers.** `Label3D` billboards over heads, white with a dark outline, 2 px of outline per 16 px of text.
   Text is never drawn into a sprite.
 
+### The landmarks (lm_*)
+
+The 26 landmarks of the wild maps are put together from pack parts in `scripts/landmark_models.gd`: a list per kind of
+[model, recolour, scale, position, turn] on the landmark's footprint, each part a baked mesh in the prop material (so
+seasons, snow and the night glow act on them). Kenney Nature Kit models take palette colours by material name (recolour
+"kenney": stone, dirt, wood, water, leaves); its cliff pieces face -Z and are turned half round. What no pack has is a
+small generated mesh (`gen:` eggs, tar pit, pond, embers, ice-cream tower, chocolate fountain, satellite). Lantern parts
+get a night glow; the vårdkase and the fire well a flame. A kind missing from the table still shows the old cairn.
+
 ### Trial: people in 3D (`--people3d`)
 
 `godot --path packages/godot -- --demo=farm --people3d` draws the players as chibi figures put together from the

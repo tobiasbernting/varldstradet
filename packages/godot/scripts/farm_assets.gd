@@ -249,6 +249,12 @@ func _make(n: String) -> ArrayMesh:
 		return _fence(int(n.substr(6)), false)
 	if n.begins_with("gatef_"):
 		return _fence(int(n.substr(6)), true)
+	if n.begins_with("pk:"):
+		# a landmark's part (landmark_models.gd): "pk:<path under assets>|<recolour>|<scale>"
+		var pk := n.substr(3).split("|")
+		return _baked("res://assets/" + pk[0], float(pk[2]), pk[1])
+	if n.begins_with("gen:"):
+		return _landmark_mesh(n.substr(4))
 	if n.begins_with("ph_"):
 		var wh := n.substr(3).split("x")
 		return _placeholder(int(wh[0]), int(wh[1]))
@@ -312,7 +318,7 @@ func _make(n: String) -> ArrayMesh:
 		"workbench": return _workbench()
 		"trough": return _trough()
 		"bus_stop": return _bus_stop()
-		"cave_mouth": return _cave()
+		"cave_mouth": return _merged(_turned(_baked(NATURE + "cliff_cave_rock.glb", 2.0, "cliff", Vector2.ZERO, null, Vector3(0.0, 0.0, -0.85)), PI), _cave_dark())
 		"arch": return _arch()
 		"scarecrow": return _scarecrow()
 		"bench": return _bench()
@@ -472,6 +478,7 @@ func _collect(node: Node, xf: Transform3D, verts: PackedVector3Array, norms: Pac
 			var nrm: Variant = arr[Mesh.ARRAY_NORMAL]
 			var uv: Variant = arr[Mesh.ARRAY_TEX_UV]
 			var idx: Variant = arr[Mesh.ARRAY_INDEX]
+			var vcol: Variant = arr[Mesh.ARRAY_COLOR] # (the Kenney Nature Kit keeps its colours here, under a pale albedo)
 			var mat: Material = mi.get_active_material(s)
 			var img: Image = null
 			var tint := Color.WHITE
@@ -496,6 +503,8 @@ func _collect(node: Node, xf: Transform3D, verts: PackedVector3Array, norms: Pac
 					var px := clampi(int(p.x * img.get_width()), 0, img.get_width() - 1)
 					var py := clampi(int(p.y * img.get_height()), 0, img.get_height() - 1)
 					c = img.get_pixel(px, py) * tint
+				if vcol is PackedColorArray and (vcol as PackedColorArray).size() == v.size():
+					c *= (vcol as PackedColorArray)[i]
 				cols.append(_recolour(c, recolour, mat.resource_name if mat != null else ""))
 	for child in node.get_children():
 		_collect(child, here, verts, norms, cols, recolour)
@@ -516,6 +525,14 @@ func _recolour(c: Color, mode: String, mat_name := "") -> Color:
 		out = out.lerp(STONE, 0.3)
 	elif mode == "wood":
 		out = c.lerp(WOOD, 0.25)
+	elif mode == "ice":
+		out = Color("#cfe8f4").lerp(Color("#9ccbe6"), clampf(1.0 - c.get_luminance(), 0.0, 1.0))
+	elif mode == "sand":
+		out = Color("#b8a27a") * clampf(c.get_luminance() * 1.3, 0.55, 1.05)
+	elif mode == "lava":
+		out = Color("#5e5258") * clampf(c.get_luminance() * 1.5, 0.6, 1.2)
+	elif mode == "moon":
+		out = Color("#d8dcf0") * clampf(c.get_luminance() * 1.4, 0.7, 1.15)
 	elif mode == "forest":
 		# KayKit Forest: one gradient texture. Its greens are the leaves (foliage, recoloured by the season); its
 		# red-brown trunks lean to the palette's wood.
@@ -523,17 +540,34 @@ func _recolour(c: Color, mode: String, mat_name := "") -> Color:
 			return FarmMesh.lin(c, 1.0)
 		if c.r > c.g * 1.3:
 			out = c.lerp(WOOD, 0.6)
-	elif mode == "leaf" or mode == "plant":
-		# Kenney Nature Kit: one flat colour per material. Leaves and grass take the palette's greens (and, for
-		# "leaf", the foliage mask, so the season and the wind act on them); bark leans to the palette's wood.
+	elif mode == "leaf" or mode == "plant" or mode == "kenney" or mode == "cliff":
+		# Kenney Nature Kit: one flat (pale) colour per material, so each material takes a palette colour by name.
+		# Leaves and grass take the palette's greens (and, for "leaf", the foliage mask, so the season and the wind
+		# act on them).
 		if mat_name.begins_with("leafsDark"):
 			out = MOSS
+		elif mat_name.begins_with("leafsFall"):
+			out = WOOD_LIGHT # (the canoe's hull)
 		elif mat_name.begins_with("leafs"):
 			out = GRASS
 		elif mat_name.begins_with("grass"):
 			out = GRASS.lightened(0.08)
+		elif mat_name.begins_with("woodInner"):
+			out = Color("#d8b48a")
+		elif mat_name.begins_with("woodBark") or mat_name.begins_with("woodDark"):
+			out = WOOD
 		elif mat_name.begins_with("wood"):
-			out = c.lerp(WOOD, 0.5)
+			out = WOOD_LIGHT
+		elif mat_name.begins_with("stoneDark"):
+			out = STONE_DARK
+		elif mat_name.begins_with("stone"):
+			out = STONE.lightened(0.25)
+		elif mat_name.begins_with("dirt"):
+			out = STONE_DARK if mode == "cliff" else Color("#9a8e7e") # ("cliff": the grey of the map's rock walls)
+		elif mat_name.begins_with("water"):
+			out = Color("#5ab4de")
+		elif mat_name.begins_with("colorRed"):
+			out = Color("#c8473a")
 		var green := mat_name.begins_with("leafs") or mat_name.begins_with("grass")
 		return FarmMesh.lin(out, 1.0 if green and mode == "leaf" else 0.0)
 	return FarmMesh.lin(out, 0.0)
@@ -649,6 +683,55 @@ func _fence(mask: int, gate: bool) -> ArrayMesh:
 	return b.build()
 
 
+## The landmarks' generated pieces, for what no pack has (landmark_models.gd names them `gen:<name>`).
+func _landmark_mesh(n: String) -> ArrayMesh:
+	var b := FarmMesh.new()
+	match n:
+		"eggs", "eggs_big":
+			var k := 1.0 if n == "eggs" else 2.6
+			for i in range(3):
+				var a := TAU * i / 3.0 + 0.4
+				var c := Color("#f2ead8") if i != 1 else Color("#d8e8c0")
+				b.blob(Vector3(cos(a), 0.0, sin(a)) * 0.13 * k + Vector3(0.0, 0.14 * k, 0.0), Vector3(0.11, 0.15, 0.11) * k, 7, 4, c.darkened(0.15), c, 0.0, 0.0)
+		"wisp":
+			b.blob(Vector3(0.0, 0.9, 0.0), Vector3.ONE * 0.09, 5, 3, Color("#9fd8ff"), Color("#ffffff"), 0.5, 0.0)
+		"tar":
+			b.cylinder(Vector3(0.0, -0.02, 0.0), 1.25, 1.25, 0.05, 12, Color("#1c1a1e"), Color("#2a262c"), 0.0)
+			for i in range(5):
+				var a := TAU * i / 5.0 + 0.3
+				b.blob(Vector3(cos(a) * 0.6, 0.04, sin(a) * 0.5), Vector3(0.12, 0.06, 0.12), 5, 2, Color("#2a262c"), Color("#4a4250"), 0.0, 0.0)
+		"embers":
+			b.cylinder(Vector3(0.0, 0.0, 0.0), 0.75, 0.6, 0.12, 10, Color("#5e5258"), Color("#6e6268"), 0.0)
+			for i in range(7):
+				var a := TAU * i / 7.0
+				b.blob(Vector3(cos(a) * 0.35, 0.14, sin(a) * 0.35), Vector3(0.16, 0.08, 0.16), 5, 2, Color("#c8401a"), Color("#ff9a3c"), 0.5, 0.0)
+			b.blob(Vector3(0.0, 0.16, 0.0), Vector3(0.22, 0.1, 0.22), 5, 2, Color("#e86a2a"), Color("#ffc870"), 0.5, 0.0)
+		"pond":
+			b.cylinder(Vector3(0.0, 0.01, 0.0), 1.0, 1.0, 0.02, 14, Color("#3f8fc0"), Color("#5ab4de"), 0.0)
+		"icecream":
+			b.cone(Vector3(0.0, 0.0, 0.0), 0.75, 2.2, 10, Color("#c8904a"), Color("#e8b870"), 0.0, 1.0)
+			b.blob(Vector3(0.0, 2.45, 0.0), Vector3(1.05, 0.7, 1.05), 9, 5, Color("#e87ab8"), Color("#f8b8d8"), 0.0, 0.05)
+			b.blob(Vector3(0.0, 3.1, 0.0), Vector3(0.8, 0.55, 0.8), 9, 5, Color("#f4ecd0"), Color("#ffffff"), 0.0, 0.05)
+			b.blob(Vector3(0.0, 3.6, 0.0), Vector3(0.18, 0.18, 0.18), 6, 3, Color("#c8202a"), Color("#f04a4a"), 0.0, 0.0)
+		"fountain":
+			var choc := Color("#6a3a1e")
+			b.cylinder(Vector3.ZERO, 1.35, 1.35, 0.4, 14, Color("#e8d0b0"), Color("#f4e2c8"), 0.0)
+			b.cylinder(Vector3(0.0, 0.4, 0.0), 1.2, 1.2, 0.03, 14, choc, choc.lightened(0.1), 0.0)
+			b.cylinder(Vector3(0.0, 0.4, 0.0), 0.18, 0.14, 1.0, 8, Color("#e8d0b0"), Color("#f4e2c8"), 0.0)
+			b.cylinder(Vector3(0.0, 1.4, 0.0), 0.7, 0.7, 0.2, 12, Color("#e8d0b0"), Color("#f4e2c8"), 0.0)
+			b.cylinder(Vector3(0.0, 1.6, 0.0), 0.62, 0.62, 0.03, 12, choc, choc.lightened(0.1), 0.0)
+			b.blob(Vector3(0.0, 1.85, 0.0), Vector3(0.25, 0.3, 0.25), 7, 4, choc, choc.lightened(0.15), 0.0, 0.0)
+		"satellite":
+			b.box(Vector3(0.0, 0.5, 0.0), Vector3(0.8, 0.8, 0.8), Color("#c8ccd4"), 0.0, 0.3, Color("#e8ecf0"))
+			b.box(Vector3(1.05, 0.55, 0.0), Vector3(1.2, 0.05, 0.6), Color("#2a4a9a"), 0.0, 0.3, Color("#4a7ad8"))
+			b.box(Vector3(-1.05, 0.45, 0.0), Vector3(1.2, 0.05, 0.6), Color("#2a4a9a"), 0.0, 0.3, Color("#4a7ad8"))
+			b.cone(Vector3(0.0, 0.9, 0.0), 0.35, 0.3, 8, Color("#e8ecf0"), Color("#ffffff"), 0.0)
+			b.blob(Vector3(0.0, 1.25, 0.0), Vector3.ONE * 0.08, 5, 3, Color("#ff4a4a"), Color("#ffa0a0"), 0.5, 0.0)
+		_:
+			return null
+	return b.build()
+
+
 func _placeholder(w: int, h: int) -> ArrayMesh:
 	var b := FarmMesh.new()
 	b.box(Vector3(0.0, 0.4, 0.0), Vector3(maxf(0.5, w - 0.2), 0.8, maxf(0.5, h - 0.2)), Color("#9a80b8"), 0.0, 0.0, Color("#b89ad4"))
@@ -749,14 +832,55 @@ func _bus_stop() -> ArrayMesh:
 	return b.build()
 
 
-func _cave() -> ArrayMesh:
+## The dark inside behind the Kenney cliff's cave opening (the cliff is a thin wall with a hole, set on the
+## footprint's front edge so the rock wall's front row does not hide it).
+func _cave_dark() -> ArrayMesh:
 	var b := FarmMesh.new()
-	var col := STONE_DARK
-	b.blob(Vector3(-0.55, 0.45, 0.0), Vector3(0.55, 0.5, 0.7), 7, 4, col.darkened(0.2), col.lightened(0.12), 0.0, 0.12, 3.0)
-	b.blob(Vector3(0.55, 0.45, 0.0), Vector3(0.55, 0.5, 0.7), 7, 4, col.darkened(0.2), col.lightened(0.12), 0.0, 0.12, 4.0)
-	b.blob(Vector3(0.0, 1.0, -0.15), Vector3(1.0, 0.45, 0.75), 8, 4, col.darkened(0.15), col.lightened(0.15), 0.0, 0.1, 5.0)
-	b.box(Vector3(0.0, 0.4, 0.2), Vector3(0.7, 0.8, 0.5), Color("#14121a"), 0.0)
+	b.box(Vector3(0.0, 0.45, 0.55), Vector3(0.9, 0.9, 0.4), Color("#14121a"), 0.0)
 	return b.build()
+
+
+## A mesh turned `yaw` radians about Y (the Kenney cliff pieces face -Z; the props face +Z).
+func _turned(m: ArrayMesh, yaw: float) -> ArrayMesh:
+	if m == null:
+		return null
+	var arr := m.surface_get_arrays(0)
+	var basis := Basis(Vector3.UP, yaw)
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var nrm: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+	for i in range(v.size()):
+		v[i] = basis * v[i]
+		nrm[i] = basis * nrm[i]
+	return _surface(v, nrm, arr[Mesh.ARRAY_COLOR], arr[Mesh.ARRAY_TEX_UV])
+
+
+## Two prop meshes as one (their four channels joined).
+func _merged(a: ArrayMesh, b: ArrayMesh) -> ArrayMesh:
+	if a == null or b == null:
+		return a if b == null else b
+	var x := a.surface_get_arrays(0)
+	var y := b.surface_get_arrays(0)
+	var v: PackedVector3Array = x[Mesh.ARRAY_VERTEX]
+	var n: PackedVector3Array = x[Mesh.ARRAY_NORMAL]
+	var c: PackedColorArray = x[Mesh.ARRAY_COLOR]
+	var uv: PackedVector2Array = x[Mesh.ARRAY_TEX_UV]
+	v.append_array(y[Mesh.ARRAY_VERTEX])
+	n.append_array(y[Mesh.ARRAY_NORMAL])
+	c.append_array(y[Mesh.ARRAY_COLOR])
+	uv.append_array(y[Mesh.ARRAY_TEX_UV])
+	return _surface(v, n, c, uv)
+
+
+func _surface(v: PackedVector3Array, n: PackedVector3Array, c: PackedColorArray, uv: PackedVector2Array) -> ArrayMesh:
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = v
+	arrays[Mesh.ARRAY_NORMAL] = n
+	arrays[Mesh.ARRAY_COLOR] = c
+	arrays[Mesh.ARRAY_TEX_UV] = uv
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return m
 
 
 ## The dungeon's arch: two pillars, a lintel with a rune band, and a dark doorway; the glow in it is the node's.
