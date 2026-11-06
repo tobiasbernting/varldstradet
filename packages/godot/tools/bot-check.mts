@@ -37,6 +37,7 @@
 // BOT_ONLY=voice runs only this.
 //
 //   GODOT=~/godot/godot pnpm godot:bot            (GODOT defaults to `godot` on the PATH)
+//   BOT_RUN_MAX_WIPES=0 sets how many wipes the run pair retries (default 2; 0 = a wipe fails the check)
 //   BOT_ONLY=run BOT_RUN_SECONDS=480 pnpm godot:bot [-- --full]   (the run pair alone; --full plays to the boss: BOT_RUN_SECONDS=2400)
 //   BOT_RUN_SHOTS=dir                             (the run pair saves pictures there; needs a window: run it under xvfb-run)
 //   BOT_SECONDS=120 BOT_PORT=8097 BOT_PACKS=1     (optional; BOT_FARM_SECONDS=600 for the farmer, BOT_ONLY=farm or walker)
@@ -63,6 +64,7 @@ const farmSeconds = Number(process.env.BOT_FARM_SECONDS ?? 600);
 const farmShots = process.env.BOT_FARM_SHOTS ?? '';
 const fullRun = process.argv.includes('--full');
 const runSeconds = Number(process.env.BOT_RUN_SECONDS ?? (fullRun ? 2400 : 480));
+const runMaxWipes = process.env.BOT_RUN_MAX_WIPES ?? ''; // (unset: the bot's own default of 2; 0 makes a wipe fail the check)
 const runShots = process.env.BOT_RUN_SHOTS ?? '';
 const runNames = ['Run-Ask', 'Run-Embla'];
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'varldstradet-bot-'));
@@ -425,6 +427,7 @@ async function main(): Promise<void> {
         const log = path.join(tmp, `${name}.log`);
         const args = ['--headless', '--path', godotDir, '--', '--runbot', '--route=run', `--server=http://127.0.0.1:${runPort}`, `--name=${name}`, `--report=${report}`, `--seconds=${runSeconds}`, `--role=${i === 0 ? 'lead' : 'follow'}`];
         if (fullRun) args.push('--full');
+        if (runMaxWipes !== '') args.push(`--max-wipes=${runMaxWipes}`);
         if (runShots) {
           args.splice(0, 1); // (pictures need a window: no --headless)
           args.push(`--shots=${runShots}`);
