@@ -19,6 +19,7 @@ const THRESHOLD := 0.02 ## the RMS (of -1..1) above which a frame is speech
 const HOLD := 0.4 ## seconds the microphone stays "talking" after the last loud frame
 const FRAME_SECONDS := 0.02
 const RETRY_SECONDS := 3.0
+const TALKING_MIN_MSEC := 150 ## the server ignores a `talking` report this soon after the last one it took (VOICE_TALKING_MIN_MS)
 const BUS := "VoiceIn"
 
 var available := false ## webrtc-native is loaded
@@ -43,7 +44,9 @@ var _acc := PackedFloat32Array()
 var _carry := {}
 var _seq := 0
 var _hold := 0.0
-var _talking_sent := false
+var _talking_sent := false ## what the server has accepted as my room's talking state
+var _talking_want := false ## what it should be: sent as soon as TALKING_MIN_MSEC have passed since the last report
+var _talking_at := -TALKING_MIN_MSEC ## Time.get_ticks_msec() of the last report sent
 var _auto_ok := true
 var _demo_on := false
 
@@ -449,6 +452,7 @@ func _ptt_held() -> bool:
 
 
 func _process(delta: float) -> void:
+	_flush_talking()
 	for id in _retry.keys():
 		_retry[id] -= delta
 		if _retry[id] <= 0.0:
@@ -486,8 +490,22 @@ func _set_talking(on: bool, report: bool) -> void:
 	if on != talking:
 		talking = on
 		changed.emit()
-	if report and on != _talking_sent and is_speaker():
-		_talking_sent = on
-		Net.send({"t": "voice", "a": "talking", "on": on})
-	elif not report:
+	if report:
+		_talking_want = on
+		_flush_talking()
+	else:
 		_talking_sent = false
+		_talking_want = false
+
+
+## Tells the server about the talking state, but never sooner than TALKING_MIN_MSEC after the last report: the server
+## drops one that comes sooner, and a dropped "off" would leave the room talking for good. Called again from _process
+## until what the server has matches what is wanted.
+func _flush_talking() -> void:
+	if _talking_want == _talking_sent or not is_speaker():
+		return
+	if Time.get_ticks_msec() - _talking_at < TALKING_MIN_MSEC:
+		return
+	_talking_sent = _talking_want
+	_talking_at = Time.get_ticks_msec()
+	Net.send({"t": "voice", "a": "talking", "on": _talking_sent})
