@@ -18,6 +18,7 @@ var full := false
 var shots_dir := ""
 var _zones: Array = []
 var _exited: Dictionary = {} ## zone -> true once the run reached the pick (the server let me through)
+var _pressed: Dictionary = {} ## zone -> true once I pressed a card
 var _confirmed: Dictionary = {} ## zone -> true once the server's offer showed my vote
 var _beat := 5.0
 var _kit_t := -1.0
@@ -114,7 +115,9 @@ func _rb_tick(delta: float) -> void:
 			_log("starter weapon asked for")
 	# the arch window on the farm
 	var win := world.play.windows.run_arch
-	if win.is_open():
+	if win.is_open() and _leave_sent and m.my_area_key() == "farm":
+		win.close() # (it is still open when the run ends: a window freezes the hero, and the walk to the tree needs it free)
+	elif win.is_open():
 		_window_t += delta
 		if _window_t > 0.8 and not _arch_shot:
 			_arch_shot = true
@@ -154,9 +157,17 @@ func _rb_tick(delta: float) -> void:
 			_shot("m5c-cards", 0.0)
 		if _vote_t > 1.6 and not _confirmed.has(zone) and fmod(_vote_t, 2.0) < delta and not world.run_pick.buttons.is_empty():
 			_log("pressing card 0 after zone %d" % zone)
+			_pressed[zone] = true
 			(world.run_pick.buttons[0] as Button).pressed.emit()
 	else:
 		_vote_t = 0.0
+		# the last voter's press settles the pick at once, so the offer never shows that vote: it counts when the run went on to the
+		# next map after I pressed (a lone vote would not have settled it before the time ran out)
+		for zone in _pressed.keys():
+			if not _confirmed.has(zone) and m.run is Dictionary and int(m.run.get("zone", 0)) > int(zone):
+				_confirmed[zone] = true
+				_report["run"]["picks"] = int(_report["run"]["picks"]) + 1
+				_log("the pick after zone %d went through after my press" % int(zone))
 	if m.run is Dictionary and str(m.run.get("phase", "")) == "pick" and not _exited.has(int(m.run.get("zone", 0))):
 		_exited[int(m.run.get("zone", 0))] = true
 		_report["run"]["exits"] = int(_report["run"]["exits"]) + 1
@@ -267,7 +278,7 @@ func _walk_to_exit(delta: float) -> void:
 	if not _path.is_empty():
 		var next: Vector2i = _path[0]
 		var target := Vector2((next.x + 0.5) * tile, (next.y + 0.5) * tile)
-		if me.distance_to(target) < 3.0:
+		if me.distance_to(target) < _reach(delta):
 			_path.pop_front()
 			return
 		_drive_towards(target)
