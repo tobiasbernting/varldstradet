@@ -95,7 +95,7 @@ func _fill() -> void:
 			b.tooltip_text = "%s: %s" % [Data.item_name(item), Data.food_text(item)]
 			b.pressed.connect(_drop.bind(i))
 		else:
-			b.text = "＋"
+			b.text = "+"
 			b.add_theme_font_size_override("font_size", 34)
 			b.disabled = true
 		slot_row.add_child(b)
