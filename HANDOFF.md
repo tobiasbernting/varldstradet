@@ -110,7 +110,11 @@ been tested on the MacBook yet; PR 11, 12, 13 and 14 each carry a "what to check
   branch** with a standalone brief (one commit and one test per finding), or send them to the original child as a
   message about its own PR (children accept messages about CI or review on their own PR and act on them; they will
   not take new scope from a message). Then `merge_pull_request` with `merge_method: merge` and `expectedHeadSha`.
-- **Children go idle while waiting for CI** (25–40 minutes per Godot workflow run) and do not reliably wake on their
+- **CI time budget:** the Godot workflow's `export` job (headless checks, bots, exports) runs on every PR and should
+  stay under ~10 minutes. Anything under Xvfb (pictures, benches, the farmer's or the run pair's windowed runs) goes in
+  the `pictures` job, which runs only on a manual `workflow_dispatch` (Actions -> Godot client -> Run workflow on the
+  branch) and uploads the `farm-screenshots` artifact. Do not add slow steps to the `export` job.
+- **Children go idle while waiting for CI** (Godot workflow runs) and do not reliably wake on their
   own schedule. Check-ins from the orchestrating session (`send_later`, 45–60 minutes) are what keeps the work moving;
   a child that has gone idle before finishing is nudged with a message about CI on its own PR. A child must not use
   CI as its debugger: Godot 4.7.2 can be installed in the sandbox (download the editor zip from the godotengine GitHub
