@@ -26,6 +26,7 @@ import {
   TREE_STAGES,
   TREE_TEXT,
   TREE_TOTAL,
+  SOLO_MERCY,
   WIPE_MS,
   XP_LEVELS,
   equipGear,
@@ -732,6 +733,29 @@ describe('starting, joining and leaving', () => {
     expect(run.party).toContain(b.id);
     // and from inside to someone else inside
     expect(jumpTo(party.world, b.id, a.id).every((x) => x.t === 'toast')).toBe(true);
+  });
+
+  it('the solo mercy is for one human with the hired companion, not for a lone player without one', () => {
+    const hp = (opts: { longhall?: boolean; companion?: boolean }): { mul: number; boss: number; plan: number; bossPlan: number } => {
+      const party = makeParty(['krigare'], { seed: 6, longhall: opts.longhall });
+      startRun(party.world, party.players[0]!.id, { seed: 6, ...(opts.companion === false ? { companion: false } : {}) }, party.ctx());
+      const run = runOf(party.world)!;
+      const r = party.world.areas![run.key]!.saga!.run!;
+      return { mul: r.hpMul, boss: r.bossMul, plan: run.plan.zones[0]!.hpMul, bossPlan: run.plan.zones[0]!.bossMul };
+    };
+    const hired = hp({ longhall: true });
+    expect(hired.mul).toBeCloseTo(hired.plan * SOLO_MERCY);
+    expect(hired.boss).toBeCloseTo(hired.bossPlan * SOLO_MERCY);
+    // no longhouse, or a hire turned down: one fighter, the plain numbers
+    for (const alone of [hp({}), hp({ longhall: true, companion: false })]) {
+      expect(alone.mul).toBe(alone.plan);
+      expect(alone.boss).toBe(alone.bossPlan);
+    }
+    // two humans: no mercy either
+    const duo = makeParty(['krigare', 'helare'], { seed: 6, longhall: true });
+    startRun(duo.world, duo.players[0]!.id, { seed: 6 }, duo.ctx());
+    const run = runOf(duo.world)!;
+    expect(duo.world.areas![run.key]!.saga!.run!.hpMul).toBe(run.plan.zones[0]!.hpMul);
   });
 
   it('is full at three, or four with a longhouse', () => {

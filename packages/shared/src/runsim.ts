@@ -530,7 +530,8 @@ function enterZone(farm: WorldState, run: RunState, i: number, ctx: SimCtx): Cha
   const z = run.plan.zones[i]!;
   const world = buildZone(run.plan, i, key);
   const inst = world.saga!;
-  const solo = run.party.length === 1;
+  // the mercy is for one human with the hired companion (two fighters), not for a lone player without one
+  const solo = run.party.length === 1 && run.companions.length > 0;
   inst.run = {
     run: run.id,
     zone: i,
