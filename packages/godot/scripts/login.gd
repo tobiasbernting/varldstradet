@@ -9,7 +9,6 @@ signal start_game(player_id: String)
 const POLL_SECONDS := 3.0
 
 var _can_create := true ## the gate's canCreate: a guest device may not make characters
-
 @onready var title: Label = %Title
 @onready var status: Label = %Status
 @onready var form: VBoxContainer = %Form
