@@ -26,6 +26,7 @@ This file is only what the next agent needs: state, decisions, how the work is r
 | 11 | M5b | `GAME.md`; the run generator, rules and bot brain (`run.ts`, `runmap.ts`, `runsim.ts`, `runbot.ts`), the hired companion, sagafrön and the sagaträd, färdkost, the three buildings, server handlers, data export; a review fix-up round (seven findings) and the soft 30-minute clock; merged 12:04 UTC as bd01a91 |
 | 12 | backlog 3 | The character creator in the Godot client: "Ny karaktär" on the login screen, a creator window with the look composer, `POST /api/players` from the client, a headless creator check, `docs/creator.png`; merged 14:52 UTC as 70dac5a |
 | 15 | CI | By the owner's other session (`session_01KTh22pJ2K85r8267Nim4Fy`, Opus): the Godot workflow split into a fast `export` job (headless checks, bots, exports, about 6 minutes, on every PR) and a `pictures` job (Xvfb pictures, benches, the windowed farmer) that runs only on a manual `workflow_dispatch`; shared setup in `.github/actions/setup-godot`; job timeouts; superseded PR runs cancelled; merged 18:32 UTC as 3707985 |
+| 14 | backlog 2 | Röstprat in the Godot client: mu-law audio over a WebRTC data channel (`webrtc-native` 1.2.2-stable fetched by `tools/fetch-webrtc.sh`, not committed), `voice.gd`/`voice_peer.gd`/`voice_codec.gd`/`voice_window.gd`, push-to-talk default, a headless voice check and a two-bot signalling check, `docs/voice.png`; reviewed, seven findings fixed by a fix-up child; merged 19:28 UTC as 2873377. Not yet heard by the owner. |
 
 - **Open pull requests (the next agent's first job).** Both conflict with main since PR 15 (in the table above) in
   `.github/workflows/godot.yml` only; each needs `origin/main` merged in and its workflow steps moved into the new
@@ -59,33 +60,10 @@ This file is only what the next agent needs: state, decisions, how the work is r
     until the conflict is resolved, the `export` job is green on the merged head, the manual `pictures` run has
     produced the run pictures and they are committed, and the PR body and ready state are in. Local checks on the branch were green at every
     head so far (297 shared, 47 server tests, `pnpm godot:gen` clean).
-  - **PR 14, Röstprat (voice) in the Godot client**, branch `godot-voice`, **ready for review, CI green, no
-    conflicts with main at 17:50 UTC**, child `session_01KTh22ouaSJXMfDZvpaPHMt` (done). Design: Godot's
-    WebRTC has no media tracks, so sound is 16 kHz mono 8-bit mu-law over an unordered data channel (16 kB/s per
-    peer), push-to-talk (key C) default, open mic a setting, no echo cancellation; the `webrtc-native` 1.2.2-stable
-    GDExtension is not committed but fetched by `packages/godot/tools/fetch-webrtc.sh` (pinned, sha256-checked) in
-    the workflow and by developers; all four exports have a binary; macOS export has the microphone text and
-    entitlement and library validation off. **Since PR 15 this branch also conflicts with main in
-    `.github/workflows/godot.yml`**: its "Fetch the webrtc-native GDExtension" step belongs in
-    `.github/actions/setup-godot` (before the import, so the `pictures` job gets it too) and its voicecheck step in
-    the `export` job; the branch must merge `origin/main` and re-place them before GitHub runs its workflow again
-    (the green CI on 28eb03a was on the old workflow). Reviewed in the orchestrating session (local checks green, the picture
-    `docs/voice.png` fine, an independent review found **no blocker**). Findings to hand to a fix-up child or to
-    accept with a backlog note before merging: (a) medium: a push-to-talk tap shorter than 150 ms leaves the server
-    stuck on "talking" because the server drops a report within 150 ms of the last one (`voice.gd` ~485-491):
-    hold the "off" report until 150 ms have passed; (b) low: on every first offer the answerer throws away the
-    peer it already opened in `_sync` (`voice.gd` ~378): drop only when that peer has a remote description;
-    (c) low-medium on Låg: the microphone is captured and resampled every frame for any speaker even with no
-    peers or the mic off (`_mic_start`, `voice.gd` ~396): clear the buffer and skip the resampling when not
-    transmitting; (d) low: the generator buffer accounting assumes 8000 frames but Godot likely rounds to 8192
-    (`voice_peer.gd` ~170), costing about 60 ms of latency; (e) the "Röstprat finns inte i den här versionen"
-    text is unreachable because the button and menu entry are hidden without the extension, and `voiceNoMicNative`
-    is unused (a denied macOS microphone permission is not detected); (f) `_early` is not cleared in `_drop`/`_sync`,
-    `open_window` checks null rather than `is_instance_valid`; (g) `fetch-webrtc.sh` uses `"${auth[@]}"` with an
-    empty array under `set -u`, which fails on macOS's bash 3.2 (CI is fine); the bot-check voice check exercises the
-    server with bare sockets, not the Godot client. Merge order: PR 13 and PR 14 both touch `bot-check.mts`,
-    `sv.ts`/`sv.json`, README, DESIGN.md, PLAN.md; whichever merges second must merge main into its branch first
-    (GitHub does not run the workflow on a conflicting PR).
+  - **PR 14 is merged** (see the table). What the next agent should know: the MacBook test recipe is in the PR
+    body (two devices in different places, the microphone prompt, hold C to talk); the extension is fetched by
+    `packages/godot/tools/fetch-webrtc.sh` once per checkout; the voice bot check exercises the server with bare
+    sockets, not the Godot client; audio itself has never been heard.
 - Not yet done: M6 (the other eight dungeons and chapters as zone sets in the client), M7 (alive world), M8 (polish,
   release tag, homelab deploy of the v2 server, `DESIGN.md` rewrite).
 
