@@ -5,15 +5,35 @@ import { describe, expect, it } from 'vitest';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 
+/** The local image targets of a Markdown text: `[a](x.png)`, `![a](<x.png>)`, `[a](x.png "title")`, percent-encoded paths decoded. */
+export function imageLinks(text: string): string[] {
+  const out: string[] = [];
+  for (const m of text.matchAll(/!?\[[^\]]*\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g)) {
+    let target = m[1]!.split('#')[0]!;
+    try {
+      target = decodeURIComponent(target);
+    } catch {
+      // (left as written: it will not resolve, and the test says so)
+    }
+    if (/^[a-z]+:/i.test(target) || !/\.(png|webp|jpe?g|gif|svg)$/i.test(target)) continue;
+    out.push(target);
+  }
+  return out;
+}
+
 describe('README', () => {
+  it('finds image links with titles, angle brackets and percent-encoding', () => {
+    const text = '![a](img.png "t") [b](<b.png>) [c](dir/a%20b.webp) [d](https://x.se/e.png) [e](notes.md)';
+    expect(imageLinks(text)).toEqual(['img.png', 'b.png', 'dir/a b.webp']);
+  });
+
+  it('catches a broken link that has a title', () => {
+    const missing = imageLinks('![x](packages/godot/docs/no-such-picture.png "A title")').filter((t) => !existsSync(resolve(root, t)));
+    expect(missing).toEqual(['packages/godot/docs/no-such-picture.png']);
+  });
+
   it('links only to pictures that exist', () => {
     const text = readFileSync(resolve(root, 'README.md'), 'utf8');
-    const missing: string[] = [];
-    for (const m of text.matchAll(/!?\[[^\]]*\]\(([^)\s]+)\)/g)) {
-      const target = m[1]!.split('#')[0]!;
-      if (/^[a-z]+:/i.test(target) || !/\.(png|webp|jpe?g|gif|svg)$/i.test(target)) continue;
-      if (!existsSync(resolve(root, target))) missing.push(target);
-    }
-    expect(missing).toEqual([]);
+    expect(imageLinks(text).filter((t) => !existsSync(resolve(root, t)))).toEqual([]);
   });
 });
