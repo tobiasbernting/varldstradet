@@ -105,6 +105,40 @@ Open in this line of work:
 6. `--people3d` gaps: no hit flash, lunge, swing, frozen or webbed pose on figures; "bald" uses the barbarian head,
    whose beard takes the hair colour.
 
+## 1c. Atmosphere pass (session `session_01KTh22rMH5UutKMoSA5XCUG`, 2026-11-06, branch `claude/eloquent-rubin-0r5o0h`)
+
+The owner asked for the browser game's cosiness, its changing light and weather, in the Godot client. The branch starts
+from the art pass (section 1b merged in at 59a6366) and adds eight commits, all under `packages/godot/` plus `ART.md`
+("Atmosphere") and `DESIGN.md` ("Godot client: the atmosphere pass"). **No pull request opened yet**, awaiting the
+owner's approval of the pictures (`packages/godot/docs/atm-*.png`) and a time-lapse video shared in chat.
+`pnpm godot:bot` green on every commit; nothing in the bots, the workflow, the server or shared was touched.
+
+| Commit | What |
+| --- | --- |
+| 17049df | The browser's ambient curve carried by ambient, sun, moon and fog; soft sun shadows (angular distance, blur); the moon; the ground and prop shaders undo the Compatibility renderer's second sRGB conversion of vertex colours |
+| ea11466 | `screen_grade.gd` + `screen_grade.gdshader`: one full-screen pass under the HUD on every preset (warm grade, saturation, night blue by desaturation, dusk mauve, vignette, lightning double flash); glow threshold and strength from the dark |
+| 0aeaf5e | Lamps with bigger OmniLights and a ground pool quad each (`light_pool.gdshader`), a light beam on the ground from the farmhouse window and the village windows, the hero's lantern outdoors at night |
+| 0d41e51 | Rain streaks (slanted, 2x in storm) and splash rings, puddles that dry over ~40 s, fog banks that double as dawn mist, two flake sizes, hail, cloud shadows in cloudy weather and on props |
+| 6a71e02 | Fireflies (warm months or midsommar, dark > 0.5), dew sparkles in the morning sun, chimney smoke, the pond at night (sky colour and star glints), autumn leaves |
+| 6150bc7 | Demo-only `--daylapse=<s>`, `--weathers=a,b,c`, `--weather-every=<s>` for videos |
+| 7f21c3c | ART.md, DESIGN.md, the docs pictures |
+| 441a5b5 | Review fixes: `fog_disabled` on every additive quad shader (the depth fog made them squares on Compatibility in rain and fog), no cloud shadows at night, smaller darker puddles, weather budget mellan 900 / hög 2000 with `preprocess`, thinner day fog, actor sprites lifted at night by emission (`Actor.night_lift`, off indoors and in dungeons), softer pools, fog banks that fade |
+
+How the pictures were judged: the retired browser client (commit 620e395) was built in a worktree and screenshotted
+with Playwright against its own server (`POST /admin/time` and `/admin/weather` with `ACCESS=open`), and the Godot
+scenes rendered next to them under Xvfb (`--rendering-driver opengl3`, ~15 s each; `vulkan` on Mesa lavapipe shows
+Forward+ with glow and SSAO in ~45 s). A time-lapse: `--demo=farm --time=0.3 --daylapse=70
+--weathers=sun,cloudy,rain,storm,sun,fog,snow --weather-every=12` recorded with ffmpeg x11grab.
+
+Open in this line of work (not blocking):
+1. Day fog is still fairly milky; dusk is more rose than the browser's violet; puddles read as dark ovals.
+2. Fog banks and dawn mist lie over the whole view (the map has no height data to keep them to the water and low ground).
+3. The chimney smoke's place on the farmhouse is a guess (ridge top); the fireflies follow the real month, so in
+   November only `--season=midsommar` shows them.
+4. No thunder sound; `sfx.gd` was not extended.
+5. Nothing of this has been seen on the MacBook (Forward+, Metal) yet: check the night on the farm, the rain, and that
+   Mellan holds its frame rate with 900 weather particles and the extra full-screen pass.
+
 ## 2. The owner's decisions (do not re-ask)
 
 | Topic | Decision |
