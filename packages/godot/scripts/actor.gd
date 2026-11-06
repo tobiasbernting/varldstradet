@@ -119,18 +119,20 @@ func _placeholder() -> void:
 	_headroom = 0
 
 
-## The 3D trial: shows the KayKit Adventurers figure `path` (a .glb on the shared Rig_Medium skeleton) instead of
-## the sprite, `height_m` tall, with the pack's idle, walk and death animations. false (the sprite stays) if missing.
-func set_model(path: String, height_m := 1.5) -> bool:
-	if model != null and model.get_meta("path", "") == path:
+## The 3D trial: shows a figure on the shared Rig_Medium skeleton (Figure3D.build()) instead of the sprite,
+## `height_m` tall, with the pack's idle, walk and death animations. `key` names the look, so the same look is not
+## rebuilt; a null figure keeps the sprite and returns false.
+func set_figure(figure: Node3D, key: String, height_m := 1.5) -> bool:
+	if model != null and model.get_meta("key", "") == key:
+		if figure != null:
+			figure.free()
 		return true
-	var scene: Variant = load(path) if ResourceLoader.exists(path) else null
-	if not (scene is PackedScene):
+	if figure == null:
 		return false
 	if model != null:
 		model.queue_free()
-	model = (scene as PackedScene).instantiate()
-	model.set_meta("path", path)
+	model = figure
+	model.set_meta("key", key)
 	var top := 0.0
 	for mi in model.find_children("*", "MeshInstance3D", true, false):
 		top = maxf(top, (mi as MeshInstance3D).get_aabb().end.y)
@@ -147,6 +149,10 @@ func set_model(path: String, height_m := 1.5) -> bool:
 	label.position.y = height_m + 0.3
 	_play("General/Idle_A")
 	return true
+
+
+func has_figure(key: String) -> bool:
+	return model != null and model.get_meta("key", "") == key
 
 
 static func _libs() -> Array:

@@ -44,9 +44,9 @@ var wheel: Wheel
 var play: FarmPlay
 var demo := false
 var looks: LookComposer
-## The 3D trial: `--people3d` draws players as KayKit Adventurers figures by class instead of pixel sprites.
+## The 3D trial: `--people3d` draws players as chibi figures put together from KayKit Adventurers parts and
+## dressed in their look (figure_3d.gd) instead of pixel sprites.
 var _people3d := OS.get_cmdline_user_args().has("--people3d")
-const PEOPLE_3D := {"krigare": "Barbarian", "vaktare": "Knight", "magiker": "Mage", "helare": "Rogue_Hooded"}
 var _mode := "" ## "dungeon", "outdoor" (the farm and the wild maps) or "" (nothing drawn)
 var _demo_time := -1.0 ## --time=<0..1>: a fixed time of day for pictures
 var _demo_rain := false
@@ -424,7 +424,7 @@ func _place_name(key: String, w: Dictionary) -> String:
 
 ## My own figure: on the farm in my outfit, in a dungeon in my class's.
 func _dress_hero(me: Dictionary) -> void:
-	if _people3d and hero.actor.set_model(_model_of(me)):
+	if _people3d and _dress_figure(hero.actor, me):
 		return
 	if _mode == "outdoor" and looks.available():
 		hero.actor.set_texture(looks.texture_for(me), looks.frames(), 16, 32, 8)
@@ -502,9 +502,22 @@ func _on_change(c: Dictionary) -> void:
 				hud.show_toast(Strings.t("sagaLootToast", {"from": str(c.get("from", "")), "items": ", ".join(names)}))
 
 
-func _model_of(p: Dictionary) -> String:
-	var cls := str(p.get("saga", {}).get("cls", "krigare")) if p.get("saga") is Dictionary else "krigare"
-	return "res://assets/kaykit_adventurers/%s.glb" % PEOPLE_3D.get(cls, "Barbarian")
+## The 3D trial's figure for a player: on the farm in their outfit, in a dungeon in their class's hat and shirt
+## (as the sprites are). false when the pack or the layers are missing (the sprite is used).
+func _dress_figure(actor: Actor, p: Dictionary) -> bool:
+	if not looks.available():
+		return false
+	var rec := p.duplicate()
+	if _mode != "outdoor":
+		var cls := str(p.get("saga", {}).get("cls", "krigare")) if p.get("saga") is Dictionary else "krigare"
+		var of: Dictionary = (p.get("outfit", {}) as Dictionary).duplicate() if p.get("outfit") is Dictionary else {}
+		of.merge(Data.classes.get(cls, {}).get("outfit", {}), true)
+		rec["outfit"] = of
+	var colours := looks.colours_for(rec)
+	var key := str(hash(JSON.stringify(colours)))
+	if actor.has_figure(key):
+		return true
+	return actor.set_figure(Figure3D.build(colours), key)
 
 
 func _hero_sheet_of(p: Dictionary) -> String:
@@ -582,7 +595,7 @@ func _sync_actors() -> void:
 
 
 func _dress(actor: Actor, rec: Dictionary) -> void:
-	if _people3d and actor.set_model(_model_of(rec)):
+	if _people3d and _dress_figure(actor, rec):
 		return
 	if _mode == "outdoor" and looks.available():
 		actor.set_texture(looks.texture_for(rec), looks.frames(), 16, 32, 8)

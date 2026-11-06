@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://bsnwr7wqgkv2c"
-path="res://.godot/imported/Rogue_Hooded.glb-809d1ad2bd4f6d7f0228d4dfee9b6dac.scn"
+uid="uid://crstigvx0wuft"
+path="res://.godot/imported/Rogue.glb-731bc5a6c575843ab19e7e2039f20beb.scn"
 
 [deps]
 
-source_file="res://assets/kaykit_adventurers/Rogue_Hooded.glb"
-dest_files=["res://.godot/imported/Rogue_Hooded.glb-809d1ad2bd4f6d7f0228d4dfee9b6dac.scn"]
+source_file="res://assets/kaykit_adventurers/Rogue.glb"
+dest_files=["res://.godot/imported/Rogue.glb-731bc5a6c575843ab19e7e2039f20beb.scn"]
 
 [params]
 

@@ -169,3 +169,43 @@ func _outline(frame: Image, colour: Color, fw: int, fh: int) -> void:
 				out.append(Vector2i(x, y))
 	for p in out:
 		frame.set_pixelv(p, colour)
+
+
+## The colours of a look for the 3D figures (figure_3d.gd): skin and hair from the creator's palettes, and each
+## worn item's main colour, the commonest opaque colour of its pixel layer that is not the outline. Item ids are
+## the ones that have a layer (else ""), so the figure dresses exactly what the sprite would.
+func colours_for(p: Dictionary) -> Dictionary:
+	var ap: Dictionary = p.get("appearance", {}) if p.get("appearance") is Dictionary else {}
+	var of: Dictionary = p.get("outfit", {}) if p.get("outfit") is Dictionary else {}
+	var skins: Array = _farm.get("skins", [])
+	var hairs: Array = _farm.get("hair_colors", [])
+	var out := {
+		"skin": Color.html(str(skins[_nearest(str(ap.get("skin", "#f1c9a5")), skins)])) if not skins.is_empty() else Color("#f1c9a5"),
+		"hair": Color.html(str(hairs[_nearest(str(ap.get("hair", "#5a3a1e")), hairs)])) if not hairs.is_empty() else Color("#5a3a1e"),
+		"style": str(ap.get("hairStyle", "short")),
+	}
+	for slot in ["shirt", "pants", "shoes", "hat"]:
+		var item := str(of.get(slot, "")) if of.get(slot) != null else ""
+		var k := _item_key(slot, item, {}) if item != "" else "default"
+		out[slot] = item if k == item else ""
+		out[slot + "_colour"] = _main_colour(_cell(_layer("%s_%s" % [slot, k]), 0))
+	return out
+
+
+func _main_colour(img: Image) -> Variant:
+	if img == null:
+		return null
+	var outline := Color.html(str(_farm.get("outline", {}).get("color", "#2a2420")))
+	var counts := {}
+	for y in range(img.get_height()):
+		for x in range(img.get_width()):
+			var c := img.get_pixel(x, y)
+			if c.a < 0.5 or c.is_equal_approx(outline):
+				continue
+			var key := c.to_html(false)
+			counts[key] = int(counts.get(key, 0)) + 1
+	var best := ""
+	for key in counts:
+		if best == "" or int(counts[key]) > int(counts[best]):
+			best = key
+	return Color.html(best) if best != "" else null

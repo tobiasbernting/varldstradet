@@ -30,11 +30,15 @@ the owner decides otherwise); `assets/LICENSES.md` has every file's origin.
 
 ### Trial: people in 3D (`--people3d`)
 
-`godot --path packages/godot -- --demo=farm --people3d` draws the players as KayKit Adventurers figures by class
-(krigare Barbarian, väktare Knight, magiker Mage, helare Rogue_Hooded) with the pack's idle, walk and death
-animations (`Actor.set_model()`). It is a look to judge, off by default: villagers, animals and monsters stay pixels,
-a player's outfit and look from the creator do not show, and hits, lunges and the frozen and webbed poses are not
-drawn on the figures.
+`godot --path packages/godot -- --demo=farm --people3d` draws the players as chibi figures put together from the
+KayKit Adventurers parts (`scripts/figure_3d.gd`), dressed in the character creator's look: the head by hair style
+(short: Knight, long: Mage, curly and ponytail: Rogue, bald: Barbarian, whose beard takes the hair colour), the body
+by the kind of shirt (plain, armour, mantle with cape, fur), skirt or trousers, and the hat by its kind (helmet,
+pointed hat, fur hood; other hats are not shown). The pack's textures are one 8 × 4 grid of gradient swatches, so a
+look repaints the skin, hair, cloth, trouser and boot swatches with the colours of the creator's palettes and of the
+items' pixel layers (`LookComposer.colours_for()`), keeping their shading. In a dungeon the figure wears the class's
+hat and shirt. Off by default: villagers, animals and monsters stay pixels, and hits, lunges and the frozen and
+webbed poses are not drawn on the figures.
 
 ## Palette
 
