@@ -100,9 +100,9 @@ func release() -> void:
 	if _mic_player != null:
 		_mic_player.queue_free()
 		_mic_player = null
-	if _window != null:
+	if is_instance_valid(_window):
 		_window.queue_free()
-		_window = null
+	_window = null
 
 
 ## Whether the webrtc-native GDExtension is loaded (a WebRTCPeerConnection made without it only prints errors).
@@ -189,7 +189,7 @@ func problem() -> String:
 
 func open_window() -> void:
 	window_asked.emit()
-	if _window == null:
+	if not is_instance_valid(_window):
 		_window = VoiceWindow.new()
 		# a child of the running scene, not of this autoload: the scene is torn down in an order that leaves nothing behind
 		(get_tree().current_scene if get_tree().current_scene != null else self).add_child(_window)
@@ -197,7 +197,7 @@ func open_window() -> void:
 
 
 func window_open() -> bool:
-	return _window != null and _window.is_open()
+	return is_instance_valid(_window) and _window.is_open()
 
 
 func call_up() -> void:
@@ -319,11 +319,15 @@ func _on_state(st: Dictionary) -> void:
 func _sync() -> void:
 	if not is_speaker() or not available:
 		_close_all()
+		_early.clear()
 		if not is_speaker():
 			_ice_ready = false
 		_mic_stop()
 		return
 	var want := voice_peers(state)
+	for id in _early.keys():
+		if not want.has(id):
+			_early.erase(id)
 	for id in peers.keys():
 		if not want.has(id):
 			_drop(id)
@@ -341,12 +345,13 @@ func _open_peer(id: String) -> VoicePeer:
 	var p := VoicePeer.new()
 	p.name = "Peer-" + id.replace(":", "_")
 	add_child(p)
+	# connected before start(): the offerer's first message must not have nobody to go to
+	p.signal_out.connect(func(data: Dictionary) -> void:
+		Net.send({"t": "voice", "a": "signal", "to": id, "data": data}))
 	if not p.start(id, offers(Net.player_id, id), ice):
 		p.queue_free()
 		_retry[id] = RETRY_SECONDS
 		return null
-	p.signal_out.connect(func(data: Dictionary) -> void:
-		Net.send({"t": "voice", "a": "signal", "to": id, "data": data}))
 	p.state_changed.connect(func(s: String) -> void:
 		if s == "failed" and peers.get(id) == p:
 			_drop(id)
@@ -363,6 +368,7 @@ func _open_peer(id: String) -> VoicePeer:
 func _drop(id: String) -> void:
 	var p: VoicePeer = peers.get(id)
 	peers.erase(id)
+	_early.erase(id) # handshake messages kept for the old peer must not be replayed into the next one
 	if p != null:
 		p.close()
 		p.queue_free()
