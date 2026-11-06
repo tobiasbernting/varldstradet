@@ -78,6 +78,7 @@ import {
   forgeLevel,
   type ForgeCost,
 } from './saga.ts';
+import { runHooks } from './runhooks.ts';
 import { sagaCheckpoint, spawnSagaMob } from './sagamap.ts';
 import {
   ATTACK_GAP,
@@ -143,8 +144,6 @@ const buffsOf = (h: Here, id: string): RunBuffs => h.inst.run?.buffs[id] ?? ZERO
 /** Cooldown left after the run's reductions (never below 40 %). */
 const cdOf = (rb: RunBuffs, spellId: string, cd: number): number => cd * (1 - Math.min(0.6, rb.cd + (rb.spellCd[spellId] ?? 0)));
 
-/** Pressing the use key on a run's zone exit: runsim.ts sets this (sagasim must not import it, it imports sagasim). */
-export const runHooks: { exit?: (world: WorldState, p: PlayerState, obj: WorldObject, ctx: SimCtx) => Change[] } = {};
 
 const upright = (h: Here, p: PlayerState): boolean => {
   const f = h.inst.fighters[p.id];

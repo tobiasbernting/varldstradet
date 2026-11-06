@@ -17,7 +17,7 @@ import {
   type ClassId,
 } from './saga.ts';
 import { sagaCheckpoint } from './sagamap.ts';
-import { runHooks } from './sagasim.ts';
+import { runHooks } from './runhooks.ts';
 import { botStep, newMind, type BotMind } from './runbot.ts';
 import {
   CARED_HEARTS,

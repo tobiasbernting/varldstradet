@@ -16,8 +16,12 @@ import {
   shownHeld,
   drinkPotion,
   isSagaKey,
+  isRunKey,
   jumpTo,
+  rejoinRun,
   rejoinSaga,
+  runMessage,
+  ensureRunPlaces,
   sagaChapter,
   sagaQuestAct,
   sagaSnapshot,
@@ -138,6 +142,8 @@ export class Game {
   async start(): Promise<void> {
     this.world = await this.store.load();
     for (const p of Object.values(this.world.players)) p.online = false;
+    // the färdport and the Yggdrasil shoot (a fresh farm, or one from before runs)
+    ensureRunPlaces(this.world);
     if (this.opts.autoStart !== false) {
       this.lastTick = Date.now();
       this.timers.push(setInterval(() => this.tick(), 1000 / TICK_HZ));
@@ -253,11 +259,13 @@ export class Game {
   // ---- players (HTTP) ----
 
   playerSummaries(): PlayerSummary[] {
-    return Object.values(this.world.players).map((p) => ({ id: p.id, name: p.name, appearance: p.appearance, outfit: p.outfit }));
+    return Object.values(this.world.players)
+      .filter((p) => !p.bot)
+      .map((p) => ({ id: p.id, name: p.name, appearance: p.appearance, outfit: p.outfit }));
   }
 
   createPlayer(name: string, appearance: Appearance, shirt?: string): PlayerSummary | null {
-    if (Object.keys(this.world.players).length >= MAX_PLAYERS) return null;
+    if (Object.values(this.world.players).filter((p) => !p.bot).length >= MAX_PLAYERS) return null;
     const p = createPlayer(this.world, name, appearance, shirt);
     this.pending.push({ t: 'player', id: p.id, player: p });
     this.dispatchPending();
@@ -266,7 +274,7 @@ export class Game {
 
   onlinePlayers(): string[] {
     return Object.values(this.world.players)
-      .filter((p) => p.online)
+      .filter((p) => p.online && !p.bot)
       .map((p) => p.name);
   }
 
@@ -362,8 +370,8 @@ export class Game {
           client.link.send({ t: 'changes', changes: [{ t: 'areaData', to: p.id, key: 'dungeon', world: d }] });
         } else this.pending.push(...leaveCave(this.world, p.id, false));
       } else if (isSagaKey(p.area)) {
-        // back in a dungeon: up at its last rest stone (it may have started over meanwhile)
-        this.pending.push(...rejoinSaga(this.world, p.id));
+        // back in a dungeon: up at its last rest stone (it may have started over meanwhile); in a run: the same, or home if it is over
+        this.pending.push(...(isRunKey(p.area) ? rejoinRun(this.world, p.id) : rejoinSaga(this.world, p.id)));
       } else if (p.area !== 'farm') {
         const area = getArea(this.world, p.area);
         if (area) {
@@ -475,6 +483,11 @@ export class Game {
         break;
       case 'jump':
         changes = jumpTo(this.world, pid, String(msg.to ?? ''));
+        break;
+      case 'run':
+      case 'seed':
+      case 'fardkost':
+        changes = runMessage(this.world, pid, msg as unknown as Parameters<typeof runMessage>[2], this.ctx());
         break;
       case 'dev':
         if (!this.opts.devTeleport) {

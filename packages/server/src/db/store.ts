@@ -5,7 +5,7 @@ import { inArray, sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { AREA_GEN, CAVE_EXIT_TILE, MAX_HEARTS, TILE, settlePlayer, upgradeSavedArea, ensureBathhouse, ensureGear, ensureLevelRewards, ensureRoaming, ensureTownDress, ensureSagaPlaces, ensureCave, ensureCity, ensureLandmarks, ensureFarmBusStop, ensureFarmExits, ensureInterior, ensurePizzeria, ensureTransport, ensureVillagers, generateWorld, isRemovedAreaKey, isSagaKey, scrubArea, scrubPlayer, DUNGEONS, dungeonOfKey, portalFront, archFront, rebuildOccupancy, type Change, type DungeonId, type WorldState } from '../../../shared/src/index.ts';
+import { AREA_GEN, CAVE_EXIT_TILE, MAX_HEARTS, TILE, settlePlayer, upgradeSavedArea, ensureBathhouse, ensureGear, ensureLevelRewards, ensureRoaming, ensureTownDress, ensureSagaPlaces, ensureCave, ensureCity, ensureLandmarks, ensureFarmBusStop, ensureFarmExits, ensureInterior, ensurePizzeria, ensureTransport, ensureVillagers, generateWorld, isRemovedAreaKey, isSagaKey, scrubArea, scrubPlayer, DUNGEONS, dungeonOfKey, portalFront, archFront, archFrontOf, ensureRunPlaces, isRunKey, newRunSave, rebuildOccupancy, type Change, type DungeonId, type WorldState } from '../../../shared/src/index.ts';
 import * as s from './schema.ts';
 import { PgAccessStore } from './accessStore.ts';
 
@@ -92,6 +92,7 @@ export class PgStore implements Store {
     const loadedObjectIds: number[] = [];
     /** Players who were inside a dungeon: they go in front of its arch, wherever it stands in its map. */
     const outOfDungeon: [string, DungeonId][] = [];
+    const outOfRun: string[] = [];
     for (const o of await this.db.select().from(s.objects)) {
       world.objects[o.id] = o.data;
       loadedObjectIds.push(o.id);
@@ -117,6 +118,13 @@ export class PgStore implements Store {
         world.players[p.id]!.y = front.y * TILE + TILE / 2;
         outOfDungeon.push([p.id, sagaId]);
       }
+      // inside a run when the server stopped (a run is never saved): home, in front of the arch (placed once the farm is checked)
+      if (isRunKey(p.data.area)) {
+        world.players[p.id]!.area = 'farm';
+        outOfRun.push(p.id);
+      }
+      // old saves have no run record, newer ones may lack fields added since
+      if (world.players[p.id]!.run) world.players[p.id]!.run = { ...newRunSave(), ...world.players[p.id]!.run };
       delete world.players[p.id]!.emote;
       delete world.players[p.id]!.fishing;
       // scores, tickets, a garage or prizes from before the minigames went
@@ -213,6 +221,12 @@ export class PgStore implements Store {
     if (ensureCave(world)) console.log('added the cave to the saved world');
     ensureFarmExits(world);
     if (ensureFarmBusStop(world)) console.log('added the bus stop to the farm');
+    if (ensureRunPlaces(world)) console.log('put the färdport and the Yggdrasil shoot on the farm');
+    for (const id of outOfRun) {
+      const front = archFrontOf(world);
+      world.players[id]!.x = front.x * TILE + TILE / 2;
+      world.players[id]!.y = front.y * TILE + TILE / 2;
+    }
     // Objects removed by the repairs above must also leave the database
     for (const id of loadedObjectIds) if (!world.objects[id]) this.gone.objects.add(id);
     if (scrubbed) console.log('cleaned what the minigames left in the saved world');
@@ -258,6 +272,8 @@ export class PgStore implements Store {
           this.worldDirty = true;
           break;
         case 'player':
+          // the hired companion of a run is not a character: never saved
+          if (c.player?.bot) break;
           if (c.player) this.players.add(c.id), this.gone.players.delete(c.id);
           else this.gone.players.add(c.id), this.players.delete(c.id);
           this.worldDirty = true;
@@ -274,14 +290,14 @@ export class PgStore implements Store {
     for (const id of Object.keys(world.objects)) this.objects.add(Number(id));
     for (const k of Object.keys(world.crops)) this.crops.add(k);
     for (const id of Object.keys(world.animals)) this.animals.add(Number(id));
-    for (const id of Object.keys(world.players)) this.players.add(id);
+    for (const [id, p] of Object.entries(world.players)) if (!p.bot) this.players.add(id);
   }
 
   /** Positions of animals and players change without Change records; call this every so often. */
   markMoving(world: WorldState): void {
     for (const [k, a] of Object.entries(world.areas ?? {})) if (Object.values(a.players).some((p) => p.online)) this.dirtyAreas.add(k);
     for (const id of Object.keys(world.animals)) this.animals.add(Number(id));
-    for (const p of Object.values(world.players)) if (p.online) this.players.add(p.id);
+    for (const p of Object.values(world.players)) if (p.online && !p.bot) this.players.add(p.id);
     this.worldDirty = true;
   }
 
@@ -295,7 +311,7 @@ export class PgStore implements Store {
     const objects = [...this.objects].filter((id) => world.objects[id]);
     const crops = [...this.crops].filter((k) => world.crops[k]);
     const animals = [...this.animals].filter((id) => world.animals[id]);
-    const players = [...this.players].filter((id) => world.players[id]);
+    const players = [...this.players].filter((id) => world.players[id] && !world.players[id]!.bot);
     const gone = {
       objects: [...this.gone.objects],
       crops: [...this.gone.crops],
