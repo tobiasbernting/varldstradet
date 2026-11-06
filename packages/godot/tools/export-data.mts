@@ -135,8 +135,11 @@ const animals: Record<string, { growDays: number; pet?: true; wild?: true; preda
 for (const [id, a] of Object.entries(ANIMALS)) animals[id] = { growDays: a.growDays, ...(a.pet ? { pet: true as const } : {}), ...(a.wild ? { wild: true as const } : {}), ...(a.predator ? { predator: true as const } : {}), ...(a.mob ? { mob: true as const } : {}), ...(a.product ? { product: a.product } : {}), ...(a.mount ? { mount: a.mount.speed } : {}) };
 
 /** The villagers: who they are and which map they live on (the sprite is npc_<id> in the atlas). */
-const npcs: Record<string, { name: string; area: string; greeting: string[] }> = {};
-for (const n of Object.values(NPCS)) npcs[n.id] = { name: n.name, area: n.area ?? 'farm', greeting: n.greeting };
+const npcs: Record<string, { name: string; area: string; greeting: string[]; appearance?: unknown; outfit?: unknown }> = {};
+for (const n of Object.values(NPCS)) {
+  // the look is for the --people3d trial's figures (figure_3d.gd); the sprites come from the exported sheets
+  npcs[n.id] = { name: n.name, area: n.area ?? 'farm', greeting: n.greeting, appearance: n.appearance, outfit: n.outfit };
+}
 
 const dungeons: Record<string, unknown> = {};
 for (const id of DUNGEON_IDS) {

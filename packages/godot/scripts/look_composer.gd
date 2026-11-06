@@ -171,17 +171,18 @@ func _outline(frame: Image, colour: Color, fw: int, fh: int) -> void:
 		frame.set_pixelv(p, colour)
 
 
-## The colours of a look for the 3D figures (figure_3d.gd): skin and hair from the creator's palettes, and each
+## The colours of a look for the 3D figures (figure_3d.gd): the look's skin and hair, and each
 ## worn item's main colour, the commonest opaque colour of its pixel layer that is not the outline. Item ids are
 ## the ones that have a layer (else ""), so the figure dresses exactly what the sprite would.
 func colours_for(p: Dictionary) -> Dictionary:
 	var ap: Dictionary = p.get("appearance", {}) if p.get("appearance") is Dictionary else {}
 	var of: Dictionary = p.get("outfit", {}) if p.get("outfit") is Dictionary else {}
-	var skins: Array = _farm.get("skins", [])
-	var hairs: Array = _farm.get("hair_colors", [])
+	# the look's own colours (a villager's grey hair is in no player palette), else the creator's defaults
+	var skin_hex := str(ap.get("skin", "#f1c9a5"))
+	var hair_hex := str(ap.get("hair", "#5a3a1e"))
 	var out := {
-		"skin": Color.html(str(skins[_nearest(str(ap.get("skin", "#f1c9a5")), skins)])) if not skins.is_empty() else Color("#f1c9a5"),
-		"hair": Color.html(str(hairs[_nearest(str(ap.get("hair", "#5a3a1e")), hairs)])) if not hairs.is_empty() else Color("#5a3a1e"),
+		"skin": Color.html(skin_hex) if skin_hex.is_valid_html_color() else Color("#f1c9a5"),
+		"hair": Color.html(hair_hex) if hair_hex.is_valid_html_color() else Color("#5a3a1e"),
 		"style": str(ap.get("hairStyle", "short")),
 	}
 	for slot in ["shirt", "pants", "shoes", "hat"]:

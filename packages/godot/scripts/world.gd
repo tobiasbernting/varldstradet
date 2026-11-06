@@ -577,7 +577,9 @@ func _sync_actors() -> void:
 			_dress(actor, rec)
 			actor.set_label(str(rec.get("name", "")))
 		elif k.begins_with("n:"):
-			actor.set_sheet(Data.npc_sheet(k.substr(2)))
+			var npc: Dictionary = Data.npcs.get(k.substr(2), {})
+			if not (_people3d and npc.get("appearance") is Dictionary and _dress_figure(actor, npc)):
+				actor.set_sheet(Data.npc_sheet(k.substr(2)))
 			actor.set_label(str(Data.npcs.get(k.substr(2), {}).get("name", "")))
 		else:
 			var species := str(rec.get("species", ""))
@@ -596,6 +598,7 @@ func _sync_actors() -> void:
 
 func _dress(actor: Actor, rec: Dictionary) -> void:
 	if _people3d and _dress_figure(actor, rec):
+		actor.set_meta("look", _look_key(rec))
 		return
 	if _mode == "outdoor" and looks.available():
 		actor.set_texture(looks.texture_for(rec), looks.frames(), 16, 32, 8)
