@@ -70,8 +70,8 @@ This file is only what the next agent needs: state, decisions, how the work is r
 ## 1b. Art pass (session `session_01KTh22oagteA1US6DqRwXHt`, 2026-11-06, branch `claude/inspiring-hypatia-txeupy`)
 
 The owner asked for nicer assets than the code-generated placeholders. Pushed to `claude/inspiring-hypatia-txeupy`,
-**no pull request opened yet**; `main` merged in at the end (clean). `pnpm godot:bot` passed on every commit up to the
-landmarks (369dc85); the rock-wall commit's run was still going when this was written. Pictures were shared in chat
+**no pull request opened yet**; `main` merged in at the end (clean). `pnpm godot:bot` passed on every art commit through
+the rock walls (dd2cb18); not yet run after `main` was merged in. Pictures were shared in chat
 only, none are in `packages/godot/docs/` yet. `packages/godot/ASSET_MAP.md` maps every object kind to a pack model
 and says what is wired.
 
