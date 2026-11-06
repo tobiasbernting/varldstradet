@@ -216,7 +216,7 @@ func _make_environment(d: Dictionary) -> void:
 	var amb := Color(float(amb_arr[0]), float(amb_arr[1]), float(amb_arr[2]))
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = amb * 0.12
+	env.background_color = amb * float(look["bg_k"])
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = amb
 	env.ambient_light_energy = float(look["ambient_energy"]) # the browser's dungeonAmbient: the dungeon's colour turned down, so torches pool light
@@ -364,7 +364,7 @@ func _build_walls() -> void:
 			var t := Transform3D(Basis(Vector3.UP, angle), origin) * Transform3D(Basis(Vector3(SCALE, 0.0, 0.0), Vector3(0.0, SCALE * (0.99 - 0.001 * side), 0.0), Vector3(0.0, 0.0, SCALE)), Vector3(-0.5, 0.0, 0.0))
 			side += 1
 			faces[chunk].append(t)
-	var cap_mesh := DungeonProps.wall_cap_mesh(tint())
+	var cap_mesh := DungeonProps.wall_cap_mesh(tint() * float(look["cap_k"]))
 	var face_mesh := _tinted_mesh(KAYKIT + "wall_half.gltf.glb", tint())
 	for chunk in caps.keys():
 		# the blocks are what the torches' shadows fall from; the slabs on their sides are 1 cm from the block

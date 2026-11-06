@@ -16,12 +16,14 @@ extends RefCounted
 ##   ambient_energy  strength of the ambient light (the dungeon's colour turned down so torches pool light)
 ##   fog_density, fog_k   the fog's density, and how much of the ambient colour it takes
 ##   glow      bloom strength
+##   cap_k     lightens (or darkens) the wall blocks' tops and their dark cores, a multiplier on the stone tint
+##   bg_k      the background colour (what shows beyond the walls) as a fraction of the ambient colour
 ##   motes     "", "snow", "embers" or "wisps": what drifts through the air round the hero (Mellan and Hög)
 
 ## Draugkryptan's values are the ones the view had before the table existed (M3a), unchanged.
 const NEUTRAL := {
 	"wall": -1, "stone": Color(0.8, 0.8, 0.8), "torch": Color(1.0, 0.72, 0.4), "floors": {},
-	"ambient_energy": 0.7, "fog_density": 0.035, "fog_k": 0.45, "glow": 0.5, "motes": "", "boss_decor": true, "weeds": true,
+	"ambient_energy": 0.7, "fog_density": 0.035, "fog_k": 0.45, "glow": 0.5, "bg_k": 0.12, "cap_k": 1.0, "motes": "", "boss_decor": true, "weeds": true,
 }
 
 const LOOKS := {
@@ -41,7 +43,7 @@ const LOOKS := {
 		"wall": 3, "stone": Color(0.6, 0.78, 0.76), "torch": Color(0.6, 1.0, 0.82),
 		# a heavy green fog and wisps of ghost-light; the boss hall's stone a little darker, so the ghost queen stands out
 		"floors": {"crypt": Color(0.85, 0.9, 0.9)},
-		"ambient_energy": 0.7, "fog_density": 0.055, "fog_k": 0.6, "glow": 0.55, "motes": "wisps", "boss_decor": false,
+		"ambient_energy": 1.0, "fog_density": 0.036, "fog_k": 0.4, "glow": 0.55, "bg_k": 0.08, "cap_k": 1.9, "motes": "wisps", "boss_decor": false,
 	},
 	"dvarg": {"wall": 4, "stone": Color(0.7, 0.7, 0.76), "torch": Color(1.0, 0.86, 0.6)},
 	"orm": {"wall": 5, "stone": Color(0.6, 0.76, 0.9), "torch": Color(0.7, 0.92, 1.0)},
@@ -92,7 +94,7 @@ static func resolve(id: String, d: Dictionary) -> Dictionary:
 ## (dungeon_view.gd set_weather), so the dungeon's fog, bloom and drifting motes stay out of them.
 static func plain_air(look: Dictionary) -> Dictionary:
 	var out: Dictionary = look.duplicate()
-	for k in ["ambient_energy", "fog_density", "fog_k", "glow", "motes"]:
+	for k in ["ambient_energy", "fog_density", "fog_k", "glow", "bg_k", "cap_k", "motes"]:
 		out[k] = NEUTRAL[k]
 	return out
 
