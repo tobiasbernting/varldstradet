@@ -121,6 +121,40 @@ jobs:
           set -euo pipefail
           GODOT=~/godot/godot BOT_ONLY=run BOT_RUN_SECONDS=480 pnpm godot:bot 2>&1 | tee runbots.log
 
+      # M6a: the same fighter pair in Frostjättens borg, Surts smedja and Helheim (the dev way in: DEV_TELEPORT=1, `dev saga`):
+      # each clears its first two packs against a server in memory (about 25 s each).
+      - name: Two bots clear the first packs of Frostjättens borg, Surts smedja and Helheim (the dev way in)
+        run: |
+          set -euo pipefail
+          for d in frost surt hel; do
+            echo "== $d"
+            GODOT=~/godot/godot BOT_ONLY=dungeon BOT_DUNGEON=$d BOT_PACKS=2 BOT_SECONDS=240 pnpm godot:bot 2>&1 | tee "bot-$d.log"
+          done
+
+      # M6a: every move of the mid-boss and the boss of each of the three plays on the recorded dungeon, from the data
+      # (scripts/demo_bosses.gd): the cast bar, the marks on the floor, the landing, the ice block, the burning ground, the
+      # helpers, the pull. The three run side by side (about 40 s).
+      - name: Play the bosses' moves of Frostjättens borg, Surts smedja and Helheim headless (telegraphs, cast bars, what they leave)
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          for d in frost surt hel; do
+            (timeout 150 ~/godot/godot --headless --path . -- --demo=$d --fight --once > "bosses-$d.log" 2>&1; echo $? > "bosses-$d.code") &
+          done
+          wait
+          for d in frost surt hel; do
+            cat "bosses-$d.log"
+            if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate|leaked at exit|still in use at exit|Pages in use exist at exit" "bosses-$d.log"; then
+              echo "::error::the $d boss show reported errors or leaked at exit (see above)"; exit 1
+            fi
+            test "$(cat "bosses-$d.code")" = 0 || { echo "::error::the $d boss show did not end cleanly"; exit 1; }
+            grep -q "bosses: show finished" "bosses-$d.log" || { echo "::error::the $d boss show did not play to its end"; exit 1; }
+          done
+          # every move of each boss cast once: the mid-boss's and the boss's, 1 + 4 (frost), 2 + 3 (surt), 2 + 3 (hel)
+          test "$(cat bosses-frost.log | grep -c 'casts,')" = 5
+          test "$(cat bosses-surt.log | grep -c 'casts,')" = 5
+          test "$(cat bosses-hel.log | grep -c 'casts,')" = 5
+
       - name: Export all four targets
         working-directory: packages/godot
         run: |
@@ -207,6 +241,42 @@ jobs:
             fi
           done
 
+      # M6a: a picture of each of the three new dungeons (the start room and the boss's hall) and of each boss move's marks,
+      # under Xvfb (software GL). The ones worth keeping are copied into packages/godot/docs/ by hand.
+      - name: Pictures of Frostjättens borg, Surts smedja and Helheim and of their bosses' moves under Xvfb
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/shots/dungeons"
+          shot() { # name, demo args...
+            local name="$1"; shift
+            xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- "$@" --screenshot="$GITHUB_WORKSPACE/shots/dungeons/$name.png" 2>&1 | tee "shot-$name.log"
+            if grep -E "SCRIPT ERROR|Parse Error|leaked at exit|still in use at exit|Pages in use exist at exit" "shot-$name.log"; then
+              echo "::error::$name: errors or leaks (see above)"; exit 1
+            fi
+            test "$(stat -c %s "$GITHUB_WORKSPACE/shots/dungeons/$name.png")" -gt 20000
+          }
+          shot m6a-frost --demo=frost
+          shot m6a-frost-hall --demo=frost --at=17,15
+          shot m6a-surt --demo=surt
+          shot m6a-surt-hall --demo=surt --at=31,34
+          shot m6a-hel --demo=hel
+          shot m6a-hel-hall --demo=hel --at=14,51
+          shot m6a-isbjorn-charge --demo=frost --boss-move=isbjorn:charge
+          shot m6a-rimturs-cleave --demo=frost --boss-move=rimturs:cleave
+          shot m6a-rimturs-rain --demo=frost --boss-move=rimturs:rain
+          shot m6a-rimturs-freeze --demo=frost --boss-move=rimturs:freeze:after
+          shot m6a-rimturs-nova --demo=frost --boss-move=rimturs:nova
+          shot m6a-smeden-slam --demo=surt --boss-move=smeden:slam
+          shot m6a-smeden-pools --demo=surt --boss-move=smeden:pools:after
+          shot m6a-surt-cleave --demo=surt --boss-move=surt:cleave
+          shot m6a-surt-nova --demo=surt --boss-move=surt:nova
+          shot m6a-garm-charge --demo=hel --boss-move=garm:charge
+          shot m6a-garm-summon --demo=hel --boss-move=garm:summon:after
+          shot m6a-hel-pull --demo=hel --boss-move=hel:pull
+          shot m6a-hel-nova --demo=hel --boss-move=hel:nova
+          shot m6a-hel-rain --demo=hel --boss-move=hel:rain
+
       # The farmer works a farm of its own (a second in-memory server) in a window under Xvfb and takes pictures at the
       # moments the owner asked for: watering, the bag and a chest open, a fish biting, a wild animal petted (M4b); and
       # the shop, the workbench, a refused fence, the farmhouse, the stove, the wardrobe, a talk, Köpingen, the class
@@ -237,6 +307,7 @@ jobs:
           name: farm-screenshots
           path: |
             shots/*.png
+            shots/dungeons/*.png
             shots/farmer/*.png
             shots/run/*.png
           if-no-files-found: warn
