@@ -913,6 +913,7 @@ export const T = {
   worldPosition: 'Du: {x}, {y}',
   worldLogTitle: 'Meddelanden',
   noCharactersYet: 'Inga karaktärer än. Tryck på Ny karaktär för att skapa din första!',
+  noCharactersGuest: 'Inga karaktärer än. Be en förälder om en plats för en till karaktär på den här enheten.',
   // The native client: the character creator
   creatorNewCharacter: 'Ny karaktär',
   creatorTitle: 'Vem blir du?',
