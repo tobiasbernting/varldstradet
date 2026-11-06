@@ -325,7 +325,12 @@ static func needs_line(model_: WorldModel, ingredients: Array) -> String:
 
 ## A villager's face: the first standing frame of their sheet (the sprite the farm draws), for a window.
 static func npc_portrait(id: String) -> Texture2D:
-	var s := Data.sheet(Data.npc_sheet(id))
+	return sheet_face(Data.npc_sheet(id))
+
+
+## The first standing frame of a sprite sheet by its atlas name (a villager's, a hero's), for a window; null when there is none.
+static func sheet_face(sheet_name: String) -> Texture2D:
+	var s := Data.sheet(sheet_name)
 	if s.is_empty():
 		return null
 	var path := "res://assets/sprites/" + str(s.get("file", ""))

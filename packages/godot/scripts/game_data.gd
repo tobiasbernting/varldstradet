@@ -39,6 +39,7 @@ var saga_quests: Array = [] ## the villagers' saga quests
 var gear: Dictionary = {}
 var level_rewards: Dictionary = {}
 var dialogue: Dictionary = {}
+var run: Dictionary = {} ## M5c: the runor, the sagaträd, the dishes, the zones' looks and the run's texts and numbers
 var atlas: Dictionary = {}
 var _icon_sheet: Texture2D = null
 var _icon_cache: Dictionary = {}
@@ -81,6 +82,7 @@ func _ready() -> void:
 		gear = g.get("gear", {})
 		level_rewards = g.get("levelRewards", {})
 		dialogue = g.get("dialogue", {})
+		run = g.get("run", {})
 		if g.get("flags") is Dictionary:
 			flags = g.get("flags")
 		if g.get("interruptKinds") is Array:
@@ -126,6 +128,88 @@ func dungeon_of_key(key: String) -> String:
 		return ""
 	var id := key.substr(5)
 	return id if dungeons.has(id) else ""
+
+
+## A map of the saga's: a dungeon (`saga:draug`) or a zone of a run (`saga:run3z0`).
+func is_saga_key(key: String) -> bool:
+	return key.begins_with("saga:")
+
+
+## A zone of a run (`saga:run<n>z<i>`), not a dungeon (isRunKey in the shared package).
+func is_run_key(key: String) -> bool:
+	return key.begins_with("saga:run")
+
+
+## Which map of the run a zone key is: 0..2 the zones, 3 the boss's.
+func zone_index(key: String) -> int:
+	var parts := key.split("z")
+	return int(parts[parts.size() - 1]) if parts.size() >= 2 else 0
+
+
+func run_text(key: String, vars: Dictionary = {}) -> String:
+	var s := str(run.get("texts", {}).get(key, key))
+	for k in vars:
+		s = s.replace("{%s}" % k, str(vars[k]))
+	return s
+
+
+func run_const(key: String, fallback: float) -> float:
+	return float(run.get("constants", {}).get(key, fallback))
+
+
+## A runa's card (id, cls?, icon (an emoji), name, text); {} for an unknown id.
+func runa(id: String) -> Dictionary:
+	for r in run.get("runor", []):
+		if r is Dictionary and str(r.get("id", "")) == id:
+			return r
+	return {}
+
+
+## A node of the sagaträd (id, branch, cost, needs?, name, text); {} for an unknown id.
+func tree_node(id: String) -> Dictionary:
+	for n in run.get("tree", []):
+		if n is Dictionary and str(n.get("id", "")) == id:
+			return n
+	return {}
+
+
+## What a färdkost dish does for the run, one line ("" for an item that is no dish).
+func food_text(item: String) -> String:
+	for f in run.get("food", []):
+		if f is Dictionary and str(f.get("id", "")) == item:
+			return str(f.get("text", ""))
+	return ""
+
+
+func is_food(item: String) -> bool:
+	return food_text(item) != ""
+
+
+## The look of a map of a run, shaped like a dungeon's entry: the biome's own floor, the walls, decor and ambient light
+## of the dungeon it borrows from (game.json `run.zones`), or the boss's own dungeon for the last map. `run_snap` is the
+## RunSnap (null before it arrives: the look then comes from the map itself, and is corrected when the snapshot comes).
+func zone_look(key: String, run_snap: Variant, w: Dictionary) -> Dictionary:
+	var zi := zone_index(key)
+	var biome := ""
+	var boss := ""
+	if run_snap is Dictionary:
+		boss = str(run_snap.get("boss", ""))
+		var biomes: Array = run_snap.get("biomes", [])
+		if zi >= 0 and zi < biomes.size() and biomes[zi] != null:
+			biome = str(biomes[zi])
+	if biome != "":
+		for z in run.get("zones", []):
+			if z is Dictionary and str(z.get("biome", "")) == biome:
+				var look: Dictionary = z.duplicate()
+				look["bossFloor"] = look.get("floor", "grass")
+				return look
+	var dungeon_id := boss
+	if dungeon_id == "" or not dungeons.has(dungeon_id):
+		var inst: Variant = w.get("saga")
+		dungeon_id = str(inst.get("id", "draug")) if inst is Dictionary else "draug"
+	var d: Dictionary = dungeon(dungeon_id).duplicate()
+	d["boss_zone"] = true
+	return d
 
 
 func dungeon(id: String) -> Dictionary:
