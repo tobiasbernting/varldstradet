@@ -1044,7 +1044,7 @@ describe('the vote on a runa', () => {
     expect(run.base[p.id]!.potion ?? 0).toBe(0);
     const inst = party.world.areas![run.key]!.saga!;
     expect(inst.run!.buffs[p.id]!.potion).toBeCloseTo(0.15);
-    // p_fro: a pack is worth 1 → 1.25 rounds to 1 (never less), a zone 4 → 5
+    // p_fro: a pack is worth 1 and gives 1.25 (the quarter is carried, whole seeds are paid), a zone 4 → 5
     run.runor.push('p_fro');
     const seeds = readRun(p).seeds;
     const area = party.world.areas![run.key]!;
@@ -1058,7 +1058,44 @@ describe('the vote on a runa', () => {
     for (let i = 0; i < 4; i++) step(party, false, []);
     const gained = readRun(p).seeds - seeds;
     const n = inst.packs.length;
-    expect(gained).toBe(n * Math.max(1, Math.round(1.25)) + Math.round(RUN_SEEDS.zone * 1.25));
+    expect(gained).toBe(Math.floor((n + RUN_SEEDS.zone) * 1.25 + 1e-9));
+    expect(gained).toBeGreaterThan(n + RUN_SEEDS.zone);
+  });
+
+  it('sagafrön bonuses are not rounded away: p_fro and two modifiers pay visibly more than none over the same events', () => {
+    const play = (bonus: boolean): { gained: number; n: number; exact: number } => {
+      const party = makeParty(['krigare'], { seed: 6 });
+      const p = party.players[0]!;
+      startRun(party.world, p.id, { seed: 6 }, party.ctx());
+      const run = runOf(party.world)!;
+      if (bonus) {
+        run.runor.push('p_fro');
+        run.plan.modifiers = ['fler', 'segare'];
+      }
+      const area = party.world.areas![run.key]!;
+      const inst = area.saga!;
+      const seeds = readRun(p).seeds;
+      // the packs fall one at a time, each paid on its own, then the gate
+      for (const pk of inst.packs) {
+        pk.dead = true;
+        for (const id of pk.members) {
+          delete inst.mobs[id];
+          delete area.animals[id];
+        }
+        step(party, false, []);
+      }
+      for (let i = 0; i < 4; i++) step(party, false, []);
+      const n = inst.packs.length;
+      return { gained: readRun(p).seeds - seeds, n, exact: (n + RUN_SEEDS.zone) * (bonus ? 1 + 0.25 + 0.3 : 1) };
+    };
+    const plain = play(false);
+    const rich = play(true);
+    expect(plain.gained).toBe(plain.n + RUN_SEEDS.zone);
+    // the total over the run is the sum of n × (1 + bonus), to within one seed, and only whole seeds are paid
+    expect(rich.gained).toBe(Math.floor(rich.exact + 1e-9));
+    expect(rich.exact - rich.gained).toBeLessThan(1);
+    expect(Number.isInteger(rich.gained)).toBe(true);
+    expect(rich.gained).toBeGreaterThanOrEqual(plain.gained + Math.floor(plain.gained * 0.5));
   });
 
   it('the tree’s fourth branch: the party may ask for new cards once, and only with the node g3', () => {

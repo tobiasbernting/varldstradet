@@ -103,6 +103,8 @@ export interface RunState {
   base: Record<string, RunEffect>;
   food: Record<string, string[]>;
   earned: Record<string, number>;
+  /** The fraction of a sagafrö each player is owed by the bonuses (whole seeds are paid; never saved). */
+  carry: Record<string, number>;
   paid: Set<string>;
   /** Players who joined while a vote was on: they enter the next zone. */
   waiting: string[];
@@ -301,7 +303,11 @@ function pay(farm: WorldState, run: RunState, n: number, out: Change[], quiet = 
   if (n <= 0) return;
   for (const p of humans(farm, run)) {
     const bonus = (effectFor(farm, run, p).seeds ?? 0) + MODIFIER_SEEDS * run.plan.modifiers.length;
-    const amount = Math.max(n, Math.round(n * (1 + bonus)));
+    // the bonuses are added exactly: whole seeds are paid and the remainder is carried to the next payment
+    const exact = n * (1 + bonus) + (run.carry[p.id] ?? 0);
+    const amount = Math.floor(exact + 1e-9);
+    run.carry[p.id] = exact - amount;
+    if (amount <= 0) continue;
     const save = runSaveOf(p);
     save.seeds += amount;
     save.earned += amount;
@@ -467,6 +473,7 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
     base: {},
     food: {},
     earned: {},
+    carry: {},
     paid: new Set(),
     waiting: [],
     minds: new Map(),

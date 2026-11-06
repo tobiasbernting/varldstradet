@@ -199,7 +199,9 @@ on the player (`PlayerState.run.seeds`), so a wipe, a time-out, a dropped connec
 | the boss, first clear of the chapter | 20 |
 | the boss, a replay | 12 |
 
-Bonuses are added to these: `p_fro` +25 %, each modifier +15 %, tree nodes (section 3.1). A normal run gives about 50
+Bonuses are added to these: `p_fro` +25 %, each modifier +15 %, tree nodes (section 3.1). Only whole sagafrön are paid, but the
+fraction a bonus leaves over is carried from one payment to the next (per player, over the run), so a pack that pays 1 still
+adds up: over a run the total is the sum of each payment × (1 + bonus), within one sagafrö. A normal run gives about 50
 sagafrön (the bots, who skip the side rooms, got 49–51); the whole tree costs 462, so it is some nine runs of growing,
 not a grind.
 
