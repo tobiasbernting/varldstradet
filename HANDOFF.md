@@ -39,12 +39,16 @@ This file is only what the next agent needs: state, decisions, how the work is r
     (no walking, no fight, no report for 900 s). The original child was told to stand down; a **fix-up child**
     (`session_01KTh22s4VK2T6Mc1ipSsM5W`, Sonnet, same branch) is reproducing the stall headless in its sandbox
     with Godot installed locally (at 17:45 UTC: "CI stall in fight phase; checking melee reach vs bot stop
-    distance"). Its brief: fix, verify locally that the run pair reaches zone 2, push, wait for CI, fetch the
-    `m5c-*.png` pictures from the `farm-screenshots` artifact into `packages/godot/docs/`, write the real PR body
-    (per deliverable, commands, what to check on the MacBook, pictures, unsure), mark the PR ready. Do not merge until
+    distance"). **18:45 UTC:** the fix-up child reproduced the stall headless and pushed 45c12fc ("Run bot: it no
+    longer stalls at 2-3 fps or after a fall, and it closes the arch window after the run": `bot.gd` +20, `run_bot.gd`
+    +13, plus the missing `.uid` files of the new scripts). The Godot workflow on 45c12fc has been running since
+    18:13 UTC (the `build` job green; `export` in progress, the Xvfb steps next); the child is idle waiting for it.
+    Still to do by that child when CI is green: fetch the `m5c-*.png` pictures from the `farm-screenshots` artifact
+    into `packages/godot/docs/`, write the real PR body (per deliverable, commands, what to check on the MacBook,
+    pictures, unsure), mark the PR ready. GitHub showed `mergeable_state: dirty` at 18:45 although `git merge-tree`
+    against main found no conflict (main only gained HANDOFF.md commits): recheck before merging. Do not merge until
     all of that is in and CI is green including both run-pair steps. Local checks on the branch were green at every
-    head so far (297 shared, 47 server tests, `pnpm godot:gen` clean). A pause-mode check-in in the old
-    orchestrating session may still append the child's result to this entry.
+    head so far (297 shared, 47 server tests, `pnpm godot:gen` clean).
   - **PR 14, Röstprat (voice) in the Godot client**, branch `godot-voice`, **ready for review, CI green, no
     conflicts with main at 17:50 UTC**, child `session_01KTh22ouaSJXMfDZvpaPHMt` (done). Design: Godot's
     WebRTC has no media tracks, so sound is 16 kHz mono 8-bit mu-law over an unordered data channel (16 kB/s per
@@ -187,7 +191,7 @@ been tested on the MacBook yet; PR 11, 12, 13 and 14 each carry a "what to check
   M5b soft clock `session_01KTh22qjEejiGHLyJoPWc7W`, creator `session_01KTh22pn3nY1PwSd9U6Gv3B`, M5c
   `session_01KTh22riKcXRQssJpT6nmes` (stood down), **M5c fix-up `session_01KTh22s4VK2T6Mc1ipSsM5W` (running at
   18:00 UTC)**, voice `session_01KTh22ouaSJXMfDZvpaPHMt` (done).
-- One pause-mode check-in pending in the old orchestrating session (about 18:45 UTC): it only records the fix-up
+- One pause-mode check-in pending in the old orchestrating session (about 19:30 UTC): it only records the fix-up
   child's result here and merges nothing.
 - Homelab repo `tobiasbernting/homelab`: `cloud/` (Hetzner + Cloudflare + Tailscale, running), `server/roles/lilla-garden`
   and `lilla-garden-cloud`.
