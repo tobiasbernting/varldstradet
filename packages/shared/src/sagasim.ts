@@ -602,6 +602,8 @@ export function drinkStrength(world: WorldState, playerId: string, ctx: SimCtx):
 
 /** Opens a chest: everyone gets their own loot from it once. */
 function openChest(h: Here, p: PlayerState, chest: WorldObject, ctx: SimCtx): Change[] {
+  // the hired companion of a run never takes loot
+  if (p.bot) return [];
   const looted = (h.inst.looted[chest.id] ??= []);
   if (looted.includes(p.id)) return [toast(p.id, T.sagaLooted)];
   const d = DUNGEONS[h.inst.id];
@@ -1082,7 +1084,7 @@ function mobDown(h: Here, m: SagaMob, by: string, ctx: SimCtx, out: Change[]): v
   }
   if (m.kind === 'mob') {
     const killer = h.farm.players[by];
-    if (killer && ctx.rnd() < ESSENS_CHANCE) {
+    if (killer && !killer.bot && ctx.rnd() < ESSENS_CHANCE) {
       giveItems(h.area, killer, ESSENS, 1, out);
       out.push(toast(killer.id, T.sagaEssens));
     }
@@ -1133,6 +1135,8 @@ function mobDown(h: Here, m: SagaMob, by: string, ctx: SimCtx, out: Change[]): v
     h.inst.bossDown = true;
     const names: string[] = [];
     for (const p of party) {
+      // a run's chapter is cleared for its party by runsim.ts (offline members too); the hired companion has no record
+      if (p.bot) continue;
       const prog = progressOf(p);
       if (!prog.cleared.includes(h.inst.id)) {
         prog.cleared.push(h.inst.id);
@@ -1162,7 +1166,7 @@ function bestTime(h: Here, names: string[], now: number, out: Change[]): void {
 }
 
 /** The achievement stat for clearing each dungeon. */
-const CLEARED_STAT: Record<DungeonId, string> = { draug: 'sagaDraug', frost: 'sagaFrost', surt: 'sagaSurt', hel: 'sagaHel', dvarg: 'sagaDvarg', orm: 'sagaOrm', alv: 'sagaAlv', fenrir: 'sagaFenrir', loke: 'sagaLoke' };
+export const CLEARED_STAT: Record<DungeonId, string> = { draug: 'sagaDraug', frost: 'sagaFrost', surt: 'sagaSurt', hel: 'sagaHel', dvarg: 'sagaDvarg', orm: 'sagaOrm', alv: 'sagaAlv', fenrir: 'sagaFenrir', loke: 'sagaLoke' };
 
 /** Kill quests count the monster; collect quests may find what the villager wants on it (in a dungeon). */
 function questCredit(area: WorldState, p: PlayerState, species: string, ctx: SimCtx, out: Change[], collect: boolean): void {

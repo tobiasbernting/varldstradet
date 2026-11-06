@@ -272,7 +272,7 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
   // the boss is down: its chest, once
   if (inst.bossDown) {
     const chest = Object.values(area.objects).find((o) => o.kind === 'saga_chest' && o.variant === 2);
-    if (chest && !(inst.looted[chest.id] ?? []).includes(p.id)) {
+    if (chest && !p.bot && !(inst.looted[chest.id] ?? []).includes(p.id)) {
       if (dist({ x: chest.x * TILE + TILE / 2, y: chest.y * TILE + TILE / 2 }, p) > 1.6) walkTo(area, p, mind, chest, dtMs, now, slowed, 1.2);
       else out.push(...performAction(area, p.id, chest.x, chest.y, ctx));
       return out;

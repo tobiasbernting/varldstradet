@@ -18,6 +18,7 @@ import {
   type ClassId,
 } from './saga.ts';
 import { sagaCheckpoint } from './sagamap.ts';
+import { CLEARED_STAT } from './sagasim.ts';
 import { runHooks } from './runhooks.ts';
 import { botStep, newMind, type BotMind } from './runbot.ts';
 import {
@@ -66,6 +67,7 @@ import {
   placeIn,
   playerChange,
   toast,
+  bump,
   createPlayer,
   isPetAnimal,
   isMount,
@@ -853,6 +855,12 @@ function victory(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
   pay(farm, run, (run.plan.replay ? RUN_SEEDS.bossReplay : RUN_SEEDS.bossFirst) + bonus, out);
   const crops = ['carrot', 'potato', 'strawberry', 'tomato', 'pumpkin', 'sunflower', 'wheat'];
   for (const p of humans(farm, run)) {
+    // the chapter is cleared for everyone in the party, offline members too (sagasim already did it for those standing in the zone)
+    const prog = (p.saga ??= newSagaProgress());
+    if (!prog.cleared.includes(boss)) {
+      prog.cleared.push(boss);
+      bump(p, CLEARED_STAT[boss], 1, out);
+    }
     const s = runSaveOf(p);
     s.wins++;
     s.clears[boss] = (s.clears[boss] ?? 0) + 1;

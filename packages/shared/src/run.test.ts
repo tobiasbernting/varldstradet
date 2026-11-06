@@ -1275,6 +1275,79 @@ describe('the clock, the wipe and the end', () => {
     for (const p of party.players) expect(p.area).toBe('farm');
   });
 
+  /** The party stands in the boss's zone (the plan's own map), the boss at one health. */
+  function atTheBoss(party: Party): { run: NonNullable<ReturnType<typeof runOf>>; inst: NonNullable<WorldState['saga']>; world: WorldState; boss: { id: number } } {
+    const run = runOf(party.world)!;
+    const key = 'saga:runlab-boss';
+    const world = buildZone(run.plan, 3, key);
+    world.saga!.run = { ...party.world.areas![run.key]!.saga!.run!, zone: 3 };
+    delete party.world.areas![run.key];
+    party.world.areas![key] = world;
+    getArea(party.world, key);
+    run.key = key;
+    run.zone = 3;
+    for (const p of [...party.players, ...run.companions.map((id) => party.world.players[id]!)]) if (p.online) placeIn(party.world, p, key, world.saga!.start.x, world.saga!.start.y, 'up', []);
+    for (let i = 0; i < 4; i++) step(party, false, []);
+    const inst = world.saga!;
+    const boss = inst.mobs[inst.boss]!;
+    const bossA = world.animals[boss.id]!;
+    for (const p of party.players) {
+      p.x = bossA.x - 3 * TILE;
+      p.y = bossA.y;
+    }
+    boss.hp = 1;
+    boss.state = 'fight';
+    return { run, inst, world: party.world, boss };
+  }
+
+  it('the boss falling clears the chapter for a member who is offline too, and the hired companion takes no loot', () => {
+    // two players, one of them has lost the connection in the zone
+    const duo = makeParty(['magiker', 'vaktare'], { seed: 6 });
+    startRun(duo.world, duo.players[0]!.id, { seed: 6 }, duo.ctx());
+    const { run, inst } = atTheBoss(duo);
+    const [a, b] = duo.players as [import('./index.ts').PlayerState, import('./index.ts').PlayerState];
+    b.online = false;
+    expect(run.party).toContain(b.id);
+    castSpell(duo.world, a.id, 'eldboll', inst.boss, duo.ctx());
+    expect(inst.bossDown).toBe(true);
+    for (let i = 0; i < 4; i++) step(duo, false, []);
+    expect(a.saga!.cleared).toContain('draug');
+    expect(b.saga!.cleared).toContain('draug');
+    expect(b.stats?.sagaDraug).toBe(1);
+    expect(readRun(b).wins).toBe(1);
+    expect(readRun(b).clears.draug).toBe(1);
+
+    // one player and the companion: the companion never takes a chest, an essence or sagafrön
+    const solo = makeParty(['magiker'], { seed: 6, longhall: true });
+    startRun(solo.world, solo.players[0]!.id, { seed: 6 }, solo.ctx());
+    const lab = atTheBoss(solo);
+    const h = solo.players[0]!;
+    const c = solo.world.players[lab.run.companions[0]!]!;
+    expect(c.bot).toBe(true);
+    placeIn(solo.world, c, lab.run.key, lab.inst.start.x, lab.inst.start.y, 'up', []);
+    const coins = c.coins;
+    const bag = JSON.stringify(c.inventory);
+    // an essence roll that always succeeds goes to the one who struck the blow, unless it is the companion
+    const sure = { ...solo.ctx(), rnd: () => 0 };
+    const mob = spawnSagaMob(lab.world.areas![lab.run.key]!, lab.inst, 'skelett', c.x + TILE, c.y, 'mob', -1);
+    lab.inst.mobs[mob.id]!.hp = 1;
+    lab.inst.mobs[mob.id]!.state = 'fight';
+    castSpell(solo.world, c.id, 'ljuspil', mob.id, sure);
+    expect(lab.inst.mobs[mob.id]).toBeUndefined();
+    expect(c.inventory.some((s) => s?.item === 'monsteressens')).toBe(false);
+    castSpell(solo.world, h.id, 'eldboll', lab.inst.boss, solo.ctx());
+    expect(lab.inst.bossDown).toBe(true);
+    const seeds = readRun(h).seeds;
+    for (let i = 0; i < 400; i++) step(solo, true, []);
+    expect(readRun(h).seeds).toBeGreaterThanOrEqual(seeds);
+    const chest = Object.values(lab.world.areas![lab.run.key]!.objects).find((o) => o.kind === 'saga_chest' && o.variant === 2)!;
+    expect(performAction(lab.world.areas![lab.run.key]!, c.id, chest.x, chest.y, solo.ctx())).toEqual([]);
+    expect(lab.inst.looted[chest.id] ?? []).not.toContain(c.id);
+    expect(c.coins).toBe(coins);
+    expect(JSON.stringify(c.inventory)).toBe(bag);
+    expect(readRun(c).seeds).toBe(0);
+  });
+
   it('a dropped connection: the player comes back to the zone, or home when the run is over', () => {
     const party = makeParty(['vaktare', 'helare']);
     startRun(party.world, party.players[0]!.id, { seed: 6 }, party.ctx());
