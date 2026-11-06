@@ -22,7 +22,7 @@ const SHADOW_EVERY := 0.3
 ## Inside the farmhouse the camera stands higher over the hero and nearer, looking down steeper (the same distance in the
 ## same direction would put it among the crowns of the trees behind the room's south wall).
 const INSIDE_OFFSET := Vector3(0.0, 9.6, 5.2)
-const USABLE := {"saga_exit": "actExit", "saga_chest": "actChest", "saga_rest": "actRest", "saga_plate": "actPlate", "saga_gate": "actGate"}
+const USABLE := {"saga_exit": "actExit", "saga_chest": "actChest", "saga_rest": "actRest", "saga_plate": "actPlate", "saga_gate": "actGate", "run_exit": "actRunExit"}
 ## Outdoors only the dungeons' arches work yet; the other things you can use say so (M4b and M4c make them work).
 const ARCH := "saga_portal"
 
@@ -107,6 +107,7 @@ func _ready() -> void:
 		if id == model.me and _area != "":
 			_update_hud())
 	model.snapshot.connect(_on_snapshot)
+	model.run_changed.connect(_on_run_changed)
 	model.warped.connect(_on_warped)
 	model.toast.connect(hud.show_toast)
 	model.banner.connect(hud.show_banner)
@@ -192,6 +193,10 @@ func feed(msg: Dictionary) -> void:
 func _on_message(msg: Dictionary) -> void:
 	if not demo:
 		model.apply(msg)
+		if str(msg.get("t", "")) == "welcome":
+			# a run may be going and the shoot has my sagafrön: ask (the server answers with changes)
+			Net.send({"t": "run", "a": "state"})
+			Net.send({"t": "seed", "a": "state"})
 
 
 func _on_connection(status: String, _close_code: int) -> void:
@@ -280,6 +285,11 @@ func _act() -> void:
 	if _mode == "outdoor":
 		_act_outdoors(obj, kind)
 		return
+	# a run's way on is a flat rune disc: standing on it counts as facing it
+	var exit_here := _run_exit_here()
+	if not exit_here.is_empty():
+		Net.send({"t": "act", "tx": int(exit_here.get("x", 0)), "ty": int(exit_here.get("y", 0))})
+		return
 	if USABLE.has(kind):
 		var t := hero.facing_tile()
 		Net.send({"t": "act", "tx": t.x, "ty": t.y})
@@ -294,6 +304,22 @@ func _act() -> void:
 ## for the browser, a window the new client does not have yet says so.
 func _act_outdoors(_obj: Dictionary, _kind: String) -> void:
 	play.act()
+
+
+## The run's exit I stand on or face ({} when none).
+func _run_exit_here() -> Dictionary:
+	if _mode != "dungeon" or not Data.is_run_key(_area):
+		return {}
+	var tile := Data.tile()
+	var tx := floori(hero.px / tile)
+	var ty := floori(hero.py / tile)
+	var id: Variant = hero.world.get("occupancy", {}).get("%d,%d" % [tx, ty])
+	if id != null:
+		var o: Variant = hero.world.get("objects", {}).get(str(int(id)))
+		if o is Dictionary and str(o.get("kind", "")) == "run_exit":
+			return o
+	var f := hero.facing_object()
+	return f if str(f.get("kind", "")) == "run_exit" else {}
 
 
 func _arch_name(obj: Dictionary) -> String:
@@ -358,12 +384,13 @@ func _rebuild() -> void:
 	play.leave()
 	var key := model.my_area_key()
 	var id := Data.dungeon_of_key(key)
+	var is_zone := Data.is_run_key(key)
 	_clear_actors()
 	fx.clear()
 	combat.reset()
 	var w := model.world_for(key)
 	var outdoor: bool = id == "" and _is_outdoor_key(key) and w.get("terrain", []).size() > 0
-	if not outdoor and (id == "" or not model.areas.has(key)):
+	if not outdoor and ((id == "" and not is_zone) or not model.areas.has(key)):
 		_clear_views()
 		_area = ""
 		hero.set_world({})
@@ -392,12 +419,17 @@ func _rebuild() -> void:
 	else:
 		w = model.areas[key]
 		_clear_views()
-		dungeon.build(w, key)
+		var look: Dictionary = {}
+		if is_zone:
+			look = Data.zone_look(key, model.run, w)
+		dungeon.build(w, key, look)
 		_mode = "dungeon"
 		_area = key
 		hud.farm_box.visible = false
 		hero.set_world(w)
-		hud.set_area(str(Data.dungeon(id).get("name", key)), true)
+		hud.set_area(str(look.get("name", key)) if is_zone else str(Data.dungeon(id).get("name", key)), true)
+		if is_zone:
+			dungeon.set_weather(_zone_weather())
 		fx.load_area(key)
 	hero.place(float(me.get("x", 0)), float(me.get("y", 0)))
 	_dress_hero(me)
@@ -411,6 +443,22 @@ func _rebuild() -> void:
 			hud.show_hint(Strings.t("sagaTargetHint") + "  ·  " + Strings.t("chatHint"), 10.0)
 	_sync_actors()
 	_update_hud()
+
+
+## The weather of the map the run is on now ("" when the snapshot has not come).
+func _zone_weather() -> String:
+	return str(model.run.get("weather", "")) if model.run is Dictionary else ""
+
+
+## The run snapshot came or changed: a zone drawn before it arrived is redrawn with its right look; its weather follows.
+func _on_run_changed() -> void:
+	if _mode == "dungeon" and Data.is_run_key(_area):
+		var look := Data.zone_look(_area, model.run, model.areas.get(_area, {}))
+		if str(look.get("biome", look.get("name", ""))) != dungeon.look_name:
+			_rebuild()
+			return
+		dungeon.set_weather(_zone_weather())
+		hud.set_area(str(look.get("name", "")), true)
 
 
 func _place_name(key: String, w: Dictionary) -> String:
@@ -791,6 +839,8 @@ func _process(delta: float) -> void:
 	if _shadow_in <= 0.0:
 		_shadow_in = SHADOW_EVERY
 		dungeon.update_shadows(camera.global_position, Quality.shadow_lights())
+	if _mode == "dungeon":
+		dungeon.follow_weather(hero.position)
 	hud.tick_spell_bar(combat, snap.get("b") is Dictionary and snap["b"].get("cast") is Dictionary and bool(snap["b"]["cast"].get("kick", false)))
 	_frames += 1
 	if _screenshot != "" and _frames == 90:
@@ -872,7 +922,9 @@ func _update_prompt() -> void:
 	var kind := str(facing.get("kind", ""))
 	if _mode == "outdoor":
 		return # (farm_play.gd sets the prompt: what the use key does on the tile in front)
-	if USABLE.has(kind):
+	if not _run_exit_here().is_empty():
+		hud.set_prompt("%s · %s" % [Strings.t("actKey"), Strings.t("actRunExit")])
+	elif USABLE.has(kind):
 		hud.set_prompt("%s · %s" % [Strings.t("actKey"), Strings.t(USABLE[kind])])
 	else:
 		hud.set_prompt("")

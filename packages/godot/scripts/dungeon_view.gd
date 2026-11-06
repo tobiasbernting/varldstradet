@@ -40,6 +40,12 @@ const FLOOR_TINT := {
 	"forge": Color(0.45, 0.4, 0.42), "bifrost": Color(1.3, 1.25, 1.4), "moss": Color(0.8, 1.1, 0.75), "stone": Color(0.95, 0.95, 0.95),
 	"gravel": Color(0.9, 0.88, 0.85), "sand": Color(1.2, 1.1, 0.85), "dirt": Color(0.9, 0.8, 0.7), "floor_wood": Color(1.1, 0.9, 0.7),
 }
+## The ground of a run's zones (the biome's own floor: GAME.md section 1.1), drawn flat in the biome's colour with a little
+## variation per tile; the walls, torches and decor are the dungeon's the biome borrows from.
+const FLAT_FLOOR := {
+	"grass": Color("#5f9a44"), "mud": Color("#5e4a34"), "gravel": Color("#8b877e"), "sand": Color("#d6c086"),
+	"moss": Color("#4b7a3a"), "snow": Color("#e8eef4"), "ash": Color("#4b4745"),
+}
 const FLICKER_EVERY := 1.0 / 30.0
 const CANDLE_COLOUR := Color(1.0, 0.78, 0.45)
 const EXIT_COLOUR := Color(1.0, 0.95, 0.82)
@@ -67,6 +73,12 @@ var _t := 0.0
 var _flicker_in := 0.0
 var _shadow_order: Array[OmniLight3D] = [] ## the lights with a shadow now, nearest first (update_shadows)
 var _exit_walls: Dictionary = {} ## "x,y" of wall tiles the way out's stairs go into (no cap or faces there)
+var zone := false ## a zone of a run (`saga:run<n>z<i>`)
+var flat_floor := false ## a biome's ground (the zones) instead of the dungeon's flagstones
+var look_name := "" ## which look this was built with (the biome, or the dungeon), so the view can tell when it is stale
+var _vc_mat: StandardMaterial3D ## the vertex-colour material of the zone props (zone_props.gd)
+var _weather := ""
+var _weather_node: GPUParticles3D
 
 
 func _process(delta: float) -> void:
@@ -99,18 +111,27 @@ func clear() -> void:
 	_meshes = {}
 	_materials = {}
 	_exit_walls = {}
+	_vc_mat = null
+	_weather = ""
+	_weather_node = null
 	world = {}
 	key = ""
 	dungeon_id = ""
+	zone = false
+	flat_floor = false
+	look_name = ""
 
 
-## Builds the whole map from its WorldState (`w`) under the area key `k`.
-func build(w: Dictionary, k: String) -> void:
+## Builds the whole map from its WorldState (`w`) under the area key `k`. A zone of a run passes its look (Data.zone_look).
+func build(w: Dictionary, k: String, zone_look: Dictionary = {}) -> void:
 	clear()
 	world = w
 	key = k
 	dungeon_id = Data.dungeon_of_key(k)
-	var d := Data.dungeon(dungeon_id)
+	zone = Data.is_run_key(k)
+	var d: Dictionary = zone_look if not zone_look.is_empty() else Data.dungeon(dungeon_id)
+	flat_floor = zone and d.has("biome")
+	look_name = str(d.get("biome", d.get("name", dungeon_id)))
 	look = int(d.get("wall", 0)) % STONE_TINT.size()
 	map_w = int(w.get("w", 64))
 	map_h = int(w.get("h", 64))
@@ -269,6 +290,9 @@ func _is_open(x: int, y: int) -> bool:
 
 
 func _build_floor(d: Dictionary) -> void:
+	if flat_floor:
+		_build_floor_flat(d)
+		return
 	var floor_t := str(d.get("floor", "crypt"))
 	var boss_t := str(d.get("bossFloor", floor_t))
 	var groups: Dictionary = {} # [model, terrain] -> Array[Transform3D]
@@ -294,6 +318,38 @@ func _build_floor(d: Dictionary) -> void:
 		if mesh == null:
 			continue
 		_static.add_child(_multimesh(mesh, groups[gk], false))
+
+
+## The biome's ground: one flat quad per tile in the biome's colour, a little lighter or darker by tile, one mesh per chunk
+## (so a chunk is still lit by its own torches only).
+func _build_floor_flat(d: Dictionary) -> void:
+	var base: Color = FLAT_FLOOR.get(str(d.get("floor", "grass")), Color(0.5, 0.5, 0.5))
+	var chunks: Dictionary = {} # Vector2i -> FarmMesh
+	for y in range(map_h):
+		for x in range(map_w):
+			var t := _terrain_at(x, y)
+			if t == "" or Data.is_wall_terrain(t) or _is_wall_tile(x, y):
+				continue
+			var ck := Vector2i(x / CHUNK, y / CHUNK)
+			if not chunks.has(ck):
+				chunks[ck] = FarmMesh.new()
+			var h := float(absi((x * 73856093) ^ (y * 19349663) ^ (x * y * 83492791)) % 1000) / 1000.0
+			var k := 0.9 + 0.2 * h
+			var col := Color(base.r * k, base.g * k, base.b * k)
+			var fb: FarmMesh = chunks[ck]
+			fb.quad(Vector3(x, 0.0, y + 1), Vector3(x + 1, 0.0, y + 1), Vector3(x + 1, 0.0, y), Vector3(x, 0.0, y), col)
+	for ck in chunks.keys():
+		var mi := MeshInstance3D.new()
+		mi.mesh = (chunks[ck] as FarmMesh).build()
+		mi.material_override = _vertex_material()
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_static.add_child(mi)
+
+
+func _vertex_material() -> StandardMaterial3D:
+	if _vc_mat == null:
+		_vc_mat = ZoneProps.material()
+	return _vc_mat
 
 
 func _build_walls() -> void:
@@ -440,7 +496,33 @@ func _make_prop(kind: String, variant: int, x: int, y: int) -> Node3D:
 			node.add_child(DungeonProps.bones(variant, tint()))
 		"saga_urn":
 			node.add_child(DungeonProps.urn(variant, tint()))
+		"run_exit":
+			# the way on: a glowing rune disc on the floor with a beam of light over it
+			var disc := CylinderMesh.new()
+			disc.top_radius = 0.48
+			disc.bottom_radius = 0.5
+			disc.height = 0.05
+			disc.radial_segments = 16
+			node.add_child(DungeonProps._mesh_node(disc, DungeonProps.mat(Color(0.12, 0.3, 0.34), DungeonProps.RUNBLATT, 0.5), Vector3(0.0, 0.025, 0.0)))
+			var rim := CylinderMesh.new()
+			rim.top_radius = 0.58
+			rim.bottom_radius = 0.6
+			rim.height = 0.03
+			rim.radial_segments = 16
+			node.add_child(DungeonProps._mesh_node(rim, DungeonProps.mat(DungeonProps.KRYPTSTEN * tint(), Color.BLACK, 0.8), Vector3(0.0, 0.015, 0.0)))
+			var beam := DungeonProps.flame(Color(0.55, 1.0, 0.9), 2.2, mini(Quality.particles(), 8))
+			beam.position = Vector3(0.0, 0.1, 0.0)
+			node.add_child(beam)
+			_add_light(node, Vector3(0.0, 1.3, 0.0), Color(0.6, 1.0, 0.9), 5.5, 2.0, 0.15)
 		_:
+			var made := ZoneProps.make(kind, variant, _vertex_material())
+			if made != null:
+				node.add_child(made)
+				var lt: Variant = ZoneProps.LIGHTS.get(kind)
+				# (Låg gets the prop's glow and no light of its own)
+				if lt is Array and Quality.preset != "lag":
+					_add_light(node, Vector3(0.0, float(lt[3]), 0.0), lt[0], float(lt[1]), float(lt[2]), float(lt[4]))
+				return node
 			if not _warned.has(kind):
 				_warned[kind] = true
 				push_warning("dungeon: no model for '%s' yet, a placeholder box is shown" % kind)
@@ -555,3 +637,98 @@ func _first_mesh(node: Node) -> MeshInstance3D:
 		if found != null:
 			return found
 	return null
+
+
+# ---------------------------------------------------------------------------
+# Weather in a zone (the RunSnap says which): fog in the air, and on Mellan and Hög something falling
+
+
+## `kind` is a WeatherKind (sun, cloudy, rain, fog, wind, snow, hail, storm). Låg changes the fog only; the others add a
+## falling-particle box that follows the hero (`follow_weather`), sized by the preset's weather budget.
+func set_weather(kind: String) -> void:
+	if kind == _weather:
+		return
+	_weather = kind
+	if _weather_node != null:
+		_weather_node.queue_free()
+		_weather_node = null
+	if _env != null and _env.environment != null:
+		var fog := 0.035
+		match kind:
+			"fog":
+				fog = 0.095
+			"rain", "storm":
+				fog = 0.05
+			"snow", "hail":
+				fog = 0.045
+			"wind":
+				fog = 0.04
+		_env.environment.fog_density = fog
+	var budget := int(Quality.spec().get("weather", 0)) / 3 if Quality.preset != "lag" else 0
+	if budget <= 0 or not (kind in ["rain", "storm", "snow", "hail", "wind"]):
+		return
+	var quad := QuadMesh.new()
+	var pm := ParticleProcessMaterial.new()
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	pm.emission_box_extents = Vector3(11.0, 0.2, 9.0)
+	var colour := Color(0.75, 0.85, 1.0, 0.55)
+	var life := 1.0
+	match kind:
+		"rain", "storm":
+			quad.size = Vector2(0.02, 0.55)
+			pm.direction = Vector3(0.12, -1.0, 0.0)
+			pm.spread = 3.0
+			pm.initial_velocity_min = 9.0
+			pm.initial_velocity_max = 11.0
+			life = 0.85
+			if kind == "storm":
+				budget = budget * 3 / 2
+		"snow":
+			quad.size = Vector2(0.07, 0.07)
+			pm.direction = Vector3(0.1, -1.0, 0.0)
+			pm.spread = 30.0
+			pm.initial_velocity_min = 0.7
+			pm.initial_velocity_max = 1.1
+			colour = Color(1, 1, 1, 0.85)
+			life = 7.5
+		"hail":
+			quad.size = Vector2(0.05, 0.12)
+			pm.direction = Vector3(0.2, -1.0, 0.0)
+			pm.spread = 6.0
+			pm.initial_velocity_min = 9.0
+			pm.initial_velocity_max = 12.0
+			colour = Color(0.92, 0.97, 1.0, 0.85)
+			life = 0.8
+		_:
+			# wind: pale dust blowing across
+			quad.size = Vector2(0.06, 0.06)
+			pm.direction = Vector3(1.0, -0.05, 0.25)
+			pm.spread = 12.0
+			pm.initial_velocity_min = 3.0
+			pm.initial_velocity_max = 5.0
+			colour = Color(0.85, 0.85, 0.8, 0.4)
+			life = 4.0
+			budget = budget / 3
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	m.albedo_color = colour
+	quad.material = m
+	var p := GPUParticles3D.new()
+	p.amount = maxi(8, budget)
+	p.lifetime = life
+	p.preprocess = life
+	p.local_coords = false
+	p.process_material = pm
+	p.draw_pass_1 = quad
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	p.visibility_aabb = AABB(Vector3(-14, -9, -12), Vector3(28, 12, 24))
+	add_child(p)
+	_weather_node = p
+
+
+## The falling weather goes where the hero goes.
+func follow_weather(at: Vector3) -> void:
+	if _weather_node != null:
+		_weather_node.position = at + Vector3(0.0, 7.0, 0.0)
