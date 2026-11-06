@@ -538,10 +538,11 @@ in `packages/shared`, before any client draws them (M5c). Every fight rule is th
   (the strongest of each effect among members), and the runor taken (class runor only for the class).
 - **Runor**: after a zone's exit a vote on three cards (`offerRunor`): strict majority at once, everyone voted, or 20 s; ties go to
   the card voted first; the node `g3` allows one new offer. **Sagafrön** are paid to every human in the run when earned (`RUN_SEEDS`,
-  +15 % per modifier, +runor and tree bonuses) into `PlayerState.run` (`RunSave`, optional; old saves load unchanged; `readRun`/
+  +15 % per modifier, +runor and tree bonuses; only whole seeds are paid and the fraction is carried per player in `RunState.carry`, never saved) into `PlayerState.run` (`RunSave`, optional; old saves load unchanged; `readRun`/
   `runSaveOf`), planted with `{t:'seed', a:'plant'}` into `SEED_TREE` (18 nodes, 462 in all). The shoot's `variant` is the tree's
   stage from all nodes planted by the family (0, 3, 8, 14, 24).
-- **Ending**: the boss falling pays and clears the chapter (sagasim's own `cleared`) and starts 90 s for the chest; a wipe (the
+- **Ending**: the boss falling pays and clears the chapter for everyone in the party, offline members too (`victory` in `runsim.ts`; the
+  hired companion takes no loot, essence or sagafrön), and starts 90 s for the chest; the solo mercy is for one human *with* the companion; a wipe (the
   saga's four-second pause, but the zone does not reset) ends the run; so does the clock, the last human leaving, or a minute with
   nobody online. Everyone is back in front of the arch with everything; sagafrön were paid as earned.
 - **Protocol** (additive): client `run` (`start`, `join`, `pick`, `reroll`, `leave`, `state`), `seed` (`plant`, `state`),
