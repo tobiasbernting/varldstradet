@@ -28,7 +28,7 @@ auth=()
 if [ -n "${GITHUB_TOKEN:-}" ]; then auth=(-H "Authorization: Bearer $GITHUB_TOKEN"); fi
 api="https://api.github.com/repos/godotengine/webrtc-native/releases"
 if [ -n "$PIN_TAG" ]; then url="$api/tags/$PIN_TAG"; else url="$api/latest"; fi
-curl -fsSL "${auth[@]}" -H "Accept: application/vnd.github+json" -o "$work/release.json" "$url"
+curl -fsSL ${auth[@]+"${auth[@]}"} -H "Accept: application/vnd.github+json" -o "$work/release.json" "$url"
 
 # prints "tag", then "asset <name> <size> <digest>" per asset, then the url of the chosen asset
 node -e '
@@ -42,7 +42,7 @@ node -e '
 ' "$work/release.json" "$PIN_ASSET" | tee "$work/info.txt"
 
 asset_url="$(sed -n 's/^use [^ ]* //p' "$work/info.txt")"
-curl -fsSL "${auth[@]}" -o "$work/webrtc.zip" "$asset_url"
+curl -fsSL ${auth[@]+"${auth[@]}"} -o "$work/webrtc.zip" "$asset_url"
 sum="$(sha256sum "$work/webrtc.zip" | cut -d' ' -f1)"
 echo "sha256 of the download: $sum"
 if [ -n "$PIN_SHA256" ] && [ "$sum" != "$PIN_SHA256" ]; then
