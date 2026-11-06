@@ -42,6 +42,7 @@ var loot: LootWindow
 var chat: ChatUi
 var run_hud: RunHud
 var run_pick: RunPick
+var run_end: RunEnd
 var wheel: Wheel
 var play: FarmPlay
 var demo := false
@@ -77,6 +78,9 @@ func _ready() -> void:
 	run_pick = RunPick.new()
 	run_pick.model = model
 	add_child(run_pick)
+	run_end = RunEnd.new()
+	run_end.model = model
+	add_child(run_end)
 	menu = PauseMenu.new()
 	add_child(menu)
 	loot = LootWindow.new()
