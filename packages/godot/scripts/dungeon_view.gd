@@ -282,12 +282,12 @@ func _build_floor(d: Dictionary) -> void:
 			if t == "" or Data.is_wall_terrain(t) or _is_wall_tile(x, y):
 				continue
 			var model: String
-			if t == boss_t and boss_t != floor_t:
+			var h := absi((x * 73856093) ^ (y * 19349663) ^ (x * y * 83492791))
+			var v := h % 9
+			if t == boss_t and boss_t != floor_t and bool(look["boss_decor"]):
 				model = FLOOR_BOSS
 			else:
-				var h := absi((x * 73856093) ^ (y * 19349663) ^ (x * y * 83492791))
-				var v := h % 9
-				model = FLOOR_MODELS[1] if v == 0 else (FLOOR_MODELS[2] if v == 1 else FLOOR_MODELS[0])
+				model = FLOOR_MODELS[1] if v == 0 else (FLOOR_MODELS[2] if v == 1 and bool(look["weeds"]) else FLOOR_MODELS[0])
 			var gk := [model, t, x / CHUNK, y / CHUNK]
 			if not groups.has(gk):
 				groups[gk] = []

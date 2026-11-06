@@ -11,6 +11,8 @@ extends RefCounted
 ##   stone     tint on the KayKit stone (floor tiles, wall faces, props): ART.md, "Recolouring imported packs"
 ##   torch     the colour of the wall torches' flame and light
 ##   floors    terrain -> multiplier on `stone` for the floor tiles of that terrain (on top of FLOORS)
+##   boss_decor  the boss hall's floor tiles are KayKit's decorated tile (false: the plain one; the crypt's own hall has the decor)
+##   weeds     some floor tiles are the weedy variant (false: only the broken one, for stone and ice that has no weeds)
 ##   ambient_energy  strength of the ambient light (the dungeon's colour turned down so torches pool light)
 ##   fog_density, fog_k   the fog's density, and how much of the ambient colour it takes
 ##   glow      bloom strength
@@ -19,7 +21,7 @@ extends RefCounted
 ## Draugkryptan's values are the ones the view had before the table existed (M3a), unchanged.
 const NEUTRAL := {
 	"wall": -1, "stone": Color(0.8, 0.8, 0.8), "torch": Color(1.0, 0.72, 0.4), "floors": {},
-	"ambient_energy": 0.7, "fog_density": 0.035, "fog_k": 0.45, "glow": 0.5, "motes": "",
+	"ambient_energy": 0.7, "fog_density": 0.035, "fog_k": 0.45, "glow": 0.5, "motes": "", "boss_decor": true, "weeds": true,
 }
 
 const LOOKS := {
@@ -27,17 +29,19 @@ const LOOKS := {
 	"frost": {
 		"wall": 1, "stone": Color(0.82, 0.9, 1.0), "torch": Color(0.6, 0.86, 1.0),
 		# a cold, clear air with a little more bloom on the rime
-		"ambient_energy": 0.8, "fog_density": 0.028, "fog_k": 0.6, "glow": 0.65, "motes": "snow",
+		"ambient_energy": 0.8, "fog_density": 0.028, "fog_k": 0.6, "glow": 0.65, "motes": "snow", "boss_decor": false, "weeds": false,
 	},
 	"surt": {
 		"wall": 2, "stone": Color(0.55, 0.5, 0.52), "torch": Color(1.0, 0.58, 0.26),
-		# thicker, redder air with embers rising
-		"ambient_energy": 0.75, "fog_density": 0.045, "fog_k": 0.55, "glow": 0.7, "motes": "embers",
+		# thicker, redder air with embers rising; the forge's floor is black stone, lit enough to read a boss against
+		"floors": {"forge": Color(0.8, 0.72, 0.74), "ash": Color(0.7, 0.64, 0.64)},
+		"ambient_energy": 0.75, "fog_density": 0.045, "fog_k": 0.55, "glow": 0.7, "motes": "embers", "boss_decor": false, "weeds": false,
 	},
 	"hel": {
 		"wall": 3, "stone": Color(0.6, 0.78, 0.76), "torch": Color(0.6, 1.0, 0.82),
-		# a heavy green fog and wisps of ghost-light
-		"ambient_energy": 0.7, "fog_density": 0.055, "fog_k": 0.6, "glow": 0.55, "motes": "wisps",
+		# a heavy green fog and wisps of ghost-light; the boss hall's stone a little darker, so the ghost queen stands out
+		"floors": {"crypt": Color(0.85, 0.9, 0.9)},
+		"ambient_energy": 0.7, "fog_density": 0.055, "fog_k": 0.6, "glow": 0.55, "motes": "wisps", "boss_decor": false,
 	},
 	"dvarg": {"wall": 4, "stone": Color(0.7, 0.7, 0.76), "torch": Color(1.0, 0.86, 0.6)},
 	"orm": {"wall": 5, "stone": Color(0.6, 0.76, 0.9), "torch": Color(0.7, 0.92, 1.0)},

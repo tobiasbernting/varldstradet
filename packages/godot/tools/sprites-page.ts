@@ -52,7 +52,8 @@ export function speciesOf(dungeonId: keyof typeof DUNGEONS): string[] {
     set.add(b);
     const adds = SAGA_BOSSES[b]?.phaseAdds;
     if (adds) set.add(adds.species);
-    for (const mv of SAGA_BOSSES[b]?.moves ?? []) if (mv.block) set.add(mv.block);
+    // (a freeze holds its friend in an ice block unless the move names a web, as sagasim's freeze() does)
+    for (const mv of SAGA_BOSSES[b]?.moves ?? []) if (mv.move === 'freeze') set.add(mv.block ?? 'isblock');
   }
   return [...set].sort();
 }
