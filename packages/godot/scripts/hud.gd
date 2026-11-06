@@ -60,6 +60,7 @@ var prompt_label: Label
 var hint_label: Label
 var _hint_t := 0.0
 var fps_label: Label
+var voice_button: Button
 var _frame_times: Array = []
 var _fps_in := 0.0
 
@@ -107,6 +108,7 @@ func _ready() -> void:
 	right.alignment = BoxContainer.ALIGNMENT_END
 	right.add_theme_constant_override("separation", 8)
 	add_child(right)
+	_build_voice_button(right)
 	conn_label = _label(16)
 	conn_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	right.add_child(conn_label)
@@ -291,6 +293,38 @@ func _ready() -> void:
 	box.add_child(button)
 	fps_label.visible = Settings.show_fps
 	reset()
+
+
+## Röstprat's button (voice.gd): opens its window; its colour says whether you are on the phone and whether you are heard.
+func _build_voice_button(parent: Control) -> void:
+	voice_button = Button.new()
+	voice_button.name = "VoiceButton"
+	voice_button.text = Strings.t("voiceWindow")
+	voice_button.add_theme_font_size_override("font_size", 15)
+	voice_button.flat = true
+	voice_button.focus_mode = Control.FOCUS_NONE
+	voice_button.tooltip_text = Strings.t("voiceWindow")
+	voice_button.visible = Voice.available
+	voice_button.pressed.connect(Voice.open_window)
+	parent.add_child(voice_button)
+	Voice.changed.connect(_voice_changed)
+	Voice.mic_silent.connect(func() -> void: show_toast(Strings.t("voiceNoMicNative")))
+	Voice.rang.connect(func(who: String) -> void:
+		show_toast(Strings.t("voiceRang", {"name": who}))
+		Sfx.play("target"))
+	_voice_changed()
+
+
+func _voice_changed() -> void:
+	if voice_button == null:
+		return
+	voice_button.visible = Voice.available
+	var c := Color(1, 1, 1, 0.45) # not on the phone
+	if Voice.is_joined():
+		c = Color("8fe08a") if Voice.is_speaker() else Color(1, 1, 1, 0.9)
+		if Voice.talking:
+			c = Color("e8b830")
+	voice_button.modulate = c
 
 
 func _label(size: int) -> Label:

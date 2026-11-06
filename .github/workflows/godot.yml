@@ -56,6 +56,16 @@ jobs:
             echo "::error::running the project reported errors or leaked at exit (see above)"; exit 1
           fi
 
+      - name: Röstprat's codec, rules and two WebRTC peers exchanging sound packets (headless; the extension must be loaded)
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          timeout 120 ~/godot/godot --headless --path . -- --voicecheck --require-webrtc 2>&1 | tee voicecheck.log
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|voicecheck: FAIL|leaked at exit|still in use at exit|Pages in use exist at exit" voicecheck.log; then
+            echo "::error::the voice check reported errors (see above)"; exit 1
+          fi
+          grep -q "voicecheck: all ok" voicecheck.log
+
       - name: Run the Draugkryptan demo headless for a moment (the dungeon view, actors and HUD run on the recorded fixture)
         working-directory: packages/godot
         run: |

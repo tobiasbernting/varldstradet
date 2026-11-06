@@ -6,3 +6,6 @@ dist/
 .claude/
 # Godot exports (CI)
 build/
+
+# the webrtc-native GDExtension, fetched by tools/fetch-webrtc.sh (CI and developers)
+packages/godot/addons/

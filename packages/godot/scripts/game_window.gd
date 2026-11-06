@@ -150,7 +150,7 @@ func _on_close() -> void:
 func refresh() -> void:
 	if not _open:
 		return
-	var me := model.my_player()
+	var me := model.my_player() if model != null else {}
 	_purse.text = _purse_text(me)
 	_remember_focus()
 	for c in _body.get_children():
