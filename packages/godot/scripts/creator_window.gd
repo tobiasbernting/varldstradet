@@ -28,7 +28,7 @@ var _composer: LookComposer
 var _root: Control
 var _input: LineEdit
 var _preview: TextureRect
-var _rows: Dictionary = {} ## id -> {icon: TextureRect, swatch: ColorRect, label: Label}
+var _rows: Dictionary = {} ## id -> {icon: TextureRect, swatch: ColorRect, label: Label, prev: Button, next: Button}
 var _error: Label
 var _create: Button
 var _cancel: Button
@@ -151,9 +151,10 @@ func _row(parent: Control, id: String, label_key: String, step: Callable) -> voi
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override("font_size", 20)
 	row.add_child(label)
-	row.add_child(_arrow("◀", Strings.t("creatorPrev"), func() -> void:
+	var prev := _arrow("◀", Strings.t("creatorPrev"), func() -> void:
 		step.call(-1)
-		_refresh()))
+		_refresh())
+	row.add_child(prev)
 	var mid := PanelContainer.new()
 	var msb := StyleBoxFlat.new()
 	msb.bg_color = Color(0.2, 0.17, 0.13)
@@ -183,10 +184,11 @@ func _row(parent: Control, id: String, label_key: String, step: Callable) -> voi
 	text.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	text.visible = false
 	inner.add_child(text)
-	row.add_child(_arrow("▶", Strings.t("creatorNext"), func() -> void:
+	var next := _arrow("▶", Strings.t("creatorNext"), func() -> void:
 		step.call(1)
-		_refresh()))
-	_rows[id] = {"swatch": swatch, "icon": icon, "label": text}
+		_refresh())
+	row.add_child(next)
+	_rows[id] = {"swatch": swatch, "icon": icon, "label": text, "prev": prev, "next": next}
 
 
 func _arrow(glyph: String, tip: String, pressed: Callable) -> Button:

@@ -8,11 +8,14 @@ signal start_game(player_id: String)
 
 const POLL_SECONDS := 3.0
 
+var _can_create := true ## the gate's canCreate: a guest device may not make characters
+
 @onready var title: Label = %Title
 @onready var status: Label = %Status
 @onready var form: VBoxContainer = %Form
 @onready var url_label: Label = %UrlLabel
 @onready var url: LineEdit = %Url
+
 @onready var url_hint: Label = %UrlHint
 @onready var code_label: Label = %CodeLabel
 @onready var code: LineEdit = %Code
@@ -155,7 +158,8 @@ func _apply_gate(body: Dictionary) -> void:
 	_polling = false
 	match gate:
 		"ok":
-			new_button.visible = bool(body.get("canCreate", true)) # (the server checks again on Skapa)
+			_can_create = bool(body.get("canCreate", true)) # (the server checks again on Skapa)
+			new_button.visible = _can_create
 			_show("picker", "")
 			_load_players()
 		"pending":
@@ -208,7 +212,7 @@ func _load_players() -> void:
 			button.grab_focus()
 	if list.is_empty():
 		var hint := Label.new()
-		hint.text = Strings.t("noCharactersYet")
+		hint.text = Strings.t("noCharactersYet" if _can_create else "noCharactersGuest")
 		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		cards.add_child(hint)
 

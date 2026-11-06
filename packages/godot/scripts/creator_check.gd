@@ -67,6 +67,19 @@ func _run() -> void:
 	# an empty name is refused before anything is sent, in Swedish
 	var empty: Dictionary = await win._submit()
 	_step("an empty name is refused", int(empty.get("status", 0)) == 400 and win._error.text == Strings.t("creatorErrName"), win._error.text)
+	# the arrow buttons: each row's ▶ steps its choice on by one, ◀ steps it back (and wraps round)
+	for row_id in ["skin", "hair", "style", "shirt"]:
+		var row: Dictionary = win._rows[row_id]
+		var before: int = win.get(row_id + "_i")
+		var n: int = {"skin": win.skins.size(), "hair": win.hair_colors.size(), "style": win.HAIR_STYLES.size(), "shirt": win.shirts.size()}[row_id]
+		(row["next"] as Button).pressed.emit()
+		var after: int = win.get(row_id + "_i")
+		(row["prev"] as Button).pressed.emit()
+		var back: int = win.get(row_id + "_i")
+		(row["prev"] as Button).pressed.emit()
+		var wrapped: int = win.get(row_id + "_i")
+		(row["next"] as Button).pressed.emit()
+		_step("the %s arrows step the choice" % row_id, n < 2 or (after == (before + 1) % n and back == before and wrapped == posmod(before - 1, n) and win.get(row_id + "_i") == before), "%d -> %d -> %d -> %d of %d" % [before, after, back, wrapped, n])
 	# a look: the 4th skin, the 7th hair colour, curly, the green shirt (through the arrow buttons' own step)
 	win._input.text = "  " + char_name + "  "
 	win.skin_i = 3
