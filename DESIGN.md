@@ -519,8 +519,8 @@ this repository (it lives on in `tobiasbernting/lilla-garden`, which is not touc
 ## Runs: Sagan som färd (2026-11-06)
 Milestone M5b of `PLAN.md`: the design is `GAME.md` (read it first); this is the record of the rules as built, on the server and
 in `packages/shared`, before any client draws them (M5c). Every fight rule is the saga's: a run only hands fighters their buffs.
-- **A run** (`runsim.ts`) is at most 30 minutes (server clock, counted while someone in the party is online; a banner at 25:00,
-  a graceful end at 30:00): three zones and the chapter's boss. Started with `{t:'run', a:'start'}` at the **färdport**
+- **A run** (`runsim.ts`) is about 30 minutes as a soft target (server clock, counted while someone in the party is online; banners at 25:00 and
+  30:00 and every 10 minutes after, never a forced end: owner, 2026-11-06): three zones and the chapter's boss. Started with `{t:'run', a:'start'}` at the **färdport**
   (`fardport`, 3 × 2, placed by `ensureRunPlaces` beside the **Yggdrasil shoot** `yggdrasil`, which the family may already have
   planted; the same function puts both back every 20 s of play, on load and at server start). Family members within 6 tiles come
   along; others `join` and appear at the last lit rest stone of the zone. Three players, four with a longhouse; one human with a
@@ -543,7 +543,7 @@ in `packages/shared`, before any client draws them (M5c). Every fight rule is th
   stage from all nodes planted by the family (0, 3, 8, 14, 24).
 - **Ending**: the boss falling pays and clears the chapter for everyone in the party, offline members too (`victory` in `runsim.ts`; the
   hired companion takes no loot, essence or sagafrön), and starts 90 s for the chest; the solo mercy is for one human *with* the companion; a wipe (the
-  saga's four-second pause, but the zone does not reset) ends the run; so does the clock, the last human leaving, or a minute with
+  saga's four-second pause, but the zone does not reset) ends the run; so does the last human leaving (never the clock), or a minute with
   nobody online. Everyone is back in front of the arch with everything; sagafrön were paid as earned.
 - **Protocol** (additive): client `run` (`start`, `join`, `pick`, `reroll`, `leave`, `state`), `seed` (`plant`, `state`),
   `fardkost`; server `Change`s `run` (`state`, `offer`, `ended`), `seed` (`tree`), `fardkost`, and `open` with `run` and `seed`.

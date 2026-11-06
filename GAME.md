@@ -10,7 +10,7 @@ falling costs nothing. Where a number is written here it is the number in the co
 
 | Question | Decision |
 | --- | --- |
-| Length | Three zones and a boss, at most **30 minutes** on the server's clock. A warning at 25:00, a graceful end at 30:00. |
+| Length | Three zones and a boss, about **30 minutes** as a soft target on the server's clock: nudges at 25:00 and 30:00 and every 10 minutes after, never a forced end (owner, 2026-11-06: "should not be a hard cap, we can adjust later"). |
 | Zones | One of seven biomes each, never repeating in a run. 4–6 rooms, one rest stone, an exit. |
 | Runor pick | The party gets **one offer of three cards** and **votes**; a strict majority wins at once, otherwise the most votes after 20 s, ties go to the card voted first. |
 | Sagafrön | Paid to every party member the moment they are earned, so nothing can be lost. Planted at the Yggdrasil shoot. |
@@ -39,12 +39,17 @@ the rest can join (section 6).
   the dungeon's gate opens when the mid-boss falls. Using the exit starts the pick.
 * **Boss zone.** A start room, one pack room, a rest stone and the boss's hall. The boss is the chapter's boss with all
   of its telegraphed attacks (section 1.3).
-* **Time.** The clock runs on the server while at least one party member is online and is 30:00 at the most. At 25:00
-  everyone gets a banner ("Fem minuter kvar!"). At 30:00 the run ends gracefully: "Dags att gå hem", everyone is carried
-  home with what they have. A run that ends on time gives its sagafrön and loot but does not clear the chapter.
+* **Time.** The clock runs on the server while at least one party member is online. Thirty minutes is the **target the
+  numbers are tuned to** and a gentle nudge, not a wall: the owner decided on 2026-11-06 that it "should not be a hard
+  cap" and that "we can adjust later". At 25:00 everyone gets a banner ("Snart dags att gå hem"), at 30:00 another
+  ("Dags att gå hem?": finish what you are doing and walk home from the next rest stone or the boss), and the same
+  reminder again every 10 minutes (40:00, 50:00, ...). The clock never ends a run. A run ends only when the boss
+  falls, when everyone is down (a wipe), when a player leaves on their own (that player is at the farm with
+  everything), or when no human has been online for 60 s. `timeouts` in the save counts the runs that went past the
+  30:00 mark (counted once, when the first nudge goes out).
   The numbers were tuned with bot parties (section 9): the careful bots reach the boss in 8–12 minutes, the clumsy
   bots, who are about as slow as kids (2.2–2.5 times the careful ones), in 14–25 minutes, plus a short vote at each
-  exit. So the cap is a safety net and not a wall.
+  exit. So the 30 minutes is a target we meet with room to spare.
 * **Rooms are not saved.** Like a dungeon, a run exists only while it is played: a server restart puts everyone back on
   the farm, and what they earned was already paid out.
 
@@ -320,7 +325,8 @@ bag when the run starts. Nothing chosen is fine.
 * **A wipe** (everyone down) is a four second pause and then the run ends: a banner, and everyone is back at the farm in
   front of the arch, full health, with their bag, their coins and the sagafrön they earned so far. Nothing is taken.
 * **Victory** (the boss falls): the banner, the chest, 90 seconds, then the farm.
-* **Time** (30:00) ends it the same way as a wipe, with its own kind words.
+* **Time** does not end a run. At 30:00 (and every 10 minutes after) a banner suggests going home; the party decides
+  (owner, 2026-11-06). The only ways a run ends are the boss, a wipe, leaving and the 60 s with no human online.
 * **Leaving** and a **dropped connection** (an offline member stays a quiet member for the rest of the run; when the last
   human is offline for 60 s the run ends).
 * Every end writes the run's statistics and sends the same summary: outcome, time, sagafrön earned, zones cleared.
@@ -335,7 +341,7 @@ bag when the run starts. Nothing chosen is fine.
   most people tapped glows; there is no timer bar the 7-year-old can lose to, only a gentle one; the first card is the
   fallback.
 * Every card has an `icon` (an emoji, drawn by the client's emoji sheet) and a `text` (at most 40 characters).
-* Falling, the wipe and the time-out say "Ni vaknar vid vilostenen" and "Dags att gå hem" and never anything about losing.
+* Falling, the wipe and the time-out say "Ni vaknar vid vilostenen", and the time nudges say "Snart dags att gå hem" and "Dags att gå hem?" with a kind line, and never anything about losing or being too slow; they are short and in Swedish like everything else.
 * The same safety as the saga: nothing bleeds, monsters poof, the party is always at the farm again with what it has.
 * A parent's play hours, pause and remove work as before: they take the member's device offline, and the run treats that as a
   dropped connection (section 7). It goes on for the others with that member offline, and ends after 60 seconds with no
@@ -359,4 +365,4 @@ Minutes until the boss falls (3 runs each):
 
 The exact table from the last run of the tests is in the pull request. Tuned: `ZONE_HP`, `ZONE_PACKS`, `SOLO_MERCY` and
 the hired companion's class (a healer for everyone but the healer). The tests fail if a careful party ever stops
-winning, if any party gets stuck or runs out of the 30 minutes, or if the careful trio's time leaves 4–15 minutes.
+winning, if any party gets stuck or takes longer than the 30 minutes to reach the boss (the tuning target; the game itself no longer stops there), or if the careful trio's time leaves 4–15 minutes.
