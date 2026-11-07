@@ -46,6 +46,7 @@ var run_end: RunEnd
 var steps: Footsteps ## footsteps on the outdoor maps (M7b)
 var soundscape: Soundscape ## the ambience of the outdoor maps (M7b)
 var wheel: Wheel
+var minimap: Minimap ## the small map in the HUD's corner (M9a)
 var play: FarmPlay
 var demo := false
 var looks: LookComposer
@@ -73,6 +74,7 @@ var _shadow_in := 0.0
 var _screenshot := ""
 var _open_chat := false ## --open-chat (with --demo): the chat box is open (pictures)
 var _open_npc := "" ## --open-npc=<id> (or "volva"): a villager's talk window opens on the farm demo (pictures)
+var _open_map := false ## --open-map (with --demo): the world map is open (pictures)
 var _settings_page := "" ## --settings-page=picture|sound|reading|controls: the settings window opens on it (pictures)
 var _frames := 0
 var _rest_glow_in := 0.0
@@ -99,6 +101,10 @@ func _ready() -> void:
 	add_child(soundscape)
 	hud = HudLayer.new()
 	add_child(hud)
+	minimap = Minimap.new()
+	minimap.name = "Minimap"
+	hud.add_child(minimap)
+	minimap.setup(model, hero)
 	run_hud = RunHud.new()
 	run_hud.model = model
 	add_child(run_hud)
@@ -120,13 +126,16 @@ func _ready() -> void:
 	play = FarmPlay.new()
 	add_child(play)
 	play.setup(self)
+	play.windows.world_map.on_minimap = func() -> void: minimap.toggle()
 	_make_lantern()
 	hud.menu_asked.connect(menu.open)
 	menu.switch_player.connect(func() -> void: left.emit())
 	menu.dev_enter.connect(_on_dev_enter)
 	menu.fps_toggled.connect(hud.set_fps_shown)
 	menu.window_asked.connect(func(which: String) -> void:
-		if _mode == "outdoor" and not demo:
+		if which == "map":
+			_open_world_map()
+		elif _mode == "outdoor" and not demo:
 			play.windows.toggle_gear() if which == "gear" else play.windows.toggle_quests())
 	camera.position = CAMERA_OFFSET
 	camera.look_at_from_position(CAMERA_OFFSET, CAMERA_LOOK)
@@ -173,6 +182,8 @@ func _ready() -> void:
 			_screenshot = arg.substr("--screenshot=".length())
 		elif arg == "--open-chat":
 			_open_chat = true
+		elif arg == "--open-map":
+			_open_map = true
 		elif arg.begins_with("--open-npc="):
 			_open_npc = arg.substr("--open-npc=".length())
 		elif arg.begins_with("--settings-page="):
@@ -192,6 +203,7 @@ func reset() -> void:
 	hero.reset()
 	hero.send_moves = true
 	play.leave()
+	minimap.refresh_visible(false)
 	hud.reset()
 	chat.reset()
 	demo = false
@@ -223,6 +235,17 @@ func start_demo(fixture := "draug") -> void:
 			model.weather = {"kind": arg.substr(10), "since": model.server_now() - 60000.0, "until": model.server_now() + 600000.0}
 		elif arg.begins_with("--season="):
 			model.season = arg.substr(9)
+		elif arg.begins_with("--visited="):
+			# --visited=a:0,-1=skog|a:1,0=by|moon=mane: maps I have been to (and their places), for the world map's picture
+			var me_rec := model.my_player()
+			var seen: Array = me_rec.get("visited", ["farm"])
+			for part in arg.substr(10).split("|", false):
+				var kv := part.split("=")
+				if not seen.has(kv[0]):
+					seen.append(kv[0])
+				if kv.size() == 2:
+					model.biomes[kv[0]] = kv[1]
+			me_rec["visited"] = seen
 		elif arg.begins_with("--daylapse="):
 			_lapse = maxf(float(arg.substr(11)), 1.0)
 			if _demo_time < 0.0:
@@ -335,6 +358,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		chat.open()
 		get_viewport().set_input_as_handled()
 		return
+	if event.is_action_pressed("minimap"):
+		minimap.toggle()
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed("worldmap"):
+		_open_world_map()
+		get_viewport().set_input_as_handled()
+		return
 	if event.is_action_pressed("emote"):
 		_open_emotes()
 		get_viewport().set_input_as_handled()
@@ -435,6 +466,13 @@ func _arch_name(obj: Dictionary) -> String:
 	return str(Data.dungeon(str(ids[v])).get("name", "")) if v >= 0 and v < ids.size() else ""
 
 
+## K, the left trigger or the pause menu's button: the world map (from any map that is drawn; the buttons that would be refused are greyed).
+func _open_world_map() -> void:
+	if _area == "" or model.my_player().is_empty():
+		return
+	play.windows.toggle_map()
+
+
 func _open_emotes() -> void:
 	var entries: Array = []
 	for id in Strings.list("emotes"):
@@ -508,6 +546,7 @@ func _rebuild() -> void:
 		hud.set_area(shown, false)
 		hud.build_spell_bar("")
 		hud.units.visible = false
+		minimap.refresh_visible(false)
 		return
 	var me := model.my_player()
 	if outdoor:
@@ -552,6 +591,7 @@ func _rebuild() -> void:
 			hud.show_hint(Strings.t("sagaTargetHint") + "  ·  " + Strings.t("chatHint"), 10.0)
 	_sync_actors()
 	_update_hud()
+	minimap.refresh_visible(true)
 
 
 ## The weather of the map the run is on now ("" when the snapshot has not come).
@@ -1004,6 +1044,8 @@ func _process(delta: float) -> void:
 		hero.frozen = run_pick.is_open()
 	hud.tick_spell_bar(combat, snap.get("b") is Dictionary and snap["b"].get("cast") is Dictionary and bool(snap["b"]["cast"].get("kick", false)))
 	_frames += 1
+	if _open_map and _frames == 30:
+		play.windows.world_map.open_window()
 	if _open_chat and _frames == 30:
 		chat.open()
 	if _open_npc != "" and _frames == 30:

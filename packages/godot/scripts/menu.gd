@@ -8,7 +8,7 @@ signal resumed
 signal switch_player
 signal dev_enter(dungeon: String)
 signal fps_toggled(on: bool)
-signal window_asked(which: String) ## "gear" or "quests": the windows the keys G and J open, for a pad
+signal window_asked(which: String) ## "gear", "quests" or "map": the windows the keys G, J and K open, for a pad
 
 var _root: Control
 var _main: VBoxContainer
@@ -58,6 +58,9 @@ func _ready() -> void:
 	_continue_button = _button(Strings.t("menuContinue"), func() -> void: close())
 	_main.add_child(_continue_button)
 	_main.add_child(_button(Strings.t("menuSettings"), func() -> void: open_settings()))
+	_main.add_child(_button("🗺️ %s (%s)" % [Strings.t("worldMap"), Strings.t("mapKey")], func() -> void:
+		close()
+		window_asked.emit("map")))
 	_main.add_child(_button("%s (%s)" % [Strings.t("gearTitle"), Strings.t("gearKey")], func() -> void:
 		close()
 		window_asked.emit("gear")))

@@ -22,6 +22,7 @@ var travel: TravelWindow
 var quests: QuestsWindow
 var run_arch: RunWindow
 var seed_tree: SeedWindow
+var world_map: MapWindow
 var _all: Array = []
 
 
@@ -46,6 +47,7 @@ func setup(v: WorldView) -> void:
 	quests = _add(QuestsWindow.new())
 	run_arch = _add(RunWindow.new())
 	seed_tree = _add(SeedWindow.new())
+	world_map = _add(MapWindow.new())
 	model.quests_changed.connect(refresh)
 	model.fardkost_changed.connect(refresh)
 	model.tree_changed.connect(refresh)
@@ -130,7 +132,19 @@ func toggle_quests() -> void:
 		quests.open_window()
 
 
+## K: the world map (anywhere a map is drawn; inside a dungeon it only shows where I am, the buttons are greyed).
+func toggle_map() -> void:
+	if world_map.is_open():
+		world_map.close()
+	elif not is_busy():
+		world_map.open_window()
+
+
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("worldmap") and world_map.is_open():
+		world_map.close()
+		get_viewport().set_input_as_handled()
+		return
 	# the key that opened the gear or the wishes closes them again
 	if event.is_action_pressed("gear") and gear.is_open():
 		gear.close()

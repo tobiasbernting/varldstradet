@@ -14,6 +14,8 @@ var quality: String = "mellan"
 ## "buttons": the four spells on X, Y, B and RB (the browser's layout); "wheel": one button opens a radial wheel.
 var spell_input: String = "buttons"
 var show_fps: bool = false
+## M9a: the minimap in the HUD's corner (key M, or the button in the world map).
+var minimap_on: bool = true
 ## Röstprat (voice.gd): ring up when the game starts; "ptt" (hold the key) or "open" (the microphone is always on);
 ## the microphone on or off; how loud the others are, 0 to 1.
 var voice_auto: bool = true
@@ -110,6 +112,7 @@ func _load() -> void:
 	quality = str(cfg.get_value("graphics", "quality", "mellan"))
 	spell_input = str(cfg.get_value("input", "spells", "buttons"))
 	show_fps = bool(cfg.get_value("graphics", "fps", false))
+	minimap_on = bool(cfg.get_value("hud", "minimap", true))
 	voice_auto = bool(cfg.get_value("voice", "auto", true))
 	voice_mode = str(cfg.get_value("voice", "mode", "ptt"))
 	voice_mic = bool(cfg.get_value("voice", "mic", true))
@@ -144,6 +147,7 @@ func save() -> void:
 	cfg.set_value("graphics", "quality", quality)
 	cfg.set_value("input", "spells", spell_input)
 	cfg.set_value("graphics", "fps", show_fps)
+	cfg.set_value("hud", "minimap", minimap_on)
 	cfg.set_value("voice", "auto", voice_auto)
 	cfg.set_value("voice", "mode", voice_mode)
 	cfg.set_value("voice", "mic", voice_mic)

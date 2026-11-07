@@ -56,6 +56,7 @@ import {
   WIPE_MS,
   INVENTORY_FILTERS,
   FILTER_NAMES,
+  SPACEPORT,
   itemName,
   CATEGORY_ORDER,
   RECIPES,
@@ -144,7 +145,7 @@ for (const n of Object.values(NPCS)) {
 const dungeons: Record<string, unknown> = {};
 for (const id of DUNGEON_IDS) {
   const d = DUNGEONS[id];
-  dungeons[id] = { name: d.name, chapter: d.chapter, intro: d.intro, floor: d.floor, bossFloor: d.bossFloor, wall: d.wall, ambient: d.ambient, decor: d.decor, mini: d.mini, boss: d.boss, ...(d.illusions ? { illusions: true } : {}) };
+  dungeons[id] = { name: d.name, chapter: d.chapter, intro: d.intro, floor: d.floor, bossFloor: d.bossFloor, wall: d.wall, ambient: d.ambient, decor: d.decor, mini: d.mini, boss: d.boss, portal: d.portal, ...(d.illusions ? { illusions: true } : {}) };
 }
 
 /** Every creature: its name, and for a fight its reach, speed and whether it shoots (reach above 2.5). */
@@ -250,7 +251,7 @@ const run = {
 
 const data = {
   _comment: 'Generated from packages/shared by `pnpm godot:data`. Do not edit; edit the shared data and run the script.',
-  constants: { TILE, MAP_W, MAP_H, MAX_HEARTS, DAY_LENGTH_MS, EDGE_GAP, REACH, PICKUP_RADIUS, RIDE_SPEED_MUL, WATERING_CAN_CHARGES, HOTBAR_SIZE, INVENTORY_SIZE, CHEST_SIZE, MAX_STACK, PLAYER_SPEED, PLAYER_HALF_W, PLAYER_HALF_H, SLOW_MUL, GCD_MS, DOWN_MS, WIPE_MS, POTION_CD, CHAT_MAX_LEN, CHAT_BUBBLE_MS, EMOTE_MS },
+  constants: { TILE, MAP_W, MAP_H, MAX_HEARTS, DAY_LENGTH_MS, EDGE_GAP, REACH, PICKUP_RADIUS, RIDE_SPEED_MUL, WATERING_CAN_CHARGES, HOTBAR_SIZE, INVENTORY_SIZE, CHEST_SIZE, MAX_STACK, SPACEPORT_AX: SPACEPORT.ax, SPACEPORT_AY: SPACEPORT.ay, PLAYER_SPEED, PLAYER_HALF_W, PLAYER_HALF_H, SLOW_MUL, GCD_MS, DOWN_MS, WIPE_MS, POTION_CD, CHAT_MAX_LEN, CHAT_BUBBLE_MS, EMOTE_MS },
   /** The fighter flags in a saga snapshot (sagasim.ts, SagaSnap.f). */
   flags: { down: 1, wall: 2, rage: 4, hot: 8, slow: 16, frozen: 32 },
   /** Spells that stop a boss's big attack (the browser's INTERRUPTS). */

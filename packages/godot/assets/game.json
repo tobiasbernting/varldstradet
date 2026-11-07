@@ -15,6 +15,8 @@
     "INVENTORY_SIZE": 32,
     "CHEST_SIZE": 32,
     "MAX_STACK": 99,
+    "SPACEPORT_AX": 1,
+    "SPACEPORT_AY": 3,
     "PLAYER_SPEED": 64,
     "PLAYER_HALF_W": 5,
     "PLAYER_HALF_H": 3,
@@ -2083,7 +2085,12 @@
         "saga_urn"
       ],
       "mini": "gravvaktare",
-      "boss": "draugkung"
+      "boss": "draugkung",
+      "portal": {
+        "area": "a:-1,-1",
+        "x": 30,
+        "y": 26
+      }
     },
     "frost": {
       "name": "Frostjättens borg",
@@ -2104,7 +2111,12 @@
         "saga_snowdrift"
       ],
       "mini": "isbjorn",
-      "boss": "rimturs"
+      "boss": "rimturs",
+      "portal": {
+        "area": "a:0,-2",
+        "x": 30,
+        "y": 30
+      }
     },
     "surt": {
       "name": "Surts smedja",
@@ -2125,7 +2137,12 @@
         "saga_brazier"
       ],
       "mini": "smeden",
-      "boss": "surt"
+      "boss": "surt",
+      "portal": {
+        "area": "a:2,2",
+        "x": 30,
+        "y": 33
+      }
     },
     "hel": {
       "name": "Helheim",
@@ -2146,7 +2163,12 @@
         "saga_deadtree"
       ],
       "mini": "garm",
-      "boss": "hel"
+      "boss": "hel",
+      "portal": {
+        "area": "a:-1,0",
+        "x": 30,
+        "y": 34
+      }
     },
     "dvarg": {
       "name": "Svartalfheims gruvor",
@@ -2167,7 +2189,12 @@
         "saga_minelamp"
       ],
       "mini": "jarnvakten",
-      "boss": "fafner"
+      "boss": "fafner",
+      "portal": {
+        "area": "a:2,0",
+        "x": 30,
+        "y": 30
+      }
     },
     "orm": {
       "name": "Havsormens tempel",
@@ -2188,7 +2215,12 @@
         "saga_pearl"
       ],
       "mini": "blackis",
-      "boss": "jormungand"
+      "boss": "jormungand",
+      "portal": {
+        "area": "a:-2,0",
+        "x": 30,
+        "y": 30
+      }
     },
     "alv": {
       "name": "Alvernas lund",
@@ -2209,7 +2241,12 @@
         "saga_elfstatue"
       ],
       "mini": "spindeldrottning",
-      "boss": "nattmara"
+      "boss": "nattmara",
+      "portal": {
+        "area": "a:1,-1",
+        "x": 30,
+        "y": 30
+      }
     },
     "fenrir": {
       "name": "Fenrisklyftan",
@@ -2230,7 +2267,12 @@
         "saga_bonepile"
       ],
       "mini": "skoll",
-      "boss": "fenrisulven"
+      "boss": "fenrisulven",
+      "portal": {
+        "area": "a:0,-2",
+        "x": 12,
+        "y": 44
+      }
     },
     "loke": {
       "name": "Bifrost",
@@ -2252,6 +2294,11 @@
       ],
       "mini": "lokesskugga",
       "boss": "loke",
+      "portal": {
+        "area": "a:1,3",
+        "x": 30,
+        "y": 24
+      },
       "illusions": true
     }
   },
