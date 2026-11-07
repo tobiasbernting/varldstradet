@@ -8,13 +8,13 @@ var via := "bus"
 
 
 func _init() -> void:
-	title_text = "🚌 " + Strings.t("travelTitle")
+	title_text = "🐴 " + Strings.t("travelTitle")
 	body_height = 300
 
 
 func open_for(kind: String) -> void:
 	via = kind
-	set_title(("🚂 " if kind == "train" else "🚌 ") + Strings.t("travelTitle"))
+	set_title(("⛏️ " if kind == "train" else "🐴 ") + Strings.t("travelTitle"))
 	open_window()
 
 
@@ -38,7 +38,7 @@ func _fill() -> void:
 		add_label(Strings.t("noDestinations"), 16)
 		return
 	for d in dests:
-		var b := make_button(("🚂 " if via == "train" else "🚌 ") + Strings.t("go"), _go.bind(str(d["key"])), "go:" + str(d["key"]))
+		var b := make_button(("⛏️ " if via == "train" else "🐴 ") + Strings.t("go"), _go.bind(str(d["key"])), "go:" + str(d["key"]))
 		b.disabled = int(me.get("coins", 0)) < price
 		add_row(null, str(d["name"]), "[color=#e8b830]%d %s[/color]" % [price, Strings.t("coins")], [b])
 
