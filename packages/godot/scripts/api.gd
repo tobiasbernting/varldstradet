@@ -33,6 +33,20 @@ func request_json(method: HTTPClient.Method, path: String, body: Variant = null,
 	return {"ok": ok, "status": status, "body": parsed if (parsed is Dictionary or parsed is Array) else {}}
 
 
+## `request_json` again while the server did not answer at all (status 0: a refused connection or a timeout), up to `tries`
+## times with a pause: for the headless bots, which start many Godot processes beside their servers on a small runner, where
+## a server starved of CPU can miss one 15 s window. An answer of any status, a refusal included, is returned at once.
+func request_json_retrying(method: HTTPClient.Method, path: String, body: Variant = null, tries := 6, pause := 2.0) -> Dictionary:
+	var answer: Dictionary = {}
+	for i in range(tries):
+		answer = await request_json(method, path, body)
+		if int(answer.get("status", 0)) != 0:
+			return answer
+		print("api: %s %s did not answer (try %d of %d)" % ["GET" if method == HTTPClient.METHOD_GET else "POST", path, i + 1, tries])
+		await get_tree().create_timer(pause).timeout
+	return answer
+
+
 ## The join itself sends no token: the answer brings the new one.
 func join(code: String, device_name: String) -> Dictionary:
 	return await request_json(HTTPClient.METHOD_POST, "/api/join", {"code": code, "name": device_name}, false)

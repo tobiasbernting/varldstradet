@@ -131,12 +131,12 @@ func _run() -> void:
 
 
 func _login() -> bool:
-	var gate: Dictionary = await _api.gate()
+	var gate: Dictionary = await _api.request_json_retrying(HTTPClient.METHOD_GET, "/api/gate")
 	if not bool(gate.get("ok", false)) or str(gate.get("body", {}).get("gate", "")) != "ok":
 		_error("gate: %s" % str(gate))
 		_finish()
 		return false
-	var list: Dictionary = await _api.players()
+	var list: Dictionary = await _api.request_json_retrying(HTTPClient.METHOD_GET, "/api/players")
 	var id := ""
 	if list.get("body") is Array:
 		for p in list["body"]:
