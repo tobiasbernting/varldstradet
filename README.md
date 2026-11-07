@@ -81,6 +81,10 @@ stays), so there is nothing to set up for it. The parent page is at `/admin`
 (log in with `PARENT_PASSWORD`; make join codes, manage devices, force a season, save, skip to the next day,
 make it evening/morning).
 
+`pnpm test` runs everything; the importer's tests that need a real Postgres (`importSave.pg.test.ts`) run when `TEST_DATABASE_URL` points
+at a server where they may create scratch databases (`TEST_DATABASE_URL=postgres://postgres@localhost:5435/postgres pnpm test`; CI
+sets it in `.github/workflows/server.yml`) and are skipped without it.
+
 Without `DATABASE_URL` the server runs in memory and saves nothing – handy for a quick look,
 useless for a real farm.
 
@@ -576,7 +580,7 @@ In a dungeon or a run the same keys fight:
 | Next target | `Tab` | d-pad right |
 | Drop the target / pause | `Esc` | `Start` |
 
-Notes: the hotbar numbers and the spell numbers share `1`–`4`, so outdoors on the farm they pick tools and in a
+Notes: the d-pad is shared. Its four directions also walk, so d-pad up opens the emote wheel (and walks up) and, in a fight, d-pad right switches target (and walks right); use the left stick for walking if that is in the way. The hotbar numbers and the spell numbers share `1`–`4`, so outdoors on the farm they pick tools and in a
 dungeon they cast. The gamepad's `Y` is the bag on the farm and the second spell in a dungeon. The kids' setting
 **Hjul** keeps the face buttons free of the spells; the choice is saved per computer in `user://settings.cfg`. To pair a controller with a Mac or a PC use the system's Bluetooth settings.
 
