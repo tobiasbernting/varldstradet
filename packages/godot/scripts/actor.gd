@@ -86,6 +86,11 @@ var _once_t := 0.0 ## seconds left of a one-shot animation (attack, hit), during
 static var _anim_libs: Array = [] ## AnimationLibrary, loaded once from the pack's two rig files
 ## The voxel body (`--people3d`, voxel_body.gd): a creature's sprite frames extruded into meshes, or null.
 var voxel: MeshInstance3D = null
+## A vehicle (the cart, the riding horse, Diligensen, the mine train): turns right round to face up or down a street, and
+## carries a lantern that shines at night (the browser's headlights were lanterns; `set_lantern`).
+var full_turn := false
+var _lantern: OmniLight3D = null
+var _lantern_at := Vector3.ZERO
 var _vframes: Array[ArrayMesh] = []
 var _vmat: ShaderMaterial = null
 var _vframe := -1
@@ -241,6 +246,20 @@ func set_voxel(frames: Array[ArrayMesh], key: String) -> bool:
 	return true
 
 
+## A lantern light (the hanging lantern of the cart, the coach and the engine) at `at` (metres, in the body's own frame,
+## +x forward). It only shines at night (night_lift).
+func set_lantern(at: Vector3) -> void:
+	_lantern_at = at
+	if _lantern == null:
+		_lantern = OmniLight3D.new()
+		_lantern.light_color = Color(1.0, 0.8, 0.45)
+		_lantern.omni_range = 3.2
+		_lantern.omni_attenuation = 1.6
+		_lantern.shadow_enabled = false
+		_lantern.visible = false
+		add_child(_lantern)
+
+
 func has_voxel(key: String) -> bool:
 	return voxel != null and voxel.get_meta("key", "") == key
 
@@ -260,7 +279,13 @@ func _animate_voxel(facing: String, moving: bool, delta: float) -> void:
 	if facing == "left" or facing == "right":
 		_last_facing = facing
 	var want := 0.0 if _last_facing == "right" else PI
-	if moving:
+	if full_turn:
+		# a vehicle on a street: right 0, left PI, down the screen -PI/2, up it +PI/2 (a sprite faces +x)
+		if facing == "down":
+			want = -PI * 0.5
+		elif facing == "up":
+			want = PI * 0.5
+	elif moving:
 		# toward the camera (down) or away (up): +z is the way the camera sits
 		var s := 1.0 if _last_facing == "left" else -1.0
 		if facing == "down":
@@ -273,6 +298,10 @@ func _animate_voxel(facing: String, moving: bool, delta: float) -> void:
 	# standing breathes: the height swells and settles by 2 %
 	var breath := 0.0 if moving else 0.02 * sin(_vt * 2.4)
 	voxel.basis = Basis(Vector3.UP, _vyaw) * Basis.from_scale(Vector3(1.0, 1.0 + breath, 1.0))
+	if _lantern != null:
+		_lantern.position = voxel.position + Basis(Vector3.UP, _vyaw) * _lantern_at
+		_lantern.light_energy = 1.1 * night_lift
+		_lantern.visible = night_lift > 0.04
 
 
 ## Gives the figure its own copy of every material (the looks share them between actors), with the texture as an

@@ -53,6 +53,8 @@ var looks: LookComposer
 ## together from KayKit Adventurers parts and dressed in their look (figure_3d.gd), animals and monsters as voxel
 ## bodies extruded from their own sprites (voxel_body.gd), instead of pixel sprites. Vehicles stay billboards.
 const VEHICLES: Array[String] = ["bus", "car", "train", "motorcycle"]
+## Where each one's lantern hangs (metres from its middle, +x forward): the cart's, the saddle bow's, the coach's and the engine's nose.
+const VEHICLE_LANTERN := {"car": Vector3(0.25, 0.8, 0.0), "motorcycle": Vector3(0.1, 0.65, 0.0), "bus": Vector3(0.25, 0.85, 0.0), "train": Vector3(1.4, 0.55, 0.0)}
 var _people3d := OS.get_cmdline_user_args().has("--people3d")
 var _mode := "" ## "dungeon", "outdoor" (the farm and the wild maps) or "" (nothing drawn)
 var _demo_time := -1.0 ## --time=<0..1>: a fixed time of day for pictures
@@ -746,7 +748,13 @@ func _sync_actors() -> void:
 			actor.set_sheet(sheet)
 			if _people3d and SkeletonFigure.has(species):
 				actor.set_figure(SkeletonFigure.build(species), "skel:" + species, SkeletonFigure.height_of(species), SkeletonFigure.rig(species))
-			elif _people3d and not VEHICLES.has(species) and sheet != "":
+			elif VEHICLES.has(species) and sheet != "":
+				# the town's traffic is always a body of its own (the browser's cart, riding horse, Diligens and mine train
+				# extruded from their pixel art), never a flat quad
+				actor.set_voxel(VoxelBody.frames(sheet), sheet)
+				actor.full_turn = true
+				actor.set_lantern(VEHICLE_LANTERN.get(species, Vector3(0.2, 0.8, 0.0)))
+			elif _people3d and sheet != "":
 				actor.set_voxel(VoxelBody.frames(sheet), sheet)
 			# dungeon monsters show their own bars instead of the name labels (the browser's ownsLabel)
 			actor.set_label("" if (_mode == "dungeon" and not Data.mob(species).is_empty()) else str(rec.get("name", Data.mob_name(species))))
@@ -947,6 +955,10 @@ func _process(delta: float) -> void:
 				actor.position = target
 			else:
 				actor.position = actor.position.lerp(target, k)
+		if key.begins_with("p:") and rec.get("riding") != null:
+			# somebody riding sits up on the mount (the cart's bench, the horse's saddle), as the browser's rideInfo
+			var mount: Variant = w.get("animals", {}).get(str(int(rec.get("riding"))))
+			actor.position.y = Data.ride_lift(str(mount.get("species", ""))) if mount is Dictionary else Data.ride_lift("")
 		# facing from the velocity on screen (a monster has one side view: left or right); the record's when still
 		var prev: Vector3 = _prev_pos.get(key, actor.position)
 		var vel := (actor.position - prev) / maxf(0.001, delta)
@@ -955,7 +967,7 @@ func _process(delta: float) -> void:
 		var moving := bool(rec.get("moving", false))
 		if vel.length() > 0.25:
 			moving = true
-			if absf(vel.x) > absf(vel.z) or key.begins_with("a:"):
+			if absf(vel.x) > absf(vel.z) or (key.begins_with("a:") and not actor.full_turn):
 				facing = "right" if vel.x > 0.0 else "left"
 			else:
 				facing = "down" if vel.z > 0.0 else "up"
