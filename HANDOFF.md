@@ -79,7 +79,7 @@ This file is only what the next agent needs: state, decisions, how the work is r
   the plan); (2) **no save is ported**: Världsträdet is a new game, a fresh world (the lilla-garden import is not
   needed; compatibility code can go in a later cleanup); (3) no cars or other modern things: Köpingen and all vehicles in
   the Viking look of the browser game; (4) sprint like the web game; (5) feature parity with lilla-garden's browser game
-  (an audit is running). MacBook: 67–75 fps on Hög in Köpingen and the forest (1 % low 14–17 ms).
+  (audit done; batches running); (6) **desktop only**: no tablet/touch (confirmed again). MacBook: 67–75 fps on Hög in Köpingen and the forest (1 % low 14–17 ms).
 - **Running (2026-11-07 15:10 UTC):** minimap + world map with fast travel + all dungeon arches
   `session_01KTh22qnjz33EpArLqwZk7o` (`claude/m9a-map-travel-arches`); Köpingen's Viking look
   `session_01KTh22pxQszsTzr6LppqA3f` (`claude/koepingen-viking-look`); sprint `session_01KTh22rMG5kApQsuopLjLzE`
