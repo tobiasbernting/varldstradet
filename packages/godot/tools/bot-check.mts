@@ -238,6 +238,7 @@ function run(cmd: string, args: string[], opts: { cwd: string; env?: Record<stri
   return child;
 }
 
+// (150 s: it only waits as long as the server needs, but eight pairs boot together on a small runner)
 async function waitFor(url: string, ms: number): Promise<void> {
   const until = Date.now() + ms;
   while (Date.now() < until) {
@@ -361,7 +362,7 @@ async function main(): Promise<void> {
     log: serverLog,
   });
   try {
-    await waitFor(`http://localhost:${port}/api/gate`, 60_000);
+    await waitFor(`http://localhost:${port}/api/gate`, 150_000);
     console.log('server: up');
     if ((process.env.BOT_ONLY ?? '') === 'voice' || (process.env.BOT_ONLY ?? '') === '') await checkVoice(`http://127.0.0.1:${port}`);
     if ((process.env.BOT_ONLY ?? '') === 'voice') {
@@ -402,7 +403,7 @@ async function main(): Promise<void> {
         log: path.join(tmp, 'server-farm.log'),
       });
       farmServers.push(farmServer);
-      await waitFor(`http://localhost:${farmPort}/api/gate`, 60_000);
+      await waitFor(`http://localhost:${farmPort}/api/gate`, 150_000);
       console.log(`server 2 (the farmer's): port ${farmPort}`);
       // a second player builds three fences first: the farmer has to be refused when it tries to take one down
       const friendReport = path.join(tmp, 'friend.json');
@@ -430,7 +431,7 @@ async function main(): Promise<void> {
         log: path.join(tmp, 'server-run.log'),
       });
       farmServers.push(runServer);
-      await waitFor(`http://localhost:${runPort}/api/gate`, 60_000);
+      await waitFor(`http://localhost:${runPort}/api/gate`, 150_000);
       console.log(`server 3 (the run pair's): port ${runPort}`);
       runNames.forEach((name, i) => {
         const report = path.join(tmp, `${name}.json`);
