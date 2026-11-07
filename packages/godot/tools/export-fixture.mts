@@ -1,4 +1,4 @@
-// Writes packages/godot/assets/fixtures/draug.json, frost.json, surt.json and hel.json (M6a: one per dungeon, `--demo=<id>`; and farm.json and forest.json, see the end of this file): the messages a client gets when a hero steps into
+// Writes packages/godot/assets/fixtures/draug.json, frost.json, surt.json, hel.json, dvarg.json, orm.json and alv.json (M6a, M6b: one per dungeon, `--demo=<id>`; and farm.json and forest.json, see the end of this file): the messages a client gets when a hero steps into
 // Draugkryptan (a `welcome`, the `changes` with the dungeon's `areaData`, and one `state`), made by the shared code
 // that the server runs (generateSaga through placeIn). The native client's demo mode (`--demo` on the command line)
 // plays them back without a server, which is how the Godot workflow exercises the dungeon view headless, and how
@@ -10,8 +10,8 @@ import { ITEMS, NPCS, SPAWN, addAnimal, addObject, objectAt, removeObject, choos
 
 const out = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../assets/fixtures/draug.json');
 fs.mkdirSync(path.dirname(out), { recursive: true });
-// M6a: the first four dungeons (Draugkryptan, Frostjättens borg, Surts smedja, Helheim), one fixture each: `--demo=<id>`
-for (const id of ['draug', 'frost', 'surt', 'hel'] as const) {
+// M6a/M6b: the first seven dungeons (Draugkryptan, Frostjättens borg, Surts smedja, Helheim, Svartalfheims gruvor, Havsormens tempel, Alvernas lund), one fixture each: `--demo=<id>`
+for (const id of ['draug', 'frost', 'surt', 'hel', 'dvarg', 'orm', 'alv'] as const) {
   const key = sagaKey(id);
 
   const farm = generateWorld();

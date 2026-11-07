@@ -130,36 +130,37 @@ jobs:
           test "$(cat runbots.code)" = 0 || { echo "::error::the run pair failed"; bad=1; }
           exit $bad
 
-      # M6a: the same fighter pair in Frostjättens borg, Surts smedja and Helheim (the dev way in: DEV_TELEPORT=1, `dev saga`):
-      # each clears its first two packs against a server in memory. They run side by side, each on ports of its own (a run uses its port and the next two; gaps left).
-      - name: Two bots clear the first packs of Frostjättens borg, Surts smedja and Helheim (the dev way in)
+      # M6a, M6b: the same fighter pair in Frostjättens borg, Surts smedja, Helheim, Svartalfheims gruvor, Havsormens tempel
+      # and Alvernas lund (the dev way in: DEV_TELEPORT=1, `dev saga`): each clears its first two packs against a server in
+      # memory. The six run side by side, each on ports of its own (a run uses its port and the next two; gaps left).
+      - name: Two bots clear the first packs of each of the six dungeons after Draugkryptan (the dev way in)
         run: |
           set -uo pipefail
           port=8100
-          for d in frost surt hel; do
+          for d in frost surt hel dvarg orm alv; do
             (GODOT=~/godot/godot BOT_ONLY=dungeon BOT_DUNGEON=$d BOT_PORT=$port BOT_PACKS=2 BOT_SECONDS=240 pnpm godot:bot > "bot-$d.log" 2>&1; echo $? > "bot-$d.code") &
             port=$((port + 4))
           done
           wait
           bad=0
-          for d in frost surt hel; do
+          for d in frost surt hel dvarg orm alv; do
             echo "== $d"; cat "bot-$d.log"
             test "$(cat "bot-$d.code")" = 0 || { echo "::error::the $d bot pair failed"; bad=1; }
           done
           exit $bad
 
-      # M6a: every move of the mid-boss and the boss of each of the three plays on the recorded dungeon, from the data
+      # M6a, M6b: every move of the mid-boss and the boss of each of the six plays on the recorded dungeon, from the data
       # (scripts/demo_bosses.gd): the cast bar, the marks on the floor, the landing, the ice block or web, the burning ground,
-      # the helpers, the pull, a mend's glow and the heal. The three run side by side.
-      - name: Play the bosses' moves of Frostjättens borg, Surts smedja and Helheim headless (telegraphs, cast bars, what they leave)
+      # the helpers, the pull, a mend's glow and the heal. The six run side by side (about 20 s).
+      - name: Play the bosses' moves of the six dungeons headless (telegraphs, cast bars, what they leave)
         working-directory: packages/godot
         run: |
           set -euo pipefail
-          for d in frost surt hel; do
+          for d in frost surt hel dvarg orm alv; do
             (timeout 150 ~/godot/godot --headless --path . -- --demo=$d --fight --once > "bosses-$d.log" 2>&1; echo $? > "bosses-$d.code") &
           done
           wait
-          for d in frost surt hel; do
+          for d in frost surt hel dvarg orm alv; do
             cat "bosses-$d.log"
             if grep -E "^ERROR:|SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate|bosses: FAIL|leaked at exit|still in use at exit|Pages in use exist at exit" "bosses-$d.log"; then
               echo "::error::the $d boss show reported errors or leaked at exit (see above)"; exit 1
@@ -169,11 +170,14 @@ jobs:
             # (the show checks what it fed: each mark is in the fx view after the cast, gone after the landing, a helper, an ice block or a web is an actor, a mend glows and its glow ends)
             grep -q "^bosses: ok" "bosses-$d.log" || { echo "::error::the $d boss show's own checks did not pass"; exit 1; }
           done
-          # every move of each boss cast once: the mid-boss's and the boss's: frost 1 + 4, surt 2 + 3, hel 2 + 3
+          # every move of each boss cast once: the mid-boss's and the boss's: frost 1 + 4, surt 2 + 3, hel 2 + 3, dvarg 2 + 3, orm 2 + 4, alv 2 + 4
           check_casts() { test "$(grep -c 'casts,' "bosses-$1.log")" = "$2" || { echo "::error::the $1 boss show did not cast every move"; exit 1; }; }
           check_casts frost 5
           check_casts surt 5
           check_casts hel 5
+          check_casts dvarg 5
+          check_casts orm 6
+          check_casts alv 6
 
       - name: Export all four targets
         working-directory: packages/godot
