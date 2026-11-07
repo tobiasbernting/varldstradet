@@ -62,4 +62,12 @@ describe('the release path: what the workflow builds and what the download page 
     expect(docker).not.toMatch(/lilla-garden/);
     expect(readFileSync(resolve(root, 'README.md'), 'utf8')).not.toMatch(/ghcr\.io\/tobiasbernting\/lilla-garden/);
   });
+
+  it('the Postgres-backed tests run in CI instead of skipping: server.yml has a postgres service and sets TEST_DATABASE_URL', () => {
+    const server = readFileSync(resolve(root, '.github/workflows/server.yml'), 'utf8');
+    expect(server).toMatch(/services:\n\s+postgres:\n\s+image: postgres:/);
+    expect(server).toMatch(/TEST_DATABASE_URL: postgres:\/\/postgres:postgres@localhost:5432\//);
+    expect(server).toMatch(/run: pnpm -r run test/);
+    expect(readFileSync(resolve(root, 'packages/server/src/importSave.pg.test.ts'), 'utf8')).toContain('process.env.TEST_DATABASE_URL');
+  });
 });
