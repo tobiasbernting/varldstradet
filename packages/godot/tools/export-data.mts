@@ -121,6 +121,11 @@ import {
   NPC_LINES,
   LANDMARKS,
   DISCOVERABLE,
+  HELP,
+  HELP_NATIVE_CONTROLS,
+  HELP_NATIVE_GAMEPAD,
+  HELP_NATIVE_SAGA_PAD,
+  SPECIES_NAMES,
 } from '../../shared/src/index.ts';
 
 const out = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../assets/game.json');
@@ -255,14 +260,32 @@ const run = {
 };
 
 /**
- * The books (M9b, parity with the browser): the Gårdsbok's achievements with their texts, the villagers' idle lines and the
- * Upptäcktsboken's landmarks by biome with their lore.
+ * The books (M9b, parity with the browser): the Gårdsbok's achievements with their texts, the villagers' idle lines, the
+ * Upptäcktsboken's landmarks by biome with their lore, the help topics with {recipe:}/{price:}/{name:} filled in (the native
+ * client's own lines where the browser's talk about touch or a pad layout it has not), and the animal houses.
  */
+const helpFill = (text: string): string =>
+  text
+    .replace(/\{recipe:(\w+)\}/g, (_, id: string) => {
+      const r = RECIPES.find((x) => x.id === id);
+      return r ? r.in.map((i) => `${i.count} ${itemName(i.item).toLowerCase()}`).join(' + ') : id;
+    })
+    .replace(/\{price:(\w+)\}/g, (_, id: string) => `${ITEMS[id]?.buy ?? '?'} ${T.coins}`)
+    .replace(/\{name:(\w+)\}/g, (_, id: string) => itemName(id));
+const helpTopics = HELP.map((t) => {
+  let steps = t.steps.filter((s) => s.only !== 'touch');
+  if (t.id === 'controls') steps = [...HELP_NATIVE_CONTROLS];
+  if (t.id === 'gamepad') steps = [...steps.filter((s) => !/Webbläsaren|surfplattan|konsolen/.test(s.text) && !s.text.startsWith('Android-surfplatta')), ...HELP_NATIVE_GAMEPAD];
+  if (t.id === 'saga') steps = steps.map((s) => (s.text.startsWith('Med handkontroll') ? { ...s, text: HELP_NATIVE_SAGA_PAD } : s));
+  return { id: t.id, emoji: t.emoji, title: t.title, ...(t.intro ? { intro: helpFill(t.intro.replace(' på surfplattan och datorn', '')) } : {}), steps: steps.map((s) => ({ icon: s.icon ?? '', text: helpFill(s.text) })), ...(t.houses ? { houses: true } : {}) };
+});
 const book = {
   achievements: ACHIEVEMENTS.map((a) => ({ id: a.id, stat: a.stat, goal: a.goal, stars: a.stars, icon: a.icon, title: ACHIEVEMENT_TEXT[a.id]?.title ?? a.id, text: ACHIEVEMENT_TEXT[a.id]?.text ?? '' })),
   npcLines: NPC_LINES,
   /** The biomes with landmarks, in the browser's order, each with its landmarks (the Upptäcktsboken). */
   landmarks: DISCOVERABLE.map((biome) => ({ biome, items: Object.values(LANDMARKS).filter((l) => l.biome === biome).map((l) => ({ id: l.id, name: l.name, lore: l.lore })) })).filter((g) => g.items.length > 0),
+  help: helpTopics,
+  houses: Object.values(ANIMALS).filter((a) => a.house).map((a) => ({ house: a.house, species: a.species, name: SPECIES_NAMES[a.species] ?? a.species, recipe: RECIPES.find((x) => x.id === a.house)?.in.map((i) => ({ item: i.item, count: i.count })) ?? [], price: ITEMS[`animal_${a.species}`]?.buy ?? 0 })),
   /** Lokes list begins here (a heading over it in the journal). */
   actTwo: 4,
 };

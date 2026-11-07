@@ -1,7 +1,7 @@
 class_name FarmBotBooks
 extends RefCounted
 ## The farmer's M9b steps (farm_bot.gd runs them): the Gårdsbok on B, the journal on K and Völvan's journal tab, the finds, the level chip
-## and the saga tracker on the HUD, the pause menu's way to the books. Every step goes through the keys, the
+## and the saga tracker on the HUD, the help on H and ?, the pause menu's way to the books. Every step goes through the keys, the
 ## clicks and the buttons a person uses; what the windows show is put in the report (`books`), and tools/bot-check.mts compares it with
 ## the server's own record of the player (the achievements it has and how far each is) and with the shared data.
 
@@ -167,11 +167,56 @@ func hud() -> void:
 	bot._step("the tracker folds", folded and hud.tracker_lines.get_child_count() == lines.size(), "a click on the header hid the lines, another showed them again")
 
 
-## The pause menu has the books (a pad's way: Start, then A), and each button opens its window.
+## H and ?: the help, every topic.
+func help() -> void:
+	await _close_all()
+	bot._press_action("help")
+	var open := await bot._until(func() -> bool: return windows.help.is_open(), 3.0)
+	await bot._wait(0.3)
+	var topics: Array = Data.book["help"]
+	var ok_all := true
+	var rows_total := 0
+	var placeholder := false
+	var houses := 0
+	for t in topics:
+		windows.help._pick(str(t["id"]))
+		await bot._wait(0.05)
+		var txt := _texts(windows.help)
+		var n := 0
+		for c in windows.help._body.get_children():
+			if c is HBoxContainer and c.get_child_count() >= 2 and c.get_child(0) is Label and (c.get_child(0) as Label).text.ends_with("."):
+				n += 1
+		rows_total += n
+		if n != (t["steps"] as Array).size():
+			ok_all = false
+		if txt.contains("{recipe:") or txt.contains("{price:") or txt.contains("{name:"):
+			placeholder = true
+		if bool(t.get("houses", false)):
+			houses = (txt.count("→"))
+	_books()["help"] = {"topics": topics.size(), "rows": rows_total, "placeholder": placeholder, "houses": houses}
+	bot._step("the help", open and ok_all and not placeholder and houses == Data.book["houses"].size(), "H opened it: %d topics, %d steps drawn, the animal-house list has %d rows, no placeholders left" % [topics.size(), rows_total, houses])
+	windows.help._pick("controls")
+	await bot._wait(0.2)
+	await bot._shot("help", 0.1)
+	# ? closes it again, and opens it again
+	var q := InputEventKey.new()
+	q.keycode = KEY_QUESTION
+	q.physical_keycode = KEY_SLASH
+	q.pressed = true
+	Input.parse_input_event(q)
+	var closed := await bot._until(func() -> bool: return not windows.help.is_open(), 3.0)
+	Input.parse_input_event(q)
+	var reopened := await bot._until(func() -> bool: return windows.help.is_open(), 3.0)
+	bot._step("the help on ?", closed and reopened, "? shut it and opened it again")
+	windows.help.close()
+	await bot._wait(0.2)
+
+
+## The pause menu has the books and the help (a pad's way: Start, then A), and each button opens its window.
 func pause_menu() -> void:
 	await _close_all()
 	var pressed_all := true
-	for which in ["book", "journal"]:
+	for which in ["book", "journal", "help"]:
 		world.menu.open()
 		await bot._wait(0.1)
 		var b := _menu_button(which)
@@ -179,11 +224,11 @@ func pause_menu() -> void:
 			pressed_all = false
 			continue
 		b.pressed.emit()
-		var win: GameWindow = {"book": windows.book, "journal": windows.book}[which]
+		var win: GameWindow = {"book": windows.book, "journal": windows.book, "help": windows.help}[which]
 		pressed_all = pressed_all and await bot._until(func() -> bool: return win.is_open(), 2.0)
 		windows.close_all()
 		await bot._wait(0.15)
-	bot._step("the pause menu opens the books", pressed_all, "Paus has Gårdsbok and Sagans dagbok, and each opens its window")
+	bot._step("the pause menu opens the books", pressed_all, "Paus has Gårdsbok, Sagans dagbok and Hjälp, and each opens its window")
 
 
 func _menu_button(which: String) -> Button:
@@ -215,10 +260,13 @@ func large_text() -> void:
 	var view: Rect2 = world.get_viewport().get_visible_rect()
 	var inside := true
 	var report: Array = []
-	var wins: Array = [["book", windows.book, "book"], ["journal", windows.book, "journal"], ["finds", windows.book, "finds"]]
+	var wins: Array = [["book", windows.book, "book"], ["journal", windows.book, "journal"], ["finds", windows.book, "finds"], ["help", windows.help, ""]]
 	for w in wins:
 		var win: GameWindow = w[1]
-		(win as BookWindow).open_at(w[2])
+		if w[0] == "help":
+			win.open_window()
+		else:
+			(win as BookWindow).open_at(w[2])
 		await bot._wait(0.5)
 		var r: Rect2 = win._stack.get_global_rect()
 		var ok := view.grow(1.0).encloses(r) and win._scroll.size.y >= 100.0
@@ -226,6 +274,8 @@ func large_text() -> void:
 		report.append("%s %s" % [w[0], "fits" if ok else "OUT %s in %s" % [str(r), str(view)]])
 		if w[0] == "journal":
 			await bot._shot("book-175", 0.1)
+		if w[0] == "help":
+			await bot._shot("help-175", 0.1)
 		win.close()
 		await bot._wait(0.2)
 	var hud: HudLayer = world.hud

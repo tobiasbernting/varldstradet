@@ -120,7 +120,7 @@ func _run() -> void:
 	var stages := {
 		"shop": _home.shop_buy, "patch": _farm_patch, "keys": _keys_and_pets, "drop": _drop_and_pick_up, "sell": _home.sell_crop, "gather": _gather, "quests": _quests, "pond": _pond_and_fishing, "bag": _bag_and_chest,
 		"build": _home.build, "house": _home.house_and_cook, "wardrobe": _home.wardrobe, "talk": _home.talk, "pet": _pet_wild,
-		"village": _home.class_and_chapter, "pizza": _home.pizza, "hero": _home.hero_switch, "bus": _home.bus, "marks": _home.marks_up_close, "books": _books.books, "hud": _books.hud, "menu": _books.pause_menu, "volva": _books.volva_journal, "text": _books.large_text,
+		"village": _home.class_and_chapter, "pizza": _home.pizza, "hero": _home.hero_switch, "bus": _home.bus, "marks": _home.marks_up_close, "books": _books.books, "hud": _books.hud, "menu": _books.pause_menu, "help": _books.help, "volva": _books.volva_journal, "text": _books.large_text,
 	}
 	for key in stages.keys():
 		if _done:

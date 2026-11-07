@@ -56,6 +56,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { ACHIEVEMENTS } from '../../shared/src/data.ts';
 import { LANDMARK_IDS } from '../../shared/src/landmarks.ts';
+import { HELP } from '../../shared/src/sv.ts';
 import { DUNGEON_IDS } from '../../shared/src/saga.ts';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -136,12 +137,13 @@ interface FarmReport {
   day: number;
   route: string[];
   hearts_seen: number;
-  /** M9b: what the books and the HUD showed (farm_bot_books.gd). */
+  /** M9b: what the books, the HUD and the help showed (farm_bot_books.gd). */
   books?: {
     achievements?: Record<string, { unlocked: boolean; k: number }>;
     journal?: { chapters: number; dungeons: number; levels: number; level: number; chapter: number; has_level_line: boolean; cleared: number };
     finds?: { total: number; found: number; groups: number; unknown: number; all_line: boolean };
     tracker?: { visible: boolean; lines: string[] };
+    help?: { topics: number; rows: number; placeholder: boolean; houses: number };
   };
 }
 
@@ -328,6 +330,7 @@ async function checkFarmer(r: FarmReport, farmPort: number, botLog?: string): Pr
     'the Gårdsbok', 'the Gårdsbok closes on B', 'the pause menu opens the books',
     'the journal', "the family's best time", 'the level chip', 'the level chip opens the journal', 'the saga tracker', 'the tracker folds', "Völvan's journal tab",
     'the Upptäcktsbok',
+    'the help', 'the help on ?',
     'large text fits',
     // the village: the class, Völvan, the pizzeria, the gear and the hero switch, the bus
     'walk to Köpingen', 'sound: the village', 'pick a class', "Völvan's chapter", 'buy a pizza', 'eat the pizza', 'equip the weapon', 'the hero switch', 'back to the farm outfit', 'the bus home', 'the bus to the village', 'sound: footsteps', 'sound: ambience',
@@ -373,6 +376,8 @@ function checkBooks(r: FarmReport, rec: ServerRecord): void {
   const f = b.finds;
   check(!!f && f.total === LANDMARK_IDS.length && f.found === (rec.saga?.discovered?.length ?? 0) && f.unknown === f.total - f.found && f.all_line, `${r.name}: the Upptäcktsbok has all ${LANDMARK_IDS.length} places, ${f?.found} found as the server says, the rest ???`);
   check(!!b.tracker?.visible && b.tracker.lines.length >= 1, `${r.name}: the saga tracker was on the HUD (${b.tracker?.lines.join(' | ')})`);
+  const h = b.help;
+  check(!!h && h.topics === HELP.length && !h.placeholder, `${r.name}: the help has all ${HELP.length} topics of the shared file (${h?.topics}), ${h?.rows} steps, no {placeholders} left`);
 }
 
 /** One bot of the run pair: it played through the client and its report says how far. */

@@ -603,6 +603,8 @@ func _on_window_asked(which: String) -> void:
 			play.windows.toggle_book("book")
 		"journal":
 			play.windows.toggle_book(BookWindow.page_for_key(model.my_player()))
+		"help":
+			play.windows.toggle_help()
 		_:
 			play.windows.toggle_quests()
 

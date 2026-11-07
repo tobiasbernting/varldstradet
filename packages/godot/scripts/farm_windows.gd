@@ -21,6 +21,7 @@ var klass: ClassWindow
 var travel: TravelWindow
 var quests: QuestsWindow
 var book: BookWindow ## B (the Gårdsbok), K (the journal), the level chip
+var help: HelpWindow ## H or ?
 var run_arch: RunWindow
 var seed_tree: SeedWindow
 var _all: Array = []
@@ -46,6 +47,7 @@ func setup(v: WorldView) -> void:
 	travel = _add(TravelWindow.new())
 	quests = _add(QuestsWindow.new())
 	book = _add(BookWindow.new())
+	help = _add(HelpWindow.new())
 	run_arch = _add(RunWindow.new())
 	seed_tree = _add(SeedWindow.new())
 	model.quests_changed.connect(refresh)
@@ -144,20 +146,30 @@ func toggle_book(page: String) -> void:
 		book.open_at(page)
 
 
-## True when `event` is the key of a book, and it was used.
+## H or ?: the help.
+func toggle_help() -> void:
+	if help.is_open():
+		help.close()
+	elif not is_busy():
+		help.open_window()
+
+
+## True when `event` is the key of a book or the help (or `?`), and it was used.
 func handle_key(event: InputEvent) -> bool:
 	if event.is_action_pressed("book"):
 		toggle_book("book")
 	elif event.is_action_pressed("journal"):
 		toggle_book(BookWindow.page_for_key(model.my_player()))
+	elif event.is_action_pressed("help") or (event is InputEventKey and event.pressed and not event.echo and (event as InputEventKey).keycode == KEY_QUESTION):
+		toggle_help()
 	else:
 		return false
 	return true
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	# the key that opened a book closes it again
-	if book.is_open() and Time.get_ticks_msec() - 250 > book._opened_at and handle_key(event):
+	# the key that opened a book or the help closes it again
+	if (book.is_open() or help.is_open()) and Time.get_ticks_msec() - 250 > maxi(book._opened_at, help._opened_at) and handle_key(event):
 		get_viewport().set_input_as_handled()
 		return
 	# the key that opened the gear or the wishes closes them again
