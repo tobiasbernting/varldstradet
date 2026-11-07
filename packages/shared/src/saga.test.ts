@@ -29,6 +29,7 @@ import {
   npcState,
   isSolidForPlayer,
   jumpTo,
+  devSagaBest,
   mobDmgScale,
   objectAt,
   performAction,
@@ -500,6 +501,19 @@ describe('the saga', () => {
     expect(b.area).toBe(sagaKey('draug'));
     expect(d.saga!.fighters[b.id]).toBeDefined();
     expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeLessThan(3 * TILE);
+  });
+
+  it('the dev sagaBest records a best time through the real path: faster replaces, slower changes nothing', () => {
+    const { world, players } = family(1);
+    const p = players[0]!;
+    const first = devSagaBest(world, p.id, 'draug', 754000);
+    expect(first).toEqual([{ t: 'sagaBest', dungeon: 'draug', best: { ms: 754000, names: [p.name], day: world.day } }]);
+    expect(world.sagaBest?.draug?.ms).toBe(754000);
+    expect(devSagaBest(world, p.id, 'draug', 800000)).toEqual([]);
+    expect(world.sagaBest?.draug?.ms).toBe(754000);
+    const faster = devSagaBest(world, p.id, 'draug', 600000);
+    expect(faster.map((c) => c.t)).toEqual(['sagaBest', 'toast']);
+    expect(devSagaBest(world, p.id, 'nope', 1)).toEqual([]);
   });
 
   it('an empty dungeon starts over after a while', () => {

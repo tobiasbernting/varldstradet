@@ -9,6 +9,7 @@ import {
   craftGear,
   devEnterSaga,
   devKit,
+  devSagaBest,
   devStarterKit,
   equipGear,
   forgeGear,
@@ -499,6 +500,7 @@ export class Game {
         else if (msg.a === 'nextDay') this.skipDay();
         else if (msg.a === 'starter') changes = devStarterKit(this.world, pid);
         else if (msg.a === 'kit') changes = devKit(this.world, pid);
+        else if (msg.a === 'sagaBest') changes = devSagaBest(this.world, pid, String(msg.id ?? ''), Number(msg.ms));
         break;
       case 'voice':
         this.voice.handle(pid, msg);

@@ -101,17 +101,19 @@ func books() -> void:
 	_books()["journal"] = journal
 	bot._step("the journal", open and chapters == SagaState.chapter_index(me) + 1 and dungeons == Data.dungeons.size() and levels == Data.level_rewards.size() and journal["has_level_line"], "K opened it: %d chapters (the saga is at %d), %d dungeons, %d level rewards, hero level %d" % [chapters, SagaState.chapter_index(me), dungeons, levels, Gear.level_of(me)])
 	await bot._shot("journal", 0.1)
-	# the dungeons' best times: the server says a record in a `sagaBest` change; the card shows the time and the names
-	var change := {"t": "sagaBest", "dungeon": "draug", "best": {"ms": 754000, "names": ["Bot-Bonde", "Bot-Syskon"], "day": model.day}}
-	model.apply({"t": "changes", "changes": [change]})
+	# the dungeons' best times: the server (DEV_TELEPORT) records one through the real path and says so in a `sagaBest` change; the card shows
+	# the server's own time and name
+	Net.send({"t": "dev", "a": "sagaBest", "id": "draug", "ms": 754000})
+	var got := await bot._until(func() -> bool: return model.farm.get("sagaBest") is Dictionary and (model.farm["sagaBest"] as Dictionary).has("draug"), 4.0)
 	await bot._wait(0.3)
 	var card_text := ""
 	for d in _nodes_named(windows.book, "dungeon_draug"):
 		for e in _descend(d):
 			if e is RichTextLabel:
 				card_text += (e as RichTextLabel).get_parsed_text() + "\n"
-	bot._step("the family's best time", card_text.contains("12:34") and card_text.contains("Bot-Syskon"), "Draugkryptan's card shows the time of a sagaBest change (12:34, both names)")
-	(model.farm["sagaBest"] as Dictionary).erase("draug")
+	var server_best: Dictionary = (model.farm["sagaBest"] as Dictionary).get("draug", {}) if got else {}
+	var shown_time := SagaState.clock(float(server_best.get("ms", 0)))
+	bot._step("the family's best time", got and shown_time == "12:34" and card_text.contains(shown_time) and card_text.contains(str(model.my_player().get("name", "?"))), "the server recorded %s for Draugkryptan (dev sagaBest) and the card shows \"%s\" with my name" % [str(server_best), shown_time])
 	# the finds on a tab
 	var tab_ok := home._press(windows.book, "tab:" + Strings.t("sagaFindsTab"))
 	await bot._wait(0.3)
