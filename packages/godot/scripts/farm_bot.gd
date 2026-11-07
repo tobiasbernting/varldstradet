@@ -498,9 +498,14 @@ func _pet_wild() -> void:
 			if not _startles.has(wild_id): # (every animal watched gets its own record: the nearest one changes as they run)
 				_startles[wild_id] = {"home": _animal_px(a), "away": 0.0, "back": INF}
 			var rec: Dictionary = _startles[wild_id]
-			await _goto(spot["stand"], 4.0)
-			# M7b: a hero who walks at a wild animal startles it (the server's tickStartle); standing still, it creeps up again
-			# and can be petted. Watch it run off and come back (`_startle`), and wait for it quietly.
+			var far_at := Vector2(world.hero.px, world.hero.py).distance_to(_animal_px(a)) / Data.tile()
+			# Walk right up to it: a hero who walks at a wild animal startles it when within 4 tiles (the server's tickStartle). The
+			# forest is 95 tiles across and the animals can start anywhere in it, so this needs time (25 s, not the 4 s it once had:
+			# a bot that gave up 10 tiles short stood still out of range for the whole wait below, and never startled anything).
+			await _goto(spot["stand"], 25.0)
+			_log("wild %s: %.0f tiles away, %.1f after walking up to its spot" % [wild_id, far_at, Vector2(world.hero.px, world.hero.py).distance_to(_animal_px(_animal_by_id(wild_id))) / Data.tile() if not _animal_by_id(wild_id).is_empty() else -1.0])
+			# M7b: standing still now, it creeps up again and can be petted. Watch it run off and come back (`_startles`), and
+			# wait for it quietly.
 			await _until(func() -> bool:
 				var b := _animal_by_id(wild_id)
 				if b.is_empty():
