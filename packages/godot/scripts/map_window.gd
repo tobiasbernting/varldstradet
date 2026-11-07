@@ -54,7 +54,7 @@ func _fill() -> void:
 			var biome := "" if not known else ("farm" if k == "farm" else _biome_of(k))
 			var rumour := not known and k == rumour_key
 			var mark: String = marks.get(k, "") if known else ""
-			var b := _cell(k, known, biome, rumour, mark, k == here, inside)
+			var b := _cell(k, known, biome, rumour, mark, k == here, k == mine, inside)
 			_grid.add_child(b)
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 8)
@@ -73,10 +73,10 @@ func _fill() -> void:
 	_body.add_child(buttons)
 
 
-func _cell(k: String, known: bool, biome: String, rumour: bool, mark: String, is_here: bool, inside: bool) -> Button:
+func _cell(k: String, known: bool, biome: String, rumour: bool, mark: String, is_here: bool, is_mine: bool, inside: bool) -> Button:
 	var emoji := Strings.place_emoji(biome) if known else ("🚀" if rumour else "❔")
 	var name_text := Strings.place(biome) if known else ("?" if rumour else "")
-	if is_here:
+	if is_mine:
 		name_text = Strings.t("mapHereTag")
 	var b := make_button("", _go.bind(k), "cell:" + k)
 	b.name = "Cell_" + k.replace(":", "_").replace(",", "_")
@@ -122,8 +122,9 @@ func _cell(k: String, known: bool, biome: String, rumour: bool, mark: String, is
 	elif rumour:
 		tip = Strings.t("spaceportRumour")
 	b.tooltip_text = tip
-	# the server's rules: only a map I have been to, never the one I am on, never from inside a dungeon or a run
-	b.disabled = not known or is_here or inside
+	# the server's rules: only a map I have been to, never the map I am on, never from inside a dungeon or a run
+	# (the cell I am "at" is marked, but only the map I am really on is refused: from the moon the space base is a fine place to go)
+	b.disabled = not known or is_mine or inside
 	b.set_meta("known", known)
 	if is_here:
 		var sb := StyleBoxFlat.new()
