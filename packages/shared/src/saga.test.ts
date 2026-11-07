@@ -1245,11 +1245,11 @@ describe('Smedjan', () => {
     expect(p.saga!.forge!.offhand_helskold).toBe(1);
   });
 
-  it('the development kit pays for the first two forge levels and gives paper and a bucket of paint', () => {
+  it('the development kit pays for the first two forge levels and gives paper, paint and a wall piece', () => {
     const { world, p } = atStina();
     p.saga!.gear = { weapon: 'runsvard' };
     expect(devKit(world, p.id).length).toBeGreaterThan(0);
-    expect([count(p, 'paper'), count(p, 'paint_red'), p.coins]).toEqual([2, 1, 400]);
+    expect([count(p, 'paper'), count(p, 'paint_red'), count(p, 'wall_wood'), p.coins]).toEqual([2, 2, 1, 400]);
     for (const n of [1, 2]) {
       expect(said(forgeGear(world, p.id, 'runsvard'), `till +${n}`)).toBe(true);
     }

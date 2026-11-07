@@ -352,14 +352,14 @@ export function devStarterKit(world: WorldState, playerId: string): Change[] {
 /**
  * Development only (DEV_TELEPORT=1, `dev kit`): what a check of the native client's smithy and paint screen needs in the bag
  * without a day's work to earn it: materials and coins for the first two forge levels (stone, gold, crystal, 400 kr), two
- * papers and a bucket of red paint. Everyone, with or without a class.
+ * papers, two buckets of red paint and a wall piece. Everyone, with or without a class.
  */
 export function devKit(world: WorldState, playerId: string): Change[] {
   const farm = farmOf(world);
   const p = farm.players[playerId];
   if (!p) return [];
   const out: Change[] = [];
-  for (const [id, n] of [['stone', 20], ['gold', 10], ['crystal', 4], ['paper', 2], ['paint_red', 1]] as const) giveItems(farm, p, id, n, out);
+  for (const [id, n] of [['stone', 20], ['gold', 10], ['crystal', 4], ['paper', 2], ['paint_red', 2], ['wall_wood', 1]] as const) giveItems(farm, p, id, n, out);
   p.coins += 400;
   out.push(playerChange(p));
   return out;

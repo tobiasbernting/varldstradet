@@ -304,6 +304,10 @@ Home and village (M4c): [the workbench](packages/godot/docs/m4c-workbench.png), 
 [the wardrobe](packages/godot/docs/m4c-wardrobe.png), [Köpingen](packages/godot/docs/m4c-village.png),
 [the class stone](packages/godot/docs/m4c-class.png), [the Völvan](packages/godot/docs/m4c-volva.png) and [the gear window](packages/godot/docs/m4c-gear.png).
 
+Smedjan: [the forge window](packages/godot/docs/smedjan-forge.png), [two levels up](packages/godot/docs/smedjan-forge-level2.png), [the starter set Stina smiths](packages/godot/docs/smedjan-smith.png)
+and [the gear window with "Järnyxa +2"](packages/godot/docs/smedjan-gear.png). Paper and paint: [the paint screen](packages/godot/docs/paint-screen.png),
+[a painted tavla hung in its frame](packages/godot/docs/paint-frames.png), [a painted wall](packages/godot/docs/paint-walls.png) and [a painted farmhouse](packages/godot/docs/paint-house.png).
+
 Farming (M4b): [watering](packages/godot/docs/m4b-watering.png), [the bag and a chest](packages/godot/docs/m4b-bag-chest.png),
 [the bag from the demo](packages/godot/docs/m4b-bag-demo.png) [a bite](packages/godot/docs/m4b-fishing-bite.png) and [a wild fox petted](packages/godot/docs/m4b-pet.png).
 
@@ -350,8 +354,8 @@ generator. `--time=0.9` (a fraction of the day: 0 sunrise, 0.4 midday, 0.9 night
 native client draws only Draugkryptan's way in (the arch), so the switch lets the pause menu's "Gå in i …" entries for
 the other eight dungeons ask the server to put you inside, as their arches would, making you a Krigare first if you
 have no class (and, since M4c, the farmer bot's `dev starter` hands a hero with a class the starter weapon Smed-Stina's forge
-makes, which the gear window can then put on; `dev kit` hands anyone the materials and kronor for two forge levels and a starter piece, two papers and a
-bucket of red paint, for the smithy and paint checks). Draugkryptan itself needs no switch. Never set it on the real farm.
+makes, which the gear window can then put on; `dev kit` hands anyone the materials and kronor for two forge levels and a starter piece, two papers, two
+buckets of red paint and a wall piece, for the smithy and paint checks). Draugkryptan itself needs no switch. Never set it on the real farm.
 
 - *Throwaway, nothing to set up* (no password, no database, nothing saved; a home network only):
 
@@ -421,6 +425,12 @@ Then start the client:
    material and the kronor green when you have enough, red when not) and the button that forges it; *Smid* is the starter
    set she makes once for each hero. The server's refusals ("Du behöver mer: …", "Gå till Smed-Stina …") are the toasts.
    The gear window shows a forged piece as "Järnyxa +2" with its stars.
+   **Paper and paint**: a paper used on nothing opens the **paint screen** (16 × 16 cells, the browser's twelve colours, a
+   brush, a fill and an eraser): drag with the mouse or the touchpad (a right press erases), or use the arrows / d-pad
+   to move the cursor and Enter, space or `A` to paint (held while moving it draws a line; the shoulder buttons and the
+   mouse wheel step through the colours). "Klar" turns the paper into a painted tavla (the bag slot shows its picture);
+   put it down and the frame on the wall shows the drawing. A **paint bucket** used on the farmhouse or a wall piece
+   colours it (a wall with every wall piece joined to it, as the server does).
    **Farming** (M4b) works on the tile in front of you, which is outlined (green when something would happen) with the
    action written under it ("E · Vattna"): `1`–`8` (the shoulder buttons `LB`/`RB`, the mouse wheel, `[` `]`) pick the
    hotbar square; `E`, space, `A` or a click on a tile beside you use it. The hoe tills grass, seeds go in tilled soil, the

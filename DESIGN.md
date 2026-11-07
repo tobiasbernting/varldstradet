@@ -858,7 +858,32 @@ Smed-Stina's forge (the rules are the server's: `forgeGear`, `craftGear`, `forge
 - **Refusals** are the server's toasts (not near her, not owned, short of material or kronor); the window does not repeat them.
 - **Gear window.** A forged piece shows "Järnyxa +2" and its stars; the sums (`Gear.stats`) already counted the forge level.
 - **Check and `dev kit`.** The farmer bot's new `smed` step (`farm_bot_home.gd`, `smedjan()`) takes `{t:'dev', a:'kit'}` (DEV_TELEPORT only: 20 stone, 10 gold,
-  4 crystal, 400 kr, two papers and a bucket of red paint; tested in `saga.test.ts`), opens Stina's window and the forge, asserts the worn weapon's "now" and "next"
+  4 crystal, 400 kr, two papers, two buckets of red paint and a wall piece; tested in `saga.test.ts`), opens Stina's window and the forge, asserts the worn weapon's "now" and "next"
   lines against the numbers computed from the item data, forges twice and asserts the server's forge level, the bag and the purse against `FORGE_COSTS`, that the window then
   says the new numbers, that level 3 is out of reach (the button is off), the server's own refusal for a piece I do not own, that a starter piece is smithed
   and the gear window says "+2" with its stars.
+
+## Godot client: paper, paint and buckets (2026-11-07)
+
+The server already did all of it (`paint` makes a painted tavla of a paper, `data` is its 256-character string; a bucket sets the object's `variant`
+1..6 on the farmhouse or on a wall piece and every wall piece joined to it: `paintObject` in `sim.ts`). The client draws it.
+- **Data.** `export-data.mts` writes `paint: {palette, chars, size}` (shared `paint.ts`) to `game.json`; `PaintArt` (`paint_art.gd`) reads it: a cell's colour, a
+  16 × 16 `Image` of a painting (paper where nothing is painted), its 20 × 20 framed icon, a cached texture, the flood fill, `valid` (what the server accepts) and
+  `matches` (a texture against a painting, cell by cell, for the check). The buckets' colours are the browser's `PAINT_COLORS` (`PaintArt.BUCKET`; they were never in `shared`).
+- **Screen.** The server's `open` with `ui: 'paint'` (it used to end in the "not drawn" toast in `farm_play.gd`) opens `PaintWindow` (`paint_window.gd`, a `GameWindow`) with a
+  `PaintCanvas` (`paint_canvas.gd`): the mouse or touchpad press and drag (a stroke is joined cell to cell so a fast hand leaves no gaps; a right press erases),
+  or the keyboard and the pad (the cursor moves with the `ui_*` actions, accept paints and, held, draws a line; off the canvas's edge the focus goes on to the
+  colours, the tools and the buttons below; the shoulder buttons step through the colours). The cells are the window's, so a refresh of my record (which rebuilds
+  every other window) leaves a half-drawn picture alone. "Klar" sends `{t:'paint', pixels}` (an empty drawing is refused here with the server's words and again
+  by the server); "Avbryt" and Escape throw it away. The canvas's cell size follows the screen height (10–22 px) so the whole picture is on screen at 175 % text.
+- **Bag.** A painted tavla's slot shows its framed picture (`ItemSlot._art`).
+- **Frames.** `painting` is a node in `farm_assets.gd` now (it was a baked frame in a chunk's MultiMesh): `farm_view.gd` `_picture` puts a `Picture` quad with the
+  painting's texture in front of the frame (nearest-filtered, shaded). `FarmView.picture_texture(id)` gives the texture to the check.
+- **Colours.** `farm_view.gd` asks `farm_assets.gd` for `paint:<mesh>:<variant>` when the server's `variant` is above 0 on a wall, a door, a window or the house: walls,
+  doors and windows are built again in the bucket's colour, and the farmhouse keeps its roof and timber and recolours the model's cool-grey plaster vertices (shade
+  kept, so the plaster's ambient occlusion still reads). The old code ignored `variant` there.
+- **Check.** The farmer bot's `paint` step (`farm_bot_home.gd`, after the farmhouse): `dev kit` (two papers, two buckets, a wall piece), a paper opens the screen,
+  an empty drawing is refused, a drawing is made through the canvas's own input (a mouse press and drag, the arrows and accept, the fill, the eraser) and sent, the
+  server's bag has a `painting` whose `data` is exactly the cells drawn, hung on the grass the frame's `Picture` texture equals the server's `data` cell by cell, a
+  wall piece painted with a bucket has the server's `variant` and is drawn with the mesh `paint:wall_wood:1` (red), and so is the farmhouse. `docs/paint-*.png` are
+  the screen, the hung picture, the red wall and the red house.

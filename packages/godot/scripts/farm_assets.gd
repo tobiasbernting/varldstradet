@@ -132,7 +132,7 @@ const SPECS := {
 	"sofa": {"m": ["sofa"], "front": true},
 	"bookshelf": {"m": ["bookshelf"], "front": true},
 	"plant": {"m": ["houseplant"]},
-	"painting": {"m": ["painting"]},
+	"painting": {"m": ["painting"], "node": true}, # a node: the drawing on it is a texture of its own (farm_view.gd _picture)
 	"clock": {"m": ["clock"]},
 	"stove": {"m": ["stove"], "front": true, "node": true, "light": [Color("#ff8a3a"), 3.2, 0.8, 0.5, 0.3]},
 	"hay_cart": {"m": ["hay_cart"]},
@@ -296,6 +296,14 @@ func mesh(mesh_name: String) -> ArrayMesh:
 	return m
 
 
+## The name a mesh was made under (for the checks): "" when it is not one of the kept ones.
+func name_of(m: Mesh) -> String:
+	for k in _meshes.keys():
+		if _meshes[k] == m:
+			return str(k)
+	return ""
+
+
 func _make(n: String) -> ArrayMesh:
 	if n.begins_with("fence_"):
 		return _fence(int(n.substr(6)), false)
@@ -317,6 +325,10 @@ func _make(n: String) -> ArrayMesh:
 		return _baked(NATURE + rock, 1.0, "cliff_" + cb[1])
 	if n.begins_with("gen:"):
 		return _landmark_mesh(n.substr(4))
+	if n.begins_with("paint:"):
+		# a painted house, wall, door or window (the server's `variant` is the paint bucket): "paint:<mesh>:<variant>"
+		var pp := n.split(":")
+		return _painted(pp[1], int(pp[2]))
 	if n.begins_with("ph_"):
 		var wh := n.substr(3).split("x")
 		return _placeholder(int(wh[0]), int(wh[1]))
@@ -816,15 +828,53 @@ func _placeholder(w: int, h: int) -> ArrayMesh:
 	return b.build()
 
 
+## A mesh in the colour of a paint bucket. Walls, doors and windows are built again in it; the farmhouse keeps its roof and its
+## timber and the plaster between them (the cool-grey vertices of the model, shades kept) takes the colour.
+func _painted(base: String, variant: int) -> ArrayMesh:
+	var col := PaintArt.bucket(variant)
+	if col.a == 0.0:
+		return mesh(base)
+	match base:
+		"wall_wood", "wall_stone":
+			return _wall(col)
+		"door":
+			return _door(col)
+		"window":
+			return _window(col)
+		"house":
+			var src := mesh("house")
+			if src == null:
+				return null
+			var arr := src.surface_get_arrays(0)
+			var cols: PackedColorArray = arr[Mesh.ARRAY_COLOR]
+			var verts: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+			var lin := col.srgb_to_linear()
+			var out := PackedColorArray()
+			out.resize(cols.size())
+			for i in range(cols.size()):
+				var c := cols[i]
+				# plaster: cool and not the black of the gaps or the grey of the foundation (the model's blue-grey walls)
+				if c.b >= c.r * 1.02 and verts[i].y > 0.45 and c.get_luminance() > 0.09:
+					var shade := clampf(c.get_luminance() / 0.5, 0.35, 1.0)
+					out[i] = Color(lin.r * shade, lin.g * shade, lin.b * shade, c.a)
+				else:
+					out[i] = c
+			arr[Mesh.ARRAY_COLOR] = out
+			var m := ArrayMesh.new()
+			m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+			return m
+	return mesh(base)
+
+
 func _wall(col: Color) -> ArrayMesh:
 	var b := FarmMesh.new()
 	b.box(Vector3(0.0, 1.05, 0.0), Vector3(1.0, 2.1, 1.0), col, 0.0, 0.0, col.lightened(0.1))
 	return b.build()
 
 
-func _door() -> ArrayMesh:
+func _door(col := Color.TRANSPARENT) -> ArrayMesh:
 	var b := FarmMesh.new()
-	b.box(Vector3(0.0, 0.95, 0.0), Vector3(0.9, 1.9, 0.18), WOOD.darkened(0.1), 0.0)
+	b.box(Vector3(0.0, 0.95, 0.0), Vector3(0.9, 1.9, 0.18), WOOD.darkened(0.1) if col.a == 0.0 else col.darkened(0.1), 0.0)
 	b.box(Vector3(0.28, 0.9, 0.12), Vector3(0.08, 0.08, 0.06), GOLD, 0.0)
 	return b.build()
 
@@ -835,9 +885,9 @@ func _door_mat() -> ArrayMesh:
 	return b.build()
 
 
-func _window() -> ArrayMesh:
+func _window(col := Color.TRANSPARENT) -> ArrayMesh:
 	var b := FarmMesh.new()
-	b.box(Vector3(0.0, 1.1, 0.0), Vector3(0.9, 1.0, 0.16), WOOD, 0.0)
+	b.box(Vector3(0.0, 1.1, 0.0), Vector3(0.9, 1.0, 0.16), WOOD if col.a == 0.0 else col, 0.0)
 	b.box(Vector3(0.0, 1.1, 0.07), Vector3(0.62, 0.7, 0.06), Color("#a8d8f0"), 0.5)
 	return b.build()
 
