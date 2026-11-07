@@ -472,6 +472,17 @@ export const ZONE_HP: readonly number[] = [1.35, 1.5, 1.7];
 /** One human alone (with the hired companion, who counts as a fighter for the monsters' health): monsters tolerate this much less. */
 export const SOLO_MERCY = 0.75;
 
+/**
+ * The class of the hired companion (Hirdmannen) for a party of these human classes, or null for none: one human gets
+ * the class they lack (a healer for everyone but the healer, a tank for the healer); two humans get one only when the
+ * pair lacks a healer, or else a tank; three or four never do.
+ */
+export function companionClass(classes: ClassId[]): ClassId | null {
+  if (classes.length === 1) return classes[0] === 'helare' ? 'vaktare' : 'helare';
+  if (classes.length === 2) return !classes.includes('helare') ? 'helare' : !classes.includes('vaktare') ? 'vaktare' : null;
+  return null;
+}
+
 /** Packs per room (and members), by zone. Tuned by the bots (run.test.ts), see GAME.md. */
 export const ZONE_PACKS = [
   { a: [2, 2], b: [3, 3], size: [3, 4], big: 0 },

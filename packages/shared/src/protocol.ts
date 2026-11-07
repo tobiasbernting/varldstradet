@@ -153,6 +153,8 @@ export type ClientMsg =
   | { t: 'dev'; a: 'starter' }
   /** Development only (same switch): every dungeon before the last counts as cleared, so a check can use a later chapter's arch. */
   | { t: 'dev'; a: 'unlock' }
+  /** Development only (same switch): materials and 400 kr for two forge levels and a starter piece, two papers, two buckets of red paint and a run of wall pieces, for a check of the smithy and the paint screen. */
+  | { t: 'dev'; a: 'kit' }
   | { t: 'ping' };
 
 export interface PlayerSnap {

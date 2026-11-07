@@ -88,6 +88,19 @@ jobs:
           fi
           grep -q "voicecheck: all ok" voicecheck.log
 
+      # Nothing in the world may be drawn with the stand-in look: every recorded world (farm, forest, Köpingen with its traffic and the
+      # dungeons) plays and the views report any object drawn as a placeholder box, any actor with no sprite sheet, any vehicle that is
+      # not a body of its own (scripts/placeholder_check.gd)
+      - name: No placeholder look anywhere (objects, creatures, vehicles)
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          timeout 240 ~/godot/godot --headless --path . -- --placeholdercheck 2>&1 | tee placeholdercheck.log
+          if grep -E "SCRIPT ERROR|Parse Error|placeholdercheck: FAIL|leaked at exit|still in use at exit|Pages in use exist at exit" placeholdercheck.log; then
+            echo "::error::the placeholder check reported errors (see above)"; exit 1
+          fi
+          grep -q "placeholdercheck: all ok" placeholdercheck.log
+
       - name: Run the Draugkryptan demo headless for a moment (the dungeon view, actors and HUD run on the recorded fixture)
         working-directory: packages/godot
         run: |
@@ -339,6 +352,10 @@ jobs:
           shot house-day --demo=house --time=0.4
           shot village-day --demo=village --time=0.4
           shot village-night --demo=village --time=0.9
+          # Köpingen in the browser's Viking look: the main street with the cart, the riding horse, Diligensen at its stop and a signpost
+          shot koepingen-street --demo=village --time=0.4 --stage=street --at=37,36
+          shot koepingen-street-night --demo=village --time=0.9 --stage=street --at=37,36
+          shot koepingen-houses --demo=village --time=0.4 --at=18,28
           xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- --bench=mellan --scene=farm 2>&1 | tee bench-farm.log
           grep -q "bench: done" bench-farm.log
           if grep -E "SCRIPT ERROR|leaked at exit|still in use at exit|Pages in use exist at exit" bench-farm.log; then

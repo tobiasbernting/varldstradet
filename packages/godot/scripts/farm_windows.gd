@@ -1,7 +1,7 @@
 class_name FarmWindows
 extends Node
 ## Owns the windows the server's `open` changes ask for (the workbench, the stove, the shop, the sell box, the
-## wardrobe, the villagers, the Völvan, the class stone, the bus) and the ones the keys open (the gear, the wishes),
+## wardrobe, the villagers, Smed-Stina's forge, the paint screen, the Völvan, the class stone, the bus) and the ones the keys open (the gear, the wishes),
 ## answers "is a window open" for the use key and the hero, rebuilds the open ones when my record changes, and closes
 ## them all when the map changes. Each window is a GameWindow (game_window.gd) and only sends the browser's messages.
 
@@ -20,6 +20,8 @@ var talk: TalkWindow
 var klass: ClassWindow
 var travel: TravelWindow
 var quests: QuestsWindow
+var forge: ForgeWindow
+var paint: PaintWindow
 var run_arch: RunWindow
 var seed_tree: SeedWindow
 var world_map: MapWindow
@@ -42,6 +44,9 @@ func setup(v: WorldView) -> void:
 	gear.looks = v.looks
 	talk = _add(TalkWindow.new())
 	talk.class_asked.connect(klass_open)
+	forge = _add(ForgeWindow.new())
+	talk.forge_asked.connect(forge.open_forge)
+	paint = _add(PaintWindow.new())
 	klass = _add(ClassWindow.new())
 	travel = _add(TravelWindow.new())
 	quests = _add(QuestsWindow.new())
@@ -104,6 +109,8 @@ func on_open(c: Dictionary) -> bool:
 			run_arch.open_window()
 		"seed":
 			seed_tree.open_window()
+		"paint":
+			paint.open_paint()
 		"travel":
 			var o: Variant = model.world_for(model.my_area_key()).get("objects", {}).get(str(int(c.get("id", -1))))
 			travel.open_for("train" if o is Dictionary and str(o.get("kind", "")) == "train_station" else "bus")

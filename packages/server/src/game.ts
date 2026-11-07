@@ -8,6 +8,7 @@ import {
   chooseClass,
   craftGear,
   devEnterSaga,
+  devKit,
   devStarterKit,
   devUnlockChapters,
   equipGear,
@@ -499,6 +500,7 @@ export class Game {
         else if (msg.a === 'nextDay') this.skipDay();
         else if (msg.a === 'starter') changes = devStarterKit(this.world, pid);
         else if (msg.a === 'unlock') changes = devUnlockChapters(this.world, pid);
+        else if (msg.a === 'kit') changes = devKit(this.world, pid);
         break;
       case 'voice':
         this.voice.handle(pid, msg);

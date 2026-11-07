@@ -54,6 +54,8 @@ var looks: LookComposer
 ## together from KayKit Adventurers parts and dressed in their look (figure_3d.gd), animals and monsters as voxel
 ## bodies extruded from their own sprites (voxel_body.gd), instead of pixel sprites. Vehicles stay billboards.
 const VEHICLES: Array[String] = ["bus", "car", "train", "motorcycle"]
+## Where each one's lantern hangs (metres from its middle, +x forward): the cart's, the saddle bow's, the coach's and the engine's nose.
+const VEHICLE_LANTERN := {"car": Vector3(0.25, 0.8, 0.0), "motorcycle": Vector3(0.1, 0.65, 0.0), "bus": Vector3(0.25, 0.85, 0.0), "train": Vector3(1.4, 0.55, 0.0)}
 var _people3d := OS.get_cmdline_user_args().has("--people3d")
 var _mode := "" ## "dungeon", "outdoor" (the farm and the wild maps) or "" (nothing drawn)
 var _demo_time := -1.0 ## --time=<0..1>: a fixed time of day for pictures
@@ -279,6 +281,9 @@ func start_demo(fixture := "draug") -> void:
 				var tile := Data.tile()
 				hero.place((float(parts[0]) + 0.5) * tile, (float(parts[1]) + 0.5) * tile)
 				rig.position = hero.position
+	# --stage=street (Köpingen only, for pictures): the cart, the riding horse with a rider, Diligensen at its stop
+	if "--stage=street" in OS.get_cmdline_user_args() and _area == "a:1,0":
+		_stage_street()
 	# --walk (with --demo): the hero walks east, for the footsteps' check (no server needed)
 	_walk_demo = "--walk" in OS.get_cmdline_user_args()
 	if _walk_demo:
@@ -797,7 +802,13 @@ func _sync_actors() -> void:
 			actor.set_sheet(sheet)
 			if _people3d and SkeletonFigure.has(species):
 				actor.set_figure(SkeletonFigure.build(species), "skel:" + species, SkeletonFigure.height_of(species), SkeletonFigure.rig(species))
-			elif _people3d and not VEHICLES.has(species) and sheet != "":
+			elif VEHICLES.has(species) and sheet != "":
+				# the town's traffic is always a body of its own (the browser's cart, riding horse, Diligens and mine train
+				# extruded from their pixel art), never a flat quad
+				actor.set_voxel(VoxelBody.frames(sheet), sheet)
+				actor.full_turn = true
+				actor.set_lantern(VEHICLE_LANTERN.get(species, Vector3(0.2, 0.8, 0.0)))
+			elif _people3d and sheet != "":
 				actor.set_voxel(VoxelBody.frames(sheet), sheet)
 			# dungeon monsters show their own bars instead of the name labels (the browser's ownsLabel)
 			actor.set_label("" if (_mode == "dungeon" and not Data.mob(species).is_empty()) else str(rec.get("name", Data.mob_name(species))))
@@ -998,6 +1009,10 @@ func _process(delta: float) -> void:
 				actor.position = target
 			else:
 				actor.position = actor.position.lerp(target, k)
+		if key.begins_with("p:") and rec.get("riding") != null:
+			# somebody riding sits up on the mount (the cart's bench, the horse's saddle), as the browser's rideInfo
+			var mount: Variant = w.get("animals", {}).get(str(int(rec.get("riding"))))
+			actor.position.y = Data.ride_lift(str(mount.get("species", ""))) if mount is Dictionary else Data.ride_lift("")
 		# facing from the velocity on screen (a monster has one side view: left or right); the record's when still
 		var prev: Vector3 = _prev_pos.get(key, actor.position)
 		var vel := (actor.position - prev) / maxf(0.001, delta)
@@ -1006,7 +1021,7 @@ func _process(delta: float) -> void:
 		var moving := bool(rec.get("moving", false))
 		if vel.length() > 0.25:
 			moving = true
-			if absf(vel.x) > absf(vel.z) or key.begins_with("a:"):
+			if absf(vel.x) > absf(vel.z) or (key.begins_with("a:") and not actor.full_turn):
 				facing = "right" if vel.x > 0.0 else "left"
 			else:
 				facing = "down" if vel.z > 0.0 else "up"
@@ -1087,6 +1102,62 @@ func _tick_sounds(delta: float) -> void:
 	if _walk_demo and not _walk_said and int(steps.stats["steps"]) >= 5:
 		_walk_said = true
 		print("walk: %d footsteps (%s), ambience %s" % [int(steps.stats["steps"]), str(steps.stats["kinds"]), str(soundscape.report()["layers"])])
+
+
+## Köpingen's main street laid out for a picture: Diligensen at its stop, a cart behind it, a riding horse coming the other way
+## with a rider on its back (a villager's body lent for the day). Only the demo does this (`--stage=street`).
+func _stage_street() -> void:
+	var animals: Dictionary = model.areas.get(_area, {}).get("animals", {})
+	var tile := float(Data.tile())
+	var horse_id := -1
+	var put := func(species: String, variant: int, tx: float, ty: float, facing: String) -> int:
+		for id in animals.keys():
+			var a: Dictionary = animals[id]
+			if str(a.get("species", "")) == species and int(a.get("variant", 0)) == variant:
+				a["x"] = tx * tile
+				a["y"] = ty * tile
+				a["facing"] = facing
+				a["moving"] = false
+				return int(id)
+		return -1
+	put.call("bus", 0, 37.4, 34.5, "right")
+	put.call("car", 1, 33.2, 34.5, "right")
+	put.call("car", 0, 43.5, 33.5, "left")
+	horse_id = put.call("motorcycle", 1, 40.2, 33.5, "left")
+	var rider: Dictionary = model.players().get("greta", {})
+	if horse_id >= 0 and not rider.is_empty():
+		rider["area"] = _area
+		rider["riding"] = horse_id
+		rider["x"] = 40.2 * tile
+		rider["y"] = 33.5 * tile
+		rider["facing"] = "left"
+		var snap: Variant = model.player_snaps.get("greta")
+		if snap is Dictionary:
+			snap["x"] = rider["x"]
+			snap["y"] = rider["y"]
+			snap["facing"] = "left"
+	# the actors were made where the fixture had things: make them again
+	for k in _actors.keys():
+		_actors[k].queue_free()
+	_actors.clear()
+	_prev_pos.clear()
+	_sync_actors()
+
+
+## Everything on screen that is a stand-in and not a look of its own: objects drawn as a placeholder box or that could not be
+## loaded, actors with no picture, and a vehicle that is not a body of its own (--placeholdercheck fails on any).
+func placeholder_report() -> Array[String]:
+	var out: Array[String] = []
+	out.append_array(farm.assets.problems)
+	out.append_array(dungeon.problems)
+	for k in _actors.keys():
+		var a: Actor = _actors[k]
+		if a.is_placeholder:
+			out.append("actor %s (%s) has no sprite sheet and shows the stand-in figure" % [k, a.sheet_name])
+		var rec: Variant = model.areas.get(_area, model.farm if _area == "farm" else {}).get("animals", {}).get(str(k).substr(2))
+		if rec is Dictionary and VEHICLES.has(str(rec.get("species", ""))) and (a.voxel == null or a.sprite.visible):
+			out.append("vehicle %s (%s) is not drawn as a body of its own" % [k, rec.get("species", "")])
+	return out
 
 
 func _is_riding(p: Variant) -> bool:

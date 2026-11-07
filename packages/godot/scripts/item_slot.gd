@@ -23,6 +23,7 @@ var charge_fill: ColorRect
 var chest := -1
 var slot := 0
 var _item := ""
+var _art := "" ## a painted tavla's pixels (the picture drawn in its slot)
 var _count := -1
 var _charges := -1
 var _selected := false
@@ -132,11 +133,14 @@ func show_stack(stack: Variant, is_selected := false, is_picked := false, is_dim
 		count = int(stack.get("count", 1))
 		if stack.has("charges"):
 			charges = int(stack.get("charges", 0))
-	if id == _item and count == _count and charges == _charges:
+	# a painted tavla shows its own picture (the stack's `data`), framed
+	var art := str(stack.get("data", "")) if stack is Dictionary and id == "painting" else ""
+	if id == _item and count == _count and charges == _charges and art == _art:
 		return
-	if id != _item:
-		icon_rect.texture = Data.item_icon(id) if id != "" else null
+	if id != _item or art != _art:
+		icon_rect.texture = (PaintArt.icon_of(art) if PaintArt.valid(art) else Data.item_icon(id)) if id != "" else null
 		tooltip_text = Data.item_name(id) if id != "" else ""
+	_art = art
 	_item = id
 	_count = count
 	_charges = charges

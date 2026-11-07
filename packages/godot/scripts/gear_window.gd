@@ -4,7 +4,8 @@ extends GameWindow
 ## my class, level and experience, what the gear adds up to (kraft, hälsa, skydd, from `Gear.stats`, the same sums as
 ## the server's gearStats), the three slots (weapon, offhand, amulet) with what is worn (tap to take it off,
 ## `saga equip` with item null), the gear in the bag (tap to put it on) and the hero switch (`saga hero`) that swaps the
-## farm and the hero outfit out in the world. Clothes are the wardrobe's.
+## farm and the hero outfit out in the world. A piece Smed-Stina has forged shows its stars and "+n" (Smedjan: forge_window.gd).
+## Clothes are the wardrobe's.
 
 var looks: LookComposer
 
@@ -74,7 +75,7 @@ func _fill() -> void:
 			add_row(Data.icon("ui_" + ("sword" if slot == "weapon" else ("shield" if slot == "offhand" else "chest"))), label, Strings.t("gearEmpty"), [], true)
 		else:
 			var b := make_button(Strings.t("sagaTapOff"), _equip.bind(slot, null), "off:" + slot)
-			add_row(Data.item_icon(id), "%s: %s" % [label, Data.item_name(id)], _stats_sub(id, Gear.forge_level(me, id)), [b])
+			add_row(Data.item_icon(id), "%s: %s" % [label, Gear.forged_name(id, Gear.forge_level(me, id))], _stats_sub(id, Gear.forge_level(me, id)), [b])
 	# the gear in the bag
 	add_label("🎒 " + Strings.t("sagaGearBag"), 18, GOLD)
 	var any := false
@@ -96,7 +97,7 @@ func _fill() -> void:
 			for c in Data.item(id).get("classes", []):
 				names.append(str(Data.classes.get(str(c), {}).get("name", c)))
 			sub += "\n" + ("✓ " if fits else "") + Strings.t("sagaFits", {"classes": ", ".join(names)})
-		add_row(Data.item_icon(id), Data.item_name(id), sub, [b2])
+		add_row(Data.item_icon(id), Gear.forged_name(id, Gear.forge_level(me, id)), sub, [b2])
 	if not any:
 		add_label(Strings.t("sagaGearBagEmpty"), 15)
 
@@ -107,7 +108,11 @@ static func progress_has_gear(me: Dictionary) -> bool:
 
 func _stats_sub(id: String, level: int) -> String:
 	var rar := str(Data.item(id).get("rarity", "common"))
-	return "[color=#%s]%s[/color] · %s" % [Data.rarity_color(rar).to_html(false), str(Data.rarity_names.get(rar, rar)), Gear.stat_line(id, level)]
+	var line := "[color=#%s]%s[/color] · %s" % [Data.rarity_color(rar).to_html(false), str(Data.rarity_names.get(rar, rar)), Gear.stat_line(id, level)]
+	# a forged piece (Smedjan) shows its five stars, the forged ones golden; the forge level is in its name too
+	if level > 0:
+		line += "\n[color=#e8b830]%s[/color] %s" % [Gear.stars(level), Strings.t("forgeLevel", {"n": level})]
+	return line
 
 
 func _hero(on: bool) -> void:

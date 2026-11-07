@@ -78,6 +78,7 @@ import {
   ITEMS,
   POWER_CAP,
   craftGear,
+  devKit,
   forgeGear,
   forgeStats,
   itemName,
@@ -1312,6 +1313,18 @@ describe('Smedjan', () => {
     expect(said(forgeGear(world, p.id, 'offhand_helskold'), T.forgeNotNear)).toBe(true);
     expect(said(craftGear(world, p.id, 'jarnsvard'), T.forgeNotNear)).toBe(true);
     expect(p.saga!.forge!.offhand_helskold).toBe(1);
+  });
+
+  it('the development kit pays for the first two forge levels and gives paper, paint and a wall piece', () => {
+    const { world, p } = atStina();
+    p.saga!.gear = { weapon: 'runsvard' };
+    expect(devKit(world, p.id).length).toBeGreaterThan(0);
+    expect([count(p, 'paper'), count(p, 'paint_red'), count(p, 'wall_wood'), count(p, 'wall_stone'), count(p, 'door'), count(p, 'window'), p.coins]).toEqual([2, 2, 2, 1, 1, 1, 400]);
+    for (const n of [1, 2]) {
+      expect(said(forgeGear(world, p.id, 'runsvard'), `till +${n}`)).toBe(true);
+    }
+    expect(p.saga!.forge!.runsvard).toBe(2);
+    expect(devKit(world, 'nobody')).toEqual([]);
   });
 
   it('offhands and amulets grow by their own rules', () => {

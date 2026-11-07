@@ -523,8 +523,7 @@ in `packages/shared`, before any client draws them (M5c). Every fight rule is th
   30:00 and every 10 minutes after, never a forced end: owner, 2026-11-06): three zones and the chapter's boss. Started with `{t:'run', a:'start'}` at the **färdport**
   (`fardport`, 3 × 2, placed by `ensureRunPlaces` beside the **Yggdrasil shoot** `yggdrasil`, which the family may already have
   planted; the same function puts both back every 20 s of play, on load and at server start). Family members within 6 tiles come
-  along; others `join` and appear at the last lit rest stone of the zone. Three players, four with a longhouse; one human with a
-  longhouse gets the hired **Hirdmannen** (a `PlayerState` with `bot: true`, created by `createPlayer`, played by `botStep`, never
+  along; others `join` and appear at the last lit rest stone of the zone. Three players, four with a longhouse; one or two humans get the hired **Hirdmannen** (no longhouse needed; `companionClass`: a healer if the humans have none, else a tank, else nobody) (a `PlayerState` with `bot: true`, created by `createPlayer`, played by `botStep`, never
   saved, listed, or counted against `MAX_PLAYERS`).
 - **A zone** is a `saga:run<n>z<i>` area (`isRunKey`) built by `runmap.ts` with `sagamap.ts`'s new `buildDungeon(def, rnd, solid,
   key)` (`generateSaga` calls it, output unchanged): a template per biome (`ZONE_TEMPLATES`, six rooms, 4–6 kept, four flips),
@@ -842,6 +841,63 @@ server and `shared` are untouched (the strings are in `sv.ts`, exported by `pnpm
   file read back fresh, and applied (the viewport's scale, the audio buses, the content scale, the labels, the input map, the palette, the
   HUD layout at every text size in a 1280 × 720 window), that a restart reads it all back, and that everything is put back. The manual `pictures` job
   takes the window's four pages, the HUD, the farm and a talk window at 175 %, and the same boss telegraph in each palette (`docs/m8b-*.png`).
+
+## Godot client: Smedjan (2026-11-07)
+
+Smed-Stina's forge (the rules are the server's: `forgeGear`, `craftGear`, `forgeStats`, `FORGE_COSTS`, `FORGE_CRAFTS`, `FORGE_MAX` in
+`shared/src/saga.ts` and `sagasim.ts`; "Bigger maps, landmarks, Smedjan and replays" above). The client only offers what can be paid and sends the intent.
+- **Data.** `export-data.mts` writes `gear.forgeCosts`, `gear.forgeCrafts` and `gear.smith` to `game.json` beside the `forgeMax` it already had, so the window
+  reads the same costs as the server. `Gear` (`gear.gd`) has the browser's helpers on them: `owned`, `forge_line` (a weapon's power is its rarity's times what
+  the forge and its stats add, as `gearStats` counts it), `forge_cost`, `cost_parts` (the "any of" part counts every kind in its list), `affordable`.
+- **Window.** `ForgeWindow` (`forge_window.gd`, a `GameWindow`) is opened by the "🔨 Smedjan" button in Stina's talk window (both its front and its chat page;
+  `TalkWindow.forge_asked`), like the browser's `forgeButton`. Two tabs: *Förbättra* (a row per piece I wear or carry: name with "+n", rarity, slot, worn,
+  five stars, now → next, the cost as coloured text, the button, off when the cost cannot be paid or at +5) and *Smid* (the six starter pieces, each once). Every
+  row's control is a `Button` (keyboard, mouse, d-pad and A work as in every `GameWindow`); the body scrolls and the panel fits the text size. Walking more than four tiles from
+  Stina (the server's own radius) closes it. `shown` keeps the numbers each row says, by item, for the check.
+- **Refusals** are the server's toasts (not near her, not owned, short of material or kronor); the window does not repeat them.
+- **Gear window.** A forged piece shows "Järnyxa +2" and its stars; the sums (`Gear.stats`) already counted the forge level.
+- **Check and `dev kit`.** The farmer bot's new `smed` step (`farm_bot_home.gd`, `smedjan()`) takes `{t:'dev', a:'kit'}` (DEV_TELEPORT only: 20 stone, 10 gold,
+  4 crystal, 400 kr, two papers, two buckets of red paint and a run of wall pieces (wood ×2, stone, door, window); tested in `saga.test.ts`), opens Stina's window and the forge, asserts the worn weapon's "now" and "next"
+  lines against numbers computed by the TS `forgeStats` (exported into `game.json` as `gear.forgeSamples`, with `gear.heroSamples`: `gearStats` and `fighterMax` of a krigare in the jarnyxa at every hero level and forge level), compares the client's `Gear.forge_stats` with the TS ones for eleven pieces at +0..+5, and holds `Gear.stats` and `max_hp` after each forge to the TS gearStats and fighterMax, forges twice and asserts the server's forge level, the bag and the purse against `FORGE_COSTS`, that the window then
+  says the new numbers, that level 3 is out of reach (the button is off), the server's own refusal for a piece I do not own, that a starter piece is smithed
+  and the gear window says "+2" with its stars.
+
+## Godot client: paper, paint and buckets (2026-11-07)
+
+The server already did all of it (`paint` makes a painted tavla of a paper, `data` is its 256-character string; a bucket sets the object's `variant`
+1..6 on the farmhouse or on a wall piece and every wall piece joined to it: `paintObject` in `sim.ts`). The client draws it.
+- **Data.** `export-data.mts` writes `paint: {palette, chars, size}` (shared `paint.ts`) to `game.json`; `PaintArt` (`paint_art.gd`) reads it: a cell's colour, a
+  16 × 16 `Image` of a painting (paper where nothing is painted), its 20 × 20 framed icon, a cached texture, the flood fill, `valid` (what the server accepts) and
+  `matches` (a texture against a painting, cell by cell, for the check). The buckets' colours are the browser's `PAINT_COLORS` (`PaintArt.BUCKET`; they were never in `shared`).
+- **Screen.** The server's `open` with `ui: 'paint'` (it used to end in the "not drawn" toast in `farm_play.gd`) opens `PaintWindow` (`paint_window.gd`, a `GameWindow`) with a
+  `PaintCanvas` (`paint_canvas.gd`): the mouse or touchpad press and drag (a stroke is joined cell to cell so a fast hand leaves no gaps; a right press erases),
+  or the keyboard and the pad (the cursor moves with the `ui_*` actions, accept paints and, held, draws a line; off the canvas's edge the focus goes on to the
+  colours, the tools and the buttons below; the shoulder buttons step through the colours). The cells are the window's, so a refresh of my record (which rebuilds
+  every other window) leaves a half-drawn picture alone. "Klar" sends `{t:'paint', pixels}` (an empty drawing is refused here with the server's words and again
+  by the server); "Avbryt" and Escape throw it away. The canvas's cell size follows the screen height (10–20 px) so the whole picture is on screen at 175 % text.
+- **Bag.** A painted tavla's slot shows its framed picture (`ItemSlot._art`). `PaintArt`'s texture cache is an LRU of 48 (a hung frame holds its own texture), emptied by `quit_clean`; no texture is reported leaked at exit.
+- **Frames.** `painting` is a node in `farm_assets.gd` now (it was a baked frame in a chunk's MultiMesh): `farm_view.gd` `_picture` puts a `Picture` quad with the
+  painting's texture in front of the frame (nearest-filtered, shaded). `FarmView.picture_texture(id)` gives the texture to the check.
+- **Colours.** `farm_view.gd` asks `farm_assets.gd` for `paint:<mesh>:<variant>` when the server's `variant` is above 0 on a wall, a door, a window or the house: walls,
+  doors and windows are built again in the bucket's colour, and the farmhouse keeps its roof and timber and recolours the model's cool-grey plaster vertices (shade
+  kept, so the plaster's ambient occlusion still reads). The old code ignored `variant` there.
+- **Focus.** `PaintWindow._wire_focus` sets all four focus neighbours of every control: the canvas's right edge leads to the colours, its bottom to "Rensa"; the colours
+  are a grid whose left column leads back to the canvas and whose last row leads to the tools; the tools lead down to "Klar", which leads down to "Avbryt".
+- **Check.** The farmer bot's `paint` step (`farm_bot_home.gd`, after the farmhouse; `dev kit`: two papers, two buckets, wall wood ×2, stone, a door, a window) works through
+  the client's real input: a paper opens the screen, an empty drawing is refused, a mouse press and drag, the wheel and `slot_next` step the colour (the hotbar keeps its
+  square), then InputEventActions through the viewport (`Input.parse_input_event`) so the focus navigation runs: accept paints, the cursor leaves the canvas for the
+  colours, a colour is picked, the tools are reached and fill chosen, "Klar" is reached from the canvas by focus and pressed. The server's bag has a `painting` whose `data` is
+  exactly the cells drawn; hung on the grass the frame's `Picture` texture equals `data` cell by cell; a run of wood wall, stone wall, door and window painted with one bucket
+  all have the server's `variant` (it flood-paints) and are drawn with `paint:<kind>:1` meshes with red vertices; the farmhouse's recoloured vertices are sampled (hundreds turned
+  red, none that were not plaster, the roof and timber unchanged). `docs/paint-*.png` are the screen, the hung picture, the red wall run and the red house.
+
+## Köpingen in the native client looks like the browser's (2026-11-07)
+The owner played the native client and saw Köpingen as a modern town: asphalt, zebra crossings, traffic lights, a red car and Diligensen as a flat magenta quad. The browser game had drawn this world as a Norse market town since "The saga world" (see "Art conventions" there: cobblestone `road`, flagstone `sidewalk`, pale-slab `crossing`, iron-on-ties `rail`, timber houses and shops with hanging signs, the cart (`car`) 32×16, the riding horse (`motorcycle`) 24×20 with the rider on top, the Diligens and the mine train at the bus's and train's length, headlights that are lanterns). The Godot client had kept the modern look of M4c, which HANDOFF.md section 1b item 5 noted. Nothing in `shared` or the server changed (the ids `road`, `crossing`, `traffic_light`, `street_lamp`, `car`, `motorcycle`, `bus`, `train`, `parked_car` stay what they were); only how the client draws them.
+- **Ground.** `farm_view.gd` draws `road` as cobbles (the browser's stones and greys, a dark kerb along the pavement), `sidewalk` as flagstones, `crossing` as two pale slabs across the cobbles (never stripes) and `rail` as gravel, sleepers and two iron rails, all in the one vertex-coloured ground mesh of a chunk.
+- **Buildings and furniture.** `scripts/village_meshes.gd` generates the timber town from boxes and quads in the pixel art's own colours, one mesh per variant the browser has: four plaster cottages (`house_small`), two half-timbered town houses, a log longhouse and a stave house (`apartment`), the smith's, baker's and weaver's shops with their hanging signs (`shop`), Pino's tavern, the sauna, the stone station with its bell, the Vägvisare (`traffic_light`, which `sv.ts` already called that), the iron lantern post (`street_lamp`, 1.8 m instead of the pack lantern's 2.5 m), the Diligens stop (`bus_stop`) and the hand carts (`parked_car`).
+- **Traffic.** The browser's four vehicle sprites are exported with the other animals (`animal_car*`, `animal_motorcycle*`, `animal_bus*`, `animal_train*`, no tomteluva) and drawn as voxel bodies (`voxel_body.gd`) always, not only under `--people3d`; they turn to face along the street, carry a warm lantern light at night, and riders sit up on them by `Data.ride_lift` (horse 7 px, cart 4 px, as the browser's `rideInfo`).
+- **No stand-ins.** `--placeholdercheck` (`scripts/placeholder_check.gd`, a headless step of the Godot workflow) plays every recorded world and fails if an object is drawn as a placeholder box, an actor has no sprite sheet, a vehicle is not a body, or a kind's mesh cannot be made.
+- **Pictures** (`packages/godot/docs/koepingen-*.png`, with the browser's art for the same spot beside the native one) are made with `--demo=village --stage=street`, which lays the main street out (a demo-only flag). Nothing here is third-party: `assets/LICENSES.md` notes it, `ART.md` has the details.
 
 
 ## Godot client: minimap, world map and the nine arches (2026-11-07)

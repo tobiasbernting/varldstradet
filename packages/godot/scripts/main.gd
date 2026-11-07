@@ -16,6 +16,7 @@ extends Node
 ##   --farmbot           a headless player that farms against a local server (farm_bot.gd, M4b)
 ##   --runbot            a headless player that walks to the färdport, starts (or joins) a run and fights through its zones (run_bot.gd, M5c)
 ##   --settingscheck     the settings window: every setting changed through its controls, kept, saved and applied, then restored (settings_check.gd, M8b)
+##   --placeholdercheck  every recorded world plays and nothing may be drawn with the stand-in look (placeholder_check.gd)
 ##   --voicecheck        Röstprat's codec, rules and (with the webrtc extension) a connection between two peers (voice_check.gd)
 ##   --bot               a headless player that logs in against a local server (ACCESS=open, DEV_TELEPORT=1), walks
 ##                       to the first pack, fights it and writes a report (bot.gd)
@@ -51,6 +52,13 @@ func _ready() -> void:
 		var sc := SettingsCheck.new()
 		sc.name = "SettingsCheck"
 		add_child(sc)
+	elif args.has("--placeholdercheck"):
+		login.visible = false
+		_set_world(true)
+		var pc := PlaceholderCheck.new()
+		pc.name = "PlaceholderCheck"
+		pc.world = world
+		add_child(pc)
 	elif args.has("--voicecheck"):
 		login.visible = false
 		var vc := VoiceCheck.new()
@@ -202,5 +210,6 @@ func quit_clean(code := 0) -> void:
 		child.queue_free()
 	await get_tree().process_frame
 	await get_tree().process_frame
+	PaintArt.clear_cache() # (the pictures' textures are not left to the engine's exit report)
 	await get_tree().create_timer(0.4).timeout
 	get_tree().quit(code)
