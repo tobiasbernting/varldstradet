@@ -70,9 +70,10 @@ This file is only what the next agent needs: state, decisions, how the work is r
   non-overlapping centre stack; colour-blind palettes with stripes; reduced motion; a ~120-step settings check; review
   fixes) merged 2026-11-07 13:34 UTC as 5a541bf. **M8 is done except the first `v*` tag (the owner's call) and the
   DESIGN.md rewrite.**
-- **Running now:** `session_01KTh22rn2baE99QRxRLZGH7` on `claude/ci-time-and-import-path`: the export job is at
-  11m36s on PR 25's run (the bots step 5m33s), to be brought back under ~9.5 min; and `import-save` resolving a relative
-  dump path from `INIT_CWD` (today `pnpm --filter … import-save lilla-garden.sql` looks in packages/server).
+- PR 27 merged 2026-11-07 14:37 UTC as f6e2d84: the bot step moved unchanged into its own `bots` job beside
+  `export` (export 4m28s, bots 5m26s, a PR's CI about 5.5 min; the release job needs both), and `import-save`
+  resolves a relative dump path against `INIT_CWD`. **No child is running and no PR is open.** Next: the `DESIGN.md`
+  rewrite (M8), then the owner's MacBook results and the backlog in section 5.
 - **Waiting on the owner:** the first release tag; make the `varldstradet` GHCR package public before the first deploy
   (homelab `cloud/YOUR-STEPS.md` J); whether to fix the running farm's backup-dir permissions (0750, the nightly fetch
   probably reads nothing); MacBook results for PR 11–25 (bench on Låg/Mellan/Hög by a pond, voice).
