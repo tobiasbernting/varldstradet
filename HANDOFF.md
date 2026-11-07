@@ -29,11 +29,15 @@ This file is only what the next agent needs: state, decisions, how the work is r
 | 14 | backlog 2 | Röstprat in the Godot client: mu-law audio over a WebRTC data channel (`webrtc-native` 1.2.2-stable fetched by `tools/fetch-webrtc.sh`, not committed), `voice.gd`/`voice_peer.gd`/`voice_codec.gd`/`voice_window.gd`, push-to-talk default, a headless voice check and a two-bot signalling check, `docs/voice.png`; reviewed, seven findings fixed by a fix-up child; merged 19:28 UTC as 2873377. Not yet heard by the owner. |
 | 13 | M5c | Runs in the Godot client: the färdport arch, the Yggdrasil shoot in five stages, the smithy, herb garden and longhouse, the arch window, zones drawn with the biome looks, the run HUD with the soft clock, the three runor cards and the vote, the end summary, the sagaträd window, the hired companion drawn, a run bot with a headless CI check and an Xvfb picture run, docs and five pictures; six review findings fixed, a run-bot stall at 2–3 fps fixed, wipes retried; merged 21:49 UTC as c874511 |
 
-- **Resumed 22:36 UTC by orchestrating session `session_01KTh22s6gWj5rerGqj3fNdr`.** Two Sonnet children running:
-  M6a (chapters 2–4: frost, surt, hel, plus a generic per-dungeon look table) `session_01KTh22qPPYJFNEk4wVjmv5b` on
-  `claude/m6a-chapters-2-4`, and the tidy-up of the leftovers below `session_01KTh22qpJkd4hoGWrPg64yA` on
-  `claude/tidy-up-m5c-voice`. A check-in is scheduled about 50 minutes out. Everything from M4 onward is untested on
-  the MacBook; PR 11, 12, 13 and 14 each carry a "what to check on the MacBook" recipe in their bodies.
+- **Resumed 2026-11-06 22:36 UTC by orchestrating session `session_01KTh22s6gWj5rerGqj3fNdr`.** Since then:
+  PR 16 (tidy-up of the PR 13/14 leftovers below, plus five review fixes) merged 23:46 UTC as ccaa03a; PR 17 (M6a:
+  a per-dungeon look table `dungeon_look.gd`, Frostjättens borg, Surts smedja and Helheim with sprites, every boss
+  move telegraphed, `demo_bosses.gd` boss shows that assert what they fed, dungeon bot pairs per chapter in CI, a fix of
+  a socket teardown race in `net.gd`, eight review fixes) merged 2026-11-07 01:16 UTC as f06f2f6. The export job is at
+  10m55s, over budget; M6b's brief makes cutting it the first step.
+- **Running now:** M6b (chapters 5–7: dvarg, orm, alv) `session_01KTh22rTdZexhwmCtMLZuRP` on `claude/m6b-chapters-5-7`.
+  Then M6c (fenrir, loke), M7, M8. The owner tests PR 11–17 on the MacBook on 2026-11-07.
+- **The leftovers below were fixed in PR 16** except the waypoint tolerance and the voice bot using bare sockets.
 - **Small things left over from PR 13 and PR 14, for one tidy-up PR** (none blocks anything): the pick screen shows
   "Välj en runa!" twice, offset (the server's `reward` banner over the pick's own title; `run_pick.gd` / `hud.gd`);
   README's M5c paragraph links `m5c-farm-run.png` and `m5c-smithy.png`, which do not exist (the `pictures` job takes
@@ -135,7 +139,7 @@ been tested on the MacBook yet; PR 11, 12, 13 and 14 each carry a "what to check
 
 ## 5. Open items and backlog, in rough order
 
-1. **M6 next** (the other eight dungeons as zone sets and all bosses in the Godot client, in chapter order; PLAN.md
+1. **M6 in progress: M6a (chapters 2–4) merged, M6b (5–7) running, M6c (fenrir, loke) next** (the other eight dungeons as zone sets and all bosses in the Godot client, in chapter order; PLAN.md
    M6; the dungeons' plans and bosses exist as data, the client draws Draugkryptan's look and the seven biome looks of
    the run zones). Then M7, M8. Before M6, ask the owner for the MacBook results of PR 11–14 if any have come in.
 2. The tidy-up PR of section 1's leftovers.
@@ -164,6 +168,6 @@ been tested on the MacBook yet; PR 11, 12, 13 and 14 each carry a "what to check
   `session_01KTh22pn3nY1PwSd9U6Gv3B`, M5c `session_01KTh22riKcXRQssJpT6nmes` (stood down), M5c fix-up
   `session_01KTh22s4VK2T6Mc1ipSsM5W`, voice `session_01KTh22ouaSJXMfDZvpaPHMt`, voice fix-up
   `session_01KTh22qka2AJW7nyefZu2x5`.
-- Orchestrator since 22:36 UTC: `session_01KTh22s6gWj5rerGqj3fNdr`; children M6a `session_01KTh22qPPYJFNEk4wVjmv5b`, tidy-up `session_01KTh22qpJkd4hoGWrPg64yA`; a check-in is pending.
+- Orchestrator since 2026-11-06 22:36 UTC: `session_01KTh22s6gWj5rerGqj3fNdr`; children (Sonnet): M6a `session_01KTh22qPPYJFNEk4wVjmv5b` (done), tidy-up `session_01KTh22qpJkd4hoGWrPg64yA` (done), M6b `session_01KTh22rTdZexhwmCtMLZuRP` (running); a check-in is pending.
 - Homelab repo `tobiasbernting/homelab`: `cloud/` (Hetzner + Cloudflare + Tailscale, running), `server/roles/lilla-garden`
   and `lilla-garden-cloud`.
