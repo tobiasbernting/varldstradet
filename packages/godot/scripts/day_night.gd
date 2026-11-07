@@ -161,7 +161,7 @@ func _apply_quality() -> void:
 
 
 func _make_particles() -> void:
-	var n := int(Quality.spec().get("sky_weather", 0))
+	var n := int(Quality.value("sky_weather"))
 	if n <= 0:
 		return
 	_rain = _particles(n * 2, 1.1, Vector3(0.0, -18.0, 0.0), Color(0.75, 0.85, 1.0, 0.5), Vector3(0.014, 0.6, 0.014))

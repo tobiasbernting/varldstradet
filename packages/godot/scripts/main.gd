@@ -15,6 +15,7 @@ extends Node
 ##                       leaves, smoke and mist all on whatever the hour and season; --year=spring|summer|autumn|winter sets the season of the year
 ##   --farmbot           a headless player that farms against a local server (farm_bot.gd, M4b)
 ##   --runbot            a headless player that walks to the färdport, starts (or joins) a run and fights through its zones (run_bot.gd, M5c)
+##   --settingscheck     the settings window: every setting changed through its controls, kept, saved and applied, then restored (settings_check.gd, M8b)
 ##   --voicecheck        Röstprat's codec, rules and (with the webrtc extension) a connection between two peers (voice_check.gd)
 ##   --bot               a headless player that logs in against a local server (ACCESS=open, DEV_TELEPORT=1), walks
 ##                       to the first pack, fights it and writes a report (bot.gd)
@@ -45,6 +46,11 @@ func _ready() -> void:
 		runner.name = "Bot"
 		runner.world = world
 		add_child(runner)
+	elif args.has("--settingscheck"):
+		login.visible = false
+		var sc := SettingsCheck.new()
+		sc.name = "SettingsCheck"
+		add_child(sc)
 	elif args.has("--voicecheck"):
 		login.visible = false
 		var vc := VoiceCheck.new()

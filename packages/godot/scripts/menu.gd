@@ -1,8 +1,8 @@
 class_name PauseMenu
 extends CanvasLayer
-## The pause menu (the `menu` action: Escape or the gamepad's start button): continue, settings (the quality
-## presets of quality.gd, the spells' buttons, the frame rate and the world's sounds), the development way into the dungeons that have no arch drawn yet (the server's `dev` message, DEV_TELEPORT=1), and
-## back to the login screen. Built in code; the texts come from assets/sv.json.
+## The pause menu (the `menu` action: Escape or the gamepad's start button): continue, the settings window (settings_window.gd),
+## the gear and quest windows, Röstprat, the development way into the dungeons that have no arch drawn yet (the server's `dev`
+## message, DEV_TELEPORT=1), and back to the login screen. Built in code; the texts come from assets/sv.json.
 
 signal resumed
 signal switch_player
@@ -12,15 +12,7 @@ signal window_asked(which: String) ## "gear" or "quests": the windows the keys G
 
 var _root: Control
 var _main: VBoxContainer
-var _settings: VBoxContainer
-var _quality_buttons: Dictionary = {}
-var _hint: Label
-var _spell_buttons: Dictionary = {}
-var _spell_hint: Label
-var _fps_check: CheckButton
-var _steps_check: CheckButton
-var _ambience_check: CheckButton
-var _volume_slider: HSlider
+var _settings_window: SettingsWindow
 
 
 func _ready() -> void:
@@ -55,7 +47,7 @@ func _ready() -> void:
 	stack.add_child(_main)
 	_main.add_child(_title(Strings.t("menuTitle")))
 	_main.add_child(_button(Strings.t("menuContinue"), func() -> void: close()))
-	_main.add_child(_button(Strings.t("menuSettings"), func() -> void: _show_settings(true)))
+	_main.add_child(_button(Strings.t("menuSettings"), func() -> void: open_settings()))
 	_main.add_child(_button("%s (%s)" % [Strings.t("gearTitle"), Strings.t("gearKey")], func() -> void:
 		close()
 		window_asked.emit("gear")))
@@ -93,92 +85,11 @@ func _ready() -> void:
 		close()
 		switch_player.emit()))
 
-	_settings = VBoxContainer.new()
-	_settings.add_theme_constant_override("separation", 10)
-	_settings.visible = false
-	stack.add_child(_settings)
-	_settings.add_child(_title(Strings.t("menuSettings")))
-	var quality_label := Label.new()
-	quality_label.text = Strings.t("settingsQuality")
-	_settings.add_child(quality_label)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	_settings.add_child(row)
-	for p in Quality.ORDER:
-		var b := Button.new()
-		b.text = Quality.label_of(p)
-		b.toggle_mode = true
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size = Vector2(0, 44)
-		b.pressed.connect(func() -> void: _pick(p))
-		row.add_child(b)
-		_quality_buttons[p] = b
-	_hint = Label.new()
-	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_hint.custom_minimum_size = Vector2(0, 60)
-	_settings.add_child(_hint)
-	# the kids' gamepads: the four spells on the face buttons, or one button and a wheel (PLAN.md section 7)
-	var spells_label := Label.new()
-	spells_label.text = Strings.t("settingsSpells")
-	_settings.add_child(spells_label)
-	var spell_row := HBoxContainer.new()
-	spell_row.add_theme_constant_override("separation", 8)
-	_settings.add_child(spell_row)
-	for mode in ["buttons", "wheel"]:
-		var b := Button.new()
-		b.text = Strings.t("spellsButtons" if mode == "buttons" else "spellsWheel")
-		b.toggle_mode = true
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size = Vector2(0, 44)
-		b.pressed.connect(func() -> void: _pick_spells(mode))
-		spell_row.add_child(b)
-		_spell_buttons[mode] = b
-	_spell_hint = Label.new()
-	_spell_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_spell_hint.custom_minimum_size = Vector2(0, 50)
-	_settings.add_child(_spell_hint)
-	_fps_check = CheckButton.new()
-	_fps_check.text = Strings.t("settingsFps")
-	_fps_check.button_pressed = Settings.show_fps
-	_fps_check.toggled.connect(func(on: bool) -> void:
-		Settings.show_fps = on
-		Settings.save()
-		fps_toggled.emit(on))
-	_settings.add_child(_fps_check)
-	# the world's own sounds (M7b): footsteps and the ambience, each on or off, and how loud
-	var sound_label := Label.new()
-	sound_label.text = Strings.t("settingsWorldSound")
-	_settings.add_child(sound_label)
-	_steps_check = CheckButton.new()
-	_steps_check.text = Strings.t("settingsSteps")
-	_steps_check.button_pressed = Settings.steps_on
-	_steps_check.toggled.connect(func(on: bool) -> void:
-		Settings.steps_on = on
-		Settings.save())
-	_settings.add_child(_steps_check)
-	_ambience_check = CheckButton.new()
-	_ambience_check.text = Strings.t("settingsAmbience")
-	_ambience_check.button_pressed = Settings.ambience_on
-	_ambience_check.toggled.connect(func(on: bool) -> void:
-		Settings.ambience_on = on
-		Settings.save())
-	_settings.add_child(_ambience_check)
-	var volume_label := Label.new()
-	volume_label.text = Strings.t("settingsWorldVolume")
-	_settings.add_child(volume_label)
-	_volume_slider = HSlider.new()
-	_volume_slider.min_value = 0.0
-	_volume_slider.max_value = 1.0
-	_volume_slider.step = 0.05
-	_volume_slider.value = Settings.world_volume
-	_volume_slider.custom_minimum_size = Vector2(0, 28)
-	_volume_slider.value_changed.connect(func(v: float) -> void:
-		Settings.world_volume = v
-		Settings.save())
-	_settings.add_child(_volume_slider)
-	_settings.add_child(_button(Strings.t("back"), func() -> void: _show_settings(false)))
-	_refresh_quality()
-	_refresh_spells()
+	# the settings window (M8b) lives over this menu
+	_settings_window = SettingsWindow.new()
+	_settings_window.name = "SettingsWindow"
+	add_child(_settings_window)
+	_settings_window.fps_changed.connect(func(on: bool) -> void: fps_toggled.emit(on))
 
 
 func _title(text: String) -> Label:
@@ -210,44 +121,21 @@ func toggle() -> void:
 
 func open() -> void:
 	visible = true
-	_fps_check.button_pressed = Settings.show_fps
-	_steps_check.button_pressed = Settings.steps_on
-	_ambience_check.button_pressed = Settings.ambience_on
-	_volume_slider.value = Settings.world_volume
-	_show_settings(false)
+	_main.get_child(1).grab_focus()
 
 
 func close() -> void:
+	if _settings_window.is_open():
+		_settings_window.close()
 	visible = false
 	resumed.emit()
 
 
-func _show_settings(on: bool) -> void:
-	_settings.visible = on
-	_main.visible = not on
-	var first: Control = (_quality_buttons[Quality.preset] if on else _main.get_child(1))
-	if first is Control:
-		first.grab_focus()
+## The settings window over the menu (also what the check opens).
+func open_settings() -> SettingsWindow:
+	_settings_window.open_window()
+	return _settings_window
 
 
-func _pick(p: String) -> void:
-	Quality.set_preset(p)
-	_refresh_quality()
-
-
-func _pick_spells(mode: String) -> void:
-	Settings.spell_input = mode
-	Settings.save()
-	_refresh_spells()
-
-
-func _refresh_spells() -> void:
-	for mode in _spell_buttons.keys():
-		_spell_buttons[mode].button_pressed = mode == Settings.spell_input
-	_spell_hint.text = Strings.t("spellsButtonsHint" if Settings.spell_input == "buttons" else "spellsWheelHint")
-
-
-func _refresh_quality() -> void:
-	for p in _quality_buttons.keys():
-		_quality_buttons[p].button_pressed = p == Quality.preset
-	_hint.text = Quality.hint_of(Quality.preset)
+func settings_window() -> SettingsWindow:
+	return _settings_window

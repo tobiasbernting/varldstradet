@@ -71,6 +71,7 @@ var _prev_pos: Dictionary = {} ## actor key -> last scene position (facing from 
 var _emote_shown: Dictionary = {} ## player id -> until
 var _shadow_in := 0.0
 var _screenshot := ""
+var _settings_page := "" ## --settings-page=picture|sound|reading|controls: the settings window opens on it (pictures)
 var _frames := 0
 var _rest_glow_in := 0.0
 var _cam_k := 0.0 ## 0 outdoors, 1 inside the farmhouse: how far the camera has moved to its closer, steeper place
@@ -162,6 +163,8 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--screenshot="):
 			_screenshot = arg.substr("--screenshot=".length())
+		elif arg.begins_with("--settings-page="):
+			_settings_page = arg.substr("--settings-page=".length())
 
 
 func reset() -> void:
@@ -988,6 +991,8 @@ func _process(delta: float) -> void:
 		hero.frozen = run_pick.is_open()
 	hud.tick_spell_bar(combat, snap.get("b") is Dictionary and snap["b"].get("cast") is Dictionary and bool(snap["b"]["cast"].get("kick", false)))
 	_frames += 1
+	if _settings_page != "" and _frames == 30:
+		menu.open_settings()._show_page(_settings_page)
 	if _screenshot != "" and _frames == 90:
 		var img := get_viewport().get_texture().get_image()
 		if img != null:

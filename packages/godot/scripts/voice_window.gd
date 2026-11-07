@@ -34,7 +34,7 @@ func _build() -> void:
 	_open_button = make_button(Strings.t("voiceModeOpen"), func() -> void: Voice.set_mode("open"), "open")
 	_open_button.toggle_mode = true
 	_toolbar.add_child(_open_button)
-	_hold_button = make_button(Strings.t("voiceHold", {"key": Strings.t("voiceKey")}), func() -> void: pass, "hold")
+	_hold_button = make_button(Strings.t("voiceHold", {"key": Settings.ptt_key_name()}), func() -> void: pass, "hold")
 	_hold_button.button_down.connect(func() -> void:
 		Voice.ptt_button = true
 		Voice.changed.emit())
@@ -84,6 +84,7 @@ func _fill() -> void:
 	_toolbar.visible = usable and Voice.is_joined()
 	_hold_button.visible = usable and Voice.is_joined() and Settings.voice_mode == "ptt"
 	_mic_button.text = Strings.t("voiceMute") if Settings.voice_mic else Strings.t("voiceUnmute")
+	_hold_button.text = Strings.t("voiceHold", {"key": Settings.ptt_key_name()}) # (the key is a setting since M8b)
 	_ptt_button.button_pressed = Settings.voice_mode == "ptt"
 	_open_button.button_pressed = Settings.voice_mode == "open"
 	if not usable:

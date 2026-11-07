@@ -681,7 +681,7 @@ func set_weather(kind: String) -> void:
 			"wind":
 				fog = 0.04
 		_env.environment.fog_density = fog
-	var budget := int(Quality.spec().get("weather", 0)) / 3 if Quality.preset != "lag" else 0
+	var budget := Quality.dungeon_budget(3)
 	if budget <= 0 or not (kind in ["rain", "storm", "snow", "hail", "wind"]):
 		return
 	var quad := QuadMesh.new()
@@ -759,7 +759,7 @@ func follow_weather(at: Vector3) -> void:
 
 func _make_motes() -> void:
 	var kind := str(look.get("motes", ""))
-	var budget := int(Quality.spec().get("weather", 0)) / 4 if Quality.preset != "lag" else 0
+	var budget := Quality.dungeon_budget(4)
 	if kind == "" or budget <= 0:
 		return
 	var quad := QuadMesh.new()

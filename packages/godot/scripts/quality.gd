@@ -51,6 +51,18 @@ const LIGHT_FADE_BEGIN := 20.0
 const LIGHT_FADE_LENGTH := 6.0
 const SHADOW_FADE := 16.0
 
+## M8b: the effects the settings window can switch by hand, over the preset's own: toggle id -> the PRESETS keys it governs.
+## Off makes every one of them 0; on gives the preset's value, or Mellan's when the preset has none (a Låg player who wants the
+## wind's gusts gets what Mellan has). Picking a preset clears the hand-made choices (Settings.effect_overrides).
+const TOGGLES := {
+	"wind": ["wind"],
+	"water": ["water"],
+	"ambient": ["fireflies", "butterflies", "leaves", "smoke", "mist", "window_light", "particles"],
+	"weather": ["sky_weather", "weather"],
+	"wildlife": ["sparrows"],
+}
+const TOGGLE_ORDER := ["wind", "water", "ambient", "weather", "wildlife"]
+
 var preset := "mellan"
 
 
@@ -72,6 +84,7 @@ func set_preset(p: String, persist := true) -> void:
 	preset = p
 	if persist:
 		Settings.quality = p
+		Settings.clear_effect_overrides()
 		Settings.save()
 	_apply_viewport()
 	changed.emit(p)
@@ -86,14 +99,56 @@ func shadow_lights() -> int:
 	return int(spec().get("shadows", 0))
 
 
-## One of the alive-world toggles of the current preset (see PRESETS).
+## One of the alive-world toggles of the current preset (see PRESETS), with the player's own switches (TOGGLES) laid over it.
 func alive(what: String) -> int:
-	return int(spec().get(what, 0))
+	return int(value(what))
+
+
+## A PRESETS entry as it is now: the preset's, unless the player switched its toggle off (0) or on (Mellan's value when the
+## preset has none).
+func value(key: String) -> Variant:
+	var v: Variant = spec().get(key, 0)
+	var t := toggle_of(key)
+	if t != "" and Settings.effect_overrides.has(t):
+		if not bool(Settings.effect_overrides[t]):
+			return 0
+		if int(v) == 0:
+			return PRESETS["mellan"].get(key, 0)
+	return v
+
+
+## Which toggle governs a PRESETS key ("" for none).
+func toggle_of(key: String) -> String:
+	for t in TOGGLES.keys():
+		if key in TOGGLES[t]:
+			return t
+	return ""
+
+
+## Is a toggle on in the preset itself (any of its keys above 0)?
+func toggle_default(id: String) -> bool:
+	for k in TOGGLES.get(id, []):
+		if int(spec().get(k, 0)) > 0:
+			return true
+	return false
+
+
+## The dungeons' falling weather and motes (dungeon_view.gd): `div` shares the budget between them. Låg has none unless switched on.
+func dungeon_budget(div: int) -> int:
+	if preset == "lag" and not bool(Settings.effect_overrides.get("weather", false)):
+		return 0
+	return int(value("weather")) / div
+
+
+## An effect was switched in the settings window: what is built at the start (the weather's particles, the torches' sparks) is
+## built again, the rest reads `alive` every frame.
+func effects_changed() -> void:
+	changed.emit(preset)
 
 
 ## Particles per torch flame (0: a flat flame only).
 func particles() -> int:
-	return int(spec().get("particles", 0))
+	return int(value("particles"))
 
 
 ## The toggles on a dungeon's environment.
@@ -119,7 +174,13 @@ func apply_environment(env: Environment) -> void:
 func scale_for(pixels: Vector2) -> float:
 	var s := spec()
 	var area := maxf(1.0, pixels.x * pixels.y)
-	return clampf(minf(float(s.get("scale", 1.0)), sqrt(float(s.get("mpix", 4.0)) * 1.0e6 / area)), 0.5, 1.0)
+	var by_preset := clampf(minf(float(s.get("scale", 1.0)), sqrt(float(s.get("mpix", 4.0)) * 1.0e6 / area)), 0.5, 1.0)
+	return clampf(by_preset * Settings.res_scale, 0.4, 1.0) # (the player's own "resolution scale" on top)
+
+
+## The viewport's 3D scale again, after the player changed it (settings_window.gd).
+func refresh_viewport() -> void:
+	_apply_viewport()
 
 
 func _apply_viewport() -> void:

@@ -24,9 +24,59 @@ var voice_volume: float = 1.0
 var steps_on: bool = true
 var ambience_on: bool = true
 var world_volume: float = 0.8
+## M8b: the master volume over everything, and the dungeon's own sounds (sfx.gd: spells, hits, the HUD's chimes), 0 to 1.
+var master_volume: float = 1.0
+var effects_volume: float = 1.0
+## M8b: "window" or "fullscreen"; how much of the preset's 3D resolution to render (0.5 to 1), the rest is upscaled.
+var window_mode: String = "window"
+var res_scale: float = 1.0
+## M8b: the effects switched by hand over the preset's own: toggle id (see Quality.TOGGLES) -> on or off. A toggle that is not
+## here follows the preset; picking a preset clears them.
+var effect_overrides: Dictionary = {}
+## M8b: the Röstprat key for hold-to-talk, as a physical keycode (C).
+var ptt_key: int = KEY_C
+## M8b, accessibility: the size of the HUD, the windows and the labels over heads (1, 1.25, 1.5 or 1.75); the colours of danger
+## and health ("normal", "rg" for deuteranopia and protanopia, "tritan"); stripes and a thick edge on the marks of coming attacks
+## (always on with a colour-blind palette: it is what is drawn when colour is not enough); and no shaking or flashing.
+var ui_scale: float = 1.0
+var colour_mode: String = "normal"
+var danger_pattern: bool = false
+var reduce_motion: bool = false
+
+signal ui_scale_changed
+signal access_changed ## the colour palette, the stripes or reduced motion changed
+
+const UI_SCALES := [1.0, 1.25, 1.5, 1.75]
+const COLOUR_MODES := ["normal", "rg", "tritan"]
+const RES_SCALES := [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+const EFFECT_AUDIO_BUS := "Effekter"
 
 
 func _ready() -> void:
+	_load()
+	_command_line()
+	_ensure_buses()
+	# (the window and the key map are there from the first frame, but the tree may not be finished: apply on the next frame)
+	_apply_all.call_deferred()
+
+
+## --ui-scale=1.75 --colours=rg|tritan --pattern --reduce-motion --res-scale=0.7: this run only, never saved (pictures and checks).
+func _command_line() -> void:
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--ui-scale="):
+			ui_scale = nearest_of(UI_SCALES, float(arg.substr(11)))
+		elif arg.begins_with("--colours=") and arg.substr(10) in COLOUR_MODES:
+			colour_mode = arg.substr(10)
+			danger_pattern = colour_mode != "normal"
+		elif arg == "--pattern":
+			danger_pattern = true
+		elif arg == "--reduce-motion":
+			reduce_motion = true
+		elif arg.begins_with("--res-scale="):
+			res_scale = nearest_of(RES_SCALES, float(arg.substr(12)))
+
+
+func _load() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(FILE) != OK:
 		return
@@ -44,6 +94,22 @@ func _ready() -> void:
 	steps_on = bool(cfg.get_value("sound", "steps", true))
 	ambience_on = bool(cfg.get_value("sound", "ambience", true))
 	world_volume = clampf(float(cfg.get_value("sound", "volume", 0.8)), 0.0, 1.0)
+	master_volume = clampf(float(cfg.get_value("sound", "master", 1.0)), 0.0, 1.0)
+	effects_volume = clampf(float(cfg.get_value("sound", "effects", 1.0)), 0.0, 1.0)
+	window_mode = str(cfg.get_value("graphics", "window", "window"))
+	if window_mode != "fullscreen":
+		window_mode = "window"
+	res_scale = nearest_of(RES_SCALES, float(cfg.get_value("graphics", "res_scale", 1.0)))
+	effect_overrides = {}
+	for id in cfg.get_section_keys("effects") if cfg.has_section("effects") else PackedStringArray():
+		effect_overrides[id] = bool(cfg.get_value("effects", id, true))
+	ptt_key = int(cfg.get_value("input", "ptt_key", KEY_C))
+	ui_scale = nearest_of(UI_SCALES, float(cfg.get_value("access", "ui_scale", 1.0)))
+	colour_mode = str(cfg.get_value("access", "colours", "normal"))
+	if not colour_mode in COLOUR_MODES:
+		colour_mode = "normal"
+	danger_pattern = bool(cfg.get_value("access", "pattern", false))
+	reduce_motion = bool(cfg.get_value("access", "reduce_motion", false))
 
 
 func save() -> void:
@@ -62,6 +128,17 @@ func save() -> void:
 	cfg.set_value("sound", "steps", steps_on)
 	cfg.set_value("sound", "ambience", ambience_on)
 	cfg.set_value("sound", "volume", world_volume)
+	cfg.set_value("sound", "master", master_volume)
+	cfg.set_value("sound", "effects", effects_volume)
+	cfg.set_value("graphics", "window", window_mode)
+	cfg.set_value("graphics", "res_scale", res_scale)
+	for id in effect_overrides.keys():
+		cfg.set_value("effects", str(id), bool(effect_overrides[id]))
+	cfg.set_value("input", "ptt_key", ptt_key)
+	cfg.set_value("access", "ui_scale", ui_scale)
+	cfg.set_value("access", "colours", colour_mode)
+	cfg.set_value("access", "pattern", danger_pattern)
+	cfg.set_value("access", "reduce_motion", reduce_motion)
 	var err := cfg.save(FILE)
 	if err != OK:
 		push_warning("could not save %s: %s" % [FILE, error_string(err)])
@@ -111,3 +188,165 @@ func ws_url() -> String:
 	elif u.begins_with("http://"):
 		u = "ws://" + u.substr(7)
 	return u + "/ws"
+
+
+# ---------------------------------------------------------------------------
+# M8b: the settings window's choices. Each setter keeps the value, saves it and applies it at once (no restart); the window
+# (settings_window.gd) and the headless check (settings_check.gd) both go through these.
+
+
+## The member of `list` nearest to `v`.
+static func nearest_of(list: Array, v: float) -> float:
+	var best: float = list[0]
+	for x in list:
+		if absf(float(x) - v) < absf(best - v):
+			best = float(x)
+	return best
+
+
+func _apply_all() -> void:
+	apply_window()
+	apply_ui_scale()
+	apply_volumes()
+	apply_ptt_key()
+	Quality.refresh_viewport()
+
+
+func _ensure_buses() -> void:
+	if AudioServer.get_bus_index(EFFECT_AUDIO_BUS) == -1:
+		AudioServer.add_bus()
+		var i := AudioServer.bus_count - 1
+		AudioServer.set_bus_name(i, EFFECT_AUDIO_BUS)
+		AudioServer.set_bus_send(i, "Master")
+
+
+func set_master_volume(v: float) -> void:
+	master_volume = clampf(v, 0.0, 1.0)
+	save()
+	apply_volumes()
+
+
+func set_effects_volume(v: float) -> void:
+	effects_volume = clampf(v, 0.0, 1.0)
+	save()
+	apply_volumes()
+
+
+func set_world_volume(v: float) -> void:
+	world_volume = clampf(v, 0.0, 1.0)
+	save() # (the steps and the ambience read it when they play)
+
+
+func apply_volumes() -> void:
+	_ensure_buses()
+	AudioServer.set_bus_volume_db(0, linear_to_db(master_volume))
+	AudioServer.set_bus_mute(0, master_volume <= 0.001)
+	var i := AudioServer.get_bus_index(EFFECT_AUDIO_BUS)
+	if i != -1:
+		AudioServer.set_bus_volume_db(i, linear_to_db(effects_volume))
+		AudioServer.set_bus_mute(i, effects_volume <= 0.001)
+
+
+func set_window_mode(mode: String) -> void:
+	window_mode = "fullscreen" if mode == "fullscreen" else "window"
+	save()
+	apply_window()
+
+
+func apply_window() -> void:
+	var want := DisplayServer.WINDOW_MODE_FULLSCREEN if window_mode == "fullscreen" else DisplayServer.WINDOW_MODE_WINDOWED
+	if DisplayServer.window_get_mode() != want:
+		DisplayServer.window_set_mode(want)
+
+
+func set_res_scale(v: float) -> void:
+	res_scale = nearest_of(RES_SCALES, v)
+	save()
+	Quality.refresh_viewport()
+
+
+func set_ui_scale(v: float) -> void:
+	ui_scale = nearest_of(UI_SCALES, v)
+	save()
+	apply_ui_scale()
+
+
+func apply_ui_scale() -> void:
+	var w := get_window()
+	if w != null:
+		w.content_scale_factor = ui_scale
+	for l in get_tree().get_nodes_in_group("scaled_label3d"):
+		if l is Label3D:
+			l.pixel_size = float(l.get_meta("base_px", l.pixel_size)) * ui_scale
+	ui_scale_changed.emit()
+
+
+## A Label3D (a name, a bubble, a floating number) whose size follows the UI scale; `base` is its pixel size at 100 %.
+func scaled_label(l: Label3D, base: float) -> void:
+	l.set_meta("base_px", base)
+	l.pixel_size = base * ui_scale
+	l.add_to_group("scaled_label3d")
+
+
+func set_colour_mode(mode: String) -> void:
+	colour_mode = mode if mode in COLOUR_MODES else "normal"
+	if colour_mode != "normal":
+		danger_pattern = true # the stripes are what shows danger when the colour does not
+	save()
+	access_changed.emit()
+
+
+func set_danger_pattern(on: bool) -> void:
+	danger_pattern = on
+	save()
+	access_changed.emit()
+
+
+func set_reduce_motion(on: bool) -> void:
+	reduce_motion = on
+	save()
+	access_changed.emit()
+
+
+## The hold-to-talk key, as a physical keycode.
+func set_ptt_key(keycode: int) -> void:
+	ptt_key = keycode
+	save()
+	apply_ptt_key()
+
+
+func apply_ptt_key() -> void:
+	if not InputMap.has_action("voice_ptt"):
+		return
+	InputMap.action_erase_events("voice_ptt")
+	var ev := InputEventKey.new()
+	ev.physical_keycode = ptt_key as Key
+	InputMap.action_add_event("voice_ptt", ev)
+
+
+## The key as the player reads it ("C", "F5", "Mellanslag").
+func ptt_key_name() -> String:
+	var k: Key = ptt_key as Key
+	if DisplayServer.get_name() != "headless": # (the headless server has no keyboard layout to ask)
+		var layout := DisplayServer.keyboard_get_keycode_from_physical(k)
+		if layout != KEY_NONE:
+			k = layout
+	return OS.get_keycode_string(k)
+
+
+## Is an effect (Quality.TOGGLES) on, by the preset or by hand?
+func effect_on(id: String) -> bool:
+	if effect_overrides.has(id):
+		return bool(effect_overrides[id])
+	return Quality.toggle_default(id)
+
+
+func set_effect(id: String, on: bool) -> void:
+	effect_overrides[id] = on
+	save()
+	Quality.effects_changed()
+
+
+## Back to the preset's own (picking a preset does this).
+func clear_effect_overrides() -> void:
+	effect_overrides = {}

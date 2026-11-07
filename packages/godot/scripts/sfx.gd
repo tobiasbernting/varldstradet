@@ -21,7 +21,7 @@ var muted := false
 func _ready() -> void:
 	for i in range(PLAYERS):
 		var p := AudioStreamPlayer.new()
-		p.bus = "Master"
+		p.bus = Settings.EFFECT_AUDIO_BUS
 		add_child(p)
 		_players.append(p)
 
