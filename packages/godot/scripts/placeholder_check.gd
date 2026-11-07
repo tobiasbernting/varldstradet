@@ -8,54 +8,13 @@ extends Node
 ##
 ##   godot --headless --path packages/godot -- --placeholdercheck
 
-## Object kinds that have no look of their own on a farm or wild map yet and no zone prop either: some are drawn by the dungeon view's
-## own cases (saga_wall, saga_gate, saga_torch, saga_exit, saga_plate, saga_rest, saga_chest ...) and the fixtures above prove them; the
-## wild maps' own props (banana_plant, beehive, volcano, ufo, ...) are a known gap that shows the lilac placeholder box. The list may
-## only shrink: a kind added without a look fails the check, and so does a kind listed here that now has one.
-const KNOWN_UNDRAWN := [
-	"alvlykta",
-	"banana_plant",
-	"bath_exit",
-	"beehive",
-	"bifrostbit",
-	"bones",
-	"candy_cane",
-	"cave_exit",
-	"cave_rock",
-	"cave_torch",
-	"cave_wall",
-	"crater",
-	"crystal",
-	"dino_bones",
-	"dino_skeleton",
-	"dragon_egg",
-	"dvargstaty",
-	"earth",
-	"easter_twigs",
-	"egg_basket",
-	"fairy_ring",
-	"fenrislanka",
-	"fire_crystal",
-	"flag_se",
-	"flower_wreath_decor",
-	"fossil_rock",
-	"gem_vein",
-	"ghost_flag",
-	"giant_glowshroom",
-	"giant_mushroom",
-	"gingerbread_house",
-	"gold_vein",
-	"hels_lykta",
-	"lights",
-	"lollipop_tree",
-	"moon_cheese",
-	"moon_rock",
-	"obsidian_rock",
-	"ore",
-	"ormtand",
-	"pyramid",
-	"rocket",
-	"ruin_pillar",
+## Object kinds the dungeon view draws with its own cases (dungeon_view.gd `_make_prop`: the torches, the candles, the exit
+## stairs, the gate, the rest stone, the chests, the plate, the coffins, the bones, the urns, the run's rune disc; the wall
+## tiles are its wall faces) and that no farm or wild map ever holds, so the farm's SPECS and ZoneProps rightly have no model
+## for them. The check below proves both halves: the dungeon view makes each of them without a stand-in, and none of them is an
+## object of the farm, forest or village fixture. (This is not a list of gaps: every other kind has a look, in
+## farm_assets.gd SPECS, wild_meshes.gd or zone_props.gd, and a kind added without one fails the check.)
+const DUNGEON_DRAWN := [
 	"run_exit",
 	"saga_bones",
 	"saga_candles",
@@ -68,21 +27,10 @@ const KNOWN_UNDRAWN := [
 	"saga_torch",
 	"saga_urn",
 	"saga_wall",
-	"satellite_dish",
-	"shipwreck",
-	"signpost",
-	"snowman_wild",
-	"solruna",
-	"stalagmite",
-	"star_crystal",
-	"steam_vent",
-	"temple",
-	"treasure",
-	"ufo",
-	"volcano",
-	"wisp_jar",
 ]
-const FIXTURES := ["farm", "house", "forest", "village", "draug", "frost", "surt", "hel", "dvarg", "orm", "alv", "fenrir", "loke"]
+## (the same, as the farm view's fixtures see them)
+const MAP_FIXTURES := ["farm", "forest", "village", "volcano", "mushroom", "jungle"]
+const FIXTURES := ["farm", "house", "forest", "village", "volcano", "mushroom", "jungle", "draug", "frost", "surt", "hel", "dvarg", "orm", "alv", "fenrir", "loke"]
 
 var world: WorldView
 var _bad := 0
@@ -119,6 +67,9 @@ func _run() -> void:
 	var assets := FarmAssets.new()
 	var names := 0
 	for kind in FarmAssets.SPECS.keys():
+		var lo: Variant = FarmAssets.SPECS[kind].get("lo")
+		if lo != null and assets.mesh(str(lo)) == null:
+			_fail("the cheap look of '%s' names the mesh '%s', which cannot be made" % [kind, lo])
 		for m in FarmAssets.SPECS[kind].get("m", []):
 			names += 1
 			if assets.mesh(str(m)) == null:
@@ -136,12 +87,17 @@ func _run() -> void:
 		else:
 			z.free()
 	for kind in undrawn:
-		if not KNOWN_UNDRAWN.has(kind):
-			_fail("object kind '%s' has no look on a map and no zone prop (add one in farm_assets.gd SPECS)" % kind)
-	for kind in KNOWN_UNDRAWN:
+		if not DUNGEON_DRAWN.has(kind):
+			_fail("object kind '%s' has no look on a map and no zone prop (add one in farm_assets.gd SPECS, drawn in wild_meshes.gd)" % kind)
+	for kind in DUNGEON_DRAWN:
 		if not Data.objects.has(kind) or not undrawn.has(kind):
-			_fail("'%s' is listed as undrawn but now has a look (or is gone): take it off KNOWN_UNDRAWN" % kind)
-	print("placeholdercheck: %d object kinds in the data, %d of them known to have no wild-map look yet" % [Data.objects.size(), undrawn.size()])
+			_fail("'%s' is listed as drawn by the dungeon view alone but now has a look of its own (or is gone): take it off DUNGEON_DRAWN" % kind)
+	# every kind a farm map can hold is drawn on the farm view, not only by the dungeon's zone props (a kind with a zone prop and no spec
+	# would show the lilac box on the wild map)
+	for kind in missing:
+		if not undrawn.has(kind) and not kind.begins_with("saga_"): # (the saga_* decor is the dungeons' own: the dungeon view makes it)
+			_fail("object kind '%s' is drawn only by zone_props.gd: the wild maps (farm view) would show a placeholder box for it (add a SPEC)" % kind)
+	print("placeholdercheck: %d object kinds in the data, %d drawn by the dungeon view alone, none without a look" % [Data.objects.size(), undrawn.size()])
 	for p in assets.problems:
 		_fail(p)
 	print("placeholdercheck: data: %d animals (%d vehicles), %d meshes of %d kinds" % [Data.animals.size(), vehicles, names, FarmAssets.SPECS.size()])
@@ -156,6 +112,28 @@ func _run() -> void:
 		for line in report:
 			_fail("%s: %s" % [fx, line])
 		print("placeholdercheck: %s: %d stand-ins" % [fx, report.size()])
+	# the dungeon-drawn kinds: the dungeon view (a dungeon is on screen now) makes each without a stand-in, and no map fixture holds one
+	world.dungeon.problems.clear()
+	for kind in DUNGEON_DRAWN:
+		if kind == "saga_wall":
+			continue # (a wall tile is made of wall faces, `_place` skips it; the dungeon fixtures above draw them)
+		var node: Node3D = world.dungeon._make_prop(kind, 0, 3, 3)
+		if node != null:
+			world.dungeon.add_child(node) # (the dungeon's own lights point at it: it goes with the dungeon, not freed here)
+	for p in world.dungeon.problems:
+		_fail("dungeon: %s" % p)
+	for fx in MAP_FIXTURES:
+		var f := FileAccess.open("res://assets/fixtures/%s.json" % fx, FileAccess.READ)
+		var parsed: Variant = JSON.parse_string(f.get_as_text()) if f != null else null
+		if not (parsed is Dictionary):
+			_fail("fixture %s cannot be read" % fx)
+			continue
+		for m in parsed.get("messages", []):
+			if m is Dictionary and m.get("world") is Dictionary:
+				var objs: Variant = m["world"].get("objects", {})
+				for o in (objs.values() if objs is Dictionary else objs):
+					if DUNGEON_DRAWN.has(str(o.get("kind", ""))):
+						_fail("%s: a map holds '%s', which only the dungeon view draws" % [fx, o.get("kind")])
 	if _bad == 0:
 		print("placeholdercheck: all ok")
 	(get_tree().current_scene as Main).quit_clean(0 if _bad == 0 else 1)

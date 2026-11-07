@@ -100,6 +100,12 @@ This file is only what the next agent needs: state, decisions, how the work is r
   longhouse), PR 35 (Smedjan's forge window and painting). In review/fixing: 29 sprint, 31 minimap/world map/arches,
   37 books/markers/family, 38 models for every undrawn kind, 39 GAME2 R2 (Lätt, Sagoandan), the startle check split
   (`claude/startle-split`), 28 the DESIGN.md rewrite (last).
+- **Merged later on 2026-11-07:** PR 29 (sprint 1.7×, pizza/rage boost 1.3×, a server-side move speed bound), PR 39
+  (GAME2 R2: Lätt and the Sagoandan), PR 38 (every undrawn object kind has a look; Låg/Mellan use cheap giant
+  mushrooms). Running: R3 the route (`claude/runs-r3-route`, `session_01KTh22rczdYpWVjNiqviHrd`); PR 31 and PR 37
+  re-merging main; the startle check split (`claude/startle-split`); PR 28 last.
+- **Usage limit:** at ~17:15 UTC several children stopped on the account's 5-hour limit ("resets 5:20pm UTC"). Run
+  at most 3–4 children at once; children that stop on it must be told to resume after the reset.
 - **Found, not yet fixed:** the farm's south opening (row 63, x 30–34) cannot be reached on foot: rows ~40–61 south of
   the farm are dense trees and rock (a flood fill from the spawn never gets there). A world-generation item; fold it
   into the open-world work (OPEN_WORLD.md replaces the map edges).
