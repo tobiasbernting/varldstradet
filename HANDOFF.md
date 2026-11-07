@@ -109,6 +109,14 @@ This file is only what the next agent needs: state, decisions, how the work is r
   markers and speech, Gårdsbok, journal and quest tracker, Upptäcktsboken, help, family window with "Hoppa till"), PR 31
   (minimap `M`, world map `N` with fast travel, every dungeon's own arch). Keys now: K journal, N world map, M minimap,
   Shift/left trigger run. Running: R3 the route (`claude/runs-r3-route`); PR 28 (DESIGN.md rewrite) folding main.
+- **PAUSED by the owner at ~19:10 UTC on 2026-11-07.** Everything from today is on main (last: PR 28, the DESIGN.md
+  rewrite, 667060e). Only unfinished work: GAME2 R3 (the route) on `claude/runs-r3-route`
+  (`session_01KTh22rczdYpWVjNiqviHrd`), told to push a WIP commit and stop; no PR. No check-in is scheduled.
+  **GitHub Actions has assigned no runners since ~19:01 UTC** (every job fails in 1–2 s, runner_id 0): most likely the
+  account's Actions minutes are used up; the owner checks billing. Until it runs again, verify PRs locally (install,
+  typecheck, tests, godot:gen clean, Godot import, godot:bot, --placeholdercheck) before merging.
+  To resume: read this file, check Actions, then finish R3 (merge main, review, merge), then GAME2 R4–R10 in order,
+  then OPEN_WORLD.md's phases; keep at most 3–4 children at a time (the 5-hour usage limit).
 - **Usage limit:** at ~17:15 UTC several children stopped on the account's 5-hour limit ("resets 5:20pm UTC"). Run
   at most 3–4 children at once; children that stop on it must be told to resume after the reset.
 - **Found, not yet fixed:** the farm's south opening (row 63, x 30–34) cannot be reached on foot: rows ~40–61 south of
