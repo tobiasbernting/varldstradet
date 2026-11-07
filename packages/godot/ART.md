@@ -218,7 +218,8 @@ Everything expensive is a toggle in `scripts/quality.gd`, so a scene is built on
 | Volumetric fog | off | off | on |
 | Glow | off | on | on |
 | Torch flame particles | none (a flat flame sprite) | 8 per torch | 16 per torch, plus dust motes |
-| Weather particles (rain, snow, hail; the atmosphere pass) | 150 | 900 | 2000 |
+| Weather particles in dungeons (`weather`; a third of it falls, a quarter drifts as motes) | 150 | 600 | 1500 |
+| Weather particles outdoors (`sky_weather`: rain, snow, hail; the atmosphere pass) | 150 | 900 | 2000 |
 | Screen grade (one full-screen pass, outdoors only: dungeons are not graded) | on | on | on |
 
 Låg must stay a plain forward render with a handful of unshadowed lights: that is what an Intel integrated GPU does
