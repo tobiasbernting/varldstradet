@@ -14,6 +14,10 @@ extends RefCounted
 const KENNEY := "res://assets/kenney_castle/"
 const HEX := "res://assets/kaykit_hex/"
 const DUNGEON_KAYKIT := "res://assets/kaykit/"
+const HALLOWEEN := "res://assets/kaykit_halloween/"
+const FURNITURE := "res://assets/kaykit_furniture/"
+const NATURE := "res://assets/kenney_nature/"
+const FOREST := "res://assets/kaykit_forest/"
 const PROP_SHADER := "res://assets/shaders/farm_prop.gdshader"
 const GROUND_SHADER := "res://assets/shaders/farm_ground.gdshader"
 const WATER_SHADER := "res://assets/shaders/farm_water.gdshader"
@@ -29,11 +33,16 @@ const GOLD := Color("#e8b830")
 const BONE := Color("#e2d6b8")
 const EMBER := Color("#ffa040")
 const RUNE := Color("#38d8f0")
+## The browser's lamp colours (lighting.ts): a lamp's warm light, a fire's.
+const WARM := Color(1.0, 0.66, 0.35)
+const FIRE := Color(1.0, 0.58, 0.26)
 const STONE := Color("#7c7d78")
 const STONE_DARK := Color("#5f625f")
 const THATCH := Color("#c9a24d")
 const ROOF_RED := Color("#a83a2c")
 const CLOTH := Color("#d9d2c0")
+## The rock walls' faces (Kenney cliffs) by terrain, a little lighter than their tops so the edge reads.
+const CLIFF_FACE := {"cliff_rock": Color("#9a9ea3"), "cliff_sandstone": Color("#c88a5a"), "cliff_basalt": Color("#5e5a62")}
 
 ## kind -> how it is drawn. m: mesh name (or a list the tile's hash picks from); s: scale; fit: [w, d] metres to
 ## scale an imported model into; yaw: "free" (a random turn per tile), "none"; lift: metres; node: its own node
@@ -45,8 +54,8 @@ const SPECS := {
 	"tree_pine": {"m": ["pine_a", "pine_b"], "yaw": "free", "grow": [0.85, 1.2]},
 	"tree_snow": {"m": ["pine_a", "pine_b"], "yaw": "free", "grow": [0.85, 1.2]},
 	"stump": {"m": ["stump"], "yaw": "free"},
-	"dead_tree": {"m": ["dead_a", "dead_b"], "yaw": "free", "grow": [0.9, 1.2]},
-	"saga_deadtree": {"m": ["dead_a", "dead_b"], "yaw": "free"},
+	"dead_tree": {"m": ["dead_a", "dead_b", "dead_c"], "yaw": "free", "grow": [0.9, 1.2]},
+	"saga_deadtree": {"m": ["dead_a", "dead_b", "dead_c"], "yaw": "free"},
 	"palm": {"m": ["palm"], "yaw": "free", "grow": [0.9, 1.15]},
 	"jungle_tree": {"m": ["oak_a", "oak_c"], "yaw": "free", "s": 1.3},
 	"rock": {"m": ["rock_big_a", "rock_big_b", "rock_big_c"], "yaw": "free", "grow": [0.9, 1.15]},
@@ -109,10 +118,10 @@ const SPECS := {
 	"barn": {"m": ["barn"], "front": true},
 	"stall": {"m": ["stall"], "front": true},
 	"pigsty": {"m": ["pigsty"], "front": true},
-	"lamp": {"m": ["lamp"], "node": true, "light": [Color("#ffc977"), 6.0, 1.4, 1.5, 0.15], "night": true},
-	"street_lamp": {"m": ["lamp"], "node": true, "light": [Color("#ffc977"), 7.0, 1.5, 2.2, 0.1, 12.0], "night": true},
-	"lantern": {"m": ["lantern"], "node": true, "light": [Color("#ffb55a"), 5.0, 1.2, 0.6, 0.25], "night": true},
-	"torch": {"m": ["torch"], "node": true, "light": [Color("#ff9a3c"), 5.5, 1.5, 1.3, 0.35], "night": true},
+	"lamp": {"m": ["lamp"], "node": true, "light": [WARM, 7.5, 1.6, 1.5, 0.15], "night": true},
+	"street_lamp": {"m": ["street_lamp"], "node": true, "light": [Color(1.0, 0.78, 0.5), 9.0, 1.7, 2.2, 0.1, 12.0], "night": true},
+	"lantern": {"m": ["lantern"], "node": true, "light": [WARM, 6.0, 1.4, 0.6, 0.25], "night": true},
+	"torch": {"m": ["torch"], "node": true, "light": [FIRE, 6.0, 1.7, 1.3, 0.35], "night": true},
 	"crystal_lamp": {"m": ["lantern"], "node": true, "light": [Color("#9fe8ff"), 5.0, 1.0, 0.6, 0.1]},
 	"mushroom_lamp": {"m": ["mushroom"], "node": true, "light": [Color("#ffd27a"), 4.0, 0.9, 0.5, 0.1]},
 	"wisp": {"m": ["wisp"], "node": true, "light": [Color("#bfe8ff"), 3.5, 0.9, 1.0, 0.3]},
@@ -130,16 +139,16 @@ const SPECS := {
 	"snowman": {"m": ["snowman"]},
 	"xmas_tree": {"m": ["xmas_tree"]},
 	"maypole": {"m": ["maypole"]},
-	"pumpkin_lantern": {"m": ["pumpkin"], "node": true, "light": [Color("#ff9a3c"), 3.0, 0.9, 0.4, 0.3]},
+	"pumpkin_lantern": {"m": ["jack_o_lantern"], "node": true, "light": [Color("#ff9a3c"), 3.0, 0.9, 0.4, 0.3]},
 	# --- Köpingen (city.ts): the Norse market town; its streets are ground, these are what stands on them
 	"house_small": {"m": ["house_b"], "front": true, "chimney": Vector3(0.33, 3.05, -1.02)},
 	"apartment": {"m": ["apartment"], "front": true, "chimney": Vector3(0.9, 3.7, -0.3)},
-	"shop": {"m": ["village_shop"], "node": true, "front": true, "glows": [[-0.8, 0.8, 0.95], [0.8, 0.8, 0.95]], "light": [Color("#ffc977"), 5.5, 1.2, 1.2, 0.1], "night": true},
+	"shop": {"m": ["village_shop"], "node": true, "front": true, "glows": [[-0.8, 0.8, 0.95], [0.8, 0.8, 0.95]], "light": [WARM, 6.0, 1.3, 1.2, 0.1], "night": true},
 	"market": {"m": ["market"], "front": true},
 	"sellstall": {"m": ["sell_stall"], "front": true},
-	"pizzeria": {"m": ["pizzeria"], "node": true, "front": true, "chimney": Vector3(0.7, 2.35, -0.3), "glows": [[-0.8, 0.75, 0.9], [0.8, 0.75, 0.9]], "light": [Color("#ffb55a"), 5.5, 1.3, 1.2, 0.15], "night": true},
+	"pizzeria": {"m": ["pizzeria"], "node": true, "front": true, "chimney": Vector3(0.7, 2.35, -0.3), "glows": [[-0.8, 0.75, 0.9], [0.8, 0.75, 0.9]], "light": [WARM, 6.0, 1.4, 1.2, 0.15], "night": true},
 	"bathhouse": {"m": ["bathhouse"], "front": true, "chimney": Vector3(-1.0, 2.4, -0.4)},
-	"train_station": {"m": ["station"], "node": true, "front": true, "glows": [[-0.8, 0.7, 0.75], [0.8, 0.7, 0.75]], "light": [Color("#ffd98a"), 6.0, 1.2, 1.6, 0.1], "night": true},
+	"train_station": {"m": ["station"], "node": true, "front": true, "glows": [[-0.8, 0.7, 0.75], [0.8, 0.7, 0.75]], "light": [Color(1.0, 0.78, 0.5), 7.0, 1.3, 1.6, 0.1], "night": true},
 	"traffic_light": {"m": ["traffic_light"]},
 	"parked_car": {"m": ["car_0", "car_1", "car_2"], "by_variant": true},
 	"banner_pole": {"m": ["banner_0", "banner_1", "banner_2"], "by_variant": true},
@@ -160,6 +169,7 @@ var glow_mat: ShaderMaterial ## unshaded additive glows (arch, windows' light po
 var _gtex: Dictionary = {}
 var _water_level := -1
 var _glow_tex: Texture2D
+var pool_mat: ShaderMaterial ## the light on the ground: a lamp's pool
 
 
 func _init() -> void:
@@ -167,6 +177,10 @@ func _init() -> void:
 	prop_mat.shader = load(PROP_SHADER)
 	ground_mat = ShaderMaterial.new()
 	ground_mat.shader = load(GROUND_SHADER)
+	# the Compatibility renderer converts vertex colours from sRGB once more: the shaders undo it
+	var vfix := 1.0 if RenderingServer.get_current_rendering_method() == "gl_compatibility" else 0.0
+	prop_mat.set_shader_parameter("vcol_fix", vfix)
+	ground_mat.set_shader_parameter("vcol_fix", vfix)
 	water_mat = _water(Color("#52a8d1"), Color("#1f5788"), 0.84)
 	bog_mat = _water(Color("#5d6b3a"), Color("#2f3a22"), 0.9)
 	lava_mat = _water(Color("#ff8a2a"), Color("#c03a12"), 1.0)
@@ -174,6 +188,8 @@ func _init() -> void:
 	choco_mat = _water(Color("#7a4a2a"), Color("#4a2a16"), 0.95)
 	glow_mat = ShaderMaterial.new()
 	glow_mat.shader = _glow_shader()
+	pool_mat = ShaderMaterial.new()
+	pool_mat.shader = load("res://assets/shaders/light_pool.gdshader")
 
 
 func release() -> void:
@@ -187,6 +203,7 @@ func release() -> void:
 	lava_mat = null
 	choco_mat = null
 	glow_mat = null
+	pool_mat = null
 
 
 ## The liquids' look by preset (Quality "water"): 0 the flat cheap shader, 1 and 2 the one with waves and reflections.
@@ -217,7 +234,7 @@ func _water(shallow: Color, deep: Color, alpha: float) -> ShaderMaterial:
 
 func _glow_shader() -> Shader:
 	var s := Shader.new()
-	s.code = "shader_type spatial;\nrender_mode unshaded, blend_add, depth_draw_never, cull_disabled;\nuniform vec3 colour : source_color = vec3(1.0);\nuniform float energy = 1.0;\nvoid fragment() { float d = length(UV - vec2(0.5)) * 2.0; float k = clamp(1.0 - d, 0.0, 1.0); ALBEDO = colour * energy * k * k; }\n"
+	s.code = "shader_type spatial;\nrender_mode unshaded, blend_add, depth_draw_never, cull_disabled, fog_disabled;\nuniform vec3 colour : source_color = vec3(1.0);\nuniform float energy = 1.0;\nvoid fragment() { float d = length(UV - vec2(0.5)) * 2.0; float k = clamp(1.0 - d, 0.0, 1.0); ALBEDO = colour * energy * k * k; }\n"
 	return s
 
 
@@ -230,6 +247,20 @@ func glow_quad(colour: Color, size: float, energy: float, flat := false) -> Mesh
 	var mi := MeshInstance3D.new()
 	mi.mesh = q
 	var m := glow_mat.duplicate() as ShaderMaterial
+	m.set_shader_parameter("colour", colour)
+	m.set_shader_parameter("energy", energy)
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return mi
+
+
+## Light on the ground: a round pool of `size` metres across. Laid flat; the caller puts it just above the ground.
+func pool_quad(colour: Color, size: Vector2, energy: float) -> MeshInstance3D:
+	var q := PlaneMesh.new()
+	q.size = size
+	var mi := MeshInstance3D.new()
+	mi.mesh = q
+	var m := pool_mat.duplicate() as ShaderMaterial
 	m.set_shader_parameter("colour", colour)
 	m.set_shader_parameter("energy", energy)
 	mi.material_override = m
@@ -270,6 +301,22 @@ func _make(n: String) -> ArrayMesh:
 		return _fence(int(n.substr(6)), false)
 	if n.begins_with("gatef_"):
 		return _fence(int(n.substr(6)), true)
+	if n.begins_with("pk:"):
+		# a landmark's part (landmark_models.gd): "pk:<path under assets>|<recolour>|<scale>"
+		var pk := n.substr(3).split("|")
+		return _baked("res://assets/" + pk[0], float(pk[2]), pk[1])
+	if n.begins_with("cliffwall_"):
+		# a rock wall's face (farm_view.gd): "cliffwall_<terrain>_<shape>", 1 m wide and 1 m tall, facing -Z
+		var cw := n.split("_")
+		var piece := "cliff_large_rock.glb" if cw[2] == "0" else "cliff_rock.glb"
+		return _baked(NATURE + piece, 1.0, "cliff_" + cw[1])
+	if n.begins_with("cliffboulder_"):
+		# a boulder at a rock wall's foot: "cliffboulder_<terrain>_<0..2>"
+		var cb := n.split("_")
+		var rock := ["rock_tallB.glb", "rock_tallE.glb", "rock_largeC.glb"][int(cb[2])] as String
+		return _baked(NATURE + rock, 1.0, "cliff_" + cb[1])
+	if n.begins_with("gen:"):
+		return _landmark_mesh(n.substr(4))
 	if n.begins_with("ph_"):
 		var wh := n.substr(3).split("x")
 		return _placeholder(int(wh[0]), int(wh[1]))
@@ -277,41 +324,43 @@ func _make(n: String) -> ArrayMesh:
 		var parts := n.split("_")
 		return _crop(parts[1], int(parts[2]))
 	match n:
-		"oak_a": return _oak(1.0, 1)
-		"oak_b": return _oak(1.1, 2)
-		"oak_c": return _oak(0.9, 3)
-		"apple_a": return _oak(0.95, 4, true)
-		"apple_b": return _oak(1.05, 5, true)
+		"oak_a": return _baked(FOREST + "Tree_1_A_Color1.gltf", 0.0, "forest", Vector2(1.6, 1.6))
+		"oak_b": return _baked(FOREST + "Tree_2_A_Color1.gltf", 0.0, "forest", Vector2(1.5, 1.5))
+		"oak_c": return _baked(FOREST + "Tree_3_A_Color1.gltf", 0.0, "forest", Vector2(1.5, 1.5))
+		"apple_a": return _with_fruit(_baked(FOREST + "Tree_1_B_Color1.gltf", 0.0, "forest", Vector2(1.5, 1.5)), 8, 0.09, Color("#b02a2a"), Color("#e8483a"), 4)
+		"apple_b": return _with_fruit(_baked(FOREST + "Tree_3_B_Color1.gltf", 0.0, "forest", Vector2(1.5, 1.5)), 8, 0.09, Color("#b02a2a"), Color("#e8483a"), 5)
 		"pine_a": return _baked(KENNEY + "tree-large.glb", 1.6, "pine")
 		"pine_b": return _baked(KENNEY + "tree-small.glb", 1.8, "pine")
 		"stump": return _baked(HEX + "tree_single_A_cut.gltf", 2.6, "wood")
-		"dead_a": return _dead(1.0, 1)
-		"dead_b": return _dead(1.2, 2)
-		"palm": return _palm()
+		"dead_a": return _baked(HALLOWEEN + "tree_dead_large.gltf", 0.5, "keep")
+		"dead_b": return _baked(HALLOWEEN + "tree_dead_medium.gltf", 0.55, "keep")
+		"dead_c": return _baked(HALLOWEEN + "tree_dead_small.gltf", 0.7, "keep")
+		"palm": return _baked(NATURE + "tree_palmTall.glb", 1.4, "leaf")
 		"rock_big_a": return _baked(KENNEY + "rocks-large.glb", 1.1, "stone")
 		"rock_big_b": return _baked(HEX + "rock_single_E.gltf", 3.2, "stone")
 		"rock_big_c": return _baked(HEX + "rock_single_C.gltf", 3.6, "stone")
 		"rock_small_a": return _baked(KENNEY + "rocks-small.glb", 1.2, "stone")
 		"rock_small_b": return _baked(HEX + "rock_single_B.gltf", 3.0, "stone")
 		"rock_small_c": return _baked(HEX + "rock_single_D.gltf", 3.0, "stone")
-		"bush_a": return _bush(Color("#4f8a3a"), 1)
-		"bush_b": return _bush(Color("#5a9a42"), 2)
-		"berry_blue": return _bush(Color("#4a7e3c"), 3, Color("#4a5fd0"))
-		"berry_cloud": return _bush(Color("#6b9a4a"), 4, Color("#f0a640"), 0.6)
-		"berry_ice": return _bush(Color("#6fa4a0"), 5, Color("#9fd8ff"), 0.7)
-		"pumpkin": return _pumpkin()
-		"tuft_a": return _tuft(1)
-		"tuft_b": return _tuft(2)
-		"tuft_c": return _tuft(3)
-		"flower_0": return _flower(Color("#e84a5a"), 1)
-		"flower_1": return _flower(Color("#f0d24a"), 2)
-		"flower_2": return _flower(Color("#f4f0e4"), 3)
-		"flower_3": return _flower(Color("#9a6ae0"), 4)
-		"mushroom": return _mushroom()
-		"fern": return _fern()
+		"bush_a": return _baked(NATURE + "plant_bushDetailed.glb", 1.6, "leaf", Vector2.ZERO, null, Vector3.ZERO, 0.5)
+		"bush_b": return _baked(NATURE + "plant_bushLarge.glb", 2.4, "leaf", Vector2.ZERO, null, Vector3.ZERO, 0.5)
+		"berry_blue": return _with_fruit(_baked(NATURE + "plant_bushDetailed.glb", 1.5, "leaf", Vector2.ZERO, null, Vector3.ZERO, 0.5), 8, 0.075, Color("#3a4ab0"), Color("#4a5fd0"), 3)
+		"berry_cloud": return _with_fruit(_baked(NATURE + "plant_bush.glb", 2.0, "leaf", Vector2.ZERO, null, Vector3.ZERO, 0.5), 7, 0.08, Color("#c8842a"), Color("#f0a640"), 4)
+		"berry_ice": return _with_fruit(_baked(NATURE + "plant_bushLarge.glb", 2.2, "leaf", Vector2.ZERO, null, Vector3.ZERO, 0.5), 7, 0.085, Color("#7ab8e0"), Color("#9fd8ff"), 5)
+		"pumpkin": return _baked(HALLOWEEN + "pumpkin_orange.gltf", 0.55, "keep")
+		"jack_o_lantern": return _baked(HALLOWEEN + "pumpkin_orange_jackolantern.gltf", 0.4, "lamp")
+		"tuft_a": return _baked(NATURE + "grass.glb", 1.0, "leaf", Vector2.ZERO, null, Vector3.ZERO, 1.0)
+		"tuft_b": return _baked(NATURE + "grass_large.glb", 1.0, "leaf", Vector2.ZERO, null, Vector3.ZERO, 1.0)
+		"tuft_c": return _baked(NATURE + "grass_leafs.glb", 1.5, "leaf", Vector2.ZERO, null, Vector3.ZERO, 1.0)
+		"flower_0": return _baked(NATURE + "flower_redA.glb", 1.4, "leaf", Vector2.ZERO, null, Vector3.ZERO, 1.0)
+		"flower_1": return _baked(NATURE + "flower_yellowA.glb", 1.7, "leaf", Vector2.ZERO, null, Vector3.ZERO, 1.0)
+		"flower_2": return _flower(Color("#f4f0e4"), 3) # the kit has no white flower
+		"flower_3": return _baked(NATURE + "flower_purpleA.glb", 1.4, "leaf", Vector2.ZERO, null, Vector3.ZERO, 1.0)
+		"mushroom": return _baked(NATURE + "mushroom_red.glb", 1.6, "keep")
+		"fern": return _baked(NATURE + "plant_flatTall.glb", 2.0, "leaf", Vector2.ZERO, null, Vector3.ZERO, 1.0)
 		"reed": return _reed()
 		"shell": return _shell()
-		"cactus": return _cactus()
+		"cactus": return _baked(NATURE + "cactus_tall.glb", 2.0, "plant")
 		"dig": return _dig()
 		"house": return _baked(HEX + "building_home_A_red.gltf", 0.0, "house", Vector2(4.6, 3.6))
 		"well": return _baked(HEX + "building_well_red.gltf", 0.0, "house", Vector2(1.2, 1.2))
@@ -331,7 +380,7 @@ func _make(n: String) -> ArrayMesh:
 		"workbench": return _workbench()
 		"trough": return _trough()
 		"bus_stop": return _bus_stop()
-		"cave_mouth": return _cave()
+		"cave_mouth": return _merged(_turned(_baked(NATURE + "cliff_cave_rock.glb", 2.0, "cliff", Vector2.ZERO, null, Vector3(0.0, 0.0, -0.85)), PI), _cave_dark())
 		"arch": return _arch()
 		"fardport": return RunMeshes.fardport()
 		"ygg_0": return RunMeshes.yggdrasil(0)
@@ -351,18 +400,21 @@ func _make(n: String) -> ArrayMesh:
 		"hutch": return _shed(1, 1, Color("#a8793f"), Color("#7a5230"), 0.55, 0.3)
 		"sheepfold": return _shed(2, 2, Color("#c9b28a"), Color("#7a6a50"), 0.8, 0.45)
 		"pigsty": return _shed(2, 2, Color("#b27a5a"), Color("#8a4a3a"), 0.8, 0.45)
-		"lamp": return _lamp()
-		"lantern": return _lantern()
+		# the post's lantern hangs 1 unit south of the post: the pivot puts it over the tile's middle, where the light is
+		"lamp": return _baked(HALLOWEEN + "post_lantern.gltf", 0.75, "lamp", Vector2.ZERO, Vector3(0.0, 0.0, 1.0))
+		"street_lamp": return _baked(HALLOWEEN + "post_lantern.gltf", 1.1, "lamp", Vector2.ZERO, Vector3(0.0, 0.0, 1.0))
+		"lantern": return _baked(HALLOWEEN + "lantern_standing.gltf", 0.6, "lamp")
 		"torch": return _torch()
 		"wisp": return _wisp()
 		"rug": return _rug()
-		"bed": return _bed()
-		"table": return _table()
-		"chair": return _chair()
-		"sofa": return _sofa()
+		"bed": return _baked(FURNITURE + "bed_single_A.gltf", 0.0, "keep", Vector2(0.95, 1.95))
+		"table": return _baked(FURNITURE + "table_small.gltf", 0.75, "keep")
+		"chair": return _baked(FURNITURE + "chair_A_wood.gltf", 0.6, "keep")
+		"sofa": return _baked(FURNITURE + "couch_pillows.gltf", 0.0, "keep", Vector2(1.95, 0.95))
 		"bookshelf": return _bookshelf()
-		"houseplant": return _houseplant()
-		"painting": return _painting()
+		"houseplant": return _baked(FURNITURE + "cactus_medium_A.gltf", 0.8, "keep")
+		# hung by its back (the model's origin) with its middle 1.3 m up, as the generated one was
+		"painting": return _baked(FURNITURE + "pictureframe_large_A.gltf", 0.7, "keep", Vector2.ZERO, Vector3.ZERO, Vector3(0.0, 1.3, -0.03))
 		"clock": return _clock()
 		"stove": return _stove()
 		"hay_cart": return _hay_cart()
@@ -397,7 +449,11 @@ func _make(n: String) -> ArrayMesh:
 ## middle on the origin) and scales it: by `scale`, or to fit `fit` metres (width, depth) when that is given.
 ## `recolour`: "pine" turns the pack's teal into the pine green, "stone" greys the blue, "wood" and "house" keep
 ## the pack's colours (the house gets a snow-catching roof by being plain vertex colour like the rest).
-func _baked(path: String, scale: float, recolour: String, fit := Vector2.ZERO) -> ArrayMesh:
+## `pivot` (model units), when given, is the point put at the origin instead of the foot of the middle (a frame
+## hung on a wall, a lamp post whose lantern must sit where the light is); `offset` (metres) moves the result.
+## `sway` is the wind's weight on the whole model (FarmMesh.sway: 1 grass, flowers and ferns, 0.5 bushes).
+## recolour "lamp" also marks a lantern's candle flame (bright yellow and orange) as a night glow (the window mask, 0.5).
+func _baked(path: String, scale: float, recolour: String, fit := Vector2.ZERO, pivot: Variant = null, offset := Vector3.ZERO, sway := 0.0) -> ArrayMesh:
 	var scene: Variant = load(path) if ResourceLoader.exists(path) else null
 	if not (scene is PackedScene):
 		warn_once(path, "farm: could not load %s (is the project imported?)" % path)
@@ -421,9 +477,15 @@ func _baked(path: String, scale: float, recolour: String, fit := Vector2.ZERO) -
 	if fit != Vector2.ZERO:
 		k = minf(fit.x / maxf(0.001, size.x), fit.y / maxf(0.001, size.z))
 	var mid := Vector3((lo.x + hi.x) * 0.5, lo.y, (lo.z + hi.z) * 0.5)
+	if pivot is Vector3:
+		mid = pivot
 	for i in range(verts.size()):
-		verts[i] = (verts[i] - mid) * k
-		uvs.append(Vector2(0.0, -1.0 if recolour == "pine" else 0.0)) # (pines sway as a stiff crown: farm_prop.gdshader)
+		verts[i] = (verts[i] - mid) * k + offset
+		var c := cols[i]
+		var lit := recolour == "lamp" and c.r > 0.8 and c.g > 0.18 and c.b < c.g * 0.6
+		# the foliage mask comes from _recolour, in the colour's alpha ("leaf": the Nature Kit's leaves and grass); the UV's y
+		# is the wind's sway weight (farm_prop.gdshader): plants lean from the foot up, a pine sways as a stiff crown (-1)
+		uvs.append(Vector2(0.5 if lit else c.a, -1.0 if recolour == "pine" else sway))
 	var arrays: Array = []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = verts
@@ -432,6 +494,49 @@ func _baked(path: String, scale: float, recolour: String, fit := Vector2.ZERO) -
 	arrays[Mesh.ARRAY_TEX_UV] = uvs
 	var m := ArrayMesh.new()
 	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return m
+
+
+## A baked tree or bush with fruit or berries on the outside of its leaves: `n` small blobs set on foliage
+## vertices picked by `seed_v`, pushed a little outwards. The blobs are not foliage (the season leaves them red).
+func _with_fruit(base: ArrayMesh, n: int, r: float, low: Color, high: Color, seed_v: int) -> ArrayMesh:
+	if base == null:
+		return null
+	var arr := base.surface_get_arrays(0)
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var uv: PackedVector2Array = arr[Mesh.ARRAY_TEX_UV]
+	var leaves := PackedVector3Array()
+	var top := 0.0
+	for i in range(v.size()):
+		if uv[i].x > 0.9:
+			leaves.append(v[i])
+			top = maxf(top, v[i].y)
+	if leaves.is_empty():
+		return base
+	var b := FarmMesh.new()
+	b.sway = uv[0].y if uv.size() > 0 and uv[0].y > 0.0 else 0.0 # the fruit leans with its bush
+	var placed := 0
+	var tries := 0
+	while placed < n and tries < n * 20:
+		var p := leaves[int(_rnd(seed_v, tries) * leaves.size()) % leaves.size()]
+		tries += 1
+		# on the sides and the lower half of the crown, where fruit hangs and the camera sees it
+		var side := Vector2(p.x, p.z)
+		if side.length() < 0.15 or p.y > top * 0.85:
+			continue
+		var out := Vector3(side.x, 0.0, side.y).normalized() * r * 1.3
+		b.blob(p + out, Vector3.ONE * r, 5, 2, low, high, 0.0, 0.0)
+		placed += 1
+	var extra := b.build().surface_get_arrays(0)
+	# only the four channels the props use (a mesh read back also carries tangents, which would not line up)
+	var joined: Array = []
+	joined.resize(Mesh.ARRAY_MAX)
+	for k in [Mesh.ARRAY_VERTEX, Mesh.ARRAY_NORMAL, Mesh.ARRAY_COLOR, Mesh.ARRAY_TEX_UV]:
+		var both: Variant = arr[k]
+		both.append_array(extra[k])
+		joined[k] = both
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, joined)
 	return m
 
 
@@ -448,6 +553,7 @@ func _collect(node: Node, xf: Transform3D, verts: PackedVector3Array, norms: Pac
 			var nrm: Variant = arr[Mesh.ARRAY_NORMAL]
 			var uv: Variant = arr[Mesh.ARRAY_TEX_UV]
 			var idx: Variant = arr[Mesh.ARRAY_INDEX]
+			var vcol: Variant = arr[Mesh.ARRAY_COLOR] # (the Kenney Nature Kit keeps its colours here, under a pale albedo)
 			var mat: Material = mi.get_active_material(s)
 			var img: Image = null
 			var tint := Color.WHITE
@@ -472,14 +578,16 @@ func _collect(node: Node, xf: Transform3D, verts: PackedVector3Array, norms: Pac
 					var px := clampi(int(p.x * img.get_width()), 0, img.get_width() - 1)
 					var py := clampi(int(p.y * img.get_height()), 0, img.get_height() - 1)
 					c = img.get_pixel(px, py) * tint
-				cols.append(_recolour(c, recolour))
+				if vcol is PackedColorArray and (vcol as PackedColorArray).size() == v.size():
+					c *= (vcol as PackedColorArray)[i]
+				cols.append(_recolour(c, recolour, mat.resource_name if mat != null else ""))
 	for child in node.get_children():
 		_collect(child, here, verts, norms, cols, recolour)
 
 
 ## The palette pass: the packs' colours, nudged to the ART.md palette; the result is linear with the foliage mask
 ## in alpha (0: none of the baked models is deciduous foliage).
-func _recolour(c: Color, mode: String) -> Color:
+func _recolour(c: Color, mode: String, mat_name := "") -> Color:
 	var out := c
 	if mode == "pine":
 		# the pack's teal greens become the pine's: darker, bluer than the oak's
@@ -492,7 +600,52 @@ func _recolour(c: Color, mode: String) -> Color:
 		out = out.lerp(STONE, 0.3)
 	elif mode == "wood":
 		out = c.lerp(WOOD, 0.25)
-	return FarmMesh.lin(out, 1.0)
+	elif mode == "ice":
+		out = Color("#cfe8f4").lerp(Color("#9ccbe6"), clampf(1.0 - c.get_luminance(), 0.0, 1.0))
+	elif mode == "sand":
+		out = Color("#b8a27a") * clampf(c.get_luminance() * 1.3, 0.55, 1.05)
+	elif mode == "lava":
+		out = Color("#5e5258") * clampf(c.get_luminance() * 1.5, 0.6, 1.2)
+	elif mode == "moon":
+		out = Color("#d8dcf0") * clampf(c.get_luminance() * 1.4, 0.7, 1.15)
+	elif mode == "forest":
+		# KayKit Forest: one gradient texture. Its greens are the leaves (foliage, recoloured by the season); its
+		# red-brown trunks lean to the palette's wood.
+		if c.g > c.r * 1.2 and c.g > c.b * 1.2:
+			return FarmMesh.lin(c, 1.0)
+		if c.r > c.g * 1.3:
+			out = c.lerp(WOOD, 0.6)
+	elif mode == "leaf" or mode == "plant" or mode == "kenney" or mode.begins_with("cliff"):
+		# Kenney Nature Kit: one flat (pale) colour per material, so each material takes a palette colour by name.
+		# Leaves and grass take the palette's greens (and, for "leaf", the foliage mask, so the season and the wind
+		# act on them).
+		if mat_name.begins_with("leafsDark"):
+			out = MOSS
+		elif mat_name.begins_with("leafsFall"):
+			out = WOOD_LIGHT # (the canoe's hull)
+		elif mat_name.begins_with("leafs"):
+			out = GRASS
+		elif mat_name.begins_with("grass"):
+			out = CLIFF_FACE.get(mode, STONE).lightened(0.12) if mode.begins_with("cliff_") else GRASS.lightened(0.08)
+		elif mat_name.begins_with("woodInner"):
+			out = Color("#d8b48a")
+		elif mat_name.begins_with("woodBark") or mat_name.begins_with("woodDark"):
+			out = WOOD
+		elif mat_name.begins_with("wood"):
+			out = WOOD_LIGHT
+		elif mat_name.begins_with("stoneDark"):
+			out = STONE_DARK
+		elif mat_name.begins_with("stone"):
+			out = CLIFF_FACE.get(mode, STONE.lightened(0.25)) if mode.begins_with("cliff_") else STONE.lightened(0.25)
+		elif mat_name.begins_with("dirt"):
+			out = CLIFF_FACE.get(mode, STONE_DARK) if mode.begins_with("cliff") else Color("#9a8e7e") # (the walls' rock)
+		elif mat_name.begins_with("water"):
+			out = Color("#5ab4de")
+		elif mat_name.begins_with("colorRed"):
+			out = Color("#c8473a")
+		var green := mat_name.begins_with("leafs") or mat_name.begins_with("grass")
+		return FarmMesh.lin(out, 1.0 if green and mode == "leaf" else 0.0)
+	return FarmMesh.lin(out, 0.0)
 
 
 # ---------------------------------------------------------------------------
@@ -503,74 +656,6 @@ func _rnd(seed_v: float, i: float) -> float:
 	return fposmod(sin((seed_v * 31.7 + i * 7.13) * 12.9898) * 43758.5453, 1.0)
 
 
-func _oak(size_k: float, seed_v: int, apples := false) -> ArrayMesh:
-	var b := FarmMesh.new()
-	var trunk_h := 0.75 * size_k
-	b.cylinder(Vector3.ZERO, 0.17 * size_k, 0.11 * size_k, trunk_h, 6, WOOD.darkened(0.15), WOOD, 0.0)
-	var low := Color("#2f6a2c")
-	var high := Color("#88c456")
-	# the crown: one big blob and three smaller on top and to the sides
-	b.blob(Vector3(0.0, trunk_h + 0.55 * size_k, 0.0), Vector3(0.8, 0.62, 0.8) * size_k, 7, 4, low, high, 1.0, 0.1, seed_v)
-	b.blob(Vector3(0.35 * size_k, trunk_h + 0.35 * size_k, 0.15 * size_k), Vector3(0.5, 0.4, 0.5) * size_k, 6, 3, low, high, 1.0, 0.1, seed_v + 1.0)
-	b.blob(Vector3(-0.3 * size_k, trunk_h + 0.9 * size_k, -0.1 * size_k), Vector3(0.5, 0.42, 0.5) * size_k, 6, 3, low, high, 1.0, 0.1, seed_v + 2.0)
-	if apples:
-		for i in range(6):
-			var a := TAU * (i + _rnd(seed_v, i)) / 6.0
-			var r := 0.7 * size_k
-			var y := trunk_h + (0.35 + 0.4 * _rnd(seed_v, i + 9)) * size_k
-			b.blob(Vector3(cos(a) * r * 0.85, y, sin(a) * r * 0.85), Vector3.ONE * 0.075, 5, 2, Color("#b02a2a"), Color("#e8483a"), 0.0, 0.0)
-	return b.build()
-
-
-func _dead(size_k: float, seed_v: int) -> ArrayMesh:
-	var b := FarmMesh.new()
-	var col := Color("#6a5848")
-	b.cylinder(Vector3.ZERO, 0.17 * size_k, 0.08 * size_k, 1.5 * size_k, 5, col.darkened(0.2), col, 0.0)
-	for i in range(4):
-		var a := TAU * (i + _rnd(seed_v, i)) / 4.0
-		var y := (0.7 + 0.25 * i) * size_k
-		b.blade(Vector3(0.0, y, 0.0), Vector3(cos(a) * 0.7, y + 0.55, sin(a) * 0.7) * size_k * Vector3(1, 1, 1), 0.1, col, col.lightened(0.1), 0.0, a)
-	return b.build()
-
-
-func _palm() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.cylinder(Vector3.ZERO, 0.14, 0.09, 1.7, 5, Color("#8a6a40"), Color("#a8844e"), 0.0)
-	for i in range(6):
-		var a := TAU * i / 6.0
-		b.blade(Vector3(0.0, 1.65, 0.0), Vector3(cos(a) * 0.95, 1.5, sin(a) * 0.95), 0.34, Color("#3a8a3a"), Color("#74c04e"), 1.0, a)
-	return b.build()
-
-
-func _bush(col: Color, seed_v: int, berry := Color(-1, 0, 0), berry_k := 0.5) -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.sway = 0.5
-	b.blob(Vector3(0.0, 0.28, 0.0), Vector3(0.45, 0.32, 0.45), 6, 3, col.darkened(0.3), col.lightened(0.18), 1.0, 0.12, seed_v)
-	b.blob(Vector3(0.22, 0.2, 0.1), Vector3(0.28, 0.22, 0.28), 5, 2, col.darkened(0.3), col.lightened(0.1), 1.0, 0.1, seed_v + 1.0)
-	if berry.r >= 0.0:
-		for i in range(7):
-			var a := TAU * (i + _rnd(seed_v, i)) / 7.0
-			b.blob(Vector3(cos(a) * 0.4, 0.2 + 0.25 * _rnd(seed_v, i + 4), sin(a) * 0.4), Vector3.ONE * 0.05 * (1.0 + berry_k), 4, 2, berry.darkened(0.2), berry, 0.0, 0.0)
-	return b.build()
-
-
-func _pumpkin() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.blob(Vector3(0.0, 0.18, 0.0), Vector3(0.28, 0.2, 0.28), 8, 4, Color("#c8561a"), Color("#f08a2a"), 0.0, 0.0)
-	b.cylinder(Vector3(0.0, 0.36, 0.0), 0.04, 0.03, 0.1, 4, Color("#4a7a2a"), Color("#4a7a2a"), 0.0)
-	return b.build()
-
-
-func _tuft(seed_v: int) -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.sway = 1.0
-	for i in range(5):
-		var a := TAU * (i + _rnd(seed_v, i)) / 5.0
-		var h := 0.2 + 0.18 * _rnd(seed_v, i + 3)
-		b.blade(Vector3(cos(a) * 0.05, 0.0, sin(a) * 0.05), Vector3(cos(a) * 0.14, h, sin(a) * 0.14), 0.07, GRASS.darkened(0.25), GRASS.lightened(0.15), 1.0, a)
-	return b.build()
-
-
 func _flower(petal: Color, seed_v: int) -> ArrayMesh:
 	var b := FarmMesh.new()
 	b.sway = 1.0
@@ -578,23 +663,6 @@ func _flower(petal: Color, seed_v: int) -> ArrayMesh:
 	b.blade(Vector3(0.0, 0.1, 0.0), Vector3(0.1, 0.2, 0.0), 0.08, GRASS.darkened(0.1), GRASS.lightened(0.1), 1.0, 0.4 * seed_v)
 	b.blob(Vector3(0.0, 0.33, 0.0), Vector3(0.1, 0.05, 0.1), 5, 2, petal.darkened(0.15), petal, 0.0, 0.0)
 	b.blob(Vector3(0.0, 0.36, 0.0), Vector3(0.035, 0.03, 0.035), 4, 2, Color("#e8b830"), Color("#f4d060"), 0.0, 0.0)
-	return b.build()
-
-
-func _mushroom() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.cylinder(Vector3.ZERO, 0.05, 0.04, 0.16, 5, BONE.darkened(0.1), BONE, 0.0)
-	b.cone(Vector3(0.0, 0.13, 0.0), 0.15, 0.1, 7, Color("#c8402a"), Color("#e86a4a"), 0.0)
-	b.blob(Vector3(0.05, 0.22, 0.03), Vector3.ONE * 0.025, 4, 2, Color("#f4f0e4"), Color("#ffffff"), 0.0, 0.0)
-	return b.build()
-
-
-func _fern() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.sway = 1.0
-	for i in range(6):
-		var a := TAU * i / 6.0
-		b.blade(Vector3.ZERO, Vector3(cos(a) * 0.32, 0.28, sin(a) * 0.32), 0.1, Color("#2f6a2c"), Color("#6aa84a"), 1.0, a)
 	return b.build()
 
 
@@ -611,14 +679,6 @@ func _reed() -> ArrayMesh:
 func _shell() -> ArrayMesh:
 	var b := FarmMesh.new()
 	b.blob(Vector3(0.0, 0.05, 0.0), Vector3(0.12, 0.06, 0.1), 6, 2, Color("#e8b0a0"), Color("#f8e0d4"), 0.0, 0.0)
-	return b.build()
-
-
-func _cactus() -> ArrayMesh:
-	var b := FarmMesh.new()
-	var col := Color("#4a8a4a")
-	b.cylinder(Vector3.ZERO, 0.17, 0.15, 0.9, 6, col.darkened(0.15), col, 0.0)
-	b.cylinder(Vector3(0.17, 0.4, 0.0), 0.08, 0.07, 0.3, 5, col.darkened(0.1), col, 0.0)
 	return b.build()
 
 
@@ -698,6 +758,55 @@ func _fence(mask: int, gate: bool) -> ArrayMesh:
 	if gate:
 		# the gate's own bar, swung open to one side
 		b.box(Vector3(0.22, 0.4, 0.1), Vector3(0.05, 0.3, 0.36), col.lightened(0.05), 0.0, 0.5)
+	return b.build()
+
+
+## The landmarks' generated pieces, for what no pack has (landmark_models.gd names them `gen:<name>`).
+func _landmark_mesh(n: String) -> ArrayMesh:
+	var b := FarmMesh.new()
+	match n:
+		"eggs", "eggs_big":
+			var k := 1.0 if n == "eggs" else 2.6
+			for i in range(3):
+				var a := TAU * i / 3.0 + 0.4
+				var c := Color("#f2ead8") if i != 1 else Color("#d8e8c0")
+				b.blob(Vector3(cos(a), 0.0, sin(a)) * 0.13 * k + Vector3(0.0, 0.14 * k, 0.0), Vector3(0.11, 0.15, 0.11) * k, 7, 4, c.darkened(0.15), c, 0.0, 0.0)
+		"wisp":
+			b.blob(Vector3(0.0, 0.9, 0.0), Vector3.ONE * 0.09, 5, 3, Color("#9fd8ff"), Color("#ffffff"), 0.5, 0.0)
+		"tar":
+			b.cylinder(Vector3(0.0, -0.02, 0.0), 1.25, 1.25, 0.05, 12, Color("#1c1a1e"), Color("#2a262c"), 0.0)
+			for i in range(5):
+				var a := TAU * i / 5.0 + 0.3
+				b.blob(Vector3(cos(a) * 0.6, 0.04, sin(a) * 0.5), Vector3(0.12, 0.06, 0.12), 5, 2, Color("#2a262c"), Color("#4a4250"), 0.0, 0.0)
+		"embers":
+			b.cylinder(Vector3(0.0, 0.0, 0.0), 0.75, 0.6, 0.12, 10, Color("#5e5258"), Color("#6e6268"), 0.0)
+			for i in range(7):
+				var a := TAU * i / 7.0
+				b.blob(Vector3(cos(a) * 0.35, 0.14, sin(a) * 0.35), Vector3(0.16, 0.08, 0.16), 5, 2, Color("#c8401a"), Color("#ff9a3c"), 0.5, 0.0)
+			b.blob(Vector3(0.0, 0.16, 0.0), Vector3(0.22, 0.1, 0.22), 5, 2, Color("#e86a2a"), Color("#ffc870"), 0.5, 0.0)
+		"pond":
+			b.cylinder(Vector3(0.0, 0.01, 0.0), 1.0, 1.0, 0.02, 14, Color("#3f8fc0"), Color("#5ab4de"), 0.0)
+		"icecream":
+			b.cone(Vector3(0.0, 0.0, 0.0), 0.75, 2.2, 10, Color("#c8904a"), Color("#e8b870"), 0.0, 1.0)
+			b.blob(Vector3(0.0, 2.45, 0.0), Vector3(1.05, 0.7, 1.05), 9, 5, Color("#e87ab8"), Color("#f8b8d8"), 0.0, 0.05)
+			b.blob(Vector3(0.0, 3.1, 0.0), Vector3(0.8, 0.55, 0.8), 9, 5, Color("#f4ecd0"), Color("#ffffff"), 0.0, 0.05)
+			b.blob(Vector3(0.0, 3.6, 0.0), Vector3(0.18, 0.18, 0.18), 6, 3, Color("#c8202a"), Color("#f04a4a"), 0.0, 0.0)
+		"fountain":
+			var choc := Color("#6a3a1e")
+			b.cylinder(Vector3.ZERO, 1.35, 1.35, 0.4, 14, Color("#e8d0b0"), Color("#f4e2c8"), 0.0)
+			b.cylinder(Vector3(0.0, 0.4, 0.0), 1.2, 1.2, 0.03, 14, choc, choc.lightened(0.1), 0.0)
+			b.cylinder(Vector3(0.0, 0.4, 0.0), 0.18, 0.14, 1.0, 8, Color("#e8d0b0"), Color("#f4e2c8"), 0.0)
+			b.cylinder(Vector3(0.0, 1.4, 0.0), 0.7, 0.7, 0.2, 12, Color("#e8d0b0"), Color("#f4e2c8"), 0.0)
+			b.cylinder(Vector3(0.0, 1.6, 0.0), 0.62, 0.62, 0.03, 12, choc, choc.lightened(0.1), 0.0)
+			b.blob(Vector3(0.0, 1.85, 0.0), Vector3(0.25, 0.3, 0.25), 7, 4, choc, choc.lightened(0.15), 0.0, 0.0)
+		"satellite":
+			b.box(Vector3(0.0, 0.5, 0.0), Vector3(0.8, 0.8, 0.8), Color("#c8ccd4"), 0.0, 0.3, Color("#e8ecf0"))
+			b.box(Vector3(1.05, 0.55, 0.0), Vector3(1.2, 0.05, 0.6), Color("#2a4a9a"), 0.0, 0.3, Color("#4a7ad8"))
+			b.box(Vector3(-1.05, 0.45, 0.0), Vector3(1.2, 0.05, 0.6), Color("#2a4a9a"), 0.0, 0.3, Color("#4a7ad8"))
+			b.cone(Vector3(0.0, 0.9, 0.0), 0.35, 0.3, 8, Color("#e8ecf0"), Color("#ffffff"), 0.0)
+			b.blob(Vector3(0.0, 1.25, 0.0), Vector3.ONE * 0.08, 5, 3, Color("#ff4a4a"), Color("#ffa0a0"), 0.5, 0.0)
+		_:
+			return null
 	return b.build()
 
 
@@ -801,14 +910,55 @@ func _bus_stop() -> ArrayMesh:
 	return b.build()
 
 
-func _cave() -> ArrayMesh:
+## The dark inside behind the Kenney cliff's cave opening (the cliff is a thin wall with a hole, set on the
+## footprint's front edge so the rock wall's front row does not hide it).
+func _cave_dark() -> ArrayMesh:
 	var b := FarmMesh.new()
-	var col := STONE_DARK
-	b.blob(Vector3(-0.55, 0.45, 0.0), Vector3(0.55, 0.5, 0.7), 7, 4, col.darkened(0.2), col.lightened(0.12), 0.0, 0.12, 3.0)
-	b.blob(Vector3(0.55, 0.45, 0.0), Vector3(0.55, 0.5, 0.7), 7, 4, col.darkened(0.2), col.lightened(0.12), 0.0, 0.12, 4.0)
-	b.blob(Vector3(0.0, 1.0, -0.15), Vector3(1.0, 0.45, 0.75), 8, 4, col.darkened(0.15), col.lightened(0.15), 0.0, 0.1, 5.0)
-	b.box(Vector3(0.0, 0.4, 0.2), Vector3(0.7, 0.8, 0.5), Color("#14121a"), 0.0)
+	b.box(Vector3(0.0, 0.45, 0.55), Vector3(0.9, 0.9, 0.4), Color("#14121a"), 0.0)
 	return b.build()
+
+
+## A mesh turned `yaw` radians about Y (the Kenney cliff pieces face -Z; the props face +Z).
+func _turned(m: ArrayMesh, yaw: float) -> ArrayMesh:
+	if m == null:
+		return null
+	var arr := m.surface_get_arrays(0)
+	var basis := Basis(Vector3.UP, yaw)
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var nrm: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+	for i in range(v.size()):
+		v[i] = basis * v[i]
+		nrm[i] = basis * nrm[i]
+	return _surface(v, nrm, arr[Mesh.ARRAY_COLOR], arr[Mesh.ARRAY_TEX_UV])
+
+
+## Two prop meshes as one (their four channels joined).
+func _merged(a: ArrayMesh, b: ArrayMesh) -> ArrayMesh:
+	if a == null or b == null:
+		return a if b == null else b
+	var x := a.surface_get_arrays(0)
+	var y := b.surface_get_arrays(0)
+	var v: PackedVector3Array = x[Mesh.ARRAY_VERTEX]
+	var n: PackedVector3Array = x[Mesh.ARRAY_NORMAL]
+	var c: PackedColorArray = x[Mesh.ARRAY_COLOR]
+	var uv: PackedVector2Array = x[Mesh.ARRAY_TEX_UV]
+	v.append_array(y[Mesh.ARRAY_VERTEX])
+	n.append_array(y[Mesh.ARRAY_NORMAL])
+	c.append_array(y[Mesh.ARRAY_COLOR])
+	uv.append_array(y[Mesh.ARRAY_TEX_UV])
+	return _surface(v, n, c, uv)
+
+
+func _surface(v: PackedVector3Array, n: PackedVector3Array, c: PackedColorArray, uv: PackedVector2Array) -> ArrayMesh:
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = v
+	arrays[Mesh.ARRAY_NORMAL] = n
+	arrays[Mesh.ARRAY_COLOR] = c
+	arrays[Mesh.ARRAY_TEX_UV] = uv
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return m
 
 
 ## The dungeon's arch: two pillars, a lintel with a rune band, and a dark doorway; the glow in it is the node's.
@@ -875,22 +1025,6 @@ func _shed(w: int, d: int, wall: Color, roof: Color, height: float, door_h: floa
 	return b.build()
 
 
-func _lamp() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.cylinder(Vector3.ZERO, 0.06, 0.04, 1.9, 5, IRON, IRON, 0.0)
-	b.box(Vector3(0.0, 2.0, 0.0), Vector3(0.26, 0.26, 0.26), Color("#ffd98a"), 0.5)
-	b.cone(Vector3(0.0, 2.13, 0.0), 0.22, 0.14, 4, IRON, IRON, 0.0)
-	return b.build()
-
-
-func _lantern() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.box(Vector3(0.0, 0.2, 0.0), Vector3(0.24, 0.4, 0.24), Color("#ffd98a"), 0.5)
-	b.box(Vector3(0.0, 0.02, 0.0), Vector3(0.3, 0.05, 0.3), IRON, 0.0)
-	b.cone(Vector3(0.0, 0.4, 0.0), 0.2, 0.12, 4, IRON, IRON, 0.0)
-	return b.build()
-
-
 func _torch() -> ArrayMesh:
 	var b := FarmMesh.new()
 	b.cylinder(Vector3.ZERO, 0.05, 0.04, 1.2, 5, WOOD.darkened(0.1), WOOD, 0.0)
@@ -911,41 +1045,6 @@ func _rug() -> ArrayMesh:
 	return b.build()
 
 
-func _bed() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.box(Vector3(0.0, 0.2, 0.0), Vector3(0.9, 0.4, 1.9), WOOD, 0.0, 0.0, WOOD.lightened(0.1))
-	b.box(Vector3(0.0, 0.5, 0.15), Vector3(0.8, 0.22, 1.5), Color("#4a78c8"), 0.0, 0.0, Color("#6a98e0"))
-	b.box(Vector3(0.0, 0.58, -0.7), Vector3(0.6, 0.14, 0.34), CLOTH, 0.0)
-	return b.build()
-
-
-func _table() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.box(Vector3(0.0, 0.68, 0.0), Vector3(0.95, 0.08, 0.95), WOOD_LIGHT, 0.0, 0.0, WOOD_LIGHT.lightened(0.08))
-	for x in [-0.4, 0.4]:
-		for z in [-0.4, 0.4]:
-			b.box(Vector3(x, 0.32, z), Vector3(0.08, 0.64, 0.08), WOOD.darkened(0.1), 0.0)
-	return b.build()
-
-
-func _chair() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.box(Vector3(0.0, 0.34, 0.0), Vector3(0.44, 0.06, 0.44), WOOD_LIGHT, 0.0)
-	b.box(Vector3(0.0, 0.62, -0.2), Vector3(0.44, 0.5, 0.05), WOOD_LIGHT.darkened(0.08), 0.0)
-	for x in [-0.18, 0.18]:
-		for z in [-0.18, 0.18]:
-			b.box(Vector3(x, 0.16, z), Vector3(0.05, 0.32, 0.05), WOOD.darkened(0.1), 0.0)
-	return b.build()
-
-
-func _sofa() -> ArrayMesh:
-	var b := FarmMesh.new()
-	var c := Color("#6a8a5a")
-	b.box(Vector3(0.0, 0.3, 0.0), Vector3(1.9, 0.5, 0.8), c, 0.0, 0.0, c.lightened(0.1))
-	b.box(Vector3(0.0, 0.7, -0.3), Vector3(1.9, 0.5, 0.22), c.darkened(0.1), 0.0)
-	return b.build()
-
-
 func _bookshelf() -> ArrayMesh:
 	var b := FarmMesh.new()
 	b.box(Vector3(0.0, 0.95, 0.0), Vector3(0.95, 1.9, 0.4), WOOD.darkened(0.1), 0.0, 0.0, WOOD)
@@ -953,23 +1052,6 @@ func _bookshelf() -> ArrayMesh:
 	for row in range(4):
 		for i in range(6):
 			b.box(Vector3(-0.38 + 0.15 * i, 0.3 + 0.42 * row, 0.2), Vector3(0.1, 0.3, 0.05), cols[(i + row) % 4], 0.0)
-	return b.build()
-
-
-func _houseplant() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.cylinder(Vector3.ZERO, 0.18, 0.14, 0.3, 6, Color("#a8602a"), Color("#c8783a"), 0.0)
-	for i in range(6):
-		var a := TAU * i / 6.0
-		b.blade(Vector3(0.0, 0.3, 0.0), Vector3(cos(a) * 0.3, 0.75, sin(a) * 0.3), 0.14, Color("#2f6a2c"), Color("#6aa84a"), 0.0, a)
-	return b.build()
-
-
-func _painting() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.box(Vector3(0.0, 1.3, 0.0), Vector3(0.8, 0.6, 0.06), WOOD, 0.0)
-	b.box(Vector3(0.0, 1.3, 0.03), Vector3(0.64, 0.46, 0.04), Color("#7ab0d8"), 0.0)
-	b.box(Vector3(0.0, 1.18, 0.05), Vector3(0.64, 0.2, 0.02), Color("#4f8a3a"), 0.0)
 	return b.build()
 
 

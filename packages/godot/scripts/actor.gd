@@ -19,12 +19,31 @@ const FOOT_LIFT := 0.03
 ## themselves by where they stand.
 const PULL := Vector3(0.0, 0.38, 0.33)
 const WALK_FPS := 6.0
+## The Adventurers' figures: their rig's animations (names are `library/animation`; the libraries are _libs()).
+## The Adventurers' basic rigs have no melee swing: the throw stands in for a lunge, the interaction for a tool.
+const DEFAULT_RIG := {"idle": "General/Idle_A", "walk": "Move/Walking_A", "death": "General/Death_A", "attack": "General/Throw", "hit": "General/Hit_A", "use": "General/Interact"}
+const ICE_TINT := Color(0.55, 0.8, 1.0, 0.4)
+const FALLEN_FX := Color(0.3, 0.3, 0.4, 0.38)
+## How far a voxel body turns toward a walk up or down the screen (radians), at most.
+const VOXEL_TURN := 0.61
 const BAR_BACK_PRIORITY := 10
 const BAR_FILL_PRIORITY := 11
 const SWING_TIME := 0.26
 const FALLEN_TINT := Color(0.62, 0.62, 0.72)
 
+## How far the people outdoors are lifted at night, 0..1 (world.gd sets it from the dark: 0 by day, indoors and in
+## dungeons, whose darkness is by design). The sprite's own emission, about 40 % of its day brightness at full dark.
+static var night_lift := 0.0
+const NIGHT_EMISSION := 0.4
+## A figure's night lift is a small part of the sprite's: the pack's textures are bright, the lantern lights them, and
+## the emission must stay far below the glow pass's threshold (albedo × energy well under 0.5).
+const FIGURE_NIGHT_EMISSION := NIGHT_EMISSION * 0.12
+## The hero's own figure takes no night lift: the lantern lights them.
+var night_exempt := false
+
 var sprite: Sprite3D
+var _mat: StandardMaterial3D ## the sprite's material, so it can glow a little at night
+var _lift := -1.0
 var label: Label3D
 var _frames: Array = []
 var _frame_w := 16
@@ -52,6 +71,29 @@ var _marker_t := 0.0
 var _tool: Sprite3D = null
 var _swing_t := 0.0
 var _swing_side := 1.0
+## The 3D trial (`--people3d`): a KayKit Adventurers figure in place of the pixel sprite, or null.
+var model: Node3D = null
+var _anim: AnimationPlayer = null
+var _played := "" ## the last animation asked for (a finished one-shot clip leaves `current_animation` empty, so that cannot be compared)
+var _model_h := 0.0
+var _yaw := 0.0
+var _rig := {} ## the animations this figure plays: idle, walk, death, attack, hit (set_figure's `rig`)
+var _fx_mat: StandardMaterial3D = null ## the flash and tint laid over a figure's meshes (material_overlay)
+var _fx_colour := Color(0.0, 0.0, 0.0, 0.0)
+var _model_meshes: Array = []
+var _model_mats: Array = [] ## this figure's own copies of its materials, glowing a little at night
+var _once_t := 0.0 ## seconds left of a one-shot animation (attack, hit), during which idle and walk wait
+static var _anim_libs: Array = [] ## AnimationLibrary, loaded once from the pack's two rig files
+## The voxel body (`--people3d`, voxel_body.gd): a creature's sprite frames extruded into meshes, or null.
+var voxel: MeshInstance3D = null
+var _vframes: Array[ArrayMesh] = []
+var _vmat: ShaderMaterial = null
+var _vframe := -1
+var _vyaw := 0.0
+var _vt := 0.0
+var _vh := 0.0 ## the body's height, its width and its greatest half-depth, metres
+var _vw := 0.0
+var _vd := 0.0
 
 
 func _init() -> void:
@@ -61,6 +103,17 @@ func _init() -> void:
 	sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
 	sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	sprite.pixel_size = PIXEL
+	_mat = StandardMaterial3D.new()
+	_mat.billboard_mode = BaseMaterial3D.BILLBOARD_FIXED_Y
+	_mat.billboard_keep_scale = true
+	_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+	_mat.alpha_scissor_threshold = 0.5
+	_mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_mat.vertex_color_use_as_albedo = true
+	_mat.emission_enabled = true
+	_mat.emission_energy_multiplier = 0.0
+	sprite.material_override = _mat
 	add_child(sprite)
 	label = Label3D.new()
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -96,6 +149,7 @@ func set_texture(tex: Texture2D, frame_names: Array, fw: int, fh: int, headroom:
 	_headroom = headroom
 	_side_only = not _frames.has("down0")
 	sprite.texture = tex
+	_set_mat_texture(tex)
 	sprite.region_enabled = true
 	sprite.position = Vector3(0.0, _frame_h * PIXEL / 2.0 + FOOT_LIFT, 0.0) + PULL
 	label.position.y = (_frame_h - _headroom) * PIXEL + 0.3
@@ -106,6 +160,7 @@ func _placeholder() -> void:
 	var img := Image.create(16, 24, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0.8, 0.3, 0.8))
 	sprite.texture = ImageTexture.create_from_image(img)
+	_set_mat_texture(sprite.texture)
 	sprite.region_enabled = false
 	sprite.position = Vector3(0.0, 24 * PIXEL / 2.0 + FOOT_LIFT, 0.0) + PULL
 	label.position.y = 24 * PIXEL + 0.3
@@ -115,6 +170,190 @@ func _placeholder() -> void:
 	_headroom = 0
 
 
+## The 3D trial: shows a figure on the shared Rig_Medium skeleton (Figure3D.build()) instead of the sprite,
+## `height_m` tall, with the pack's idle, walk and death animations. `key` names the look, so the same look is not
+## rebuilt; a null figure keeps the sprite and returns false.
+func set_figure(figure: Node3D, key: String, height_m := 1.5, rig := {}) -> bool:
+	if model != null and model.get_meta("key", "") == key:
+		if figure != null:
+			figure.free()
+		return true
+	if figure == null:
+		return false
+	if model != null:
+		model.queue_free()
+	model = figure
+	model.set_meta("key", key)
+	var top := 0.0
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		top = maxf(top, (mi as MeshInstance3D).get_aabb().end.y)
+	var k := height_m / maxf(0.1, top)
+	model.scale = Vector3.ONE * k
+	_model_meshes = model.find_children("*", "MeshInstance3D", true, false)
+	_own_materials()
+	_model_h = height_m
+	add_child(model)
+	_anim = AnimationPlayer.new()
+	_played = ""
+	model.add_child(_anim)
+	_anim.root_node = NodePath("..")
+	_rig = DEFAULT_RIG.merged(rig, true)
+	for lib in (_rig["libs"] if _rig.has("libs") else _libs()):
+		_anim.add_animation_library(str(lib.get_meta("name")), lib)
+	sprite.visible = false
+	label.position.y = height_m + 0.3
+	_lift = -1.0 # the next tick writes the night lift and the fx overlay to the new materials
+	_fx_colour = Color(0.0, 0.0, 0.0, 0.0)
+	_play(_rig["idle"])
+	return true
+
+
+## The 3D trial for creatures: a body of voxels (VoxelBody.frames()) in place of the sprite, with the frames of the
+## sheet in order (walking swaps between them). `key` names the sheet, so the same body is not set twice. An empty
+## list keeps the sprite and returns false.
+func set_voxel(frames: Array[ArrayMesh], key: String) -> bool:
+	if voxel != null and voxel.get_meta("key", "") == key:
+		return true
+	if frames.is_empty():
+		return false
+	if voxel == null:
+		voxel = MeshInstance3D.new()
+		_vmat = VoxelBody.material()
+		voxel.material_override = _vmat
+		add_child(voxel)
+	voxel.set_meta("key", key)
+	_vframes = frames
+	_vh = 0.0
+	_vw = 0.0
+	_vd = 0.0
+	for f in frames:
+		var bb := f.get_aabb()
+		_vh = maxf(_vh, bb.end.y)
+		_vw = maxf(_vw, bb.size.x)
+		_vd = maxf(_vd, bb.end.z)
+	_vframe = -1
+	_show_voxel(0)
+	voxel.position = Vector3(0.0, FOOT_LIFT, 0.0)
+	sprite.visible = false
+	label.position.y = _vh + 0.3
+	_lift = -1.0
+	_fx_colour = Color(0.0, 0.0, 0.0, 0.0)
+	return true
+
+
+func has_voxel(key: String) -> bool:
+	return voxel != null and voxel.get_meta("key", "") == key
+
+
+func _show_voxel(i: int) -> void:
+	if i != _vframe:
+		_vframe = i
+		voxel.mesh = _vframes[i]
+
+
+## The voxel body turned toward where it faces: the sprites are side views facing right, so it yaws to right or left
+## (a mirror by yaw, not by scale) and turns at most VOXEL_TURN further toward a walk up or down the screen, so a
+## pillow never shows its head-on end.
+func _animate_voxel(facing: String, moving: bool, delta: float) -> void:
+	if pose == "down":
+		return
+	if facing == "left" or facing == "right":
+		_last_facing = facing
+	var want := 0.0 if _last_facing == "right" else PI
+	if moving:
+		# toward the camera (down) or away (up): +z is the way the camera sits
+		var s := 1.0 if _last_facing == "left" else -1.0
+		if facing == "down":
+			want += s * VOXEL_TURN
+		elif facing == "up":
+			want -= s * VOXEL_TURN
+	_vyaw = lerp_angle(_vyaw, want, 1.0 - pow(0.001, delta))
+	_vt += delta
+	_show_voxel(int(_anim_t * WALK_FPS) % _vframes.size() if moving else 0)
+	# standing breathes: the height swells and settles by 2 %
+	var breath := 0.0 if moving else 0.02 * sin(_vt * 2.4)
+	voxel.basis = Basis(Vector3.UP, _vyaw) * Basis.from_scale(Vector3(1.0, 1.0 + breath, 1.0))
+
+
+## Gives the figure its own copy of every material (the looks share them between actors), with the texture as an
+## emission map at no strength: the night lift raises it.
+func _own_materials() -> void:
+	_model_mats = []
+	for mi in _model_meshes:
+		var m := mi as MeshInstance3D
+		if m.material_override is StandardMaterial3D:
+			m.material_override = _glow_copy(m.material_override as StandardMaterial3D)
+		elif m.mesh != null:
+			for i in range(m.mesh.get_surface_count()):
+				var src := m.get_active_material(i) as StandardMaterial3D
+				if src != null:
+					m.set_surface_override_material(i, _glow_copy(src))
+
+
+func _glow_copy(src: StandardMaterial3D) -> StandardMaterial3D:
+	var d := src.duplicate() as StandardMaterial3D
+	if not d.emission_enabled and d.albedo_texture != null:
+		d.emission_enabled = true
+		d.emission = Color.WHITE
+		d.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY # the texture's own colour, not the texture plus white
+		d.emission_texture = d.albedo_texture
+		d.emission_energy_multiplier = 0.0
+		_model_mats.append(d)
+	return d
+
+
+func has_figure(key: String) -> bool:
+	return model != null and model.get_meta("key", "") == key
+
+
+static func _libs() -> Array:
+	if _anim_libs.is_empty():
+		for pair in [["General", "res://assets/kaykit_adventurers/Rig_Medium_General.glb"], ["Move", "res://assets/kaykit_adventurers/Rig_Medium_MovementBasic.glb"]]:
+			var scene: Variant = load(pair[1]) if ResourceLoader.exists(pair[1]) else null
+			if not (scene is PackedScene):
+				continue
+			var root: Node = (scene as PackedScene).instantiate()
+			var src := root.find_child("AnimationPlayer", true, false) as AnimationPlayer
+			if src != null:
+				var lib: AnimationLibrary = src.get_animation_library("").duplicate(true)
+				for n in ["Idle_A", "Walking_A", "Running_A"]:
+					if lib.has_animation(n):
+						lib.get_animation(n).loop_mode = Animation.LOOP_LINEAR
+				lib.set_meta("name", pair[0])
+				_anim_libs.append(lib)
+			root.free()
+	return _anim_libs
+
+
+func _play(anim_name: String) -> void:
+	if _anim != null and _anim.has_animation(anim_name) and _played != anim_name:
+		_played = anim_name
+		_anim.play(anim_name, 0.15)
+
+
+## A one-shot animation (the swing, the hit) at `speed`; idle and walk wait until it is done.
+func _play_once(anim_name: String, speed := 1.0) -> void:
+	if _anim == null or anim_name == "" or not _anim.has_animation(anim_name) or pose == "down":
+		return
+	_played = anim_name
+	_anim.play(anim_name, 0.05, speed)
+	_anim.seek(0.0, true)
+	_once_t = _anim.get_animation(anim_name).length / speed
+
+
+func _animate_model(facing: String, moving: bool, delta: float) -> void:
+	if pose == "down":
+		_play(_rig["death"])
+		return
+	var want: float = {"down": 0.0, "up": PI, "right": PI / 2.0, "left": -PI / 2.0}.get(facing, _yaw)
+	_yaw = lerp_angle(_yaw, want, 1.0 - pow(0.001, delta))
+	model.rotation.y = _yaw
+	if _once_t > 0.0:
+		_once_t -= delta
+		return
+	_play(_rig["walk"] if moving else _rig["idle"])
+
+
 func set_label(text: String) -> void:
 	if label.text != text:
 		label.text = text
@@ -122,10 +361,16 @@ func set_label(text: String) -> void:
 
 ## The figure's height in metres (without the headroom) and its width.
 func height() -> float:
+	if model != null:
+		return _model_h
+	if voxel != null:
+		return _vh
 	return (_frame_h - _headroom) * PIXEL
 
 
 func width() -> float:
+	if voxel != null:
+		return _vw
 	return _frame_w * PIXEL
 
 
@@ -136,6 +381,11 @@ func body_position() -> Vector3:
 
 func head_position() -> Vector3:
 	return global_position + Vector3(0.0, height() + 0.1, 0.0)
+
+
+func _set_mat_texture(tex: Texture2D) -> void:
+	_mat.albedo_texture = tex
+	_mat.emission_texture = tex
 
 
 func _show(frame_name: String) -> void:
@@ -152,6 +402,12 @@ func animate(facing: String, moving: bool, delta: float) -> void:
 	else:
 		_anim_t = 0.0
 	_tick_looks(delta)
+	if model != null:
+		_animate_model(facing, moving, delta)
+		return
+	if voxel != null:
+		_animate_voxel(facing, moving, delta)
+		return
 	if _frames.is_empty():
 		return
 	if pose == "down":
@@ -168,17 +424,40 @@ func animate(facing: String, moving: bool, delta: float) -> void:
 
 
 func _tick_looks(delta: float) -> void:
+	# a light floor at night; off while the sprite flashes or lies fallen (their tints must read as they are)
+	var lift := night_lift if (_flash_t <= 0.0 and pose != "down") else 0.0
+	if not is_equal_approx(lift, _lift):
+		_lift = lift
+		if voxel != null:
+			_vmat.set_shader_parameter("night", lift)
+		elif model != null:
+			for fm in _model_mats:
+				(fm as StandardMaterial3D).emission_energy_multiplier = 0.0 if night_exempt else lift * FIGURE_NIGHT_EMISSION
+		else:
+			_mat.emission_energy_multiplier = lift * NIGHT_EMISSION
 	if _flash_t > 0.0:
 		_flash_t -= delta
 		var k := clampf(_flash_t / 0.12, 0.0, 1.0)
-		sprite.modulate = (FALLEN_TINT if pose == "down" else Color.WHITE).lerp(_flash_colour, k)
+		if voxel != null:
+			_vmat.set_shader_parameter("flash_colour", _flash_colour)
+			_vmat.set_shader_parameter("flash", k)
+		else:
+			sprite.modulate = (FALLEN_TINT if pose == "down" else Color.WHITE).lerp(_flash_colour, k)
+	if model != null:
+		_tick_model_fx()
 	if _lunge_t > 0.0:
 		_lunge_t -= delta
 		var k := clampf(_lunge_t / 0.18, 0.0, 1.0)
-		var base := Vector3(0.0, _frame_h * PIXEL / 2.0 + FOOT_LIFT, 0.0) + PULL
-		sprite.position = base + _lunge * sin(k * PI)
-		if _lunge_t <= 0.0:
-			sprite.position = base
+		if model != null:
+			model.position = _lunge * sin(k * PI) if _lunge_t > 0.0 and pose != "down" else Vector3.ZERO
+		elif voxel != null:
+			if pose != "down":
+				voxel.position = Vector3(0.0, FOOT_LIFT, 0.0) + (_lunge * sin(k * PI) if _lunge_t > 0.0 else Vector3.ZERO)
+		else:
+			var base := Vector3(0.0, _frame_h * PIXEL / 2.0 + FOOT_LIFT, 0.0) + PULL
+			sprite.position = base + _lunge * sin(k * PI)
+			if _lunge_t <= 0.0:
+				sprite.position = base
 	if _swing_t > 0.0:
 		_swing_t -= delta
 		if _swing_t <= 0.0:
@@ -201,10 +480,34 @@ func _tick_looks(delta: float) -> void:
 # A fight on this body
 
 
+## The figure's flash and tints: one translucent unshaded overlay over all its meshes, the hit's colour fading out,
+## else blue while frozen, else grey while fallen.
+func _tick_model_fx() -> void:
+	var c := Color(0.0, 0.0, 0.0, 0.0)
+	if _flash_t > 0.0:
+		c = Color(_flash_colour.r, _flash_colour.g, _flash_colour.b, 0.8 * clampf(_flash_t / 0.12, 0.0, 1.0))
+	elif pose == "frozen":
+		c = ICE_TINT
+	elif pose == "down":
+		c = FALLEN_FX
+	if c == _fx_colour:
+		return
+	_fx_colour = c
+	if _fx_mat == null:
+		_fx_mat = StandardMaterial3D.new()
+		_fx_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_fx_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_fx_mat.albedo_color = c
+	for mi in _model_meshes:
+		(mi as MeshInstance3D).material_overlay = _fx_mat if c.a > 0.0 else null
+
+
 ## A quick flash of colour (hit: white, hurt: red, healed: green).
 func flash(colour: Color = Color(1.0, 1.0, 1.0), seconds := 0.12) -> void:
 	_flash_colour = colour
 	_flash_t = seconds
+	if colour.r >= colour.g: # a hit (white) or hurt (red), not a heal (green)
+		_play_once(str(_rig.get("hit", "")), 1.6)
 
 
 ## A short lunge in a direction (the swing of a melee spell), scene units.
@@ -212,6 +515,7 @@ func lunge(dir: Vector3, dist := 0.25) -> void:
 	var d := Vector3(dir.x, 0.0, dir.z)
 	_lunge = d.normalized() * dist if d.length() > 0.01 else Vector3(0.0, 0.0, -dist)
 	_lunge_t = 0.18
+	_play_once(str(_rig.get("attack", "")), 1.8)
 
 
 ## The farm's use animation: a lunge towards the tile and the tool's picture swinging past (the browser squashes the
@@ -241,6 +545,7 @@ func swing(icon: Texture2D, facing: String) -> void:
 			dir = Vector3(0, 0, 1)
 			_swing_side = 1.0
 	lunge(dir, 0.2)
+	_play_once(str(_rig.get("use", "")), 1.5)
 	if icon != null:
 		_tool.texture = icon
 		_tool.visible = true
@@ -255,9 +560,13 @@ func set_pose(p: String) -> void:
 	if _block != null:
 		_block.queue_free()
 		_block = null
+	if voxel != null:
+		_voxel_pose(p)
+		return
 	if p == "down":
 		# lying on the ground: the billboard goes, the sprite is laid flat with its feet where it stood
 		sprite.billboard = BaseMaterial3D.BILLBOARD_DISABLED
+		_mat.billboard_mode = BaseMaterial3D.BILLBOARD_DISABLED
 		sprite.rotation = Vector3(-PI / 2.0, 0.0, PI / 2.0)
 		sprite.position = Vector3(0.0, 0.06, -height() / 2.0 + 0.2)
 		sprite.modulate = FALLEN_TINT
@@ -265,9 +574,31 @@ func set_pose(p: String) -> void:
 			_bar.visible = false
 		return
 	sprite.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
+	_mat.billboard_mode = BaseMaterial3D.BILLBOARD_FIXED_Y
 	sprite.rotation = Vector3.ZERO
 	sprite.position = Vector3(0.0, _frame_h * PIXEL / 2.0 + FOOT_LIFT, 0.0) + PULL
 	sprite.modulate = Color.WHITE
+	if p == "frozen":
+		_block = _ice_block()
+		add_child(_block)
+	elif p == "web":
+		_block = _web()
+		add_child(_block)
+
+
+## The voxel body's poses: lying on its side with its feet where it stood (grey), or up again; the ice block and the
+## web are the same as the billboard's.
+func _voxel_pose(p: String) -> void:
+	_vmat.set_shader_parameter("tint", FALLEN_TINT if p == "down" else Color.WHITE)
+	if p == "down":
+		# rolled onto its flank: the pillow's side faces up, and it rests on the floor by its half-depth
+		voxel.basis = Basis(Vector3.UP, _vyaw) * Basis(Vector3.RIGHT, -PI / 2.0)
+		voxel.position = Vector3(0.0, FOOT_LIFT + _vd, 0.0)
+		if _bar != null:
+			_bar.visible = false
+		return
+	voxel.position = Vector3(0.0, FOOT_LIFT, 0.0)
+	voxel.basis = Basis(Vector3.UP, _vyaw)
 	if p == "frozen":
 		_block = _ice_block()
 		add_child(_block)

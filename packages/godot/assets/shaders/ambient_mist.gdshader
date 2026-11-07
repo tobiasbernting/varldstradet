@@ -6,6 +6,7 @@ render_mode blend_mix, unshaded, depth_draw_never, cull_disabled, fog_disabled;
 uniform vec3 center = vec3(0.0);
 uniform vec2 box = vec2(30.0, 24.0);
 uniform float fade = 1.0;
+uniform float strength = 1.0; // 1 at dawn, more in fog weather
 uniform vec3 colour : source_color = vec3(0.85, 0.88, 0.92);
 varying float v_a;
 varying float v_seed;
@@ -41,5 +42,5 @@ void fragment() {
 	float k = clamp(1.0 - length(q), 0.0, 1.0);
 	float n = vnoise(UV * 4.0 + v_seed) * 0.6 + vnoise(UV * 9.0 - v_seed) * 0.4;
 	ALBEDO = colour;
-	ALPHA = k * k * (0.25 + 0.75 * n) * v_a * 0.32;
+	ALPHA = k * k * (0.25 + 0.75 * n) * v_a * 0.32 * strength;
 }

@@ -28,6 +28,75 @@ the owner decides otherwise); `assets/LICENSES.md` has every file's origin.
 - **Names and numbers.** `Label3D` billboards over heads, white with a dark outline, 2 px of outline per 16 px of text.
   Text is never drawn into a sprite.
 
+### Rock walls
+
+The wild maps' rock, sandstone and basalt walls (`farm_view.gd`, `_cliff_tile`) keep their flat tops at varying
+heights, but every side that faces land is a Kenney cliff face (`cliff_large_rock` or `cliff_rock`, picked per tile)
+turned outward and stretched to the wall's height, in one MultiMesh per chunk; about one side in five gets a boulder at
+its foot. The faces take the terrain's colour by material (`CLIFF_FACE` in `farm_assets.gd`, recolour `cliff_<terrain>`).
+A step down to a lower wall tile is closed, so no sky shows between tiles. Sides over water and lava keep a plain face
+down to the bed.
+
+### The landmarks (lm_*)
+
+The 26 landmarks of the wild maps are put together from pack parts in `scripts/landmark_models.gd`: a list per kind of
+[model, recolour, scale, position, turn] on the landmark's footprint, each part a baked mesh in the prop material (so
+seasons, snow and the night glow act on them). Kenney Nature Kit models take palette colours by material name (recolour
+"kenney": stone, dirt, wood, water, leaves); its cliff pieces face -Z and are turned half round. What no pack has is a
+small generated mesh (`gen:` eggs, tar pit, pond, embers, ice-cream tower, chocolate fountain, satellite). Lantern parts
+get a night glow; the vårdkase and the fire well a flame. A kind missing from the table still shows the old cairn.
+
+### Trial: people in 3D (`--people3d`)
+
+`godot --path packages/godot -- --demo=farm --people3d` draws the players as chibi figures put together from the
+KayKit Adventurers parts (`scripts/figure_3d.gd`), dressed in the character creator's look: the head by hair style
+(short: Knight, long: Mage, curly and ponytail: Rogue, bald: Barbarian, whose beard takes the hair colour), the body
+by the kind of shirt (plain, armour, mantle with cape, fur), skirt or trousers, and the hat by its kind (helmet,
+pointed hat, fur hood; other hats are not shown). The pack's textures are one 8 × 4 grid of gradient swatches, so a
+look repaints the skin, hair, cloth, trouser and boot swatches with the colours of the creator's palettes and of the
+items' pixel layers (`LookComposer.colours_for()`), keeping their shading. In a dungeon the figure wears the class's
+hat and shirt. Off by default. The figures show the fight too: a white or red flash laid over their meshes
+(`material_overlay`), a lunge, the Throw animation on a swing (the pack's basic rigs have no melee swing) and
+Interact on a tool, Hit_A when hit, a blue tint when frozen (inside the ice block), grey when fallen (Death_A), and
+the web. Villagers wear figures too; animals and monsters: see "Creatures in 3D".
+
+### Creatures in 3D (`--people3d`)
+
+The flag means 3D bodies for people and creatures. Without it nothing changes; vehicles (`bus`, `car`, `train`,
+`motorcycle`) stay billboards. Every other animal and monster has one of two bodies, and the billboard stays the
+fallback for a creature with no sheet (the placeholder), so this can grow piece by piece.
+
+- **Voxel bodies** (`scripts/voxel_body.gd`, `assets/shaders/voxel_body.gdshader`) for everything without a figure: each
+  frame of the creature's own sheet becomes a mesh of cubes, one per opaque pixel (`pixel` 16 px = 1 m, so a 20 × 14
+  wolf is 1.25 × 0.9 m, as big as its billboard; bosses are bigger sprites). The depth is a pillow: on each row the
+  opaque span gives a half-depth that follows a circle over the span (`DEPTH_K`), on each column likewise, and the
+  body is as deep as the shallower of the two and never deeper than `DEPTH_MAX` pixels, so a wide row under a narrow
+  one is not a ledge. Faces between boxes are only emitted where the neighbour is shorter; the colour is the pixel's
+  (stored linear; the shader undoes the Compatibility renderer's second sRGB conversion with `vcol_fix` as the props
+  do), but the dark outline pixels keep their colour on the front and back only: the faces that stand out (top, sides,
+  underside) take the colour of the body behind them, else every creature seen from above wears a black cap. The mesh
+  stands on the feet row, centred, facing +x. One mesh per (sheet, frame) is built once and shared by every actor of
+  that sheet; each actor has its own `ShaderMaterial` with a flash, a tint and a night-lift uniform. All the sheets of
+  the atlas work, so babies, winter hats, tame and colour variants need nothing extra; the 44 mobs have `mob_<id>`
+  sheets since `pnpm godot:sprites` exports every entry of `SAGA_MOBS` and `SAGA_BOSSES`.
+- **How it behaves** (`Actor.set_voxel`): walking swaps the two frames at the billboard's 6 fps; standing shows frame 0
+  with a slow breath (height ±2 %). The sprites face right, so the body yaws to face right or left (a mirror by yaw,
+  not by scale) and turns 35° further toward a walk up or down the screen, so a creature walking away still shows its
+  side. The hit flash is the material's flash uniform (white, or the spell's colour); the lunge moves the mesh; fallen
+  rolls the body onto its flank, grey, feet where it stood; frozen and webbed are the same ice block and threads as the
+  billboards'; the night lift is the actor's `night_lift` through the material.
+- **The undead** (`scripts/skeleton_figure.gd`, `assets/kaykit_skeletons`, KayKit Skeletons, CC0) are rigged figures
+  through `set_figure` with the pack's animations: `skelett` the Warrior (sword and small shield, 1.45 m), `gravvaktare` the Warrior at 2.5 m, `draugkung` the Rogue at 2.75 m (hood and cape tinted purple `#6a3a8a`, green eyes `#9cff8a`), `vandrardraug` and `sjodraug`
+  the Minion tinted brown and sea green, `gengangare` the Minion at 40 % opacity. `gravrotta` (a rat) and `draugbage` (a
+  beetle) stay voxel. Idle, the pack's Walking_D_Skeletons, an attack animation per weapon on the swing, Hit_A on the
+  flash and Death_A when fallen. The Skeletons' texture is not the Adventurers' swatch grid (its swatches are bone,
+  cloth, metal and leather), so a creature's colour is the material's albedo over the texture, not a swatch repaint.
+  Only the Warrior's file keeps the pack's 95 animations; the Rogue's and the Minion's are stripped with
+  `tools/strip_glb_animations.py` (4.8 MB to 0.3 MB) and play the Warrior's.
+- **Pictures** (all with `--people3d`): `docs/creatures-farm.png`, `docs/creatures-fight.png`,
+  `docs/creatures-forest.png`. Look: a creature that is mostly one thin row (the wolf) reads worse than a body (cow, bear,
+  hen, slime); the pillow is a trial, `DEPTH_K`, `DEPTH_MAX` and `COLUMN_K` in `voxel_body.gd` are its knobs.
+
 ## Palette
 
 Twelve named colours taken from the existing pixel art (`packages/art/src`). Imported 3D packs are tinted to
@@ -60,10 +129,14 @@ material, one tint per dungeon look. Emissive parts (flames, runes, glow) take t
 ## What is generated and why
 
 Where a pack the sandbox could reach had nothing (the Kenney kits answered 403 on 2026-11-01), the prop is made in
-code: coffin, bones, urn, rest stone, gate, wall caps (`scripts/dungeon_props.gd`, listed in `LICENSES.md`). They use
-only palette colours and simple shapes so they sit next to the KayKit models without clashing. When the Kenney
-Graveyard Kit is fetched (`tools/fetch-assets.sh`), the coffin, urn and bones can be swapped for its models in the
-`make_prop()` table without touching anything else.
+code: urn, gate, wall caps (`scripts/dungeon_props.gd`, listed in `LICENSES.md`). They use only palette colours and
+simple shapes so they sit next to the KayKit models without clashing. The coffins, bones and rest shrine are KayKit
+Halloween Bits (`assets/kaykit_halloween/`), tinted like the Dungeon models; the generated ones are only drawn when
+that pack is missing. On the farm, KayKit Halloween Bits and Furniture Bits replace the dead trees, pumpkins, lamps
+and lanterns and the farmhouse's bed, table, chairs, sofa, plant and painting, baked like the Hexagon models. KayKit Forest gives the oaks and apple trees (its greens become foliage by colour, mode "forest"); the Kenney Nature
+Kit gives the palms, bushes, grass, flowers and mushrooms; its leaf and grass materials become the palette's greens
+and carry the foliage mask, so the season and the wind still act on them (recolour mode "leaf" in `_baked()`).
+`ASSET_MAP.md` lists a pack model for each prop that is still generated.
 
 ## Sprites from the drawn-in-code art (packages/art)
 
@@ -145,6 +218,9 @@ Everything expensive is a toggle in `scripts/quality.gd`, so a scene is built on
 | Volumetric fog | off | off | on |
 | Glow | off | on | on |
 | Torch flame particles | none (a flat flame sprite) | 8 per torch | 16 per torch, plus dust motes |
+| Weather particles in dungeons (`weather`; a third of it falls, a quarter drifts as motes) | 150 | 600 | 1500 |
+| Weather particles outdoors (`sky_weather`: rain, snow, hail; the atmosphere pass) | 150 | 900 | 2000 |
+| Screen grade (one full-screen pass, outdoors only: dungeons are not graded) | on | on | on |
 
 Låg must stay a plain forward render with a handful of unshadowed lights: that is what an Intel integrated GPU does
 at 60 fps. The decision Mobile-vs-Forward+ is made with a frame-time capture in M3b, not here.
@@ -289,6 +365,10 @@ the chimney spots were read from the highest vertices of the KayKit meshes alrea
 | Fireflies · butterflies · leaves | 0 · 0 · 0 | 28 · 9 · 36 | 56 · 16 · 80 |
 | Smoke (per chimney) · mist · window light | 0 · 0 · 0 | 7 · 9 · pools | 12 · 18 · flickering pools |
 
+The mist is also what fog weather draws (`ambient_view.gd`: the eased fog strength fades it in at three times the dawn's opacity,
+in the sky's own colour), so Låg, which builds no mist, has the depth fog only. The window-light pools are the atmosphere pass's
+warm colour (1, 0.66, 0.35) and come on with the lamps (`dark` 0.35 to 0.75).
+
 ## The living world's sound and wildlife (M7b)
 
 Sounds are the project's own (CC0): `assets/audio/*.wav` made by `tools/make-audio.py` from noise and sines (licence and
@@ -327,6 +407,26 @@ Village Låg 48.4 → 48.3, Farm Mellan natural 104.8 → 109.1, Village Mellan 
 104.9 → 109.4, Village Mellan everything on 97.5 → 102.8. Draw calls rise by 2–7 (the ambient MultiMeshes, one each), primitives
 by under 1 % (an unrelated rise on Hög in the village is the same ±1 %), Låg's draw calls and primitives are unchanged.
 
+### Measured after merging the atmosphere pass, the art pass and creatures in 3D with M7a and M7b
+
+`--bench=<preset> --scene=farm`, 1280×720, sandbox only (software GL under Xvfb: compare rows, not absolute numbers). "main" is
+origin/main at M7b (670df30), "merged" is this branch. Average frame ms; Låg is the mean of two runs:
+
+| Farm, Compatibility (OpenGL) | main | merged | primitives main → merged |
+| --- | --- | --- | --- |
+| Låg | 30.0 | 52.3 | 34 000 → 93 400 |
+| Mellan | 67.2 | 102.2 | 86 700 → 244 000 |
+| Hög | 81.4 | 120.2 | 141 200 → 304 700 |
+| Farm, Forward+ (lavapipe) | main | merged | |
+| Låg | 75.8 | 105.3 | 34 100 → 95 000 |
+| Mellan | 133.5 | 133.3 | 89 400 → 250 300 |
+
+Draw calls are the same (91 → 92 on Låg). **Låg is slower than main's, and it is the art pass's models, not the atmosphere pass:**
+the branch before the merge (5a259fb) already draws 91 000 primitives on Låg and 45.7 ms; the pack trees, bushes and grass
+(KayKit Forest, Kenney Nature Kit) have three times the triangles of the generated meshes they replaced. The merge itself adds
+about 2 ms on Låg (M7a's wind at level 1 is the old sway; the grade is one pass). On Forward+ the Mellan frame is capped by the
+swapchain in lavapipe, so it reads equal. Mellan pays the one full-screen grade pass on top of M7a's budgets.
+
 ## The fight on screen (M3b)
 
 - **Telegraphs** are flat shapes 4.5 cm over the floor: a dim red base in the zone's full size, a brighter fill that
@@ -341,6 +441,15 @@ by under 1 % (an unrelated rise on Hög in the village is the same ±1 %), Låg'
   box (Is); webbed: white rings. Health bars are two unshaded quads over the head; the target's and a boss's name over
   them. The monster after you carries the ⚠️ icon, bobbing.
 - **Sound** is code-generated into PCM (`sfx.gd`), one recipe per spell, move and HUD event, the browser's.
+
+
+## Atmosphere (2026-11-06)
+**Merged with M7a ("The alive world", below).** Where both built the same thing M7a's stays and ours is struck through: ~~fireflies~~, ~~chimney smoke~~, ~~autumn leaves~~, ~~dawn mist and the eight fog banks~~ (fog weather drives M7a's mist with a higher alpha), ~~the pond at night~~, ~~the window beams~~ (M7a's window-light pools, in our warmer colour and on our lamp ramp), our old wind sway (M7a's wind). Kept: the light, the grade, the lamp pools, the lantern, rain/splash/puddles/snow/hail/cloud shadows, dew. The screen grade is on for every preset and is the one full-screen pass; Mellan and Hög pay it on top of M7a's budgets.
+The look of the day is the browser's, made in three layers. **The light** (`day_night.gd`): the `DAY` table's colour is the ambient light, the sun, the moon and the fog colour at once, so grass goes dark blue-teal at night and the dusk is a dusty violet; sun shadows are soft (`light_angular_distance`, `shadow_blur`) and about a quarter darker than lit ground. **The grade** (`screen_grade.gd` / `screen_grade.gdshader`, one full-screen pass on every preset, under the HUD): the browser's warm grade, a little more colour than the render (never less, even in fog), a multiply toward saturated navy at night that keeps lamps warm, a vignette that closes in with the dark, and the double flash of lightning. Indoors in the farmhouse the grade stays on (warm grade, colour, vignette) without the night blue, the dusk mauve, the weather's cast or the flash; in dungeons it is hidden (`dungeon_look()`). **Light you can see**: lamps are 6-9 m OmniLights from the browser's colours with a ground pool (`light_pool.gdshader`, an additive flat quad: this is what shows on Låg), switched on from `dark` 0.35 to 0.75; the farmhouse's gable window, the shops and the station put a pool of warm light on the ground in front of them (M7a's window light, `window_light` in the presets); the hero carries a lantern (OmniLight, 5.5 m, no shadow) outdoors after dark. Glow (Mellan, Hög) opens up with the dark; Låg's haze quads stand in.
+- **Weather.** Rain: slanted streaks (the budget in a storm, half of it in rain and hail), splash rings on the ground, puddles in the ground shader (`puddle`, filled in rain, drying over ~40 s, mirror the sky colour), cooler grade. Fog: depth fog plus M7a's mist at a higher alpha (the fog banks are gone). Snow: big soft flakes and small sharp ones that drift sideways. Hail: short, bright, fast. Cloud shadows (`cloud`): faint in sun, big and slow when cloudy, on props as well as the ground.
+- **Extras.** ~~Fireflies, chimney smoke, the pond taking the night sky, autumn leaves~~ (M7a's), dew sparkles on the morning grass (ours).
+- **Presets.** Låg: the grade, lamps' ground pools, the extras that are quads; no OmniLight shadows, no glow, no cloud shadows, weather particles at 150. Mellan: glow, SSAO, sun shadows (1024), weather 900. Hög: adds torch shadows, SDFGI, volumetric fog, 2048 sun shadows, weather 2000.
+- **Pictures.** `--daylapse=<s>` runs a whole day in that many seconds (demo only); `--weathers=sun,rain,fog` with `--weather-every=<s>` steps the weather. `tools/sky-sweep.sh` renders a series of `--time` values.
 
 ## Runs (M5c)
 All generated in code with the farm's mesh builder (`run_meshes.gd`, `zone_props.gd`), in the palette above; nothing new is imported except one more use of the

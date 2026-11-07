@@ -7,6 +7,8 @@ extends Node
 ##                       --demo=frost|surt|hel are the next dungeons; --demo=ending (Völvan's last hand-in) and --demo=loke --ending play the saga's ending (demo_ending.gd); --fight plays their bosses' moves (demo_bosses.gd), and
 ##                       --once leaves when it has played, --boss-move=<species>:<move>[:after] holds one move's marks for a picture;
 ##                       --time=0.7 --weather=rain --season=jul set the sky, --at=x,y where to stand
+##                       --people3d 3D bodies for people and creatures (figure_3d.gd, voxel_body.gd, skeleton_figure.gd)
+##   --demo=lineup       the 3D bodies side by side on green, no world (demo_lineup.gd; --set=undead|animals, --zoom=0.9)
 ##   --bench[=preset]    the demo scene on each quality preset (or one: lag, mellan, hog) in steady state, printing
 ##                       frame times, draw calls, lights and the render timings (bench.gd)
 ##   --quality=lag|mellan|hog   (with --demo) this run's preset, not saved; --alive=all (M7a) turns the alive world's fireflies, butterflies,
@@ -71,6 +73,11 @@ func _ready() -> void:
 		bench.world = world
 		bench.fight = fight
 		add_child(bench)
+	elif _flag(args, "--demo") and _demo_name(args) == "lineup":
+		# the 3D bodies side by side (demo_lineup.gd): no world, no server
+		login.visible = false
+		world.queue_free()
+		add_child((load("res://scenes/lineup.tscn") as PackedScene).instantiate())
 	elif _flag(args, "--demo"):
 		login.visible = false
 		_set_world(true)
@@ -133,6 +140,8 @@ func _show_login() -> void:
 
 func _set_world(on: bool) -> void:
 	world.visible = on
+	if not on:
+		world.hide_look()
 	world.process_mode = Node.PROCESS_MODE_INHERIT if on else Node.PROCESS_MODE_DISABLED
 
 
@@ -180,7 +189,8 @@ func quit_clean(code := 0) -> void:
 	_quitting = true
 	Net.disconnect_now()
 	Sfx.release()
-	world.release_sounds()
+	if is_instance_valid(world): # (the --demo=lineup scene has no world: it is freed in _ready)
+		world.release_sounds()
 	Voice.release()
 	for child in get_children():
 		child.queue_free()

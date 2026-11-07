@@ -14,25 +14,29 @@ signal changed(preset: String)
 
 const ORDER := ["lag", "mellan", "hog"]
 const PRESETS := {
-	"lag": {"scale": 0.8, "mpix": 1.3, "shadows": 0, "ssao": false, "gi": false, "fog": false, "glow": false, "particles": 0, "sun_shadow": 0, "weather": 150,
+	"lag": {"scale": 0.8, "mpix": 1.3, "shadows": 0, "ssao": false, "gi": false, "fog": false, "glow": false, "particles": 0, "sun_shadow": 0, "weather": 150, "sky_weather": 150,
 		"wind": 1, "water": 0, "fireflies": 0, "butterflies": 0, "leaves": 0, "smoke": 0, "mist": 0, "window_light": 0,
 		"steps": 3, "ambience": 1, "sparrows": 0},
-	"mellan": {"scale": 1.0, "mpix": 2.1, "shadows": 0, "ssao": true, "gi": false, "fog": false, "glow": true, "particles": 8, "sun_shadow": 1, "weather": 600,
+	"mellan": {"scale": 1.0, "mpix": 2.1, "shadows": 0, "ssao": true, "gi": false, "fog": false, "glow": true, "particles": 8, "sun_shadow": 1, "weather": 600, "sky_weather": 900,
 		"wind": 2, "water": 1, "fireflies": 28, "butterflies": 9, "leaves": 36, "smoke": 7, "mist": 9, "window_light": 1,
 		"steps": 6, "ambience": 2, "sparrows": 6},
-	"hog": {"scale": 1.0, "mpix": 3.7, "shadows": 6, "ssao": true, "gi": true, "fog": true, "glow": true, "particles": 16, "sun_shadow": 2, "weather": 1500,
+	"hog": {"scale": 1.0, "mpix": 3.7, "shadows": 6, "ssao": true, "gi": true, "fog": true, "glow": true, "particles": 16, "sun_shadow": 2, "weather": 1500, "sky_weather": 2000,
 		"wind": 3, "water": 2, "fireflies": 56, "butterflies": 16, "leaves": 80, "smoke": 12, "mist": 18, "window_light": 2,
 		"steps": 10, "ambience": 2, "sparrows": 12},
 }
-## The alive world's toggles on the outdoor maps (M7a), per preset. The counts are budgets (how many of each thing exist
+## The alive world's toggles on the outdoor maps (M7a) and the weather's particle budget, per preset. The counts are budgets (how many of each thing exist
 ## near the hero at most; 0 is off), the levels pick a shader's quality:
 ##  wind          0 none, 1 crowns of trees and bushes only, one sine (what it was before M7a: Låg), 2 + gusts that cross the
 ##                map and grass, crops and reeds that lean with them, 3 + a fast flutter of leaves
 ##  water         0 a flat cheap look (Låg: two colours and the bank's foam), 1 waves, animated foam and a sky and shore
 ##                reflection (screen space, 16 steps), 2 a finer reflection (28 steps)
+##  weather       the dungeons' falling weather and motes (dungeon_view.gd; as on main: 150 / 600 / 1500)
+##  sky_weather   how many rain streaks / flakes / hail stones exist near the hero outdoors (day_night.gd, the atmosphere pass; 150 / 900 / 2000; rain uses half of it as streaks, a storm all of it)
 ##  fireflies     on summer nights;   butterflies by day in spring and summer;   leaves falling from the trees in autumn;
 ##  smoke         puffs from a chimney (per chimney);   mist  low drifting mist at dawn;
 ##  window_light  0 the windows' glow only, 1 + a pool of light on the ground in front of them, 2 + it flickers like a fire
+## The screen grade (screen_grade.gd: tone, vignette, the night's navy and a warm lift) is on for every preset: it is one
+## cheap full-screen pass, so it has no toggle here (Låg pays it too).
 ## The living world's sound and wildlife (M7b), per preset (the sound ones are also switched in Settings: steps_on, ambience_on):
 ##  steps      how many footsteps can sound at once (the hero's and the others'; 0 is off). Låg: 3, so the hero and two others
 ##  ambience   0 off, 1 (Låg) only the three loudest layers of the place's soundscape, chosen by place, hour and weather, 2 all

@@ -1,6 +1,6 @@
 // The browser side of export-sprites.mts: bundled by Vite, run in Playwright's Chromium, draws the game's pixel art
 // (packages/art/src, which needs a canvas) and hands back PNG data for every sheet. Nothing here runs in Node.
-import { ANIMALS, CLASSES, DUNGEONS, ITEMS, NPCS, SAGA_BOSSES, SAGA_LOOT, SAGA_TREASURE, SPELLS, T, sagaItem, type Appearance, type ClassId, type Outfit } from '@lilla-garden/shared';
+import { ANIMALS, CLASSES, DUNGEONS, ITEMS, NPCS, SAGA_BOSSES, SAGA_MOBS, SAGA_LOOT, SAGA_TREASURE, SPELLS, T, sagaItem, type Appearance, type ClassId, type Outfit } from '@lilla-garden/shared';
 // (the world's art first: the art modules form a cycle, and the browser's own entry loads them in this order)
 import { EMOTE_GLYPH } from '../../art/src/world.ts';
 import { getArt } from '../../art/src/textures.ts';
@@ -520,7 +520,8 @@ export async function render(dungeons: (keyof typeof DUNGEONS)[]): Promise<Rende
       heroes[cls]!.push(s.file);
     });
   }
-  const species = [...new Set(dungeons.flatMap(speciesOf))].sort();
+  // every mob and boss gets a sheet, also those no dungeon room lists (the voxel bodies need them all)
+  const species = [...new Set([...dungeons.flatMap(speciesOf), ...Object.keys(SAGA_MOBS), ...Object.keys(SAGA_BOSSES)])].sort();
   for (const s of species) sheets.push(mobSheet(s));
   // M6c: Loke's illusions are drawn ghostly (variant 1, sagamap.ts): every monster of a dungeon with `illusions` that is not a boss
   for (const id of dungeons) if (DUNGEONS[id as keyof typeof DUNGEONS]?.illusions) for (const s of speciesOf(id as keyof typeof DUNGEONS)) if (!SAGA_BOSSES[s]) sheets.push(mobSheet(s, 1));

@@ -62,6 +62,13 @@ This file is only what the next agent needs: state, decisions, how the work is r
   dry run, README controls and "running your own server") `session_01KTh22qsQXEMZuS8qdhftjn` on
   `claude/m8a-cutover-server`. No `v*` tag is pushed without the owner. M8's client parts (settings, accessibility:
   bigger text, colour-blind telegraph colours) wait for the art PR. The owner tests on the MacBook on 2026-11-07.
+- **Branch `claude/eloquent-rubin-0r5o0h` (sections 1b–1d: the art pass, the atmosphere pass, creatures in 3D) merged `main`
+  up to PR 21 (670df30 and the handoff ded1e66) and reconciled the overlap with M7a.** M7a's stay (the preset framework, wind, water, fireflies, butterflies,
+  leaves, chimney smoke, dawn mist, window light); dropped from the atmosphere pass as duplicates: its fireflies, chimney
+  smoke, autumn leaves in the trees, dawn mist, the window beams and the pond at night, plus its old wind sway and its
+  fog banks (fog weather now drives M7a's mist at a higher alpha). Kept: the day/night grade, screen grade, lamp pools,
+  the hero's lantern, rain/snow/hail/puddles/cloud shadows and dew. Details in `DESIGN.md` and `ART.md`. PR 21 (M7b) is merged in too. Open: the pack models draw ~3x the primitives of the generated ones, so
+  Låg is ~1.7x slower than main's in the sandbox bench (the art pass, not the merge; `ART.md` "Measured after merging").
 - **The leftovers below were fixed in PR 16** except the waypoint tolerance and the voice bot using bare sockets.
 - **Small things left over from PR 13 and PR 14, for one tidy-up PR** (none blocks anything): the pick screen shows
   "Välj en runa!" twice, offset (the server's `reward` banner over the pick's own title; `run_pick.gd` / `hud.gd`);
@@ -74,6 +81,102 @@ This file is only what the next agent needs: state, decisions, how the work is r
   not create characters, and the creator check not pressing the arrow buttons.
 - Not yet done: M6 (the other eight dungeons and chapters as zone sets in the client), M7 (alive world), M8 (polish,
   release tag, homelab deploy of the v2 server, `DESIGN.md` rewrite).
+
+## 1b. Art pass (session `session_01KTh22oagteA1US6DqRwXHt`, 2026-11-06, branch `claude/inspiring-hypatia-txeupy`)
+
+The owner asked for nicer assets than the code-generated placeholders. Pushed to `claude/inspiring-hypatia-txeupy`,
+**no pull request opened yet**; `main` merged in at the end (clean). `pnpm godot:bot` passed on every art commit through
+the rock walls (dd2cb18); not yet run after `main` was merged in. Pictures were shared in chat
+only, none are in `packages/godot/docs/` yet. `packages/godot/ASSET_MAP.md` maps every object kind to a pack model
+and says what is wired.
+
+| Commit | What |
+| --- | --- |
+| a5b86a9 | `ASSET_MAP.md`; `fetch-assets.sh` also clones KayKit Furniture, Halloween and Restaurant Bits |
+| 2936848 | KayKit Halloween Bits: the crypt's coffins, bones and rest shrines (generated meshes stay as fallbacks), dead trees, pumpkins, jack-o'-lanterns, lamps and lanterns; KayKit Furniture Bits: bed, table, chairs, sofa, plant, painting. `_baked()` got a pivot, an offset and a "lamp" glow mode; `downloads/` gets a `.gdignore` |
+| 0dbd90d, 403e38a | Kenney Nature Kit (uploaded by the owner) for bushes, berry bushes, grass, flowers, mushrooms, fern, palm, cactus; KayKit Forest (uploaded) for the oaks and apple trees (the owner's pick: KayKit trees with Kenney bushes and grass). Recolour modes "leaf" (Kenney, by material name) and "forest" (by colour) keep the season, wind and snow; `_with_fruit()` hangs apples and berries |
+| a70b26b, d00df72, 1b388bb | `--people3d` (off by default): players and villagers as chibi KayKit Adventurers figures put together from parts by `figure_3d.gd` and recoloured from the creator's look (`LookComposer.colours_for()`); in a dungeon the class's outfit. `export-data.mts` now exports the villagers' appearance and outfit |
+| 369dc85 | All 26 landmarks from pack parts (`landmark_models.gd`), lantern night glows, fires; the cave mouth is the Kenney cave cliff. The baker reads vertex colours (Kenney's real colours); recolour "kenney"/"cliff" by material |
+| dd2cb18 | Rock walls: Kenney cliff faces on every side facing land, boulders at the foot, no sky seams between wall tiles |
+
+Owner decisions in this session (do not re-ask):
+- Art stays free CC0. Quaternius characters are **not the right style**; KayKit's chibi look is.
+- Köpingen is **skipped** for now (it may come back later); the focus is the landmarks and the wild maps.
+- The 3D people stay behind `--people3d`; animals and monsters get 3D later. Proposed and not yet chosen: KayKit
+  Skeletons and KayKit Character Animations (both free, same rig) for the crypt and combat animations, and either a
+  pack or voxel figures extruded from the pixel art for the ~150 animals and monsters.
+
+Open in this line of work:
+1. Open a PR for the branch (or hand it to the orchestrating session), with the pictures in `packages/godot/docs/`.
+2. Rock-wall tops are still flat squares; small rocks and tufts on top or rounded corners would help.
+3. Still generated on the wild maps: reed, shell, dig spot, the white flower, wisps. On the farm: fences, gates,
+   mailbox, sell box, chest, workbench, trough, scarecrow, bench, flower box, the animal sheds, torch, snowman,
+   Christmas tree, maypole, runestone; the farmhouse's walls, door, window, rug, bookshelf, clock, stove, wardrobe.
+   `ASSET_MAP.md` has candidates for most (Kenney Nature fences, Hexagon props, Dungeon and Restaurant pieces).
+4. Landmarks that read weakly: Klocktornet (a red church in the sand), Apkungens tron, Den förstenade jätten; the two
+   bone landmarks look alike.
+5. In the Godot client Köpingen still has asphalt and zebra crossings and modern generated buildings; the street lamps
+   (`post_lantern` at ×1.1) are far too big there. Only matters if Köpingen comes back.
+6. `--people3d` gaps: no hit flash, lunge, swing, frozen or webbed pose on figures; "bald" uses the barbarian head,
+   whose beard takes the hair colour.
+
+## 1c. Atmosphere pass (session `session_01KTh22rMH5UutKMoSA5XCUG`, 2026-11-06, branch `claude/eloquent-rubin-0r5o0h`)
+
+The owner asked for the browser game's cosiness, its changing light and weather, in the Godot client. The branch starts
+from the art pass (section 1b merged in at 59a6366) and adds ten commits, all under `packages/godot/` plus `ART.md`
+("Atmosphere") and `DESIGN.md` ("Godot client: the atmosphere pass"). **No pull request opened yet**, awaiting the
+owner's approval of the pictures (`packages/godot/docs/atm-*.png`) and a time-lapse video shared in chat.
+`pnpm godot:bot` green on every commit; nothing in the bots, the workflow, the server or shared was touched.
+
+| Commit | What |
+| --- | --- |
+| 17049df | The browser's ambient curve carried by ambient, sun, moon and fog; soft sun shadows (angular distance, blur); the moon; the ground and prop shaders undo the Compatibility renderer's second sRGB conversion of vertex colours |
+| ea11466 | `screen_grade.gd` + `screen_grade.gdshader`: one full-screen pass under the HUD on every preset (warm grade, saturation, night blue, dusk mauve, vignette, lightning double flash; off in dungeons); glow threshold and strength from the dark |
+| 0aeaf5e | Lamps with bigger OmniLights and a ground pool quad each (`light_pool.gdshader`), ~~a light beam on the ground from the farmhouse window and the village windows~~ (dropped for M7a's window light pools), the hero's lantern outdoors at night |
+| 0d41e51 | Rain streaks (slanted, 2x in storm) and splash rings, puddles that dry over ~40 s, ~~fog banks that double as dawn mist~~ (now M7a's mist), two flake sizes, hail, cloud shadows in cloudy weather and on props |
+| 6a71e02 | ~~Fireflies, chimney smoke, the pond at night, autumn leaves~~ (dropped for M7a's), dew sparkles in the morning sun |
+| 6150bc7 | Demo-only `--daylapse=<s>`, `--weathers=a,b,c`, `--weather-every=<s>` for videos |
+| 7f21c3c | ART.md, DESIGN.md, the docs pictures |
+| e5ee223 | The owner found the first result washed out: re-tuned rich and warm to measured targets (`scratchpad` script `meas2.py`: mean HSV saturation at or above the pre-pass pictures: noon S 0.75, golden 0.93, night Forward+ S 0.57 V 0.29); no desaturation anywhere, no black lift, contrast 1.06 by day, vignette 0.18/0.32, night as a navy multiply (0.5, 0.66, 1.25) with warm lamps masked, lamps and pools more orange, ambient cooler than the sun, no depth fog in clear weather, ambient 0.2 / sun 0.34 at noon (the higher energies clipped the grass to yellow-white) |
+| d4a935f | Dusk violet, not pink: multiply (0.76, 0.74, 1.0) at 0.8, saturation boost only on blues and violets, darker (V 0.23) |
+| 441a5b5 | Review fixes: `fog_disabled` on every additive quad shader (the depth fog made them squares on Compatibility in rain and fog), no cloud shadows at night, smaller darker puddles, weather budget mellan 900 / hög 2000 with `preprocess`, thinner day fog, actor sprites lifted at night by emission (`Actor.night_lift`, off indoors and in dungeons), softer pools, fog banks that fade |
+
+How the pictures were judged: the retired browser client (commit 620e395) was built in a worktree and screenshotted
+with Playwright against its own server (`POST /admin/time` and `/admin/weather` with `ACCESS=open`), and the Godot
+scenes rendered next to them under Xvfb (`--rendering-driver opengl3`, ~15 s each; `vulkan` on Mesa lavapipe shows
+Forward+ with glow and SSAO in ~45 s). A time-lapse: `--demo=farm --time=0.3 --daylapse=70
+--weathers=sun,cloudy,rain,storm,sun,fog,snow --weather-every=12` recorded with ffmpeg x11grab.
+
+Open in this line of work (not blocking):
+1. Day fog is still fairly milky; dusk is more rose than the browser's violet; puddles read as dark ovals.
+2. Fog banks and dawn mist lie over the whole view (the map has no height data to keep them to the water and low ground).
+3. The chimney smoke's place on the farmhouse is a guess (ridge top); the fireflies follow the real month, so in
+   November only `--season=midsommar` shows them.
+4. No thunder sound; `sfx.gd` was not extended.
+5. Nothing of this has been seen on the MacBook (Forward+, Metal) yet: check the night on the farm, the rain, and that
+   Mellan holds its frame rate with 900 weather particles and the extra full-screen pass.
+
+## 1d. Creatures in 3D (session `session_01KTh22rMH5UutKMoSA5XCUG`, 2026-11-06, same branch)
+
+The owner asked for the mobs and villagers in 3D like the players ("if you find a good solution go with it"). Built by
+a Sonnet child in a worktree (`creatures-wip`, merged at 4ac4499 and 2d218d3), all behind the existing `--people3d`
+flag, the billboard as the fallback; `pnpm godot:bot` green on the merged head. `ART.md` "Creatures in 3D",
+`DESIGN.md` "Godot client: creatures in 3D (2026-11-06)", `ASSET_MAP.md`, `LICENSES.md`. Pictures
+`packages/godot/docs/creatures-{farm,forest,fight,undead}.png`; `--demo=lineup --set=undead|animals` draws a lineup
+without a server (`scenes/lineup.tscn`, `scripts/demo_lineup.gd`).
+
+| Commit | What |
+| --- | --- |
+| 4032327 | The 44 `mob_<id>` sheets main already had are used for the creatures in 3D |
+| 56b9718 | `voxel_body.gd` + `voxel_body.gdshader`: a creature mesh extruded from a sprite frame (pillow depth profile, the shallower of row and column, floor 1.5 px, cap 3.5 px; outline pixels only on the front and back; per-face shading baked into the vertex colours), cached per sheet and frame |
+| e827ce2 | `Actor.set_voxel`: frame swapping, yaw facing (at most 35° toward a walk up or down the screen), breathing, hit flash, lunge, lying on its side when fallen, the night lift; `world.gd` gives every animal and monster a voxel body under the flag; vehicles stay billboards |
+| 7cf12f7 | KayKit Skeletons (CC0, GitHub `KayKit-Character-Pack-Skeletons-1.0`, 5.5 MB, the Rogue's and Minion's animations stripped by `tools/strip_glb_animations.py`): `skelett` Warrior 1.45 m, `gravvaktare` Warrior 2.5 m, `draugkung` Rogue 2.75 m with a purple cloak and green eyes, `vandrardraug`/`sjodraug` tinted Minions, `gengangare` a 40 % Minion; idle, walk, attack on the swing, Hit_A on the flash, Death_A when fallen (`skeleton_figure.gd`, the `KINDS` table) |
+| c9e759b | The people's figures: hit flash and fallen tint (a material overlay), lunge, `Throw`/`Interact` on the swing (the Adventurers rig has no melee swing), blue frozen tint, Death_A |
+| 334abbf, 2d218d3 | Review fixes; the figures' night lift a tenth of the sprites', the hero's figure none (it blew out white under Forward+ glow) |
+| (this) | The voxel night lift warm-neutral (white animals went electric blue under the navy grade) |
+
+Open: the wolf and other thin side-view sprites are the weakest voxels; `draugkung` reads as a hooded figure rather
+than a crowned king; `creatures-fight.png` is a lineup, not a frame of the real fight; nothing seen on the MacBook.
 
 ## 2. The owner's decisions (do not re-ask)
 
@@ -158,6 +261,15 @@ been tested on the MacBook yet; PR 11, 12, 13 and 14 each carry a "what to check
 - Dev-only messages behind `DEV_TELEPORT=1`: `dev saga` (into a dungeon), `dev nextDay`, `dev starter` (a class's
   starter gear). All tested both ways in `game.test.ts`.
 - Godot `WebSocketPeer` needs an 8 MiB inbound buffer for the `welcome` message (set in `net.gd`).
+- Godot 4.7.2 downloads fine in the sandbox from `github.com/godotengine/godot/releases` (check it against
+  `GODOT_EDITOR_SHA512` in `.github/workflows/godot.yml`). Xvfb shots: `xvfb-run -a godot --path packages/godot
+  --rendering-driver opengl3 -- --demo=forest --at=x,y --time=0.4 --screenshot=f.png`.
+- A new `class_name` script is unknown until an editor import (`--import`) registers it. Autoloads (`Data`,
+  `Strings`) are not loaded under `--script`; a throwaway `.tscn` run as the main scene has them.
+- Packs the owner uploads land in `/root/.claude/uploads/<session>/`; unpack them into `packages/godot/downloads/`
+  (gitignored, with a `.gdignore` so Godot does not import them) and commit only the files used under `assets/`. They
+  are gone in a new container: KayKit Forest, KayKit Adventurers and the Kenney Nature Kit are not on GitHub, so ask
+  the owner again for more of them. Scripting itch.io's download flow is refused by the permission classifier.
 - Bots: `pnpm godot:bot` runs an in-memory server and the fighter, walker, farmer and creator bots (`BOT_ONLY=walker`
   / `farm` / `creator` / `run` / `voice` for one of them); CI runs them on every PR.
 - `pnpm -r run test` sometimes prints a vitest `Timeout calling "onTaskUpdate"` during the 24 s generator test; every
@@ -177,8 +289,8 @@ been tested on the MacBook yet; PR 11, 12, 13 and 14 each carry a "what to check
 7. M8: the homelab role for the v2 server (second instance on the Hetzner box, `spel.<domain>` through the same
    tunnel, its own database), importing the family's save from lilla-garden (migration 0004 drops the minigame prize
    decor), the README's Controls section still describes the browser keys.
-8. Deferred art purchases (Synty Vikings 30 USD, Minifantasy Creatures 3 USD, weather bundle 10 USD) need a new
-   decision; AI generation was never used.
+8. Art: the art pass of section 1b (branch `claude/inspiring-hypatia-txeupy`, no PR yet). Deferred purchases (Synty
+   Vikings 30 USD, Minifantasy Creatures 3 USD, weather bundle 10 USD) need a new decision; AI generation was never used.
 9. In lilla-garden, branch `claude/trusting-brown-z2omlt` holds the original `PLAN.md` and `HANDOFF.md` seed; it is
    superseded by this repository. The orchestrating session's `git push origin --delete` was refused by the
    permission classifier: the owner deletes it by hand.
@@ -187,6 +299,7 @@ been tested on the MacBook yet; PR 11, 12, 13 and 14 each carry a "what to check
 
 ## 6. Identifiers
 
+- Art pass session: `session_01KTh22oagteA1US6DqRwXHt` (section 1b); the atmosphere pass and creatures in 3D (1c, 1d) and the merge of main into that branch: `session_01KTh22rMH5UutKMoSA5XCUG`.
 - Orchestrating sessions: `session_01KTh22pPGKmMmYJxTLXzyqs` (2026-11-06 09:55–21:50 UTC, paused), before that
   `session_01KTh22nak5ip5cq8vST7H9Q`. The owner's other session `session_01KTh22pJ2K85r8267Nim4Fy` (Opus) made PR 15.
 - Children, all Sonnet, all done: M5b `session_01KTh22qkzZkRx6UToLHSTLk`, M5b review fixes

@@ -14,6 +14,7 @@ const BOX := Vector2(30.0, 24.0) ## fireflies, butterflies and mist live in a bo
 ## A MultiMesh's bounds come from its instances' origins, which these ignore (they wrap round the hero): never cull them.
 const NEVER_CULL := AABB(Vector3(-4000.0, -50.0, -4000.0), Vector3(8000.0, 400.0, 8000.0))
 const BUTTERFLY_COLOURS := [Color("#f2a23a"), Color("#f4f0e4"), Color("#5d8fe0"), Color("#f2d64a"), Color("#e86a8a")]
+const FOG_THICKER := 2.0 ## fog weather's mist is (1 + this) times as opaque as the dawn's
 const SMOKE_PUFFS := 12 ## puffs in one chimney's loop at most (Quality "smoke" is how many)
 
 var view: FarmView
@@ -55,7 +56,7 @@ func setup(v: FarmView) -> void:
 
 ## Every frame. `st`: dark (0 day .. 1 night), year (spring, summer, autumn, winter), kind (the weather here), wind
 ## (its strength), f (the day's fraction, 0 at dawn), sky (the horizon colour), seasons (this biome has the four seasons),
-## and `at` is where the hero stands.
+## fog (the fog weather's eased strength, 0..1: the mist is also the fog's banks, thicker) and `at` is where the hero stands.
 func update(delta: float, st: Dictionary, at: Vector3) -> void:
 	if view == null:
 		return
@@ -64,6 +65,7 @@ func update(delta: float, st: Dictionary, at: Vector3) -> void:
 	var kind: String = st["kind"]
 	var f: float = st["f"]
 	var seasons: bool = st["seasons"]
+	var fog: float = st.get("fog", 0.0)
 	var dry := kind != "rain" and kind != "storm" and kind != "snow" and kind != "hail"
 	var dawn := maxf(smoothstep(0.955, 0.99, f), 1.0 - smoothstep(0.05, 0.14, f)) if (f > 0.9 or f < 0.2) else 0.0
 	var want := {
@@ -71,7 +73,7 @@ func update(delta: float, st: Dictionary, at: Vector3) -> void:
 		"butterflies": 1.0 if (force_all or ((year == "spring" or year == "summer") and seasons and dark < 0.3 and (kind == "sun" or kind == "cloudy"))) else 0.0,
 		"leaves": 1.0 if (force_all or (year == "autumn" and seasons and dry)) else 0.0,
 		"smoke": 1.0,
-		"mist": 1.0 if force_all else (dawn if (dry and kind != "wind") else 0.0),
+		"mist": 1.0 if force_all else maxf(dawn if (dry and kind != "wind") else 0.0, fog),
 		"sparrows": 1.0 if (force_all or (dark < 0.35 and dry and kind != "wind")) else 0.0,
 	}
 	var k := 1.0 - pow(0.25, delta) # about two seconds to fade
@@ -117,7 +119,9 @@ func update(delta: float, st: Dictionary, at: Vector3) -> void:
 				if int(_ver.get("smoke", -1)) != view.objects_version:
 					_build_smoke(budget)
 			"mist":
-				m.set_shader_parameter("colour", Color(0.9, 0.92, 0.95).lerp(sky, 0.35))
+				# dawn: pale and thin; fog weather: the sky's own colour (dark at night) and about three times as thick
+				m.set_shader_parameter("colour", Color(0.9, 0.92, 0.95).lerp(sky, 0.35).lerp(sky.lerp(Color.WHITE, 0.25 * (1.0 - dark)), fog))
+				m.set_shader_parameter("strength", 1.0 + FOG_THICKER * fog)
 			"sparrows":
 				m.set_shader_parameter("center", at)
 				m.set_shader_parameter("shade", shade)
