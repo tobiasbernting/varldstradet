@@ -389,6 +389,8 @@ on horseback plus sprint, a 32-tile lead is 3 s and a chunk border is 3 chunks �
 12. **The internal key `'farm'`** for "anywhere in Midgård": rename to `'world'` at the very end, or leave? *Recommend: leave until PR 8, then rename in one mechanical commit if you still care.*
 13. **Confirm the fresh start:** the v2 server has never been deployed and nobody plays on a local dev database that matters? *Recommend: yes (HANDOFF says nothing is deployed). Join codes survive; characters are made again.*
 
+14. **Keep it modest:** since the runs are the focus, treat Midgård as a hub and defer every PR after 6 (maps, polish, clean-up) until the runs v2 work asks for them? *Recommend: yes; PRs 1–6 give a playable, streamed hub, PR 7 (maps) is the next most useful.*
+
 ## Appendix: numbers behind the tables
 
 | Quantity | Value | How |
@@ -407,5 +409,3 @@ on horseback plus sprint, a 32-tile lead is 3 s and a chunk border is 3 chunks �
 | Client, Låg render per frame | 92 / 83 / 80 draw calls; 129 / 122 / 151 objects; 92 k / 61 k / 59 k primitives | `--bench=lag --scene=farm|forest|village` |
 | Camera footprint | ≈ 27 × 14 tiles (16:9) | computed from `world.gd` constants |
 | CI today | `export` ≈ 4 m 28 s, `bots` ≈ 5 m 26 s | HANDOFF.md, PR 27 |
-
-14. **Keep it modest:** since the runs are the focus, treat Midgård as a hub and defer every PR after 6 (maps, polish, clean-up) until the runs v2 work asks for them? *Recommend: yes; PRs 1–6 give a playable, streamed hub, PR 7 (maps) is the next most useful.*
