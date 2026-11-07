@@ -734,7 +734,7 @@ come back, footsteps, and the ambience of the place. The farm, the wild maps and
   unchanged), after remembering where it stood (`haunt`). When the flight ends it catches its breath (2 s and a little more) and
   walks back to its spot; from then on it potters around `haunt` instead of drifting. A hero who **stands still** startles nothing,
   and an animal that has been startled before and has calmed down creeps up to a hero standing still within `CURIOUS_TILES` (7),
-  to 1.1 tiles from them: so the way to pet a shy animal is to walk near, stop and wait (the farmer bot does exactly this, and
+  to the middle of the tile next to theirs on its own side (the longer axis; the other one if that tile is blocked; never a diagonal tile, where they could not face it), where it stays while they stand still: so the way to pet a shy animal is to walk near, stop and wait (the farmer bot does exactly this, and
   asserts it). No random numbers are used (deterministic; the jitter of the spot it returns to comes from its id), pets, horses,
   traffic, farm animals and monsters are untouched. `startled` and `haunt` are optional fields of the animal and are saved with it
   like the rest of it (`haunt` is a coordinate on *that* map); both are cleared when the animal is tamed with the lasso and when it
