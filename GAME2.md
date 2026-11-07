@@ -474,15 +474,15 @@ for the chapter, so the 7-year-old is never blocked from the story.)
   `spiritUsed`) and in the end summary (`level`, `spiritUsed`).
 * **Lätt** (`LATT` in `run.ts`): monster hp ×0.6 and boss hp ×0.6 (the zone's own multipliers stay under it), damage ×0.5, the
   boss's telegraph warnings ×1.4 (`warnMul`: the ground marks, the cast timer and the snapshot's `warn` all use it), the boss
-  and the zones' guards use only their first two attacks (`moves` ∩ `[0, 1]`), half the sagafrön (`pay` multiplies by 0.5; the
+  and the zones' guards use only their first two attacks (`lattMoves()`: indices 0 and 1, whatever a first run's plan has locked), and what the boss calls in (phase adds, summons, the ice and web blocks) is ×0.6 too (`levelHp`), half the sagafrön (`pay` multiplies by 0.5; the
   bonuses of runor and the tree still count, and the remainder is carried), and a wipe never ends the run. Followers were
   already 0 % mistakes (the Hirdmannen is a careful bot). No Stark vakt, patrols or särdrag exist yet.
 * **The Sagoandan** (`SAGOANDAN`): Vanlig 1, Lätt 3, and on Lätt one more each time a zone is entered after the first ("after each
   stop"). On a wipe the pause (`WIPE_MS`) shows a gold banner "Sagoandan hjälper er!" (kind `level`, not the sad `wipe`), then
   everyone is up at the last rest stone with **50 %** health (`SAGOANDAN_HP`), fighting monsters reset, the count goes down.
   A Lätt wipe with none left is the same banner "Ingen fara!", everyone up at full health, and nothing is counted off:
-  Lätt never ends on a wipe. On Vanlig the next wipe ends the run as before. A wipe after the boss has fallen is not
-  saved (the win stands). The star on the HUD shows the count (and the word Lätt); the end summary has "Sagoandar använda".
+  Lätt never ends on a wipe. On Vanlig the next wipe ends the run as before. After the boss has fallen a Sagoandan is no longer used: on Vanlig a wipe then
+  ends the run as a win (as before); on Lätt everyone just gets up free and the run goes on to the chest. The star on the HUD shows the count (and the word Lätt); the end summary has "Sagoandar använda".
 * The tree node `g3` ("two Sagoandar") of section 4.5 is **not** built: `g3` is still the reroll node until the tree v2 (R9).
 * The arch window has two big buttons, **Lätt** and **Vanlig** (Vanlig lit by default; the choice is remembered while the game
   runs), each with one line of text: "Snällare monster. Alla reser sig igen om ni faller." / "Som vanligt. En Sagoande hjälper er en gång."
@@ -490,7 +490,7 @@ for the chapter, so the 7-year-old is never blocked from the story.)
   standing still. Before this, a solo Magiker on Lätt got stuck for 40 minutes on 2 of 20 seeds (4 and 13: a sjödraug against a
   wall that nobody could hit, a stalemate that on Vanlig showed up as a wipe); it was a bot defect, not a number.
 * Tuning script: `node --experimental-transform-types packages/shared/src/runtune.ts --level 0 --style clumsy --seeds 20 [--from 1]`
-  prints the table below (`run.test.ts` keeps the CI versions). (GAME2 section 8 called it `run:tune`.)
+  prints the table below (`run.test.ts` keeps the CI versions: 12 seeds per Lätt party). (GAME2 section 8 called it `run:tune`.)
 
 **Measured** (level-3 heroes in the starter set, Draugkryptan, the Hirdmannen hired, no longhouse; the human is the bot style named;
 wins per run, "wipes" is runs that *ended* on a wipe; minutes are until the boss falls, for the won runs):

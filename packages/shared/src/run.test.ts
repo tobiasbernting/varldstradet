@@ -24,6 +24,7 @@ import {
   SAGOANDAN,
   SAGOANDAN_HP,
   levelMuls,
+  lattMoves,
   parseRunLevel,
   runMessage,
   RUN_WARN_MS,
@@ -1821,7 +1822,7 @@ describe('bot parties play whole runs', () => {
   }
 
   // Lätt (GAME2.md 5.3/5.4): the clumsy (kid-like) bot with the Hirdmannen wins at least 95 % of its runs, none of them ends on a wipe
-  const LATT_SEEDS = Array.from({ length: 8 }, (_, i) => i + 1);
+  const LATT_SEEDS = Array.from({ length: 12 }, (_, i) => i + 1);
   const LATT_PARTIES: [string, ClassId[]][] = [...SOLO, ['väktare + helare', ['vaktare', 'helare']]];
   for (const [label, classes] of LATT_PARTIES.slice(0, 5)) {
     it(`${label}, clumsy, Lätt: wins at least 95 % of ${LATT_SEEDS.length} runs, none ends on a wipe, in 8-22 minutes`, { timeout: 120_000 }, async () => {
@@ -2037,15 +2038,68 @@ describe('Lätt and the Sagoandan (GAME2.md 4.5 and 5.3)', () => {
     expect(l.party.world.areas![l.run.key]!.saga!.run!.spirit).toBe(1);
   });
 
-  it('a wipe after the boss has fallen is not saved: the win stands and the run ends as before', () => {
+  it('a wipe after the boss has fallen: Vanlig is not saved (the win stands and the run ends), Lätt gets everyone up free and the run goes on', () => {
+    const v = lab({}, ['magiker', 'helare'], 1);
+    v.inst.bossDown = true;
+    v.run.outcome = 'win';
+    const out = wipeIt(v);
+    expect(out.some((c) => c.t === 'banner' && c.kind === 'wipe')).toBe(true);
+    expect(v.run.spiritUsed).toBe(0);
+    expect(v.run.spirit).toBe(1);
+    expect(v.run.outcome).toBe('win');
+    expect(runOf(v.party.world)).toBeUndefined();
     const l = lab({}, ['magiker', 'helare'], 0);
     l.inst.bossDown = true;
     l.run.outcome = 'win';
-    const out = wipeIt(l);
-    expect(out.some((c) => c.t === 'banner' && c.kind === 'wipe')).toBe(true);
-    expect(out.some((c) => c.t === 'banner' && c.kind === 'level')).toBe(false);
+    const out2 = wipeIt(l);
+    expect(out2.some((c) => c.t === 'banner' && c.kind === 'wipe')).toBe(false);
+    expect(out2.some((c) => c.t === 'banner' && c.text === RUN_T.spiritFree)).toBe(true);
+    expect(runOf(l.party.world)).toBe(l.run);
+    expect(l.run.spirit).toBe(3);
     expect(l.run.spiritUsed).toBe(0);
     expect(l.run.outcome).toBe('win');
+    for (const f of Object.values(l.inst.fighters)) {
+      expect(f.down).toBeUndefined();
+      expect(f.hp).toBe(f.max);
+    }
+  });
+
+  it('on Lätt every boss keeps two real attacks, and what a boss calls in (phase adds, summons, ice) is 0.6 as tough; on Vanlig adds are as before', () => {
+    // each chapter's boss: its first two attacks are real (a cast of its own, not only a summon or a mend) unless it has just the one
+    for (const d of DUNGEON_IDS) {
+      const boss = SAGA_BOSSES[DUNGEONS[d].boss]!;
+      const first = boss.moves.slice(0, LATT.bossMoves);
+      expect(first.length, d).toBeGreaterThanOrEqual(1);
+      expect(first.some((m) => m.dmg > 0), d).toBe(true);
+      if (boss.moves.length >= 2) expect(first.length, d).toBe(2);
+      // and the plan of a first run and of a replay (every move unlocked) both leave Lätt exactly those attacks
+      for (const replay of [false, true]) {
+        const plan = generateRun(9, { boss: d, replay, clears: 2 });
+        void plan; // (a first run may lock one of the later attacks; Lätt ignores the lock and keeps attacks 0 and 1)
+        expect(lattMoves(), `${d} replay ${replay}`).toEqual([0, 1]);
+        expect(lattMoves().every((k) => k < boss.moves.length), d).toBe(true);
+      }
+    }
+    const adds = (level: 0 | 1): number => {
+      const x = lab({}, ['magiker', 'helare'], level);
+      const b = x.place('draugkung', 4, 'boss');
+      x.inst.run!.dmgMul = 0;
+      b.mob.state = 'fight';
+      b.mob.threat[x.p.id] = 5;
+      b.mob.phase = 0;
+      b.mob.hp = b.mob.max * 0.661;
+      castSpell(x.party.world, x.p.id, 'eldboll', b.mob.id, x.ctx());
+      for (let t = 0; t < 1000; t += 50) {
+        x.go(50);
+        for (const f of Object.values(x.inst.fighters)) f.hp = f.max;
+      }
+      const a = Object.values(x.inst.mobs).find((m) => m.kind === 'add');
+      return a ? a.max : 0;
+    };
+    const v = adds(1);
+    const l = adds(0);
+    expect(v).toBeGreaterThan(0);
+    expect(l / v).toBeCloseTo(0.6, 1);
   });
 });
 

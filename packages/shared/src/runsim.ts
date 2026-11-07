@@ -84,6 +84,9 @@ import {
 } from './sim.ts';
 import { TILE, type PlayerState, type WorldObject, type WorldState } from './types.ts';
 
+/** The boss attacks Lätt allows: its first two, whatever a first run's plan has locked (the lock is Vanlig's variety). */
+export const lattMoves = (): number[] => Array.from({ length: LATT.bossMoves }, (_, k) => k);
+
 const tileOf = (v: number): number => Math.floor(v / TILE);
 
 // ---------------------------------------------------------------------------
@@ -585,7 +588,7 @@ function enterZone(farm: WorldState, run: RunState, i: number, ctx: SimCtx): Cha
   // Lätt: one more Sagoandan after each stop (a zone cleared)
   if (latt && i > 0) run.spirit++;
   // Lätt: the boss (and the zones' guards) use only their first two attacks
-  const moves = latt ? (run.plan.moves ?? [0, 1]).filter((k) => k < LATT.bossMoves) : i === ZONES_PER_RUN ? run.plan.moves : undefined;
+  const moves = latt ? lattMoves() : i === ZONES_PER_RUN ? run.plan.moves : undefined;
   inst.run = {
     run: run.id,
     zone: i,
@@ -596,8 +599,8 @@ function enterZone(farm: WorldState, run: RunState, i: number, ctx: SimCtx): Cha
     bossMul: z.bossMul * (solo ? SOLO_MERCY : 1) * lvl.hp,
     sight: z.sight,
     leash: z.leash,
-    ...(moves ? { moves: moves.length ? moves : [0] } : {}),
-    ...(latt ? { warnMul: lvl.warn, soft: true } : {}),
+    ...(moves ? { moves } : {}),
+    ...(latt ? { warnMul: lvl.warn, levelHp: lvl.hp, soft: true } : {}),
     spirit: run.spirit,
     used: run.spiritUsed,
     buffs: {},

@@ -2122,6 +2122,8 @@ export interface SagaRunLink {
   wipeSub: string;
   /** Lätt (GAME2.md 5.3): the boss's warnings last this much longer (a multiplier; left out, 1). */
   warnMul?: number;
+  /** Lätt: 0.6 for everything the boss calls in (phase adds, summons, the ice and web blocks); left out on Vanlig. */
+  levelHp?: number;
   /**
    * The Sagoandan: free "everyone gets up" on a wipe. `spirit` is how many are left (the star on the HUD); `soft` (Lätt)
    * means a wipe never ends the run, so with none left everyone still gets up. `revive` is set while a wipe's pause is

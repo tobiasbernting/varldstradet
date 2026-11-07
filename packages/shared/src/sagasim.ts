@@ -1065,7 +1065,7 @@ function hurtMob(h: Here, m: SagaMob, by: string, amount: number, threatMul: num
         const spot = isSolidForAnimal(h.area, tileOf(at.x), tileOf(at.y)) ? { x: a.x, y: a.y } : at;
         const add = spawnSagaMob(h.area, h.inst, boss.phaseAdds.species, spot.x, spot.y, 'add', -1);
         const am = h.inst.mobs[add.id]!;
-        am.max = Math.round(am.max * mobHpScale(partySize(h)));
+        am.max = Math.round(am.max * mobHpScale(partySize(h)) * (h.inst.run?.levelHp ?? 1));
         am.hp = am.max;
         am.state = 'fight';
         am.atkAt = ctx.now + 800;
@@ -1614,6 +1614,9 @@ function landCast(h: Here, m: SagaMob, ctx: SimCtx, out: Change[]): void {
     for (let i = 0; i < addCount(mv.count ?? 2, partySize(h)); i++) {
       const add = spawnSagaMob(h.area, h.inst, mv.add, a.x + (i - 0.5) * 2 * TILE, a.y + TILE, 'add', -1);
       const am = h.inst.mobs[add.id]!;
+      // (Lätt: the summoned adds are softer too; `levelHp` is 1 on Vanlig, so nothing else changes)
+      am.max = Math.max(1, Math.round(am.max * (h.inst.run?.levelHp ?? 1)));
+      am.hp = am.max;
       am.state = 'fight';
       am.atkAt = now + 800;
       if (party[0]) am.threat[party[i % party.length]!.id] = 5;
@@ -1649,7 +1652,7 @@ function freeze(h: Here, m: SagaMob, p: PlayerState, mv: BossAbility, ctx: SimCt
   const block = mv.block && BLOCK_SPECIES.has(mv.block) ? mv.block : 'isblock';
   const ice = spawnSagaMob(h.area, h.inst, block, p.x, p.y + 1, 'ice', -1);
   const im = h.inst.mobs[ice.id]!;
-  im.max = Math.round(ICE_HP * mobHpScale(partySize(h)));
+  im.max = Math.round(ICE_HP * mobHpScale(partySize(h)) * (h.inst.run?.levelHp ?? 1));
   im.hp = im.max;
   im.state = 'fight';
   im.holds = p.id;
@@ -1752,8 +1755,9 @@ export function tickSaga(area: WorldState, key: string, dtMs: number, ctx: SimCt
     const link = inst.run;
     if (inst.wipeAt === undefined) {
       inst.wipeAt = now + WIPE_MS;
-      const spirits = link?.spirit ?? 0;
-      if (link && !inst.bossDown && (spirits > 0 || link.soft)) link.revive = true;
+      // a Sagoandan is for a run still being fought; once the boss is down only Lätt (which never ends on a wipe) gets everyone up, free
+      const spirits = inst.bossDown ? 0 : (link?.spirit ?? 0);
+      if (link && (spirits > 0 || link.soft)) link.revive = true;
       const boss = Object.values(inst.mobs).find((m) => (m.kind === 'boss' || m.kind === 'mini') && m.state === 'fight');
       if (boss) out.push(yell(h, boss.species, SAGA_BOSSES[boss.species]!.yells.wipe));
       for (const p of party) {
@@ -1767,8 +1771,8 @@ export function tickSaga(area: WorldState, key: string, dtMs: number, ctx: SimCt
       let fraction = 1;
       if (link) {
         delete link.revive;
-        link.used = (link.used ?? 0) + 1;
-        if ((link.spirit ?? 0) > 0) {
+        if (!inst.bossDown) link.used = (link.used ?? 0) + 1;
+        if (!inst.bossDown && (link.spirit ?? 0) > 0) {
           link.spirit = (link.spirit ?? 0) - 1;
           fraction = SAGOANDAN_HP;
         }
