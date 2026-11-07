@@ -97,7 +97,7 @@ const SPECS := {
 	"trough": {"m": ["trough"], "front": true},
 	"well": {"m": ["well"], "node": true},
 	"town_well": {"m": ["well"], "node": true},
-	"bus_stop": {"m": ["bus_stop"], "node": true, "front": true},
+	"bus_stop": {"m": ["vm_bus_stop"], "node": true, "front": true},
 	"cave": {"m": ["cave_mouth"], "node": true},
 	"cave_mouth": {"m": ["cave_mouth"], "node": true},
 	"saga_portal": {"m": ["arch"], "node": true},
@@ -119,7 +119,7 @@ const SPECS := {
 	"stall": {"m": ["stall"], "front": true},
 	"pigsty": {"m": ["pigsty"], "front": true},
 	"lamp": {"m": ["lamp"], "node": true, "light": [WARM, 7.5, 1.6, 1.5, 0.15], "night": true},
-	"street_lamp": {"m": ["street_lamp"], "node": true, "light": [Color(1.0, 0.78, 0.5), 9.0, 1.7, 2.2, 0.1, 12.0], "night": true},
+	"street_lamp": {"m": ["vm_street_lamp"], "node": true, "light": [Color(1.0, 0.78, 0.5), 7.5, 1.5, 1.7, 0.1, 12.0], "night": true},
 	"lantern": {"m": ["lantern"], "node": true, "light": [WARM, 6.0, 1.4, 0.6, 0.25], "night": true},
 	"torch": {"m": ["torch"], "node": true, "light": [FIRE, 6.0, 1.7, 1.3, 0.35], "night": true},
 	"crystal_lamp": {"m": ["lantern"], "node": true, "light": [Color("#9fe8ff"), 5.0, 1.0, 0.6, 0.1]},
@@ -141,16 +141,16 @@ const SPECS := {
 	"maypole": {"m": ["maypole"]},
 	"pumpkin_lantern": {"m": ["jack_o_lantern"], "node": true, "light": [Color("#ff9a3c"), 3.0, 0.9, 0.4, 0.3]},
 	# --- Köpingen (city.ts): the Norse market town; its streets are ground, these are what stands on them
-	"house_small": {"m": ["house_b"], "front": true, "chimney": Vector3(0.33, 3.05, -1.02)},
-	"apartment": {"m": ["apartment"], "front": true, "chimney": Vector3(0.9, 3.7, -0.3)},
-	"shop": {"m": ["village_shop"], "node": true, "front": true, "glows": [[-0.8, 0.8, 0.95], [0.8, 0.8, 0.95]], "light": [WARM, 6.0, 1.3, 1.2, 0.1], "night": true},
+	"house_small": {"m": ["vm_house_0", "vm_house_1", "vm_house_2", "vm_house_3"], "by_variant": true, "front": true, "chimney": Vector3(0.75, 2.8, -0.2)},
+	"apartment": {"m": ["vm_apartment_0", "vm_apartment_1", "vm_apartment_2", "vm_apartment_3"], "by_variant": true, "front": true, "chimney": Vector3(0.9, 3.4, -0.3)},
+	"shop": {"m": ["vm_shop_0", "vm_shop_1", "vm_shop_2"], "by_variant": true, "node": true, "front": true, "glows": [[0.15, 0.74, 0.96]], "light": [WARM, 6.0, 1.3, 1.2, 0.1], "night": true},
 	"market": {"m": ["market"], "front": true},
 	"sellstall": {"m": ["sell_stall"], "front": true},
-	"pizzeria": {"m": ["pizzeria"], "node": true, "front": true, "chimney": Vector3(0.7, 2.35, -0.3), "glows": [[-0.8, 0.75, 0.9], [0.8, 0.75, 0.9]], "light": [WARM, 6.0, 1.4, 1.2, 0.15], "night": true},
-	"bathhouse": {"m": ["bathhouse"], "front": true, "chimney": Vector3(-1.0, 2.4, -0.4)},
-	"train_station": {"m": ["station"], "node": true, "front": true, "glows": [[-0.8, 0.7, 0.75], [0.8, 0.7, 0.75]], "light": [Color(1.0, 0.78, 0.5), 7.0, 1.3, 1.6, 0.1], "night": true},
-	"traffic_light": {"m": ["traffic_light"]},
-	"parked_car": {"m": ["car_0", "car_1", "car_2"], "by_variant": true},
+	"pizzeria": {"m": ["vm_pizzeria"], "node": true, "front": true, "chimney": Vector3(1.0, 2.3, -0.3), "glows": [[-0.85, 0.62, 0.94]], "light": [WARM, 6.0, 1.4, 1.2, 0.15], "night": true},
+	"bathhouse": {"m": ["vm_bathhouse"], "front": true, "chimney": Vector3(-1.0, 2.2, -0.4)},
+	"train_station": {"m": ["vm_station"], "node": true, "front": true, "glows": [[-0.95, 0.6, 0.93], [0.95, 0.6, 0.93]], "light": [Color(1.0, 0.78, 0.5), 7.0, 1.3, 1.6, 0.1], "night": true},
+	"traffic_light": {"m": ["vm_signpost"]},
+	"parked_car": {"m": ["vm_cart_0", "vm_cart_1", "vm_cart_2"], "by_variant": true},
 	"banner_pole": {"m": ["banner_0", "banner_1", "banner_2"], "by_variant": true},
 	"runestone": {"m": ["runestone"], "node": true, "light": [Color("#38d8f0"), 4.0, 0.9, 1.0, 0.1]},
 	"saga_stone": {"m": ["kampasten"], "node": true, "light": [Color("#38d8f0"), 5.0, 1.2, 1.3, 0.12]},
@@ -317,6 +317,8 @@ func _make(n: String) -> ArrayMesh:
 		return _baked(NATURE + rock, 1.0, "cliff_" + cb[1])
 	if n.begins_with("gen:"):
 		return _landmark_mesh(n.substr(4))
+	if n.begins_with("vm_"):
+		return _village(n.substr(3))
 	if n.begins_with("ph_"):
 		var wh := n.substr(3).split("x")
 		return _placeholder(int(wh[0]), int(wh[1]))
@@ -808,6 +810,26 @@ func _landmark_mesh(n: String) -> ArrayMesh:
 		_:
 			return null
 	return b.build()
+
+
+## Köpingen's timber buildings and street furniture (village_meshes.gd): "house_2", "apartment_1", "shop_0", "signpost", ...
+func _village(n: String) -> ArrayMesh:
+	var parts := n.rsplit("_", true, 1)
+	var v := int(parts[1]) if parts.size() == 2 and parts[1].is_valid_int() else 0
+	var base: String = parts[0] if parts.size() == 2 and parts[1].is_valid_int() else n
+	match base:
+		"house": return VillageMeshes.house(v)
+		"apartment": return VillageMeshes.apartment(v)
+		"shop": return VillageMeshes.shop(v)
+		"cart": return VillageMeshes.hand_cart(v)
+		"pizzeria": return VillageMeshes.pizzeria()
+		"bathhouse": return VillageMeshes.bathhouse()
+		"station": return VillageMeshes.station()
+		"signpost": return VillageMeshes.signpost()
+		"street_lamp": return VillageMeshes.street_lamp()
+		"bus_stop": return VillageMeshes.bus_stop()
+	warn_once(n, "farm: no village mesh '%s'" % n)
+	return null
 
 
 func _placeholder(w: int, h: int) -> ArrayMesh:
