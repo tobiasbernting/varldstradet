@@ -469,6 +469,7 @@ func _bag_and_chest() -> void:
 ## again if it faints.
 var _startles: Dictionary = {} ## the wild animals watched: id -> what `_watch_startle` keeps
 var _watched := "" ## the id (as a string) of the wild animal being watched now
+var _standing := false ## the bot stands still, waiting for the animal (only then is its distance to the bot a measure of its coming back)
 ## How fast the forest's wild animals wander (px a second, shared/src/data.ts ANIMALS): a bolt is more than 1.8 times this (the
 ## server's rule is 2.2 times). Not in the client's game data, which has no use for it; a species missing here is not recognised.
 const WANDER_SPEED := {"fox": 34.0, "boar": 28.0, "moose": 22.0, "hedgehog": 16.0, "hare": 40.0, "deer": 30.0}
@@ -504,7 +505,7 @@ func _pet_wild() -> void:
 				continue
 			var wild_id := str(int(a.get("id", 0)))
 			if not _startles.has(wild_id): # (every animal watched gets its own record: the nearest one changes as they run)
-				_startles[wild_id] = {"bolted": false, "from": Vector2.ZERO, "ran": 0.0, "back": INF, "peak": 0.0, "last_at": _animal_px(a), "last_t": Time.get_ticks_msec(), "speed": float(WANDER_SPEED.get(str(a.get("species", "")), 1000.0))}
+				_startles[wild_id] = {"bolted": false, "bolt_t": 0, "peak_b": 0.0, "reached": false, "peak": 0.0, "last_at": _animal_px(a), "last_t": Time.get_ticks_msec(), "speed": float(WANDER_SPEED.get(str(a.get("species", "")), 1000.0))}
 			var rec: Dictionary = _startles[wild_id]
 			_watched = wild_id
 			var far_at := Vector2(world.hero.px, world.hero.py).distance_to(_animal_px(a)) / Data.tile()
@@ -528,6 +529,7 @@ func _pet_wild() -> void:
 			# (2.5 tiles a second: up to 5 s for 12 tiles) and the creep: about 15 s of game time. The server's game clock runs slower than the
 			# wall clock when a runner is starved (a bot on one CPU saw animals still 6 tiles off after 45 s), so wait up to 120 s and
 			# stop as soon as it is next to me. Watch it all (`_startles`).
+			_standing = true
 			await _until(func() -> bool:
 				var b := _animal_by_id(wild_id)
 				if b.is_empty() or _hostile_near(Vector2(world.hero.px, world.hero.py), 7.0) != Vector2.INF:
@@ -535,6 +537,7 @@ func _pet_wild() -> void:
 				var tile := _animal_tile(b)
 				var here := _my_tile()
 				return absi(tile.y - here.y) + absi(tile.x - here.x) == 1, 120.0)
+			_standing = false
 			if _hostile_near(Vector2(world.hero.px, world.hero.py), 7.0) != Vector2.INF:
 				continue
 			a = _animal_by_id(wild_id)
@@ -573,24 +576,24 @@ func _pet_wild() -> void:
 			if model.my_area_key() != "farm":
 				await _leave_by("s", "farm")
 			await _wait(4.0)
-	# an animal counts if the server made it bolt when I walked at it (it ran 2 tiles or more from where the bolt began) and it was
-	# later on its way back (at least a tile nearer to that place than its farthest point). Which tile it ends in beside a quiet
-	# hero, and how soon, is sim.test.ts's to prove for every species, not this bot's
+	# an animal counts if the server made it bolt when I walked at it and it then came back to me while I stood still. Which tile it
+	# ends in beside a quiet hero, and how soon, is sim.test.ts's to prove for every species, not this bot's
 	var best: Dictionary = {}
 	for r in _startles.values():
-		if _ran_and_returned(r) and (best.is_empty() or float(r["ran"]) > float(best["ran"])):
+		if _ran_and_returned(r) and (best.is_empty() or float(r["peak_b"]) > float(best["peak_b"])):
 			best = r
-	_step("startle", not best.is_empty(), "%s (%d watched: %s)" % [("a wild animal bolted and headed back" if not best.is_empty() else "no animal both bolted and headed back"), _startles.size(), _startles_detail()])
+	_step("startle", not best.is_empty(), "%s (%d watched: %s)" % [("a wild animal bolted and came back to me" if not best.is_empty() else "no animal both bolted and came back to me"), _startles.size(), _startles_detail()])
 	await _sounds_any("the forest", ["birds", "crickets", "rain", "wind_hard"]) # (not wind_soft: it has a floor and always sounds)
 	_step("pet", petted, "a wild animal was brushed (%s) and petted, %d hearts seen in all (Elsa's and Sven's are two of them)" % [str(brushed), int(_report["hearts_seen"])])
 
 
 ## One sample of a wild animal being watched (every frame, from the moment the bot picks it until the next pick; it only does
 ## work every quarter second). A *bolt* is the server's flee: the animal moves faster than 1.8 times its wander speed (the server's
-## rule, sim.ts `tickStartle`, is 2.2 times, for 1.8 s). From the place where it began, `ran` is the farthest it gets and `back` the
-## nearest it has been since that farthest point (it starts over whenever the animal runs farther), in tiles; `peak` is the farthest
-## from me, for the detail only. This proves end to end that the server made the animal run when the bot walked at it, and that
-## it then headed back; where it ends up beside a quiet hero, and how soon, is sim.test.ts's to prove for every species.
+## rule, sim.ts `tickStartle`, is 2.2 times, for 1.8 s). After a bolt, `peak_b` is the farthest it gets from me, and it *returned*
+## (`reached`) when, at least 2.5 s after the bolt was seen (the flight is over by then) and while I stand still, it is within 3 tiles
+## of me after having been more than 3.5 away: the server calms it, walks it back and creeps it to the tile next to a quiet hero. That
+## it ends exactly beside me, and how soon, is sim.test.ts's to prove for every species; here it is only the end-to-end proof that
+## the server made it run when I walked at it and that it then came back to me.
 func _watch_startle(rec: Dictionary, animal: Dictionary) -> void:
 	var now := Time.get_ticks_msec()
 	var dt := float(now - int(rec["last_t"])) / 1000.0
@@ -598,39 +601,33 @@ func _watch_startle(rec: Dictionary, animal: Dictionary) -> void:
 		return
 	var tile := Data.tile()
 	var at := _animal_px(animal)
-	var before: Vector2 = rec["last_at"]
-	var speed := at.distance_to(before) / dt
+	var speed := at.distance_to(rec["last_at"]) / dt
 	rec["last_at"] = at
 	rec["last_t"] = now
-	rec["peak"] = maxf(float(rec["peak"]), at.distance_to(Vector2(world.hero.px, world.hero.py)) / tile)
+	var d_bot := at.distance_to(Vector2(world.hero.px, world.hero.py)) / tile
+	rec["peak"] = maxf(float(rec["peak"]), d_bot)
 	if not bool(rec["bolted"]):
 		if speed > 1.8 * float(rec["speed"]):
 			rec["bolted"] = true
-			rec["from"] = before
+			rec["bolt_t"] = now
 		return
-	var d := at.distance_to(rec["from"]) / tile
-	if d > float(rec["ran"]):
-		rec["ran"] = d
-		rec["back"] = INF
-	else:
-		rec["back"] = minf(float(rec["back"]), d)
+	rec["peak_b"] = maxf(float(rec["peak_b"]), d_bot)
+	if _standing and now - int(rec["bolt_t"]) >= 2500 and float(rec["peak_b"]) > 3.5 and d_bot <= 3.0:
+		rec["reached"] = true
 
 
-## Did this animal run off and head back? The proof that the server made it flee is the speed (`bolted`); the distances only guard
-## against nonsense: it got 2 tiles or more from where the bolt began (a bolt is 4 to 10 tiles; a slow one can end early) and afterwards
-## came at least a tile nearer to that place than its farthest point.
+## Did this animal bolt and come back to the bot? (See `_watch_startle`.)
 static func _ran_and_returned(rec: Dictionary) -> bool:
-	return bool(rec["bolted"]) and float(rec["ran"]) >= 2.0 and float(rec["back"]) <= float(rec["ran"]) - 1.0
+	return bool(rec["bolted"]) and bool(rec["reached"])
 
 
 ## For the startle step's detail: per animal watched, how far it was when the bot set off, how close the walk got, whether the
-## server made it bolt, how far it ran from where the bolt began, the nearest it came back to that place and the most it was from me.
+## server made it bolt, the farthest it was from me after that, and whether it came back to me.
 func _startles_detail() -> String:
 	var parts: Array = []
 	for id in _startles.keys():
 		var r: Dictionary = _startles[id]
-		var back: float = r["back"]
-		parts.append("#%s %.0f tiles off, %.1f after the walk, %s, up to %.1f from me" % [id, float(r.get("far", -1.0)), float(r.get("near", -1.0)), ("bolted, ran %.1f from where it began and %s" % [float(r["ran"]), ("then came back to %.1f of it" % back) if back < INF else "did not come back"]) if bool(r["bolted"]) else "never bolted", float(r["peak"])])
+		parts.append("#%s %.0f tiles off, %.1f after the walk, %s" % [id, float(r.get("far", -1.0)), float(r.get("near", -1.0)), ("bolted, got %.1f tiles from me and %s" % [float(r["peak_b"]), "came back to me" if bool(r["reached"]) else "did not come back"]) if bool(r["bolted"]) else "never bolted"])
 	return "; ".join(parts)
 
 
