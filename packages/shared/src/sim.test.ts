@@ -1716,6 +1716,31 @@ describe('vilda djur skräms och kommer tillbaka (M7b)', () => {
     expect([Math.floor(a.x / TILE) - Math.floor(p.x / TILE), Math.floor(a.y / TILE) - Math.floor(p.y / TILE)]).toEqual([0, 1]);
   });
 
+  it('every shy species ends up next to a hero who walked at it and then stood still, within 30 s of game time, at the normal tick and at the slowest the server steps (250 ms)', () => {
+    const species = Object.values(ANIMALS).filter((d) => d.wild && !d.mob && !d.predator && !d.vehicle && !d.mount);
+    expect(species.length).toBeGreaterThan(10);
+    for (const def of species) {
+      for (const dt of [50, 250]) {
+        const { world, p, a } = outdoors(def.species, 3);
+        let now = 1_000_000;
+        p.moving = true; // the hero walks at it for half a second...
+        for (let ms = 0; ms < 500; ms += dt) tick(world, dt, at((now += dt)));
+        expect(a.startled, `${def.species} was not startled`).toBe(true);
+        p.moving = false; // ...and then stands still
+        let adjacentAt = -1;
+        let stayed = true;
+        for (let ms = 0; ms < 30_000; ms += dt) {
+          tick(world, dt, at((now += dt)));
+          const off = Math.abs(Math.floor(a.x / TILE) - Math.floor(p.x / TILE)) + Math.abs(Math.floor(a.y / TILE) - Math.floor(p.y / TILE));
+          if (off === 1 && adjacentAt < 0) adjacentAt = ms;
+          if (adjacentAt >= 0 && off !== 1) stayed = false;
+        }
+        expect(adjacentAt, `${def.species} at ${dt} ms ticks never got next to the hero`).toBeGreaterThanOrEqual(0);
+        expect(stayed, `${def.species} at ${dt} ms ticks left again`).toBe(true);
+      }
+    }
+  });
+
   it('a hero who stands still, an animal out of reach, a petted one, predators, pets and farm animals are left alone', () => {
     // standing still, 3 tiles away
     let t = outdoors('hare');
