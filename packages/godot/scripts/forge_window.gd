@@ -51,7 +51,11 @@ func _fill() -> void:
 	shown.clear()
 	var me := model.my_player()
 	var smith := str(Data.gear.get("smith", "stina"))
-	add_bubble(npc_portrait(smith), Strings.t("forgeIntro") if tab == "upgrade" else Strings.t("forgeCraftIntro"))
+	var intro := Strings.t("forgeIntro") if tab == "upgrade" else Strings.t("forgeCraftIntro")
+	if get_viewport().get_visible_rect().size.y < 500.0:
+		add_label(intro, 14, Color(1, 1, 1, 0.7)) # (175 % text on a 720p window: a line, so the pieces are in view)
+	else:
+		add_bubble(npc_portrait(smith), intro)
 	if tab == "upgrade":
 		_fill_upgrade(me)
 	else:
