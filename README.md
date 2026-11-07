@@ -291,6 +291,16 @@ The end of the saga is on screen too: `--demo=loke --ending` plays what the serv
 (the toasts of that moment now take turns instead of wiping each other). Pictures: [Fenrisklyftan](packages/godot/docs/m6c-fenrir.png), [its hall](packages/godot/docs/m6c-fenrir-hall.png),
 [its bosses' moves](packages/godot/docs/m6c-fenrir-bosses.png); [Bifrost](packages/godot/docs/m6c-loke.png), [its hall](packages/godot/docs/m6c-loke-hall.png), [its bosses' moves](packages/godot/docs/m6c-loke-bosses.png).
 
+**M9a** gives the native client what the browser game had and it lacked. **The minimap** is a small map in the top right corner of the map you are on (the farm, a wild map, a dungeon): the terrain, you (a big yellow dot), the other players (white), the villagers (pink), the animals (cream) and the monsters (red), and a marker for what is worth finding: each dungeon's arch in that dungeon's colour, the färdport, doors and caves, the bus stop and the station, Kämpastenen, the landmarks and a dungeon's way out. `M` (or the world map's button) shows and hides it; the choice is remembered in `settings.cfg` and it grows with the text size. **The world map with fast travel** (`K`, the left trigger or the pause menu's "Karta") shows the 7 × 7 maps round the one you are on, north up: the ones you have been to with their place's emoji and name, ❔ for the rest, a "?" where you have seen a landmark you have not touched and a 🧭 where you found them all, and "här" on yours. A visited map is a button: it sends `{t:'teleport'}` and the server puts you in the middle of it; "Åk hem" goes to the farm and "Månen" to the moon when you have been there. Exactly as the server allows (`teleport()` in `sim.ts`): never from inside a dungeon or a run (the buttons are greyed; the server now refuses it there too, it used to leave your fighter behind), only to a map you have visited, never into a cave or a building. **Every dungeon has its own arch** (the server has always put all nine out in the world; the client drew one stone arch for all of them): a barrow for Draugkryptan, an ice gate for Frostjättens borg, a black forge door for Surts smedja, a bone gate for Helheim, a timber mine for Svartalfheims gruvor, a sea temple for Havsormens tempel, two living trees for Alvernas lund, a cleft of steel-blue rock for Fenrisklyftan and a rainbow arch for Bifrost, as the browser's art drew them. They stand where the plans put them (`DUNGEONS[id].portal`), all reachable on foot from the farm, and use the server's own rule for going in (a class, and the chapter before it cleared): Draugkryptan in the forest west of the north map (`a:-1,-1`), Frostjättens borg in the icy map two north of the farm (`a:0,-2`, with Fenrisklyftan's arch in the same map's south-west), Surts smedja in the volcano (`a:2,2`), Helheim in the swamp west of the farm (`a:-1,0`), Svartalfheims gruvor in the mountains east of it (`a:2,0`), Havsormens tempel on the beach (`a:-2,0`), Alvernas lund in the mushroom forest (`a:1,-1`) and Bifrost at the space base (`a:1,3`); the world map says which maps you have been to. The pause menu's "Gå in i …" entries stay what they were: a dev shortcut that only works on a server with `DEV_TELEPORT=1`. `--demo=forest --arch=0..8` draws one arch for a picture, `--demo=farm --open-map --visited=a:0,-1=skog|a:1,0=by` the world map with some visited maps. `pnpm godot:bot` has a map walker (`Bot-Kartvandrare`, `BOT_ONLY=walker`): it walks north, opens the world map with `K`, goes home and back by the buttons (the server moved it), toggles the minimap with `M`, meets Frostjättens locked arch, asks `dev unlock`, goes in by the arch and checks that the map is greyed inside.
+
+![The minimap on the farm](packages/godot/docs/m9a-minimap.png)
+
+![The world map](packages/godot/docs/m9a-worldmap.png)
+
+![Frostjättens arch](packages/godot/docs/m9a-arch-frost.png)
+
+![The nine arches](packages/godot/docs/m9a-arches.png)
+
 **Röstprat** (voice chat) is back in the native client (2026-11-06). Open it from the pause menu ("Röstprat") or the small button at the top right of the HUD. The game picks up the phone for you when you log in (the window's "Lägg på" hangs up and keeps it hung up). Hold **C** (or the window's "Håll här för att prata" button) to talk: push-to-talk is the default, for the kids; "Öppen mikrofon" in the window keeps the microphone open, "Tysta mikrofonen" turns it off, and "Volym" sets how loud the others are (all of it is remembered in `settings.cfg`). Everything about rooms is as before: devices behind the same address are one room and do not hear each other, one device per room is the speakerphone. Sound goes straight between the rooms' speakers as small mu-law packets on a WebRTC data channel (Godot has no WebRTC audio tracks), 16 kB/s a peer.
 
 ![Röstprat](packages/godot/docs/voice.png)
@@ -346,11 +356,11 @@ generator. `--time=0.9` (a fraction of the day: 0 sunrise, 0.4 midday, 0.9 night
    headless Godot renders nothing. `packages/godot/ART.md` ("Measured") keeps the numbers.
 
 **Run it against a server.** The server is the one in `packages/server` (`pnpm dev` starts it on port 8080). It refuses to start without a choice about access, and dies if
-`DATABASE_URL` points at a Postgres that is not running, so pick one of two recipes. Both set `DEV_TELEPORT=1`: the
-native client draws only Draugkryptan's way in (the arch), so the switch lets the pause menu's "Gå in i …" entries for
-the other eight dungeons ask the server to put you inside, as their arches would, making you a Krigare first if you
-have no class (and, since M4c, the farmer bot's `dev starter` hands a hero with a class the starter weapon Smed-Stina's forge
-makes, which the gear window can then put on). Draugkryptan itself needs no switch. Never set it on the real farm.
+`DATABASE_URL` points at a Postgres that is not running, so pick one of two recipes. Both set `DEV_TELEPORT=1`, which a normal game does not need:
+every dungeon has its own arch out in the world (see "Native client", M9a), and the switch only adds shortcuts for checking: the pause menu's "Gå in i …"
+entries ask the server to put you inside a dungeon at once, as its arch would, making you a Krigare first if you
+have no class; and the bots' dev messages (`dev starter` hands a hero with a class the starter weapon Smed-Stina's forge
+makes, `dev nextDay`, and `dev unlock`, which counts the chapters before the last as cleared so a check can use a later arch). Never set it on the real farm.
 
 - *Throwaway, nothing to set up* (no password, no database, nothing saved; a home network only):
 
@@ -577,6 +587,8 @@ a wheel), the frame-rate counter and the world's sounds, plus the gear and quest
 | Pets stay / come back | `X` / `V` (the whistle) | press the right stick / the left stick |
 | Emotes | `F` opens the wheel; lean the mouse towards one and click | d-pad up opens the wheel; lean the stick, `A` picks |
 | Chat | `T` or `Enter`, type, `Enter` sends, `Esc` closes | `Back` / `Select` |
+| World map (fast travel; also in the pause menu) | `K`, then click a place you have been to (or move with the arrows and `Enter`) | left trigger (`LT`/`L2`), then the d-pad and `A` |
+| Minimap (the corner map) on / off | `M` (or the button in the world map) | the button in the world map |
 | Gear and the saga's quests | `G` and `J` (also in the pause menu) | the pause menu's buttons |
 | Pause menu, close a window, drop the target | `Esc` | `Start` |
 | Talk on Röstprat (push-to-talk) | hold `C` (or choose the open microphone in the voice window) | |
@@ -593,7 +605,7 @@ In a dungeon or a run the same keys fight:
 | Next target | `Tab` | d-pad right |
 | Drop the target / pause | `Esc` | `Start` |
 
-Notes: the d-pad is shared. Its four directions also walk, so d-pad up opens the emote wheel (and walks up) and, in a fight, d-pad right switches target (and walks right); use the left stick for walking if that is in the way. The hotbar numbers and the spell numbers share `1`–`4`, so outdoors on the farm they pick tools and in a
+Notes: the minimap is not on the d-pad's down, which the browser used: down also walks, so the map would flicker with every step. It is the key `M`, and a button in the world map for the pad (the left trigger opens that). The d-pad is shared. Its four directions also walk, so d-pad up opens the emote wheel (and walks up) and, in a fight, d-pad right switches target (and walks right); use the left stick for walking if that is in the way. The hotbar numbers and the spell numbers share `1`–`4`, so outdoors on the farm they pick tools and in a
 dungeon they cast. The gamepad's `Y` is the bag on the farm and the second spell in a dungeon. The kids' setting
 **Hjul** keeps the face buttons free of the spells; the choice is saved per computer in `user://settings.cfg`. To pair a controller with a Mac or a PC use the system's Bluetooth settings.
 
