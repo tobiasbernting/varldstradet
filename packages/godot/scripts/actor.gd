@@ -820,6 +820,8 @@ func set_bubble(text: String, icon: Texture2D, seconds: float) -> void:
 ## while the villager speaks). Shapes tell them apart as well as the colour: `kind` "give" (red-orange, hand in a wish),
 ## "new" (yellow), "busy" (dim and smaller).
 func set_mark(text: String, kind := "new") -> void:
+	if _mark != null and _mark.visible and text != "" and _mark.text == text and str(_mark.get_meta("kind", "")) == kind:
+		return # (nothing changed: it is called every frame)
 	if text == "":
 		if _mark != null:
 			_mark.visible = false

@@ -14,6 +14,8 @@ const COOLDOWN_MS := 8000
 
 var _state: Dictionary = {} ## npc id -> {partner, until, text, cooldown_until}
 var _rng := RandomNumberGenerator.new()
+var _marks: Dictionary = {} ## npc id -> the mark worked out from my record; cleared when my record or the day's wishes change
+var _bound: WorldModel = null
 var said: Array = [] ## the latest lines spoken, {id, text, to_me}: what the check asks about (at most 20)
 
 
@@ -52,6 +54,14 @@ func tick(model: WorldModel, npcs: Dictionary, me_pos: Vector3) -> void:
 	var me := model.my_player()
 	if me.is_empty():
 		return
+	if _bound != model:
+		_bound = model
+		_marks = {}
+		model.player_changed.connect(func(id: String, _p: Variant) -> void:
+			if id == model.me:
+				_marks = {})
+		model.quests_changed.connect(func() -> void: _marks = {})
+		model.area_changed.connect(func(_k: String) -> void: _marks = {})
 	var now := Time.get_ticks_msec()
 	var f := fposmod(model.time_ms + (0.0 if model.time_at == 0 else float(Time.get_ticks_msec() - model.time_at)), Data.constant("DAY_LENGTH_MS", 600000.0)) / Data.constant("DAY_LENGTH_MS", 600000.0)
 	for id in npcs.keys():
@@ -82,5 +92,7 @@ func tick(model: WorldModel, npcs: Dictionary, me_pos: Vector3) -> void:
 		if now < int(st["until"]):
 			actor.set_mark("") # (the bubble holds the place)
 			continue
-		var m := mark_for(model, me, str(id))
+		if not _marks.has(id):
+			_marks[id] = mark_for(model, me, str(id))
+		var m: Dictionary = _marks[id]
 		actor.set_mark(str(m.get("text", "")), str(m.get("kind", "new")))

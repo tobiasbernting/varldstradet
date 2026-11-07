@@ -152,6 +152,7 @@ func _ready() -> void:
 	model.player_changed.connect(func(id: String, _p: Variant) -> void:
 		_sync_actors()
 		if id == model.me and _area != "":
+			hud.update_tracker(model.my_player())
 			_update_hud())
 	model.snapshot.connect(_on_snapshot)
 	model.run_changed.connect(_on_run_changed)
@@ -480,6 +481,7 @@ func _on_dev_enter(dungeon_id: String) -> void:
 
 func _on_area_changed(_key: String) -> void:
 	_rebuild()
+	hud.update_tracker(model.my_player())
 
 
 func is_outdoor() -> bool:

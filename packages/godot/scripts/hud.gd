@@ -74,7 +74,9 @@ var tracker: PanelContainer ## M9b: the saga's chapter and quests, always on the
 var tracker_head: Button
 var tracker_lines: VBoxContainer
 var tracker_open := true
-var _tracker_key := ""
+var _tracker_lines: Array = []
+var _tracker_was_open := true
+var _tracker_scale := 1.0
 var _tracker_me: Dictionary = {}
 var side_box: VBoxContainer ## M9b: the family button and (with a pet or a horse) stay and whistle, on the right edge
 var family_button: Button
@@ -672,7 +674,7 @@ func set_farm_status(model: WorldModel, me: Dictionary) -> void:
 	_farm_chip("weather", Strings.weather_emoji(kind))
 	farm_labels["weather"].tooltip_text = Strings.weather(kind)
 	_farm_chip("level", "⭐ " + Strings.t("sagaLevelChip", {"n": Gear.level_of(me)}) if SagaState.shows_level(me) else "")
-	_set_tracker(me)
+	tracker.visible = SagaState.started(me) and farm_box.visible # (its lines are redrawn by update_tracker, when my record changes)
 	_farm_chip("coins", "%d %s" % [int(me.get("coins", 0)), Strings.t("coins")])
 	var stars := int(me.get("stars", 0))
 	_farm_chip("stars", "⭐ %d" % stars if stars > 0 else "")
@@ -1069,7 +1071,6 @@ func _build_tracker(parent: Control) -> void:
 	tracker_head.add_theme_font_size_override("font_size", 16)
 	tracker_head.pressed.connect(func() -> void:
 		tracker_open = not tracker_open
-		_tracker_key = ""
 		_set_tracker(_tracker_me))
 	v.add_child(tracker_head)
 	tracker_lines = VBoxContainer.new()
@@ -1077,14 +1078,21 @@ func _build_tracker(parent: Control) -> void:
 	v.add_child(tracker_lines)
 
 
+## Redraws the tracker from my record (called when it changes, not every update): the lines are compared with the ones drawn.
+func update_tracker(me: Dictionary) -> void:
+	_set_tracker(me)
+
+
 func _set_tracker(me: Dictionary) -> void:
 	_tracker_me = me
-	var lines: Array = SagaState.tracker_lines(me) if SagaState.started(me) else []
-	tracker.visible = SagaState.started(me) and farm_box.visible
-	var key := JSON.stringify([lines, tracker_open, Settings.ui_scale])
-	if key == _tracker_key:
+	var started := SagaState.started(me)
+	var lines: Array = SagaState.tracker_lines(me) if started else []
+	tracker.visible = started and farm_box.visible
+	if lines == _tracker_lines and tracker_open == _tracker_was_open and Settings.ui_scale == _tracker_scale:
 		return
-	_tracker_key = key
+	_tracker_lines = lines
+	_tracker_was_open = tracker_open
+	_tracker_scale = Settings.ui_scale
 	tracker_head.text = "%s %s" % [Strings.t("sagaJournalTab"), "▾" if tracker_open else "▸"]
 	tracker_head.tooltip_text = Strings.t("trackerClose" if tracker_open else "trackerOpen")
 	for c in tracker_lines.get_children():

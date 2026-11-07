@@ -42,7 +42,7 @@ func members() -> Array:
 		var ob := bool(b.get("online", false))
 		if oa != ob:
 			return oa
-		return str(a.get("name", "")) < str(b.get("name", "")))
+		return str(a.get("name", "")).naturalnocasecmp_to(str(b.get("name", ""))) < 0)
 	return out
 
 
