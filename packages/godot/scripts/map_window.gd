@@ -7,7 +7,7 @@ extends GameWindow
 ## of it. "Åk hem" goes to the farm, "Månen" to the moon when I have been there, and "Minikarta av/på" is the button for the
 ## corner map (the pad's way to it). The rules are the server's (`teleport()` in sim.ts): not from inside a dungeon or a run,
 ## only to a map in my `visited`, never into a cave or a building; the window shows what it will refuse as greyed buttons.
-## Keys: K, or the controller's extra button (Share/Capture) where it has one (the `worldmap` action), open and close it; the pause menu has a button for it. (The left trigger is the run button.)
+## Keys: N, or the controller's extra button (Share/Capture) where it has one (the `worldmap` action), open and close it; the pause menu has a button for it. (The left trigger is the run button.)
 
 const R := 3 ## the grid reaches this many maps each way
 const MOON_KEY := "moon"
@@ -35,7 +35,7 @@ func _fill() -> void:
 	var c := _coords(here)
 	var visited: Array = me.get("visited", ["farm"])
 	var marks := landmark_marks(me)
-	var where := "%s %s" % [Strings.place_emoji(_biome_of(here)), Strings.place(_biome_of(here))]
+	var where := "%s %s" % [Strings.biome_emoji(_biome_of(here)), Strings.place(_biome_of(here))]
 	add_label("%s: %s" % [Strings.t("youAreHere"), where], 17, Color.WHITE)
 	add_label(Strings.t("mapNoJump" if inside else "mapHint"), 14)
 	_grid = GridContainer.new()
@@ -74,7 +74,7 @@ func _fill() -> void:
 
 
 func _cell(k: String, known: bool, biome: String, rumour: bool, mark: String, is_here: bool, is_mine: bool, inside: bool) -> Button:
-	var emoji := Strings.place_emoji(biome) if known else ("🚀" if rumour else "❔")
+	var emoji := Strings.biome_emoji(biome) if known else ("🚀" if rumour else "❔")
 	var name_text := Strings.place(biome) if known else ("?" if rumour else "")
 	if is_mine:
 		name_text = Strings.t("mapHereTag")

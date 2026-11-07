@@ -8,7 +8,7 @@ signal resumed
 signal switch_player
 signal dev_enter(dungeon: String)
 signal fps_toggled(on: bool)
-signal window_asked(which: String) ## "gear", "quests" or "map": the windows the keys G, J and K open, for a pad
+signal window_asked(which: String) ## "gear", "quests", "map", "book", "journal", "help" or "family": the windows the keys open, for a pad
 
 var _root: Control
 var _main: VBoxContainer
@@ -67,6 +67,13 @@ func _ready() -> void:
 	_main.add_child(_button("%s (%s)" % [Strings.t("questsTitle"), Strings.t("questsKey")], func() -> void:
 		close()
 		window_asked.emit("quests")))
+	for entry in [["📕 " + Strings.t("book"), "bookKey", "book"], ["📖 " + Strings.t("journalMenu"), "journalKey", "journal"], ["👪 " + Strings.t("familyTitle"), "familyKey", "family"], ["❓ " + Strings.t("helpTitle"), "helpKey", "help"]]:
+		var which: String = entry[2]
+		var b := _button("%s (%s)" % [entry[0], Strings.t(entry[1])], func() -> void:
+			close()
+			window_asked.emit(which))
+		b.name = "Ask_" + which
+		_main.add_child(b)
 	if Voice.available:
 		_main.add_child(_button(Strings.t("voiceWindow"), func() -> void:
 			close()

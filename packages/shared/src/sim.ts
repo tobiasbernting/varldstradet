@@ -3082,6 +3082,11 @@ function tickAnimals(world: WorldState, dtMs: number, ctx: SimCtx, out: Change[]
     const speed = ANIMALS[a.species]?.speed ?? 16;
     const step = (speed * dtMs) / 1000;
     if (dist <= step) {
+      // it has arrived: it stands on its target, not up to one step short of it (a step is 10 px when a starved server catches up in
+      // 250 ms ticks, which can be a whole tile short, so that a creeping animal never reached the tile beside the hero)
+      const there = resolveMove((tx, ty) => isSolidForAnimal(world, tx, ty), a.x, a.y, a.tx, a.ty, ANIMAL_HALF_W, ANIMAL_HALF_H, world);
+      a.x = there.x;
+      a.y = there.y;
       a.moving = false;
       delete a.tx;
       delete a.ty;

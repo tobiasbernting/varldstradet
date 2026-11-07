@@ -797,7 +797,7 @@ export const T = {
   mapHint: 'Norr är uppåt: kallt i norr, varmt i söder, hav i väster, berg i öster. Tryck på en plats du har varit på för att åka dit!',
   mapNoJump: 'Du kan inte åka härifrån. Gå ut ur äventyret först!',
   mapHereTag: 'här',
-  mapKey: 'K',
+  mapKey: 'N',
   minimapKey: 'M',
   newArea: 'Du har kommit till {name}!',
   newBiome: '{emoji} Du har upptäckt {name}! +1 ⭐ ({n} av {total} sorters platser)',
@@ -1106,6 +1106,22 @@ export const T = {
   gearEmpty: 'Tomt',
   gearNoClass: 'Välj väg vid Kämpastenen i Köpingen först.',
   gearKey: 'G',
+  // M9b: the native client's books, help and family window (keys as in project.godot)
+  bookKey: 'B',
+  journalKey: 'K',
+  helpKey: 'H',
+  familyKey: 'P',
+  journalMenu: 'Sagans dagbok',
+  helpTitle: 'Hjälp',
+  helpGoTo: 'Hjälp: {topic}',
+  familyOnRun: '⚔️ På färd i sagan',
+  familyFarm: 'På gården',
+  familyNobodyElse: 'Ingen annan i familjen har varit här än.',
+  familyYouHere: 'Du är här',
+  familyNoJump: 'Du kan inte hoppa härifrån eller dit just nu.',
+  trackerOpen: 'Visa sagans uppdrag',
+  trackerClose: 'Dölj sagans uppdrag',
+  houseLabel: 'Alla djurhus:',
   talkTitle: 'Prata',
   talkQuests: '📜 Uppdrag',
   talkChat: '💬 Prata!',
@@ -1361,6 +1377,26 @@ export interface HelpTopic {
   /** Show the table of animal houses after the steps. */
   houses?: boolean;
 }
+
+/**
+ * The native client's own lines for the topics that talk about keys (the browser's lines are about touch, the browser and a
+ * pad layout the native client does not have): the whole "Så styr du" topic, and the pad and pairing lines.
+ */
+export const HELP_NATIVE_CONTROLS: HelpStep[] = [
+  { icon: 'emoji:⌨️', text: 'Gå med piltangenterna eller W A S D.' },
+  { icon: 'emoji:⎵', text: 'Tryck E eller mellanslag för att använda det du håller. Du kan också klicka på en ruta bredvid dig.' },
+  { icon: 'emoji:🔢', text: 'Siffrorna 1–8 väljer sak i raden längst ner. Q eller I öppnar ryggsäcken, F visar känslor, T är chatt, X och V säger åt djuren att stanna och komma.' },
+  { icon: 'emoji:🏃', text: 'Håll in Skift för att springa. Med handkontroll: vänster avtryckare, eller B utanför strider.' },
+  { icon: 'emoji:📖', text: 'B öppnar gårdsboken, K sagans dagbok med upptäckterna, J dagens önskningar, G utrustningen, P familjen och H eller ? den här hjälpen. Esc öppnar pausmenyn.' },
+  { icon: 'emoji:🎮', text: 'Med handkontroll: vänster spak går, A använder, LB/RB byter sak, Y öppnar ryggsäcken. Start öppnar pausmenyn, och där finns gårdsboken, dagboken, familjen och hjälpen. I menyerna flyttar du med spaken, A väljer och B stänger.' },
+  { icon: 'hoe', text: 'Raden längst ner visar vad du kan hålla. Tryck på en sak för att hålla den.' },
+  { icon: 'emoji:🎒', text: 'Ryggsäcken har fler platser. Tryck på en sak och sedan på en ruta för att flytta den.' },
+];
+export const HELP_NATIVE_GAMEPAD: HelpStep[] = [
+  { icon: 'emoji:👆', text: 'Starta spelet och tryck på en knapp på kontrollen. Då märker spelet den.' },
+  { icon: 'emoji:⚙️', text: 'Start öppnar pausmenyn. Där väljer du Inställningar, gårdsboken, dagboken, familjen och hjälpen med spaken och A.' },
+];
+export const HELP_NATIVE_SAGA_PAD = 'Med handkontroll i en fängelsehåla: X, Y, B och RB är besvär 1–4, LB är dryck och d-pad höger byter mål. Start öppnar pausmenyn.';
 
 export const HELP: HelpTopic[] = [
   {

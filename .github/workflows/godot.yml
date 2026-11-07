@@ -593,7 +593,7 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/shots/farmer"
           GODOT=~/godot/godot BOT_ONLY=farm BOT_FARM_SECONDS=900 BOT_FARM_SHOTS="$GITHUB_WORKSPACE/shots/farmer" \
             xvfb-run -a -s "-screen 0 1280x720x24" pnpm godot:bot 2>&1 | tee farmer.log
-          for f in watering bag-open fishing-bite pet shop workbench not-yours house cook wardrobe talk village class volva gear bus; do test "$(stat -c %s "$GITHUB_WORKSPACE/shots/farmer/$f.png")" -gt 20000; done
+          for f in watering bag-open fishing-bite pet shop workbench not-yours house cook wardrobe talk village class volva gear bus marks book journal finds tracker help family volva-journal book-175 help-175 hud-175; do test "$(stat -c %s "$GITHUB_WORKSPACE/shots/farmer/$f.png")" -gt 20000; done
 
       # M5c: the run pair under Xvfb takes the pictures of the arch window, a zone, the three cards, the end summary and the
       # tree window (software GL, so slowly: the same run is checked headless by the export job)

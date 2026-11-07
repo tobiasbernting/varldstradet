@@ -8,6 +8,9 @@ extends CanvasLayer
 ## assets/sv.json.
 
 signal menu_asked
+signal journal_asked ## M9b: the level chip was clicked
+signal family_asked ## M9b: the 👪 button
+signal pets_asked(cmd: String) ## M9b: the stay / whistle buttons ("stay" or "come")
 signal centre_busy(on: bool) ## on a narrow screen: a banner, a toast or the fallen box is up (the chat feed makes room)
 
 const HP_GREEN := Color("4fcf5a")
@@ -67,6 +70,18 @@ var _hint_t := 0.0
 var fps_label: Label
 var voice_button: Button
 var _narrow := false
+var tracker: PanelContainer ## M9b: the saga's chapter and quests, always on the left outdoors once the saga has begun
+var tracker_head: Button
+var tracker_lines: VBoxContainer
+var tracker_open := true
+var _tracker_lines: Array = []
+var _tracker_was_open := true
+var _tracker_scale := 1.0
+var _tracker_me: Dictionary = {}
+var side_box: VBoxContainer ## M9b: the family button and (with a pet or a horse) stay and whistle, on the right edge
+var family_button: Button
+var stay_button: Button
+var come_button: Button
 var _busy := false
 var _top: VBoxContainer ## the boss at the top, in the middle (to the right when the screen is narrow, see `_layout`)
 var _frame_times: Array = []
@@ -111,6 +126,8 @@ func _ready() -> void:
 	party_box = VBoxContainer.new()
 	party_box.add_theme_constant_override("separation", 2)
 	left.add_child(party_box)
+	_build_tracker(left)
+	_build_side_buttons()
 
 	var right := HBoxContainer.new()
 	right.anchor_left = 1.0
@@ -525,6 +542,8 @@ func reset() -> void:
 	hint_label.text = ""
 	not_drawn.visible = false
 	farm_box.visible = false
+	tracker.visible = false
+	side_box.visible = false
 	boss_box.visible = false
 	cast_box.visible = false
 	down_box.visible = false
@@ -644,7 +663,7 @@ func _build_farm_box() -> void:
 	farm_box.add_theme_constant_override("separation", 8)
 	farm_box.visible = false
 	add_child(farm_box)
-	for k in ["clock", "season", "weather", "coins", "stars", "hearts"]:
+	for k in ["clock", "season", "weather", "level", "coins", "stars", "hearts"]:
 		var panel := PanelContainer.new()
 		var sb := StyleBoxFlat.new()
 		sb.bg_color = Color(0.1, 0.09, 0.07, 0.72)
@@ -660,6 +679,14 @@ func _build_farm_box() -> void:
 		farm_labels[k] = l
 		panel.visible = false
 		l.set_meta("panel", panel)
+		if k == "level":
+			# the level chip opens the journal's level page (a click; the pause menu is the pad's way)
+			panel.mouse_filter = Control.MOUSE_FILTER_STOP
+			panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+			panel.tooltip_text = Strings.t("sagaLevelChipTip")
+			panel.gui_input.connect(func(ev: InputEvent) -> void:
+				if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+					journal_asked.emit())
 
 
 func _farm_chip(k: String, text: String) -> void:
@@ -679,6 +706,8 @@ func set_farm_status(model: WorldModel, me: Dictionary) -> void:
 	var kind := str(model.weather.get("kind", "sun")) if model.weather is Dictionary else "sun"
 	_farm_chip("weather", Strings.weather_emoji(kind))
 	farm_labels["weather"].tooltip_text = Strings.weather(kind)
+	_farm_chip("level", "⭐ " + Strings.t("sagaLevelChip", {"n": Gear.level_of(me)}) if SagaState.shows_level(me) else "")
+	tracker.visible = SagaState.started(me) and farm_box.visible # (its lines are redrawn by update_tracker, when my record changes)
 	_farm_chip("coins", "%d %s" % [int(me.get("coins", 0)), Strings.t("coins")])
 	var stars := int(me.get("stars", 0))
 	_farm_chip("stars", "⭐ %d" % stars if stars > 0 else "")
@@ -690,6 +719,8 @@ func set_farm_status(model: WorldModel, me: Dictionary) -> void:
 func set_area(area_name: String, drawn: bool) -> void:
 	area_label.text = area_name if drawn else ""
 	farm_box.visible = farm_box.visible and drawn
+	tracker.visible = tracker.visible and drawn
+	side_box.visible = side_box.visible and drawn
 	not_drawn.visible = not drawn
 	not_drawn_label.text = "" if drawn else Strings.t("areaNotDrawn", {"name": area_name})
 
@@ -704,6 +735,8 @@ static func hearts_string(hp: float, max_hp: float) -> String:
 
 
 func set_hearts(hp: float, max_hp: float) -> void:
+	tracker.visible = false # (in a dungeon the fight is the whole screen)
+	side_box.visible = false
 	hearts_label.text = hearts_string(hp, max_hp)
 	hearts_text.text = "%d/%d" % [ceili(hp), ceili(max_hp)] if max_hp > 0.0 else ""
 
@@ -1036,3 +1069,118 @@ func set_down(flags: int, all_down: bool, webbed: bool, now: float) -> void:
 		sub = Strings.t("sagaWipeSub") if all_down else Strings.t("sagaFallenSub", {"s": left})
 	down_title.text = "%s %s" % [glyph, title]
 	down_sub.text = sub
+
+
+# ---------------------------------------------------------------------------
+# M9b: the saga tracker, the family button and the pet buttons
+
+func _panel_style(alpha := 0.72) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.1, 0.09, 0.07, alpha)
+	sb.set_corner_radius_all(8)
+	sb.content_margin_left = 10
+	sb.content_margin_right = 10
+	sb.content_margin_top = 4
+	sb.content_margin_bottom = 4
+	return sb
+
+
+## The chapter and the quests that go on (the browser's renderTracker): a header that folds it, one line each, a tick on the done ones.
+## Hidden before the saga has begun and in a dungeon.
+func _build_tracker(parent: Control) -> void:
+	tracker = PanelContainer.new()
+	tracker.name = "Tracker"
+	tracker.add_theme_stylebox_override("panel", _panel_style())
+	tracker.custom_minimum_size = Vector2(270, 0)
+	tracker.visible = false
+	parent.add_child(tracker)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 2)
+	tracker.add_child(v)
+	tracker_head = Button.new()
+	tracker_head.flat = true
+	tracker_head.focus_mode = Control.FOCUS_NONE
+	tracker_head.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	tracker_head.add_theme_font_size_override("font_size", 16)
+	tracker_head.pressed.connect(func() -> void:
+		tracker_open = not tracker_open
+		_set_tracker(_tracker_me))
+	v.add_child(tracker_head)
+	tracker_lines = VBoxContainer.new()
+	tracker_lines.add_theme_constant_override("separation", 2)
+	v.add_child(tracker_lines)
+
+
+## Redraws the tracker from my record (called when it changes, not every update): the lines are compared with the ones drawn.
+func update_tracker(me: Dictionary) -> void:
+	_set_tracker(me)
+
+
+func _set_tracker(me: Dictionary) -> void:
+	_tracker_me = me
+	var started := SagaState.started(me)
+	var lines: Array = SagaState.tracker_lines(me) if started else []
+	tracker.visible = started and farm_box.visible
+	if lines == _tracker_lines and tracker_open == _tracker_was_open and Settings.ui_scale == _tracker_scale:
+		return
+	_tracker_lines = lines
+	_tracker_was_open = tracker_open
+	_tracker_scale = Settings.ui_scale
+	tracker_head.text = "%s %s" % [Strings.t("sagaJournalTab"), "▾" if tracker_open else "▸"]
+	tracker_head.tooltip_text = Strings.t("trackerClose" if tracker_open else "trackerOpen")
+	for c in tracker_lines.get_children():
+		tracker_lines.remove_child(c)
+		c.queue_free()
+	if not tracker_open:
+		return
+	for l in lines:
+		var t := Label.new()
+		t.text = ("✓ " if bool(l["done"]) else "") + str(l["text"])
+		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		t.custom_minimum_size = Vector2(250, 0)
+		t.add_theme_font_size_override("font_size", 15)
+		t.modulate = Color(1, 1, 1, 0.6 if bool(l["done"]) else 1.0)
+		tracker_lines.add_child(t)
+
+
+## On the right edge: 👪 (the family: hoppa till), and once I have a pet or a horse ✋ Stanna! and 🎵 Vissla (the X and V keys).
+func _build_side_buttons() -> void:
+	side_box = VBoxContainer.new()
+	side_box.name = "SideButtons"
+	side_box.anchor_left = 1.0
+	side_box.anchor_right = 1.0
+	side_box.anchor_top = 0.5
+	side_box.anchor_bottom = 0.5
+	side_box.offset_left = -150
+	side_box.offset_right = -16
+	side_box.offset_top = 40
+	side_box.grow_vertical = Control.GROW_DIRECTION_END
+	side_box.add_theme_constant_override("separation", 6)
+	side_box.visible = false
+	add_child(side_box)
+	family_button = _side_button("👪 " + Strings.t("familyTitle"), Strings.t("familyBtn") + " (" + Strings.t("familyKey") + ")", func() -> void: family_asked.emit())
+	stay_button = _side_button("✋ " + Strings.t("petsStayBtn"), Strings.t("petsStayBtn") + " (" + Strings.t("petsStayKey") + ")", func() -> void: pets_asked.emit("stay"))
+	come_button = _side_button("🎵 " + Strings.t("petsComeBtn"), Strings.t("petsComeBtn") + " (" + Strings.t("petsComeKey") + ")", func() -> void: pets_asked.emit("come"))
+	stay_button.visible = false
+	come_button.visible = false
+
+
+func _side_button(text: String, tip: String, call: Callable) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.tooltip_text = tip
+	b.focus_mode = Control.FOCUS_NONE
+	b.add_theme_font_size_override("font_size", 16)
+	b.add_theme_stylebox_override("normal", _panel_style(0.72))
+	b.add_theme_stylebox_override("hover", _panel_style(0.92))
+	b.add_theme_stylebox_override("pressed", _panel_style(1.0))
+	b.pressed.connect(call)
+	side_box.add_child(b)
+	return b
+
+
+## Called outdoors with whether I have a pet or a horse on any map.
+func set_side_buttons(has_pets: bool) -> void:
+	side_box.visible = farm_box.visible
+	stay_button.visible = has_pets
+	come_button.visible = has_pets
