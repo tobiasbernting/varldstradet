@@ -67,7 +67,9 @@ const dungeon = process.env.BOT_DUNGEON ?? 'draug';
 const names = ['Bot-Ask', 'Bot-Embla'];
 const walkerName = 'Bot-Vandrare';
 /** M9a: walks to Frostjättens arch (chapter 2), using the world map and the minimap on the way (see Bot `--mapcheck`). */
-const archSeconds = Number(process.env.BOT_ARCH_SECONDS ?? 240);
+/** Seconds a walker may take per map on its route, beyond a base of two minutes (a lone walker needs about 25 s a map; a runner sharing four cores with the farmer, the pairs and the run pair needs up to three times that). */
+const archSecondsPerMap = Number(process.env.BOT_ARCH_SECONDS_PER_MAP ?? 70);
+const archSecondsOf = (id: string): number => 120 + archSecondsPerMap * (archMaps[id] ?? 3);
 const mapWalkerName = 'Bot-Kartvandrare';
 /**
  * M9a: every other dungeon's arch is walked to and used by the arch's own rules (the lock met, `dev unlock`, in by the arch), two lanes of one walker
@@ -75,11 +77,11 @@ const mapWalkerName = 'Bot-Kartvandrare';
  * arch is the map walker's and Fenrisklyftan's is in the same map (a:0,-2, at the other end). BOT_ARCHES=none skips them, or a list: `hel,orm`.
  */
 const archLanes: string[][] = [
-  ['fenrir', 'hel', 'orm', 'surt'],
-  ['dvarg', 'alv', 'loke'],
+  ['surt', 'fenrir', 'hel', 'orm'],
+  ['loke', 'dvarg', 'alv'],
 ];
-/** Surts and Bifrost's arches are four maps from the farm (about 100 s each, longer on a loaded runner, which timed one out in CI): they are walked with `BOT_ARCHES=surt,loke`, and every arch (those two included) is covered without walking by the shared package's test of the arches (saga.test.ts). */
-const archLong = ['surt', 'loke'];
+/** How many maps a walker crosses to reach each arch (the farm is one): the far ones go first in a lane and get a time budget from the route, which only matters when a runner is slow (a walker is done as soon as it is in). */
+const archMaps: Record<string, number> = { fenrir: 3, hel: 2, orm: 3, dvarg: 3, alv: 3, surt: 5, loke: 5 };
 const archWanted = (process.env.BOT_ARCHES ?? '') === 'none' ? [] : (process.env.BOT_ARCHES ?? '').split(',').filter(Boolean);
 const farmerName = 'Bot-Bonde';
 const creatorName = 'Bot-Skapare';
@@ -538,7 +540,7 @@ async function main(): Promise<void> {
     }
     // the other arches: lanes of walkers, one after another in a lane (a lane's results are checked at the end)
     const archResults: { id: string; report: string; log: string; code: number | null }[] = [];
-    const lanes = mode === '' || mode === 'walker' ? archLanes.map((lane) => lane.filter((id) => (archWanted.length === 0 ? !archLong.includes(id) : archWanted.includes(id)))).filter((lane) => lane.length) : [];
+    const lanes = mode === '' || mode === 'walker' ? archLanes.map((lane) => lane.filter((id) => (archWanted.length === 0 || archWanted.includes(id)))).filter((lane) => lane.length) : [];
     // (a server of its own: a server takes eight characters, and every walker is one)
     const archPort = port + 3;
     if (lanes.length) {
@@ -557,10 +559,10 @@ async function main(): Promise<void> {
           const name = `Bot-Valv-${id}`;
           const report = path.join(tmp, `${name}.json`);
           const log = path.join(tmp, `${name}.log`);
-          const args = ['--headless', '--path', godotDir, '--', '--bot', `--server=http://127.0.0.1:${archPort}`, `--name=${name}`, `--report=${report}`, `--seconds=${archSeconds}`, '--route=arch', `--dungeon=${id}`, '--unlock'];
+          const args = ['--headless', '--path', godotDir, '--', '--bot', `--server=http://127.0.0.1:${archPort}`, `--name=${name}`, `--report=${report}`, `--seconds=${archSecondsOf(id)}`, '--route=arch', `--dungeon=${id}`, '--unlock'];
           console.log(`${name}: ${godot} ${args.join(' ')}`);
           const child = run(godot, args, { cwd: godotDir, log });
-          archResults.push({ id, report, log, code: await exited(child, (archSeconds + 40) * 1000) });
+          archResults.push({ id, report, log, code: await exited(child, (archSecondsOf(id) + 40) * 1000) });
         }
       }),
     );
