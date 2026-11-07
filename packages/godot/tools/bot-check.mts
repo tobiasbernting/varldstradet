@@ -66,6 +66,8 @@ const packs = Number(process.env.BOT_PACKS ?? 1);
 const dungeon = process.env.BOT_DUNGEON ?? 'draug';
 const names = ['Bot-Ask', 'Bot-Embla'];
 const walkerName = 'Bot-Vandrare';
+/** M9a: walks to Frostjättens arch (chapter 2), using the world map and the minimap on the way (see Bot `--mapcheck`). */
+const mapWalkerName = 'Bot-Kartvandrare';
 const farmerName = 'Bot-Bonde';
 const creatorName = 'Bot-Skapare';
 const farmSeconds = Number(process.env.BOT_FARM_SECONDS ?? 600);
@@ -113,6 +115,9 @@ interface Report {
   route: string[];
   arrived_via_arch: boolean;
   dev_sent: boolean;
+  map?: Record<string, boolean>;
+  locked_seen?: boolean;
+  unlock_sent?: boolean;
   summary?: string;
   run?: { role: string; zones: number[]; exits: number; presses: number; picks: number; runor: string[]; started: boolean; joined: boolean; ended: { outcome: string } | null; boss_down: boolean; seeds: number };
 }
@@ -335,6 +340,22 @@ async function checkFarmer(r: FarmReport, farmPort: number, botLog?: string): Pr
 }
 
 /** One bot of the run pair: it played through the client and its report says how far. */
+/** M9a: the world map and the minimap through the keys and buttons, and a later chapter's arch used by its own rules. */
+function checkMapWalker(r: Report, log?: string): void {
+  check(r.errors.length === 0, `${r.name}: no errors (${r.errors.join('; ') || 'none'})`);
+  const exitErrors = (log && fs.existsSync(log) ? fs.readFileSync(log, 'utf8') : '').split('\n').filter((l) => /leaked at exit|still in use at exit|Pages in use exist at exit/.test(l));
+  check(exitErrors.length === 0, `${r.name}: exits clean, nothing leaked at exit (${exitErrors[0] ?? 'none'})`);
+  const m = r.map ?? {};
+  for (const name of ['minimap_visible', 'opened_by_key', 'here_cell_greyed', 'farm_cell_enabled', 'unvisited_greyed', 'home_enabled', 'closed_by_key', 'fast_travel_home', 'visited_cell_enabled', 'fast_travel_visited', 'minimap_toggles', 'minimap_in_dungeon', 'map_greyed_in_dungeon'])
+    check(m[name] === true, `${r.name}: world map / minimap: ${name}`);
+  // the server moved me: home and back (the route lists every map the client was shown), then on to the arch of chapter 2
+  const route = r.route.join(' → ');
+  check(r.route.includes('farm') && r.route.filter((k) => k === 'a:0,-1').length >= 2, `${r.name}: fast travel took it home and back (${route})`);
+  check(r.locked_seen === true && r.unlock_sent === true, `${r.name}: the arch of chapter 2 stayed sealed until the chapters before it counted as cleared (the server's rule; dev unlock sent after)`);
+  check(r.area === 'saga:frost' && r.route.at(-1) === 'saga:frost', `${r.name}: went into Frostjättens borg by its arch (${route})`);
+  check(r.arrived_via_arch && !r.dev_sent, `${r.name}: the dev way into a dungeon was never used (dev_sent ${r.dev_sent})`);
+}
+
 function checkRunner(r: Report, botLog?: string): void {
   const run = r.run;
   check(r.errors.length === 0, `${r.name}: no errors (${r.errors.join('; ') || 'none'})`);
@@ -479,7 +500,17 @@ async function main(): Promise<void> {
         runBots.push({ name, report, log, child: run(godot, args, { cwd: godotDir, log }) });
       });
     }
-    const all = [...bots, ...walker, ...farmers, ...creators, ...runBots];
+    // the map walker: a player of its own (and its own empty HOME, since the minimap's toggle is saved in the settings file)
+    const mapWalkers: { name: string; report: string; log: string; child: ChildProcess }[] = [];
+    if (mode === '' || mode === 'walker') {
+      const report = path.join(tmp, `${mapWalkerName}.json`);
+      const log = path.join(tmp, `${mapWalkerName}.log`);
+      const home = fs.mkdtempSync(path.join(tmp, 'home-map-'));
+      const args = ['--headless', '--path', godotDir, '--', '--bot', `--server=http://127.0.0.1:${port}`, `--name=${mapWalkerName}`, `--report=${report}`, `--seconds=${seconds}`, '--route=arch', '--dungeon=frost', '--mapcheck'];
+      console.log(`${mapWalkerName}: ${godot} ${args.join(' ')}`);
+      mapWalkers.push({ name: mapWalkerName, report, log, child: run(godot, args, { cwd: godotDir, log, env: { HOME: home, XDG_DATA_HOME: path.join(home, 'data') } }) });
+    }
+    const all = [...bots, ...walker, ...mapWalkers, ...farmers, ...creators, ...runBots];
     const codes = await Promise.all(all.map((b) => exited(b.child, ((b.name === farmerName ? farmSeconds : runNames.includes(b.name) ? runSeconds : seconds) + 40) * 1000)));
     if (settingsRun) await checkSettings(settingsRun);
     const reports: (Report | FarmReport | null)[] = all.map((b, i) => {
@@ -505,6 +536,10 @@ async function main(): Promise<void> {
       }
       if (runNames.includes(rr.name)) {
         checkRunner(rr as Report, all.find((b) => b.name === rr.name)?.log);
+        continue;
+      }
+      if (rr.name === mapWalkerName) {
+        checkMapWalker(rr as Report, all.find((b) => b.name === mapWalkerName)?.log);
         continue;
       }
       const r = rr as Report;
