@@ -53,7 +53,7 @@ void vertex() {
 			float disp;
 			if (plant) {
 				float h = clamp(VERTEX.y / 0.55, 0.0, 1.0);
-				disp = (lean * 0.3 + shake * 0.1 + 0.015 * s) * h * h * UV.y;
+				disp = clamp((lean * 0.2 + shake * 0.08 + 0.015 * s) * h * h * UV.y, -0.2, 0.2); // (a gust peak bends a blade, it does not lay it flat)
 			} else {
 				disp = (lean * 0.07 + shake * 0.06) * clamp(VERTEX.y, 0.0, 3.0) * (pine ? 0.55 : 1.0);
 			}

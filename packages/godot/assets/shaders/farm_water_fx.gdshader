@@ -1,7 +1,7 @@
 // Water on Mellan and Hög (M7a): gentle waves (four directional sines make the surface's slope, so the light, the
-// glint and the reflection all ripple together), a foam line at the bank that washes in and out, and a reflection of
+// glint and the reflection all ripple together), a foam line at the bank that washes in and out (only there), and a reflection of
 // the sky and the shore found in the screen itself: the view ray is mirrored in the surface and marched through the
-// depth buffer a few steps (`quality` 1: 16 steps over 8 m, 2: 28 and foam on the crests; the ray is flattened, see below); where it meets something standing above
+// depth buffer a few steps (`quality` 1: 16 steps over 8 m, 2: 28; the ray is flattened, see below); where it meets something standing above
 // the water (a tree, a house, the far bank) that pixel's colour is the reflection, where it leaves the screen or
 // meets nothing it is the sky's colour. It reads the screen and depth textures, so it is only used when the preset
 // asks (farm_water.gdshader is the cheap one). Everything is plain GLSL ES 3 so it also compiles on Compatibility
@@ -56,7 +56,6 @@ void fragment() {
 	float open_water = 1.0 - bank;
 	// the slope of four crossing swells (amplitude, wave number, speed): calmer near the bank, rougher in the open
 	vec2 grad = vec2(0.0);
-	float crest = 0.0;
 	vec4 w0 = vec4(0.030, 2.4, 1.1, 0.0);
 	vec4 w1 = vec4(0.022, 4.3, 1.5, 1.0);
 	vec4 w2 = vec4(0.014, 7.1, 2.1, 2.0);
@@ -70,9 +69,8 @@ void fragment() {
 	float ph2 = dot(d2, p) * w2.y - TIME * w2.z;
 	float ph3 = dot(d3, p) * w3.y - TIME * w3.z;
 	grad += d0 * (w0.x * w0.y * cos(ph0)) + d1 * (w1.x * w1.y * cos(ph1)) + d2 * (w2.x * w2.y * cos(ph2)) + d3 * (w3.x * w3.y * cos(ph3));
-	crest = sin(ph0) * w0.x + sin(ph1) * w1.x + sin(ph2) * w2.x;
 	grad *= wave * (0.45 + 0.55 * open_water);
-	vec3 nw = normalize(vec3(-grad.x * 0.55, 1.0, -grad.y * 0.55));
+	vec3 nw = normalize(vec3(-grad.x * 0.4, 1.0, -grad.y * 0.4));
 	NORMAL = normalize((VIEW_MATRIX * vec4(nw, 0.0)).xyz);
 
 	float r1 = vnoise(p * 1.7 + vec2(TIME * 0.22, TIME * 0.13));
@@ -81,15 +79,12 @@ void fragment() {
 	vec3 col = mix(deep, shallow, 0.3 + 0.5 * ripple);
 	col = mix(col, deep, 0.35 * open_water);
 
-	// foam: the wash at the bank moves in and out, broken up by noise; on Hög white flecks on the tallest crests too
+	// foam: the wash at the bank moves in and out, broken up by noise
 	float wash = 0.5 + 0.5 * sin(TIME * 1.3 + r1 * 5.0 + bank * 4.0);
 	float foam = smoothstep(0.78 - 0.18 * wash, 0.98, bank + 0.2 * (r2 - 0.5)) * (0.55 + 0.45 * vnoise(p * 7.0 + TIME * 0.3));
-	if (quality > 1) {
-		foam = max(foam, smoothstep(0.05, 0.065, crest * wave) * smoothstep(0.55, 0.8, vnoise(p * 9.0 - TIME * 0.5)) * 0.7);
-	}
 	col = mix(col, vec3(0.92, 0.97, 1.0), foam);
 	float sp = smoothstep(0.82, 0.95, vnoise(p * 6.0 + vec2(TIME * 0.9, -TIME * 0.7)));
-	col += vec3(1.0, 0.97, 0.85) * sp * glint * 0.3;
+	col += vec3(1.0, 0.97, 0.85) * sp * glint * 0.12;
 	col = mix(col, vec3(0.8, 0.9, 0.97), frozen);
 
 	// the reflection
@@ -99,7 +94,9 @@ void fragment() {
 	float hit_amount = reflect_k * 0.75 * (1.0 - foam);
 	vec3 refl = sky_colour;
 	if (amount > 0.01) {
-		vec3 rdir = reflect(view_dir, NORMAL);
+		// the reflection sees a calmer surface than the light does: a coherent image, only gently wobbled
+		vec3 calm_n = normalize(mix((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz, NORMAL, 0.3));
+		vec3 rdir = reflect(view_dir, calm_n);
 		// art direction: seen from 51 degrees the true mirror image of a far bank is mostly above the screen; a flatter
 		// ray (as if the camera stood lower) finds the trees and the bank across the pond, which is what a pond shows
 		vec3 up_v = (VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz;
@@ -126,7 +123,7 @@ void fragment() {
 				float above = (INV_VIEW_MATRIX * vec4(sc, 1.0)).y;
 				if (behind > 0.0 && behind < step_len * 1.5 + 0.25 && above > 0.25) {
 					vec2 edge = smoothstep(0.0, 0.08, uv) * (1.0 - smoothstep(0.92, 1.0, uv));
-					hit = edge.x * edge.y;
+					hit = edge.x * edge.y * (1.0 - 0.75 * float(i) / float(steps)); // fainter the farther it is: near the bank it is a mirror, farther out the sky
 					vec2 px = 1.6 / VIEWPORT_SIZE;
 					hit_col = textureLod(screen_tex, uv, 0.0).rgb * 0.5 + textureLod(screen_tex, uv + px, 0.0).rgb * 0.25 + textureLod(screen_tex, uv - px, 0.0).rgb * 0.25;
 					break;
@@ -139,6 +136,6 @@ void fragment() {
 	ALBEDO = col * (1.0 - amount * 0.6);
 	EMISSION = refl * amount;
 	ALPHA = mix(mix(alpha, 0.97, frozen), 1.0, clamp(amount, 0.0, 0.6));
-	ROUGHNESS = 0.25;
-	SPECULAR = 0.3;
+	ROUGHNESS = 0.5;
+	SPECULAR = 0.2;
 }
