@@ -113,6 +113,7 @@ func _ready() -> void:
 	add_child(loot)
 	chat = ChatUi.new()
 	add_child(chat)
+	hud.centre_busy.connect(chat.set_log_hidden)
 	wheel = Wheel.new()
 	add_child(wheel)
 	play = FarmPlay.new()

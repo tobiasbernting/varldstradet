@@ -810,7 +810,7 @@ server and `shared` are untouched (the strings are in `sv.ts`, exported by `pnpm
   hotbar and its labels. The 3D labels (names, bubbles, floating numbers) are `Label3D`s, so they follow through `Settings.scaled_label(label, base)`
   (their pixel size times the scale; a group re-applies it when the setting changes). At 175 % the default 1280 × 720 window is 731 × 411 logical
   points, which broke the layout in three places that are fixed: `HudLayer._layout` moves the boss's bar to the right under the connection dot when
-  the screen is narrower than 1050 points (it lay over the hearts), moves the "fallen" box down from the banner, wraps the hint and lifts the spell bar
+  the screen is narrower than 1050 points (it lay over the hearts), stacks the middle of the screen in one top-anchored column that cannot overlap (a smaller banner, the toast, the "fallen" box; the spell bar steps aside while fallen and the chat feed hides while any of them is up, `centre_busy`), wraps the hint and lifts the spell bar
   and the lines above it a line; `GameWindow._fit` gives a window's scrolling body the height that is left and makes the panel no wider than the screen.
   Hotbar labels already shrink to fit ("Bärsärkaraseri"). Pictures: `docs/m8b-hud-175.png`, `m8b-talk-175.png`, `m8b-settings-reading-175.png`.
 - **Colour-blind palettes** (`palette.gd`). Three palettes: `normal` (every colour the client had, unchanged), `rg` (deuteranopia and protanopia:

@@ -82,6 +82,11 @@ func is_open() -> bool:
 	return _open
 
 
+## Makes room in the middle of a narrow screen (hud.gd's `centre_busy`): the small log in the corner is hidden for a while.
+func set_log_hidden(on: bool) -> void:
+	_log.modulate.a = 0.0 if on else 1.0
+
+
 func open() -> void:
 	if _open:
 		return

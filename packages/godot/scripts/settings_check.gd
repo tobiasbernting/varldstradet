@@ -215,6 +215,28 @@ func _reading() -> void:
 		var narrow := view.x < 1050.0
 		var boss_left: float = view.x * hud._top.anchor_left + hud._top.offset_left
 		_step("text size %d %%: the boss bar keeps clear of the left column" % pct, (not narrow and hud._top.anchor_left == 0.5) or boss_left >= 327.0)
+	# the middle of the screen at 125-175 %: a banner, a toast and the fallen box are all up at once, as when everyone falls
+	hud.banner_label.text = "Alla föll…"
+	hud.banner_sub.text = "Ni vaknar vid vilostenen. Försök igen!"
+	hud.toast_label.text = "Gravvaktaren: Ingen stör kungens sömn!"
+	hud.down_box.visible = true
+	var hidden: Array = []
+	hud.centre_busy.connect(func(on: bool) -> void: hidden.append(on))
+	for pct in [125, 150, 175]:
+		_click(win._size_buttons[str(pct / 100.0)])
+		await _frames(3)
+		var banner: Rect2 = hud.banner_label.get_global_rect().merge(hud.banner_sub.get_global_rect())
+		var toast: Rect2 = hud.toast_label.get_global_rect()
+		var fallen: Rect2 = hud.down_box.get_global_rect()
+		var inside := get_viewport().get_visible_rect().grow(1.0)
+		_step("text size %d %%: banner, toast and the fallen box are stacked, not overlapping, all on screen" % pct,
+			banner.end.y <= toast.position.y + 1.0 and toast.end.y <= fallen.position.y + 1.0 and inside.encloses(banner) and inside.encloses(toast) and inside.encloses(fallen),
+			"banner %s toast %s fallen %s" % [str(banner), str(toast), str(fallen)])
+		_step("text size %d %%: the spell bar steps aside while fallen" % pct, hud.spell_bar.modulate.a == 0.0)
+	_step("the chat feed was asked to make room", hidden.has(true))
+	_click(win._size_buttons["1.0"])
+	await _frames(3)
+	_step("at 100 % nothing of that is hidden or moved", hud.spell_bar.modulate.a == 1.0 and is_equal_approx(hud.banner_label.get_parent().anchor_top, 0.22), "bar %s anchor %s view %s" % [hud.spell_bar.modulate.a, hud.banner_label.get_parent().anchor_top, get_viewport().get_visible_rect().size])
 	hud.queue_free()
 	tag.queue_free()
 	get_window().size = window_was
