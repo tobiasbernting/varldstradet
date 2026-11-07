@@ -24,6 +24,9 @@ var _asked: Array = [] ## the banners the model announced
 var _sub_of: Dictionary = {} ## banner title -> the second line shown with it
 var _stage := "play"
 var _frames := 0
+var _fx_before := 0 ## effects in the fx view before the feed
+var _burst_t := 0.0
+var _burst_seen: Array = [] ## the toasts of the HUD's own burst test, as they were shown
 
 
 func _ready() -> void:
@@ -53,7 +56,25 @@ func _process(delta: float) -> void:
 	if not _fed:
 		if _t > 0.5:
 			_fed = true
+			_fx_before = world.fx._list.size()
 			world.feed({"t": "changes", "changes": _changes})
+			_frames = 0
+		return
+	_frames += 1
+	if _frames == 2 and not _in_dungeon:
+		# the hand-in's sparkle is drawn at once, and its experience floats over my hero as "+100 xp" (the village's fx view is the hero's area)
+		_check(world.fx._list.size() > _fx_before, "the hand-in's sparkle is drawn (%d effects before, %d after)" % [_fx_before, world.fx._list.size()])
+		var xp_text := ""
+		for c in _changes:
+			if str(c.get("t", "")) == "xp":
+				xp_text = Strings.t("sagaXpFloat", {"n": int(c.get("n", 0))})
+		var floated := false
+		for fl in world.fx._floaters:
+			if (fl["label"] as Label3D).text == xp_text:
+				floated = true
+		_check(xp_text != "" and floated, "the hand-in's experience floats over the hero ('%s')" % xp_text)
+	if _stage == "burst":
+		_burst_step(delta)
 		return
 	_note(_toasts_shown, world.hud.toast_label.text)
 	_note(_banners_shown, world.hud.banner_label.text)
@@ -73,8 +94,9 @@ func _process(delta: float) -> void:
 						sub = b[1]
 				_check(cleared.begins_with("Loke"), "Loke's fall: the server sent a 'cleared' banner naming Loke (%s)" % str(_want_banners))
 				_check(_sub_of.get(cleared, "") == sub and sub.contains("Bifrost"), "Loke's fall: '%s' is on screen with '%s' ('%s')" % [cleared, sub, str(_sub_of.get(cleared, ""))])
+				_check((Gear.progress(world.model.my_player()).get("cleared", []) as Array).has("loke"), "Loke's fall: Bifrost is in my cleared dungeons")
 				_finish()
-			elif _t > 8.0:
+			elif _t > 20.0:
 				_check(false, "Loke's fall: not everything came on screen (banners %s of %s; toasts %s of %s)" % [str(_banners_shown), str(titles), str(_toasts_shown), str(_want_toasts)])
 				_finish()
 			return
@@ -90,7 +112,28 @@ func _process(delta: float) -> void:
 		_frames += 1
 		if _frames >= 3:
 			_check(_has_text(world.play.windows.talk, Strings.t("sagaAllDone")), "Völvan's window says the saga is over ('%s')" % Strings.t("sagaAllDone"))
-			_finish()
+			world.play.windows.talk.close()
+			# the HUD's toast queue, on its own: A B C A in one frame, a friend's D and a repeated B half a second later: A B C D, each once
+			for t in ["A", "B", "C", "A"]:
+				world.hud.show_toast(t)
+			_burst_t = 0.0
+			_stage = "burst"
+			_burst_sent = false
+
+
+var _burst_sent := false
+
+
+func _burst_step(delta: float) -> void:
+	_burst_t += delta
+	_note(_burst_seen, world.hud.toast_label.text)
+	if not _burst_sent and _burst_t > 0.6:
+		_burst_sent = true
+		world.hud.show_toast("D")
+		world.hud.show_toast("B")
+	if _burst_t > 30.0 or (_burst_seen.size() >= 4 and world.hud.toast_label.text == "D" and _burst_t > 12.0):
+		_check(_burst_seen == ["A", "B", "C", "D"], "the HUD's toast queue: a repeat drops nothing and a toast in the middle of a burst joins it (%s)" % str(_burst_seen))
+		_finish()
 
 
 ## Adds a banner title or toast text to the list of what the HUD has shown (when it is new).
