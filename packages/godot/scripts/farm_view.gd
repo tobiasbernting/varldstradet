@@ -31,7 +31,7 @@ const GROUND := {
 	"forge": [Color("#3a3438"), 0.0, 0.0], "bifrost": [Color("#d8d0e8"), 0.0, 0.0],
 }
 ## Cliffs: the top colour; they stand CLIFF_H tall.
-const CLIFF := {"rock": Color("#6c7076"), "sandstone": Color("#b8764a"), "basalt": Color("#3c3a40")}
+const CLIFF := {"rock": Color("#7a7f86"), "sandstone": Color("#b8764a"), "basalt": Color("#3c3a40")}
 ## Liquids: which material draws them and the colour of the bed (lava has none: it glows at ground level).
 const LIQUID := {"water": "water", "pool": "water", "bog": "bog", "choco": "choco", "lava": "lava"}
 const BED := {"water": Color("#3c6270"), "pool": Color("#6aa8c0"), "bog": Color("#2a3320"), "choco": Color("#3a2010"), "lava": Color("#8a2a10")}
@@ -108,7 +108,7 @@ func _process(delta: float) -> void:
 			continue
 		var depth: float = f[3]
 		var wobble := 1.0 - depth * (0.5 + 0.35 * sin(_t * 9.0 + float(f[2])) + 0.15 * sin(_t * 23.0 + float(f[2]) * 1.7))
-		var night_k: float = _dark if bool(f[4]) else 1.0
+		var night_k: float = smoothstep(0.35, 0.75, _dark) if bool(f[4]) else 1.0
 		light.light_energy = float(f[1]) * wobble * night_k
 		light.visible = night_k > 0.02
 
@@ -313,6 +313,7 @@ func _build_ground_chunk(ck: Vector2i) -> void:
 	var y0 := ck.y * CHUNK
 	var g := _Surf.new()
 	var liquids: Dictionary = {} ## material name -> _Surf
+	var panels: Dictionary = {} ## mesh name -> Array of Transform3D (the rock walls' Kenney cliff faces)
 	for y in range(y0, mini(y0 + CHUNK, map_h)):
 		for x in range(x0, mini(x0 + CHUNK, map_w)):
 			var t := _terrain_at(x, y)
@@ -320,7 +321,7 @@ func _build_ground_chunk(ck: Vector2i) -> void:
 				continue
 			var vary := 0.93 + 0.14 * _h2(x, y)
 			if CLIFF.has(t):
-				_cliff_tile(g, x, y, t, vary)
+				_cliff_tile(g, panels, x, y, t, vary)
 			elif LIQUID.has(t):
 				_liquid_tile(g, liquids, x, y, t)
 			else:
@@ -357,6 +358,25 @@ func _build_ground_chunk(ck: Vector2i) -> void:
 		mi2.material_override = _liquid_material(str(mname))
 		mi2.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(mi2)
+	for pname in panels.keys():
+		var m := assets.mesh(str(pname))
+		if m == null:
+			continue
+		var list: Array = panels[pname]
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.use_colors = true
+		mm.use_custom_data = true
+		mm.mesh = m
+		mm.instance_count = list.size()
+		for i in range(list.size()):
+			mm.set_instance_transform(i, list[i])
+			mm.set_instance_color(i, Color.WHITE)
+			mm.set_instance_custom_data(i, Color(_h2(int(list[i].origin.x * 7.0), int(list[i].origin.z * 7.0), 12), 0.0, 0.0, 0.0))
+		var mmi := MultiMeshInstance3D.new()
+		mmi.multimesh = mm
+		mmi.material_override = assets.prop_mat
+		root.add_child(mmi)
 	_ground_root.add_child(root)
 	_ground[ck] = root
 
@@ -372,7 +392,10 @@ func _liquid_material(n: String) -> ShaderMaterial:
 	return assets.water_mat
 
 
-func _cliff_tile(g: _Surf, x: int, y: int, t: String, vary: float) -> void:
+## A rock wall tile: a flat top at its height, and on each side that faces land a Kenney cliff face (two shapes,
+## picked by the tile) turned outward and stretched to the height, so the wall's edge is rough rock, not a box.
+## Sides over water or lava keep a plain face down to the bed.
+func _cliff_tile(g: _Surf, panels: Dictionary, x: int, y: int, t: String, vary: float) -> void:
 	var top: Color = CLIFF[t]
 	var h := CLIFF_H * (0.85 + 0.3 * _h2(x, y, 3))
 	var col := Color(top.r * vary, top.g * vary, top.b * vary)
@@ -381,9 +404,34 @@ func _cliff_tile(g: _Surf, x: int, y: int, t: String, vary: float) -> void:
 	var dirs := [Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 0), Vector2i(-1, 0)]
 	for d in dirs:
 		var n := _terrain_at(x + d.x, y + d.y)
-		if n == "" or CLIFF.has(n):
+		if n == "":
 			continue
-		var depth := BED_Y if LIQUID.has(n) else 0.0
+		if CLIFF.has(n):
+			# a step down to a lower wall tile: close it, else the gap shows the sky (white seams)
+			var nh := CLIFF_H * (0.85 + 0.3 * _h2(x + d.x, y + d.y, 3))
+			if nh < h:
+				_step(g, x, y, d, nh, h, side)
+			continue
+		if not LIQUID.has(n):
+			var shape := int(_h2(x + d.x, y + d.y, 13) * 2.0)
+			var pname := "cliffwall_%s_%d" % [t, shape]
+			var inset := 0.29 if shape == 0 else 0.415 # the panel's half depth, so its face sits on the tile's edge
+			var yaw := atan2(-float(d.x), -float(d.y))
+			var at := Vector3(x + 0.5 + d.x * inset, 0.0, y + 0.5 + d.y * inset)
+			if not panels.has(pname):
+				panels[pname] = []
+			# 2 cm under the top, so the face's own top does not fight the tile's top
+			panels[pname].append(Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(1.04, h - 0.02, 1.04)), at))
+			# now and then a boulder at the foot of the wall, so its edge is not a straight line
+			if _h2(x + d.x, y + d.y, 14) < 0.22:
+				var bname := "cliffboulder_%s_%d" % [t, int(_h2(x, y, 15) * 3.0)]
+				if not panels.has(bname):
+					panels[bname] = []
+				var k := 0.7 + 0.5 * _h2(x, y, 16)
+				var foot := Vector3(x + 0.5 + d.x * 0.62 + (_h2(x, y, 17) - 0.5) * 0.5 * abs(d.y), 0.0, y + 0.5 + d.y * 0.62 + (_h2(x, y, 17) - 0.5) * 0.5 * abs(d.x))
+				panels[bname].append(Transform3D(Basis(Vector3.UP, _h2(x, y, 18) * TAU).scaled(Vector3.ONE * k), foot))
+			continue
+		var depth := BED_Y
 		var a := Vector3(x, 0.0, y)
 		var b := Vector3(x + 1, 0.0, y)
 		var c := Vector3(x + 1, 0.0, y + 1)
@@ -398,6 +446,23 @@ func _cliff_tile(g: _Surf, x: int, y: int, t: String, vary: float) -> void:
 			g.quad(c + hv, c + dv, b + dv, b + hv, side, 0.0, 0.0)
 		else:
 			g.quad(a + hv, a + dv, e + dv, e + hv, side, 0.0, 0.0)
+
+
+func _step(g: _Surf, x: int, y: int, d: Vector2i, lo: float, hi: float, col: Color) -> void:
+	var a := Vector3(x, 0.0, y)
+	var b := Vector3(x + 1, 0.0, y)
+	var c := Vector3(x + 1, 0.0, y + 1)
+	var e := Vector3(x, 0.0, y + 1)
+	var hv := Vector3(0.0, hi, 0.0)
+	var lv := Vector3(0.0, lo, 0.0)
+	if d == Vector2i(0, 1):
+		g.quad(e + hv, e + lv, c + lv, c + hv, col, 0.0, 0.0)
+	elif d == Vector2i(0, -1):
+		g.quad(b + hv, b + lv, a + lv, a + hv, col, 0.0, 0.0)
+	elif d == Vector2i(1, 0):
+		g.quad(c + hv, c + lv, b + lv, b + hv, col, 0.0, 0.0)
+	else:
+		g.quad(a + hv, a + lv, e + lv, e + hv, col, 0.0, 0.0)
 
 
 func _liquid_tile(g: _Surf, liquids: Dictionary, x: int, y: int, t: String) -> void:
@@ -626,13 +691,14 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 			if node.get_child_count() > 0:
 				var d := node.get_child(0) as Node3D
 				d.position = Vector3(0.0, 0.0, 0.2)
-			for wx in [-1.0, 1.2]:
-				var g := assets.glow_quad(Color("#ffc977"), 0.9, 0.0)
-				g.position = Vector3(wx, 1.1, 1.9)
-				node.add_child(g)
-				_night_glows.append([g, 1.6])
-				_window_pool(node, Vector3(wx, 0.0, 2.9))
-			_add_light(node, Vector3(0.0, 1.0, 2.8), Color("#ffc977"), 6.0, 1.3, 0.12, true)
+			# the one real window is the round-topped one in the front gable; its light lies on the ground in front of
+			# the door (M7a's window pool: Quality "window_light")
+			var gw := assets.glow_quad(Color("#ffc977"), 0.7, 0.0)
+			gw.position = Vector3(-0.1, 2.0, 1.88)
+			node.add_child(gw)
+			_night_glows.append([gw, 1.8])
+			_window_pool(node, Vector3(0.0, 0.0, 3.0))
+			_add_light(node, Vector3(0.0, 1.0, 2.8), FarmAssets.WARM, 7.0, 1.4, 0.12, true)
 		"saga_portal":
 			var col: Color = DungeonLook.portal_colour(variant)
 			var g2 := assets.glow_quad(col, 1.8, 1.4)
@@ -690,6 +756,11 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 			_billboard(gq)
 			node.add_child(gq)
 			_night_glows.append([gq, 0.9])
+			# and the pool it makes on the ground, which is what shows on Låg (the OmniLight is cheap there)
+			var pool := assets.pool_quad(lcol, Vector2.ONE * float(lt[1]) * 0.95, 0.41)
+			pool.position = Vector3(0.0, 0.04, 0.0)
+			node.add_child(pool)
+			_night_glows.append([pool, 0.41])
 	return node
 
 
@@ -706,16 +777,28 @@ func _billboard(mi: MeshInstance3D) -> void:
 ## A landmark (lm_*) is a 3 × 3 (or 4 × 3) feature of the wild maps: a standing-stone circle, a giant's ribs, a bridge.
 ## Until each has a mesh of its own it is a dressed placeholder: a cairn of rocks in its footprint.
 func _landmark(kind: String, node: Node3D) -> Node3D:
-	assets.warn_once(kind, "farm: no model for landmark '%s' yet, a cairn is shown" % kind)
 	var def := Data.object_def(kind)
-	var m := assets.mesh("ph_%dx%d" % [int(def.get("w", 3)), int(def.get("h", 3))])
-	if m != null:
-		var mi := MeshInstance3D.new()
-		mi.mesh = m
-		mi.material_override = assets.prop_mat
-		node.add_child(mi)
-	if def.get("light", false):
-		_add_light(node, Vector3(0.0, 1.4, 0.0), Color("#cfe8ff"), 5.0, 1.0, 0.1, false)
+	if not LandmarkModels.build(kind, node, assets):
+		assets.warn_once(kind, "farm: no model for landmark '%s' yet, a cairn is shown" % kind)
+		var m := assets.mesh("ph_%dx%d" % [int(def.get("w", 3)), int(def.get("h", 3))])
+		if m != null:
+			var mi := MeshInstance3D.new()
+			mi.mesh = m
+			mi.material_override = assets.prop_mat
+			node.add_child(mi)
+	for at in LandmarkModels.lamps(kind):
+		var g := assets.glow_quad(Color("#ffc977"), 0.9, 0.0)
+		g.position = at
+		node.add_child(g)
+		_night_glows.append([g, 1.4])
+	var fire: Variant = LandmarkModels.FIRE.get(kind)
+	if fire is Vector3:
+		var flame := DungeonProps.flame(Color("#ff9a3c"), 0.7, Quality.particles())
+		flame.position = fire
+		node.add_child(flame)
+		_add_light(node, fire + Vector3(0.0, 0.5, 0.0), Color("#ff9a3c"), 6.0, 1.6, 0.3, false)
+	elif def.get("light", false):
+		_add_light(node, LandmarkModels.LIGHT_AT.get(kind, Vector3(0.0, 1.4, 0.0)), Color("#cfe8ff"), 5.0, 1.0, 0.1, false)
 	return node
 
 
@@ -724,7 +807,7 @@ func _add_light(parent: Node3D, at: Vector3, colour: Color, range_m: float, ener
 	light.position = at
 	light.light_color = colour
 	light.omni_range = range_m
-	light.omni_attenuation = 1.4
+	light.omni_attenuation = 1.1 if night else 1.4
 	light.light_energy = 0.0 if night else energy
 	light.shadow_enabled = false
 	light.distance_fade_enabled = true
@@ -750,12 +833,12 @@ func set_dark(dark: float) -> void:
 	_dark = dark
 	var pool_level := Quality.alive("window_light")
 	if pool_level > 0 or _pools_made:
-		var pool_k := smoothstep(0.4, 0.9, dark) if pool_level > 0 else 0.0
+		var pool_k := smoothstep(0.35, 0.75, dark) if pool_level > 0 else 0.0
 		for p in _window_pools:
 			if p[0] == null:
 				if pool_level <= 0 or not is_instance_valid(p[3]):
 					continue
-				var made := assets.glow_quad(Color("#ffc977"), 2.6, 0.0, true)
+				var made := assets.glow_quad(FarmAssets.WARM, 2.6, 0.0, true)
 				made.position = (p[4] as Vector3) + Vector3(0.0, 0.03, 0.0)
 				made.scale = Vector3(1.0, 1.0, 0.7)
 				made.visible = false
@@ -771,7 +854,7 @@ func set_dark(dark: float) -> void:
 	for g in _night_glows:
 		var mi: MeshInstance3D = g[0]
 		if is_instance_valid(mi):
-			var k := smoothstep(0.4, 0.9, dark)
+			var k := smoothstep(0.35, 0.75, dark)
 			(mi.material_override as ShaderMaterial).set_shader_parameter("energy", float(g[1]) * k)
 			mi.visible = k > 0.02
 

@@ -1,8 +1,8 @@
 class_name DungeonProps
 extends RefCounted
 ## Props made in code, in the palette of ART.md, for the dungeon things no free pack the build sandbox could reach
-## had (LICENSES.md lists them): wall caps, gates, rest stones, coffins, bones, urns, a placeholder box, and the
-## flame on a torch. Primitive meshes only, so they cost nothing to load and sit next to the KayKit models without
+## had (LICENSES.md lists them): wall caps, gates, urns, a placeholder box, and the flame on a torch. The rest stone,
+## coffin and bones here are fallbacks, drawn only when the KayKit Halloween models (dungeon_view.gd) are missing. Primitive meshes only, so they cost nothing to load and sit next to the KayKit models without
 ## clashing. Replace a prop here when a pack model for it comes in; nothing else needs to change.
 
 const KANT := Color("2b2419")

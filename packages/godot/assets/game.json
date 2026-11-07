@@ -1911,7 +1911,17 @@
         "Hej lilla vän! Vad roligt att du kom.",
         "Så fint ni har det på gården!",
         "Jag bakar gärna om jag får ingredienser."
-      ]
+      ],
+      "appearance": {
+        "skin": "#f1c9a5",
+        "hair": "#d9d9d9",
+        "hairStyle": "curly"
+      },
+      "outfit": {
+        "shirt": "shirt_purple",
+        "pants": "pants_skirt_blue",
+        "shoes": "shoes_red"
+      }
     },
     "sven": {
       "name": "Fiskar-Sven",
@@ -1920,7 +1930,18 @@
         "Hallå där! Fiskarna nappar bra idag.",
         "Vet du att det finns en guldfisk i dammen?",
         "Stå stilla vid vattnet och vänta på napp."
-      ]
+      ],
+      "appearance": {
+        "skin": "#dba97d",
+        "hair": "#8a4a1e",
+        "hairStyle": "short"
+      },
+      "outfit": {
+        "shirt": "shirt_stripes",
+        "pants": "pants_brown",
+        "shoes": "shoes_rubber",
+        "hat": "hat_straw"
+      }
     },
     "elsa": {
       "name": "Lilla Elsa",
@@ -1930,7 +1951,17 @@
         "Jag letar efter blommor. Har du sett några?",
         "Min kanin heter Snövit. Fast hon bor hemma.",
         "Jag kan springa jättefort!"
-      ]
+      ],
+      "appearance": {
+        "skin": "#f7d7c0",
+        "hair": "#f2d16b",
+        "hairStyle": "ponytail"
+      },
+      "outfit": {
+        "shirt": "shirt_pink",
+        "pants": "pants_skirt_blue",
+        "shoes": "shoes_red"
+      }
     },
     "bo": {
       "name": "Bagar-Bo",
@@ -1939,7 +1970,18 @@
         "Välkommen till bageriet! Mjöl behövs alltid.",
         "Nybakat bröd är det bästa som finns.",
         "Har du vete? Jag bakar gärna."
-      ]
+      ],
+      "appearance": {
+        "skin": "#f1c9a5",
+        "hair": "#2b2119",
+        "hairStyle": "short"
+      },
+      "outfit": {
+        "shirt": "shirt_yellow",
+        "pants": "pants_brown",
+        "shoes": "shoes_boots",
+        "hat": "hat_cap_red"
+      }
     },
     "pino": {
       "name": "Pizza-Pino",
@@ -1948,7 +1990,18 @@
         "Buongiorno! Vill du ha en pizza?",
         "Pizzan är nybakad i stenugnen!",
         "Tomater och vete – då blir det pizza!"
-      ]
+      ],
+      "appearance": {
+        "skin": "#dba97d",
+        "hair": "#2b2119",
+        "hairStyle": "curly"
+      },
+      "outfit": {
+        "shirt": "shirt_red",
+        "pants": "pants_brown",
+        "shoes": "shoes_boots",
+        "hat": "hat_cap_red"
+      }
     },
     "stina": {
       "name": "Smed-Stina",
@@ -1957,7 +2010,17 @@
         "Hör du hammaren? Det är jag!",
         "Sten och malm, det är mina favoriter.",
         "Ädelstenar från bergen är underbara."
-      ]
+      ],
+      "appearance": {
+        "skin": "#b97a4e",
+        "hair": "#c43a2a",
+        "hairStyle": "ponytail"
+      },
+      "outfit": {
+        "shirt": "shirt_overalls",
+        "pants": "pants_blue",
+        "shoes": "shoes_boots"
+      }
     },
     "lind": {
       "name": "Fru Lind",
@@ -1966,7 +2029,18 @@
         "Mina blommor behöver sällskap.",
         "Honung från ängen är det godaste jag vet.",
         "Har du varit i skogen? Där växer svamp."
-      ]
+      ],
+      "appearance": {
+        "skin": "#f7d7c0",
+        "hair": "#f2d16b",
+        "hairStyle": "long"
+      },
+      "outfit": {
+        "shirt": "shirt_green",
+        "pants": "pants_skirt_pink",
+        "shoes": "shoes_red",
+        "hat": "hat_straw"
+      }
     },
     "sigrun": {
       "name": "Völvan Sigrun",
@@ -1975,7 +2049,18 @@
         "Välkommen, lilla vän. Jag har väntat på dig.",
         "Runorna viskar ditt namn…",
         "Världsträdet behöver hjältar."
-      ]
+      ],
+      "appearance": {
+        "skin": "#eccdb0",
+        "hair": "#ece6da",
+        "hairStyle": "long"
+      },
+      "outfit": {
+        "hat": "hat_volvakrans",
+        "shirt": "shirt_volvadrakt",
+        "pants": "pants_brown",
+        "shoes": "shoes_boots"
+      }
     }
   },
   "dungeons": {

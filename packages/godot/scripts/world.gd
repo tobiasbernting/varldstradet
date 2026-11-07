@@ -49,9 +49,22 @@ var wheel: Wheel
 var play: FarmPlay
 var demo := false
 var looks: LookComposer
+## The 3D trial: `--people3d` gives people and creatures 3D bodies: players and villagers as chibi figures put
+## together from KayKit Adventurers parts and dressed in their look (figure_3d.gd), animals and monsters as voxel
+## bodies extruded from their own sprites (voxel_body.gd), instead of pixel sprites. Vehicles stay billboards.
+const VEHICLES: Array[String] = ["bus", "car", "train", "motorcycle"]
+var _people3d := OS.get_cmdline_user_args().has("--people3d")
 var _mode := "" ## "dungeon", "outdoor" (the farm and the wild maps) or "" (nothing drawn)
 var _demo_time := -1.0 ## --time=<0..1>: a fixed time of day for pictures
 var _demo_rain := false
+var _lapse := 0.0 ## --daylapse=<s>: a whole day in that many real seconds (demo only)
+var _weathers := PackedStringArray() ## --weathers=sun,rain,...: the demo steps through them every --weather-every seconds
+var _weather_every := 20.0
+var _weather_i := 0
+var _weather_t := 0.0
+var _lantern: OmniLight3D ## the hero's lantern outdoors after dark (the browser's: "a lantern only outdoors after dark")
+var _lantern_glow: MeshInstance3D
+var grade := ScreenGrade.new() ## the last pass over the 3D picture (under the HUD)
 var _area := "" ## the map drawn right now ("" when none)
 var _actors: Dictionary = {} ## "p:<id>" or "a:<id>" -> Actor
 var _prev_pos: Dictionary = {} ## actor key -> last scene position (facing from velocity)
@@ -74,6 +87,7 @@ func _ready() -> void:
 	fx.name = "Fx"
 	add_child(fx)
 	fx.setup(model, _find_actor)
+	add_child(grade)
 	steps = Footsteps.new()
 	steps.name = "Footsteps"
 	add_child(steps)
@@ -102,6 +116,7 @@ func _ready() -> void:
 	play = FarmPlay.new()
 	add_child(play)
 	play.setup(self)
+	_make_lantern()
 	hud.menu_asked.connect(menu.open)
 	menu.switch_player.connect(func() -> void: left.emit())
 	menu.dev_enter.connect(_on_dev_enter)
@@ -158,6 +173,7 @@ func reset() -> void:
 	combat.reset()
 	_area = ""
 	_mode = ""
+	hide_look()
 	hero.reset()
 	hero.send_moves = true
 	play.leave()
@@ -192,6 +208,16 @@ func start_demo(fixture := "draug") -> void:
 			model.weather = {"kind": arg.substr(10), "since": model.server_now() - 60000.0, "until": model.server_now() + 600000.0}
 		elif arg.begins_with("--season="):
 			model.season = arg.substr(9)
+		elif arg.begins_with("--daylapse="):
+			_lapse = maxf(float(arg.substr(11)), 1.0)
+			if _demo_time < 0.0:
+				_demo_time = fposmod(model.time_ms / Data.constant("DAY_LENGTH_MS", 600000.0), 1.0)
+		elif arg.begins_with("--weathers="):
+			_weathers = arg.substr(11).split(",", false)
+		elif arg.begins_with("--weather-every="):
+			_weather_every = maxf(float(arg.substr(16)), 1.0)
+	if _weathers.size() > 0:
+		model.weather = {"kind": _weathers[0], "since": model.server_now() - 60000.0, "until": model.server_now() + 600000.0}
 	# --at=x,y (tiles) after --demo: stand somewhere else, for looking around and for screenshots
 	if house and _area != "":
 		var tile_px := Data.tile()
@@ -210,6 +236,44 @@ func start_demo(fixture := "draug") -> void:
 		hero.driven = true
 		hero.drive = Vector2(1, 0)
 	print("demo: %s drawn (%s) with %d objects, %d lights and %d actors" % [_area, _mode, (farm.object_count() if _mode == "outdoor" else (dungeon.get_node("Objects").get_child_count() if _area != "" else 0)), (farm.light_count() if _mode == "outdoor" else dungeon.light_count()), _actors.size()])
+
+
+## No world on screen (after logout, in the login): the screen grade is hidden and the lantern and the night lift are off,
+## so nothing of the last scene stays over the login.
+func hide_look() -> void:
+	grade.dungeon_look()
+	Actor.night_lift = 0.0
+	if _lantern != null:
+		_light_lantern(0.0, 0.0)
+	if farm.sky != null:
+		farm.sky.suspend()
+
+
+## The hero's lantern: a warm light that follows them outdoors after dark so the wild stays readable near them. No shadow
+## (a budget), no lantern for the other players. Off by day, indoors and in dungeons (`_light_lantern`).
+func _make_lantern() -> void:
+	_lantern = OmniLight3D.new()
+	_lantern.name = "Lantern"
+	_lantern.light_color = Color(1.0, 0.78, 0.5)
+	_lantern.omni_range = 5.5
+	_lantern.omni_attenuation = 1.1
+	_lantern.shadow_enabled = false
+	_lantern.position = Vector3(0.3, 1.0, 0.3)
+	_lantern.visible = false
+	hero.add_child(_lantern)
+	_lantern_glow = farm.assets.glow_quad(Color(1.0, 0.78, 0.5), 0.9, 0.0)
+	_lantern_glow.position = Vector3(0.3, 0.9, 0.35)
+	_lantern_glow.rotation_degrees = Vector3(-51.0, 0.0, 0.0)
+	_lantern_glow.visible = false
+	hero.add_child(_lantern_glow)
+
+
+func _light_lantern(dark: float, open: float) -> void:
+	var k := smoothstep(0.45, 0.8, dark) * open
+	_lantern.visible = k > 0.01
+	_lantern.light_energy = 1.5 * k * (0.94 + 0.06 * sin(Time.get_ticks_msec() * 0.011))
+	_lantern_glow.visible = k > 0.01
+	(_lantern_glow.material_override as ShaderMaterial).set_shader_parameter("energy", 0.8 * k)
 
 
 ## A message as if from the server (the demo's scripted fight in bench and screenshot runs).
@@ -452,6 +516,7 @@ func _rebuild() -> void:
 			look = Data.zone_look(key, model.run, w)
 		dungeon.build(w, key, look)
 		_mode = "dungeon"
+		farm.sky.suspend()
 		_area = key
 		hud.farm_box.visible = false
 		hero.set_world(w)
@@ -497,6 +562,9 @@ func _place_name(key: String, w: Dictionary) -> String:
 
 ## My own figure: on the farm in my outfit, in a dungeon in my class's.
 func _dress_hero(me: Dictionary) -> void:
+	hero.actor.night_exempt = true
+	if _people3d and _dress_figure(hero.actor, me):
+		return
 	if _mode == "outdoor" and looks.available():
 		hero.actor.set_texture(looks.texture_for(me), looks.frames(), 16, 32, 8)
 		hero.actor.set_meta("look", _look_key(me))
@@ -573,6 +641,24 @@ func _on_change(c: Dictionary) -> void:
 				hud.show_toast(Strings.t("sagaLootToast", {"from": str(c.get("from", "")), "items": ", ".join(names)}))
 
 
+## The 3D trial's figure for a player: on the farm in their outfit, in a dungeon in their class's hat and shirt
+## (as the sprites are). false when the pack or the layers are missing (the sprite is used).
+func _dress_figure(actor: Actor, p: Dictionary) -> bool:
+	if not looks.available():
+		return false
+	var rec := p.duplicate()
+	if _mode != "outdoor":
+		var cls := str(p.get("saga", {}).get("cls", "krigare")) if p.get("saga") is Dictionary else "krigare"
+		var of: Dictionary = (p.get("outfit", {}) as Dictionary).duplicate() if p.get("outfit") is Dictionary else {}
+		of.merge(Data.classes.get(cls, {}).get("outfit", {}), true)
+		rec["outfit"] = of
+	var colours := looks.colours_for(rec)
+	var key := str(hash(JSON.stringify(colours)))
+	if actor.has_figure(key):
+		return true
+	return actor.set_figure(Figure3D.build(colours), key)
+
+
 func _hero_sheet_of(p: Dictionary) -> String:
 	var cls := str(p.get("saga", {}).get("cls", "krigare")) if p.get("saga") is Dictionary else "krigare"
 	var skin := str(p.get("appearance", {}).get("skin", "")) if p.get("appearance") is Dictionary else ""
@@ -630,7 +716,9 @@ func _sync_actors() -> void:
 			_dress(actor, rec)
 			actor.set_label(str(rec.get("name", "")))
 		elif k.begins_with("n:"):
-			actor.set_sheet(Data.npc_sheet(k.substr(2)))
+			var npc: Dictionary = Data.npcs.get(k.substr(2), {})
+			if not (_people3d and npc.get("appearance") is Dictionary and _dress_figure(actor, npc)):
+				actor.set_sheet(Data.npc_sheet(k.substr(2)))
 			actor.set_label(str(Data.npcs.get(k.substr(2), {}).get("name", "")))
 		else:
 			var species := str(rec.get("species", ""))
@@ -640,6 +728,10 @@ func _sync_actors() -> void:
 				var grow := int(Data.animals.get(species, {}).get("growDays", 3))
 				sheet = Data.animal_sheet(species, int(rec.get("age", 99)) < grow, model.season == "jul", int(rec.get("variant", 0)))
 			actor.set_sheet(sheet)
+			if _people3d and SkeletonFigure.has(species):
+				actor.set_figure(SkeletonFigure.build(species), "skel:" + species, SkeletonFigure.height_of(species), SkeletonFigure.rig(species))
+			elif _people3d and not VEHICLES.has(species) and sheet != "":
+				actor.set_voxel(VoxelBody.frames(sheet), sheet)
 			# dungeon monsters show their own bars instead of the name labels (the browser's ownsLabel)
 			actor.set_label("" if (_mode == "dungeon" and not Data.mob(species).is_empty()) else str(rec.get("name", Data.mob_name(species))))
 		actor.position = _scene_of(float(rec.get("x", 0)), float(rec.get("y", 0)))
@@ -651,6 +743,9 @@ func _dress(actor: Actor, rec: Dictionary) -> void:
 	# the hired Hirdmannen (a player record with bot: true) is always a hero sprite of its class, never a composed outfit
 	if bool(rec.get("bot", false)):
 		actor.set_sheet(_hero_sheet_of(rec))
+		return
+	if _people3d and _dress_figure(actor, rec):
+		actor.set_meta("look", _look_key(rec))
 		return
 	if _mode == "outdoor" and looks.available():
 		actor.set_texture(looks.texture_for(rec), looks.frames(), 16, 32, 8)
@@ -777,14 +872,27 @@ func _clear_actors() -> void:
 
 
 func _process(delta: float) -> void:
+	if demo:
+		_demo_clock(delta)
 	if _area == "":
 		soundscape.silence(delta)
 		return
 	if _mode == "outdoor":
+		farm.sky.grade = grade
+		farm.sky.indoors = _cam_k
+		_light_lantern(farm.sky.dark_now(), 1.0 - _cam_k)
+		Actor.night_lift = smoothstep(0.3, 0.8, farm.sky.dark_now()) * (1.0 - _cam_k)
 		farm.sky.update_sky(delta, _clock_ms(), model.season, model.weather, model.server_now())
 		_tick_sounds(delta)
-	else:
+	elif _mode == "dungeon":
+		grade.dungeon_look()
+		Actor.night_lift = 0.0
+		_light_lantern(0.0, 0.0)
 		soundscape.silence(delta) # (the dungeons have sounds of their own)
+	else:
+		_light_lantern(0.0, 0.0)
+		Actor.night_lift = 0.0
+		soundscape.silence(delta)
 	combat.tick()
 	fx.tick(delta)
 	play.tick(delta)
@@ -936,6 +1044,20 @@ func _frame_camera(delta: float) -> void:
 		return
 	_cam_k = lerpf(_cam_k, want, 1.0 - pow(0.02, delta))
 	_aim_camera(CAMERA_OFFSET.lerp(INSIDE_OFFSET, _cam_k))
+
+
+## The demo's running clock and weather (--daylapse, --weathers): off unless the flags are there.
+func _demo_clock(delta: float) -> void:
+	if _lapse > 0.0 and _demo_time >= 0.0:
+		_demo_time = fposmod(_demo_time + delta / _lapse, 1.0)
+	if _weathers.size() > 1:
+		_weather_t += delta
+		if _weather_t >= _weather_every:
+			_weather_t = 0.0
+			var prev := str((model.weather as Dictionary).get("kind", "sun")) if model.weather is Dictionary else "sun"
+			_weather_i = (_weather_i + 1) % _weathers.size()
+			var now := model.server_now()
+			model.weather = {"kind": _weathers[_weather_i], "prev": prev, "since": now, "until": now + 600000.0}
 
 
 ## The time of day (ms into the day): the server's, running on between its snapshots; fixed in the demo's --time.
