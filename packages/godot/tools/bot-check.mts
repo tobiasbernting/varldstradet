@@ -67,7 +67,18 @@ const dungeon = process.env.BOT_DUNGEON ?? 'draug';
 const names = ['Bot-Ask', 'Bot-Embla'];
 const walkerName = 'Bot-Vandrare';
 /** M9a: walks to Frostjättens arch (chapter 2), using the world map and the minimap on the way (see Bot `--mapcheck`). */
+const archSeconds = Number(process.env.BOT_ARCH_SECONDS ?? 240);
 const mapWalkerName = 'Bot-Kartvandrare';
+/**
+ * M9a: every other dungeon's arch is walked to and used by the arch's own rules (the lock met, `dev unlock`, in by the arch), two lanes of one walker
+ * at a time (each is a minute or two, mostly waiting on the server and the walk; the lanes finish inside the farmer's five minutes). Frostjättens
+ * arch is the map walker's and Fenrisklyftan's is in the same map (a:0,-2, at the other end). BOT_ARCHES=none skips them, or a list: `hel,orm`.
+ */
+const archLanes: string[][] = [
+  ['fenrir', 'hel', 'orm', 'surt'],
+  ['dvarg', 'alv', 'loke'],
+];
+const archWanted = (process.env.BOT_ARCHES ?? '') === 'none' ? [] : (process.env.BOT_ARCHES ?? '').split(',').filter(Boolean);
 const farmerName = 'Bot-Bonde';
 const creatorName = 'Bot-Skapare';
 const farmSeconds = Number(process.env.BOT_FARM_SECONDS ?? 600);
@@ -116,6 +127,8 @@ interface Report {
   arrived_via_arch: boolean;
   dev_sent: boolean;
   map?: Record<string, boolean>;
+  /** Every `dev` message the client sent (its `a`): the arch routes must not have sent `saga`. */
+  dev_messages?: string[];
   locked_seen?: boolean;
   unlock_sent?: boolean;
   summary?: string;
@@ -340,6 +353,17 @@ async function checkFarmer(r: FarmReport, farmPort: number, botLog?: string): Pr
 }
 
 /** One bot of the run pair: it played through the client and its report says how far. */
+/** M9a: a later chapter's arch, walked to over the real maps: sealed until the chapters before it count as cleared, then in by the arch to the right saga key. */
+function checkArchWalker(id: string, r: Report, log?: string): void {
+  const name = r.name;
+  check(r.errors.length === 0, `${name}: no errors (${r.errors.join('; ') || 'none'})`);
+  const exitErrors = (log && fs.existsSync(log) ? fs.readFileSync(log, 'utf8') : '').split('\n').filter((l) => /leaked at exit|still in use at exit|Pages in use exist at exit/.test(l));
+  check(exitErrors.length === 0, `${name}: exits clean, nothing leaked at exit (${exitErrors[0] ?? 'none'})`);
+  check(r.locked_seen === true, `${name}: the arch was sealed first (the server's chapter lock)`);
+  check(JSON.stringify(r.dev_messages ?? []) === JSON.stringify(['unlock']), `${name}: the only dev message was unlock (${(r.dev_messages ?? []).join(', ') || 'none'})`);
+  check(r.area === `saga:${id}` && r.route.at(-1) === `saga:${id}`, `${name}: went in by the arch into saga:${id} (${r.route.join(' → ')}) after ${r.seconds.toFixed(0)} s`);
+}
+
 /** M9a: the world map and the minimap through the keys and buttons, and a later chapter's arch used by its own rules. */
 function checkMapWalker(r: Report, log?: string): void {
   check(r.errors.length === 0, `${r.name}: no errors (${r.errors.join('; ') || 'none'})`);
@@ -353,7 +377,7 @@ function checkMapWalker(r: Report, log?: string): void {
   check(r.route.includes('farm') && r.route.filter((k) => k === 'a:0,-1').length >= 2, `${r.name}: fast travel took it home and back (${route})`);
   check(r.locked_seen === true && r.unlock_sent === true, `${r.name}: the arch of chapter 2 stayed sealed until the chapters before it counted as cleared (the server's rule; dev unlock sent after)`);
   check(r.area === 'saga:frost' && r.route.at(-1) === 'saga:frost', `${r.name}: went into Frostjättens borg by its arch (${route})`);
-  check(r.arrived_via_arch && !r.dev_sent, `${r.name}: the dev way into a dungeon was never used (dev_sent ${r.dev_sent})`);
+  check(JSON.stringify(r.dev_messages ?? []) === JSON.stringify(['unlock']) && r.arrived_via_arch, `${r.name}: the only dev message was unlock, never saga (${(r.dev_messages ?? []).join(', ') || 'none'})`);
 }
 
 function checkRunner(r: Report, botLog?: string): void {
@@ -510,6 +534,34 @@ async function main(): Promise<void> {
       console.log(`${mapWalkerName}: ${godot} ${args.join(' ')}`);
       mapWalkers.push({ name: mapWalkerName, report, log, child: run(godot, args, { cwd: godotDir, log, env: { HOME: home, XDG_DATA_HOME: path.join(home, 'data') } }) });
     }
+    // the other arches: lanes of walkers, one after another in a lane (a lane's results are checked at the end)
+    const archResults: { id: string; report: string; log: string; code: number | null }[] = [];
+    const lanes = mode === '' || mode === 'walker' ? archLanes.map((lane) => lane.filter((id) => archWanted.length === 0 || archWanted.includes(id))).filter((lane) => lane.length) : [];
+    // (a server of its own: a server takes eight characters, and every walker is one)
+    const archPort = port + 3;
+    if (lanes.length) {
+      const archServer = run(tsx, ['src/main.ts'], {
+        cwd: path.join(root, 'packages/server'),
+        env: { PORT: String(archPort), ACCESS: 'open', DEV_TELEPORT: '1', DATABASE_URL: '', SEASON_OVERRIDE: 'summer' },
+        log: path.join(tmp, 'server-arch.log'),
+      });
+      farmServers.push(archServer);
+      await waitFor(`http://localhost:${archPort}/api/gate`, 150_000);
+      console.log(`server 3 (the arch walkers'): port ${archPort}`);
+    }
+    const lanesDone = Promise.all(
+      lanes.map(async (lane) => {
+        for (const id of lane) {
+          const name = `Bot-Valv-${id}`;
+          const report = path.join(tmp, `${name}.json`);
+          const log = path.join(tmp, `${name}.log`);
+          const args = ['--headless', '--path', godotDir, '--', '--bot', `--server=http://127.0.0.1:${archPort}`, `--name=${name}`, `--report=${report}`, `--seconds=${archSeconds}`, '--route=arch', `--dungeon=${id}`, '--unlock'];
+          console.log(`${name}: ${godot} ${args.join(' ')}`);
+          const child = run(godot, args, { cwd: godotDir, log });
+          archResults.push({ id, report, log, code: await exited(child, (archSeconds + 40) * 1000) });
+        }
+      }),
+    );
     const all = [...bots, ...walker, ...mapWalkers, ...farmers, ...creators, ...runBots];
     const codes = await Promise.all(all.map((b) => exited(b.child, ((b.name === farmerName ? farmSeconds : runNames.includes(b.name) ? runSeconds : seconds) + 40) * 1000)));
     if (settingsRun) await checkSettings(settingsRun);
@@ -557,7 +609,7 @@ async function main(): Promise<void> {
           check(r.route.length >= want.length && JSON.stringify(r.route.slice(-want.length)) === JSON.stringify(want), `${r.name}: walked ${r.route.join(' → ')}`);
         } else check(r.route.at(-1) === `saga:${dungeon}`, `${r.name}: walked ${r.route.join(' → ')}`);
         check(r.area === `saga:${dungeon}`, `${r.name}: arrived in saga:${dungeon} through the arch (${r.area || 'never'}) after ${r.seconds.toFixed(0)} s`);
-        check(r.arrived_via_arch && !r.dev_sent, `${r.name}: the dev way was never used (dev_sent ${r.dev_sent})`);
+        check(!(r.dev_messages ?? ['?']).includes('saga') && r.arrived_via_arch, `${r.name}: no dev saga message went out on the way (dev messages: ${(r.dev_messages ?? []).join(', ') || 'none'})`);
         continue;
       }
       check(r.casts_sent > 0, `${r.name}: sent casts (${r.casts_sent})`);
@@ -598,6 +650,15 @@ async function main(): Promise<void> {
       check(differ === 0, `monster health agrees between the bots (${differ} differ${examples.length ? ': ' + examples.join('; ') : ''})`);
       const same = a.monsters_beaten.filter((id) => b.monsters_beaten.includes(id));
       check(same.length > 0, `both saw the same monsters beaten (${same.length} in common)`);
+    }
+    await lanesDone;
+    for (const a of archResults.sort((x, y) => x.id.localeCompare(y.id))) {
+      console.log(`\n--- Bot-Valv-${a.id} (exit ${a.code === null ? 'killed' : a.code}) ---`);
+      if (!fs.existsSync(a.report)) {
+        check(false, `Bot-Valv-${a.id}: no report written (see ${a.log})`);
+        continue;
+      }
+      checkArchWalker(a.id, JSON.parse(fs.readFileSync(a.report, 'utf8')) as Report, a.log);
     }
   } finally {
     for (const f of farmServers) f.kill('SIGTERM');

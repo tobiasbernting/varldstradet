@@ -26,6 +26,7 @@ var seconds := 90.0
 var dungeon_id := "draug"
 var packs_wanted := 1
 var route := ""
+var unlock_route := false ## --unlock: the arch is a later chapter's: meet the lock, send the dev unlock, use it again
 var mapcheck := false ## --mapcheck (M9a): on the way, use the world map (home and back), meet the chapter lock, then go in by the arch
 var _unlocked := false ## the chapter lock was met and the dev unlock sent (the mapcheck walker)
 var _route_toasts: Array = []
@@ -51,7 +52,7 @@ var _report := {
 	"name": "", "ok": false, "phase": "", "seconds": 0.0, "casts_sent": 0, "casts_acked": 0, "spells_sent": {}, "spells_acked": {},
 	"others_casts": 0, "others": {}, "monsters_beaten": [], "hits_taken": 0, "damage_taken": 0, "hits_dealt": 0, "damage_dealt": 0,
 	"route": [], "arrived_via_arch": false, "dev_sent": false, "zones_seen": 0, "stepped_out": 0, "fell": 0, "hearts": [], "mob_hp": [], "bar_samples": 0, "ghosts": 0, "solid": 0, "rises": [], "errors": [], "packs_beaten": 0, "area": "",
-	"map": {}, "locked_seen": false, "unlock_sent": false,
+	"map": {}, "dev_messages": [], "locked_seen": false, "unlock_sent": false,
 }
 
 
@@ -73,6 +74,9 @@ func _ready() -> void:
 			route = arg.substr(8)
 		elif arg == "--mapcheck":
 			mapcheck = true
+			unlock_route = true
+		elif arg == "--unlock":
+			unlock_route = true
 	_report["name"] = bot_name
 	_api = Api.new()
 	add_child(_api)
@@ -89,7 +93,7 @@ func _ready() -> void:
 			_log("toast: " + text)
 			_route_toasts.append(text)
 			# the chapter lock (sagaLocked): the arch refused, as the server's rule says; the check then asks the dev way to clear the chapters before
-			if mapcheck and not _unlocked and text.contains("förseglad"):
+			if unlock_route and not _unlocked and text.contains("förseglad"):
 				_report["locked_seen"] = true
 				_unlocked = true
 				_report["unlock_sent"] = true
@@ -99,6 +103,12 @@ func _ready() -> void:
 		world.model.player_changed.connect(func(id: String, p: Variant) -> void:
 			if id == world.model.me and p is Dictionary:
 				_log("my record: area %s at %d,%d" % [str(p.get("area", "farm")), int(p.get("x", 0)), int(p.get("y", 0))]))
+	# every dev message this bot's client sends, whoever sends it (the arch routes must never send `saga`)
+	Net.sent.connect(func(msg: Dictionary) -> void:
+		if str(msg.get("t", "")) == "dev":
+			_report["dev_messages"].append(str(msg.get("a", "")))
+			if str(msg.get("a", "")) == "saga":
+				_report["dev_sent"] = true)
 	Net.connection_changed.connect(func(status: String, code: int) -> void: _log("socket %s (%d) %s" % [status, code, Settings.ws_url()]))
 	Net.message.connect(func(msg: Dictionary) -> void:
 		if str(msg.get("t", "")) == "welcome":
@@ -388,7 +398,9 @@ func _route_plan() -> void:
 		# the tile in front of the arch (portalFront): its middle column, below it
 		_route_goal = Vector2i(int(arch.get("x", 0)) + 1, int(arch.get("y", 0)) + 2)
 		_route_act = true
-	elif here.y != target.y:
+	elif here.y != target.y and not (target.y > 0 and here.x != target.x):
+		# (north and west: along y first; a target to the south goes along x first, out of the farm's east opening: the farm's own way
+		# to its south opening is not a walk the bot's path search finds)
 		var up := target.y < here.y
 		_route_goal = Vector2i(mw / 2, 0 if up else mh - 1)
 		_route_push = Vector2(0, -1 if up else 1)
