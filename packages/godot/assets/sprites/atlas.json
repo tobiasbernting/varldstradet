@@ -45,26 +45,42 @@
   ],
   "species": [
     "benspindel",
+    "blackis",
     "draugbage",
     "draugkung",
     "eldhund",
     "eldimp",
+    "fafner",
     "frosttroll",
     "garm",
     "gengangare",
     "gravrotta",
     "gravvaktare",
+    "gruvtroll",
+    "guldbagge",
     "hel",
     "helhund",
     "isande",
     "isbjorn",
     "isblock",
     "isvarg",
+    "jarnvakten",
+    "jattekrabba",
+    "jattespindel",
+    "jormungand",
     "lavagolem",
+    "manet",
+    "nattmara",
     "rimturs",
+    "sjodraug",
     "skelett",
+    "skuggalv",
     "smeden",
-    "surt"
+    "spindeldrottning",
+    "spindelnat",
+    "stengolem",
+    "surt",
+    "svampvakt"
   ],
   "icons": {
     "spell_hugg": {
@@ -5911,6 +5927,17 @@
       ],
       "headroom": 0
     },
+    "mob_blackis": {
+      "file": "mob_blackis.png",
+      "frame_w": 40,
+      "frame_h": 36,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
     "mob_draugbage": {
       "file": "mob_draugbage.png",
       "frame_w": 18,
@@ -5948,6 +5975,17 @@
       "file": "mob_eldimp.png",
       "frame_w": 14,
       "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "mob_fafner": {
+      "file": "mob_fafner.png",
+      "frame_w": 52,
+      "frame_h": 40,
       "columns": 2,
       "frames": [
         "right0",
@@ -6003,6 +6041,28 @@
       "file": "mob_gravvaktare.png",
       "frame_w": 32,
       "frame_h": 40,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "mob_gruvtroll": {
+      "file": "mob_gruvtroll.png",
+      "frame_w": 23,
+      "frame_h": 26,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "mob_guldbagge": {
+      "file": "mob_guldbagge.png",
+      "frame_w": 16,
+      "frame_h": 12,
       "columns": 2,
       "frames": [
         "right0",
@@ -6076,10 +6136,76 @@
       ],
       "headroom": 0
     },
+    "mob_jarnvakten": {
+      "file": "mob_jarnvakten.png",
+      "frame_w": 37,
+      "frame_h": 42,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "mob_jattekrabba": {
+      "file": "mob_jattekrabba.png",
+      "frame_w": 27,
+      "frame_h": 17,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "mob_jattespindel": {
+      "file": "mob_jattespindel.png",
+      "frame_w": 28,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "mob_jormungand": {
+      "file": "mob_jormungand.png",
+      "frame_w": 52,
+      "frame_h": 42,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
     "mob_lavagolem": {
       "file": "mob_lavagolem.png",
       "frame_w": 24,
       "frame_h": 26,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "mob_manet": {
+      "file": "mob_manet.png",
+      "frame_w": 16,
+      "frame_h": 21,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "mob_nattmara": {
+      "file": "mob_nattmara.png",
+      "frame_w": 46,
+      "frame_h": 40,
       "columns": 2,
       "frames": [
         "right0",
@@ -6098,10 +6224,32 @@
       ],
       "headroom": 0
     },
+    "mob_sjodraug": {
+      "file": "mob_sjodraug.png",
+      "frame_w": 20,
+      "frame_h": 23,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
     "mob_skelett": {
       "file": "mob_skelett.png",
       "frame_w": 18,
       "frame_h": 22,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "mob_skuggalv": {
+      "file": "mob_skuggalv.png",
+      "frame_w": 19,
+      "frame_h": 24,
       "columns": 2,
       "frames": [
         "right0",
@@ -6120,10 +6268,54 @@
       ],
       "headroom": 0
     },
+    "mob_spindeldrottning": {
+      "file": "mob_spindeldrottning.png",
+      "frame_w": 50,
+      "frame_h": 29,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "mob_spindelnat": {
+      "file": "mob_spindelnat.png",
+      "frame_w": 22,
+      "frame_h": 28,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "mob_stengolem": {
+      "file": "mob_stengolem.png",
+      "frame_w": 24,
+      "frame_h": 28,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
     "mob_surt": {
       "file": "mob_surt.png",
       "frame_w": 46,
       "frame_h": 56,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "mob_svampvakt": {
+      "file": "mob_svampvakt.png",
+      "frame_w": 21,
+      "frame_h": 26,
       "columns": 2,
       "frames": [
         "right0",
