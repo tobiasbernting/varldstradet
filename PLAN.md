@@ -45,7 +45,7 @@ upgrade something, and go again. Same rules as the saga today: nothing bleeds, m
 - Animals come along: hund, katt and häst are companions and mounts on a run; a well-kept cow or sheep gives a
   stronger buff than a neglected one.
 - Buildings are the permanent upgrades: the smithy raises gear quality, the stable unlocks mounts, the herb garden
-  unlocks potions, the longhouse unlocks the fourth party slot and the hired companion, the Kämpastenen unlocks spells.
+  unlocks potions, the longhouse unlocks the fourth party slot (the hired companion needs no building), the Kämpastenen unlocks spells.
 
 **The run feeds the farm.**
 - Loot: gear, seeds of new crops, decor, rare pets and mounts (the existing loot tables and `found` rules).

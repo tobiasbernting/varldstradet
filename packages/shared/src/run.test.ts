@@ -28,6 +28,7 @@ import {
   TREE_TEXT,
   TREE_TOTAL,
   SOLO_MERCY,
+  companionClass,
   ITEMS,
   LEASH_TILES,
   WIPE_MS,
@@ -329,7 +330,8 @@ describe('the data', () => {
 /** A run of two heroes in its first zone, with the first hero's buffs set to `effect` before the fight begins. */
 function lab(effect: RunEffect, classes: ClassId[] = ['magiker', 'helare']) {
   const party = makeParty(classes, { seed: 3 });
-  startRun(party.world, party.players[0]!.id, { seed: 3 }, party.ctx());
+  // the lab is exactly its own fighters: no hired companion (those have their own tests)
+  startRun(party.world, party.players[0]!.id, { seed: 3, companion: false }, party.ctx());
   const run = runOf(party.world)!;
   const area = party.world.areas![run.key]!;
   const inst = area.saga!;
@@ -762,27 +764,31 @@ describe('starting, joining and leaving', () => {
     expect(jumpTo(party.world, b.id, a.id).every((x) => x.t === 'toast')).toBe(true);
   });
 
-  it('the solo mercy is for one human with the hired companion, not for a lone player without one', () => {
-    const hp = (opts: { longhall?: boolean; companion?: boolean }): { mul: number; boss: number; plan: number; bossPlan: number } => {
-      const party = makeParty(['krigare'], { seed: 6, longhall: opts.longhall });
+  it('the mercy is for a human with the hired companion (no longhouse needed), not for a lone player who turns it down; a duo with a companion is not softened', () => {
+    const hp = (classes: ClassId[], opts: { longhall?: boolean; companion?: boolean }): { mul: number; boss: number; plan: number; bossPlan: number; n: number } => {
+      const party = makeParty(classes, { seed: 6, longhall: opts.longhall });
       startRun(party.world, party.players[0]!.id, { seed: 6, ...(opts.companion === false ? { companion: false } : {}) }, party.ctx());
       const run = runOf(party.world)!;
       const r = party.world.areas![run.key]!.saga!.run!;
-      return { mul: r.hpMul, boss: r.bossMul, plan: run.plan.zones[0]!.hpMul, bossPlan: run.plan.zones[0]!.bossMul };
+      return { mul: r.hpMul, boss: r.bossMul, plan: run.plan.zones[0]!.hpMul, bossPlan: run.plan.zones[0]!.bossMul, n: run.companions.length };
     };
-    const hired = hp({ longhall: true });
-    expect(hired.mul).toBeCloseTo(hired.plan * SOLO_MERCY);
-    expect(hired.boss).toBeCloseTo(hired.bossPlan * SOLO_MERCY);
-    // no longhouse, or a hire turned down: one fighter, the plain numbers
-    for (const alone of [hp({}), hp({ longhall: true, companion: false })]) {
-      expect(alone.mul).toBe(alone.plan);
-      expect(alone.boss).toBe(alone.bossPlan);
+    // the farm has no longhouse, and a lone player still gets the Hirdmannen and the mercy
+    for (const hired of [hp(['krigare'], {}), hp(['krigare'], { longhall: true })]) {
+      expect(hired.n).toBe(1);
+      expect(hired.mul).toBeCloseTo(hired.plan * SOLO_MERCY);
+      expect(hired.boss).toBeCloseTo(hired.bossPlan * SOLO_MERCY);
     }
-    // two humans: no mercy either
-    const duo = makeParty(['krigare', 'helare'], { seed: 6, longhall: true });
-    startRun(duo.world, duo.players[0]!.id, { seed: 6 }, duo.ctx());
-    const run = runOf(duo.world)!;
-    expect(duo.world.areas![run.key]!.saga!.run!.hpMul).toBe(run.plan.zones[0]!.hpMul);
+    // a hire turned down: one fighter, the plain numbers
+    const alone = hp(['krigare'], { companion: false });
+    expect(alone.n).toBe(0);
+    expect(alone.mul).toBe(alone.plan);
+    expect(alone.boss).toBe(alone.bossPlan);
+    // two humans: no mercy, with the companion (two dps) or without (tank and healer)
+    for (const duo of [hp(['krigare', 'magiker'], {}), hp(['vaktare', 'helare'], {})]) expect(duo.mul).toBe(duo.plan);
+    expect(hp(['krigare', 'magiker'], {}).n).toBe(1);
+    expect(hp(['vaktare', 'helare'], {}).n).toBe(0);
+    // three humans: the plain numbers
+    expect(hp(['vaktare', 'helare', 'krigare'], {}).n).toBe(0);
   });
 
   it('leaving and joining again does not bring the player in twice: one run counted, the potions once, the dishes kept', () => {
@@ -829,38 +835,54 @@ describe('starting, joining and leaving', () => {
     expect(runOf(lh.world)!.party).toHaveLength(4);
   });
 
-  it('hires the Hirdmannen for one player with a longhouse: the class they lack, never saved, gone with the run', () => {
-    const none = makeParty(['krigare']);
-    startRun(none.world, none.players[0]!.id, { seed: 2 }, none.ctx());
-    expect(runOf(none.world)!.companions).toHaveLength(0);
-    for (const [cls, want] of [['krigare', 'helare'], ['magiker', 'helare'], ['vaktare', 'helare'], ['helare', 'vaktare']] as const) {
-      const party = makeParty([cls], { longhall: true, level: 5 });
-      const players = Object.keys(party.world.players).length;
-      startRun(party.world, party.players[0]!.id, { seed: 2 }, party.ctx());
-      const run = runOf(party.world)!;
-      expect(run.companions).toHaveLength(1);
-      const c = party.world.players[run.companions[0]!]!;
-      expect(c.bot).toBe(true);
-      expect(c.saga!.cls).toBe(want);
-      expect(c.online).toBe(true);
-      expect(c.area).toBe(run.key);
-      expect(Object.keys(party.world.players)).toHaveLength(players + 1);
-      // it plays: a few seconds in, it has moved or cast
-      for (let i = 0; i < 40; i++) step(party, false, []);
-      expect(party.world.areas![run.key]!.saga!.fighters[c.id]).toBeTruthy();
-      endRun(party.world, run, 'leave', party.ctx());
-      expect(party.world.players[c.id]).toBeUndefined();
-      expect(Object.keys(party.world.players)).toHaveLength(players);
+  it('companionClass: the class the party lacks, for one or two humans, never for three', () => {
+    expect(companionClass(['vaktare'])).toBe('helare');
+    expect(companionClass(['krigare'])).toBe('helare');
+    expect(companionClass(['magiker'])).toBe('helare');
+    expect(companionClass(['helare'])).toBe('vaktare');
+    expect(companionClass(['krigare', 'magiker'])).toBe('helare');
+    expect(companionClass(['vaktare', 'krigare'])).toBe('helare');
+    expect(companionClass(['helare', 'magiker'])).toBe('vaktare');
+    expect(companionClass(['helare', 'krigare'])).toBe('vaktare');
+    expect(companionClass(['vaktare', 'helare'])).toBeNull();
+    expect(companionClass(['vaktare', 'helare', 'krigare'])).toBeNull();
+    expect(companionClass(['vaktare', 'helare', 'krigare', 'magiker'])).toBeNull();
+  });
+
+  it('hires the Hirdmannen for one or two players, no longhouse needed: the class they lack, never saved, gone with the run', () => {
+    for (const [classes, want] of [[['krigare'], 'helare'], [['magiker'], 'helare'], [['vaktare'], 'helare'], [['helare'], 'vaktare'], [['krigare', 'magiker'], 'helare'], [['helare', 'krigare'], 'vaktare']] as [ClassId[], ClassId][]) {
+      for (const longhall of [false, true]) {
+        const party = makeParty(classes, { longhall, level: 5 });
+        expect(unlocksOf(party.world).longhall).toBe(longhall);
+        const players = Object.keys(party.world.players).length;
+        startRun(party.world, party.players[0]!.id, { seed: 2 }, party.ctx());
+        const run = runOf(party.world)!;
+        expect(run.companions).toHaveLength(1);
+        const c = party.world.players[run.companions[0]!]!;
+        expect(c.bot).toBe(true);
+        expect(c.saga!.cls).toBe(want);
+        expect(c.online).toBe(true);
+        expect(c.area).toBe(run.key);
+        expect(Object.keys(party.world.players)).toHaveLength(players + 1);
+        // it plays: a few seconds in, it has moved or cast
+        for (let i = 0; i < 40; i++) step(party, false, []);
+        expect(party.world.areas![run.key]!.saga!.fighters[c.id]).toBeTruthy();
+        endRun(party.world, run, 'leave', party.ctx());
+        expect(party.world.players[c.id]).toBeUndefined();
+        expect(Object.keys(party.world.players)).toHaveLength(players);
+      }
     }
-    // not for a player who asked to go without, nor for two
-    const two = makeParty(['krigare', 'helare'], { longhall: true });
-    startRun(two.world, two.players[0]!.id, { seed: 2 }, two.ctx());
-    expect(runOf(two.world)!.companions).toHaveLength(0);
-    const quiet = makeParty(['krigare'], { longhall: true });
+    // not for a pair that has a tank and a healer, nor for three, nor for a player who asked to go without
+    for (const classes of [['vaktare', 'helare'], ['vaktare', 'helare', 'krigare']] as ClassId[][]) {
+      const full = makeParty(classes);
+      startRun(full.world, full.players[0]!.id, { seed: 2 }, full.ctx());
+      expect(runOf(full.world)!.companions).toHaveLength(0);
+    }
+    const quiet = makeParty(['krigare']);
     startRun(quiet.world, quiet.players[0]!.id, { seed: 2, companion: false }, quiet.ctx());
     expect(runOf(quiet.world)!.companions).toHaveLength(0);
     // a friend who joins sends the companion home
-    const solo = makeParty(['krigare', 'vaktare'], { longhall: true });
+    const solo = makeParty(['krigare', 'vaktare']);
     const [a, b] = solo.players as [import('./index.ts').PlayerState, import('./index.ts').PlayerState];
     const f = archFrontOf(solo.world);
     b.x = px(f.x + 8);
@@ -1533,7 +1555,8 @@ describe('the clock, the wipe and the end', () => {
     for (const how of ['late', 'wipe'] as const) {
       const party = makeParty(['magiker'], { seed: 6 });
       const p = party.players[0]!;
-      startRun(party.world, p.id, { seed: 6 }, party.ctx());
+      // a lone fighter (a standing companion would make the fall of the human no wipe)
+      startRun(party.world, p.id, { seed: 6, companion: false }, party.ctx());
       const { run, inst } = atTheBoss(party);
       castSpell(party.world, p.id, 'eldboll', inst.boss, party.ctx());
       const out: Change[] = [];
@@ -1712,7 +1735,7 @@ describe('saves', () => {
 
 describe('bot parties play whole runs', () => {
   const FAMILIES: [string, ClassId[], boolean][] = [
-    ['en spelare + Hirdmannen', ['krigare'], true],
+    ['en spelare + Hirdmannen', ['krigare'], false],
     ['två spelare', ['vaktare', 'helare'], false],
     ['tre spelare', ['vaktare', 'helare', 'magiker'], false],
     ['fyra spelare', ['vaktare', 'helare', 'krigare', 'magiker'], true],
@@ -1754,6 +1777,37 @@ describe('bot parties play whole runs', () => {
         expect(avg).toBeGreaterThan(style === 'careful' ? 4 : 10);
       });
     }
+  }
+
+  // the quick win for solo play: the clumsy (kid-like) bot wins at least 70 % of its runs, on every class alone and in a pair without a healer, with no longhouse on the farm
+  const SOLO_SEEDS = Array.from({ length: 10 }, (_, i) => i + 1);
+  const SOLO: [string, ClassId[]][] = [
+    ['ensam väktare', ['vaktare']],
+    ['ensam helare', ['helare']],
+    ['ensam krigare', ['krigare']],
+    ['ensam magiker', ['magiker']],
+    ['krigare + magiker', ['krigare', 'magiker']],
+  ];
+  for (const [label, classes] of SOLO) {
+    it(`${label}, clumsy, no longhouse: wins at least 7 of ${SOLO_SEEDS.length} with the Hirdmannen, in 10-30 minutes`, { timeout: 120_000 }, async () => {
+      let wins = 0;
+      const mins: number[] = [];
+      for (const seed of SOLO_SEEDS) {
+        // let the test runner report in between: ten whole runs in a row would starve its worker
+        await new Promise((r) => setImmediate(r));
+        const party = makeParty(classes, { style: 'clumsy', seed, level: 3 });
+        const r = playRun(party, { seed });
+        expect(unlocksOf(party.world).longhall).toBe(false);
+        if (r.outcome === 'win') {
+          wins++;
+          mins.push(r.winMs! / 60_000);
+        }
+      }
+      const avg = mins.reduce((a, b) => a + b, 0) / Math.max(1, mins.length);
+      expect(wins).toBeGreaterThanOrEqual(7);
+      expect(avg).toBeGreaterThan(10);
+      expect(avg).toBeLessThan(30);
+    });
   }
 
   it('prints the bot minutes per run', () => {
