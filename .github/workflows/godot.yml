@@ -107,30 +107,38 @@ jobs:
           fi
 
       # Two headless bots fight the first pack of Draugkryptan together against a server running in memory
-      # (no Postgres: the server's MemoryStore). tools/bot-check.mts compares their reports.
-      - name: Two bots clear the first pack together (the server in memory, ACCESS=open, DEV_TELEPORT=1)
-        run: |
-          set -euo pipefail
-          GODOT=~/godot/godot BOT_SECONDS=150 pnpm godot:bot 2>&1 | tee bot.log
-
+      # (no Postgres: the server's MemoryStore). tools/bot-check.mts compares their reports; the same run also has the
+      # arch walker, the creator check and the farmer.
+      #
       # M5c: two headless bots play a run through the client against a server in memory: they walk to the färdport, the lead
-      # starts, both clear zone 1, use the exit, vote on a runa and enter zone 2 (tools/bot-check.mts; `--full` plays to the
-      # boss, locally).
-      - name: Two bots play the start of a run (the arch window, zone 1, the exit, the cards, zone 2)
+      # starts, both clear zone 1, use the exit, vote on a runa and enter zone 2 (`--full` plays to the boss, locally).
+      #
+      # M6b: these two used to run one after the other (4 + 4 minutes) and the job was over its ~10 minute budget; they
+      # are independent (each has servers of its own: 8097 and 8098, and 8200 with its run pair on 8202), so they run side
+      # by side. Nothing they assert changed. (If one starves the other on a small runner, a timed wait fails: that is a
+      # real signal to look at, not a reason to lengthen a limit.)
+      - name: The Draugkryptan bots (fighters, walker, creator, farmer) and the run pair play side by side
         run: |
-          set -euo pipefail
-          GODOT=~/godot/godot BOT_ONLY=run BOT_RUN_SECONDS=480 pnpm godot:bot 2>&1 | tee runbots.log
+          set -uo pipefail
+          (GODOT=~/godot/godot BOT_SECONDS=150 pnpm godot:bot > bot.log 2>&1; echo $? > bot.code) &
+          (GODOT=~/godot/godot BOT_ONLY=run BOT_PORT=8200 BOT_RUN_SECONDS=480 pnpm godot:bot > runbots.log 2>&1; echo $? > runbots.code) &
+          wait
+          bad=0
+          echo "== the Draugkryptan bots"; cat bot.log
+          test "$(cat bot.code)" = 0 || { echo "::error::the Draugkryptan bots failed"; bad=1; }
+          echo "== the run pair"; cat runbots.log
+          test "$(cat runbots.code)" = 0 || { echo "::error::the run pair failed"; bad=1; }
+          exit $bad
 
       # M6a: the same fighter pair in Frostjättens borg, Surts smedja and Helheim (the dev way in: DEV_TELEPORT=1, `dev saga`):
-      # each clears its first two packs against a server in memory. The three run side by side, each on ports of its own
-      # (a run uses its port and the next two).
+      # each clears its first two packs against a server in memory. They run side by side, each on ports of its own (a run uses its port and the next two; gaps left).
       - name: Two bots clear the first packs of Frostjättens borg, Surts smedja and Helheim (the dev way in)
         run: |
           set -uo pipefail
           port=8100
           for d in frost surt hel; do
             (GODOT=~/godot/godot BOT_ONLY=dungeon BOT_DUNGEON=$d BOT_PORT=$port BOT_PACKS=2 BOT_SECONDS=240 pnpm godot:bot > "bot-$d.log" 2>&1; echo $? > "bot-$d.code") &
-            port=$((port + 3))
+            port=$((port + 4))
           done
           wait
           bad=0
@@ -141,8 +149,8 @@ jobs:
           exit $bad
 
       # M6a: every move of the mid-boss and the boss of each of the three plays on the recorded dungeon, from the data
-      # (scripts/demo_bosses.gd): the cast bar, the marks on the floor, the landing, the ice block, the burning ground, the
-      # helpers, the pull. The three run side by side (about 15 s).
+      # (scripts/demo_bosses.gd): the cast bar, the marks on the floor, the landing, the ice block or web, the burning ground,
+      # the helpers, the pull, a mend's glow and the heal. The three run side by side.
       - name: Play the bosses' moves of Frostjättens borg, Surts smedja and Helheim headless (telegraphs, cast bars, what they leave)
         working-directory: packages/godot
         run: |
@@ -158,13 +166,14 @@ jobs:
             fi
             test "$(cat "bosses-$d.code")" = 0 || { echo "::error::the $d boss show did not end cleanly"; exit 1; }
             grep -q "bosses: show finished" "bosses-$d.log" || { echo "::error::the $d boss show did not play to its end"; exit 1; }
-            # (the show checks what it fed: each mark is in the fx view after the cast, gone after the landing, a helper or an ice block is an actor)
+            # (the show checks what it fed: each mark is in the fx view after the cast, gone after the landing, a helper, an ice block or a web is an actor, a mend glows and its glow ends)
             grep -q "^bosses: ok" "bosses-$d.log" || { echo "::error::the $d boss show's own checks did not pass"; exit 1; }
           done
-          # every move of each boss cast once: the mid-boss's and the boss's, 1 + 4 (frost), 2 + 3 (surt), 2 + 3 (hel)
-          test "$(grep -c 'casts,' bosses-frost.log)" = 5 || { echo "::error::the frost boss show did not cast every move"; exit 1; }
-          test "$(grep -c 'casts,' bosses-surt.log)" = 5 || { echo "::error::the surt boss show did not cast every move"; exit 1; }
-          test "$(grep -c 'casts,' bosses-hel.log)" = 5 || { echo "::error::the hel boss show did not cast every move"; exit 1; }
+          # every move of each boss cast once: the mid-boss's and the boss's: frost 1 + 4, surt 2 + 3, hel 2 + 3
+          check_casts() { test "$(grep -c 'casts,' "bosses-$1.log")" = "$2" || { echo "::error::the $1 boss show did not cast every move"; exit 1; }; }
+          check_casts frost 5
+          check_casts surt 5
+          check_casts hel 5
 
       - name: Export all four targets
         working-directory: packages/godot
