@@ -8,6 +8,7 @@ extends GameWindow
 ## edge to the colours and the tools, and the shoulder buttons (or the mouse wheel over the canvas) step through the colours.
 ## Redrawing the body when my record changes would throw the picture away, so `refresh` leaves it alone.
 
+const COLS := 6 ## colours per row (two rows of six: the side column is no taller than the canvas at 175 % text)
 var canvas: PaintCanvas
 var _swatches: Dictionary = {}
 var _tools: Dictionary = {}
@@ -17,7 +18,7 @@ var _built := false
 func _init() -> void:
 	title_text = "🎨 " + Strings.t("paint")
 	body_height = 400
-	width = 600
+	width = 660
 
 
 func _purse_text(_me: Dictionary) -> String:
@@ -71,7 +72,7 @@ func _fill() -> void:
 	side.add_theme_constant_override("separation", 10)
 	top.add_child(side)
 	var grid := GridContainer.new()
-	grid.columns = 4
+	grid.columns = COLS
 	grid.add_theme_constant_override("h_separation", 6)
 	grid.add_theme_constant_override("v_separation", 6)
 	side.add_child(grid)
@@ -79,7 +80,7 @@ func _fill() -> void:
 	var ch := PaintArt.chars()
 	for i in range(ch.length()):
 		var b := Button.new()
-		b.custom_minimum_size = Vector2(44, 40)
+		b.custom_minimum_size = Vector2(38, 34)
 		b.toggle_mode = true
 		b.set_meta("k", "c:" + ch[i])
 		b.tooltip_text = str(i + 1)
@@ -95,16 +96,21 @@ func _fill() -> void:
 		grid.add_child(b)
 		_swatches[ch[i]] = b
 	_tools.clear()
+	var tool_row := HBoxContainer.new()
+	tool_row.add_theme_constant_override("separation", 4)
+	side.add_child(tool_row)
 	for t in [["brush", "🖌️ " + Strings.t("paintBrush")], ["fill", "🪣 " + Strings.t("paintFill")], ["eraser", "🧽 " + Strings.t("paintEraser")]]:
 		var tb := make_button(str(t[1]), _pick_tool.bind(str(t[0])), "tool:" + str(t[0]))
 		tb.toggle_mode = true
-		side.add_child(tb)
+		tb.custom_minimum_size = Vector2(0, 34)
+		tool_row.add_child(tb)
 		_tools[str(t[0])] = tb
 	var hint := Label.new()
 	hint.text = "←↑↓→  ·  ⏎ / A"
 	hint.add_theme_font_size_override("font_size", 13)
 	hint.modulate = Color(1, 1, 1, 0.5)
 	side.add_child(hint)
+	canvas.tooltip_text = hint.text
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 8)
 	_body.add_child(actions)
@@ -120,9 +126,10 @@ func _fill() -> void:
 
 
 ## Focus for a pad or the keys, set explicitly on all four sides of every control (the engine's guess would take the nearest
-## in space): the canvas's edges lead to the colours (right), "Rensa" (down) and, kept where they are, left and up; the colours
-## are a grid of four columns that leads left to the canvas and down to the tools; the tools go down in turn to "Klar"; "Rensa"
-## and "Klar" lead up to the canvas and the tools and down to "Avbryt" (the window's close button), which leads back up to "Klar".
+## in space): the canvas's right edge leads to the first colour and its bottom to "Rensa" (left and up stay on it); the colours are
+## two rows of six whose left column leads back to the canvas and whose second row leads down to the tools (the colour above them);
+## the three tools are a row that leads left to the canvas (from the first) and down to "Klar"; "Rensa" and "Klar" lead up to the
+## canvas and the tools and down to "Avbryt" (the window's close button), which leads back up to "Klar".
 func _wire_focus(grid: GridContainer, actions: HBoxContainer) -> void:
 	var sw: Array = grid.get_children()
 	var tools: Array = [_tools["brush"], _tools["fill"], _tools["eraser"]]
@@ -136,10 +143,11 @@ func _wire_focus(grid: GridContainer, actions: HBoxContainer) -> void:
 		c.focus_neighbor_bottom = (d if d != null else c).get_path()
 	set_n.call(canvas, null, sw[0], null, clear_b)
 	for i in range(sw.size()):
-		var col := i % 4
-		set_n.call(sw[i], canvas if col == 0 else sw[i - 1], sw[i + 1] if col < 3 and i + 1 < sw.size() else null, sw[i - 4] if i >= 4 else null, sw[i + 4] if i + 4 < sw.size() else tools[0])
+		var col := i % COLS
+		var below: Control = sw[i + COLS] if i + COLS < sw.size() else tools[mini(col / 2, tools.size() - 1)]
+		set_n.call(sw[i], canvas if col == 0 else sw[i - 1], sw[i + 1] if col < COLS - 1 and i + 1 < sw.size() else null, sw[i - COLS] if i >= COLS else null, below)
 	for i in range(tools.size()):
-		set_n.call(tools[i], canvas, null, sw[8] if i == 0 else tools[i - 1], tools[i + 1] if i + 1 < tools.size() else ok_b)
+		set_n.call(tools[i], canvas if i == 0 else tools[i - 1], tools[i + 1] if i + 1 < tools.size() else null, sw[COLS + i * 2], ok_b)
 	set_n.call(clear_b, null, ok_b, canvas, close_b)
 	set_n.call(ok_b, clear_b, null, tools[2], close_b)
 	set_n.call(close_b, null, null, ok_b, null)

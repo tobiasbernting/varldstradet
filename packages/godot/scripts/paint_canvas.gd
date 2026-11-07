@@ -20,6 +20,8 @@ var _last := Vector2i(-1, -1)
 
 func _init() -> void:
 	focus_mode = Control.FOCUS_ALL
+	size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	size_flags_vertical = Control.SIZE_SHRINK_BEGIN # (the row would stretch it taller than wide: the cells are square)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	clear_cells()
 	focus_entered.connect(queue_redraw)

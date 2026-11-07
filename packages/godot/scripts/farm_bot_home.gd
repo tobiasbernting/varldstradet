@@ -627,18 +627,25 @@ func paint() -> void:
 	await _pad("ui_right")
 	await _pad("ui_accept")
 	var picked_by_pad: bool = canvas.colour == "2" and on_swatch and first_key == "c:0"
-	# then down to the colours' last row and on to the tools: fill is the second
+	# then down off the colours onto the tools, along the row to "fill" and accept, and left along it and off its edge back to the canvas
 	var reached_tool := false
-	for i in range(8):
+	for i in range(6):
 		await _pad("ui_down")
 		var f := win.get_viewport().gui_get_focus_owner()
-		if f != null and f.has_meta("k") and str(f.get_meta("k")) == "tool:brush":
+		if f != null and f.has_meta("k") and str(f.get_meta("k")).begins_with("tool:"):
 			reached_tool = true
 			break
-	await _pad("ui_down")
+	for i in range(3):
+		var f2 := win.get_viewport().gui_get_focus_owner()
+		if f2 != null and str(f2.get_meta("k", "")) == "tool:fill":
+			break
+		await _pad("ui_right" if str(f2.get_meta("k", "")) == "tool:brush" else "ui_left")
 	await _pad("ui_accept")
 	var fill_by_pad: bool = canvas.mode == "fill"
-	await _pad("ui_left")
+	for i in range(4):
+		if win.get_viewport().gui_get_focus_owner() == canvas:
+			break
+		await _pad("ui_left")
 	var back_on_canvas := win.get_viewport().gui_get_focus_owner() == canvas
 	bot._step("the pad reaches the colours and the tools by focus", pad_ok and on_swatch and picked_by_pad and reached_tool and fill_by_pad and back_on_canvas, "painted by accept: %s; right off the canvas's edge landed on '%s' after %d steps; colour picked: %s; down to the tools: %s, fill chosen: %s; left is the canvas again: %s" % [str(pad_ok), first_key, steps, canvas.colour, str(reached_tool), str(fill_by_pad), str(back_on_canvas)])
 	# the fill tool is on: fill the cell at (12, 12) with the pad on the canvas, then the eraser with the mouse-free tool button
@@ -785,6 +792,51 @@ func paint() -> void:
 		var cells := ".".repeat(PaintArt.size() * PaintArt.size())
 		PaintArt.texture_of(cells.substr(0, i) + "0" + cells.substr(i + 1))
 	bot._step("the picture cache is capped", PaintArt.cache_size() <= PaintArt.CACHE_MAX and PaintArt.matches(world.farm.picture_texture(oid), server_data), "%d textures kept after %d made; the hung frame still shows its painting" % [PaintArt.cache_size(), PaintArt.CACHE_MAX + 20])
+
+
+## The text size at 175 % (the 1280 × 720 window is then 731 × 411 points): the forge window and the paint screen both fit on the
+## screen, their close buttons ("Avbryt", "OK") and, on the paint screen, "Klar" and the whole canvas are inside it, and the canvas is
+## still big enough to draw on (cells of at least 10 points). The text size is put back as it was.
+func ui_175() -> void:
+	var was := Settings.ui_scale
+	var win_size := world.get_window().size
+	world.get_window().size = Vector2i(1280, 720) # (the window the 175 % is meant for: 731 × 411 points)
+	Settings.set_ui_scale(1.75)
+	await bot._wait(0.6)
+	var view := world.get_viewport().get_visible_rect()
+	var report: Array = []
+	var all_ok := true
+	for pair in [["forge", windows.forge], ["paint", windows.paint]]:
+		var win: GameWindow = pair[1]
+		if pair[0] == "forge":
+			windows.forge.open_forge()
+		else:
+			windows.paint.open_paint()
+		await bot._wait(0.6)
+		var inside := func(c: Control) -> bool:
+			var r: Rect2 = c.get_global_transform() * Rect2(Vector2.ZERO, c.size)
+			return view.grow(1.0).encloses(r)
+		var panel: Control = win._stack.get_parent()
+		var ok: bool = inside.call(panel) and inside.call(win._foot.get_node("Close"))
+		var detail := "panel %s of %s" % [str((panel.get_global_transform() * Rect2(Vector2.ZERO, panel.size)).size.round()), str(view.size)]
+		if pair[0] == "paint":
+			var canvas: Control = windows.paint.canvas
+			var cr: Rect2 = canvas.get_global_transform() * Rect2(Vector2.ZERO, canvas.size)
+			var klar: Control = null
+			for b in win._find_buttons(win._body):
+				if b.has_meta("k") and str(b.get_meta("k")) == "ok":
+					klar = b
+			ok = ok and inside.call(canvas) and klar != null and inside.call(klar) and cr.size.x >= 160.0 and windows.paint.canvas.cell >= 10
+			detail += ", canvas %s at %s (cells of %d), Klar at %s, view %s" % [str(cr.size.round()), str(cr.position.round()), windows.paint.canvas.cell, str(klar.get_global_transform() * Rect2(Vector2.ZERO, klar.size)) if klar != null else "-", str(view)]
+		await bot._shot(str(pair[0]) + "-175", 0.1)
+		report.append("%s: %s (%s)" % [pair[0], "fits" if ok else "DOES NOT FIT", detail])
+		all_ok = all_ok and ok
+		win.close()
+		await bot._wait(0.2)
+	Settings.set_ui_scale(was)
+	world.get_window().size = win_size
+	await bot._wait(0.3)
+	bot._step("the forge and the paint windows fit at 175 % text", all_ok and is_equal_approx(Settings.ui_scale, was) and absf(view.size.y - 411.4) < 2.0, "; ".join(report))
 
 
 ## A pad's or a key's action through the viewport (the focus navigation and the controls' own handlers see it as a press and a release).
