@@ -94,6 +94,15 @@ This file is only what the next agent needs: state, decisions, how the work is r
   `session_01KTh22pxQszsTzr6LppqA3f` (`claude/koepingen-viking-look`); sprint `session_01KTh22rMG5kApQsuopLjLzE`
   (`claude/sprint`); open-world design `session_01KTh22qn3ovGnFU1ZFT6n5e` (`claude/open-world-design`); DESIGN.md
   rewrite `session_01KTh22qs1i6zSS1vwUsWw1z` (`claude/m8c-design-rewrite`).
+- **Merged 2026-11-07 afternoon:** PR 30 (`GAME2.md`) and 33 (`OPEN_WORLD.md`), PR 36 (wild animals creep to the tile
+  next to a standing hero, never diagonal: petting fixed; the farmer bot's startle check), PR 32 (Köpingen and every
+  vehicle in the Viking look, the placeholder check over all kinds), PR 34 (GAME2 R1: the Hirdmannen for 1–2 humans, no
+  longhouse), PR 35 (Smedjan's forge window and painting). In review/fixing: 29 sprint, 31 minimap/world map/arches,
+  37 books/markers/family, 38 models for every undrawn kind, 39 GAME2 R2 (Lätt, Sagoandan), the startle check split
+  (`claude/startle-split`), 28 the DESIGN.md rewrite (last).
+- **Found, not yet fixed:** the farm's south opening (row 63, x 30–34) cannot be reached on foot: rows ~40–61 south of
+  the farm are dense trees and rock (a flood fill from the spawn never gets there). A world-generation item; fold it
+  into the open-world work (OPEN_WORLD.md replaces the map edges).
 - **Waiting on the owner:** the first release tag; make the `varldstradet` GHCR package public before the first deploy
   (homelab `cloud/YOUR-STEPS.md` J); whether to fix the running farm's backup-dir permissions (0750, the nightly fetch
   probably reads nothing); MacBook results for PR 11–25 (bench on Låg/Mellan/Hög by a pond, voice).

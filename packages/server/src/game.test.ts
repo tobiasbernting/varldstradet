@@ -413,7 +413,7 @@ describe('runs over the socket', () => {
     await game.stop();
   });
 
-  it('a run with one player and a longhouse has a companion that is no character: not listed, not counted, gone afterwards', async () => {
+  it('a run with one player (no longhouse needed) has a companion that is no character: not listed, not counted, gone afterwards', async () => {
     const game = new Game(new MemoryStore(), { autoStart: false });
     await game.start();
     const a = game.createPlayer('Astrid', look)!;
@@ -423,8 +423,7 @@ describe('runs over the socket', () => {
     const pa = game.world.players[a.id]!;
     pa.saga = { cls: 'krigare', chapter: 1, heard: true, cleared: [], titles: [], quests: {}, done: [], found: [] };
     const front = archFrontOf(game.world);
-    const { addObject } = await import('../../shared/src/index.ts');
-    for (let r = 4; r < 20 && !Object.values(game.world.objects).some((o) => o.kind === 'longhall'); r++) for (let dx = -r; dx <= r; dx++) addObject(game.world, 'longhall', front.x + dx, front.y + r);
+    expect(Object.values(game.world.objects).some((o) => o.kind === 'longhall')).toBe(false);
     pa.x = TILE * front.x + TILE / 2;
     pa.y = TILE * front.y + TILE / 2;
     ha({ t: 'run', a: 'start' });
