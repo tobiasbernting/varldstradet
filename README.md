@@ -304,6 +304,15 @@ Home and village (M4c): [the workbench](packages/godot/docs/m4c-workbench.png), 
 [the wardrobe](packages/godot/docs/m4c-wardrobe.png), [Köpingen](packages/godot/docs/m4c-village.png),
 [the class stone](packages/godot/docs/m4c-class.png), [the Völvan](packages/godot/docs/m4c-volva.png) and [the gear window](packages/godot/docs/m4c-gear.png).
 
+Köpingen as a Viking market town (2026-11-07): cobblestone streets, flagstone pavements, pale slabs to cross on, timber houses and shops with
+hanging signs, the Vägvisare signposts and iron lanterns, and the horse cart, the riding horse and Diligensen instead of cars and a bus
+([the main street](packages/godot/docs/koepingen-street.png), [at night](packages/godot/docs/koepingen-street-night.png),
+[the houses and shops](packages/godot/docs/koepingen-houses.png), [the square](packages/godot/docs/koepingen-square.png),
+[the station](packages/godot/docs/koepingen-station.png), [what it looked like before](packages/godot/docs/koepingen-before.png) and
+[the browser's art for the same spot beside the native client](packages/godot/docs/koepingen-browser-vs-native.png), the left half drawn by the browser's own art code, not a screenshot of the running browser).
+
+![Köpingen's main street in the native client](packages/godot/docs/koepingen-street.png)
+
 Farming (M4b): [watering](packages/godot/docs/m4b-watering.png), [the bag and a chest](packages/godot/docs/m4b-bag-chest.png),
 [the bag from the demo](packages/godot/docs/m4b-bag-demo.png) [a bite](packages/godot/docs/m4b-fishing-bite.png) and [a wild fox petted](packages/godot/docs/m4b-pet.png).
 

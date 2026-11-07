@@ -83,3 +83,13 @@ to the Kenney and KayKit models. Placeholders in the sense that a pack model may
 No new third-party files. `kaykit_hex/building_blacksmith_red.gltf` (KayKit Medieval Hexagon Pack, CC0, already imported in M4c) is now drawn as the smithy. The färdport,
 the Yggdrasil shoot, the herb garden, the longhouse, the smithy's anvil and coals and the 22 zone decor props are generated meshes (`scripts/run_meshes.gd`,
 `scripts/zone_props.gd`); they are the project's own.
+
+
+## Köpingen's Viking look (2026-11-07)
+No new third-party files. The timber buildings, the Vägvisare, the lantern post, the Diligens stop, the hand carts and the cobbled
+ground are generated in code (`scripts/village_meshes.gd`, `scripts/farm_view.gd`), and the cart, the riding horse, Diligensen and
+the mine train are the project's own pixel art (`packages/art/src/animals.ts`) exported to `sprites/animal_car*.png`,
+`animal_motorcycle*.png`, `animal_bus*.png` and `animal_train*.png` by `pnpm godot:sprites` and extruded into bodies at run time
+(`scripts/voxel_body.gd`); they are this project's own work, like the browser game. The Halloween pack's `post_lantern` is no longer
+used for the street lamps (it still lights the farm's lamp posts); the Hexagon pack's `building_home_B_red` and `building_tavern_red`,
+which Köpingen's houses and shops used, are no longer used there.
