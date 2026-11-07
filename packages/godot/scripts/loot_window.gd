@@ -50,6 +50,7 @@ func _ready() -> void:
 	_style.content_margin_bottom = 18
 	_panel.add_theme_stylebox_override("panel", _style)
 	centre.add_child(_panel)
+	UiFit.attach(_panel)
 	var stack := VBoxContainer.new()
 	stack.custom_minimum_size = Vector2(460, 0)
 	stack.add_theme_constant_override("separation", 10)

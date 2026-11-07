@@ -258,6 +258,35 @@ func _reading() -> void:
 	_click(win._size_buttons["1.0"])
 	await _frames(3)
 	_step("at 100 % nothing of that is hidden or moved", hud.spell_bar.modulate.a == 1.0 and is_equal_approx(hud.banner_label.get_parent().anchor_top, 0.22), "bar %s anchor %s view %s" % [hud.spell_bar.modulate.a, hud.banner_label.get_parent().anchor_top, get_viewport().get_visible_rect().size])
+	# windows that are not a GameWindow (the bag with a chest, the creator, the loot, the name box) shrink to fit instead of clipping
+	_click(win._size_buttons["1.75"])
+	await _frames(3)
+	var view175 := get_viewport().get_visible_rect()
+	var big := CenterContainer.new()
+	big.anchor_right = 1.0
+	big.anchor_bottom = 1.0
+	var big_panel := PanelContainer.new()
+	big_panel.custom_minimum_size = Vector2(900, 700)
+	big.add_child(big_panel)
+	var layer := CanvasLayer.new()
+	layer.add_child(big)
+	add_child(layer)
+	UiFit.attach(big_panel)
+	await _frames(4)
+	var rect := Rect2(big_panel.position + big_panel.pivot_offset * (Vector2.ONE - big_panel.scale), big_panel.size * big_panel.scale)
+	_step("a 900 x 700 panel on a %s screen is shrunk to fit and centred" % str(view175.size), big_panel.scale.x < 1.0 and view175.grow(1.0).encloses(rect) and absf(rect.get_center().x - view175.size.x / 2.0) < 2.0 and absf(rect.get_center().y - view175.size.y / 2.0) < 2.0, "scale %.2f rect %s" % [big_panel.scale.x, str(rect)])
+	layer.queue_free()
+	var creator := CreatorWindow.new()
+	add_child(creator)
+	await _frames(2)
+	creator.open()
+	await _frames(4)
+	var cp := _centred_panel(creator)
+	var crect := Rect2(cp.position + cp.pivot_offset * (Vector2.ONE - cp.scale), cp.size * cp.scale)
+	_step("the character creator fits at 175 %", view175.grow(1.0).encloses(crect), "scale %.2f rect %s" % [cp.scale.x, str(crect)])
+	creator.queue_free()
+	_click(win._size_buttons["1.0"])
+	await _frames(3)
 	hud.queue_free()
 	tag.queue_free()
 	get_window().size = window_was
@@ -307,6 +336,17 @@ func _motion() -> void:
 	_step("the shake and the lightning are 0, the landing glow a third", Settings.calm(0.7) == 0.0 and Settings.calm(1.0) == 0.0 and is_equal_approx(FxView._glare(), 0.35))
 	win._motion_check.button_pressed = false
 	_step("and back: shake and flash as they were", Settings.calm(0.7) == 0.7 and FxView._glare() == 1.0 and _on_disk("access", "reduce_motion") == false)
+
+
+## The panel a window shows (a PanelContainer in a CenterContainer).
+func _centred_panel(node: Node) -> Control:
+	for c in node.get_children():
+		if c is CenterContainer and c.get_child_count() > 0 and c.get_child(0) is PanelContainer:
+			return c.get_child(0)
+		var deeper := _centred_panel(c)
+		if deeper != null:
+			return deeper
+	return null
 
 
 func _controls() -> void:

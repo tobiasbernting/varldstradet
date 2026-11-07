@@ -120,6 +120,9 @@ func enter(w: Dictionary) -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg == "--bag" and view.demo:
 			open_bag.call_deferred()
+		elif arg == "--bag=chest" and view.demo:
+			bag.pinned = true # (a picture: the bag with a chest beside it, the biggest window; the demo has no chest to stay near)
+			open_bag.call_deferred(0)
 
 
 ## The map is something else (a dungeon, or nothing).

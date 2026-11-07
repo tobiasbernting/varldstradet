@@ -71,6 +71,7 @@ var _prev_pos: Dictionary = {} ## actor key -> last scene position (facing from 
 var _emote_shown: Dictionary = {} ## player id -> until
 var _shadow_in := 0.0
 var _screenshot := ""
+var _open_chat := false ## --open-chat (with --demo): the chat box is open (pictures)
 var _open_npc := "" ## --open-npc=<id> (or "volva"): a villager's talk window opens on the farm demo (pictures)
 var _settings_page := "" ## --settings-page=picture|sound|reading|controls: the settings window opens on it (pictures)
 var _frames := 0
@@ -170,6 +171,8 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--screenshot="):
 			_screenshot = arg.substr("--screenshot=".length())
+		elif arg == "--open-chat":
+			_open_chat = true
 		elif arg.begins_with("--open-npc="):
 			_open_npc = arg.substr("--open-npc=".length())
 		elif arg.begins_with("--settings-page="):
@@ -1000,6 +1003,8 @@ func _process(delta: float) -> void:
 		hero.frozen = run_pick.is_open()
 	hud.tick_spell_bar(combat, snap.get("b") is Dictionary and snap["b"].get("cast") is Dictionary and bool(snap["b"]["cast"].get("kick", false)))
 	_frames += 1
+	if _open_chat and _frames == 30:
+		chat.open()
 	if _open_npc != "" and _frames == 30:
 		play.windows.talk.open_npc(Data.volva if _open_npc == "volva" else _open_npc)
 	if _settings_page != "" and _frames == 30:

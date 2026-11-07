@@ -63,6 +63,7 @@ func _ready() -> void:
 	sb.content_margin_bottom = 14
 	panel.add_theme_stylebox_override("panel", sb)
 	centre.add_child(panel)
+	UiFit.attach(panel)
 	var stack := VBoxContainer.new()
 	_stack = stack
 	stack.add_theme_constant_override("separation", 8)

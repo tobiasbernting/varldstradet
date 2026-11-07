@@ -500,6 +500,12 @@ jobs:
           shot m8b-hud-175 --demo=draug --fight --ui-scale=1.75
           shot m8b-farm-175 --demo=farm --time=0.4 --ui-scale=1.75
           shot m8b-talk-175 --demo=farm --time=0.4 --open-npc=volva --ui-scale=1.75
+          shot m8b-hud-125 --demo=draug --fight --ui-scale=1.25
+          shot m8b-bag-chest-175 --demo=farm --at=18,14 --time=0.4 --bag=chest --ui-scale=1.75
+          shot m8b-loot-175 --demo=draug --fight --loot --ui-scale=1.75
+          shot m8b-chat-175 --demo=draug --fight --open-chat --ui-scale=1.75
+          xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- --creatorcheck --ui-scale=1.75 --shot="$GITHUB_WORKSPACE/shots/m8b/m8b-creator-175.png" 2>&1 | tee shot-creator.log
+          test "$(stat -c %s "$GITHUB_WORKSPACE/shots/m8b/m8b-creator-175.png")" -gt 20000
           for palette in normal rg tritan; do
             shot m8b-telegraph-$palette --demo=frost --boss-move=rimturs:cleave --colours=$palette
           done

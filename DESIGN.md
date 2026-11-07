@@ -815,6 +815,9 @@ server and `shared` are untouched (the strings are in `sv.ts`, exported by `pnpm
   points, which broke the layout in three places that are fixed: `HudLayer._layout` moves the boss's bar to the right under the connection dot when
   the screen is narrower than 1050 points (it lay over the hearts), stacks the middle of the screen in one top-anchored column that cannot overlap (a smaller banner, the toast, the "fallen" box; the spell bar steps aside while fallen and the chat feed hides while any of them is up, `centre_busy`), wraps the hint and lifts the spell bar
   and the lines above it a line; `GameWindow._fit` gives a window's scrolling body the height that is left and makes the panel no wider than the screen.
+  Windows that are not a `GameWindow` (the bag with a chest open, the creator, the loot, the name box) and `GameWindow`'s panel as a net get `UiFit`: a panel
+  bigger than the screen is scaled down about its middle to fit (never below 40 %), chosen so the container's top-left placement of an overflowing panel ends
+  up centred; the chat box grows upwards from its bottom edge on a solid panel and the log above it makes room.
   Hotbar labels already shrink to fit ("Bärsärkaraseri"). Pictures: `docs/m8b-hud-175.png`, `m8b-talk-175.png`, `m8b-settings-reading-175.png`.
 - **Colour-blind palettes** (`palette.gd`). Three palettes: `normal` (every colour the client had, unchanged), `rg` (deuteranopia and protanopia:
   danger amber with black stripes, safe blue, hearts blue / yellow / purple) and `tritan` (tritanopia: danger pink-red with white stripes, safe green,
