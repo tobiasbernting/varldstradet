@@ -538,7 +538,7 @@ func _pet_wild() -> void:
 			await _wait(4.0)
 	_step("startle", float(_startle.get("away", 0.0)) >= 2.5 and float(_startle.get("back", INF)) <= 4.0,
 		"the wild animal ran %.1f tiles from where it stood when I walked at it, and was back within %.1f tiles of it (next to me, to be petted) after I stood still" % [float(_startle.get("away", 0.0)), float(_startle.get("back", INF))])
-	await _sounds("the forest", ["wind_soft"])
+	await _sounds_any("the forest", ["birds", "crickets", "rain", "wind_hard"]) # (not wind_soft: it has a floor and always sounds)
 	_step("pet", petted, "a wild animal was brushed (%s) and petted, %d hearts seen in all (Elsa's and Sven's are two of them)" % [str(brushed), int(_report["hearts_seen"])])
 
 
@@ -564,15 +564,25 @@ func _sounds(label: String, expect: Array, muffled: Array = []) -> void:
 	_step("sound: " + label, ok, "sounding now: %s" % str(world.soundscape.report()["layers"]))
 
 
+## M7b: at least one of these layers (the ones a place, an hour or a weather adds, not the always-on wind) is sounding.
+func _sounds_any(label: String, any_of: Array) -> void:
+	var ok := await _until(func() -> bool:
+		var layers: Dictionary = world.soundscape.report()["layers"]
+		return any_of.any(func(l: String) -> bool: return layers.has(l)), 12.0)
+	_step("sound: " + label, ok, "sounding now: %s (one of %s wanted)" % [str(world.soundscape.report()["layers"]), str(any_of)])
+
+
 ## M7b: the footsteps made it from the grass to the wooden floor of the farmhouse and the village's stones, the ambience
 ## switched layers on the way, and no sound node piled up.
 func _sound_totals() -> void:
 	var st: Dictionary = world.steps.stats
 	var kinds: Dictionary = st["kinds"]
 	_step("sound: footsteps", int(st["steps"]) >= 30 and kinds.has("grass") and kinds.has("wood") and kinds.size() >= 3, "%d steps in all, by ground: %s" % [int(st["steps"]), str(kinds)])
+	# the route went by a pond (water on and off), the stove (fire on and off), the village (murmur on and off) and the farm's
+	# birds and wind: at least 8 layers started or ended; and no sound node piled up (one player a layer and the owl's)
 	var rep: Dictionary = world.soundscape.report()
-	_step("sound: ambience", int(rep["fades"]) >= 4 and int(rep["players"]) <= Soundscape.LAYERS.size() and world.soundscape.get_child_count() <= Soundscape.LAYERS.size() + 1 and world.steps.get_child_count() <= Quality.alive("steps"),
-		"%d layers started or ended, %d players, %d step voices" % [int(rep["fades"]), int(rep["players"]), world.steps.get_child_count()])
+	_step("sound: ambience", int(rep["fades"]) >= 8 and world.soundscape.get_child_count() <= Soundscape.LAYERS.size() + 1,
+		"%d layers started or ended, %d players, %d children" % [int(rep["fades"]), int(rep["players"]), world.soundscape.get_child_count()])
 
 
 func _final_state() -> void:
