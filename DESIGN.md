@@ -859,7 +859,7 @@ Smed-Stina's forge (the rules are the server's: `forgeGear`, `craftGear`, `forge
 - **Gear window.** A forged piece shows "Järnyxa +2" and its stars; the sums (`Gear.stats`) already counted the forge level.
 - **Check and `dev kit`.** The farmer bot's new `smed` step (`farm_bot_home.gd`, `smedjan()`) takes `{t:'dev', a:'kit'}` (DEV_TELEPORT only: 20 stone, 10 gold,
   4 crystal, 400 kr, two papers, two buckets of red paint and a run of wall pieces (wood ×2, stone, door, window); tested in `saga.test.ts`), opens Stina's window and the forge, asserts the worn weapon's "now" and "next"
-  lines against the numbers computed from the item data, forges twice and asserts the server's forge level, the bag and the purse against `FORGE_COSTS`, that the window then
+  lines against numbers computed by the TS `forgeStats` (exported into `game.json` as `gear.forgeSamples`, with `gear.heroSamples`: `gearStats` and `fighterMax` of a krigare in the jarnyxa at every hero level and forge level), compares the client's `Gear.forge_stats` with the TS ones for eleven pieces at +0..+5, and holds `Gear.stats` and `max_hp` after each forge to the TS gearStats and fighterMax, forges twice and asserts the server's forge level, the bag and the purse against `FORGE_COSTS`, that the window then
   says the new numbers, that level 3 is out of reach (the button is off), the server's own refusal for a piece I do not own, that a starter piece is smithed
   and the gear window says "+2" with its stars.
 

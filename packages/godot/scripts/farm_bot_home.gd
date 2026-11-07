@@ -844,11 +844,19 @@ func smedjan() -> void:
 	await bot._shot("forge", 0.1)
 	var forge := windows.forge
 	var row: Dictionary = forge.shown.get(weapon, {})
-	var d := Data.item(weapon)
-	var base_power := float((d.get("stats", {}) as Dictionary).get("power", 0.0))
-	var rp := float((Data.gear.get("rarityPower", {}) as Dictionary).get(str(d.get("rarity", "common")), 1.0))
-	var want_now := "💪 +%d %%" % roundi((rp * (1.0 + base_power) - 1.0) * 100.0)
-	var want_next := "💪 +%d %%" % roundi((rp * (1.0 + base_power + 0.06) - 1.0) * 100.0)
+	# the numbers to hold the client to come from the TS forgeStats / gearStats (exported into game.json by export-data.mts), not from the client's own formula
+	var samples: Dictionary = Data.gear.get("forgeSamples", {})
+	var sample: Array = samples.get(weapon, [])
+	var bad_pieces: Array = []
+	for id in samples.keys():
+		for n in range((samples[id] as Array).size()):
+			var want: Dictionary = samples[id][n]
+			var got := Gear.forge_stats(str(id), n)
+			if absf(float(got["power"]) - float(want["power"])) > 1e-9 or absf(float(got["hp"]) - float(want["hp"])) > 1e-9 or absf(float(got["armor"]) - float(want["armor"])) > 1e-9:
+				bad_pieces.append("%s +%d" % [id, n])
+	bot._step("the client's forge sums are the TS forgeStats", bad_pieces.is_empty() and not samples.is_empty(), "%d pieces at +0..+5 compared; differing: %s" % [samples.size(), str(bad_pieces)])
+	var want_now := "💪 +%d %%" % roundi(float(sample[0]["shown"]) * 100.0) if not sample.is_empty() else "?"
+	var want_next := "💪 +%d %%" % roundi(float(sample[1]["shown"]) * 100.0) if not sample.is_empty() else "?"
 	bot._step("Stina's forge window", button and not row.is_empty() and int(row.get("level", -1)) == 0 and str(row.get("now", "")) == want_now and str(row.get("next", "")) == want_next and bool(row.get("can", false)), "%s: now '%s', next '%s' (wanted '%s' and '%s'), cost %s" % [weapon, row.get("now", ""), row.get("next", ""), want_now, want_next, row.get("cost", "")])
 	var stone := model.count_item("stone")
 	var gold := model.count_item("gold")
@@ -857,12 +865,18 @@ func smedjan() -> void:
 	await bot._wait(0.5)
 	var paid := model.count_item("stone") == stone - 6 and model.count_item("gold") == gold - 3 and _coins() == coins - 40
 	row = forge.shown.get(weapon, {})
-	bot._step("forge +1", level1 and paid and int(row.get("level", -1)) == 1 and str(row.get("now", "")) == want_next, "server forge level %d, stone %d -> %d, gold %d -> %d, coins %d -> %d; the window says level %s '%s'" % [Gear.forge_level(model.my_player(), weapon), stone, model.count_item("stone"), gold, model.count_item("gold"), coins, _coins(), row.get("level", "?"), row.get("now", "")])
+	var rows1: Array = (Data.gear.get("heroSamples", {}) as Dictionary).get(str(Gear.level_of(model.my_player())), [])
+	var sums1 := not rows1.is_empty() and absf(float(Gear.stats(model.my_player())["power"]) - float(rows1[1]["power"])) < 1e-6
+	bot._step("forge +1", level1 and paid and sums1 and int(row.get("level", -1)) == 1 and str(row.get("now", "")) == want_next, "server forge level %d, stone %d -> %d, gold %d -> %d, coins %d -> %d; the window says level %s '%s'" % [Gear.forge_level(model.my_player(), weapon), stone, model.count_item("stone"), gold, model.count_item("gold"), coins, _coins(), row.get("level", "?"), row.get("now", "")])
 	var level2 := _press(forge, "up:" + weapon) and await bot._until(func() -> bool: return Gear.forge_level(model.my_player(), weapon) == 2, 4.0)
 	await bot._wait(0.5)
 	row = forge.shown.get(weapon, {})
-	var want_two := "💪 +%d %%" % roundi((rp * (1.0 + base_power + 0.12) - 1.0) * 100.0)
-	bot._step("forge +2", level2 and int(row.get("level", -1)) == 2 and str(row.get("now", "")) == want_two and Gear.stats(model.my_player())["power"] > 1.0, "server forge level 2; the window says '%s' (wanted '%s')" % [row.get("now", ""), want_two])
+	var want_two := "💪 +%d %%" % roundi(float(sample[2]["shown"]) * 100.0) if not sample.is_empty() else "?"
+	# what a fight would use: gearStats and the full health of the TS maths for a krigare of my hero level in this gear at forge +2
+	var hero_rows: Array = (Data.gear.get("heroSamples", {}) as Dictionary).get(str(Gear.level_of(model.my_player())), [])
+	var mine := Gear.stats(model.my_player())
+	var sums_ok := not hero_rows.is_empty() and absf(float(mine["power"]) - float(hero_rows[2]["power"])) < 1e-6 and absf(float(mine["hp"]) - float(hero_rows[2]["hp"])) < 1e-6 and absf(float(mine["armor"]) - float(hero_rows[2]["armor"])) < 1e-6 and Gear.max_hp(model.my_player()) == int(hero_rows[2]["max"])
+	bot._step("forge +2", level2 and int(row.get("level", -1)) == 2 and str(row.get("now", "")) == want_two and sums_ok, "server forge level 2; the window says '%s' (the TS maths: '%s'); my gear adds up to power %.5f, health %d (the TS gearStats: %s)" % [row.get("now", ""), want_two, float(mine["power"]), Gear.max_hp(model.my_player()), str(hero_rows[2]) if not hero_rows.is_empty() else "none"])
 	var off := not bool(row.get("can", true)) and not _press(forge, "up:" + weapon)
 	bot._step("level 3 is out of reach", off, "two of the rare things are missing: the button is off (cost %s)" % row.get("cost", ""))
 	await bot._shot("forge2", 0.1)
