@@ -47,10 +47,23 @@ This file is only what the next agent needs: state, decisions, how the work is r
   Forward+ shader compile under Xvfb/lavapipe in the export job; review fixes) merged 2026-11-07 06:03 UTC as b48ce70.
   Export job 9m51s (M7b's first step cuts it). The screen-texture copy of Mellan/Hög water is the main GPU cost to
   bench on the MacBook.
-- **Running now:** M7b (wildlife that flees and returns, footsteps, ambient sound) `session_01KTh22rF2Y4u6N5YDy7c9rJ`
-  on `claude/m7b-alive-world-life-sound`. Then M8. The owner tests PR 11–20 on the MacBook on 2026-11-07.
+- PR 21 (M7b: wild animals startle from a moving hero and come back, a server rule `tickStartle` in sim.ts with tests,
+  pets/predators/farm animals exempt, cleared on taming; per-terrain footsteps; a per-place/time/weather soundscape;
+  sparrows; 34 sounds synthesized by `tools/make-audio.py`, CC0; review fixes) merged 2026-11-07 07:39 UTC as 670df30.
+  **M7 is done.** Export job 9m49s (inside ~10 min; the 9-min target was missed).
+- **The art/atmosphere session** `session_01KTh22rMH5UutKMoSA5XCUG` (the owner's, branch `claude/eloquent-rubin-0r5o0h`:
+  KayKit/Kenney art pass, a colour grade, lamps, lantern, weather, 3D creatures behind `--people3d`) is merging main
+  into its branch, keeping M7a's preset framework, water and ambient code, and will open its own PR. Until it is in, no
+  child of the orchestrator touches packages/godot. Whether the orchestrator or that session merges its PR is a question
+  put to the owner.
+- **Running now (M8, outside packages/godot):** the homelab role for the v2 server (second instance on the Hetzner box,
+  `spel.<domain>`, own database, backups, updates, ntfy) `session_01KTh22okor46TcVjiA7m4tQ` on homelab branch
+  `claude/varldstradet-cloud-role`; and M8a in varldstradet (import of the family's lilla-garden save, release
+  dry run, README controls and "running your own server") `session_01KTh22qsQXEMZuS8qdhftjn` on
+  `claude/m8a-cutover-server`. No `v*` tag is pushed without the owner. M8's client parts (settings, accessibility:
+  bigger text, colour-blind telegraph colours) wait for the art PR. The owner tests on the MacBook on 2026-11-07.
 - **Branch `claude/eloquent-rubin-0r5o0h` (sections 1b–1d: the art pass, the atmosphere pass, creatures in 3D) merged `main`
-  up to PR 20 and reconciled the overlap with M7a.** M7a's stay (the preset framework, wind, water, fireflies, butterflies,
+  up to PR 21 (670df30 and the handoff ded1e66) and reconciled the overlap with M7a.** M7a's stay (the preset framework, wind, water, fireflies, butterflies,
   leaves, chimney smoke, dawn mist, window light); dropped from the atmosphere pass as duplicates: its fireflies, chimney
   smoke, autumn leaves in the trees, dawn mist, the window beams and the pond at night, plus its old wind sway and its
   fog banks (fog weather now drives M7a's mist at a higher alpha). Kept: the day/night grade, screen grade, lamp pools,
@@ -264,7 +277,7 @@ been tested on the MacBook yet; PR 11, 12, 13 and 14 each carry a "what to check
 
 ## 5. Open items and backlog, in rough order
 
-1. **M6 done (PR 17–19); M7a done (PR 20); M7b running, then M8** (the other eight dungeons as zone sets and all bosses in the Godot client, in chapter order; PLAN.md
+1. **M6 done (PR 17–19); M7 done (PR 20–21); M8 running (server side), client side after the art PR** (the other eight dungeons as zone sets and all bosses in the Godot client, in chapter order; PLAN.md
    M6; the dungeons' plans and bosses exist as data, the client draws Draugkryptan's look and the seven biome looks of
    the run zones). Then M7, M8. Before M6, ask the owner for the MacBook results of PR 11–14 if any have come in.
 2. The tidy-up PR of section 1's leftovers.
@@ -294,6 +307,6 @@ been tested on the MacBook yet; PR 11, 12, 13 and 14 each carry a "what to check
   `session_01KTh22pn3nY1PwSd9U6Gv3B`, M5c `session_01KTh22riKcXRQssJpT6nmes` (stood down), M5c fix-up
   `session_01KTh22s4VK2T6Mc1ipSsM5W`, voice `session_01KTh22ouaSJXMfDZvpaPHMt`, voice fix-up
   `session_01KTh22qka2AJW7nyefZu2x5`.
-- Orchestrator since 2026-11-06 22:36 UTC: `session_01KTh22s6gWj5rerGqj3fNdr`; children (Sonnet): M6a `session_01KTh22qPPYJFNEk4wVjmv5b` (done), tidy-up `session_01KTh22qpJkd4hoGWrPg64yA` (done), M6b `session_01KTh22rTdZexhwmCtMLZuRP` (done), M6c `session_01KTh22s7Dm75532mFbJzr47` (done), M7a `session_01KTh22qWWBKXeP4TboJqexR` (done), M7b `session_01KTh22rF2Y4u6N5YDy7c9rJ` (running); a check-in is pending.
+- Orchestrator since 2026-11-06 22:36 UTC: `session_01KTh22s6gWj5rerGqj3fNdr`; children (Sonnet): M6a `session_01KTh22qPPYJFNEk4wVjmv5b` (done), tidy-up `session_01KTh22qpJkd4hoGWrPg64yA` (done), M6b `session_01KTh22rTdZexhwmCtMLZuRP` (done), M6c `session_01KTh22s7Dm75532mFbJzr47` (done), M7a `session_01KTh22qWWBKXeP4TboJqexR` (done), M7b `session_01KTh22rF2Y4u6N5YDy7c9rJ` (done), homelab role `session_01KTh22okor46TcVjiA7m4tQ` and M8a `session_01KTh22qsQXEMZuS8qdhftjn` (running); a check-in is pending.
 - Homelab repo `tobiasbernting/homelab`: `cloud/` (Hetzner + Cloudflare + Tailscale, running), `server/roles/lilla-garden`
   and `lilla-garden-cloud`.
