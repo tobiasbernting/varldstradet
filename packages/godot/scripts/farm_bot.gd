@@ -537,6 +537,11 @@ func _pet_wild() -> void:
 				var tile := _animal_tile(b)
 				var here := _my_tile()
 				return absi(tile.y - here.y) + absi(tile.x - here.x) == 1, 120.0)
+			# (the wait ends the moment the animal is beside me, which can be sooner than the next quarter-second sample: take it now)
+			var finished := _animal_by_id(wild_id)
+			if not finished.is_empty():
+				rec["last_t"] = 0
+				_watch_startle(rec, finished)
 			_standing = false
 			if _hostile_near(Vector2(world.hero.px, world.hero.py), 7.0) != Vector2.INF:
 				continue
