@@ -202,5 +202,6 @@ func quit_clean(code := 0) -> void:
 		child.queue_free()
 	await get_tree().process_frame
 	await get_tree().process_frame
+	PaintArt.clear_cache() # (the pictures' textures are not left to the engine's exit report)
 	await get_tree().create_timer(0.4).timeout
 	get_tree().quit(code)

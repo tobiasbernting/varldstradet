@@ -780,6 +780,11 @@ func paint() -> void:
 				break
 	bot._step("the painted house's plaster is recoloured", house_painted and house_before == "house" and house_after == "paint:house:1" and changed >= 100 and wrong == 0 and roof_kept, "the mesh went from '%s' to '%s'; %d plaster vertices turned red, %d wrong, the roof and timber kept: %s" % [house_before, house_after, changed, wrong, str(roof_kept)])
 	await bot._shot("house-painted", 0.3)
+	# the textures made from paintings are kept in a capped cache (the hung frame holds its own)
+	for i in range(PaintArt.CACHE_MAX + 20):
+		var cells := ".".repeat(PaintArt.size() * PaintArt.size())
+		PaintArt.texture_of(cells.substr(0, i) + "0" + cells.substr(i + 1))
+	bot._step("the picture cache is capped", PaintArt.cache_size() <= PaintArt.CACHE_MAX and PaintArt.matches(world.farm.picture_texture(oid), server_data), "%d textures kept after %d made; the hung frame still shows its painting" % [PaintArt.cache_size(), PaintArt.CACHE_MAX + 20])
 
 
 ## A pad's or a key's action through the viewport (the focus navigation and the controls' own handlers see it as a press and a release).

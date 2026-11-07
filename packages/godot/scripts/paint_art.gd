@@ -11,7 +11,11 @@ const FRAME_DARK := Color("#6b4420")
 ## A paint bucket's colour by the `variant` the server sets on a painted house or wall (0 is unpainted).
 const BUCKET: Array = ["", "#c9433c", "#f0d060", "#6a9fd8", "#7fb86a", "#f4f2ec", "#f0a8c8"]
 
+## Textures made from paintings, by the string, least recently used first; at most CACHE_MAX are kept (a frame holds its own texture
+## while it hangs, the cache only saves making it again), and `clear_cache` lets them all go when the game closes.
+const CACHE_MAX := 48
 static var _cache: Dictionary = {}
+static var _order: Array = []
 
 
 static func size() -> int:
@@ -78,18 +82,35 @@ static func framed_image(pixels: String) -> Image:
 
 ## The drawing as a texture for a picture frame (nearest-filtered by the material; kept by the string).
 static func texture_of(pixels: String) -> ImageTexture:
-	var key := "t" + pixels
-	if not _cache.has(key):
-		_cache[key] = ImageTexture.create_from_image(image_of(pixels))
-	return _cache[key]
+	return _cached("t" + pixels, pixels, false)
 
 
 ## The framed picture for a bag slot or a window.
 static func icon_of(pixels: String) -> ImageTexture:
-	var key := "i" + pixels
-	if not _cache.has(key):
-		_cache[key] = ImageTexture.create_from_image(framed_image(pixels))
-	return _cache[key]
+	return _cached("i" + pixels, pixels, true)
+
+
+static func _cached(key: String, pixels: String, framed: bool) -> ImageTexture:
+	if _cache.has(key):
+		_order.erase(key)
+		_order.append(key)
+		return _cache[key]
+	var tex := ImageTexture.create_from_image(framed_image(pixels) if framed else image_of(pixels))
+	_cache[key] = tex
+	_order.append(key)
+	while _order.size() > CACHE_MAX:
+		_cache.erase(_order.pop_front())
+	return tex
+
+
+## Lets every cached texture go (the game is closing, or a check wants to see none left).
+static func clear_cache() -> void:
+	_cache.clear()
+	_order.clear()
+
+
+static func cache_size() -> int:
+	return _cache.size()
 
 
 ## Does a texture show exactly the painting (every cell its palette colour, paper where nothing is painted)?

@@ -876,7 +876,7 @@ The server already did all of it (`paint` makes a painted tavla of a paper, `dat
   colours, the tools and the buttons below; the shoulder buttons step through the colours). The cells are the window's, so a refresh of my record (which rebuilds
   every other window) leaves a half-drawn picture alone. "Klar" sends `{t:'paint', pixels}` (an empty drawing is refused here with the server's words and again
   by the server); "Avbryt" and Escape throw it away. The canvas's cell size follows the screen height (10–20 px) so the whole picture is on screen at 175 % text.
-- **Bag.** A painted tavla's slot shows its framed picture (`ItemSlot._art`).
+- **Bag.** A painted tavla's slot shows its framed picture (`ItemSlot._art`). `PaintArt`'s texture cache is an LRU of 48 (a hung frame holds its own texture), emptied by `quit_clean`; no texture is reported leaked at exit.
 - **Frames.** `painting` is a node in `farm_assets.gd` now (it was a baked frame in a chunk's MultiMesh): `farm_view.gd` `_picture` puts a `Picture` quad with the
   painting's texture in front of the frame (nearest-filtered, shaded). `FarmView.picture_texture(id)` gives the texture to the check.
 - **Colours.** `farm_view.gd` asks `farm_assets.gd` for `paint:<mesh>:<variant>` when the server's `variant` is above 0 on a wall, a door, a window or the house: walls,
