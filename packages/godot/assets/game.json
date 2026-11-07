@@ -2934,6 +2934,7 @@
           "radius": 1,
           "dmg": 0,
           "interrupt": true,
+          "heal": 0.12,
           "phase": 1,
           "text": "Han kryper ihop på sitt guld och sover sig frisk. Väck honom med Sköldslag, Stormsteg eller Isspjut!"
         }
@@ -3128,6 +3129,7 @@
           "radius": 1,
           "dmg": 0,
           "interrupt": true,
+          "heal": 0.1,
           "phase": 1,
           "text": "Hon somnar och drömmer sig frisk. Väck henne med Sköldslag, Stormsteg eller Isspjut!"
         },
@@ -3347,6 +3349,7 @@
           "radius": 1,
           "dmg": 0,
           "interrupt": true,
+          "heal": 0.08,
           "phase": 2,
           "text": "Han låtsas sova och läker sig i smyg. Avbryt med Sköldslag, Stormsteg eller Isspjut!"
         },

@@ -40,7 +40,7 @@
 //   BOT_RUN_MAX_WIPES=0 sets how many wipes the run pair retries (default 2; 0 = a wipe fails the check)
 //   BOT_ONLY=run BOT_RUN_SECONDS=480 pnpm godot:bot [-- --full]   (the run pair alone; --full plays to the boss: BOT_RUN_SECONDS=2400)
 //   BOT_RUN_SHOTS=dir                             (the run pair saves pictures there; needs a window: run it under xvfb-run)
-//   BOT_ONLY=dungeon BOT_DUNGEON=frost BOT_SECONDS=240 pnpm godot:bot   (the fighter pair alone, in Frostjättens borg: draug, frost, surt or hel; M6a)
+//   BOT_ONLY=dungeon BOT_DUNGEON=frost BOT_SECONDS=240 pnpm godot:bot   (the fighter pair alone, in Frostjättens borg: draug, frost, surt, hel, dvarg, orm or alv; M6a, M6b)
 //   BOT_SECONDS=120 BOT_PORT=8097 BOT_PACKS=1     (optional; BOT_FARM_SECONDS=600 for the farmer, BOT_ONLY=farm or walker)
 //   BOT_FARM_SHOTS=dir                            (the farmer saves pictures there; needs a window: run under xvfb-run)
 import { spawn, type ChildProcess } from 'node:child_process';
@@ -57,7 +57,7 @@ const godot = process.env.GODOT ?? 'godot';
 const port = Number(process.env.BOT_PORT ?? 8097);
 const seconds = Number(process.env.BOT_SECONDS ?? 120);
 const packs = Number(process.env.BOT_PACKS ?? 1);
-/** Which dungeon the fighter pair asks the dev way into (M6a: draug, frost, surt or hel; BOT_ONLY=dungeon runs just that pair). */
+/** Which dungeon the fighter pair asks the dev way into (M6a, M6b: draug, frost, surt, hel, dvarg, orm or alv; BOT_ONLY=dungeon runs just that pair). */
 const dungeon = process.env.BOT_DUNGEON ?? 'draug';
 const names = ['Bot-Ask', 'Bot-Embla'];
 const walkerName = 'Bot-Vandrare';

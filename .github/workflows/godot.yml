@@ -107,64 +107,76 @@ jobs:
           fi
 
       # Two headless bots fight the first pack of Draugkryptan together against a server running in memory
-      # (no Postgres: the server's MemoryStore). tools/bot-check.mts compares their reports.
-      - name: Two bots clear the first pack together (the server in memory, ACCESS=open, DEV_TELEPORT=1)
-        run: |
-          set -euo pipefail
-          GODOT=~/godot/godot BOT_SECONDS=150 pnpm godot:bot 2>&1 | tee bot.log
-
+      # (no Postgres: the server's MemoryStore). tools/bot-check.mts compares their reports; the same run also has the
+      # arch walker, the creator check and the farmer.
+      #
       # M5c: two headless bots play a run through the client against a server in memory: they walk to the färdport, the lead
-      # starts, both clear zone 1, use the exit, vote on a runa and enter zone 2 (tools/bot-check.mts; `--full` plays to the
-      # boss, locally).
-      - name: Two bots play the start of a run (the arch window, zone 1, the exit, the cards, zone 2)
+      # starts, both clear zone 1, use the exit, vote on a runa and enter zone 2 (`--full` plays to the boss, locally).
+      #
+      # M6b: these two used to run one after the other (4 + 4 minutes) and the job was over its ~10 minute budget; they
+      # are independent (each has servers of its own: 8097 and 8098, and 8200 with its run pair on 8202), so they run side
+      # by side. Nothing they assert changed. (If one starves the other on a small runner, a timed wait fails: that is a
+      # real signal to look at, not a reason to lengthen a limit.)
+      - name: The Draugkryptan bots (fighters, walker, creator, farmer) and the run pair play side by side
         run: |
-          set -euo pipefail
-          GODOT=~/godot/godot BOT_ONLY=run BOT_RUN_SECONDS=480 pnpm godot:bot 2>&1 | tee runbots.log
+          set -uo pipefail
+          (GODOT=~/godot/godot BOT_SECONDS=150 pnpm godot:bot > bot.log 2>&1; echo $? > bot.code) &
+          (GODOT=~/godot/godot BOT_ONLY=run BOT_PORT=8200 BOT_RUN_SECONDS=480 pnpm godot:bot > runbots.log 2>&1; echo $? > runbots.code) &
+          wait
+          bad=0
+          echo "== the Draugkryptan bots"; cat bot.log
+          test "$(cat bot.code)" = 0 || { echo "::error::the Draugkryptan bots failed"; bad=1; }
+          echo "== the run pair"; cat runbots.log
+          test "$(cat runbots.code)" = 0 || { echo "::error::the run pair failed"; bad=1; }
+          exit $bad
 
-      # M6a: the same fighter pair in Frostjättens borg, Surts smedja and Helheim (the dev way in: DEV_TELEPORT=1, `dev saga`):
-      # each clears its first two packs against a server in memory. The three run side by side, each on ports of its own
-      # (a run uses its port and the next two).
-      - name: Two bots clear the first packs of Frostjättens borg, Surts smedja and Helheim (the dev way in)
+      # M6a, M6b: the same fighter pair in Frostjättens borg, Surts smedja, Helheim, Svartalfheims gruvor, Havsormens tempel
+      # and Alvernas lund (the dev way in: DEV_TELEPORT=1, `dev saga`): each clears its first two packs against a server in
+      # memory. The six run side by side, each on ports of its own (a run uses its port and the next two; gaps left).
+      - name: Two bots clear the first packs of each of the six dungeons after Draugkryptan (the dev way in)
         run: |
           set -uo pipefail
           port=8100
-          for d in frost surt hel; do
+          for d in frost surt hel dvarg orm alv; do
             (GODOT=~/godot/godot BOT_ONLY=dungeon BOT_DUNGEON=$d BOT_PORT=$port BOT_PACKS=2 BOT_SECONDS=240 pnpm godot:bot > "bot-$d.log" 2>&1; echo $? > "bot-$d.code") &
-            port=$((port + 3))
+            port=$((port + 4))
           done
           wait
           bad=0
-          for d in frost surt hel; do
+          for d in frost surt hel dvarg orm alv; do
             echo "== $d"; cat "bot-$d.log"
             test "$(cat "bot-$d.code")" = 0 || { echo "::error::the $d bot pair failed"; bad=1; }
           done
           exit $bad
 
-      # M6a: every move of the mid-boss and the boss of each of the three plays on the recorded dungeon, from the data
-      # (scripts/demo_bosses.gd): the cast bar, the marks on the floor, the landing, the ice block, the burning ground, the
-      # helpers, the pull. The three run side by side (about 15 s).
-      - name: Play the bosses' moves of Frostjättens borg, Surts smedja and Helheim headless (telegraphs, cast bars, what they leave)
+      # M6a, M6b: every move of the mid-boss and the boss of each of the six plays on the recorded dungeon, from the data
+      # (scripts/demo_bosses.gd): the cast bar, the marks on the floor, the landing, the ice block or web, the burning ground,
+      # the helpers, the pull, a mend's glow and the heal. The six run side by side (about 20 s).
+      - name: Play the bosses' moves of the six dungeons headless (telegraphs, cast bars, what they leave)
         working-directory: packages/godot
         run: |
-          set -euo pipefail
-          for d in frost surt hel; do
+          set -uo pipefail
+          for d in frost surt hel dvarg orm alv; do
             (timeout 150 ~/godot/godot --headless --path . -- --demo=$d --fight --once > "bosses-$d.log" 2>&1; echo $? > "bosses-$d.code") &
           done
           wait
-          for d in frost surt hel; do
-            cat "bosses-$d.log"
+          # every dungeon's log is printed and every failure reported (one failing show must not hide the others)
+          bad=0
+          fail() { echo "::error::$1"; bad=1; }
+          # every move of each boss cast once: the mid-boss's and the boss's: frost 1 + 4, surt 2 + 3, hel 2 + 3, dvarg 2 + 3, orm 2 + 4, alv 2 + 4
+          declare -A casts=([frost]=5 [surt]=5 [hel]=5 [dvarg]=5 [orm]=6 [alv]=6)
+          for d in frost surt hel dvarg orm alv; do
+            echo "== $d"; cat "bosses-$d.log"
             if grep -E "^ERROR:|SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate|bosses: FAIL|leaked at exit|still in use at exit|Pages in use exist at exit" "bosses-$d.log"; then
-              echo "::error::the $d boss show reported errors or leaked at exit (see above)"; exit 1
+              fail "the $d boss show reported errors or leaked at exit (see above)"
             fi
-            test "$(cat "bosses-$d.code")" = 0 || { echo "::error::the $d boss show did not end cleanly"; exit 1; }
-            grep -q "bosses: show finished" "bosses-$d.log" || { echo "::error::the $d boss show did not play to its end"; exit 1; }
-            # (the show checks what it fed: each mark is in the fx view after the cast, gone after the landing, a helper or an ice block is an actor)
-            grep -q "^bosses: ok" "bosses-$d.log" || { echo "::error::the $d boss show's own checks did not pass"; exit 1; }
+            test "$(cat "bosses-$d.code")" = 0 || fail "the $d boss show did not end cleanly"
+            grep -q "bosses: show finished" "bosses-$d.log" || fail "the $d boss show did not play to its end"
+            # (the show checks what it fed: each mark is in the fx view after the cast, gone after the landing, a helper, an ice block or a web is an actor, a mend glows and its glow ends and the heal floats, a pull puts the hero next to the boss, the air's motes drift)
+            grep -q "^bosses: ok" "bosses-$d.log" || fail "the $d boss show's own checks did not pass"
+            test "$(grep -c 'casts,' "bosses-$d.log")" = "${casts[$d]}" || fail "the $d boss show did not cast every move"
           done
-          # every move of each boss cast once: the mid-boss's and the boss's, 1 + 4 (frost), 2 + 3 (surt), 2 + 3 (hel)
-          test "$(grep -c 'casts,' bosses-frost.log)" = 5 || { echo "::error::the frost boss show did not cast every move"; exit 1; }
-          test "$(grep -c 'casts,' bosses-surt.log)" = 5 || { echo "::error::the surt boss show did not cast every move"; exit 1; }
-          test "$(grep -c 'casts,' bosses-hel.log)" = 5 || { echo "::error::the hel boss show did not cast every move"; exit 1; }
+          exit $bad
 
       - name: Export all four targets
         working-directory: packages/godot
@@ -287,6 +299,46 @@ jobs:
           shot m6a-hel-pull --demo=hel --boss-move=hel:pull
           shot m6a-hel-nova --demo=hel --boss-move=hel:nova
           shot m6a-hel-rain --demo=hel --boss-move=hel:rain
+
+      # M6b: the same for Svartalfheims gruvor, Havsormens tempel and Alvernas lund: the start room, the boss's hall (the
+      # hero off to one side, so the boss shows) and the marks of each move of the mid-boss and the boss.
+      - name: Pictures of Svartalfheims gruvor, Havsormens tempel and Alvernas lund and of their bosses' moves under Xvfb
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/shots/dungeons"
+          shot() { # name, demo args...
+            local name="$1"; shift
+            xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- "$@" --screenshot="$GITHUB_WORKSPACE/shots/dungeons/$name.png" 2>&1 | tee "shot-$name.log"
+            if grep -E "^ERROR:|SCRIPT ERROR|Parse Error|leaked at exit|still in use at exit|Pages in use exist at exit" "shot-$name.log"; then
+              echo "::error::$name: errors or leaks (see above)"; exit 1
+            fi
+            test "$(stat -c %s "$GITHUB_WORKSPACE/shots/dungeons/$name.png")" -gt 20000
+          }
+          shot m6b-dvarg --demo=dvarg
+          shot m6b-dvarg-hall --demo=dvarg --at=48,11
+          shot m6b-jarnvakten-line --demo=dvarg --boss-move=jarnvakten:line
+          shot m6b-jarnvakten-slam --demo=dvarg --boss-move=jarnvakten:slam
+          shot m6b-fafner-cleave --demo=dvarg --boss-move=fafner:cleave
+          shot m6b-fafner-pools-mark --demo=dvarg --boss-move=fafner:pools
+          shot m6b-fafner-pools --demo=dvarg --boss-move=fafner:pools:after
+          shot m6b-fafner-mend --demo=dvarg --boss-move=fafner:mend
+          shot m6b-orm --demo=orm
+          shot m6b-orm-hall --demo=orm --at=47,50
+          shot m6b-blackis-pools --demo=orm --boss-move=blackis:pools:after
+          shot m6b-blackis-line --demo=orm --boss-move=blackis:line
+          shot m6b-jormungand-line --demo=orm --boss-move=jormungand:line
+          shot m6b-jormungand-pull --demo=orm --boss-move=jormungand:pull
+          shot m6b-jormungand-nova --demo=orm --boss-move=jormungand:nova
+          shot m6b-jormungand-rain --demo=orm --boss-move=jormungand:rain
+          shot m6b-alv --demo=alv
+          shot m6b-alv-hall --demo=alv --at=27,48
+          shot m6b-spindeldrottning-web --demo=alv --boss-move=spindeldrottning:freeze:after
+          shot m6b-spindeldrottning-rain --demo=alv --boss-move=spindeldrottning:rain
+          shot m6b-nattmara-nova --demo=alv --boss-move=nattmara:nova
+          shot m6b-nattmara-pools --demo=alv --boss-move=nattmara:pools:after
+          shot m6b-nattmara-mend --demo=alv --boss-move=nattmara:mend
+          shot m6b-nattmara-summon --demo=alv --boss-move=nattmara:summon:after
 
       # The farmer works a farm of its own (a second in-memory server) in a window under Xvfb and takes pictures at the
       # moments the owner asked for: watering, the bag and a chest open, a fish biting, a wild animal petted (M4b); and

@@ -83,8 +83,14 @@ the sheets are committed under `assets/sprites/` with `atlas.json` (frame size, 
 - `mob_<species>.png`: the dungeon's monsters and bosses as `SAGA_MOBS`/`SAGA_BOSSES` name them, two walk frames
   facing right, at the size `SAGA_ANIMAL_SIZE` gives them, outlined as `drawAnimal` outlines them. M6a: the creatures of
   Draugkryptan, Frostjättens borg, Surts smedja and Helheim (21, with the ice block a freeze leaves); `pnpm godot:sprites`
-  takes the dungeon ids as its argument (`draug,frost,surt,hel` by default) and `speciesOf` in `tools/sprites-page.ts` lists
+  takes the dungeon ids as its argument (`draug,frost,surt,hel,dvarg,orm,alv` by default) and `speciesOf` in `tools/sprites-page.ts` lists
   what each one needs, so a later dungeon is one more id. No new pixel art was drawn: all of it is in `packages/art/src/sagaanimals.ts`.
+  M6b added the 15 creatures (and the web: 16 sheets) of Svartalfheims gruvor (gruvtroll, guldbagge, stengolem, jarnvakten, fafner), Havsormens tempel
+  (sjodraug, jattekrabba, manet, blackis, jormungand) and Alvernas lund (skuggalv, jattespindel, svampvakt, spindeldrottning,
+  nattmara; plus the web a spider's freeze leaves, `spindelnat`): 37 sheets in all. Again nothing was drawn, and the sheets
+  already exported are byte for byte the same (the icon sheet too: the new dungeons' loot has pictures already). The new
+  looks (`dungeon_look.gd`) tint KayKit stone as before: amber for the mine, sea-teal for the temple, violet for the grove;
+  the three new drifting airs (dust, bubbles, spores) are particles drawn in code with the engine's glow texture.
 - The farm's people (M4a): `farm_<kind>.png`, one PNG per layer kind with one row of 12 frames (`down0..2 up0..2 left0..2
   right0..2`, 16×32, left = right mirrored) per layer; `atlas.json`'s `farm.layers` maps a layer key (`shirt_shirt_red`,
   `hair_ponytail_3`, `hat_hat_viking`) to `{file, x, y}`, the cell of its frame 0 (frame i is at `x + i*16`). Any

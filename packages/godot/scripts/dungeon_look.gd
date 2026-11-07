@@ -18,7 +18,7 @@ extends RefCounted
 ##   glow      bloom strength
 ##   cap_k     lightens (or darkens) the wall blocks' tops and their dark cores, a multiplier on the stone tint
 ##   bg_k      the background colour (what shows beyond the walls) as a fraction of the ambient colour
-##   motes     "", "snow", "embers" or "wisps": what drifts through the air round the hero (Mellan and Hög)
+##   motes     "", "snow", "embers", "wisps", "dust", "bubbles" or "spores": what drifts through the air round the hero (Mellan and Hög)
 
 ## Draugkryptan's values are the ones the view had before the table existed (M3a), unchanged.
 const NEUTRAL := {
@@ -45,9 +45,24 @@ const LOOKS := {
 		"floors": {"crypt": Color(0.85, 0.9, 0.9)},
 		"ambient_energy": 1.0, "fog_density": 0.036, "fog_k": 0.4, "glow": 0.55, "bg_k": 0.08, "cap_k": 1.9, "motes": "wisps", "boss_decor": false,
 	},
-	"dvarg": {"wall": 4, "stone": Color(0.7, 0.7, 0.76), "torch": Color(1.0, 0.86, 0.6)},
-	"orm": {"wall": 5, "stone": Color(0.6, 0.76, 0.9), "torch": Color(0.7, 0.92, 1.0)},
-	"alv": {"wall": 6, "stone": Color(0.72, 0.62, 0.82), "torch": Color(0.82, 0.7, 1.0)},
+	"dvarg": {
+		"wall": 4, "stone": Color(0.68, 0.64, 0.62), "torch": Color(1.0, 0.78, 0.38),
+		# M6b, Svartalfheims gruvor: dark rock under amber mine lamps, dusty air with gold glinting in it; the hoard hall is bare stone
+		"floors": {"gravel": Color(0.85, 0.8, 0.74), "floor_stone": Color(1.25, 1.15, 1.0)},
+		"ambient_energy": 0.8, "fog_density": 0.04, "fog_k": 0.5, "glow": 0.65, "cap_k": 1.3, "motes": "dust", "boss_decor": false, "weeds": false,
+	},
+	"orm": {
+		"wall": 5, "stone": Color(0.52, 0.72, 0.82), "torch": Color(0.45, 0.95, 0.95),
+		# Havsormens tempel: wet blue-green stone, sea-lanterns, a thick teal haze with bubbles rising through it; the sand floor kept pale
+		"floors": {"sand": Color(1.5, 1.35, 1.05), "floor_stone": Color(1.15, 1.25, 1.25)},
+		"ambient_energy": 0.95, "fog_density": 0.042, "fog_k": 0.6, "glow": 0.75, "bg_k": 0.1, "cap_k": 1.6, "motes": "bubbles", "boss_decor": false,
+	},
+	"alv": {
+		"wall": 6, "stone": Color(0.62, 0.55, 0.74), "torch": Color(0.78, 0.55, 1.0),
+		# Alvernas lund: violet bark-stone, glowing mushrooms (a lot of bloom) and spores drifting up; the boss's clearing is grass, no decor tile
+		"floors": {"moss": Color(0.95, 1.9, 0.85), "grass": Color(1.1, 2.3, 0.9)},
+		"ambient_energy": 0.9, "fog_density": 0.034, "fog_k": 0.55, "glow": 0.95, "bg_k": 0.1, "cap_k": 1.5, "motes": "spores", "boss_decor": false,
+	},
 	"fenrir": {"wall": 7, "stone": Color(0.78, 0.82, 0.9), "torch": Color(0.62, 0.8, 1.0)},
 	"loke": {"wall": 8, "stone": Color(0.9, 0.86, 1.0), "torch": Color(1.0, 0.82, 0.9)},
 }
@@ -58,7 +73,7 @@ const FLOORS := {
 	"crypt": Color(1.0, 1.0, 1.0), "floor_stone": Color(1.1, 1.08, 1.05), "snow": Color(1.3, 1.35, 1.45), "ice": Color(0.9, 1.2, 1.4),
 	"forge": Color(0.45, 0.4, 0.42), "bifrost": Color(1.3, 1.25, 1.4), "moss": Color(0.8, 1.1, 0.75), "stone": Color(0.95, 0.95, 0.95),
 	"gravel": Color(0.9, 0.88, 0.85), "sand": Color(1.2, 1.1, 0.85), "dirt": Color(0.9, 0.8, 0.7), "floor_wood": Color(1.1, 0.9, 0.7),
-	"ash": Color(0.62, 0.58, 0.58), "mud": Color(0.7, 0.62, 0.5),
+	"ash": Color(0.62, 0.58, 0.58), "mud": Color(0.7, 0.62, 0.5), "grass": Color(0.9, 1.0, 0.85),
 }
 
 

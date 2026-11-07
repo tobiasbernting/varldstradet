@@ -738,6 +738,7 @@ func _make_motes() -> void:
 			# slow flakes falling through the cold air
 			quad.size = Vector2(0.06, 0.06)
 			pm.direction = Vector3(0.15, -1.0, 0.0)
+			pm.gravity = Vector3(0.0, -0.15, 0.0) # a flake settles at its own pace; the engine default (0, -9.8, 0) would drop it like a stone
 			pm.spread = 35.0
 			pm.initial_velocity_min = 0.35
 			pm.initial_velocity_max = 0.7
@@ -746,16 +747,52 @@ func _make_motes() -> void:
 			# sparks lifting off the forge's fires
 			quad.size = Vector2(0.05, 0.05)
 			pm.direction = Vector3(0.1, 1.0, 0.0)
+			pm.gravity = Vector3(0.0, 0.25, 0.0) # heat lifts a spark; the default would pull it straight down
 			pm.spread = 30.0
 			pm.initial_velocity_min = 0.4
 			pm.initial_velocity_max = 1.0
 			colour = Color(1.0, 0.55, 0.2, 0.9)
 			life = 5.0
 			additive = true
+		"dust":
+			# the mine: small warm-gold motes hanging in the lamplight (additive)
+			quad.size = Vector2(0.05, 0.05)
+			pm.direction = Vector3(0.2, -0.2, 0.1)
+			pm.gravity = Vector3(0.0, -0.02, 0.0) # hangs in the air
+			pm.spread = 80.0
+			pm.initial_velocity_min = 0.05
+			pm.initial_velocity_max = 0.2
+			colour = Color(1.0, 0.82, 0.45, 0.7)
+			life = 9.0
+			additive = true
+		"bubbles":
+			# the temple: pale bubbles rising slowly
+			quad.size = Vector2(0.09, 0.09)
+			pm.direction = Vector3(0.05, 1.0, 0.0)
+			pm.gravity = Vector3(0.0, 0.2, 0.0) # a bubble rises, faster as it goes
+			pm.spread = 20.0
+			pm.initial_velocity_min = 0.3
+			pm.initial_velocity_max = 0.7
+			colour = Color(0.7, 0.95, 1.0, 0.45)
+			life = 7.0
+			additive = true
+		"spores":
+			# the grove: violet spores lifting off the mushrooms
+			quad.size = Vector2(0.1, 0.1)
+			pm.direction = Vector3(0.1, 1.0, 0.2)
+			pm.gravity = Vector3(0.0, 0.08, 0.0) # a spore drifts up
+			pm.spread = 50.0
+			pm.initial_velocity_min = 0.1
+			pm.initial_velocity_max = 0.35
+			colour = Color(0.85, 0.6, 1.0, 0.6)
+			life = 8.0
+			additive = true
+			budget = budget / 2
 		_:
 			# wisps: soft pale-green lights drifting sideways, slowly
 			quad.size = Vector2(0.16, 0.16)
 			pm.direction = Vector3(1.0, 0.1, 0.3)
+			pm.gravity = Vector3.ZERO # a wisp floats, nothing pulls it
 			pm.spread = 60.0
 			pm.initial_velocity_min = 0.15
 			pm.initial_velocity_max = 0.4

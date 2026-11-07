@@ -693,6 +693,16 @@ func build_spell_bar(cls: String) -> void:
 	_add_slot("potion", Data.icon("ui_potion"), "5", Strings.t("sagaPotionKey").split(" (")[0])
 
 
+## Shrinks a label's font from `size` towards `min_size` until its text is at most `width` px wide; a text that already fits keeps `size`.
+func _fit_text(label: Label, size: int, min_size: int, width: float) -> void:
+	var font := label.get_theme_font("font")
+	var fs := size
+	while fs > min_size and font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > width:
+		fs -= 1
+	if fs != size:
+		label.add_theme_font_size_override("font_size", fs)
+
+
 func _add_slot(id: String, icon: Texture2D, key: String, slot_name: String) -> void:
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", 2)
@@ -743,6 +753,7 @@ func _add_slot(id: String, icon: Texture2D, key: String, slot_name: String) -> v
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.custom_minimum_size = Vector2(72, 0)
 	name_label.clip_text = true
+	_fit_text(name_label, 12, 8, 66.0) # (a long name like "Bärsärkaraseri" shrinks to fit the slot instead of losing its ends)
 	root.add_child(name_label)
 	spell_bar.add_child(root)
 	_slots.append({"id": id, "root": root, "panel": panel, "style": sb, "icon": tex, "sweep": sweep, "num": num, "key": key_label, "name": name_label, "was_cooling": false, "last": ""})

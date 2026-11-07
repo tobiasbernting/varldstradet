@@ -12,8 +12,8 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const artDir = path.resolve(here, '../../art');
 const outDir = path.resolve(here, '../assets/sprites');
-/** The dungeons whose creatures are exported (M3a: Draugkryptan; M6a: Frostjättens borg, Surts smedja and Helheim; the rest follow in M6). */
-const DUNGEONS = (process.argv[2] ?? 'draug,frost,surt,hel').split(',');
+/** The dungeons whose creatures are exported (M3a: Draugkryptan; M6a: Frostjättens borg, Surts smedja and Helheim; M6b: Svartalfheims gruvor, Havsormens tempel and Alvernas lund; the rest follow in M6). */
+const DUNGEONS = (process.argv[2] ?? 'draug,frost,surt,hel,dvarg,orm,alv').split(',');
 
 // vite comes from the art package (the godot package has no node_modules); Playwright from wherever the machine
 // keeps it: its own install (`npm i -g playwright`, NODE_PATH) or PLAYWRIGHT_DIR

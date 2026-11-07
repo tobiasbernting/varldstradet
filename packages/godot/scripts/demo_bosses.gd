@@ -20,6 +20,8 @@ var _ids: Dictionary = {} ## species -> animal id
 var _helpers: Array = [] ## the helpers the show called (ids), taken away when their boss is beaten
 var _held: Array = [] ## the zone changes kept fresh in a held picture
 var _spare := 1000 ## ids for the things the demo makes up (zones, blocks, helpers)
+var _glow_fx: Dictionary = {} ## boss id -> the mend glow the fx view made for it
+var _late := 0.0 ## show time by which the last late check (a mend's glow ending) has been made
 var _tile := 16.0
 var _fails := 0 ## what the show fed the world and the world did not show (printed at the end as `bosses: ok` or `bosses: FAIL`)
 var _checks := 0
@@ -49,8 +51,9 @@ func _ready() -> void:
 	var t := 0.5
 	for sp in order:
 		t = _boss_show(sp, t)
-	_at(t, func() -> void:
+	_at(maxf(t, _late + 0.2), func() -> void:
 		_pending.append([5, func() -> void:
+			_check_motes()
 			print("bosses: %s (%d checks, %d failed)" % ["ok" if _fails == 0 and _checks > 0 else "FAIL", _checks, _fails])
 			print("bosses: show finished (%s)" % ", ".join(order))
 			if quit_when_done:
@@ -132,7 +135,14 @@ func _move_show(sp: String, id: int, mv: Dictionary, max_hp: float, phase: int, 
 		for k in range(zones.size()):
 			var z: Dictionary = zones[k]
 			_zone(ids[k], str(z["shape"]), float(z["x"]), float(z["y"]), float(z["r"]), warn * 1000.0 / speed, z.get("extra", {}))
-		_expect_zones(ids, true, "%s %s: marked on the floor" % [sp, move]))
+		if move == "mend":
+			# a mend has no mark on the floor (its small circle is the boss's own): the boss curls up and glows instead
+			_expect_zones(ids, false, "%s %s: no mark on the floor" % [sp, move])
+			_expect_windup(id, true, "%s %s: the boss glows and sleeps" % [sp, move])
+			_pending.append([3, func() -> void: _glow_fx[id] = world.fx._windups.get(id)])
+		else:
+			_expect_zones(ids, true, "%s %s: marked on the floor" % [sp, move]))
+	var t0 := t
 	t += warn + 0.05
 	var after := 0.6
 	_at(t, func() -> void:
@@ -140,6 +150,16 @@ func _move_show(sp: String, id: int, mv: Dictionary, max_hp: float, phase: int, 
 		_land_move(sp, id, mv, zones, ids)
 		# a landed mark is gone; burning ground stays
 		_expect_zones(ids, move == "pools", "%s %s: %s after the landing" % [sp, move, "burning on" if move == "pools" else "gone"]))
+	if move == "mend":
+		# the glow lasts the move's own warning time in real seconds (the fx view takes it from the data, the show runs `speed` times faster)
+		var over := t0 + warn * speed + 0.4
+		_late = maxf(_late, over)
+		_at(over, func() -> void:
+			# (that very glow, not whatever wind-up the boss has gone on to: a later move replaces it in the boss's slot)
+			_checks += 1
+			if _glow_fx.get(id) == null or world.fx._list.has(_glow_fx[id]):
+				_fails += 1
+				print("bosses: FAIL %s %s: the glow is over (%s)" % [sp, move, "never drawn" if _glow_fx.get(id) == null else "still drawn"]))
 	if move == "pools":
 		after = 3.2
 		_at(t + 2.8, func() -> void:
@@ -201,12 +221,37 @@ func _land_move(sp: String, id: int, mv: Dictionary, zones: Array, ids: Array) -
 			_hit(world.model.me, int(mv.get("dmg", 20)), "dmg")
 		"pull":
 			# the party is pulled in next to the boss (a `warp`), and hurt a little
+			var before := Vector2(_hx, _hy).distance_to(Vector2(_bx, _by))
 			_changes([{"t": "warp", "id": world.model.me, "x": _bx - _tile * 1.5, "y": _by + _tile * 1.0, "area": _area}])
 			_hit(world.model.me, int(mv.get("dmg", 20)), "dmg")
 			_hx = _bx - _tile * 1.5
 			_hy = _by + _tile * 1.0
+			# ...and my hero really is next to the boss now, nearer than before
+			_pending.append([2, func() -> void:
+				_checks += 1
+				var d := Vector2(world.hero.px, world.hero.py).distance_to(Vector2(_bx, _by))
+				if d > 2.0 * _tile or d >= before:
+					_fails += 1
+					print("bosses: FAIL %s pull: the hero is %.1f tiles from the boss after it (%.1f before)" % [sp, d / _tile, before / _tile])])
 		"freeze":
 			_freeze(str(mv.get("block", "isblock")))
+		"mend":
+			# nobody stopped it: the boss gets a part of its health back (sagasim's landCast) and the heal floats over it
+			var top := float(Data.mob(sp).get("hp", 1000))
+			var n := int(round(top * float(mv.get("heal", 0.1))))
+			_hp = minf(top, _hp + float(n))
+			_hit(id, n, "heal")
+			_state({str(id): [_hp, top]}, {}, null)
+			# the heal floats over the boss as "+n" (the fx view keeps a floater for a second or so)
+			_pending.append([2, func() -> void:
+				_checks += 1
+				var found := false
+				for fl in world.fx._floaters:
+					if str(fl["on"]) == str(id) and (fl["label"] as Label3D).text == "+%d" % n:
+						found = true
+				if not found:
+					_fails += 1
+					print("bosses: FAIL %s mend: no +%d floats over the boss" % [sp, n])])
 		"summon":
 			for k in range(int(mv.get("count", 2))):
 				_helper(str(mv.get("add", "")), _bx + (float(k) - 0.5) * 2.0 * _tile, _by + _tile)
@@ -222,6 +267,14 @@ func _freeze(block: String) -> void:
 	_changes([{"t": "animal", "id": _ice_id, "animal": a, "area": _area}])
 	_state({str(_boss_id): [_hp, float(Data.mob(_species_now()).get("hp", 1000))], str(_ice_id): [45, 45]}, {"me": [135, 150, Data.flag("frozen")]}, null)
 	_expect_actor(_ice_id, true, "the ice block round a friend")
+	# the hero is drawn in the right wrapping: ice for an ice block, white threads for a web
+	var want := "web" if block == "spindelnat" else "frozen"
+	_pending.append([4, func() -> void:
+		_checks += 1
+		var got: String = world._pose_of(world.model.me)
+		if got != want:
+			_fails += 1
+			print("bosses: FAIL the friend in a %s is drawn as '%s', not '%s'" % [block, got, want])])
 
 
 var _ice_id := -1
@@ -264,6 +317,25 @@ func _warp(id: int, x: float, y: float) -> void:
 		_changes([{"t": "animal", "id": id, "animal": a, "area": _area}])
 
 
+## What drifts through the dungeon's air must drift: a particle material left at the engine's default gravity (0, -9.8, 0)
+## drops every mote like a stone (embers, bubbles and spores must rise). Only when the preset draws motes at all.
+func _check_motes() -> void:
+	var node: Variant = world.dungeon._motes_node
+	if node == null:
+		return
+	var kind := str(world.dungeon.look.get("motes", ""))
+	var g: Vector3 = (node.process_material as ParticleProcessMaterial).gravity
+	_checks += 1
+	if g.length() > 1.0:
+		_fails += 1
+		print("bosses: FAIL the %s motes are pulled by gravity %s" % [kind, str(g)])
+	if kind in ["embers", "bubbles", "spores"]:
+		_checks += 1
+		if g.y <= 0.0:
+			_fails += 1
+			print("bosses: FAIL the %s motes should rise, gravity %s" % [kind, str(g)])
+
+
 ## Checks, a few frames from now, that the fx view holds (or no longer holds) each of these zones.
 func _expect_zones(ids: Array, present: bool, what: String) -> void:
 	# (a mark is looked for two frames after it was fed, and a missing one four: a fast show lands them soon)
@@ -273,6 +345,15 @@ func _expect_zones(ids: Array, present: bool, what: String) -> void:
 			if world.fx._zones.has(zid) != present:
 				_fails += 1
 				print("bosses: FAIL %s (%s: %s)" % [what, zid, "not drawn" if present else "still drawn"])])
+
+
+## The same for a boss's wind-up effect (a mend's glow, which has no mark on the floor).
+func _expect_windup(id: int, present: bool, what: String) -> void:
+	_pending.append([2 if present else 4, func() -> void:
+		_checks += 1
+		if world.fx._windups.has(id) != present:
+			_fails += 1
+			print("bosses: FAIL %s (%s)" % [what, "not drawn" if present else "still drawn"])])
 
 
 ## The same for an animal of the map (a helper or an ice block) in the world view's actors.
@@ -291,7 +372,11 @@ func _remove(id: int) -> void:
 
 
 func _at(t: float, f: Callable) -> void:
-	_q.append([t, f])
+	# kept in time order (a late check is scheduled out of turn); entries at the same time keep the order they came in
+	var i := _q.size()
+	while i > 0 and float(_q[i - 1][0]) > t:
+		i -= 1
+	_q.insert(i, [t, f])
 
 
 # ---------------------------------------------------------------------------
