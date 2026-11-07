@@ -60,7 +60,7 @@ static func targets(ctx: Dictionary) -> Dictionary:
 	var biome := str(ctx.get("biome", "farm"))
 	if biome == "":
 		biome = "farm"
-	var place: Dictionary = PLACES.get(biome, {}) if not biome.begins_with("g_") else {}
+	var place: Dictionary = PLACES.get(biome, {})
 	var dark: float = ctx.get("dark", 0.0)
 	var kind := str(ctx.get("kind", "sun"))
 	var wind: float = ctx.get("wind", 0.35)
@@ -75,15 +75,14 @@ static func targets(ctx: Dictionary) -> Dictionary:
 	var w := clampf(wind / 1.7, 0.0, 1.0)
 	var calm := 1.0 - clampf(w * 0.9 + rainy * 0.7, 0.0, 1.0)
 	var open := 0.15 if indoors else 1.0 # (behind walls everything outside is soft)
-	var cave := biome.begins_with("g_")
 	var out := {}
 	out["birds"] = day * float(place.get("birds", 0.0)) * calm * (0.35 if cold else 1.0) * open
 	out["crickets"] = night * float(place.get("crickets", 0.0)) * (1.0 - rainy) * (1.0 - w * 0.7) * (0.0 if cold else 1.0) * open
 	out["frogs"] = float(place.get("frogs", 0.0)) * (0.35 + 0.65 * night) * (1.0 - rainy * 0.4) * open
 	var windy := clampf(w + float(place.get("wind", 0.0)), 0.0, 1.0)
 	var wind_k := 0.2 if indoors else 1.0
-	out["wind_soft"] = (0.16 + 0.7 * windy) * wind_k * (1.0 - smoothstep(0.7, 1.0, windy) * 0.6) * (0.0 if cave else 1.0)
-	out["wind_hard"] = smoothstep(0.5, 0.95, windy) * wind_k * (0.0 if cave else 1.0)
+	out["wind_soft"] = (0.16 + 0.7 * windy) * wind_k * (1.0 - smoothstep(0.7, 1.0, windy) * 0.6)
+	out["wind_hard"] = smoothstep(0.5, 0.95, windy) * wind_k
 	out["rain"] = rainy * (0.0 if indoors else 1.0)
 	out["rain_roof"] = rainy * (1.0 if indoors else 0.0)
 	out["water"] = water * 0.9 * (0.4 if indoors else 1.0)
@@ -189,7 +188,7 @@ static func _audible() -> bool:
 
 ## The odd owl on a clear night in a wood or a meadow.
 func _owls(delta: float, st: Dictionary, view: FarmView, indoors: bool, level: int) -> void:
-	if level < 2 or indoors or view == null or not (view.biome() in OWL_PLACES or view.biome() == ""):
+	if level < 2 or indoors or view == null or Settings.world_volume <= 0.001 or not (view.biome() in OWL_PLACES or view.biome() == ""):
 		return
 	var dark: float = st.get("dark", 0.0)
 	var kind := str(st.get("kind", "sun"))
@@ -208,7 +207,7 @@ func _owls(delta: float, st: Dictionary, view: FarmView, indoors: bool, level: i
 		for n in ["owl_1", "owl_2"]:
 			_owl_streams.append(load(DIR + n + ".wav"))
 	_owl.stream = _owl_streams[owls % 2]
-	_owl.volume_db = -11.0 + linear_to_db(maxf(0.05, Settings.world_volume))
+	_owl.volume_db = -11.0 + linear_to_db(Settings.world_volume)
 	if _audible():
 		_owl.play()
 
@@ -222,7 +221,12 @@ func report() -> Dictionary:
 	return {"layers": sounding, "players": _players.size(), "owls": owls, "fades": fades}
 
 
-## Lets go of the streams (the audio server holds a playing stream when the process exits; Main.quit_clean calls this).
+## Lets go of the streams (the audio server holds a playing stream when the process exits). Main.quit_clean calls this, and so
+## does leaving the tree, which covers a run that ends with `--quit-after` (the benches and the compile check under Xvfb).
+func _exit_tree() -> void:
+	release()
+
+
 func release() -> void:
 	for l in _players.keys():
 		(_players[l] as AudioStreamPlayer).stop()

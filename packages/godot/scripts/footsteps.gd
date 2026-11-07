@@ -55,8 +55,9 @@ func setup(v: FarmView) -> void:
 	_walk.clear()
 
 
-## Every frame on an outdoor map: `walkers` are {key, at (scene position, one unit a tile), me}; `hero_at` the hero. A walker
-## that is not in the list any more is forgotten.
+## Every frame on an outdoor map: `walkers` are {key, at (scene position, one unit a tile), me, indoors}; `hero_at` the hero and
+## `hero_indoors` whether they are in the farmhouse (steps on the other side of its walls are not heard). A walker that is not in
+## the list any more is forgotten.
 func tick(delta: float, walkers: Array, hero_at: Vector3, hero_indoors := false) -> void:
 	if delta <= 0.0:
 		return
@@ -151,6 +152,10 @@ func _stream(kind: String, variant: int) -> AudioStream:
 		s = load("%sstep_%s.wav" % [DIR, key])
 		_streams[key] = s
 	return s
+
+
+func _exit_tree() -> void:
+	release()
 
 
 func release() -> void:

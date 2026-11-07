@@ -901,6 +901,9 @@ func _tick_sounds(delta: float) -> void:
 			var at: Vector3 = (_actors[key] as Actor).position
 			walkers.append({"key": key, "at": at, "me": false, "indoors": _area == "farm" and Data.in_interior(floori(at.x), floori(at.z))})
 	steps.tick(delta, walkers, hero.position, indoors)
+	if _walk_demo and not _walk_said and int(steps.stats["steps"]) >= 5:
+		_walk_said = true
+		print("walk: %d footsteps (%s), ambience %s" % [int(steps.stats["steps"]), str(steps.stats["kinds"]), str(soundscape.report()["layers"])])
 
 
 func _is_riding(p: Variant) -> bool:
