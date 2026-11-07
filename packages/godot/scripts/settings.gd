@@ -339,11 +339,30 @@ func set_reduce_motion(on: bool) -> void:
 	access_changed.emit()
 
 
-## The hold-to-talk key, as a physical keycode.
-func set_ptt_key(keycode: int) -> void:
+## Why a key cannot be the hold-to-talk key: "" when it can, "none" for no key at all, "taken" when another action of the game already
+## uses it (the same physical key, or the key it types).
+func ptt_key_problem(keycode: int) -> String:
+	if keycode == KEY_NONE or keycode == KEY_UNKNOWN:
+		return "none"
+	for action in InputMap.get_actions():
+		if action == "voice_ptt" or str(action).begins_with("ui_"):
+			continue
+		for e in InputMap.action_get_events(action):
+			if e is InputEventKey:
+				var k := e as InputEventKey
+				if k.physical_keycode == keycode or (k.keycode != KEY_NONE and k.keycode == keycode):
+					return "taken"
+	return ""
+
+
+## The hold-to-talk key, as a physical keycode. A key that cannot be it (`ptt_key_problem`) is refused and the old key stays; false then.
+func set_ptt_key(keycode: int) -> bool:
+	if ptt_key_problem(keycode) != "" and keycode != ptt_key:
+		return false
 	ptt_key = keycode
 	save()
 	apply_ptt_key()
+	return true
 
 
 func apply_ptt_key() -> void:

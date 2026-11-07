@@ -40,6 +40,7 @@ var _spell_buttons: Dictionary = {}
 var _spell_hint: Label
 var _ptt_button: Button
 var _capturing_key := false
+var _ptt_note: Label
 
 
 func _init() -> void:
@@ -93,6 +94,8 @@ func sync() -> void:
 
 func _on_open() -> void:
 	_capturing_key = false
+	if _ptt_note != null:
+		_ptt_note.text = ""
 
 
 func _on_close() -> void:
@@ -115,9 +118,18 @@ func _input(event: InputEvent) -> void:
 	if _capturing_key:
 		if event is InputEventKey and event.pressed and not event.echo:
 			get_viewport().set_input_as_handled()
-			if (event as InputEventKey).physical_keycode != KEY_ESCAPE:
-				Settings.set_ptt_key(int((event as InputEventKey).physical_keycode))
-			_capturing_key = false
+			var code := int((event as InputEventKey).physical_keycode)
+			if code == KEY_ESCAPE:
+				_capturing_key = false
+				_ptt_note.text = ""
+			else:
+				var problem := Settings.ptt_key_problem(code)
+				if problem == "" or code == Settings.ptt_key:
+					Settings.set_ptt_key(code)
+					_capturing_key = false
+					_ptt_note.text = ""
+				else:
+					_ptt_note.text = Strings.t("pttTaken" if problem == "taken" else "pttNone") # (still waiting: try another, or Esc)
 			sync()
 		return
 	if Time.get_ticks_msec() - _opened_at > 250 and (event.is_action_pressed("menu") or event.is_action_pressed("ui_cancel")):
@@ -313,6 +325,9 @@ func _build_controls(box: VBoxContainer) -> void:
 		_capturing_key = true
 		sync(), "ptt_key")
 	box.add_child(_ptt_button)
+	_ptt_note = _note(box, "")
+	_ptt_note.add_theme_color_override("font_color", BAD)
+	_ptt_note.modulate = Color.WHITE
 	_syncs.append(func() -> void: _ptt_button.text = Strings.t("pttPress") if _capturing_key else "%s  ·  %s" % [Settings.ptt_key_name(), Strings.t("pttChange")])
 
 

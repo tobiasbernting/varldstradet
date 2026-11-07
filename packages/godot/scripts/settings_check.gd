@@ -326,12 +326,23 @@ func _controls() -> void:
 		mapped = mapped or (e is InputEventKey and (e as InputEventKey).physical_keycode == KEY_F5)
 	_step("push-to-talk key F5: kept, saved and applied to the input map", Settings.ptt_key == KEY_F5 and int(_on_disk("input", "ptt_key", 0)) == KEY_F5 and mapped and InputMap.action_get_events("voice_ptt").size() == 1 and not win._capturing_key)
 	_step("the key is named", Settings.ptt_key_name().contains("F5"), Settings.ptt_key_name())
+	# keys that cannot be it are refused with a note, and the capture goes on: another action's key, W, and no key at all
+	for bad in [[KEY_W, "taken"], [KEY_E, "taken"], [KEY_1, "taken"], [KEY_ENTER, "taken"], [KEY_NONE, "none"]]:
+		win._ptt_button.pressed.emit()
+		var bad_ev := InputEventKey.new()
+		bad_ev.physical_keycode = bad[0]
+		bad_ev.pressed = true
+		win._input(bad_ev)
+		var note_ok: bool = win._ptt_note.text == Strings.t("pttTaken" if bad[1] == "taken" else "pttNone")
+		_step("push-to-talk key %s is refused (%s) with a note, the old key stays, and it keeps waiting" % [OS.get_keycode_string(bad[0]) if bad[0] != KEY_NONE else "none", bad[1]], Settings.ptt_key == KEY_F5 and note_ok and win._capturing_key and Settings.ptt_key_problem(bad[0]) == bad[1])
+		win._capturing_key = false
+	_step("a free key is fine", Settings.ptt_key_problem(KEY_F6) == "" and Settings.ptt_key_problem(KEY_C) == "")
 	win._ptt_button.pressed.emit()
 	var esc := InputEventKey.new()
 	esc.physical_keycode = KEY_ESCAPE
 	esc.pressed = true
 	win._input(esc)
-	_step("Escape cancels the capture and keeps the key", Settings.ptt_key == KEY_F5 and not win._capturing_key and win.is_open())
+	_step("Escape cancels the capture, clears the note and keeps the key", Settings.ptt_key == KEY_F5 and not win._capturing_key and win.is_open() and win._ptt_note.text == "")
 
 
 ## A new start: the values read back from the file are the ones in memory.

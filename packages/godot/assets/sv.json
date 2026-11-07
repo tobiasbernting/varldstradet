@@ -621,6 +621,8 @@
     "settingsPtt": "Knapp för att prata (håll nere)",
     "pttChange": "Byt tangent",
     "pttPress": "Tryck på en tangent… (Esc: avbryt)",
+    "pttTaken": "Den tangenten används redan till något annat i spelet. Välj en annan.",
+    "pttNone": "Den tangenten går inte att använda. Välj en annan.",
     "actExit": "Gå upp ur kryptan",
     "actChest": "Öppna kistan",
     "actRest": "Vilostenen",
