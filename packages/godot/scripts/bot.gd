@@ -323,6 +323,9 @@ func _on_route_area(key: String) -> void:
 	if Data.dungeon_of_key(key) == dungeon_id:
 		_report["area"] = key
 		_report["arrived_via_arch"] = not bool(_report["dev_sent"])
+		# M7a: nothing of the outdoor map's ambient life (fireflies, leaves, smoke, mist, butterflies) may stay behind in the dungeon
+		if world.farm.ambient != null and world.farm.ambient.get_child_count() > 0:
+			_error("the farm's ambient things are still there in %s: %s" % [key, str(world.farm.ambient.counts())])
 		_report["ok"] = _report["errors"].is_empty() and bool(_report["arrived_via_arch"])
 		_finish()
 	elif _phase != "done":

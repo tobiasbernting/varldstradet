@@ -35,10 +35,11 @@ func _init() -> void:
 			force_all = true
 
 
-## A new map: everything built for the old one goes.
+## A new map (or none: `null`, when the view is cleared for a dungeon): everything built for the old one goes at once.
 func setup(v: FarmView) -> void:
 	view = v
 	for c in get_children():
+		remove_child(c)
 		c.queue_free()
 	_nodes.clear()
 	_built.clear()
@@ -60,11 +61,10 @@ func update(delta: float, st: Dictionary, at: Vector3) -> void:
 	var kind: String = st["kind"]
 	var f: float = st["f"]
 	var seasons: bool = st["seasons"]
-	var calm := kind == "sun" or kind == "cloudy" or kind == "fog" or kind == "wind"
 	var dry := kind != "rain" and kind != "storm" and kind != "snow" and kind != "hail"
 	var dawn := maxf(smoothstep(0.955, 0.99, f), 1.0 - smoothstep(0.05, 0.14, f)) if (f > 0.9 or f < 0.2) else 0.0
 	var want := {
-		"fireflies": 1.0 if (force_all or (year == "summer" and seasons and dark > 0.55 and (kind == "sun" or kind == "cloudy" or kind == "fog"))) else 0.0,
+		"fireflies": 1.0 if (force_all or (year == "summer" and seasons and dark > 0.55 and (kind == "sun" or kind == "cloudy" or kind == "fog" or kind == "wind"))) else 0.0,
 		"butterflies": 1.0 if (force_all or ((year == "spring" or year == "summer") and seasons and dark < 0.3 and (kind == "sun" or kind == "cloudy"))) else 0.0,
 		"leaves": 1.0 if (force_all or (year == "autumn" and seasons and dry)) else 0.0,
 		"smoke": 1.0,
@@ -80,7 +80,7 @@ func update(delta: float, st: Dictionary, at: Vector3) -> void:
 			_fade[what] = 0.0
 			continue
 		_fade[what] = lerpf(_fade[what], float(want[what]), k)
-		var visible_now: bool = _fade[what] > 0.01 and not bool(st.get("under", false))
+		var visible_now: bool = _fade[what] > 0.01
 		if not visible_now:
 			if _nodes.has(what):
 				(_nodes[what] as Node3D).visible = false

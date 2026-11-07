@@ -255,7 +255,7 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 	view.set_dark(_dark)
 	var cam := get_viewport().get_camera_3d()
 	if view.ambient != null:
-		view.ambient.update(delta, {"dark": _dark, "year": _year, "kind": kind, "wind": _wind, "f": f, "sky": sky_color, "seasons": _biome_has_seasons(), "under": under_roof},
+		view.ambient.update(delta, {"dark": _dark, "year": _year, "kind": kind, "wind": _wind, "f": f, "sky": sky_color, "seasons": _biome_has_seasons()},
 			_target.global_position if _target != null else Vector3.ZERO)
 	if _target != null:
 		var at := _target.global_position

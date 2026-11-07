@@ -54,7 +54,8 @@ var _ground: Dictionary = {} ## Vector2i -> Node3D
 var _lights: Array[OmniLight3D] = []
 var _flicker: Array = [] ## [light, base energy, phase, flicker amount, night kind]
 var _night_glows: Array = [] ## [MeshInstance3D glow, base energy]
-var _window_pools: Array = [] ## [MeshInstance3D pool of light on the ground, base energy, phase]
+var _window_pools: Array = [] ## [MeshInstance3D pool of light on the ground (made when a preset wants it), base energy, phase, parent, place]
+var _pools_made := false
 var _flicker_in := 0.0
 var _t := 0.0
 var _dark := 0.0
@@ -123,6 +124,9 @@ func clear() -> void:
 	_flicker = []
 	_night_glows = []
 	_window_pools = []
+	_pools_made = false
+	if ambient != null:
+		ambient.setup(null) # (a dungeon is drawn next, or another map: nothing of this one may keep flying)
 	_crops = {}
 	_dirty_ground = {}
 	world = {}
@@ -737,26 +741,33 @@ func _add_light(parent: Node3D, at: Vector3, colour: Color, range_m: float, ener
 ## A pool of warm light on the ground in front of a lit window (Quality "window_light": 1 steady, 2 flickering like a
 ## fire). The same switch as the windows' own glow; hidden on Låg.
 func _window_pool(parent: Node3D, at: Vector3) -> void:
-	var pool := assets.glow_quad(Color("#ffc977"), 2.6, 0.0, true)
-	pool.position = at + Vector3(0.0, 0.03, 0.0)
-	pool.scale = Vector3(1.0, 1.0, 0.7)
-	pool.visible = false
-	parent.add_child(pool)
-	_window_pools.append([pool, 0.55, randf() * TAU])
+	# only a note: the pool itself is made the first time a preset wants it (Låg builds none and loops over none)
+	_window_pools.append([null, 0.55, randf() * TAU, parent, at])
 
 
 ## 0 bright day … 1 deep night: the lamps' strength and the windows' shine (day_night.gd calls this).
 func set_dark(dark: float) -> void:
 	_dark = dark
 	var pool_level := Quality.alive("window_light")
-	var pool_k := smoothstep(0.4, 0.9, dark) if pool_level > 0 else 0.0
-	for p in _window_pools:
-		var pm: MeshInstance3D = p[0]
-		if is_instance_valid(pm):
-			pm.visible = pool_k > 0.02
-			if pm.visible:
-				var flick := 1.0 + (0.12 * sin(_t * 7.0 + float(p[2])) + 0.06 * sin(_t * 17.0 + float(p[2]) * 2.3) if pool_level > 1 else 0.0)
-				(pm.material_override as ShaderMaterial).set_shader_parameter("energy", float(p[1]) * pool_k * flick)
+	if pool_level > 0 or _pools_made:
+		var pool_k := smoothstep(0.4, 0.9, dark) if pool_level > 0 else 0.0
+		for p in _window_pools:
+			if p[0] == null:
+				if pool_level <= 0 or not is_instance_valid(p[3]):
+					continue
+				var made := assets.glow_quad(Color("#ffc977"), 2.6, 0.0, true)
+				made.position = (p[4] as Vector3) + Vector3(0.0, 0.03, 0.0)
+				made.scale = Vector3(1.0, 1.0, 0.7)
+				made.visible = false
+				(p[3] as Node3D).add_child(made)
+				p[0] = made
+				_pools_made = true
+			var pm: MeshInstance3D = p[0]
+			if is_instance_valid(pm):
+				pm.visible = pool_k > 0.02
+				if pm.visible:
+					var flick := 1.0 + (0.12 * sin(_t * 7.0 + float(p[2])) + 0.06 * sin(_t * 17.0 + float(p[2]) * 2.3) if pool_level > 1 else 0.0)
+					(pm.material_override as ShaderMaterial).set_shader_parameter("energy", float(p[1]) * pool_k * flick)
 	for g in _night_glows:
 		var mi: MeshInstance3D = g[0]
 		if is_instance_valid(mi):
