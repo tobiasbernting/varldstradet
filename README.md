@@ -81,6 +81,10 @@ stays), so there is nothing to set up for it. The parent page is at `/admin`
 (log in with `PARENT_PASSWORD`; make join codes, manage devices, force a season, save, skip to the next day,
 make it evening/morning).
 
+`pnpm test` runs everything; the importer's tests that need a real Postgres (`importSave.pg.test.ts`) run when `TEST_DATABASE_URL` points
+at a server where they may create scratch databases (`TEST_DATABASE_URL=postgres://postgres@localhost:5435/postgres pnpm test`; CI
+sets it in `.github/workflows/server.yml`) and are skipped without it.
+
 Without `DATABASE_URL` the server runs in memory and saves nothing – handy for a quick look,
 useless for a real farm.
 
@@ -91,7 +95,7 @@ pnpm build                     # the server bundle (the native client is built b
 DATABASE_URL=postgres://… node packages/server/dist/server/src/main.js   # the server and the download page on :8080
 ```
 
-Or use the container image built by GitHub Actions: `ghcr.io/tobiasbernting/lilla-garden:latest`.
+Or use the container image built by GitHub Actions: `ghcr.io/tobiasbernting/varldstradet:latest` (a new package is private by default: make it public in the package settings, or log the server in to ghcr, before another machine can pull it; it is deliberately not the old farm's `lilla-garden` image).
 It needs `DATABASE_URL` and listens on 8080; it holds only the server (no game files: the game is downloaded from the
 GitHub Release). Migrations run on boot.
 The public farm takes each new `:latest` the night after it's built (03:30 Swedish time): it dumps the database,
@@ -120,6 +124,84 @@ Environment:
 | `TURN_URLS`       | Röstprat: a TURN relay for the connections STUN can't manage (mobile data, strict NATs), with either `TURN_USERNAME` + `TURN_CREDENTIAL` (fixed login) or `TURN_SECRET` (coturn `use-auth-secret`: short-lived logins made by the server). |
 | `CLOUDFLARE_TURN_KEY_ID` | Röstprat: Cloudflare's TURN service instead of a relay of your own (`CLOUDFLARE_TURN_API_TOKEN` alongside). Short-lived logins are fetched from its API and cached. The public farm has no open ports, so this is the one that fits it. |
 
+## Running your own server
+
+The game needs one server that everybody connects to; the family's runs on a small Hetzner machine, the same box and
+the same Cloudflare tunnel as the old farm, as a second instance next to it. What the instance looks like, so that you
+can run another one yourself:
+
+- **The game** is the container built from this repository (`ghcr.io/tobiasbernting/varldstradet`, see "Production";
+  check the tag the deploy uses) or `pnpm build && node packages/server/dist/server/src/main.js`. One process, one
+  Postgres database of its own (never the old farm's), `DATABASE_URL`, and `PARENT_PASSWORD` (12+ characters).
+- **Players** come in over the internet through the tunnel at `spel.<your domain>`: set `PUBLIC_URL=https://spel.<your
+  domain>` and `TRUST_PROXY=1`, and publish only the game's port (`PORT`, 8080). Nothing else is opened on the machine.
+  The address people type into the game is that one, and the download page shows it.
+- **The parent page** (`/admin`) is not on the public address. Set `ADMIN_PORT` (for example 8081) and `ADMIN_HOST` to
+  the machine's Tailscale address, and open `http://<tailscale-name>:8081/admin` from a phone or computer on your
+  tailnet. There you make join codes, approve devices, close the farm or set play hours. A join code is typed once in
+  the game ("Har du en kod?"); an `auto` code lets the device in at once, a `parent` code waits for your approval.
+- **First start with an old save:** see "Moving the family's save from lilla-garden" and do that before the first
+  start. Otherwise the first start makes a fresh world.
+- **Backups:** the world is the database. Dump it nightly (`pg_dump`), and keep the dump of the old farm until the
+  family has played the new one for a while.
+- **The game itself** is not served by the server: players download it from the GitHub Release (see "The download
+  page"), for Windows, macOS and Linux. Its server address is saved on the player's machine.
+- **Never** set `DEV_TELEPORT=1` or `ACCESS=open` on a server people reach over the internet.
+
+The Ansible role that deploys this instance lives in the homelab repository; this section describes what it sets up
+and is not a substitute for it.
+
+## Moving the family's save from lilla-garden
+
+The browser game (`tobiasbernting/lilla-garden`) and this one keep the world in the same Postgres tables, so the family's
+farm can move over: players with their coins, stars, bags, clothes, achievements and saga progress; the farm's
+buildings, crops, animals and pets; the explored maps and the day count. `import-save` reads the old database (or a
+`pg_dump` of it, which is the safe way) and writes a **new, empty** database with the migrations of this repository
+applied in order, migration 0004 (the minigames' leftovers: scores, tickets, garage, prize decor, the TV, Spelhallen's
+maps) included. The old database is never written: a dump is just a file, and a live source is read inside a
+`READ ONLY` transaction.
+
+What does **not** come over, and what the owner does about it:
+
+- **Devices and join codes.** A browser's device token is a cookie the native client cannot read, and the old
+  `lg_device` cookies mean nothing to the new server. After the import, open the parent page (`/admin`), make a join code
+  for each person or device, and everybody types it once in the new game ("Ny karaktär" is not needed: the old
+  characters are in the list under "Vem är du?"). The gate settings (family only, play hours, the authenticator
+  app) are not copied either; set them again on the parent page.
+- **Saved dungeons.** They are made fresh on every visit and were never worth keeping.
+- **Spelhallen.** Anybody who was inside it when the old game stopped starts on the farm.
+
+The steps (all of them on your own computer or the Hetzner box over Tailscale; nothing here touches the old farm
+except reading it):
+
+```bash
+# 1. Take a dump of the old farm's database. On the Hetzner box (ssh over Tailscale), wherever its Postgres runs;
+#    the old farm already dumps it every night, so a recent file from that backup works too.
+ssh <hetzner-host> 'docker exec <old-postgres-container> pg_dump --no-owner -U <user> <old-db>' > lilla-garden.sql
+
+# 2. Create an empty database for the new server (do NOT start the new server on it first: a first start makes a
+#    new world, and the import refuses a database that already has one).
+createdb varldstradet            # or `CREATE DATABASE varldstradet;` in psql
+
+# 3. See what would happen. Prints the players, the pets, the saga progress and what the minigame scrub drops, and
+#    checks that the target is a different database from the source and holds no world. Writes nothing.
+pnpm --filter @lilla-garden/server import-save lilla-garden.sql --target postgres://user:pass@host:5432/varldstradet --dry-run
+
+# 4. Do it. Everything is written in one transaction: all of it or nothing.
+pnpm --filter @lilla-garden/server import-save lilla-garden.sql --target postgres://user:pass@host:5432/varldstradet
+
+# 5. Start the new server on that database (DATABASE_URL, PARENT_PASSWORD, see "Production") and make join codes.
+```
+
+`import-save <source>` takes a plain-format dump file (the default of `pg_dump`; not `-Fc`, not `--inserts`) or the old
+database's own `postgres://` URL. `--target` is always given explicitly (there is no fallback to `DATABASE_URL`, which may be the running farm's). The
+tool compares source and target by host, port and database name and refuses if they are the same, looks at the target
+read only and refuses before it migrates anything if a world table already has rows, then runs the migrations and
+checks again inside the one transaction that writes (with the tables locked), so a second run does nothing (drop and
+recreate the database to run it again). The first start of the new server tidies what a save from the browser
+game needs in this version (the färdport and Yggdrasil's shoot on the farm, hero rewards for the level, and so on) and
+saves it. Run it from a checkout (`pnpm install` first): it is a development script and is not in the container image.
+
 ## The download page
 
 The web page of the server, `GET /`, is the download page (since M5a, 2026-11-02; the browser game is gone from this
@@ -130,6 +212,20 @@ game's name, a line about it, links to the latest GitHub Release and to the four
 pushed), the server's address to type into the game, and the join-code field. A parent can redeem a code on a phone there
 and read the 6-digit number (the page shows it while the device waits to be approved). The links work once the first `v*`
 tag has been pushed. `/access`, `/join` and the parent page are unchanged.
+
+**Releasing, and a dry run first.** A release is a tag: `git tag v0.1.0 && git push origin v0.1.0` starts the "Godot
+client" workflow, whose `export` job builds the four zips and whose `release` job attaches them to a GitHub Release for
+the tag (the page's `releases/latest/download/…` links then resolve). To see the same build without a tag and without a
+Release, run the workflow by hand with the slow pictures job off:
+
+```bash
+gh workflow run godot.yml --ref <branch> -f pictures=false     # or Actions -> Godot client -> Run workflow, untick "pictures"
+```
+
+The run's `export` job exports Windows, Linux x86_64, Linux arm64 and macOS, zips them under the stable names and
+uploads them as the artifact `varldstradet-builds` (download it from the run's page and open a zip on a real machine).
+Nothing is published: only the `release` job makes a Release and it runs on `v*` tags alone.
+`packages/server/src/release.test.ts` reads the workflow and the page and fails if the zip names and the links drift apart.
 
 ## Native client
 
@@ -454,22 +550,39 @@ There is still no text chat: players can only use emotes.
 
 ## Controls
 
-- Dator: WASD/piltangenter, `E`/mellanslag för att använda, klick på en ruta, `1–8` väljer verktyg, `Q` ryggsäck, `F` emotes (🐴 Gnägg! är hästens läte), `H` hjälp, `Enter`/`T` chatt, `X` husdjuren stannar, `V` vissla, `Esc` stänger.
-- Surfplatta: styrspak till vänster, stor handknapp till höger, tryck på en ruta bredvid dig.
-- Fängelsehålorna (Sagan om Världsträdet): klicka eller tryck på ett monster för att sikta och slå på det; `E`/mellanslag
-  och ✋ slår på det närmaste monstret inom räckhåll; `1`–`4` är klassens besvärjelser, `5` läkedryck, Tab (🎯 på
-  surfplatta) byter monster. En nedtryckt knapp slår direkt, hålls den kvar visas vad besvärjelsen gör.
-- Hjälteläget (Sagan om Världsträdet, när du har valt klass): hjälteknappen (🧑‍🌾, och din klass när den är på) byter
-  mellan bonde och hjälte ute i världen. Som hjälte gäller samma knappar som i en fängelsehåla utomhus: `1`–`4`
-  besvärjelser, `5` läkedryck, Tab/🎯 byter monster, och `E`/mellanslag slår med klassens vapen på monster inom
-  räckhåll. `G` (⚔️) öppnar utrustningsfönstret, där du tar på vapen, sköld och amulett från ryggsäcken, och `J`
-  dagboken med sagans kapitel. På handkontrollen öppnar Select utrustningen utomhus.
-- Handkontroll (Xbox, PlayStation, Switch): vänster spak går, `A`/`X`/`RT` använder, `B`/`LT` springer, `LB`/`RB` eller
-  styrkorset vänster/höger väljer verktyg, `Y` ryggsäck, styrkorset upp emotes och ner minikarta, Start hjälp, Select bok.
-  I en fängelsehåla är `X`/`Y`/`B`/`RB` besvärjelserna, `LB` läkedryck, styrkorset vänster/höger byter monster och
-  Select ryggsäck. I menyerna flyttar spaken/styrkorset markeringen, `A` trycker och `B` stänger.
-  Hur du kopplar ihop en Xbox-, PS5- eller Switch-kontroll med en Android-surfplatta, Mac eller PC står i hjälpen under 🕹️ Handkontroll.
-- `?` i hörnet öppnar hjälpen (visas automatiskt första gången på en enhet).
+The native client's keys and buttons, read from `packages/godot/project.godot` (the input map) and the scripts that
+use it. A gamepad and the keyboard work at the same time; the mouse is for clicking tiles, monsters and windows. The
+pause menu (`Esc` or Start) has the settings: graphics quality, **Trollformler** (spells on buttons, or one button and
+a wheel), the frame-rate counter and the world's sounds, plus the gear and quest windows and "Röstprat".
+
+| | Keyboard and mouse | Gamepad (Xbox names; PlayStation: ✕ ○ □ △) |
+| --- | --- | --- |
+| Walk | `W` `A` `S` `D` or the arrow keys | left stick or the d-pad |
+| Use (talk, open, harvest, hit what is in front of you) | `E` or `Space`, or click a tile next to you | `A`, or the right trigger |
+| Choose tool (the hotbar, 8 squares) | `1`–`8`, the mouse wheel, `[` and `]`, or click a square | `LB` and `RB` |
+| Bag | `Q` or `I` (a click on the held square also opens it) | `Y` |
+| Pets stay / come back | `X` / `V` (the whistle) | press the right stick / the left stick |
+| Emotes | `F` opens the wheel; lean the mouse towards one and click | d-pad up opens the wheel; lean the stick, `A` picks |
+| Chat | `T` or `Enter`, type, `Enter` sends, `Esc` closes | `Back` / `Select` |
+| Gear and the saga's quests | `G` and `J` (also in the pause menu) | the pause menu's buttons |
+| Pause menu, close a window, drop the target | `Esc` | `Start` |
+| Talk on Röstprat (push-to-talk) | hold `C` (or choose the open microphone in the voice window) | |
+| Frame-rate counter | `F3` | |
+
+In a dungeon or a run the same keys fight:
+
+| | Keyboard and mouse | Gamepad |
+| --- | --- | --- |
+| Four spells of your class | `1`–`4` | `X`, `Y`, `B` and `RB` |
+| Spells on the wheel instead (Settings → Trollformler → Hjul) | hold `Q`, lean the mouse, let go | hold `RB`, lean the stick, let go |
+| Health potion | `5` | `LB` |
+| Aim at a monster, swing at it | click it, or `E`/`Space` for the nearest in reach | `A` / right trigger |
+| Next target | `Tab` | d-pad right |
+| Drop the target / pause | `Esc` | `Start` |
+
+Notes: the d-pad is shared. Its four directions also walk, so d-pad up opens the emote wheel (and walks up) and, in a fight, d-pad right switches target (and walks right); use the left stick for walking if that is in the way. The hotbar numbers and the spell numbers share `1`–`4`, so outdoors on the farm they pick tools and in a
+dungeon they cast. The gamepad's `Y` is the bag on the farm and the second spell in a dungeon. The kids' setting
+**Hjul** keeps the face buttons free of the spells; the choice is saved per computer in `user://settings.cfg`. To pair a controller with a Mac or a PC use the system's Bluetooth settings.
 
 ## Art
 
