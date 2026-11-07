@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
 """Writes a copy of a .glb without its animations (the KayKit Skeletons characters each carry the same ~90 animations,
 4.8 MB apiece; the client takes the animations from one character and the meshes from the others).
-Usage: strip_glb_animations.py in.glb out.glb"""
+Usage: strip_glb_animations.py in.glb out.glb [Name,Name,...]
+With names, those animations are kept (the Warrior keeps the ones the undead play) and the rest dropped."""
 import json
 import struct
 import sys
 
 
-def main(src: str, dst: str) -> None:
+def main(src: str, dst: str, keep: list[str]) -> None:
     data = open(src, 'rb').read()
     jlen, _ = struct.unpack('<II', data[12:20])
     j = json.loads(data[20:20 + jlen])
     off = 20 + jlen
     blen, _ = struct.unpack('<II', data[off:off + 8])
     binary = data[off + 8:off + 8 + blen]
-    j.pop('animations', None)
+    j['animations'] = [a for a in j.get('animations', []) if a.get('name') in keep]
+    if not j['animations']:
+        j.pop('animations')
     # keep only the accessors the remaining parts use, and only the buffer views under them
     used_acc: set[int] = set()
     for m in j.get('meshes', []):
@@ -22,6 +25,9 @@ def main(src: str, dst: str) -> None:
             used_acc.update(p['attributes'].values())
             if 'indices' in p:
                 used_acc.add(p['indices'])
+    for a in j.get('animations', []):
+        for sm in a['samplers']:
+            used_acc.update([sm['input'], sm['output']])
     for s in j.get('skins', []):
         if 'inverseBindMatrices' in s:
             used_acc.add(s['inverseBindMatrices'])
@@ -64,6 +70,10 @@ def main(src: str, dst: str) -> None:
     for s in j.get('skins', []):
         if 'inverseBindMatrices' in s:
             s['inverseBindMatrices'] = acc_map[s['inverseBindMatrices']]
+    for a in j.get('animations', []):
+        for sm in a['samplers']:
+            sm['input'] = acc_map[sm['input']]
+            sm['output'] = acc_map[sm['output']]
     j['accessors'] = accessors
     j['bufferViews'] = views
     while len(new_bin) % 4:
@@ -79,4 +89,4 @@ def main(src: str, dst: str) -> None:
         f.write(struct.pack('<II', len(new_bin), 0x004E4942) + bytes(new_bin))
 
 
-main(sys.argv[1], sys.argv[2])
+main(sys.argv[1], sys.argv[2], sys.argv[3].split(',') if len(sys.argv) > 3 else [])
