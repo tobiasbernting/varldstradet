@@ -42,7 +42,7 @@ describe('the release path: what the workflow builds and what the download page 
   it('the zips reach the release: the export job uploads build/*.zip as varldstradet-builds, the release job attaches the same', () => {
     expect(job('export')).toMatch(/name: varldstradet-builds\n\s+path: build\/\*\.zip\n\s+if-no-files-found: error/);
     const release = job('release');
-    expect(release).toMatch(/needs: export/);
+    expect(release).toMatch(/needs: \[export, bots\]/); // (a tag release waits for the bots, too)
     expect(release).toMatch(/name: varldstradet-builds\n\s+path: build/);
     expect(release).toMatch(/files: build\/\*\.zip/);
   });
