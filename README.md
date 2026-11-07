@@ -343,11 +343,24 @@ Then start the client:
    the rest stone; everyone fallen shows the pause and the walk back); chests open the loot window.
 6. `Enter` or `T` (Back on the gamepad) opens the chat with the ready-made phrases; `F` (d-pad up) the emote wheel.
    Lines show as bubbles over heads and in the log in the corner.
-7. Escape → Inställningar: Låg, Mellan, Hög (Mellan is the default; Låg is for a laptop with an Intel GPU);
-   *Trollformler: Knappar / Hjul* (the four spells on the face buttons, or one button, `RB`/`Q`, that opens a wheel
-   you lean the stick towards); *Visa bildfrekvens (F3)*; *Ljud ute i världen*: *Stegljud*, *Omgivning* (birds, crickets, wind, rain, water, fire,
-   the village's murmur) and *Ljudstyrka* for both. Out in the world, wild animals run from you when you walk up to them and come
-   back; stand still near one that has run off and it creeps up to you.
+7. Escape → Inställningar (also a button on the login screen, so the text size can be set before the game starts). Four pages, all
+   applied at once and remembered in `settings.cfg`:
+   - *Bild*: *Grafik* Låg / Mellan / Hög (Mellan is the default; Låg is for a laptop with an Intel GPU), and under it the effects the
+     preset defines, one by one (*Vind*, *Vatten* with waves and reflections, *Eldflugor, fjärilar, löv, rök och dimma*, *Regn, snö och
+     hagel*, *Sparvar*; picking a preset resets them to its own), *Fönster / Hela skärmen*, *Hur skarp bilden är* (50–100 % of the preset's
+     3D resolution; the text stays sharp) and *Visa bildfrekvens (F3)*.
+   - *Ljud*: *Allt ljud*, *Strid, knappar och fanfarer*, *Stegljud*, *Omgivning* (birds, crickets, wind, rain, water, fire, the village's murmur)
+     and their *Ljudstyrka*, and, where Röstprat exists, how loud the others are. (The game has no music yet, so there is no music slider.)
+   - *Läsa och se*: *Hur stor texten är* 100 / 125 / 150 / 175 % (the HUD, windows, chat, hotbar, names over heads and floating numbers; the
+     sample line shows "Bärsärkaraseri"), *Färger för faror och hjärtan* (Vanliga / Rött och grönt är svårt / Blått och gult är svårt), *Ränder och
+     tjock kant på farliga ytor* (on by itself with a colour-blind choice) with a sample of danger, a safe place and full, half and low hearts, and
+     *Mindre skakningar och blixtar* (no camera shake, no lightning, a dimmer glow when a boss's attack lands).
+   - *Styrning*: *Trollformler: Knappar / Hjul* (the four spells on the face buttons, or one button, `RB`/`Q`, that opens a wheel you lean the stick
+     towards) and the Röstprat key (hold to talk; default `C`: press the button, then the key you want, `Esc` cancels).
+   Out in the world, wild animals run from you when you walk up to them and come back; stand still near one that has run off and it creeps up to you.
+   For pictures and checks, `--ui-scale=1.75`, `--colours=rg|tritan`, `--pattern`, `--reduce-motion` and `--res-scale=0.7` set a choice for that run only,
+   and `--settings-page=picture|sound|reading|controls` and `--open-npc=volva` (with `--demo`) open a window for a screenshot. `pnpm godot:bot` runs the
+   settings check (`BOT_ONLY=settings` for just that): about four seconds, no server needed.
 
 **Two players.** Start the server with `DEV_TELEPORT=1` and log two Godot clients in as above (two characters, two
 devices, or two bots) and go in through the menu or the arch. Both see each other's spells, the same monster health and

@@ -785,3 +785,51 @@ come back, footsteps, and the ambience of the place. The farm, the wild maps and
   starts or ends), and no pile-up of sound nodes. (The headless voice pool stays empty, as nothing is played.) The bench (`--bench --scene=farm|village`) prints a `sound:` line per preset (steps
   made, the layers sounding, the number of players) and the `alive world:` line carries the sparrows' count.
 
+## Godot client: settings and accessibility (2026-11-07)
+Milestone M8b of `PLAN.md`: a real settings window, a text size, colour-blind palettes and less shaking and flashing. Client only; the
+server and `shared` are untouched (the strings are in `sv.ts`, exported by `pnpm godot:gen`).
+- **One place for every choice: `Settings`.** Each setting has a setter (`set_ui_scale`, `set_master_volume`, `set_colour_mode`, ...) that keeps
+  the value, writes `settings.cfg` and applies it at once, and `_apply_all` runs them at start, so the window (`settings_window.gd`), the keys and
+  the headless check all go the same way and nothing needs a restart. Sections of the file: `graphics` (quality, fps, window, res_scale),
+  `effects` (one boolean per hand-made switch), `sound` (steps, ambience, volume = the world's, master, effects), `voice`, `input` (spells,
+  ptt_key), `access` (ui_scale, colours, pattern, reduce_motion). Command-line forms (`--ui-scale=`, `--colours=`, `--pattern`,
+  `--reduce-motion`, `--res-scale=`) set a value for one run without saving it, for pictures and checks.
+- **The window** (`SettingsWindow`, a `GameWindow` on layer 11, opened from the pause menu's "Inställningar" and from a button on the login
+  screen) has four pages built once (a redraw would drop a slider that is being dragged): *Bild*, *Ljud*, *Läsa och se*, *Styrning*; `sync`
+  reads every control back from `Settings` when it opens or after a click. Escape or `B` closes it (it takes the key before the pause menu below it).
+- **Effects over the preset.** `Quality.TOGGLES` maps five switches (wind, water, ambient things, weather, wildlife) to the `PRESETS` keys they
+  govern; `Quality.value(key)` / `alive(key)` give the preset's value unless the player switched that effect off (0) or on (Mellan's value when the
+  preset has none, so a Låg player can have the gusts). Picking a preset clears the hand-made choices. A switch emits `Quality.changed`, which
+  rebuilds what is built at the start (the weather's particles, the torches' sparks) like a preset change; the rest reads `alive` every frame. Steps
+  and ambience keep their own booleans (M7b). The 3D picture's sharpness is a multiplier on the preset's scale (`Quality.scale_for`, never below
+  0.4). The 3D figures are still the `--people3d` command-line flag (not a setting after PR 23).
+- **Sound.** Two buses: `Master` (the master volume) and `Effekter` (created at start; `Sfx`'s players play on it). The world's steps and ambience
+  keep their own per-node level from `world_volume`, Röstprat its per-peer volume. There is no music in the game, so no music slider (the bus is
+  one line to add when there is).
+- **Text size.** `Window.content_scale_factor` (stretch mode `canvas_items`) scales everything on the canvas: the HUD, every window, the chat, the
+  hotbar and its labels. The 3D labels (names, bubbles, floating numbers) are `Label3D`s, so they follow through `Settings.scaled_label(label, base)`
+  (their pixel size times the scale; a group re-applies it when the setting changes). At 175 % the default 1280 × 720 window is 731 × 411 logical
+  points, which broke the layout in three places that are fixed: `HudLayer._layout` moves the boss's bar to the right under the connection dot when
+  the screen is narrower than 1050 points (it lay over the hearts), moves the "fallen" box down from the banner, wraps the hint and lifts the spell bar
+  and the lines above it a line; `GameWindow._fit` gives a window's scrolling body the height that is left and makes the panel no wider than the screen.
+  Hotbar labels already shrink to fit ("Bärsärkaraseri"). Pictures: `docs/m8b-hud-175.png`, `m8b-talk-175.png`, `m8b-settings-reading-175.png`.
+- **Colour-blind palettes** (`palette.gd`). Three palettes: `normal` (every colour the client had, unchanged), `rg` (deuteranopia and protanopia:
+  danger amber with black stripes, safe blue, hearts blue / yellow / purple) and `tritan` (tritanopia: danger pink-red with white stripes, safe green,
+  hearts green / orange / red). They were chosen against the Machado et al. (2009) simulations, and `Palette.distance_under` (the same simulation in
+  GDScript, CIE76 distance in Lab) is what the settings check holds them to: full, half and low hearts at least 25 apart and danger against a safe
+  place at least 60, under each condition the palette is for; the check also asserts the *normal* hearts are *not* enough for red-green blindness,
+  so the test can fail. What reads the palette: the marks of coming attacks and the burning ground (`fx_view.gd`), the boss's gathering and landing
+  colours (`Palette.move`: for `rg` greens move towards blue and reds towards amber, a mend is the "safe" colour; `tritan` keeps the move colours),
+  the hearts and unit frames (`HudLayer.hp_colour`), the bars over heads (enemy, target, block) and the boss's bar.
+- **Colour is never the only cue.** With a colour-blind palette, or the "Ränder och tjock kant" switch on its own (`Palette.pattern()`), a mark of an
+  attack gets diagonal stripes (`danger_hatch.gdshader`: laid out in world metres, so a small mark and a big one have the same stripes, drifting slowly)
+  and a thicker, brighter edge (a line mark, which has no edge by default, gets one); the marks are rebuilt when the switch changes. The warning sign
+  over the monster that chases you is a shape, the bars carry numbers, and the length of a bar is the health.
+- **Less shaking and flashing.** `Settings.calm(v)` is 0 with the switch on: the camera's shake (`world.gd`), the lightning's light spike and white
+  screen flash (`day_night.gd`) and a third of the glow when a boss's attack lands (`fx_view.gd`). Hit flashes on bodies are gameplay feedback and stay.
+- **Check.** `--settingscheck` (`settings_check.gd`, run by `tools/bot-check.mts` beside the other clients, `BOT_ONLY=settings` alone, about four
+  seconds, no server): opens the window from the pause menu, changes every setting through its own controls and asserts that each is kept, in the
+  file read back fresh, and applied (the viewport's scale, the audio buses, the content scale, the labels, the input map, the palette, the
+  HUD layout at every text size in a 1280 × 720 window), that a restart reads it all back, and that everything is put back. The manual `pictures` job
+  takes the window's four pages, the HUD, the farm and a talk window at 175 %, and the same boss telegraph in each palette (`docs/m8b-*.png`).
+

@@ -201,7 +201,7 @@ one per one or two evenings, with the existing bot balance pass rerun on each. 1
 wildlife that flees and returns, water with reflections on Mellan and up, particles, footsteps and ambience. Each is a
 toggle in the presets. 6–10 evenings.
 
-**M8. Polish and cutover.** Settings, accessibility (bigger text, colour-blind telegraph colours), ~~the download page~~ (done in M5a, 2026-11-02),
+**M8. Polish and cutover.** *(M8b done 2026-11-07: the settings window, a text size of 100–175 %, colour-blind palettes with stripes on the telegraphs, and less shaking and flashing, all in the Godot client with a headless check; see `DESIGN.md` "Godot client: settings and accessibility". Still open: the release tag, the homelab role, the `DESIGN.md` rewrite.)* Settings, accessibility (bigger text, colour-blind telegraph colours), ~~the download page~~ (done in M5a, 2026-11-02),
 a release tag, the homelab role updated for the new build, `DESIGN.md` rewritten. 4–6 evenings.
 
 Total: roughly 60–90 evenings. M1 and M2 can start now and do not depend on art; the first money is spent at the start of M3.
