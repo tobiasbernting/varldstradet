@@ -350,7 +350,8 @@ generator. `--time=0.9` (a fraction of the day: 0 sunrise, 0.4 midday, 0.9 night
 native client draws only Draugkryptan's way in (the arch), so the switch lets the pause menu's "Gå in i …" entries for
 the other eight dungeons ask the server to put you inside, as their arches would, making you a Krigare first if you
 have no class (and, since M4c, the farmer bot's `dev starter` hands a hero with a class the starter weapon Smed-Stina's forge
-makes, which the gear window can then put on). Draugkryptan itself needs no switch. Never set it on the real farm.
+makes, which the gear window can then put on; `dev kit` hands anyone the materials and kronor for two forge levels and a starter piece, two papers and a
+bucket of red paint, for the smithy and paint checks). Draugkryptan itself needs no switch. Never set it on the real farm.
 
 - *Throwaway, nothing to set up* (no password, no database, nothing saved; a home network only):
 
@@ -415,6 +416,11 @@ Then start the client:
    level, the weapon, shield and amulet you wear and carry (kraft, hälsa, skydd) and the **hero switch**, which puts the
    class's clothes on out in the world and back; `J` lists the day's **önskningar**. *Villagers*: use the key facing one:
    "Prata!" (stories, questions, jokes, riddles, sten sax påse) and their wishes, handed over with "Lämna".
+   **Smedjan**: Smed-Stina's window (in Köpingen) has a "🔨 Smedjan" button. *Förbättra* lists every weapon, shield and
+   amulet you wear or carry with its five stars, what it gives now and after one more level, what the level costs (each
+   material and the kronor green when you have enough, red when not) and the button that forges it; *Smid* is the starter
+   set she makes once for each hero. The server's refusals ("Du behöver mer: …", "Gå till Smed-Stina …") are the toasts.
+   The gear window shows a forged piece as "Järnyxa +2" with its stars.
    **Farming** (M4b) works on the tile in front of you, which is outlined (green when something would happen) with the
    action written under it ("E · Vattna"): `1`–`8` (the shoulder buttons `LB`/`RB`, the mouse wheel, `[` `]`) pick the
    hotbar square; `E`, space, `A` or a click on a tile beside you use it. The hoe tills grass, seeds go in tilled soil, the

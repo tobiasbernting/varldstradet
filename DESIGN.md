@@ -843,3 +843,22 @@ server and `shared` are untouched (the strings are in `sv.ts`, exported by `pnpm
   HUD layout at every text size in a 1280 × 720 window), that a restart reads it all back, and that everything is put back. The manual `pictures` job
   takes the window's four pages, the HUD, the farm and a talk window at 175 %, and the same boss telegraph in each palette (`docs/m8b-*.png`).
 
+## Godot client: Smedjan (2026-11-07)
+
+Smed-Stina's forge (the rules are the server's: `forgeGear`, `craftGear`, `forgeStats`, `FORGE_COSTS`, `FORGE_CRAFTS`, `FORGE_MAX` in
+`shared/src/saga.ts` and `sagasim.ts`; "Bigger maps, landmarks, Smedjan and replays" above). The client only offers what can be paid and sends the intent.
+- **Data.** `export-data.mts` writes `gear.forgeCosts`, `gear.forgeCrafts` and `gear.smith` to `game.json` beside the `forgeMax` it already had, so the window
+  reads the same costs as the server. `Gear` (`gear.gd`) has the browser's helpers on them: `owned`, `forge_line` (a weapon's power is its rarity's times what
+  the forge and its stats add, as `gearStats` counts it), `forge_cost`, `cost_parts` (the "any of" part counts every kind in its list), `affordable`.
+- **Window.** `ForgeWindow` (`forge_window.gd`, a `GameWindow`) is opened by the "🔨 Smedjan" button in Stina's talk window (both its front and its chat page;
+  `TalkWindow.forge_asked`), like the browser's `forgeButton`. Two tabs: *Förbättra* (a row per piece I wear or carry: name with "+n", rarity, slot, worn,
+  five stars, now → next, the cost as coloured text, the button, off when the cost cannot be paid or at +5) and *Smid* (the six starter pieces, each once). Every
+  row's control is a `Button` (keyboard, mouse, d-pad and A work as in every `GameWindow`); the body scrolls and the panel fits the text size. Walking more than five tiles from
+  Stina closes it. `shown` keeps the numbers each row says, by item, for the check.
+- **Refusals** are the server's toasts (not near her, not owned, short of material or kronor); the window does not repeat them.
+- **Gear window.** A forged piece shows "Järnyxa +2" and its stars; the sums (`Gear.stats`) already counted the forge level.
+- **Check and `dev kit`.** The farmer bot's new `smed` step (`farm_bot_home.gd`, `smedjan()`) takes `{t:'dev', a:'kit'}` (DEV_TELEPORT only: 20 stone, 10 gold,
+  4 crystal, 400 kr, two papers and a bucket of red paint; tested in `saga.test.ts`), opens Stina's window and the forge, asserts the worn weapon's "now" and "next"
+  lines against the numbers computed from the item data, forges twice and asserts the server's forge level, the bag and the purse against `FORGE_COSTS`, that the window then
+  says the new numbers, that level 3 is out of reach (the button is off), the server's own refusal for a piece I do not own, that a starter piece is smithed
+  and the gear window says "+2" with its stars.

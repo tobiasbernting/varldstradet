@@ -1,7 +1,7 @@
 class_name FarmWindows
 extends Node
 ## Owns the windows the server's `open` changes ask for (the workbench, the stove, the shop, the sell box, the
-## wardrobe, the villagers, the Völvan, the class stone, the bus) and the ones the keys open (the gear, the wishes),
+## wardrobe, the villagers, Smed-Stina's forge, the Völvan, the class stone, the bus) and the ones the keys open (the gear, the wishes),
 ## answers "is a window open" for the use key and the hero, rebuilds the open ones when my record changes, and closes
 ## them all when the map changes. Each window is a GameWindow (game_window.gd) and only sends the browser's messages.
 
@@ -20,6 +20,7 @@ var talk: TalkWindow
 var klass: ClassWindow
 var travel: TravelWindow
 var quests: QuestsWindow
+var forge: ForgeWindow
 var run_arch: RunWindow
 var seed_tree: SeedWindow
 var _all: Array = []
@@ -41,6 +42,8 @@ func setup(v: WorldView) -> void:
 	gear.looks = v.looks
 	talk = _add(TalkWindow.new())
 	talk.class_asked.connect(klass_open)
+	forge = _add(ForgeWindow.new())
+	talk.forge_asked.connect(forge.open_forge)
 	klass = _add(ClassWindow.new())
 	travel = _add(TravelWindow.new())
 	quests = _add(QuestsWindow.new())

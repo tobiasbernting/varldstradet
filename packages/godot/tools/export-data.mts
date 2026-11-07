@@ -72,6 +72,11 @@ import {
   XP_LEVELS,
   FORGE_MAX,
   FORGE_COSTS,
+  FORGE_CRAFTS,
+  SMITH_ID,
+  PAINT_PALETTE,
+  PAINT_CHARS,
+  PAINT_SIZE,
   LEVEL_REWARDS,
   VOLVA_ID,
   NPC_TALK,
@@ -281,6 +286,7 @@ const data = {
   /** What the shop lists, in the browser's order (the order items are defined in data.ts). */
   shopItems: Object.values(ITEMS).filter((d) => d.tab !== undefined).map((d) => d.id),
   paintedSell: PAINTED_SELL,
+  paint: { palette: PAINT_PALETTE, chars: PAINT_CHARS, size: PAINT_SIZE },
   transportPrice: TRANSPORT_PRICE,
   interior: INTERIOR,
   /** Placeables that change the ground instead of standing on it (FLOOR_ITEMS in sim.ts): the object kind they place. */
@@ -288,7 +294,7 @@ const data = {
   volva: VOLVA_ID,
   chapters,
   sagaQuests,
-  gear: { rarityPower: RARITY_POWER, levelBonus: LEVEL_BONUS, powerCap: POWER_CAP, armorCap: ARMOR_CAP, classFit: CLASS_FIT, xpLevels: XP_LEVELS, forgeMax: FORGE_MAX, slots: ['weapon', 'offhand', 'amulet'] },
+  gear: { rarityPower: RARITY_POWER, levelBonus: LEVEL_BONUS, powerCap: POWER_CAP, armorCap: ARMOR_CAP, classFit: CLASS_FIT, xpLevels: XP_LEVELS, forgeMax: FORGE_MAX, forgeCosts: FORGE_COSTS, forgeCrafts: FORGE_CRAFTS, smith: SMITH_ID, slots: ['weapon', 'offhand', 'amulet'] },
   levelRewards: LEVEL_REWARDS,
   dialogue,
   run,

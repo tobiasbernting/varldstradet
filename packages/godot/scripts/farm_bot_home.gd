@@ -545,6 +545,83 @@ func hero_switch() -> void:
 	windows.gear.close()
 
 
+## Smedjan: Stina's window has the forge button, the forge window says what the worn weapon gives now and after one more
+## level, forging sends `saga forge` and the server's forge level, the bag and the purse change by FORGE_COSTS, the window
+## says the new numbers, a third level is out of reach (the rare things are missing: the button is off), a piece I do not
+## own is refused with the server's own words, and the starter set Stina smiths for `saga craft` shows up in the bag.
+func smedjan() -> void:
+	if not await to_village():
+		bot._step("Smedjan", false, "not in the village")
+		return
+	var smith := str(Data.gear.get("smith", "stina"))
+	Net.send({"t": "dev", "a": "kit"})
+	if not await bot._until(func() -> bool: return model.count_item("stone") >= 20 and _coins() >= 400, 4.0):
+		bot._step("Smedjan", false, "the kit never came")
+		return
+	var weapon := str(Gear.gear_of(model.my_player()).get("weapon", ""))
+	if weapon == "":
+		bot._step("Smedjan", false, "no weapon worn")
+		return
+	if not await _talk_to(smith):
+		bot._step("Smedjan", false, "could not get Stina's window open")
+		return
+	await bot._wait(0.3)
+	var button := _press(windows.talk, "forge") and await bot._until(func() -> bool: return windows.forge.is_open(), 3.0)
+	await bot._wait(0.4)
+	await bot._shot("forge", 0.1)
+	var forge := windows.forge
+	var row: Dictionary = forge.shown.get(weapon, {})
+	var d := Data.item(weapon)
+	var base_power := float((d.get("stats", {}) as Dictionary).get("power", 0.0))
+	var rp := float((Data.gear.get("rarityPower", {}) as Dictionary).get(str(d.get("rarity", "common")), 1.0))
+	var want_now := "💪 +%d %%" % roundi((rp * (1.0 + base_power) - 1.0) * 100.0)
+	var want_next := "💪 +%d %%" % roundi((rp * (1.0 + base_power + 0.06) - 1.0) * 100.0)
+	bot._step("Stina's forge window", button and not row.is_empty() and int(row.get("level", -1)) == 0 and str(row.get("now", "")) == want_now and str(row.get("next", "")) == want_next and bool(row.get("can", false)), "%s: now '%s', next '%s' (wanted '%s' and '%s'), cost %s" % [weapon, row.get("now", ""), row.get("next", ""), want_now, want_next, row.get("cost", "")])
+	var stone := model.count_item("stone")
+	var gold := model.count_item("gold")
+	var coins := _coins()
+	var level1 := _press(forge, "up:" + weapon) and await bot._until(func() -> bool: return Gear.forge_level(model.my_player(), weapon) == 1, 4.0)
+	await bot._wait(0.5)
+	var paid := model.count_item("stone") == stone - 6 and model.count_item("gold") == gold - 3 and _coins() == coins - 40
+	row = forge.shown.get(weapon, {})
+	bot._step("forge +1", level1 and paid and int(row.get("level", -1)) == 1 and str(row.get("now", "")) == want_next, "server forge level %d, stone %d -> %d, gold %d -> %d, coins %d -> %d; the window says level %s '%s'" % [Gear.forge_level(model.my_player(), weapon), stone, model.count_item("stone"), gold, model.count_item("gold"), coins, _coins(), row.get("level", "?"), row.get("now", "")])
+	var level2 := _press(forge, "up:" + weapon) and await bot._until(func() -> bool: return Gear.forge_level(model.my_player(), weapon) == 2, 4.0)
+	await bot._wait(0.5)
+	row = forge.shown.get(weapon, {})
+	var want_two := "💪 +%d %%" % roundi((rp * (1.0 + base_power + 0.12) - 1.0) * 100.0)
+	bot._step("forge +2", level2 and int(row.get("level", -1)) == 2 and str(row.get("now", "")) == want_two and Gear.stats(model.my_player())["power"] > 1.0, "server forge level 2; the window says '%s' (wanted '%s')" % [row.get("now", ""), want_two])
+	var off := not bool(row.get("can", true)) and not _press(forge, "up:" + weapon)
+	bot._step("level 3 is out of reach", off, "two of the rare things are missing: the button is off (cost %s)" % row.get("cost", ""))
+	await bot._shot("forge2", 0.1)
+	# the server's own words for a piece I do not own
+	var toasts_before: int = bot._report["toasts"].size()
+	Net.send({"t": "saga", "a": "forge", "item": "frostbett"})
+	var refused := await bot._until(func() -> bool: return bot._report["toasts"].slice(toasts_before).any(func(t: String) -> bool: return t.contains(Data.item_name("frostbett")) and t.contains("inte")), 3.0)
+	bot._step("a piece I do not own", refused and Gear.forge_level(model.my_player(), "frostbett") == 0, "refused: %s" % str(bot._report["toasts"].slice(toasts_before)))
+	# smithing: a starter piece I do not have
+	forge._set_tab("craft")
+	await bot._wait(0.3)
+	var piece := "jarnsvard"
+	var crow: Dictionary = forge.shown.get(piece, {})
+	await bot._shot("forge3", 0.1)
+	var made := bool(crow.get("can", false)) and _press(forge, "craft:" + piece) and await bot._until(func() -> bool: return model.count_item(piece) > 0, 4.0)
+	await bot._wait(0.4)
+	crow = forge.shown.get(piece, {})
+	bot._step("smith a sword", made and bool(crow.get("owned", false)) and not _press(forge, "craft:" + piece), "%s is in the bag; the window says it is owned and the button is off" % Data.item_name(piece))
+	# the gear window shows the forge: the name carries +2 and the stars
+	forge.close()
+	windows.talk.close()
+	bot._press_action("gear")
+	await bot._wait(0.4)
+	var texts := ""
+	for lbl in windows.gear._body.find_children("*", "RichTextLabel", true, false):
+		texts += (lbl as RichTextLabel).text + "\n"
+	for lbl in windows.gear._body.find_children("*", "Label", true, false):
+		texts += (lbl as Label).text + "\n"
+	bot._step("the gear window shows the forge", texts.contains(Gear.forged_name(weapon, 2)) and texts.contains("★★☆☆☆"), "the name '%s' and the stars are on the gear window" % Gear.forged_name(weapon, 2))
+	windows.gear.close()
+
+
 func bus() -> void:
 	if model.my_area_key() != "a:1,0":
 		if not await to_village():

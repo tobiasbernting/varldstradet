@@ -8306,6 +8306,24 @@
     "gown_blue"
   ],
   "paintedSell": 20,
+  "paint": {
+    "palette": [
+      "#1b1a17",
+      "#ffffff",
+      "#e03a3a",
+      "#f08a2a",
+      "#f5d94a",
+      "#5fae3c",
+      "#2e7a3a",
+      "#3f86d6",
+      "#8fd0f0",
+      "#a05ac8",
+      "#ff9ac8",
+      "#8a5a2a"
+    ],
+    "chars": "0123456789ab",
+    "size": 16
+  },
   "transportPrice": {
     "bus": 5,
     "train": 15
@@ -9017,6 +9035,156 @@
       7800
     ],
     "forgeMax": 5,
+    "forgeCosts": {
+      "1": {
+        "items": [
+          [
+            "stone",
+            6
+          ],
+          [
+            "gold",
+            3
+          ]
+        ],
+        "kr": 40
+      },
+      "2": {
+        "items": [
+          [
+            "crystal",
+            4
+          ],
+          [
+            "gold",
+            2
+          ]
+        ],
+        "kr": 80
+      },
+      "3": {
+        "items": [],
+        "anyOf": {
+          "items": [
+            "fire_crystal",
+            "fairy_dust",
+            "frostros",
+            "alvdagg",
+            "obsidian",
+            "star_crystal"
+          ],
+          "count": 2
+        },
+        "kr": 150
+      },
+      "4": {
+        "items": [
+          [
+            "monsteressens",
+            4
+          ]
+        ],
+        "kr": 250
+      },
+      "5": {
+        "items": [
+          [
+            "drakfjall",
+            2
+          ],
+          [
+            "monsteressens",
+            4
+          ]
+        ],
+        "kr": 400
+      }
+    },
+    "forgeCrafts": {
+      "jarnsvard": {
+        "items": [
+          [
+            "stone",
+            8
+          ],
+          [
+            "gold",
+            4
+          ]
+        ],
+        "kr": 60
+      },
+      "jarnyxa": {
+        "items": [
+          [
+            "stone",
+            8
+          ],
+          [
+            "gold",
+            4
+          ]
+        ],
+        "kr": 60
+      },
+      "ekstav": {
+        "items": [
+          [
+            "wood",
+            6
+          ],
+          [
+            "gold",
+            4
+          ]
+        ],
+        "kr": 60
+      },
+      "jaktbage": {
+        "items": [
+          [
+            "wood",
+            6
+          ],
+          [
+            "fiber",
+            4
+          ],
+          [
+            "gold",
+            2
+          ]
+        ],
+        "kr": 60
+      },
+      "traskold": {
+        "items": [
+          [
+            "wood",
+            8
+          ],
+          [
+            "gold",
+            2
+          ]
+        ],
+        "kr": 60
+      },
+      "stenamulett": {
+        "items": [
+          [
+            "stone",
+            6
+          ],
+          [
+            "crystal",
+            1
+          ]
+        ],
+        "kr": 60
+      }
+    },
+    "smith": "stina",
     "slots": [
       "weapon",
       "offhand",

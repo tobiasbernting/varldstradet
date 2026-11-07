@@ -151,6 +151,8 @@ export type ClientMsg =
   | { t: 'dev'; a: 'nextDay' }
   /** Development only (same switch): the starter set Smed-Stina makes (a weapon, a shield, an amulet) for my class, for free. */
   | { t: 'dev'; a: 'starter' }
+  /** Development only (same switch): materials and 400 kr for two forge levels and a starter piece, two papers and a bucket of red paint, for a check of the smithy and the paint screen. */
+  | { t: 'dev'; a: 'kit' }
   | { t: 'ping' };
 
 export interface PlayerSnap {
