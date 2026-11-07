@@ -62,11 +62,20 @@ This file is only what the next agent needs: state, decisions, how the work is r
   the running farm's image (pulled as `:latest` every 10 minutes). Every push was refused (`write_package`), so the farm
   was never touched; PR 22 renames it to `ghcr.io/tobiasbernting/varldstradet` with a test. The owner must make that
   package public (or log the server in to ghcr) before the first deploy; pinning the farm's image to a sha is advised.
-- **Running now:** M8a PR 22 (import of the lilla-garden save, release dry run, README, the image rename, a new
-  `server.yml` workflow with Postgres tests) `session_01KTh22qsQXEMZuS8qdhftjn`, merging main before merge; M8b
-  (settings window, UI scale, colour-blind telegraphs, reduced motion) `session_01KTh22o9QNKhg3UbFZ7tk3M` on
-  `claude/m8b-settings-accessibility`; the farmer bot's flaky `startle` step (M7b) is being fixed by
-  `session_01KTh22rF2Y4u6N5YDy7c9rJ` on `claude/m7b-startle-flake`. No `v*` tag without the owner.
+- PR 22 (M8a: `import-save` from a lilla-garden dump or database into an empty one, guarded, one transaction, tested
+  against real Postgres in a new `server.yml` workflow; release dry run and a link test; README for the native client;
+  the image renamed to `ghcr.io/tobiasbernting/varldstradet`, which now builds) merged 09:14 UTC as ec2f845. PR 24 and
+  PR 26 fixed the farmer bot's flaky `startle` step (it waited too briefly for the animal's return; reproduced).
+  PR 25 (M8b: settings window with every per-effect toggle, volumes, push-to-talk key; text size 100–175 % with a
+  non-overlapping centre stack; colour-blind palettes with stripes; reduced motion; a ~120-step settings check; review
+  fixes) merged 2026-11-07 13:34 UTC as 5a541bf. **M8 is done except the first `v*` tag (the owner's call) and the
+  DESIGN.md rewrite.**
+- **Running now:** `session_01KTh22rn2baE99QRxRLZGH7` on `claude/ci-time-and-import-path`: the export job is at
+  11m36s on PR 25's run (the bots step 5m33s), to be brought back under ~9.5 min; and `import-save` resolving a relative
+  dump path from `INIT_CWD` (today `pnpm --filter … import-save lilla-garden.sql` looks in packages/server).
+- **Waiting on the owner:** the first release tag; make the `varldstradet` GHCR package public before the first deploy
+  (homelab `cloud/YOUR-STEPS.md` J); whether to fix the running farm's backup-dir permissions (0750, the nightly fetch
+  probably reads nothing); MacBook results for PR 11–25 (bench on Låg/Mellan/Hög by a pond, voice).
 - **Branch `claude/eloquent-rubin-0r5o0h` (sections 1b–1d: the art pass, the atmosphere pass, creatures in 3D) merged `main`
   up to PR 21 (670df30 and the handoff ded1e66) and reconciled the overlap with M7a.** M7a's stay (the preset framework, wind, water, fireflies, butterflies,
   leaves, chimney smoke, dawn mist, window light); dropped from the atmosphere pass as duplicates: its fireflies, chimney
