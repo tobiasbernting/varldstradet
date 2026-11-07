@@ -142,7 +142,7 @@ export interface RunState {
   /** The fraction of a sagafrö each player is owed by the bonuses (whole seeds are paid; never saved). */
   carry: Record<string, number>;
   paid: Set<string>;
-  /** Players who joined while a vote was on: they enter the next zone. */
+  /** Players who joined while the cards were out: they enter the next stop. */
   waiting: string[];
   victoryAt?: number;
   outcome?: RunOutcome;
@@ -169,7 +169,7 @@ const humans = (farm: WorldState, run: RunState): PlayerState[] => run.party.map
 const members = (farm: WorldState, run: RunState): PlayerState[] => [...humans(farm, run), ...run.companions.map((id) => farm.players[id]).filter((p): p is PlayerState => !!p)];
 
 /**
- * Gives items into the world the player stands in (the zone's, while in a zone): what does not fit in the bag lands on the
+ * Gives items into the world the player stands in (the stop's, while in a stop): what does not fit in the bag lands on the
  * ground there, and the `drop` change names that area.
  */
 function giveHere(farm: WorldState, p: PlayerState, item: string, count: number, out: Change[]): void {
@@ -350,7 +350,7 @@ export function effectFor(farm: WorldState, run: RunState, p: PlayerState): RunE
   return e;
 }
 
-/** Hands the current buffs to the fighters of the zone. */
+/** Hands the current buffs to the fighters of the stop. */
 function refresh(farm: WorldState, run: RunState): void {
   const inst = farm.areas?.[run.key]?.saga;
   if (!inst?.run) return;
@@ -691,7 +691,7 @@ export function enterStop(farm: WorldState, run: RunState, node: number, ctx: Si
   return out;
 }
 
-/** Joins a run that is going on: at the last lit rest stone of the zone (the start before any is lit). */
+/** Joins a run that is going on: at the last lit rest stone of the stop (the start before any is lit). */
 export function joinRun(world: WorldState, playerId: string, ctx: SimCtx): Change[] {
   const farm = farmOf(world);
   const p = farm.players[playerId];
@@ -761,7 +761,7 @@ export function leaveRun(world: WorldState, playerId: string, ctx: SimCtx): Chan
   return out;
 }
 
-/** A player who comes back online inside a run (a dropped connection): up at the last rest stone of the zone, or sent home. */
+/** A player who comes back online inside a run (a dropped connection): up at the last rest stone of the stop, or sent home. */
 export function rejoinRun(world: WorldState, playerId: string): Change[] {
   const farm = farmOf(world);
   const p = farm.players[playerId];
@@ -1097,7 +1097,7 @@ function victory(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
   pay(farm, run, (p) => (run.plan.replay ? RUN_SEEDS.bossReplay : RUN_SEEDS.bossFirst) + (effectFor(farm, run, p).bossSeeds ?? 0), out);
   const crops = ['carrot', 'potato', 'strawberry', 'tomato', 'pumpkin', 'sunflower', 'wheat'];
   for (const p of humans(farm, run)) {
-    // the chapter is cleared for everyone in the party, offline members too (sagasim already did it for those standing in the zone)
+    // the chapter is cleared for everyone in the party, offline members too (sagasim already did it for those standing in the stop)
     const prog = (p.saga ??= newSagaProgress());
     if (!prog.cleared.includes(boss)) {
       prog.cleared.push(boss);
@@ -1114,7 +1114,7 @@ function victory(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
   return out;
 }
 
-/** The end of a run, for any reason: everyone home in front of the arch with everything, the zone and the companion gone. */
+/** The end of a run, for any reason: everyone home in front of the arch with everything, the stop and the companion gone. */
 export function endRun(farm: WorldState, run: RunState, outcome: RunOutcome, ctx: SimCtx, except?: string): Change[] {
   const out: Change[] = [];
   // a boss that has fallen is a win, whatever ends the run afterwards (the clock, a wipe tick, the chest's 90 seconds)

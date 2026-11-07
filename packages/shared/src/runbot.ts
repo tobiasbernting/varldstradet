@@ -119,7 +119,7 @@ function cast(farm: WorldState, p: PlayerState, spell: string, target: number | 
 const isRanged = (cls: ClassId): boolean => cls === 'helare' || cls === 'magiker';
 
 /**
- * One decision of one fighter, `dtMs` after the last. The player must be in a zone of a run (a saga area) with a
+ * One decision of one fighter, `dtMs` after the last. The player must be in a stop of a run (a saga area) with a
  * fighter record. Returns what the spells changed.
  */
 export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimCtx, dtMs: number): Change[] {

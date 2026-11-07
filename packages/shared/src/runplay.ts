@@ -52,6 +52,7 @@ export interface Played {
   outcome: string;
   ms: number;
   changes: Change[];
+  /** Run time (ms) when each new stop was entered. */
   zoneMs: number[];
   /** When the boss fell (ms of run time), if it did. */
   winMs?: number;

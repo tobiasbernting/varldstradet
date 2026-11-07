@@ -317,7 +317,7 @@ export interface RunSave {
   earned: number;
   /** The nodes planted (SEED_TREE ids). */
   tree: string[];
-  /** Runs started, won, ended by a wipe, runs that went past the 30-minute mark (`timeouts`: the name is kept so old saves load unchanged), and zones cleared. */
+  /** Runs started, won, ended by a wipe, runs that went past the 30-minute mark (`timeouts`: the name is kept so old saves load unchanged), and stops cleared (a Flock or the Mellanboss; `zones`, the name kept too). */
   runs: number;
   wins: number;
   wipes: number;

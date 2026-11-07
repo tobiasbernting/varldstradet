@@ -104,7 +104,7 @@ func set_map_open(open: bool) -> void:
 		return
 	_map.visible = open
 	if open:
-		_map_title.text = "🗺  " + Strings.t("runMapTitle")
+		_map_title.text = Strings.t("runMapTitle")
 		_map_hint.text = Strings.t("runMapHint", {"key": "R"})
 		_map_key = ""
 		_refresh_map()

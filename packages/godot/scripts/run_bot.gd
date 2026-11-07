@@ -30,6 +30,7 @@ var _pressed: Dictionary = {} ## node -> true once I pressed a card
 var _confirmed: Dictionary = {} ## node -> true once the server's offer showed my vote
 var _runes_taken := 0
 var _map_checked := false
+var _runes_shot := false
 var _beat := 5.0
 var _rest_t := 0.0
 var _wipes := 0
@@ -438,6 +439,9 @@ func _choose_rune() -> void:
 
 
 func _walk_to_exit(delta: float) -> void:
+	if shots_dir != "" and not _runes_shot and _path.size() <= 3:
+		_runes_shot = true
+		_shot("route-runes", 0.4)
 	var tile := Data.tile()
 	var me := Vector2(world.hero.px, world.hero.py)
 	if not _path.is_empty():

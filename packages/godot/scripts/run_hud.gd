@@ -33,7 +33,7 @@ func _ready() -> void:
 	_panel = PanelContainer.new()
 	_panel.anchor_left = 1.0
 	_panel.anchor_right = 1.0
-	_panel.offset_left = -250
+	_panel.offset_left = -290
 	_panel.offset_right = -16
 	_panel.offset_top = 40
 	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
