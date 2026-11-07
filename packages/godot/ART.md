@@ -85,9 +85,9 @@ the sheets are committed under `assets/sprites/` with `atlas.json` (frame size, 
   Draugkryptan, Frostjättens borg, Surts smedja and Helheim (21, with the ice block a freeze leaves); `pnpm godot:sprites`
   takes the dungeon ids as its argument (`draug,frost,surt,hel,dvarg,orm,alv` by default) and `speciesOf` in `tools/sprites-page.ts` lists
   what each one needs, so a later dungeon is one more id. No new pixel art was drawn: all of it is in `packages/art/src/sagaanimals.ts`.
-  M6b added the 16 creatures of Svartalfheims gruvor (gruvtroll, guldbagge, stengolem, jarnvakten, fafner), Havsormens tempel
+  M6b added the 15 creatures (and the web: 16 sheets) of Svartalfheims gruvor (gruvtroll, guldbagge, stengolem, jarnvakten, fafner), Havsormens tempel
   (sjodraug, jattekrabba, manet, blackis, jormungand) and Alvernas lund (skuggalv, jattespindel, svampvakt, spindeldrottning,
-  nattmara, and the web a spider's freeze leaves, `spindelnat`): 37 sheets in all. Again nothing was drawn, and the sheets
+  nattmara; plus the web a spider's freeze leaves, `spindelnat`): 37 sheets in all. Again nothing was drawn, and the sheets
   already exported are byte for byte the same (the icon sheet too: the new dungeons' loot has pictures already). The new
   looks (`dungeon_look.gd`) tint KayKit stone as before: amber for the mine, sea-teal for the temple, violet for the grove;
   the three new drifting airs (dust, bubbles, spores) are particles drawn in code with the engine's glow texture.

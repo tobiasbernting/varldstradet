@@ -755,7 +755,7 @@ func _make_motes() -> void:
 			life = 5.0
 			additive = true
 		"dust":
-			# the mine: grey dust hanging in the lamplight, now and then a gold glint (a warm tint, additive)
+			# the mine: small warm-gold motes hanging in the lamplight (additive)
 			quad.size = Vector2(0.05, 0.05)
 			pm.direction = Vector3(0.2, -0.2, 0.1)
 			pm.gravity = Vector3(0.0, -0.02, 0.0) # hangs in the air
