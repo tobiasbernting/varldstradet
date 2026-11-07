@@ -618,7 +618,7 @@ func _sync_actors() -> void:
 			actor.set_label(str(Data.npcs.get(k.substr(2), {}).get("name", "")))
 		else:
 			var species := str(rec.get("species", ""))
-			var sheet := Data.mob_sheet(species) if not Data.mob(species).is_empty() else ""
+			var sheet := Data.mob_sheet(species, int(rec.get("variant", 0))) if not Data.mob(species).is_empty() else ""
 			if sheet == "":
 				# the farm's animals and the wild ones: a baby while it is young, in its winter hat at Christmas
 				var grow := int(Data.animals.get(species, {}).get("growDays", 3))

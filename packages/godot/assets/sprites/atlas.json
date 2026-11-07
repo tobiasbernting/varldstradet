@@ -45,12 +45,14 @@
   ],
   "species": [
     "benspindel",
+    "bergsjatte",
     "blackis",
     "draugbage",
     "draugkung",
     "eldhund",
     "eldimp",
     "fafner",
+    "fenrisulven",
     "frosttroll",
     "garm",
     "gengangare",
@@ -69,18 +71,23 @@
     "jattespindel",
     "jormungand",
     "lavagolem",
+    "loke",
+    "lokesskugga",
     "manet",
     "nattmara",
+    "rimtroll",
     "rimturs",
     "sjodraug",
     "skelett",
+    "skoll",
     "skuggalv",
     "smeden",
     "spindeldrottning",
     "spindelnat",
     "stengolem",
     "surt",
-    "svampvakt"
+    "svampvakt",
+    "ulv"
   ],
   "icons": {
     "spell_hugg": {
@@ -5927,6 +5934,17 @@
       ],
       "headroom": 0
     },
+    "mob_bergsjatte": {
+      "file": "mob_bergsjatte.png",
+      "frame_w": 30,
+      "frame_h": 36,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
     "mob_blackis": {
       "file": "mob_blackis.png",
       "frame_w": 40,
@@ -5986,6 +6004,17 @@
       "file": "mob_fafner.png",
       "frame_w": 52,
       "frame_h": 40,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "mob_fenrisulven": {
+      "file": "mob_fenrisulven.png",
+      "frame_w": 54,
+      "frame_h": 37,
       "columns": 2,
       "frames": [
         "right0",
@@ -6191,6 +6220,28 @@
       ],
       "headroom": 0
     },
+    "mob_loke": {
+      "file": "mob_loke.png",
+      "frame_w": 33,
+      "frame_h": 46,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "mob_lokesskugga": {
+      "file": "mob_lokesskugga.png",
+      "frame_w": 33,
+      "frame_h": 46,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
     "mob_manet": {
       "file": "mob_manet.png",
       "frame_w": 16,
@@ -6206,6 +6257,17 @@
       "file": "mob_nattmara.png",
       "frame_w": 46,
       "frame_h": 40,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "mob_rimtroll": {
+      "file": "mob_rimtroll.png",
+      "frame_w": 25,
+      "frame_h": 28,
       "columns": 2,
       "frames": [
         "right0",
@@ -6239,6 +6301,17 @@
       "file": "mob_skelett.png",
       "frame_w": 18,
       "frame_h": 22,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "mob_skoll": {
+      "file": "mob_skoll.png",
+      "frame_w": 43,
+      "frame_h": 29,
       "columns": 2,
       "frames": [
         "right0",
@@ -6316,6 +6389,61 @@
       "file": "mob_svampvakt.png",
       "frame_w": 21,
       "frame_h": 26,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "mob_ulv": {
+      "file": "mob_ulv.png",
+      "frame_w": 27,
+      "frame_h": 18,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "mob_eldhund_v1": {
+      "file": "mob_eldhund_v1.png",
+      "frame_w": 22,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "mob_gengangare_v1": {
+      "file": "mob_gengangare_v1.png",
+      "frame_w": 18,
+      "frame_h": 23,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "mob_isvarg_v1": {
+      "file": "mob_isvarg_v1.png",
+      "frame_w": 22,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "mob_skelett_v1": {
+      "file": "mob_skelett_v1.png",
+      "frame_w": 18,
+      "frame_h": 22,
       "columns": 2,
       "frames": [
         "right0",

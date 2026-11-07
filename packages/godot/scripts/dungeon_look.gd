@@ -18,7 +18,7 @@ extends RefCounted
 ##   glow      bloom strength
 ##   cap_k     lightens (or darkens) the wall blocks' tops and their dark cores, a multiplier on the stone tint
 ##   bg_k      the background colour (what shows beyond the walls) as a fraction of the ambient colour
-##   motes     "", "snow", "embers", "wisps", "dust", "bubbles" or "spores": what drifts through the air round the hero (Mellan and Hög)
+##   motes     "", "snow", "embers", "wisps", "dust", "bubbles", "spores", "gale" or "stars": what drifts through the air round the hero (Mellan and Hög)
 
 ## Draugkryptan's values are the ones the view had before the table existed (M3a), unchanged.
 const NEUTRAL := {
@@ -63,8 +63,20 @@ const LOOKS := {
 		"floors": {"moss": Color(0.95, 1.9, 0.85), "grass": Color(1.1, 2.3, 0.9)},
 		"ambient_energy": 0.9, "fog_density": 0.034, "fog_k": 0.55, "glow": 0.95, "bg_k": 0.1, "cap_k": 1.5, "motes": "spores", "boss_decor": false,
 	},
-	"fenrir": {"wall": 7, "stone": Color(0.78, 0.82, 0.9), "torch": Color(0.62, 0.8, 1.0)},
-	"loke": {"wall": 8, "stone": Color(0.9, 0.86, 1.0), "torch": Color(1.0, 0.82, 0.9)},
+	"fenrir": {
+		"wall": 7, "stone": Color(0.62, 0.68, 0.8), "torch": Color(0.85, 0.93, 1.0),
+		# M6c, Fenrisklyftan: dark steel-blue rock and trampled snow (not the castle's clear ice), storm lanterns of a paler white, a
+		# misty air and a gale blowing the snow sideways through it; the boss's ledge is bare stone
+		"floors": {"snow": Color(1.65, 1.65, 1.75), "stone": Color(1.9, 1.9, 1.95)},
+		"ambient_energy": 0.78, "fog_density": 0.04, "fog_k": 0.5, "glow": 0.6, "bg_k": 0.1, "cap_k": 1.45, "motes": "gale", "boss_decor": false, "weeds": false,
+	},
+	"loke": {
+		"wall": 8, "stone": Color(0.82, 0.76, 1.0), "torch": Color(1.0, 0.78, 0.92),
+		# Bifrost: the glass bridge in pearly violet, rose-gold lanterns, a lot of bloom and little fog, and coloured stars twinkling in the
+		# air (the whole thing a bit too fine on purpose: it is Loke's)
+		"floors": {"bifrost": Color(1.05, 1.1, 1.25)},
+		"ambient_energy": 0.95, "fog_density": 0.026, "fog_k": 0.45, "glow": 0.9, "bg_k": 0.12, "cap_k": 1.5, "motes": "stars", "boss_decor": false, "weeds": false,
+	},
 }
 
 ## What the floor tiles of a terrain are tinted with, times the look's stone (the dungeons' floors: crypt flagstones, the

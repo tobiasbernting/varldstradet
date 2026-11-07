@@ -130,51 +130,64 @@ jobs:
           test "$(cat runbots.code)" = 0 || { echo "::error::the run pair failed"; bad=1; }
           exit $bad
 
-      # M6a, M6b: the same fighter pair in Frostjättens borg, Surts smedja, Helheim, Svartalfheims gruvor, Havsormens tempel
-      # and Alvernas lund (the dev way in: DEV_TELEPORT=1, `dev saga`): each clears its first two packs against a server in
-      # memory. The six run side by side, each on ports of its own (a run uses its port and the next two; gaps left).
-      - name: Two bots clear the first packs of each of the six dungeons after Draugkryptan (the dev way in)
+      # M6a–M6c: the same fighter pair in Frostjättens borg, Surts smedja, Helheim, Svartalfheims gruvor, Havsormens tempel,
+      # Alvernas lund, Fenrisklyftan and Bifrost (the dev way in: DEV_TELEPORT=1, `dev saga`): each clears its first two packs
+      # against a server in memory. The eight run side by side, each on ports of its own (a run uses its port and the next
+      # two; gaps left). On Bifrost the pair also checks that Loke's illusions are drawn ghostly.
+      - name: Two bots clear the first packs of each of the eight dungeons after Draugkryptan (the dev way in)
         run: |
           set -uo pipefail
           port=8100
-          for d in frost surt hel dvarg orm alv; do
+          for d in frost surt hel dvarg orm alv fenrir loke; do
             (GODOT=~/godot/godot BOT_ONLY=dungeon BOT_DUNGEON=$d BOT_PORT=$port BOT_PACKS=2 BOT_SECONDS=240 pnpm godot:bot > "bot-$d.log" 2>&1; echo $? > "bot-$d.code") &
             port=$((port + 4))
           done
           wait
           bad=0
-          for d in frost surt hel dvarg orm alv; do
+          for d in frost surt hel dvarg orm alv fenrir loke; do
             echo "== $d"; cat "bot-$d.log"
             test "$(cat "bot-$d.code")" = 0 || { echo "::error::the $d bot pair failed"; bad=1; }
           done
           exit $bad
 
-      # M6a, M6b: every move of the mid-boss and the boss of each of the six plays on the recorded dungeon, from the data
+      # M6a–M6c: every move of the mid-boss and the boss of each of the eight plays on the recorded dungeon, from the data
       # (scripts/demo_bosses.gd): the cast bar, the marks on the floor, the landing, the ice block or web, the burning ground,
-      # the helpers, the pull, a mend's glow and the heal. The six run side by side (about 20 s).
-      - name: Play the bosses' moves of the six dungeons headless (telegraphs, cast bars, what they leave)
+      # the helpers, the pull, a mend's glow and the heal. The eight run side by side (about 25 s).
+      - name: Play the bosses' moves of the eight dungeons and the saga's ending headless (telegraphs, cast bars, what they leave; the last banners and toasts)
         working-directory: packages/godot
         run: |
           set -uo pipefail
-          for d in frost surt hel dvarg orm alv; do
+          for d in frost surt hel dvarg orm alv fenrir loke; do
             (timeout 150 ~/godot/godot --headless --path . -- --demo=$d --fight --once > "bosses-$d.log" 2>&1; echo $? > "bosses-$d.code") &
           done
+          # M6c: the saga's ending, beside them: what the server sends when Loke falls (a "cleared" banner, a toast) and when
+          # Völvan is handed the last chapter (banners, three toasts, the record past the last chapter, her window: "the saga is over")
+          (timeout 150 ~/godot/godot --headless --path . -- --demo=loke --ending --once > ending-dungeon.log 2>&1; echo $? > ending-dungeon.code) &
+          (timeout 150 ~/godot/godot --headless --path . -- --demo=ending --once > ending-village.log 2>&1; echo $? > ending-village.code) &
           wait
           # every dungeon's log is printed and every failure reported (one failing show must not hide the others)
           bad=0
           fail() { echo "::error::$1"; bad=1; }
-          # every move of each boss cast once: the mid-boss's and the boss's: frost 1 + 4, surt 2 + 3, hel 2 + 3, dvarg 2 + 3, orm 2 + 4, alv 2 + 4
-          declare -A casts=([frost]=5 [surt]=5 [hel]=5 [dvarg]=5 [orm]=6 [alv]=6)
-          for d in frost surt hel dvarg orm alv; do
+          # every move of each boss cast once: the mid-boss's and the boss's: frost 1 + 4, surt 2 + 3, hel 2 + 3, dvarg 2 + 3, orm 2 + 4, alv 2 + 4, fenrir 2 + 4, loke 2 + 7
+          declare -A casts=([frost]=5 [surt]=5 [hel]=5 [dvarg]=5 [orm]=6 [alv]=6 [fenrir]=6 [loke]=9)
+          for d in frost surt hel dvarg orm alv fenrir loke; do
             echo "== $d"; cat "bosses-$d.log"
             if grep -E "^ERROR:|SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate|bosses: FAIL|leaked at exit|still in use at exit|Pages in use exist at exit" "bosses-$d.log"; then
               fail "the $d boss show reported errors or leaked at exit (see above)"
             fi
             test "$(cat "bosses-$d.code")" = 0 || fail "the $d boss show did not end cleanly"
             grep -q "bosses: show finished" "bosses-$d.log" || fail "the $d boss show did not play to its end"
-            # (the show checks what it fed: each mark is in the fx view after the cast, gone after the landing, a helper, an ice block or a web is an actor, a mend glows and its glow ends and the heal floats, a pull puts the hero next to the boss, the air's motes drift)
+            # (the show checks what it fed: each mark is in the fx view after the cast, gone after the landing, a helper, an ice block or a web is an actor, a mend glows and its glow ends and the heal floats, a pull puts the hero next to the boss, the air's motes drift, Loke's helpers are drawn as ghostly illusions)
             grep -q "^bosses: ok" "bosses-$d.log" || fail "the $d boss show's own checks did not pass"
             test "$(grep -c 'casts,' "bosses-$d.log")" = "${casts[$d]}" || fail "the $d boss show did not cast every move"
+          done
+          for e in dungeon village; do
+            echo "== the ending ($e)"; cat "ending-$e.log"
+            if grep -E "^ERROR:|SCRIPT ERROR|Parse Error|Failed to load script|ending: FAIL|leaked at exit|still in use at exit|Pages in use exist at exit" "ending-$e.log"; then
+              fail "the saga's ending ($e) reported errors or failed a check (see above)"
+            fi
+            test "$(cat "ending-$e.code")" = 0 || fail "the saga's ending ($e) did not end cleanly"
+            grep -q "^ending: ok" "ending-$e.log" || fail "the saga's ending ($e) did not pass its own checks"
           done
           exit $bad
 
@@ -339,6 +352,41 @@ jobs:
           shot m6b-nattmara-pools --demo=alv --boss-move=nattmara:pools:after
           shot m6b-nattmara-mend --demo=alv --boss-move=nattmara:mend
           shot m6b-nattmara-summon --demo=alv --boss-move=nattmara:summon:after
+
+      # M6c: the same for Fenrisklyftan and Bifrost: the start room, the boss's hall (the hero off to one side) and the marks
+      # of each move of the mid-boss and the boss (Loke's two novas are `nova` and `nova#1`).
+      - name: Pictures of Fenrisklyftan and Bifrost and of their bosses' moves under Xvfb
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/shots/dungeons"
+          shot() { # name, demo args...
+            local name="$1"; shift
+            xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- "$@" --screenshot="$GITHUB_WORKSPACE/shots/dungeons/$name.png" 2>&1 | tee "shot-$name.log"
+            if grep -E "^ERROR:|SCRIPT ERROR|Parse Error|leaked at exit|still in use at exit|Pages in use exist at exit" "shot-$name.log"; then
+              echo "::error::$name: errors or leaks (see above)"; exit 1
+            fi
+            test "$(stat -c %s "$GITHUB_WORKSPACE/shots/dungeons/$name.png")" -gt 20000
+          }
+          shot m6c-fenrir --demo=fenrir
+          shot m6c-fenrir-hall --demo=fenrir --at=45,48
+          shot m6c-skoll-charge --demo=fenrir --boss-move=skoll:charge
+          shot m6c-skoll-nova --demo=fenrir --boss-move=skoll:nova
+          shot m6c-fenrisulven-charge --demo=fenrir --boss-move=fenrisulven:charge
+          shot m6c-fenrisulven-cleave --demo=fenrir --boss-move=fenrisulven:cleave
+          shot m6c-fenrisulven-summon --demo=fenrir --boss-move=fenrisulven:summon:after
+          shot m6c-fenrisulven-nova --demo=fenrir --boss-move=fenrisulven:nova
+          shot m6c-loke --demo=loke
+          shot m6c-loke-hall --demo=loke --at=34,51
+          shot m6c-lokesskugga-rain --demo=loke --boss-move=lokesskugga:rain
+          shot m6c-lokesskugga-nova --demo=loke --boss-move=lokesskugga:nova
+          shot m6c-loke-cleave --demo=loke --boss-move=loke:cleave
+          shot m6c-loke-snow --demo=loke --boss-move=loke:nova
+          shot m6c-loke-pools --demo=loke --boss-move=loke:pools:after
+          shot m6c-loke-mend --demo=loke --boss-move=loke:mend
+          shot m6c-loke-pull --demo=loke --boss-move=loke:pull
+          shot m6c-loke-hel --demo=loke --boss-move=loke:nova#1
+          shot m6c-loke-line --demo=loke --boss-move=loke:line
 
       # The farmer works a farm of its own (a second in-memory server) in a window under Xvfb and takes pictures at the
       # moments the owner asked for: watering, the bag and a chest open, a fish biting, a wild animal petted (M4b); and

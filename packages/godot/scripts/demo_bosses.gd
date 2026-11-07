@@ -8,7 +8,8 @@ extends DemoFight
 ## without code. Nothing here is a rule: the real fight is the server's.
 ##
 ## For pictures: `--boss-move=<species>:<move>` holds one move's mark on the floor about 70 % ready, and
-## `--boss-move=<species>:<move>:after` holds what it leaves behind (the ice block, the burning ground, the helpers).
+## `--boss-move=<species>:<move>:after` holds what it leaves behind (the ice block, the burning ground, the helpers);
+## `<move>#1` is the second move of that kind (a boss with two novas).
 
 var quit_when_done := false ## `--once`: leave the program when the show has played (the CI run)
 var speed := 1.0 ## the show runs this many times faster (`--once` in CI: 3): show time, and the warning times of the marks
@@ -302,10 +303,29 @@ func _helper(species: String, x: float, y: float) -> void:
 	_spare += 1
 	_helpers.append(_spare)
 	var a := {"id": _spare, "species": species, "x": x, "y": y, "facing": "down", "moving": false, "name": Data.mob_name(species)}
+	# on Bifrost the server draws every monster but the bosses as an illusion (sagamap.ts spawnSagaMob: `variant: 1`)
+	var illusion := bool(Data.dungeon(_dungeon_id()).get("illusions", false)) and Data.boss(species).is_empty()
+	if illusion:
+		a["variant"] = 1
 	world.model.areas.get(_area, {}).get("animals", {})[str(_spare)] = a
 	_changes([{"t": "animal", "id": _spare, "animal": a, "area": _area}])
 	_changes([{"t": "fx", "kind": "poof", "x": x, "y": y, "area": _area}])
 	_expect_actor(_spare, true, "a helper (%s) called" % species)
+	if illusion:
+		# ...and the client draws it as the ghostly sheet, not as the ordinary creature
+		var hid := _spare
+		_pending.append([4, func() -> void:
+			_checks += 1
+			var actor: Variant = world._actors.get("a:" + str(hid))
+			var want := "mob_%s_v1" % species
+			if actor == null or str(actor.sheet_name) != want:
+				_fails += 1
+				print("bosses: FAIL the illusion %s is drawn as '%s', not '%s'" % [species, "nothing" if actor == null else str(actor.sheet_name), want])])
+
+
+## The id of the dungeon being played (`saga:<id>`).
+func _dungeon_id() -> String:
+	return _area.trim_prefix("saga:")
 
 
 func _warp(id: int, x: float, y: float) -> void:
@@ -329,7 +349,7 @@ func _check_motes() -> void:
 	if g.length() > 1.0:
 		_fails += 1
 		print("bosses: FAIL the %s motes are pulled by gravity %s" % [kind, str(g)])
-	if kind in ["embers", "bubbles", "spores"]:
+	if kind in ["embers", "bubbles", "spores", "stars"]:
 		_checks += 1
 		if g.y <= 0.0:
 			_fails += 1
@@ -389,10 +409,18 @@ func _hold(spec: String) -> void:
 	var move := parts[1] if parts.size() > 1 else ""
 	var after := parts.size() > 2 and parts[2] == "after"
 	var b := Data.boss(sp)
+	# `nova#1`: the second move of that kind (Loke has two novas, Snöstorm and Helskriket); plain `nova` is the first
+	var nth := 0
+	if move.contains("#"):
+		nth = int(move.get_slice("#", 1))
+		move = move.get_slice("#", 0)
 	var mv: Dictionary = {}
+	var seen := 0
 	for m in b.get("moves", []):
 		if str(m.get("move", "")) == move:
-			mv = m
+			if seen == nth:
+				mv = m
+			seen += 1
 	if mv.is_empty() or not _ids.has(sp):
 		push_error("demo_bosses: no move %s for %s here" % [move, sp])
 		return

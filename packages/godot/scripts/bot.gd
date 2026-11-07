@@ -47,7 +47,7 @@ const FAR_TILES := 7.0 ## farther from the pack than this, the bot walks a path 
 var _report := {
 	"name": "", "ok": false, "phase": "", "seconds": 0.0, "casts_sent": 0, "casts_acked": 0, "spells_sent": {}, "spells_acked": {},
 	"others_casts": 0, "others": {}, "monsters_beaten": [], "hits_taken": 0, "damage_taken": 0, "hits_dealt": 0, "damage_dealt": 0,
-	"route": [], "arrived_via_arch": false, "dev_sent": false, "zones_seen": 0, "stepped_out": 0, "fell": 0, "hearts": [], "mob_hp": [], "bar_samples": 0, "rises": [], "errors": [], "packs_beaten": 0, "area": "",
+	"route": [], "arrived_via_arch": false, "dev_sent": false, "zones_seen": 0, "stepped_out": 0, "fell": 0, "hearts": [], "mob_hp": [], "bar_samples": 0, "ghosts": 0, "solid": 0, "rises": [], "errors": [], "packs_beaten": 0, "area": "",
 }
 
 
@@ -113,12 +113,12 @@ func _error(text: String) -> void:
 
 func _login() -> void:
 	_phase = "login"
-	var gate: Dictionary = await _api.gate()
+	var gate: Dictionary = await _api.request_json_retrying(HTTPClient.METHOD_GET, "/api/gate")
 	if not bool(gate.get("ok", false)) or str(gate.get("body", {}).get("gate", "")) != "ok":
 		_error("gate: %s" % str(gate))
 		_finish()
 		return
-	var list: Dictionary = await _api.players()
+	var list: Dictionary = await _api.request_json_retrying(HTTPClient.METHOD_GET, "/api/players")
 	var id := ""
 	if list.get("body") is Array:
 		for p in list["body"]:
@@ -178,6 +178,14 @@ func _sample_bars() -> void:
 			continue
 		seen[id] = true
 		_report["bar_samples"] += 1
+		# Loke's illusions (Bifrost): every monster but the bosses must be drawn as its ghostly sheet, and nothing else may be
+		var rec: Dictionary = world.model.areas.get(world.model.my_area_key(), {}).get("animals", {}).get(id, {})
+		var sp := str(rec.get("species", ""))
+		if bool(Data.dungeon(dungeon_id).get("illusions", false)) and not Data.mob(sp).is_empty() and Data.boss(sp).is_empty():
+			if str((world._actors[key] as Actor).sheet_name).ends_with("_v1"):
+				_report["ghosts"] = int(_report["ghosts"]) + 1
+			else:
+				_report["solid"] = int(_report["solid"]) + 1
 		if _bar_prev.has(id) and k > float(_bar_prev[id]) + 0.0005 and not _healed(id):
 			_rose("bar", id, float(_bar_prev[id]), k)
 		_bar_prev[id] = k

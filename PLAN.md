@@ -194,7 +194,7 @@ sagafrön and the Yggdrasil upgrades, färdkost and companions, the arch and the
 companion for solo play. All four classes. 10–14 evenings. Done when a chapter can be run three times and feels
 different each time, and a solo run is winnable.
 
-**M6. The saga, chapter by chapter.** *(M6a done 2026-11-06: the generic dungeon look table and chapters 2-4, Frostjättens borg, Surts smedja and Helheim, with their creatures, bosses and every boss move on screen, bot-checked in CI; M6b done 2026-11-07: Svartalfheims gruvor, Havsormens tempel and Alvernas lund the same way, and the export job's two long bot runs now play side by side; next M6c: Fenrisklyftan and Bifrost, and the balance pass.)* Port the remaining eight dungeons as zone sets and all bosses, in chapter order,
+**M6. The saga, chapter by chapter.** *(M6a done 2026-11-06: the generic dungeon look table and chapters 2-4, Frostjättens borg, Surts smedja and Helheim, with their creatures, bosses and every boss move on screen, bot-checked in CI; M6b done 2026-11-07: Svartalfheims gruvor, Havsormens tempel and Alvernas lund the same way, and the export job's two long bot runs now play side by side; M6c done 2026-11-07: Fenrisklyftan and Bifrost the same way, with Loke's ghostly illusions, models for their decor and the saga's ending checked on screen. **M6 is done:** all nine dungeons and all their bosses are in the client.)* Port the remaining eight dungeons as zone sets and all bosses, in chapter order,
 one per one or two evenings, with the existing bot balance pass rerun on each. 12–18 evenings.
 
 **M7. The alive world.** Wind on foliage, weather with the existing `weather.ts` states, day and night lighting,

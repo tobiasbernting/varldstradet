@@ -733,6 +733,7 @@ func _make_motes() -> void:
 	var colour := Color(1, 1, 1, 0.8)
 	var life := 6.0
 	var additive := false
+	var stars_ramp := false
 	match kind:
 		"snow":
 			# slow flakes falling through the cold air
@@ -788,6 +789,36 @@ func _make_motes() -> void:
 			life = 8.0
 			additive = true
 			budget = budget / 2
+		"gale":
+			# Fenrisklyftan: a gale driving the snow hard and low sideways (it settles very slowly: gravity is small and explicit)
+			quad.size = Vector2(0.14, 0.04)
+			pm.direction = Vector3(1.0, -0.12, 0.25)
+			pm.gravity = Vector3(0.0, -0.2, 0.0)
+			pm.spread = 12.0
+			pm.initial_velocity_min = 2.4
+			pm.initial_velocity_max = 4.2
+			colour = Color(0.88, 0.94, 1.0, 0.7)
+			life = 4.0
+			additive = true
+		"stars":
+			# Bifrost: coloured stars drifting up and twinkling through the rainbow (a colour ramp over each star's life)
+			quad.size = Vector2(0.11, 0.11)
+			pm.direction = Vector3(0.1, 1.0, 0.1)
+			pm.gravity = Vector3(0.0, 0.05, 0.0) # a star drifts up
+			pm.spread = 60.0
+			pm.initial_velocity_min = 0.1
+			pm.initial_velocity_max = 0.4
+			colour = Color(1, 1, 1, 0.85)
+			life = 7.0
+			additive = true
+			budget = budget / 2
+			var ramp := Gradient.new()
+			ramp.offsets = PackedFloat32Array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+			ramp.colors = PackedColorArray([Color(1.0, 0.55, 0.65, 0.0), Color(1.0, 0.85, 0.5, 1.0), Color(0.6, 1.0, 0.7, 1.0), Color(0.5, 0.85, 1.0, 1.0), Color(0.8, 0.6, 1.0, 1.0), Color(1.0, 0.6, 0.9, 0.0)])
+			var tex := GradientTexture1D.new()
+			tex.gradient = ramp
+			pm.color_ramp = tex
+			stars_ramp = true
 		_:
 			# wisps: soft pale-green lights drifting sideways, slowly
 			quad.size = Vector2(0.16, 0.16)
@@ -808,6 +839,8 @@ func _make_motes() -> void:
 		m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 		m.albedo_texture = DungeonProps._glow_texture()
 	m.albedo_color = colour
+	if stars_ramp:
+		m.vertex_color_use_as_albedo = true
 	quad.material = m
 	var p := GPUParticles3D.new()
 	p.name = "Motes"

@@ -1,6 +1,6 @@
 class_name ZoneProps
 extends RefCounted
-## The decor of a run's zones (the seven biomes of GAME.md section 1.1 borrow the look of dungeons whose decor the dungeon
+## The decor of the saga's dungeons that the dungeon view has no hand-made models for, and of a run's zones (the seven biomes of GAME.md section 1.1 borrow the look of dungeons whose decor the dungeon
 ## view has no models for yet): gravestones, skull piles, mine carts, coral, glowing mushrooms, ice crystals, braziers and
 ## the rest, made in code with the farm's mesh builder (farm_mesh.gd, vertex colours in the ART.md palette) and drawn with one
 ## shared vertex-colour material that the dungeon view owns. Things that shine have a flat glow (an additive billboard) and, on
@@ -29,6 +29,9 @@ const LIGHTS := {
 	"saga_icecrystal": [Color(0.65, 0.88, 1.0), 3.4, 0.8, 0.8, 0.1],
 	"saga_brazier": [Color(1.0, 0.6, 0.25), 5.0, 1.8, 1.1, 0.35],
 	"saga_lavacrack": [Color(1.0, 0.4, 0.15), 2.8, 0.9, 0.3, 0.3],
+	# M6c: Bifrost's two lights
+	"saga_rainbowshard": [Color(0.9, 0.8, 1.0), 3.4, 0.9, 0.9, 0.2],
+	"saga_starlamp": [Color(1.0, 0.85, 0.95), 3.6, 1.0, 1.7, 0.2],
 }
 
 
@@ -224,6 +227,76 @@ static func make(kind: String, v: int, mat: Material) -> Node3D:
 				b.box(Vector3(cos(a) * 0.18, 0.012, sin(a) * 0.18), Vector3(0.7, 0.014, 0.07), heat, 0.0, -a)
 			b.box(Vector3(0.0, 0.015, 0.0), Vector3(0.2, 0.014, 0.2), Color("#ffd870"), 0.0, turn)
 			node.add_child(glow(Color(1.0, 0.45, 0.15), 1.3, 0.25, 0.9))
+		"saga_chain":
+			# M6c, Fenrisklyftan: Gleipner's broken chain, flat on the snow: heavy links in a line that ends in an open shackle
+			for i in range(7):
+				var at := Vector3(-0.42 + 0.14 * i + (0.06 if i > 3 else 0.0), 0.04, sin(float(i) * 1.7 + turn) * 0.05)
+				b.box(at, Vector3(0.16, 0.06, 0.1) if i % 2 == 0 else Vector3(0.1, 0.06, 0.16), IRON.darkened(0.15), 0.0, 0.25 * (i % 3), IRON.lightened(0.12))
+			b.cylinder(Vector3(-0.56, 0.0, 0.0), 0.12, 0.12, 0.08, 8, IRON.darkened(0.3), IRON, 0.0)
+			b.box(Vector3(0.58, 0.04, 0.1), Vector3(0.16, 0.05, 0.05), IRON, 0.0, 0.7)
+		"saga_icefang":
+			# a tusk of ice standing out of the floor, with a smaller one beside it
+			b.cone(Vector3.ZERO, 0.32, 1.5, 6, ICE.darkened(0.2), ICE.lightened(0.5), 0.0, 0.0, 0.3)
+			b.cone(Vector3(0.38, 0.0, 0.1), 0.2, 0.8, 5, ICE.darkened(0.15), ICE.lightened(0.4), 0.0, 0.0)
+			b.blob(Vector3(0.0, 0.07, 0.0), Vector3(0.6, 0.12, 0.5), 7, 2, WHITE.darkened(0.15), WHITE, 0.0, 0.06, 4.0)
+			node.add_child(glow(Color(0.7, 0.9, 1.0), 1.0, 0.8, 0.7))
+		"saga_wolfstatue":
+			# a stone wolf on a plinth, head raised to howl
+			b.box(Vector3(0.0, 0.14, 0.0), Vector3(0.8, 0.28, 0.5), STONE_DARK, 0.0, 0.0, STONE)
+			b.blob(Vector3(0.0, 0.52, 0.0), Vector3(0.34, 0.2, 0.15), 7, 3, STONE, STONE.lightened(0.1), 0.0, 0.03, 2.0)
+			for sx in [-0.22, 0.22]:
+				for sz in [-0.08, 0.08]:
+					b.box(Vector3(sx, 0.4, sz), Vector3(0.08, 0.24, 0.08), STONE, 0.0)
+			b.blade(Vector3(-0.3, 0.55, 0.0), Vector3(-0.5, 0.35, 0.0), 0.14, STONE, STONE.darkened(0.1), 0.0, 0.0)
+			b.blob(Vector3(0.34, 0.82, 0.0), Vector3(0.12, 0.12, 0.1), 6, 3, STONE, STONE.lightened(0.12), 0.0, 0.0)
+			b.cone(Vector3(0.36, 0.84, 0.0), 0.07, 0.3, 5, STONE, STONE.lightened(0.1), 0.0, 0.02, 0.0)
+			b.cone(Vector3(0.28, 0.9, -0.05), 0.04, 0.12, 4, STONE_DARK, STONE, 0.0, 0.0)
+			b.cone(Vector3(0.28, 0.9, 0.05), 0.04, 0.12, 4, STONE_DARK, STONE, 0.0, 0.0)
+			b.blade(Vector3(0.2, 0.6, 0.0), Vector3(0.34, 0.8, 0.0), 0.2, STONE, STONE.lightened(0.08), 0.0, 0.0)
+		"saga_bonepile":
+			# flat: a heap of long bones and a rib arch, nothing a hero would trip on
+			for i in range(5):
+				var a := TAU * float(i) / 5.0 + turn
+				b.box(Vector3(cos(a) * 0.15, 0.03 + 0.02 * (i % 2), sin(a) * 0.15), Vector3(0.46, 0.05, 0.06), BONE.darkened(0.08 * (i % 2)), 0.0, a)
+			for i in range(3):
+				b.box(Vector3(0.0, 0.1, -0.1 + 0.1 * i), Vector3(0.05, 0.14, 0.04), BONE, 0.0)
+			b.blob(Vector3(0.28, 0.07, 0.12), Vector3(0.1, 0.08, 0.09), 6, 3, BONE.darkened(0.2), BONE.lightened(0.05), 0.0, 0.05, 3.0)
+		"saga_rainbowshard":
+			# a cluster of crystals, each a colour of the rainbow, leaning on each other
+			var cols: Array = [Color("#ff7a9a"), Color("#ffc35a"), Color("#7fe08a"), Color("#6ac8ff"), Color("#b08aff")]
+			for i in range(5):
+				var a := TAU * float(i) / 5.0 + turn
+				var r := 0.0 if i == 0 else 0.2
+				var c: Color = cols[(i + v) % cols.size()]
+				b.cone(Vector3(cos(a) * r, 0.0, sin(a) * r), 0.12 if i == 0 else 0.09, 0.95 if i == 0 else 0.35 + 0.1 * i, 5, c.darkened(0.25), c.lightened(0.5), 0.0, 0.0, a)
+			node.add_child(glow(Color(0.9, 0.8, 1.0), 1.0, 0.65, 1.0))
+		"saga_mirror":
+			# a tall mirror in a gold frame, the glass pale and bright (Loke's hall of mirrors)
+			b.box(Vector3(0.0, 0.9, 0.0), Vector3(0.7, 1.4, 0.07), GOLD.darkened(0.2), 0.0, 0.0, GOLD)
+			b.box(Vector3(0.0, 0.9, 0.04), Vector3(0.56, 1.26, 0.03), Color("#d8ecff"), 0.0, 0.0, Color("#f4faff"))
+			b.box(Vector3(0.0, 1.62, 0.0), Vector3(0.5, 0.14, 0.07), GOLD, 0.0)
+			b.blob(Vector3(0.0, 1.76, 0.0), Vector3(0.1, 0.1, 0.05), 6, 3, GOLD, GOLD.lightened(0.3), 0.0, 0.0)
+			for sx in [-0.28, 0.28]:
+				b.box(Vector3(sx, 0.08, 0.0), Vector3(0.12, 0.16, 0.3), GOLD.darkened(0.3), 0.0)
+			node.add_child(glow(Color(0.8, 0.9, 1.0), 0.9, 0.95, 0.6))
+		"saga_starlamp":
+			# a thin post with a four-pointed star on top, gold and rose, glowing
+			b.cylinder(Vector3.ZERO, 0.05, 0.035, 1.5, 6, GOLD.darkened(0.3), GOLD, 0.0)
+			b.box(Vector3(0.0, 0.03, 0.0), Vector3(0.3, 0.06, 0.3), STONE_DARK, 0.0, 0.0, STONE)
+			for k in range(2):
+				b.box(Vector3(0.0, 1.7, 0.0), Vector3(0.34, 0.08, 0.06) if k == 0 else Vector3(0.08, 0.34, 0.06), Color("#ffe6a0") if k == 0 else Color("#ffc0d8"), 0.0)
+			b.box(Vector3(0.0, 1.7, 0.0), Vector3(0.14, 0.14, 0.08), Color("#fff6d8"), 0.0, 0.0)
+			node.add_child(glow(Color(1.0, 0.85, 0.95), 1.0, 1.7, 1.2))
+		"saga_runepillar":
+			# a stone pillar with glowing blue-white runes up its face
+			b.box(Vector3(0.0, 0.1, 0.0), Vector3(0.62, 0.2, 0.62), STONE_DARK, 0.0, 0.0, STONE)
+			b.box(Vector3(0.0, 0.85, 0.0), Vector3(0.42, 1.3, 0.42), STONE, 0.0, 0.0, STONE.lightened(0.1))
+			b.box(Vector3(0.0, 1.55, 0.0), Vector3(0.54, 0.14, 0.54), STONE_DARK, 0.0, 0.0, STONE)
+			for i in range(3):
+				var y := 0.5 + 0.35 * i
+				b.box(Vector3(0.0, y, 0.215), Vector3(0.22, 0.05, 0.02), Color("#9ef0ff"), 0.0)
+				b.box(Vector3(0.0, y + 0.1, 0.215), Vector3(0.05, 0.14, 0.02), Color("#9ef0ff"), 0.0)
+			node.add_child(glow(Color(0.6, 0.9, 1.0), 0.8, 0.85, 0.7))
 		_:
 			return null
 	node.add_child(_node(b.build(), mat))

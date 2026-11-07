@@ -300,7 +300,10 @@ func hero_sheet(cls: String, skin: String) -> String:
 
 
 ## The sheet of a creature, "" when it has none yet.
-func mob_sheet(species: String) -> String:
+func mob_sheet(species: String, variant := 0) -> String:
+	# (variant 1 is Loke's illusions on Bifrost: the same creature, ghostly; a species with no such sheet is drawn as itself)
+	if variant > 0 and not sheet("mob_%s_v%d" % [species, variant]).is_empty():
+		return "mob_%s_v%d" % [species, variant]
 	var s := "mob_" + species
 	return s if not sheet(s).is_empty() else ""
 
