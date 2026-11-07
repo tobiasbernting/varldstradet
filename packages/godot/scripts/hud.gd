@@ -656,8 +656,9 @@ func show_banner(text: String, sub: String, kind := "") -> void:
 
 
 ## One toast line. Toasts that come in a burst (within a moment of the one on screen: the end of a chapter sends an
-## achievement, a title and another achievement together) are shown one after the other instead of each wiping the last;
-## a toast that comes later replaces what is there, as before.
+## achievement, a title and another achievement together) are shown one after the other instead of each wiping the last,
+## and so is any toast that comes while such a queue is still playing (another player's broadcast must not drop the
+## rest of it); a toast that comes when nothing waits replaces what is there, as before. The queue holds at most 8.
 func show_toast(text: String) -> void:
 	# the same words again: nothing to add (the timer is renewed when nothing waits behind it, and a burst's queue is kept)
 	if _toast_t > 0.0 and toast_label.text == text:
@@ -666,7 +667,9 @@ func show_toast(text: String) -> void:
 		return
 	if _toast_queue.has(text):
 		return
-	if _toast_t > 0.0 and toast_label.text != text and Time.get_ticks_msec() - _toast_born < 400 and _toast_queue.size() < 5:
+	if _toast_t > 0.0 and (not _toast_queue.is_empty() or Time.get_ticks_msec() - _toast_born < 400):
+		if _toast_queue.size() >= 8:
+			return # (a queue this long is a flood: the newest words are dropped rather than the ones waiting)
 		_toast_queue.append(text)
 		_toast_t = minf(_toast_t, TOAST_BURST_SECONDS)
 		return
