@@ -6,6 +6,8 @@ extends Control
 ## palette's characters ("." is paper); the window owns the colour and the tool and reads `cells` when it is done.
 
 signal changed
+## The mouse wheel over the canvas: +1 / -1 steps through the colours (the window owns the colour).
+signal colour_step(d: int)
 
 var cells: Array = []
 var cell := 20
@@ -88,7 +90,10 @@ func paint_at(c: Vector2i, erase := false) -> void:
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var b := event as InputEventMouseButton
-		if b.button_index == MOUSE_BUTTON_LEFT or b.button_index == MOUSE_BUTTON_RIGHT:
+		if b.pressed and (b.button_index == MOUSE_BUTTON_WHEEL_DOWN or b.button_index == MOUSE_BUTTON_WHEEL_UP):
+			colour_step.emit(1 if b.button_index == MOUSE_BUTTON_WHEEL_DOWN else -1)
+			accept_event()
+		elif b.button_index == MOUSE_BUTTON_LEFT or b.button_index == MOUSE_BUTTON_RIGHT:
 			_down = b.pressed
 			_last = Vector2i(-1, -1)
 			if b.pressed:

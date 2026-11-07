@@ -9,7 +9,8 @@ extends GameWindow
 ## toast, which the HUD shows; this window only offers what I can pay for and redraws when my record changes.
 ## `shown` holds the numbers the rows say, by item, for the checks: {level, now, next, cost (text), can}.
 
-const FAR_TILES := 5.0
+## The server's near-NPC radius (nearNpc in shared/src/sagasim.ts: 4 tiles): further from Stina it refuses, so the window closes.
+const FAR_TILES := 4.0
 
 var tab := "upgrade"
 var shown: Dictionary = {}

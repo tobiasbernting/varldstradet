@@ -853,8 +853,8 @@ Smed-Stina's forge (the rules are the server's: `forgeGear`, `craftGear`, `forge
 - **Window.** `ForgeWindow` (`forge_window.gd`, a `GameWindow`) is opened by the "🔨 Smedjan" button in Stina's talk window (both its front and its chat page;
   `TalkWindow.forge_asked`), like the browser's `forgeButton`. Two tabs: *Förbättra* (a row per piece I wear or carry: name with "+n", rarity, slot, worn,
   five stars, now → next, the cost as coloured text, the button, off when the cost cannot be paid or at +5) and *Smid* (the six starter pieces, each once). Every
-  row's control is a `Button` (keyboard, mouse, d-pad and A work as in every `GameWindow`); the body scrolls and the panel fits the text size. Walking more than five tiles from
-  Stina closes it. `shown` keeps the numbers each row says, by item, for the check.
+  row's control is a `Button` (keyboard, mouse, d-pad and A work as in every `GameWindow`); the body scrolls and the panel fits the text size. Walking more than four tiles from
+  Stina (the server's own radius) closes it. `shown` keeps the numbers each row says, by item, for the check.
 - **Refusals** are the server's toasts (not near her, not owned, short of material or kronor); the window does not repeat them.
 - **Gear window.** A forged piece shows "Järnyxa +2" and its stars; the sums (`Gear.stats`) already counted the forge level.
 - **Check and `dev kit`.** The farmer bot's new `smed` step (`farm_bot_home.gd`, `smedjan()`) takes `{t:'dev', a:'kit'}` (DEV_TELEPORT only: 20 stone, 10 gold,
@@ -875,7 +875,7 @@ The server already did all of it (`paint` makes a painted tavla of a paper, `dat
   or the keyboard and the pad (the cursor moves with the `ui_*` actions, accept paints and, held, draws a line; off the canvas's edge the focus goes on to the
   colours, the tools and the buttons below; the shoulder buttons step through the colours). The cells are the window's, so a refresh of my record (which rebuilds
   every other window) leaves a half-drawn picture alone. "Klar" sends `{t:'paint', pixels}` (an empty drawing is refused here with the server's words and again
-  by the server); "Avbryt" and Escape throw it away. The canvas's cell size follows the screen height (10–22 px) so the whole picture is on screen at 175 % text.
+  by the server); "Avbryt" and Escape throw it away. The canvas's cell size follows the screen height (10–20 px) so the whole picture is on screen at 175 % text.
 - **Bag.** A painted tavla's slot shows its framed picture (`ItemSlot._art`).
 - **Frames.** `painting` is a node in `farm_assets.gd` now (it was a baked frame in a chunk's MultiMesh): `farm_view.gd` `_picture` puts a `Picture` quad with the
   painting's texture in front of the frame (nearest-filtered, shaded). `FarmView.picture_texture(id)` gives the texture to the check.

@@ -65,6 +65,7 @@ func _fill() -> void:
 	top.add_theme_constant_override("separation", 18)
 	_body.add_child(top)
 	canvas = PaintCanvas.new()
+	canvas.colour_step.connect(_step_colour)
 	top.add_child(canvas)
 	var side := VBoxContainer.new()
 	side.add_theme_constant_override("separation", 10)
