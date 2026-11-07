@@ -276,6 +276,44 @@ on every preset. The windows are rows of `Button`s built when a window opens or 
 frame; the camera's move into the room is one `Transform3D` a frame while it eases. (owner: paste the M4 Air's three lines for
 `--scene=house` and `--scene=village` here: `(owner: paste here)`.)
 
+## The alive world (M7a)
+
+No assets were added (nothing bought, nothing downloaded): the wind, the water and the ambient things are shaders
+(`assets/shaders/farm_prop`, `farm_water`, `farm_water_fx`, `ambient_*.gdshader`) and one script (`ambient_view.gd`);
+the chimney spots were read from the highest vertices of the KayKit meshes already here. Presets (`quality.gd`):
+
+| | Låg | Mellan | Hög |
+| --- | --- | --- | --- |
+| Wind | level 1: the old crown sway | 2: gusts, grass, crops, bushes, pines | 3: + leaf flutter |
+| Water | flat, no screen read | waves, foam, reflection (16 steps) | + crest foam, reflection (28 steps) |
+| Fireflies · butterflies · leaves | 0 · 0 · 0 | 28 · 9 · 36 | 56 · 16 · 80 |
+| Smoke (per chimney) · mist · window light | 0 · 0 · 0 | 7 · 9 · pools | 12 · 18 · flickering pools |
+
+### Measured (M7a)
+
+Sandbox only (Mesa llvmpipe under Xvfb, 1280×720; frame times are software and mean little, so read them as before/after
+ratios). `apt-get update && apt-get install mesa-vulkan-drivers` gives the sandbox a Vulkan driver (lavapipe), so Forward+
+runs there; without it Godot falls back to Compatibility (OpenGL), which is what every earlier sandbox bench used. Both are
+below. "Before" is main at the start of this work, run interleaved with "after". Average frame ms (1 % low in brackets):
+
+| Compatibility (OpenGL, llvmpipe) | before | after |
+| --- | --- | --- |
+| Farm Låg (3 runs each) | 19.7 | 20.1 (+1.7 %) |
+| Village Låg (2 runs each) | 18.8 | 18.7 |
+| Farm Mellan, as a player sees it today (autumn day: leaves, smoke) | 44.8 | 46.0 (+2.7 %) |
+| Village Mellan, natural | 41.0 | 41.4 |
+| Farm Hög, natural | 55.6 | 57.7 |
+| Village Hög, natural | 53.5 | 50.9 (noise) |
+| Farm Mellan, everything on (`--alive=all`, night, summer) | 44.7 | 49.5 (+11 %) |
+| Village Mellan, everything on | 43.7 | 45.9 (+5 %) |
+| Farm Hög, everything on | 53.9 | 63.5 (+18 %) |
+| Village Hög, everything on | 54.7 | 60.4 (+10 %) |
+
+Forward+ (lavapipe), where the swapchain quantises Hög to 133 ms so only Låg and Mellan say anything: Farm Låg 52.7 → 51.4,
+Village Låg 48.4 → 48.3, Farm Mellan natural 104.8 → 109.1, Village Mellan natural 97.8 → 96.9, Farm Mellan everything on
+104.9 → 109.4, Village Mellan everything on 97.5 → 102.8. Draw calls rise by 2–7 (the ambient MultiMeshes, one each), primitives
+by under 1 % (an unrelated rise on Hög in the village is the same ±1 %), Låg's draw calls and primitives are unchanged.
+
 ## The fight on screen (M3b)
 
 - **Telegraphs** are flat shapes 4.5 cm over the floor: a dim red base in the zone's full size, a brighter fill that

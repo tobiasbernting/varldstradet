@@ -132,6 +132,7 @@ been tested on the MacBook yet; PR 11, 12, 13 and 14 each carry a "what to check
   packs work (`KayKit-Game-Assets`, `Evolis-Work/kenney-castle-kit`). Headless Godot runs and Xvfb + Mesa screenshots
   work (Compatibility or lavapipe Vulkan only, so frame times there mean nothing). Docker Hub pulls are rate-limited;
   CI builds the image.
+- The sandbox's Xvfb has no Vulkan driver by default (Godot silently falls back to Compatibility/OpenGL): `apt-get update && apt-get install -y mesa-vulkan-drivers` adds lavapipe and Forward+ renders there (found in M7a).
 - A fresh checkout needs one import before the game runs: `godot --headless --path packages/godot --import`, and
   since PR 14 also `packages/godot/tools/fetch-webrtc.sh` for voice (the client runs without it, without voice).
 - The server needs `PARENT_PASSWORD` (12+ chars) or `ACCESS=open`, and dies if `DATABASE_URL` points at a Postgres

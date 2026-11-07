@@ -6,6 +6,9 @@ extends Node
 ##   godot --path packages/godot -- --bench            (all three presets)
 ##   godot --path packages/godot -- --bench=mellan     (one: lag, mellan or hog)
 ##   godot --path packages/godot -- --bench=mellan --scene=farm   (the farm, forest, house or village; the default is the crypt's fight)
+##   godot --path packages/godot -- --bench --scene=village --alive=all --time=0.9 --year=summer   (M7a: the alive world all on at once:
+##     wind, water, fireflies, butterflies, leaves, chimney smoke, dawn mist and window light, whatever the hour and season; `--year` and
+##     `--time` set the season of the year and the hour; without --alive=all only what is in season now runs, which is what a player sees)
 ## On the farm the hero walks to and fro along the path, so chunks and shadows are exercised.
 ## (or the exported build with `-- --bench`), and send the lines back. `--out=<file>` also writes them to a file.
 ##
@@ -172,6 +175,11 @@ func _report() -> void:
 	_results.append(line)
 	_results.append(counters)
 	_results.append(size)
+	if world.is_outdoor() and world.farm.ambient != null:
+		var spec := Quality.spec()
+		var alive := "  %s alive world: wind %d, water %d, window light %d; on screen now: %s" % [name, int(spec.get("wind", 0)), int(spec.get("water", 0)), int(spec.get("window_light", 0)), str(world.farm.ambient.counts())]
+		_say(alive)
+		_results.append(alive)
 
 
 func _finish() -> void:

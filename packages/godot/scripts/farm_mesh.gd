@@ -9,6 +9,10 @@ var _v := PackedVector3Array()
 var _n := PackedVector3Array()
 var _c := PackedColorArray()
 var _uv := PackedVector2Array()
+## The UV's y is the *sway weight* (farm_prop.gdshader): 0 for a tree's crown or anything stiff (the crown has its own
+## gentler sway), 1 for grass, flowers, ferns, reeds and crops, which lean with the wind from the foot up, 0.5 for bushes.
+## Set it on the builder before the plant's shapes are added.
+var sway := 0.0
 
 
 static func lin(c: Color, fol := 0.0) -> Color:
@@ -27,7 +31,7 @@ func tri(a: Vector3, b: Vector3, c: Vector3, ca: Color, cb: Color, cc: Color, fo
 		_v.append(p[0])
 		_n.append(n)
 		_c.append(lin(p[1], 1.0))
-		_uv.append(Vector2(fol, 0.0))
+		_uv.append(Vector2(fol, sway))
 
 
 func quad(a: Vector3, b: Vector3, c: Vector3, d: Vector3, col: Color, fol := 0.0) -> void:

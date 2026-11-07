@@ -9,6 +9,8 @@ extends Node
 ##                       --time=0.7 --weather=rain --season=jul set the sky, --at=x,y where to stand
 ##   --bench[=preset]    the demo scene on each quality preset (or one: lag, mellan, hog) in steady state, printing
 ##                       frame times, draw calls, lights and the render timings (bench.gd)
+##   --quality=lag|mellan|hog   (with --demo) this run's preset, not saved; --alive=all (M7a) turns the alive world's fireflies, butterflies,
+##                       leaves, smoke and mist all on whatever the hour and season; --year=spring|summer|autumn|winter sets the season of the year
 ##   --farmbot           a headless player that farms against a local server (farm_bot.gd, M4b)
 ##   --runbot            a headless player that walks to the färdport, starts (or joins) a run and fights through its zones (run_bot.gd, M5c)
 ##   --voicecheck        Röstprat's codec, rules and (with the webrtc extension) a connection between two peers (voice_check.gd)
