@@ -308,7 +308,7 @@ Köpingen as a Viking market town (2026-11-07): cobblestone streets, flagstone p
 hanging signs, the Vägvisare signposts and iron lanterns, and the horse cart, the riding horse and Diligensen instead of cars and a bus
 ([the main street](packages/godot/docs/koepingen-street.png), [at night](packages/godot/docs/koepingen-street-night.png),
 [the houses and shops](packages/godot/docs/koepingen-houses.png), [the square](packages/godot/docs/koepingen-square.png),
-[the station](packages/godot/docs/koepingen-station.png), [what it looked like before](packages/godot/docs/koepingen-before.png) and
+[the station](packages/godot/docs/koepingen-station.png), [the street on the Låg preset](packages/godot/docs/koepingen-street-lag.png), [what it looked like before](packages/godot/docs/koepingen-before.png) and
 [the browser's art for the same spot beside the native client](packages/godot/docs/koepingen-browser-vs-native.png), the left half drawn by the browser's own art code, not a screenshot of the running browser).
 
 ![Köpingen's main street in the native client](packages/godot/docs/koepingen-street.png)
