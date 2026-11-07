@@ -36,13 +36,21 @@ import {
   RUN_OFFLINE_END_MS,
   RUN_PARTY_MAX,
   RUN_PARTY_MAX_LONGHALL,
+  companionClass,
   RUN_PICK_MS,
   RUN_SEEDS,
   RUN_VICTORY_MS,
   RUN_WARN_MS,
   SMITHY_EFFECT,
   SOLO_MERCY,
+  SAGOANDAN,
   ZONES_PER_RUN,
+  RUN_LEVEL_LATT,
+  RUN_LEVEL_VANLIG,
+  LATT,
+  levelMuls,
+  parseRunLevel,
+  type RunLevel,
   addEffect,
   buffsOf,
   newRunSave,
@@ -76,6 +84,9 @@ import {
 } from './sim.ts';
 import { TILE, type PlayerState, type WorldObject, type WorldState } from './types.ts';
 
+/** The boss attacks Lätt allows: its first two, whatever a first run's plan has locked (the lock is Vanlig's variety). */
+export const lattMoves = (): number[] => Array.from({ length: LATT.bossMoves }, (_, k) => k);
+
 const tileOf = (v: number): number => Math.floor(v / TILE);
 
 // ---------------------------------------------------------------------------
@@ -87,6 +98,11 @@ export interface RunState {
   seed: number;
   plan: RunPlan;
   starter: string;
+  /** 0 Lätt, 1 Vanlig (GAME2.md 5.3). */
+  level: RunLevel;
+  /** The Sagoandans left (the star on the HUD), and the wipes they (or Lätt) have saved so far. */
+  spirit: number;
+  spiritUsed: number;
   phase: RunPhase;
   /** The map now (0..2 zones, 3 the boss) and its area key. */
   zone: number;
@@ -327,7 +343,7 @@ function pay(farm: WorldState, run: RunState, base: number | ((p: PlayerState) =
     if (n <= 0) continue;
     const bonus = (effectFor(farm, run, p).seeds ?? 0) + MODIFIER_SEEDS * run.plan.modifiers.length;
     // the bonuses are added exactly: whole seeds are paid and the remainder is carried to the next payment
-    const exact = n * (1 + bonus) + (run.carry[p.id] ?? 0);
+    const exact = n * (1 + bonus) * levelMuls(run.level).seeds + (run.carry[p.id] ?? 0);
     const amount = Math.floor(exact + 1e-9);
     run.carry[p.id] = exact - amount;
     if (amount <= 0) continue;
@@ -357,6 +373,9 @@ function snap(farm: WorldState, run: RunState): RunSnap {
     elapsed: Math.round(run.elapsed),
     max: RUN_MAX_MS,
     party: members(farm, run).map((p) => ({ id: p.id, name: p.name, ...(p.bot ? { bot: true as const } : {}) })),
+    level: run.level,
+    spirit: run.spirit,
+    spiritUsed: run.spiritUsed,
     runor: [...run.runor],
     earned: { ...run.earned },
   };
@@ -396,6 +415,8 @@ export interface StartOptions {
   replay?: boolean;
   companion?: boolean;
   fardkost?: string[];
+  /** 0 Lätt or 1 Vanlig (the default). */
+  level?: RunLevel;
 }
 
 const distTo = (p: PlayerState, tx: number, ty: number): number => Math.hypot(p.x - tx, p.y - ty) / TILE;
@@ -484,6 +505,9 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
     seed,
     plan,
     starter: p.id,
+    level: opts.level ?? RUN_LEVEL_VANLIG,
+    spirit: SAGOANDAN[opts.level ?? RUN_LEVEL_VANLIG],
+    spiritUsed: 0,
     phase: 'zone',
     zone: 0,
     key: '',
@@ -510,7 +534,7 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
     bring(farm, run, q, q.id === p.id && opts.fardkost ? opts.fardkost : undefined, out);
     runSaveOf(q).runs++;
   }
-  if (party.length === 1 && opts.companion !== false && unlocksOf(farm).longhall) hireCompanion(farm, run, p, out);
+  if (opts.companion !== false) hireCompanion(farm, run, party, out);
   RUNS.set(farm, run);
   out.push(...enterZone(farm, run, 0, ctx));
   for (const q of party) out.push(toast(q.id, RUN_T.started));
@@ -518,9 +542,11 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
 }
 
 /** The hired companion (Hirdmannen): a fighter the server runs with the test bots' brain, taking the class the player lacks. */
-function hireCompanion(farm: WorldState, run: RunState, human: PlayerState, out: Change[]): void {
-  const mine = human.saga!.cls!;
-  const cls: ClassId = mine === 'helare' ? 'vaktare' : 'helare';
+function hireCompanion(farm: WorldState, run: RunState, humansIn: PlayerState[], out: Change[]): void {
+  // one or two humans get the Hirdmannen, no longhouse needed (GAME.md section 6): the class the party lacks
+  const cls = companionClass(humansIn.map((q) => q.saga?.cls).filter((x): x is ClassId => !!x));
+  if (!cls) return;
+  const human = humansIn[0]!;
   const c = createPlayer(farm, COMPANION_NAME, { skin: '#c68642', hair: '#6b3e1d', hairStyle: 'short' });
   c.bot = true;
   c.online = true;
@@ -531,7 +557,8 @@ function hireCompanion(farm: WorldState, run: RunState, human: PlayerState, out:
   addItem(c.inventory, 'healing_potion', 3);
   run.companions.push(c.id);
   run.minds.set(c.id, newMind('careful', () => 0.5));
-  out.push(playerChange(c), toast(human.id, fmt(RUN_T.companion, { name: COMPANION_NAME })));
+  out.push(playerChange(c));
+  for (const q of humansIn) out.push(toast(q.id, fmt(RUN_T.companion, { name: COMPANION_NAME })));
 }
 
 function dismissCompanions(farm: WorldState, run: RunState, out: Change[]): void {
@@ -556,17 +583,26 @@ function enterZone(farm: WorldState, run: RunState, i: number, ctx: SimCtx): Cha
   const inst = world.saga!;
   // the mercy is for one human with the hired companion (two fighters), not for a lone player without one
   const solo = run.party.length === 1 && run.companions.length > 0;
+  const lvl = levelMuls(run.level);
+  const latt = run.level === RUN_LEVEL_LATT;
+  // Lätt: one more Sagoandan after each stop (a zone cleared)
+  if (latt && i > 0) run.spirit++;
+  // Lätt: the boss (and the zones' guards) use only their first two attacks
+  const moves = latt ? lattMoves() : i === ZONES_PER_RUN ? run.plan.moves : undefined;
   inst.run = {
     run: run.id,
     zone: i,
     name: z.name,
     intro: z.intro,
-    hpMul: z.hpMul * (solo ? SOLO_MERCY : 1),
-    dmgMul: z.dmgMul,
-    bossMul: z.bossMul * (solo ? SOLO_MERCY : 1),
+    hpMul: z.hpMul * (solo ? SOLO_MERCY : 1) * lvl.hp,
+    dmgMul: z.dmgMul * lvl.dmg,
+    bossMul: z.bossMul * (solo ? SOLO_MERCY : 1) * lvl.hp,
     sight: z.sight,
     leash: z.leash,
-    ...(i === ZONES_PER_RUN && run.plan.moves ? { moves: run.plan.moves } : {}),
+    ...(moves ? { moves } : {}),
+    ...(latt ? { warnMul: lvl.warn, levelHp: lvl.hp, soft: true } : {}),
+    spirit: run.spirit,
+    used: run.spiritUsed,
     buffs: {},
     wipeSub: RUN_T.wipeSub,
     required: z.required,
@@ -580,6 +616,7 @@ function enterZone(farm: WorldState, run: RunState, i: number, ctx: SimCtx): Cha
   run.paid = new Set([...run.paid].filter((k) => k.startsWith('x:')));
   run.waiting = [];
   refresh(farm, run);
+  if (latt && i > 0) for (const q of humans(farm, run)) out.push(toast(q.id, RUN_T.spiritGained));
   for (const p of members(farm, run)) {
     if (p.online) {
       placeIn(farm, p, key, inst.start.x, inst.start.y, 'up', out);
@@ -836,6 +873,13 @@ function watchZone(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
   if (!area || !inst) return [];
   const out: Change[] = [];
   const z = run.plan.zones[run.zone]!;
+  // the Sagoandans the fight has used (sagasim.ts counts them in the zone's link; the run keeps the totals)
+  const link = inst.run;
+  if (link && ((link.spirit ?? run.spirit) !== run.spirit || (link.used ?? run.spiritUsed) !== run.spiritUsed)) {
+    run.spirit = link.spirit ?? run.spirit;
+    run.spiritUsed = link.used ?? run.spiritUsed;
+    out.push(stateChange(farm, run));
+  }
   inst.packs.forEach((pk, i) => {
     const k = `${run.zone}:pack:${i}`;
     if (pk.dead && !run.paid.has(k)) {
@@ -875,7 +919,7 @@ function watchZone(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
   }
   if (inst.bossDown && run.phase === 'zone') out.push(...victory(farm, run, ctx));
   if (run.phase === 'victory' && run.victoryAt !== undefined && run.elapsed - run.victoryAt >= RUN_VICTORY_MS) return [...out, ...endRun(farm, run, 'win', ctx)];
-  if (inst.wipeAt !== undefined && ctx.now >= inst.wipeAt) return [...out, ...endRun(farm, run, 'wipe', ctx)];
+  if (inst.wipeAt !== undefined && ctx.now >= inst.wipeAt && !inst.run?.revive) return [...out, ...endRun(farm, run, 'wipe', ctx)];
   return out;
 }
 
@@ -920,7 +964,7 @@ export function endRun(farm: WorldState, run: RunState, outcome: RunOutcome, ctx
     sendHome(farm, p, out);
     if (p.id !== except)
       out.push(
-        { t: 'run', ev: 'ended', to: p.id, outcome: run.outcome, ms: Math.round(run.elapsed), seeds: run.earned[p.id] ?? 0, zones: s.zones, runor: [...run.runor] },
+        { t: 'run', ev: 'ended', to: p.id, outcome: run.outcome, ms: Math.round(run.elapsed), seeds: run.earned[p.id] ?? 0, zones: s.zones, runor: [...run.runor], level: run.level, spiritUsed: run.spiritUsed },
         toast(p.id, fmt(RUN_T.summary, { time: fmtDuration(run.elapsed), seeds: run.earned[p.id] ?? 0 })),
         playerChange(p),
       );
@@ -972,8 +1016,11 @@ export function runMessage(world: WorldState, playerId: string, msg: { t: 'run' 
     return [treeChange(farm, p)];
   }
   switch (msg.a) {
-    case 'start':
-      return startRun(farm, playerId, { replay: msg.replay === true, ...(msg.companion === false ? { companion: false } : {}), ...(Array.isArray(msg.fardkost) ? { fardkost: msg.fardkost.filter((x): x is string => typeof x === 'string') } : {}) }, ctx);
+    case 'start': {
+      const level = parseRunLevel(msg.level);
+      if (level === null) return [toast(playerId, RUN_T.badLevel)];
+      return startRun(farm, playerId, { level, replay: msg.replay === true, ...(msg.companion === false ? { companion: false } : {}), ...(Array.isArray(msg.fardkost) ? { fardkost: msg.fardkost.filter((x): x is string => typeof x === 'string') } : {}) }, ctx);
+    }
     case 'join':
       return joinRun(farm, playerId, ctx);
     case 'pick':

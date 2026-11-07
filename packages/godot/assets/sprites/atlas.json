@@ -4334,6 +4334,44 @@
         "animal_boss_jul"
       ]
     },
+    "bus": {
+      "kinds": [
+        "vehicle"
+      ],
+      "frame_w": 40,
+      "frame_h": 16,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 3,
+      "baby": false,
+      "jul": false,
+      "sheets": [
+        "animal_bus",
+        "animal_bus_v1",
+        "animal_bus_v2"
+      ]
+    },
+    "car": {
+      "kinds": [
+        "vehicle"
+      ],
+      "frame_w": 32,
+      "frame_h": 16,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 3,
+      "baby": false,
+      "jul": false,
+      "sheets": [
+        "animal_car",
+        "animal_car_v1",
+        "animal_car_v2"
+      ]
+    },
     "cat": {
       "kinds": [
         "pet"
@@ -5013,6 +5051,25 @@
         "animal_mosspoke_jul"
       ]
     },
+    "motorcycle": {
+      "kinds": [
+        "vehicle"
+      ],
+      "frame_w": 24,
+      "frame_h": 20,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 3,
+      "baby": false,
+      "jul": false,
+      "sheets": [
+        "animal_motorcycle",
+        "animal_motorcycle_v1",
+        "animal_motorcycle_v2"
+      ]
+    },
     "parrot": {
       "kinds": [
         "wild"
@@ -5280,6 +5337,25 @@
       "sheets": [
         "animal_sockerspoke",
         "animal_sockerspoke_jul"
+      ]
+    },
+    "train": {
+      "kinds": [
+        "vehicle"
+      ],
+      "frame_w": 48,
+      "frame_h": 16,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "variants": 3,
+      "baby": false,
+      "jul": false,
+      "sheets": [
+        "animal_train",
+        "animal_train_v1",
+        "animal_train_v2"
       ]
     },
     "troll": {
@@ -7023,6 +7099,72 @@
       ],
       "headroom": 0
     },
+    "animal_bus": {
+      "file": "animal_bus.png",
+      "frame_w": 40,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_bus_v1": {
+      "file": "animal_bus_v1.png",
+      "frame_w": 40,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_bus_v2": {
+      "file": "animal_bus_v2.png",
+      "frame_w": 40,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_car": {
+      "file": "animal_car.png",
+      "frame_w": 32,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_car_v1": {
+      "file": "animal_car_v1.png",
+      "frame_w": 32,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_car_v2": {
+      "file": "animal_car_v2.png",
+      "frame_w": 32,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
     "animal_cat": {
       "file": "animal_cat.png",
       "frame_w": 14,
@@ -8013,6 +8155,39 @@
       ],
       "headroom": 0
     },
+    "animal_motorcycle": {
+      "file": "animal_motorcycle.png",
+      "frame_w": 24,
+      "frame_h": 20,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_motorcycle_v1": {
+      "file": "animal_motorcycle_v1.png",
+      "frame_w": 24,
+      "frame_h": 20,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_motorcycle_v2": {
+      "file": "animal_motorcycle_v2.png",
+      "frame_w": 24,
+      "frame_h": 20,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
     "animal_parrot": {
       "file": "animal_parrot.png",
       "frame_w": 16,
@@ -8424,6 +8599,39 @@
       "file": "animal_sockerspoke_jul.png",
       "frame_w": 18,
       "frame_h": 23,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_train": {
+      "file": "animal_train.png",
+      "frame_w": 48,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_train_v1": {
+      "file": "animal_train_v1.png",
+      "frame_w": 48,
+      "frame_h": 16,
+      "columns": 2,
+      "frames": [
+        "right0",
+        "right1"
+      ],
+      "headroom": 0
+    },
+    "animal_train_v2": {
+      "file": "animal_train_v2.png",
+      "frame_w": 48,
+      "frame_h": 16,
       "columns": 2,
       "frames": [
         "right0",

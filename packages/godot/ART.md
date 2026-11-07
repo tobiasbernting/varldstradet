@@ -62,8 +62,8 @@ the web. Villagers wear figures too; animals and monsters: see "Creatures in 3D"
 
 ### Creatures in 3D (`--people3d`)
 
-The flag means 3D bodies for people and creatures. Without it nothing changes; vehicles (`bus`, `car`, `train`,
-`motorcycle`) stay billboards. Every other animal and monster has one of two bodies, and the billboard stays the
+The flag means 3D bodies for people and creatures. Without it nothing changes; the town's traffic (`bus`, `car`, `train`,
+`motorcycle`) is always a body of its own, flag or not (see "Köpingen in the browser's Viking look" below). Every other animal and monster has one of two bodies, and the billboard stays the
 fallback for a creature with no sheet (the placeholder), so this can grow piece by piece.
 
 - **Voxel bodies** (`scripts/voxel_body.gd`, `assets/shaders/voxel_body.gdshader`) for everything without a figure: each
@@ -465,3 +465,72 @@ KayKit Hexagon blacksmith.
   `ZoneProps.LIGHTS`, none on Låg (the glow billboards stay). The zone floor is flat coloured quads (grass `#5f9a44`, mud, gravel, sand, moss, snow, ash).
 - **Zone weather**: fog density by kind in every preset; particles (rain 0.02 × 0.55 m streaks, snow flakes, hail, dust) only on Mellan and Hög, `weather` budget / 3, none on Låg.
 - Everything in a window (cards, summary, HUD clock) is Control nodes: no frame cost beyond the HUD's.
+
+
+## Köpingen in the browser's Viking look (2026-11-07)
+
+The owner saw Köpingen as a modern town: asphalt, zebra crossings, traffic lights, a red car and Diligensen as a magenta
+square. The ids are unchanged (`road`, `crossing`, `traffic_light`, `car`, `bus` ... stay what the server and the shared
+code say); only the way the client draws them changed, to what the browser game drew since "The saga world" (DESIGN.md,
+"Art conventions"). Everything below is the project's own work: no new third-party file, so `assets/LICENSES.md` only notes it.
+The pixel art it follows is `packages/art/src/world.ts` (terrain, objects) and `animals.ts` (vehicles); the colours are the same hex values.
+
+- **Ground** (`farm_view.gd`, `_street_tile`): `road` is cobbles, rows of three stones over mortar in the browser's six greys and
+  browns, four rows to a tile, the same stones in the same places so the tiles run on, with a dark kerb where the pavement
+  begins; `sidewalk` is flagstones cut four ways (`FLAGS`); `crossing` is the cobbles with two big pale slabs laid with the
+  street (so they read as stepping stones, never as zebra stripes); `rail` is gravel with four sleepers and two iron rails.
+  A tile is a few dozen vertex-coloured quads in the chunk's one ground mesh (a village chunk went from about 260 to about 2 000
+  triangles; the ground is still one draw call per chunk).
+- **Buildings** (`scripts/village_meshes.gd`, generated from boxes and quads like the rest): `house_small` (the four plaster
+  cottages with red, brown, blue and green shingle roofs, framed in dark timber, shutters and flower boxes on two), `apartment`
+  (variants 0 and 2 half-timbered town houses with a jettied upper storey, a dormer and a chimney; 1 a log longhouse and 3 a
+  tarred stave house, both under turf with flowers, bark eaves, carved boards and a smoke hood), `shop` (0 the smith's of dark logs
+  with a forge glow and an anvil sign, 1 the baker's half-timbered with a pretzel, 2 the weaver's of blue-grey planks with a
+  shuttle; each with a shop window over a counter of goods, a plank door and an iron bracket with a hanging sign whose picture is
+  laid out pixel by pixel from the browser's own `SHOP_SIGNS`), `pizzeria` (Pino's tavern with the striped awning, the pizza
+  in a carved frame on the roof and a glowing stone oven), `bathhouse` (the sauna, a log house under turf with the wave over
+  the door) and `train_station` (the dwarves' stone hall with a slate roof, a brass bell in its frame, the rune band over a
+  brass-bound door). Window panes are the shared glass colours; the night glow quads and lights sit where the windows are.
+- **Street furniture**: `traffic_light` is the **Vägvisare**, a wooden signpost with two pointed arms and a small lantern on
+  top; `street_lamp` is the iron lantern on a wooden post with a stone foot (1.8 m, where the Halloween pack's lantern at
+  scale 1.1 stood 2.5 m tall; it keeps the lamps' night light); `bus_stop` is the Diligens stop, a post with a board
+  carrying a horseshoe and a low bench; `parked_car` is a hand cart on its shafts with hay, barrels or pumpkins in a red,
+  blue or yellow bed. The bench, flower boxes, banner poles, barrel stacks, hay cart, runestone, well and stalls were
+  already timber and stone and are unchanged.
+- **Traffic**: `car` is the horse and cart, `motorcycle` the saddled riding horse, `bus` Diligensen (two horses and the
+  covered coach) and `train` the mine train. They are the browser's own sprites (`animals.ts`, three colours each),
+  exported with the other animals (`pnpm godot:sprites` now includes them as `animal_car*`, `animal_motorcycle*`,
+  `animal_bus*`, `animal_train*`; no tomteluva, as in the browser) and extruded into bodies by `voxel_body.gd` like every
+  creature in `--people3d`, but always: a vehicle is never a flat quad. They turn right round to face along the street
+  (`Actor.full_turn`: a creature only turns part of the way up or down), and carry a warm lantern light that shines at night
+  (`Actor.set_lantern`, the browser's lanterns where its headlights were). A rider sits up on the mount as in the browser's
+  `rideInfo`: 7 px on a horse or a moped, 4 px on the cart's bench (`Data.ride_lift`), for me and for the others.
+- **No stand-ins**: the lilac box of a kind with no model, the magenta figure of an actor with no sheet and a vehicle that is
+  not a body are all reported by `WorldView.placeholder_report()`; `--placeholdercheck` (`scripts/placeholder_check.gd`, a
+  headless step of the Godot workflow) plays every recorded world (farm, house, forest, Köpingen with its traffic and the nine
+  dungeons) and fails on any, and on any animal or creature without a sheet or a mesh a kind's look names that cannot be made.
+- **For pictures**: `--demo=village --stage=street` lays the main street out (Diligensen at its stop, a cart, a riding horse with
+  a rider, a cart on the cross street), `--time=0.9` makes it night.
+
+Pictures (`docs/`): [the main street](docs/koepingen-street.png), [at night](docs/koepingen-street-night.png),
+[the houses and shops](docs/koepingen-houses.png), [the square](docs/koepingen-square.png), [the station](docs/koepingen-station.png),
+[before](docs/koepingen-before.png), and [the browser's art for the same spot beside the native client](docs/koepingen-browser-vs-native.png) (the left half is the same map, objects and vehicles drawn by the browser's own art code in `packages/art` on a canvas, laid out as the browser's client lays them out; the repository `lilla-garden` has no picture files and the browser client needs a database to run, so it is not a screenshot of the running browser).
+
+## The wild maps' own props (`scripts/wild_meshes.gd`)
+
+Every object kind of the data now has a look; the lilac placeholder box is gone from the wild maps. `PlaceholderCheck`'s old
+`KNOWN_UNDRAWN` list is gone. What is left is `DUNGEON_DRAWN` (the saga's torches, candles, exit stairs, gate, rest stone, chests,
+plate, coffins, bones, urns, the run's rune disc and the wall tiles): the dungeon view draws those with its own cases, and the check
+proves the dungeon view makes each without a stand-in and that no farm, forest, village, volcano, mushroom-wood or jungle fixture holds one.
+
+The props are generated with `FarmMesh` (vertex colours in the palette, one metre a tile, the footprint's middle at the origin, the front on
++z) after the browser's pixel art, so nothing needs a licence. `FarmAssets.SPECS` names them `wp_<kind>` (a cave wall by its theme and
+torch, a crystal by its colour, a stalagmite by its rock); the dungeon's `ZoneProps` falls back to the same meshes. Repeated props (rocks, ore, crystals,
+mushrooms, bones) are MultiMesh instances like the trees; only the lone landmarks carry a light (volcano, rocket, UFO, pyramid, temple,
+gingerbread house, wisp jar, cave torches), and the 600 glow mushrooms of the mushroom wood carry none. Every prop you can use has a clue on it:
+the fairy ring its toadstools and motes, the fossil rock a bone and a pick, the beehive its bees and honey, the shipwreck a chest on its deck,
+the rocket a ladder, the pyramid and temple a lit doorway, the treasure an open lid.
+
+Pictures: `docs/wild-props-sheet-*.png` (`--demo=lineup --props=kind,kind,... --zoom=1.2`, no world) and `docs/wild-map-*.png`
+(`--demo=jungle|mushroom|volcano`, fixtures from `pnpm godot:fixture`).
+

@@ -26,6 +26,10 @@ var seconds := 90.0
 var dungeon_id := "draug"
 var packs_wanted := 1
 var route := ""
+var unlock_route := false ## --unlock: the arch is a later chapter's: meet the lock, send the dev unlock, use it again
+var mapcheck := false ## --mapcheck (M9a): on the way, use the world map (home and back), meet the chapter lock, then go in by the arch
+var _unlocked := false ## the chapter lock was met and the dev unlock sent (the mapcheck walker)
+var _route_toasts: Array = []
 var _route_goal := Vector2i.ZERO
 var _route_push := Vector2.ZERO
 var _route_act := false
@@ -48,6 +52,7 @@ var _report := {
 	"name": "", "ok": false, "phase": "", "seconds": 0.0, "casts_sent": 0, "casts_acked": 0, "spells_sent": {}, "spells_acked": {},
 	"others_casts": 0, "others": {}, "monsters_beaten": [], "hits_taken": 0, "damage_taken": 0, "hits_dealt": 0, "damage_dealt": 0,
 	"route": [], "arrived_via_arch": false, "dev_sent": false, "zones_seen": 0, "stepped_out": 0, "fell": 0, "hearts": [], "mob_hp": [], "bar_samples": 0, "ghosts": 0, "solid": 0, "rises": [], "errors": [], "packs_beaten": 0, "area": "",
+	"map": {}, "dev_messages": [], "locked_seen": false, "unlock_sent": false,
 }
 
 
@@ -67,6 +72,11 @@ func _ready() -> void:
 			packs_wanted = int(arg.substr(8))
 		elif arg.begins_with("--route="):
 			route = arg.substr(8)
+		elif arg == "--mapcheck":
+			mapcheck = true
+			unlock_route = true
+		elif arg == "--unlock":
+			unlock_route = true
 	_report["name"] = bot_name
 	_api = Api.new()
 	add_child(_api)
@@ -79,11 +89,26 @@ func _ready() -> void:
 	world.model.snapshot.connect(_on_snapshot)
 	world.model.error.connect(func(text: String) -> void: _error("server: " + text))
 	if route != "":
-		world.model.toast.connect(func(text: String) -> void: _log("toast: " + text))
+		world.model.toast.connect(func(text: String) -> void:
+			_log("toast: " + text)
+			_route_toasts.append(text)
+			# the chapter lock (sagaLocked): the arch refused, as the server's rule says; the check then asks the dev way to clear the chapters before
+			if unlock_route and not _unlocked and text.contains("förseglad"):
+				_report["locked_seen"] = true
+				_unlocked = true
+				_report["unlock_sent"] = true
+				Net.send({"t": "dev", "a": "unlock"})
+				_route_acted = 0.0)
 		world.model.banner.connect(func(text: String, _sub: String, kind: String) -> void: _log("banner %s: %s" % [kind, text]))
 		world.model.player_changed.connect(func(id: String, p: Variant) -> void:
 			if id == world.model.me and p is Dictionary:
 				_log("my record: area %s at %d,%d" % [str(p.get("area", "farm")), int(p.get("x", 0)), int(p.get("y", 0))]))
+	# every dev message this bot's client sends, whoever sends it (the arch routes must never send `saga`)
+	Net.sent.connect(func(msg: Dictionary) -> void:
+		if str(msg.get("t", "")) == "dev":
+			_report["dev_messages"].append(str(msg.get("a", "")))
+			if str(msg.get("a", "")) == "saga":
+				_report["dev_sent"] = true)
 	Net.connection_changed.connect(func(status: String, code: int) -> void: _log("socket %s (%d) %s" % [status, code, Settings.ws_url()]))
 	Net.message.connect(func(msg: Dictionary) -> void:
 		if str(msg.get("t", "")) == "welcome":
@@ -320,12 +345,23 @@ func _on_route_area(key: String) -> void:
 		return # (the map's data and my record each say so)
 	_report["route"].append(key)
 	_log("now in %s" % key)
+	if _phase == "mapcheck":
+		return # (the check moves me about on purpose and walks on by itself)
+	if mapcheck and key == "a:0,-1" and not _report["map"].has("done"):
+		world.hero.drive = Vector2.ZERO
+		_path = []
+		_map_check()
+		return
 	if Data.dungeon_of_key(key) == dungeon_id:
 		_report["area"] = key
 		_report["arrived_via_arch"] = not bool(_report["dev_sent"])
 		# M7a: nothing of the outdoor map's ambient life (fireflies, leaves, smoke, mist, butterflies) may stay behind in the dungeon
 		if world.farm.ambient != null and world.farm.ambient.get_child_count() > 0:
 			_error("the farm's ambient things are still there in %s: %s" % [key, str(world.farm.ambient.counts())])
+		if mapcheck and not _report["map"].has("dungeon_done"):
+			_phase = "mapcheck"
+			_dungeon_map_check()
+			return
 		_report["ok"] = _report["errors"].is_empty() and bool(_report["arrived_via_arch"])
 		_finish()
 	elif _phase != "done":
@@ -343,29 +379,35 @@ func _route_plan() -> void:
 	var mw := world.model.map_w(w)
 	var mh := world.model.map_h(w)
 	_route_act = false
-	match key:
-		"farm":
-			_route_goal = Vector2i(mw / 2, 0)
-			_route_push = Vector2(0, -1)
-		"a:0,-1":
-			_route_goal = Vector2i(0, mh / 2)
-			_route_push = Vector2(-1, 0)
-		"a:-1,-1":
-			var arch: Dictionary = {}
-			for o in w.get("objects", {}).values():
-				if str(o.get("kind", "")) == "saga_portal" and int(o.get("variant", 0)) == Data.dungeons.keys().find(dungeon_id):
-					arch = o
-			if arch.is_empty():
-				_error("no arch for %s in %s" % [dungeon_id, key])
-				_finish()
-				return
-			# the tile in front of the arch (portalFront): its middle column, below it
-			_route_goal = Vector2i(int(arch.get("x", 0)) + 1, int(arch.get("y", 0)) + 2)
-			_route_act = true
-		_:
-			_error("the route does not know the map %s" % key)
+	# the maps between the farm and the arch's map: along y first, then along x (Draugkryptan's way is the farm, a:0,-1, a:-1,-1)
+	var target := _coords(str(Data.dungeon(dungeon_id).get("portal", {}).get("area", "")))
+	var here := _coords(key)
+	if key != "farm" and not key.begins_with("a:"):
+		_error("the route does not know the map %s" % key)
+		_finish()
+		return
+	if here == target:
+		var arch: Dictionary = {}
+		for o in w.get("objects", {}).values():
+			if str(o.get("kind", "")) == "saga_portal" and int(o.get("variant", 0)) == Data.dungeons.keys().find(dungeon_id):
+				arch = o
+		if arch.is_empty():
+			_error("no arch for %s in %s" % [dungeon_id, key])
 			_finish()
 			return
+		# the tile in front of the arch (portalFront): its middle column, below it
+		_route_goal = Vector2i(int(arch.get("x", 0)) + 1, int(arch.get("y", 0)) + 2)
+		_route_act = true
+	elif here.y != target.y and not (target.y > 0 and here.x != target.x):
+		# (north and west: along y first; a target to the south goes along x first, out of the farm's east opening: the farm's own way
+		# to its south opening is not a walk the bot's path search finds)
+		var up := target.y < here.y
+		_route_goal = Vector2i(mw / 2, 0 if up else mh - 1)
+		_route_push = Vector2(0, -1 if up else 1)
+	else:
+		var left := target.x < here.x
+		_route_goal = Vector2i(0 if left else mw - 1, mh / 2)
+		_route_push = Vector2(-1 if left else 1, 0)
 	var start := _my_tile()
 	var dist := _distance_field(start)
 	_path = _path_to(start, _route_goal, dist)
@@ -418,6 +460,122 @@ func _route_walk(delta: float) -> void:
 		return
 	# at the opening: push on outwards until the hero asks for the next map
 	world.hero.drive = _route_push
+
+
+static func _coords(key: String) -> Vector2i:
+	if key == "farm" or not key.begins_with("a:"):
+		return Vector2i.ZERO
+	var parts := key.substr(2).split(",")
+	return Vector2i(int(parts[0]), int(parts[1]))
+
+
+# ---------------------------------------------------------------------------
+# M9a: the world map and the minimap, used through the keys and the buttons a player uses
+
+
+func _press(action: String) -> void:
+	var e := InputEventAction.new()
+	e.action = action
+	e.pressed = true
+	Input.parse_input_event(e)
+	await get_tree().process_frame
+	var up := InputEventAction.new()
+	up.action = action
+	up.pressed = false
+	Input.parse_input_event(up)
+	await get_tree().process_frame
+
+
+func _wait_until(cond: Callable, limit: float) -> bool:
+	var t := 0.0
+	while t < limit:
+		if cond.call():
+			return true
+		await get_tree().process_frame
+		t += get_process_delta_time()
+	return cond.call()
+
+
+func _check(name: String, ok: bool, detail := "") -> void:
+	_report["map"][name] = ok
+	_log("map check %s: %s %s" % [name, "ok" if ok else "FAILED", detail])
+	if not ok:
+		_error("map check %s failed %s" % [name, detail])
+
+
+func _map_button(win: MapWindow, node_name: String) -> Button:
+	return win.find_child(node_name, true, false) as Button
+
+
+## In a:0,-1 (one map from the farm): the minimap is drawn, K opens the world map, its "here" and the unvisited are greyed, "Åk hem"
+## puts me on the farm (the server moved me), the map there shows a:0,-1 as a visited place and a click goes back.
+func _map_check() -> void:
+	_phase = "mapcheck"
+	var win: MapWindow = world.play.windows.world_map
+	var mm: Minimap = world.minimap
+	await _wait_until(func() -> bool: return mm.visible, 4.0) # (the map's data may be a moment behind the area change)
+	_check("minimap_visible", mm.visible and Settings.minimap_on, "(on the first wild map)")
+	await _press("worldmap")
+	await _wait_until(func() -> bool: return win.is_open(), 2.0)
+	_check("opened_by_key", win.is_open())
+	var here_cell := _map_button(win, "Cell_a_0_-1")
+	_check("here_cell_greyed", here_cell != null and here_cell.disabled)
+	var farm_cell := _map_button(win, "Cell_farm")
+	_check("farm_cell_enabled", farm_cell != null and not farm_cell.disabled)
+	var unseen := _map_button(win, "Cell_a_-1_-2")
+	_check("unvisited_greyed", unseen != null and unseen.disabled and bool(unseen.get_meta("known", true)) == false)
+	var home := _map_button(win, "Home")
+	_check("home_enabled", home != null and not home.disabled)
+	await _press("worldmap")
+	await _wait_until(func() -> bool: return not win.is_open(), 2.0)
+	_check("closed_by_key", not win.is_open())
+	# home by the button
+	await _press("worldmap")
+	await _wait_until(func() -> bool: return win.is_open(), 2.0)
+	home = _map_button(win, "Home")
+	home.pressed.emit()
+	var went_home := await _wait_until(func() -> bool: return world.model.my_area_key() == "farm" and world._area == "farm", 8.0)
+	_check("fast_travel_home", went_home, "(area %s)" % world.model.my_area_key())
+	# and back to the place I had been to, by its cell
+	await _press("worldmap")
+	await _wait_until(func() -> bool: return win.is_open(), 2.0)
+	var back := _map_button(win, "Cell_a_0_-1")
+	_check("visited_cell_enabled", back != null and not back.disabled)
+	if back != null and not back.disabled:
+		back.pressed.emit()
+	var went := await _wait_until(func() -> bool: return world.model.my_area_key() == "a:0,-1" and world._area == "a:0,-1", 8.0)
+	_check("fast_travel_visited", went, "(area %s)" % world.model.my_area_key())
+	# the minimap's key hides it and shows it again (remembered in settings)
+	await _press("minimap")
+	var hidden := not mm.visible and not Settings.minimap_on
+	await _press("minimap")
+	_check("minimap_toggles", hidden and mm.visible and Settings.minimap_on)
+	_report["map"]["done"] = true
+	_phase = "route_plan"
+	_path = []
+	world.hero.drive = Vector2.ZERO
+
+
+## Inside the dungeon: the minimap is there and the world map greys every jump (the server refuses them from here).
+func _dungeon_map_check() -> void:
+	var win: MapWindow = world.play.windows.world_map
+	await _wait_until(func() -> bool: return world._area == "saga:" + dungeon_id, 4.0)
+	_check("minimap_in_dungeon", world.minimap.visible)
+	await _press("worldmap")
+	await _wait_until(func() -> bool: return win.is_open(), 2.0)
+	var open_now := win.is_open()
+	var all_grey := open_now
+	var buttons := win.find_children("Cell_*", "Button", true, false)
+	for b in buttons:
+		if not (b as Button).disabled:
+			all_grey = false
+	var home := _map_button(win, "Home")
+	_check("map_greyed_in_dungeon", all_grey and buttons.size() == 49 and home != null and home.disabled, "(%d cells)" % buttons.size())
+	await _press("worldmap")
+	_report["map"]["dungeon_done"] = true
+	_report["ok"] = _report["errors"].is_empty() and bool(_report["arrived_via_arch"]) and bool(_report["locked_seen"])
+	_phase = "walk_done"
+	_finish()
 
 
 func _my_tile() -> Vector2i:

@@ -33,6 +33,30 @@ export const RUN_OFFLINE_END_MS = 60_000;
 /** Offers of runor are this many cards. */
 export const RUNA_CARDS = 3;
 
+/**
+ * The difficulty of a run (GAME2.md section 5.3): `0` Lätt, the kids' level, and `1` Vanlig, as before. The level is chosen
+ * at the arch and fixed for the run.
+ */
+export type RunLevel = 0 | 1;
+export const RUN_LEVEL_LATT: RunLevel = 0;
+export const RUN_LEVEL_VANLIG: RunLevel = 1;
+/** A level from a message: whole 0 or 1, left out is Vanlig; anything else is `null` (the server refuses it). */
+export const parseRunLevel = (v: unknown): RunLevel | null => (v === undefined ? RUN_LEVEL_VANLIG : v === 0 || v === 1 ? v : null);
+/**
+ * What Lätt changes: monster health ×0.6 and damage ×0.5, the warnings before a boss's big attacks 40 % longer, half the
+ * sagafrön, and only the first two attacks of the boss. A wipe never ends the run on Lätt.
+ */
+export const LATT = { hp: 0.6, dmg: 0.5, warn: 1.4, seeds: 0.5, bossMoves: 2 } as const;
+/**
+ * The Sagoandan (GAME2.md section 4.5): free "everyone gets up" on a wipe, so the run does not end. How many a run starts
+ * with, by level; on Lätt one more comes after each zone cleared (the count is what the star on the HUD shows). A
+ * Lätt wipe with none left still gets everyone up, for free: it never ends the run.
+ */
+export const SAGOANDAN = { [RUN_LEVEL_LATT]: 3, [RUN_LEVEL_VANLIG]: 1 } as const;
+/** Monster health, damage and warning multipliers for a level (the zone's own are multiplied by these). */
+export const levelMuls = (level: RunLevel): { hp: number; dmg: number; warn: number; seeds: number } =>
+  level === RUN_LEVEL_LATT ? { hp: LATT.hp, dmg: LATT.dmg, warn: LATT.warn, seeds: LATT.seeds } : { hp: 1, dmg: 1, warn: 1, seeds: 1 };
+
 /** Sagafrön for what happens in a run (GAME.md section 3). */
 export const RUN_SEEDS = { pack: 1, zone: 4, chest: 2, guard: 3, bossFirst: 20, bossReplay: 12 } as const;
 /** More sagafrön for each modifier. */
@@ -472,6 +496,17 @@ export const ZONE_HP: readonly number[] = [1.35, 1.5, 1.7];
 /** One human alone (with the hired companion, who counts as a fighter for the monsters' health): monsters tolerate this much less. */
 export const SOLO_MERCY = 0.75;
 
+/**
+ * The class of the hired companion (Hirdmannen) for a party of these human classes, or null for none: one human gets
+ * the class they lack (a healer for everyone but the healer, a tank for the healer); two humans get one only when the
+ * pair lacks a healer, or else a tank; three or four never do.
+ */
+export function companionClass(classes: ClassId[]): ClassId | null {
+  if (classes.length === 1) return classes[0] === 'helare' ? 'vaktare' : 'helare';
+  if (classes.length === 2) return !classes.includes('helare') ? 'helare' : !classes.includes('vaktare') ? 'vaktare' : null;
+  return null;
+}
+
 /** Packs per room (and members), by zone. Tuned by the bots (run.test.ts), see GAME.md. */
 export const ZONE_PACKS = [
   { a: [2, 2], b: [3, 3], size: [3, 4], big: 0 },
@@ -503,6 +538,10 @@ export interface RunSnap {
   elapsed: number;
   max: number;
   party: { id: string; name: string; bot?: true }[];
+  /** The level (0 Lätt, 1 Vanlig), the Sagoandans left (the star on the HUD) and how many have been used so far. */
+  level: RunLevel;
+  spirit: number;
+  spiritUsed: number;
   /** The runor taken so far, and the sagafrön each player has earned in this run. */
   runor: string[];
   earned: Record<string, number>;

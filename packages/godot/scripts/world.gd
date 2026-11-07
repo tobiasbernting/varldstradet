@@ -23,7 +23,7 @@ const SHADOW_EVERY := 0.3
 ## same direction would put it among the crowns of the trees behind the room's south wall).
 const INSIDE_OFFSET := Vector3(0.0, 9.6, 5.2)
 const USABLE := {"saga_exit": "actExit", "saga_chest": "actChest", "saga_rest": "actRest", "saga_plate": "actPlate", "saga_gate": "actGate", "run_exit": "actRunExit"}
-## Outdoors only the dungeons' arches work yet; the other things you can use say so (M4b and M4c make them work).
+
 const ARCH := "saga_portal"
 
 @onready var dungeon: DungeonView = $Dungeon
@@ -46,6 +46,7 @@ var run_end: RunEnd
 var steps: Footsteps ## footsteps on the outdoor maps (M7b)
 var soundscape: Soundscape ## the ambience of the outdoor maps (M7b)
 var wheel: Wheel
+var minimap: Minimap ## the small map in the HUD's corner (M9a)
 var play: FarmPlay
 var demo := false
 var looks: LookComposer
@@ -53,7 +54,11 @@ var looks: LookComposer
 ## together from KayKit Adventurers parts and dressed in their look (figure_3d.gd), animals and monsters as voxel
 ## bodies extruded from their own sprites (voxel_body.gd), instead of pixel sprites. Vehicles stay billboards.
 const VEHICLES: Array[String] = ["bus", "car", "train", "motorcycle"]
+## Where each one's lantern hangs (metres from its middle, +x forward): the cart's, the saddle bow's, the coach's and the engine's nose.
+const VEHICLE_LANTERN := {"car": Vector3(0.25, 0.8, 0.0), "motorcycle": Vector3(0.1, 0.65, 0.0), "bus": Vector3(0.25, 0.85, 0.0), "train": Vector3(1.4, 0.55, 0.0)}
 var _people3d := OS.get_cmdline_user_args().has("--people3d")
+## --boost (with --demo): the speed boost's chip is up, for a picture of where it sits.
+var _demo_boost := OS.get_cmdline_user_args().has("--boost")
 var _mode := "" ## "dungeon", "outdoor" (the farm and the wild maps) or "" (nothing drawn)
 var _demo_time := -1.0 ## --time=<0..1>: a fixed time of day for pictures
 var _demo_rain := false
@@ -72,7 +77,9 @@ var _emote_shown: Dictionary = {} ## player id -> until
 var _shadow_in := 0.0
 var _screenshot := ""
 var _open_chat := false ## --open-chat (with --demo): the chat box is open (pictures)
+var npc_talk := NpcTalk.new() ## M9b: the villagers' speech bubbles and quest marks
 var _open_npc := "" ## --open-npc=<id> (or "volva"): a villager's talk window opens on the farm demo (pictures)
+var _open_map := false ## --open-map (with --demo): the world map is open (pictures)
 var _settings_page := "" ## --settings-page=picture|sound|reading|controls: the settings window opens on it (pictures)
 var _frames := 0
 var _rest_glow_in := 0.0
@@ -99,6 +106,10 @@ func _ready() -> void:
 	add_child(soundscape)
 	hud = HudLayer.new()
 	add_child(hud)
+	minimap = Minimap.new()
+	minimap.name = "Minimap"
+	hud.add_child(minimap)
+	minimap.setup(model, hero)
 	run_hud = RunHud.new()
 	run_hud.model = model
 	add_child(run_hud)
@@ -120,14 +131,18 @@ func _ready() -> void:
 	play = FarmPlay.new()
 	add_child(play)
 	play.setup(self)
+	play.windows.world_map.on_minimap = func() -> void: minimap.toggle()
 	_make_lantern()
 	hud.menu_asked.connect(menu.open)
 	menu.switch_player.connect(func() -> void: left.emit())
 	menu.dev_enter.connect(_on_dev_enter)
 	menu.fps_toggled.connect(hud.set_fps_shown)
-	menu.window_asked.connect(func(which: String) -> void:
-		if _mode == "outdoor" and not demo:
-			play.windows.toggle_gear() if which == "gear" else play.windows.toggle_quests())
+	hud.journal_asked.connect(_on_window_asked.bind("journal"))
+	hud.family_asked.connect(_on_window_asked.bind("family"))
+	hud.pets_asked.connect(func(cmd: String) -> void:
+		if _mode == "outdoor" and not demo and not play.is_busy():
+			Net.send({"t": "pets", "cmd": cmd}))
+	menu.window_asked.connect(_on_window_asked)
 	camera.position = CAMERA_OFFSET
 	camera.look_at_from_position(CAMERA_OFFSET, CAMERA_LOOK)
 	camera.fov = 40.0
@@ -146,6 +161,7 @@ func _ready() -> void:
 	model.player_changed.connect(func(id: String, _p: Variant) -> void:
 		_sync_actors()
 		if id == model.me and _area != "":
+			hud.update_tracker(model.my_player())
 			_update_hud())
 	model.snapshot.connect(_on_snapshot)
 	model.run_changed.connect(_on_run_changed)
@@ -173,6 +189,8 @@ func _ready() -> void:
 			_screenshot = arg.substr("--screenshot=".length())
 		elif arg == "--open-chat":
 			_open_chat = true
+		elif arg == "--open-map":
+			_open_map = true
 		elif arg.begins_with("--open-npc="):
 			_open_npc = arg.substr("--open-npc=".length())
 		elif arg.begins_with("--settings-page="):
@@ -192,6 +210,7 @@ func reset() -> void:
 	hero.reset()
 	hero.send_moves = true
 	play.leave()
+	minimap.refresh_visible(false)
 	hud.reset()
 	chat.reset()
 	demo = false
@@ -212,8 +231,19 @@ func start_demo(fixture := "draug") -> void:
 	if not (parsed is Dictionary):
 		push_error("assets/fixtures/%s.json is missing or broken: run `pnpm godot:fixture`" % fixture)
 		return
+	# --arch=<0..8>: the forest's arch is another dungeon's (its variant), for the pictures of each gateway
+	var arch_variant := -1
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--arch="):
+			arch_variant = int(arg.substr(7))
 	for m in parsed.get("messages", []):
 		if m is Dictionary:
+			if arch_variant >= 0:
+				for c in m.get("changes", []):
+					if c is Dictionary and str(c.get("t", "")) == "areaData":
+						for o in c.get("world", {}).get("objects", {}).values():
+							if str(o.get("kind", "")) == ARCH:
+								o["variant"] = arch_variant
 			model.apply(m)
 	# --time=0.7 (a fraction of the day), --weather=rain, --season=jul: a fixed sky, for pictures
 	for arg in OS.get_cmdline_user_args():
@@ -223,6 +253,17 @@ func start_demo(fixture := "draug") -> void:
 			model.weather = {"kind": arg.substr(10), "since": model.server_now() - 60000.0, "until": model.server_now() + 600000.0}
 		elif arg.begins_with("--season="):
 			model.season = arg.substr(9)
+		elif arg.begins_with("--visited="):
+			# --visited=a:0,-1=skog|a:1,0=by|moon=mane: maps I have been to (and their places), for the world map's picture
+			var me_rec := model.my_player()
+			var seen: Array = me_rec.get("visited", ["farm"])
+			for part in arg.substr(10).split("|", false):
+				var kv := part.split("=")
+				if not seen.has(kv[0]):
+					seen.append(kv[0])
+				if kv.size() == 2:
+					model.biomes[kv[0]] = kv[1]
+			me_rec["visited"] = seen
 		elif arg.begins_with("--daylapse="):
 			_lapse = maxf(float(arg.substr(11)), 1.0)
 			if _demo_time < 0.0:
@@ -245,6 +286,9 @@ func start_demo(fixture := "draug") -> void:
 				var tile := Data.tile()
 				hero.place((float(parts[0]) + 0.5) * tile, (float(parts[1]) + 0.5) * tile)
 				rig.position = hero.position
+	# --stage=street (Köpingen only, for pictures): the cart, the riding horse with a rider, Diligensen at its stop
+	if "--stage=street" in OS.get_cmdline_user_args() and _area == "a:1,0":
+		_stage_street()
 	# --walk (with --demo): the hero walks east, for the footsteps' check (no server needed)
 	_walk_demo = "--walk" in OS.get_cmdline_user_args()
 	if _walk_demo:
@@ -333,6 +377,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed("chat"):
 		chat.open()
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed("minimap"):
+		minimap.toggle()
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed("worldmap"):
+		_open_world_map()
 		get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed("emote"):
@@ -435,6 +487,13 @@ func _arch_name(obj: Dictionary) -> String:
 	return str(Data.dungeon(str(ids[v])).get("name", "")) if v >= 0 and v < ids.size() else ""
 
 
+## N, the controller's extra button or the pause menu's button: the world map (from any map that is drawn; the buttons that would be refused are greyed).
+func _open_world_map() -> void:
+	if _area == "" or model.my_player().is_empty():
+		return
+	play.windows.toggle_map()
+
+
 func _open_emotes() -> void:
 	var entries: Array = []
 	for id in Strings.list("emotes"):
@@ -471,6 +530,7 @@ func _on_dev_enter(dungeon_id: String) -> void:
 
 func _on_area_changed(_key: String) -> void:
 	_rebuild()
+	hud.update_tracker(model.my_player())
 
 
 func is_outdoor() -> bool:
@@ -508,6 +568,7 @@ func _rebuild() -> void:
 		hud.set_area(shown, false)
 		hud.build_spell_bar("")
 		hud.units.visible = false
+		minimap.refresh_visible(false)
 		return
 	var me := model.my_player()
 	if outdoor:
@@ -552,6 +613,7 @@ func _rebuild() -> void:
 			hud.show_hint(Strings.t("sagaTargetHint") + "  ·  " + Strings.t("chatHint"), 10.0)
 	_sync_actors()
 	_update_hud()
+	minimap.refresh_visible(true)
 
 
 ## The weather of the map the run is on now ("" when the snapshot has not come).
@@ -590,6 +652,28 @@ func _dress_hero(me: Dictionary) -> void:
 
 func _look_key(p: Dictionary) -> String:
 	return str(hash(JSON.stringify([p.get("appearance"), p.get("outfit")])))
+
+
+## The pause menu's buttons for the windows a key also opens (for a pad).
+func _on_window_asked(which: String) -> void:
+	if which == "map":
+		_open_world_map()
+		return
+	if _mode != "outdoor" or demo:
+		return
+	match which:
+		"gear":
+			play.windows.toggle_gear()
+		"book":
+			play.windows.toggle_book("book")
+		"journal":
+			play.windows.toggle_book(BookWindow.page_for_key(model.my_player()))
+		"help":
+			play.windows.toggle_help()
+		"family":
+			play.windows.toggle_family()
+		_:
+			play.windows.toggle_quests()
 
 
 func _on_travel_asked(dir: String) -> void:
@@ -746,7 +830,13 @@ func _sync_actors() -> void:
 			actor.set_sheet(sheet)
 			if _people3d and SkeletonFigure.has(species):
 				actor.set_figure(SkeletonFigure.build(species), "skel:" + species, SkeletonFigure.height_of(species), SkeletonFigure.rig(species))
-			elif _people3d and not VEHICLES.has(species) and sheet != "":
+			elif VEHICLES.has(species) and sheet != "":
+				# the town's traffic is always a body of its own (the browser's cart, riding horse, Diligens and mine train
+				# extruded from their pixel art), never a flat quad
+				actor.set_voxel(VoxelBody.frames(sheet), sheet)
+				actor.full_turn = true
+				actor.set_lantern(VEHICLE_LANTERN.get(species, Vector3(0.2, 0.8, 0.0)))
+			elif _people3d and sheet != "":
 				actor.set_voxel(VoxelBody.frames(sheet), sheet)
 			# dungeon monsters show their own bars instead of the name labels (the browser's ownsLabel)
 			actor.set_label("" if (_mode == "dungeon" and not Data.mob(species).is_empty()) else str(rec.get("name", Data.mob_name(species))))
@@ -772,8 +862,10 @@ func _dress(actor: Actor, rec: Dictionary) -> void:
 
 func _update_hud() -> void:
 	var me := model.my_player()
+	hud.set_boost(_boosted(me), _mode != "outdoor")
 	if _mode == "outdoor":
 		hud.set_farm_status(model, me)
+		hud.set_side_buttons(model.owns_callable())
 		return
 	var f := model.my_fighter()
 	var cls := combat.my_class()
@@ -794,7 +886,9 @@ func _update_hud() -> void:
 			return a["me"]
 		return str(a["name"]) < str(b["name"]))
 	hud.set_party(rows)
-	hero.speed_mul = _my_speed_mul(f)
+	hero.speed_mul = _my_speed_mul(f) * (Data.constant("BOOST_SPEED_MUL", 1.3) if _boosted(me) else 1.0)
+	hero.fight = true
+	hero.boosted = _boosted(me)
 	# me and my target
 	var b: Variant = snap.get("b")
 	var boss_id := int(b.get("id", -1)) if b is Dictionary else -1
@@ -826,6 +920,11 @@ func _update_hud() -> void:
 		if pf.size() < 3 or (int(pf[2]) & Data.flag("down")) == 0:
 			all_down = false
 	hud.set_down(flags, all_down, _webbed(model.me), model.server_now())
+
+
+## The pizza's power, or a berserker's rage in a dungeon: `boostUntil` is ahead of the server's clock.
+func _boosted(rec: Dictionary) -> bool:
+	return _demo_boost or float(rec.get("boostUntil", 0.0)) > model.server_now()
 
 
 ## sagaSpeed in the browser: fallen or frozen is 0, slowed is SLOW_MUL.
@@ -912,7 +1011,7 @@ func _process(delta: float) -> void:
 	combat.tick()
 	fx.tick(delta)
 	play.tick(delta)
-	hero.actor.animate(hero.facing, hero.moving, delta)
+	hero.actor.animate(hero.facing, hero.moving, delta, hero.walk_rate())
 	hero.actor.set_pose(_pose_of(model.me))
 	_bubble_of(model.me, hero.actor)
 	var k := 1.0 - pow(0.001, delta)
@@ -921,6 +1020,7 @@ func _process(delta: float) -> void:
 	var boss_id := int(snap.get("b", {}).get("id", -1)) if snap.get("b") is Dictionary else -1
 	var t: Variant = combat.live_target()
 	var me_pos := hero.position
+	var npcs_here: Dictionary = {}
 	for key in _actors.keys():
 		var actor: Actor = _actors[key]
 		var id: String = key.substr(2)
@@ -947,6 +1047,10 @@ func _process(delta: float) -> void:
 				actor.position = target
 			else:
 				actor.position = actor.position.lerp(target, k)
+		if key.begins_with("p:") and rec.get("riding") != null:
+			# somebody riding sits up on the mount (the cart's bench, the horse's saddle), as the browser's rideInfo
+			var mount: Variant = w.get("animals", {}).get(str(int(rec.get("riding"))))
+			actor.position.y = Data.ride_lift(str(mount.get("species", ""))) if mount is Dictionary else Data.ride_lift("")
 		# facing from the velocity on screen (a monster has one side view: left or right); the record's when still
 		var prev: Vector3 = _prev_pos.get(key, actor.position)
 		var vel := (actor.position - prev) / maxf(0.001, delta)
@@ -955,7 +1059,7 @@ func _process(delta: float) -> void:
 		var moving := bool(rec.get("moving", false))
 		if vel.length() > 0.25:
 			moving = true
-			if absf(vel.x) > absf(vel.z) or key.begins_with("a:"):
+			if absf(vel.x) > absf(vel.z) or (key.begins_with("a:") and not actor.full_turn):
 				facing = "right" if vel.x > 0.0 else "left"
 			else:
 				facing = "down" if vel.z > 0.0 else "up"
@@ -963,7 +1067,7 @@ func _process(delta: float) -> void:
 			moving = false
 		actor.animate(facing, moving, delta)
 		if key.begins_with("n:"):
-			pass
+			npcs_here[id] = actor
 		elif key.begins_with("p:"):
 			actor.set_pose(_pose_of(id))
 			_bubble_of(id, actor)
@@ -989,6 +1093,8 @@ func _process(delta: float) -> void:
 			else:
 				actor.set_health(0.0, false, Color.WHITE)
 			actor.set_marker(_chasing_me(actor, vel, moving, species, m, me_pos))
+	if _mode == "outdoor":
+		npc_talk.tick(model, npcs_here, me_pos)
 	_update_prompt()
 	_rest_glow(delta, snap)
 	_frame_camera(delta)
@@ -1004,6 +1110,8 @@ func _process(delta: float) -> void:
 		hero.frozen = run_pick.is_open()
 	hud.tick_spell_bar(combat, snap.get("b") is Dictionary and snap["b"].get("cast") is Dictionary and bool(snap["b"]["cast"].get("kick", false)))
 	_frames += 1
+	if _open_map and _frames == 30:
+		play.windows.world_map.open_window()
 	if _open_chat and _frames == 30:
 		chat.open()
 	if _open_npc != "" and _frames == 30:
@@ -1034,6 +1142,62 @@ func _tick_sounds(delta: float) -> void:
 	if _walk_demo and not _walk_said and int(steps.stats["steps"]) >= 5:
 		_walk_said = true
 		print("walk: %d footsteps (%s), ambience %s" % [int(steps.stats["steps"]), str(steps.stats["kinds"]), str(soundscape.report()["layers"])])
+
+
+## Köpingen's main street laid out for a picture: Diligensen at its stop, a cart behind it, a riding horse coming the other way
+## with a rider on its back (a villager's body lent for the day). Only the demo does this (`--stage=street`).
+func _stage_street() -> void:
+	var animals: Dictionary = model.areas.get(_area, {}).get("animals", {})
+	var tile := float(Data.tile())
+	var horse_id := -1
+	var put := func(species: String, variant: int, tx: float, ty: float, facing: String) -> int:
+		for id in animals.keys():
+			var a: Dictionary = animals[id]
+			if str(a.get("species", "")) == species and int(a.get("variant", 0)) == variant:
+				a["x"] = tx * tile
+				a["y"] = ty * tile
+				a["facing"] = facing
+				a["moving"] = false
+				return int(id)
+		return -1
+	put.call("bus", 0, 37.4, 34.5, "right")
+	put.call("car", 1, 33.2, 34.5, "right")
+	put.call("car", 0, 43.5, 33.5, "left")
+	horse_id = put.call("motorcycle", 1, 40.2, 33.5, "left")
+	var rider: Dictionary = model.players().get("greta", {})
+	if horse_id >= 0 and not rider.is_empty():
+		rider["area"] = _area
+		rider["riding"] = horse_id
+		rider["x"] = 40.2 * tile
+		rider["y"] = 33.5 * tile
+		rider["facing"] = "left"
+		var snap: Variant = model.player_snaps.get("greta")
+		if snap is Dictionary:
+			snap["x"] = rider["x"]
+			snap["y"] = rider["y"]
+			snap["facing"] = "left"
+	# the actors were made where the fixture had things: make them again
+	for k in _actors.keys():
+		_actors[k].queue_free()
+	_actors.clear()
+	_prev_pos.clear()
+	_sync_actors()
+
+
+## Everything on screen that is a stand-in and not a look of its own: objects drawn as a placeholder box or that could not be
+## loaded, actors with no picture, and a vehicle that is not a body of its own (--placeholdercheck fails on any).
+func placeholder_report() -> Array[String]:
+	var out: Array[String] = []
+	out.append_array(farm.assets.problems)
+	out.append_array(dungeon.problems)
+	for k in _actors.keys():
+		var a: Actor = _actors[k]
+		if a.is_placeholder:
+			out.append("actor %s (%s) has no sprite sheet and shows the stand-in figure" % [k, a.sheet_name])
+		var rec: Variant = model.areas.get(_area, model.farm if _area == "farm" else {}).get("animals", {}).get(str(k).substr(2))
+		if rec is Dictionary and VEHICLES.has(str(rec.get("species", ""))) and (a.voxel == null or a.sprite.visible):
+			out.append("vehicle %s (%s) is not drawn as a body of its own" % [k, rec.get("species", "")])
+	return out
 
 
 func _is_riding(p: Variant) -> bool:

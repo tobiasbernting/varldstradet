@@ -97,10 +97,11 @@ const SPECS := {
 	"trough": {"m": ["trough"], "front": true},
 	"well": {"m": ["well"], "node": true},
 	"town_well": {"m": ["well"], "node": true},
-	"bus_stop": {"m": ["bus_stop"], "node": true, "front": true},
+	"bus_stop": {"m": ["vm_bus_stop"], "node": true, "front": true},
 	"cave": {"m": ["cave_mouth"], "node": true},
 	"cave_mouth": {"m": ["cave_mouth"], "node": true},
-	"saga_portal": {"m": ["arch"], "node": true},
+	# M9a: each dungeon's own gateway (arch_meshes.gd), by the object's variant (the dungeon's index)
+	"saga_portal": {"m": ["arch", "arch_1", "arch_2", "arch_3", "arch_4", "arch_5", "arch_6", "arch_7", "arch_8"], "node": true, "by_variant": true},
 	# --- M5c: the runs. The färdport (3 × 2) and the Yggdrasil shoot, five stages by the object's variant, and the three buildings.
 	"fardport": {"m": ["fardport"], "node": true},
 	"yggdrasil": {"m": ["ygg_0", "ygg_1", "ygg_2", "ygg_3", "ygg_4"], "node": true, "by_variant": true},
@@ -119,7 +120,7 @@ const SPECS := {
 	"stall": {"m": ["stall"], "front": true},
 	"pigsty": {"m": ["pigsty"], "front": true},
 	"lamp": {"m": ["lamp"], "node": true, "light": [WARM, 7.5, 1.6, 1.5, 0.15], "night": true},
-	"street_lamp": {"m": ["street_lamp"], "node": true, "light": [Color(1.0, 0.78, 0.5), 9.0, 1.7, 2.2, 0.1, 12.0], "night": true},
+	"street_lamp": {"m": ["vm_street_lamp"], "node": true, "light": [Color(1.0, 0.78, 0.5), 7.5, 1.5, 1.7, 0.1, 12.0], "night": true},
 	"lantern": {"m": ["lantern"], "node": true, "light": [WARM, 6.0, 1.4, 0.6, 0.25], "night": true},
 	"torch": {"m": ["torch"], "node": true, "light": [FIRE, 6.0, 1.7, 1.3, 0.35], "night": true},
 	"crystal_lamp": {"m": ["lantern"], "node": true, "light": [Color("#9fe8ff"), 5.0, 1.0, 0.6, 0.1]},
@@ -132,7 +133,7 @@ const SPECS := {
 	"sofa": {"m": ["sofa"], "front": true},
 	"bookshelf": {"m": ["bookshelf"], "front": true},
 	"plant": {"m": ["houseplant"]},
-	"painting": {"m": ["painting"]},
+	"painting": {"m": ["painting"], "node": true}, # a node: the drawing on it is a texture of its own (farm_view.gd _picture)
 	"clock": {"m": ["clock"]},
 	"stove": {"m": ["stove"], "front": true, "node": true, "light": [Color("#ff8a3a"), 3.2, 0.8, 0.5, 0.3]},
 	"hay_cart": {"m": ["hay_cart"]},
@@ -141,21 +142,80 @@ const SPECS := {
 	"maypole": {"m": ["maypole"]},
 	"pumpkin_lantern": {"m": ["jack_o_lantern"], "node": true, "light": [Color("#ff9a3c"), 3.0, 0.9, 0.4, 0.3]},
 	# --- Köpingen (city.ts): the Norse market town; its streets are ground, these are what stands on them
-	"house_small": {"m": ["house_b"], "front": true, "chimney": Vector3(0.33, 3.05, -1.02)},
-	"apartment": {"m": ["apartment"], "front": true, "chimney": Vector3(0.9, 3.7, -0.3)},
-	"shop": {"m": ["village_shop"], "node": true, "front": true, "glows": [[-0.8, 0.8, 0.95], [0.8, 0.8, 0.95]], "light": [WARM, 6.0, 1.3, 1.2, 0.1], "night": true},
+	"house_small": {"m": ["vm_house_0", "vm_house_1", "vm_house_2", "vm_house_3"], "by_variant": true, "front": true, "chimney": Vector3(0.75, 2.8, -0.2)},
+	"apartment": {"m": ["vm_apartment_0", "vm_apartment_1", "vm_apartment_2", "vm_apartment_3"], "by_variant": true, "front": true, "chimney": Vector3(0.9, 3.4, -0.3)},
+	"shop": {"m": ["vm_shop_0", "vm_shop_1", "vm_shop_2"], "by_variant": true, "node": true, "front": true, "glows": [[0.15, 0.74, 0.96]], "light": [WARM, 6.0, 1.3, 1.2, 0.1], "night": true},
 	"market": {"m": ["market"], "front": true},
 	"sellstall": {"m": ["sell_stall"], "front": true},
-	"pizzeria": {"m": ["pizzeria"], "node": true, "front": true, "chimney": Vector3(0.7, 2.35, -0.3), "glows": [[-0.8, 0.75, 0.9], [0.8, 0.75, 0.9]], "light": [WARM, 6.0, 1.4, 1.2, 0.15], "night": true},
-	"bathhouse": {"m": ["bathhouse"], "front": true, "chimney": Vector3(-1.0, 2.4, -0.4)},
-	"train_station": {"m": ["station"], "node": true, "front": true, "glows": [[-0.8, 0.7, 0.75], [0.8, 0.7, 0.75]], "light": [Color(1.0, 0.78, 0.5), 7.0, 1.3, 1.6, 0.1], "night": true},
-	"traffic_light": {"m": ["traffic_light"]},
-	"parked_car": {"m": ["car_0", "car_1", "car_2"], "by_variant": true},
+	"pizzeria": {"m": ["vm_pizzeria"], "node": true, "front": true, "chimney": Vector3(1.0, 2.3, -0.3), "glows": [[-0.85, 0.62, 0.94]], "light": [WARM, 6.0, 1.4, 1.2, 0.15], "night": true},
+	"bathhouse": {"m": ["vm_bathhouse"], "front": true, "chimney": Vector3(-1.0, 2.2, -0.4)},
+	"train_station": {"m": ["vm_station"], "node": true, "front": true, "glows": [[-0.95, 0.6, 0.93], [0.95, 0.6, 0.93]], "light": [Color(1.0, 0.78, 0.5), 7.0, 1.3, 1.6, 0.1], "night": true},
+	"traffic_light": {"m": ["vm_signpost"]},
+	"parked_car": {"m": ["vm_cart_0", "vm_cart_1", "vm_cart_2"], "by_variant": true},
 	"banner_pole": {"m": ["banner_0", "banner_1", "banner_2"], "by_variant": true},
 	"runestone": {"m": ["runestone"], "node": true, "light": [Color("#38d8f0"), 4.0, 0.9, 1.0, 0.1]},
 	"saga_stone": {"m": ["kampasten"], "node": true, "light": [Color("#38d8f0"), 5.0, 1.2, 1.3, 0.12]},
+	# --- the wild maps' own props (wild_meshes.gd): plants, bones, mining, the moon, the landmarks, the seasons' decor
+	"banana_plant": {"m": ["wp_banana_plant"], "yaw": "free"},
+	"beehive": {"m": ["wp_beehive"], "front": true},
+	"candy_cane": {"m": ["wp_candy_cane"], "yaw": "free"},
+	"lollipop_tree": {"m": ["wp_lollipop_tree"], "yaw": "free"},
+	"gingerbread_house": {"m": ["wp_gingerbread_house"], "node": true, "front": true, "light": [Color("#ffc977"), 4.5, 1.0, 1.0, 0.15], "night": true},
+	"dino_bones": {"m": ["wp_dino_bones"]},
+	"dino_skeleton": {"m": ["wp_dino_skeleton"], "front": true},
+	"fossil_rock": {"m": ["wp_fossil_rock"], "yaw": "free"},
+	"bones": {"m": ["wp_bones"], "yaw": "free"},
+	"fairy_ring": {"m": ["wp_fairy_ring"]},
+	"dragon_egg": {"m": ["wp_dragon_egg"]},
+	"wisp_jar": {"m": ["wp_wisp_jar"], "node": true, "few_lights": true, "light": [Color("#bfe8ff"), 3.0, 0.8, 0.5, 0.3]},
+	"ghost_flag": {"m": ["wp_ghost_flag"], "yaw": "free"},
+	"lights": {"m": ["wp_lights"]},
+	"easter_twigs": {"m": ["wp_easter_twigs"], "yaw": "free"},
+	"egg_basket": {"m": ["wp_egg_basket"], "yaw": "free"},
+	"flower_wreath_decor": {"m": ["wp_flower_wreath_decor"]},
+	"cave_wall": {"m": ["wp_cave_wall_0_0", "wp_cave_wall_0_1", "wp_cave_wall_0_0", "wp_cave_wall_0_1", "wp_cave_wall_1_0", "wp_cave_wall_1_1", "wp_cave_wall_2_0", "wp_cave_wall_2_1", "wp_cave_wall_3_0", "wp_cave_wall_3_1", "wp_cave_wall_4_0", "wp_cave_wall_4_1", "wp_cave_wall_5_0", "wp_cave_wall_5_1", "wp_cave_wall_6_0", "wp_cave_wall_6_1", "wp_cave_wall_7_0", "wp_cave_wall_7_1", "wp_cave_wall_8_0", "wp_cave_wall_8_1", "wp_cave_wall_9_0", "wp_cave_wall_9_1", "wp_cave_wall_10_0", "wp_cave_wall_10_1"], "by_variant": true},
+	"cave_torch": {"m": ["wp_cave_torch"], "node": true, "few_lights": true, "light": [FIRE, 5.0, 1.5, 1.2, 0.35]},
+	"cave_exit": {"m": ["wp_cave_exit"]},
+	"bath_exit": {"m": ["wp_bath_exit"]},
+	"cave_rock": {"m": ["wp_cave_rock_0", "wp_cave_rock_1", "wp_cave_rock_2", "wp_cave_rock_3", "wp_cave_rock_4", "wp_cave_rock_5", "wp_cave_rock_6", "wp_cave_rock_7", "wp_cave_rock_8", "wp_cave_rock_9", "wp_cave_rock_10"], "by_variant": true, "yaw": "free"},
+	"stalagmite": {"m": ["wp_stalagmite_0", "wp_stalagmite_1", "wp_stalagmite_2", "wp_stalagmite_3", "wp_stalagmite_4", "wp_stalagmite_5", "wp_stalagmite_6", "wp_stalagmite_7", "wp_stalagmite_8", "wp_stalagmite_9", "wp_stalagmite_10"], "by_variant": true, "yaw": "free"},
+	"ore": {"m": ["wp_ore_0", "wp_ore_1"], "yaw": "free"},
+	"gold_vein": {"m": ["wp_gold_vein"], "yaw": "free"},
+	"gem_vein": {"m": ["wp_gem_vein"], "yaw": "free"},
+	"crystal": {"m": ["wp_crystal_0", "wp_crystal_1", "wp_crystal_2", "wp_crystal_3"], "by_variant": true, "yaw": "free"},
+	"fire_crystal": {"m": ["wp_fire_crystal"], "yaw": "free"},
+	"star_crystal": {"m": ["wp_star_crystal"], "yaw": "free"},
+	"giant_mushroom": {"m": ["wp_giant_mushroom"], "lo": "wp_giant_mushroom_lo", "yaw": "free"},
+	"giant_glowshroom": {"m": ["wp_giant_glowshroom"], "lo": "wp_giant_glowshroom_lo", "yaw": "free"},
+	"obsidian_rock": {"m": ["wp_obsidian_rock"], "yaw": "free"},
+	"moon_rock": {"m": ["wp_moon_rock"], "yaw": "free"},
+	"moon_cheese": {"m": ["wp_moon_cheese"], "yaw": "free"},
+	"crater": {"m": ["wp_crater"]},
+	"earth": {"m": ["wp_earth"]},
+	"flag_se": {"m": ["wp_flag_se"]},
+	"rocket": {"m": ["wp_rocket"], "node": true, "front": true, "light": [Color("#ffd98a"), 4.0, 0.8, 1.5, 0.1]},
+	"satellite_dish": {"m": ["wp_satellite_dish"], "front": true},
+	"ufo": {"m": ["wp_ufo"], "node": true, "front": true, "light": [Color("#8affd0"), 5.0, 1.0, 0.4, 0.25]},
+	"pyramid": {"m": ["wp_pyramid"], "node": true, "front": true, "light": [Color("#ffb060"), 4.0, 1.0, 1.1, 0.35]},
+	"temple": {"m": ["wp_temple"], "node": true, "front": true, "light": [Color("#ffb060"), 4.0, 1.0, 1.0, 0.35]},
+	"volcano": {"m": ["wp_volcano"], "node": true, "light": [Color("#ff6a20"), 7.0, 1.4, 3.1, 0.3]},
+	"shipwreck": {"m": ["wp_shipwreck"], "front": true},
+	"ruin_pillar": {"m": ["wp_ruin_pillar"], "yaw": "free"},
+	"steam_vent": {"m": ["wp_steam_vent"]},
+	"snowman_wild": {"m": ["wp_snowman_wild"]},
+	"signpost": {"m": ["vm_signpost"]},
+	"treasure": {"m": ["wp_treasure"], "front": true},
+	"alvlykta": {"m": ["wp_alvlykta"]},
+	"bifrostbit": {"m": ["wp_bifrostbit"]},
+	"dvargstaty": {"m": ["wp_dvargstaty"], "front": true},
+	"fenrislanka": {"m": ["wp_fenrislanka"]},
+	"hels_lykta": {"m": ["wp_hels_lykta"]},
+	"ormtand": {"m": ["wp_ormtand"]},
+	"solruna": {"m": ["wp_solruna"], "front": true},
 }
 
+## What was drawn as a placeholder box or could not be loaded, as the warnings said (empty when every kind has a look).
+var problems: Array[String] = []
 var assets_root := ""
 var _meshes: Dictionary = {}
 var _warned: Dictionary = {}
@@ -193,6 +253,7 @@ func _init() -> void:
 
 
 func release() -> void:
+	WildMeshes.release() # (its meshes are shared with the dungeon's ZoneProps: both rebuild them on the next ask)
 	_meshes.clear()
 	_gtex.clear()
 	_glow_tex = null
@@ -280,6 +341,7 @@ func has_spec(kind: String) -> bool:
 func warn_once(what: String, text: String) -> void:
 	if not _warned.has(what):
 		_warned[what] = true
+		problems.append(text) # (the placeholder check, placeholder_check.gd, fails on any)
 		push_warning(text)
 
 
@@ -294,6 +356,14 @@ func mesh(mesh_name: String) -> ArrayMesh:
 	var m := _make(mesh_name)
 	_meshes[mesh_name] = m
 	return m
+
+
+## The name a mesh was made under (for the checks): "" when it is not one of the kept ones.
+func name_of(m: Mesh) -> String:
+	for k in _meshes.keys():
+		if _meshes[k] == m:
+			return str(k)
+	return ""
 
 
 func _make(n: String) -> ArrayMesh:
@@ -317,6 +387,14 @@ func _make(n: String) -> ArrayMesh:
 		return _baked(NATURE + rock, 1.0, "cliff_" + cb[1])
 	if n.begins_with("gen:"):
 		return _landmark_mesh(n.substr(4))
+	if n.begins_with("paint:"):
+		# a painted house, wall, door or window (the server's `variant` is the paint bucket): "paint:<mesh>:<variant>"
+		var pp := n.split(":")
+		return _painted(pp[1], int(pp[2]))
+	if n.begins_with("vm_"):
+		return _village(n.substr(3))
+	if n.begins_with("wp_"):
+		return WildMeshes.mesh(n.substr(3))
 	if n.begins_with("ph_"):
 		var wh := n.substr(3).split("x")
 		return _placeholder(int(wh[0]), int(wh[1]))
@@ -379,9 +457,9 @@ func _make(n: String) -> ArrayMesh:
 		"chest": return _chest()
 		"workbench": return _workbench()
 		"trough": return _trough()
-		"bus_stop": return _bus_stop()
 		"cave_mouth": return _merged(_turned(_baked(NATURE + "cliff_cave_rock.glb", 2.0, "cliff", Vector2.ZERO, null, Vector3(0.0, 0.0, -0.85)), PI), _cave_dark())
 		"arch": return _arch()
+		"arch_1", "arch_2", "arch_3", "arch_4", "arch_5", "arch_6", "arch_7", "arch_8": return ArchMeshes.mesh(int(n.substr(5)))
 		"fardport": return RunMeshes.fardport()
 		"ygg_0": return RunMeshes.yggdrasil(0)
 		"ygg_1": return RunMeshes.yggdrasil(1)
@@ -402,7 +480,6 @@ func _make(n: String) -> ArrayMesh:
 		"pigsty": return _shed(2, 2, Color("#b27a5a"), Color("#8a4a3a"), 0.8, 0.45)
 		# the post's lantern hangs 1 unit south of the post: the pivot puts it over the tile's middle, where the light is
 		"lamp": return _baked(HALLOWEEN + "post_lantern.gltf", 0.75, "lamp", Vector2.ZERO, Vector3(0.0, 0.0, 1.0))
-		"street_lamp": return _baked(HALLOWEEN + "post_lantern.gltf", 1.1, "lamp", Vector2.ZERO, Vector3(0.0, 0.0, 1.0))
 		"lantern": return _baked(HALLOWEEN + "lantern_standing.gltf", 0.6, "lamp")
 		"torch": return _torch()
 		"wisp": return _wisp()
@@ -421,18 +498,8 @@ func _make(n: String) -> ArrayMesh:
 		"snowman": return _snowman()
 		"xmas_tree": return _xmas_tree()
 		"maypole": return _maypole()
-		"house_b": return _baked(HEX + "building_home_B_red.gltf", 0.0, "house", Vector2(2.7, 2.6))
-		"apartment": return _apartment()
-		"village_shop": return _baked(HEX + "building_tavern_red.gltf", 0.0, "house", Vector2(2.8, 1.8))
 		"market": return _baked(HEX + "building_market_red.gltf", 0.0, "house", Vector2(1.9, 1.9))
 		"sell_stall": return _sell_stall()
-		"pizzeria": return _pizzeria()
-		"bathhouse": return _bathhouse()
-		"station": return _station()
-		"traffic_light": return _traffic_light()
-		"car_0": return _car(Color("#c8473a"))
-		"car_1": return _car(Color("#3a6ac8"))
-		"car_2": return _car(Color("#e8c43a"))
 		"banner_0": return _banner(Color("#c8473a"))
 		"banner_1": return _banner(Color("#3a6ac8"))
 		"banner_2": return _banner(Color("#e8c43a"))
@@ -810,10 +877,68 @@ func _landmark_mesh(n: String) -> ArrayMesh:
 	return b.build()
 
 
+## Köpingen's timber buildings and street furniture (village_meshes.gd): "house_2", "apartment_1", "shop_0", "signpost", ...
+func _village(n: String) -> ArrayMesh:
+	var parts := n.rsplit("_", true, 1)
+	var v := int(parts[1]) if parts.size() == 2 and parts[1].is_valid_int() else 0
+	var base: String = parts[0] if parts.size() == 2 and parts[1].is_valid_int() else n
+	match base:
+		"house": return VillageMeshes.house(v)
+		"apartment": return VillageMeshes.apartment(v)
+		"shop": return VillageMeshes.shop(v)
+		"cart": return VillageMeshes.hand_cart(v)
+		"pizzeria": return VillageMeshes.pizzeria()
+		"bathhouse": return VillageMeshes.bathhouse()
+		"station": return VillageMeshes.station()
+		"signpost": return VillageMeshes.signpost()
+		"street_lamp": return VillageMeshes.scaled(VillageMeshes.street_lamp(), 0.85)
+		"bus_stop": return VillageMeshes.bus_stop()
+	warn_once(n, "farm: no village mesh '%s'" % n)
+	return null
+
+
 func _placeholder(w: int, h: int) -> ArrayMesh:
 	var b := FarmMesh.new()
 	b.box(Vector3(0.0, 0.4, 0.0), Vector3(maxf(0.5, w - 0.2), 0.8, maxf(0.5, h - 0.2)), Color("#9a80b8"), 0.0, 0.0, Color("#b89ad4"))
 	return b.build()
+
+
+## A mesh in the colour of a paint bucket. Walls, doors and windows are built again in it; the farmhouse keeps its roof and its
+## timber and the plaster between them (the cool-grey vertices of the model, shades kept) takes the colour.
+func _painted(base: String, variant: int) -> ArrayMesh:
+	var col := PaintArt.bucket(variant)
+	if col.a == 0.0:
+		return mesh(base)
+	match base:
+		"wall_wood", "wall_stone":
+			return _wall(col)
+		"door":
+			return _door(col)
+		"window":
+			return _window(col)
+		"house":
+			var src := mesh("house")
+			if src == null:
+				return null
+			var arr := src.surface_get_arrays(0)
+			var cols: PackedColorArray = arr[Mesh.ARRAY_COLOR]
+			var verts: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+			var lin := col.srgb_to_linear()
+			var out := PackedColorArray()
+			out.resize(cols.size())
+			for i in range(cols.size()):
+				var c := cols[i]
+				# plaster: cool and not the black of the gaps or the grey of the foundation (the model's blue-grey walls)
+				if c.b >= c.r * 1.02 and verts[i].y > 0.45 and c.get_luminance() > 0.09:
+					var shade := clampf(c.get_luminance() / 0.5, 0.35, 1.0)
+					out[i] = Color(lin.r * shade, lin.g * shade, lin.b * shade, c.a)
+				else:
+					out[i] = c
+			arr[Mesh.ARRAY_COLOR] = out
+			var m := ArrayMesh.new()
+			m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+			return m
+	return mesh(base)
 
 
 func _wall(col: Color) -> ArrayMesh:
@@ -822,9 +947,9 @@ func _wall(col: Color) -> ArrayMesh:
 	return b.build()
 
 
-func _door() -> ArrayMesh:
+func _door(col := Color.TRANSPARENT) -> ArrayMesh:
 	var b := FarmMesh.new()
-	b.box(Vector3(0.0, 0.95, 0.0), Vector3(0.9, 1.9, 0.18), WOOD.darkened(0.1), 0.0)
+	b.box(Vector3(0.0, 0.95, 0.0), Vector3(0.9, 1.9, 0.18), WOOD.darkened(0.1) if col.a == 0.0 else col.darkened(0.1), 0.0)
 	b.box(Vector3(0.28, 0.9, 0.12), Vector3(0.08, 0.08, 0.06), GOLD, 0.0)
 	return b.build()
 
@@ -835,9 +960,9 @@ func _door_mat() -> ArrayMesh:
 	return b.build()
 
 
-func _window() -> ArrayMesh:
+func _window(col := Color.TRANSPARENT) -> ArrayMesh:
 	var b := FarmMesh.new()
-	b.box(Vector3(0.0, 1.1, 0.0), Vector3(0.9, 1.0, 0.16), WOOD, 0.0)
+	b.box(Vector3(0.0, 1.1, 0.0), Vector3(0.9, 1.0, 0.16), WOOD if col.a == 0.0 else col, 0.0)
 	b.box(Vector3(0.0, 1.1, 0.07), Vector3(0.62, 0.7, 0.06), Color("#a8d8f0"), 0.5)
 	return b.build()
 
@@ -896,17 +1021,6 @@ func _workbench() -> ArrayMesh:
 func _trough() -> ArrayMesh:
 	var b := FarmMesh.new()
 	b.box(Vector3(0.0, 0.2, 0.0), Vector3(0.9, 0.4, 0.46), WOOD, 0.0, 0.0, Color("#c8b45a"))
-	return b.build()
-
-
-func _bus_stop() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.box(Vector3(0.0, 1.0, 0.0), Vector3(0.08, 2.0, 0.08), IRON, 0.0)
-	b.box(Vector3(0.0, 1.85, 0.04), Vector3(0.62, 0.34, 0.05), Color("#2f6ec8"), 0.0)
-	b.box(Vector3(0.0, 1.85, 0.07), Vector3(0.46, 0.2, 0.02), Color("#f4f0e4"), 0.0)
-	b.box(Vector3(0.0, 0.3, 0.35), Vector3(0.7, 0.06, 0.3), WOOD, 0.0)
-	b.box(Vector3(-0.3, 0.15, 0.35), Vector3(0.06, 0.3, 0.26), WOOD.darkened(0.1), 0.0)
-	b.box(Vector3(0.3, 0.15, 0.35), Vector3(0.06, 0.3, 0.26), WOOD.darkened(0.1), 0.0)
 	return b.build()
 
 
@@ -1105,36 +1219,7 @@ func _maypole() -> ArrayMesh:
 
 
 # ---------------------------------------------------------------------------
-# Köpingen's buildings and street furniture (generated: the packs have no pizzeria, station or stone with runes)
-
-
-## A gable roof along x over a box of w × d, its ridge `rise` high.
-func _gable(b: FarmMesh, w: float, d: float, y0: float, rise: float, roof: Color, wall: Color) -> void:
-	var ov := 0.14
-	var hx := w * 0.5 + ov
-	var hz := d * 0.5 + ov
-	b.quad(Vector3(-hx, y0, hz), Vector3(hx, y0, hz), Vector3(hx, y0 + rise, 0.0), Vector3(-hx, y0 + rise, 0.0), roof.lightened(0.05))
-	b.quad(Vector3(hx, y0, -hz), Vector3(-hx, y0, -hz), Vector3(-hx, y0 + rise, 0.0), Vector3(hx, y0 + rise, 0.0), roof.darkened(0.1))
-	var wx := w * 0.5 - 0.02
-	var wz := d * 0.5 - 0.02
-	b.tri(Vector3(-wx, y0, wz), Vector3(-wx, y0 + rise - 0.05, 0.0), Vector3(-wx, y0, -wz), wall.darkened(0.1), wall.darkened(0.1), wall.darkened(0.1))
-	b.tri(Vector3(wx, y0, -wz), Vector3(wx, y0 + rise - 0.05, 0.0), Vector3(wx, y0, wz), wall.darkened(0.1), wall.darkened(0.1), wall.darkened(0.1))
-
-
-func _apartment() -> ArrayMesh:
-	var b := FarmMesh.new()
-	var wall := Color("#c9a77a")
-	b.box(Vector3(0.0, 1.35, 0.0), Vector3(2.8, 2.7, 2.8), wall, 0.0, 0.0, wall.darkened(0.05))
-	for floor_y in [0.55, 1.45, 2.3]:
-		b.box(Vector3(0.0, floor_y - 0.45, 1.41), Vector3(2.8, 0.05, 0.04), WOOD.darkened(0.2), 0.0)
-	for x in [-0.9, 0.0, 0.9]:
-		for y in [1.15, 2.0]:
-			b.box(Vector3(x, y, 1.42), Vector3(0.42, 0.5, 0.03), Color("#7fb0d8"), 0.0)
-			b.box(Vector3(x, y - 0.3, 1.43), Vector3(0.5, 0.06, 0.06), Color("#f4f0e4"), 0.0)
-	b.box(Vector3(0.0, 0.4, 1.42), Vector3(0.5, 0.8, 0.04), Color("#3a2a1e"), 0.0)
-	_gable(b, 2.8, 2.8, 2.7, 0.8, ROOF_RED.darkened(0.1), wall)
-	b.box(Vector3(0.9, 3.35, -0.3), Vector3(0.3, 0.7, 0.3), STONE_DARK, 0.0)
-	return b.build()
+# Köpingen's street furniture that is not timber (generated; the timber town is in village_meshes.gd)
 
 
 func _sell_stall() -> ArrayMesh:
@@ -1151,75 +1236,6 @@ func _sell_stall() -> ArrayMesh:
 	b.box(Vector3(0.1, 1.0, 0.3), Vector3(0.4, 0.2, 0.4), Color("#78a848"), 0.0)
 	b.box(Vector3(0.6, 1.0, 0.3), Vector3(0.36, 0.2, 0.4), Color("#c8473a"), 0.0)
 	b.box(Vector3(0.0, 0.2, -0.4), Vector3(1.6, 0.4, 0.3), WOOD.darkened(0.2), 0.0)
-	return b.build()
-
-
-func _pizzeria() -> ArrayMesh:
-	var b := FarmMesh.new()
-	var wall := Color("#e8d8b0")
-	b.box(Vector3(0.0, 0.8, 0.0), Vector3(2.8, 1.6, 1.8), wall, 0.0, 0.0, wall.darkened(0.05))
-	_gable(b, 2.8, 1.8, 1.6, 0.7, ROOF_RED, wall)
-	# the striped awning over the door and the windows, and the pizza on the sign
-	for i in range(8):
-		var col := Color("#f4f0e4") if i % 2 == 0 else Color("#c8473a")
-		var x0 := -1.25 + i * 0.31
-		b.quad(Vector3(x0, 1.35, 0.9), Vector3(x0 + 0.31, 1.35, 0.9), Vector3(x0 + 0.31, 1.0, 1.35), Vector3(x0, 1.0, 1.35), col)
-	b.box(Vector3(0.0, 0.4, 0.91), Vector3(0.5, 0.8, 0.04), Color("#3a2a1e"), 0.0)
-	for x in [-0.9, 0.9]:
-		b.box(Vector3(x, 0.8, 0.91), Vector3(0.5, 0.45, 0.03), Color("#ffd98a"), 0.0)
-	b.cylinder(Vector3(0.0, 1.75, 0.5), 0.34, 0.34, 0.06, 10, Color("#e8a83a"), Color("#e8a83a"), 0.0)
-	b.cylinder(Vector3(0.0, 1.78, 0.5), 0.2, 0.2, 0.04, 8, Color("#c8473a"), Color("#c8473a"), 0.0)
-	b.box(Vector3(1.0, 2.0, -0.4), Vector3(0.26, 0.7, 0.26), STONE_DARK, 0.0)
-	return b.build()
-
-
-func _bathhouse() -> ArrayMesh:
-	var b := FarmMesh.new()
-	var wall := Color("#b8b2a2")
-	b.box(Vector3(0.0, 0.75, 0.0), Vector3(2.8, 1.5, 1.8), wall, 0.0, 0.0, wall.lightened(0.05))
-	b.box(Vector3(0.0, 1.55, 0.0), Vector3(3.0, 0.12, 2.0), Color("#5e6a78"), 0.0)
-	_gable(b, 2.8, 1.8, 1.6, 0.55, Color("#5e6a78"), wall)
-	b.box(Vector3(0.0, 0.5, 0.91), Vector3(0.6, 1.0, 0.04), Color("#5a3a26"), 0.0)
-	for x in [-0.95, 0.95]:
-		b.box(Vector3(x, 0.9, 0.91), Vector3(0.4, 0.4, 0.03), Color("#9ad0e8"), 0.0)
-	b.box(Vector3(-1.0, 2.0, -0.4), Vector3(0.3, 0.8, 0.3), STONE_DARK, 0.0)
-	return b.build()
-
-
-func _station() -> ArrayMesh:
-	var b := FarmMesh.new()
-	# a platform with a waiting hall and a long roof on posts; the sign says where the dwarves' train goes
-	b.box(Vector3(0.0, 0.1, 0.0), Vector3(2.95, 0.2, 1.95), STONE, 0.0, 0.0, STONE.lightened(0.1))
-	b.box(Vector3(0.0, 0.8, -0.35), Vector3(2.5, 1.2, 0.9), Color("#a8793f"), 0.0, 0.0, WOOD_LIGHT)
-	for x in [-1.3, 1.3]:
-		b.box(Vector3(x, 0.9, 0.7), Vector3(0.1, 1.4, 0.1), WOOD.darkened(0.15), 0.0)
-	b.box(Vector3(0.0, 1.7, 0.2), Vector3(3.0, 0.12, 1.7), Color("#4a5a6a"), 0.0)
-	b.box(Vector3(0.0, 1.35, 0.12), Vector3(1.2, 0.3, 0.05), Color("#f4f0e4"), 0.0)
-	b.box(Vector3(0.0, 1.35, 0.15), Vector3(1.0, 0.1, 0.02), Color("#2f6ec8"), 0.0)
-	for x in [-0.8, 0.8]:
-		b.box(Vector3(x, 0.75, 0.11), Vector3(0.4, 0.45, 0.03), Color("#ffd98a"), 0.0)
-	b.box(Vector3(0.0, 0.55, 0.11), Vector3(0.38, 0.7, 0.03), Color("#3a2a1e"), 0.0)
-	return b.build()
-
-
-func _traffic_light() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.cylinder(Vector3.ZERO, 0.05, 0.04, 1.9, 5, IRON, IRON, 0.0)
-	b.box(Vector3(0.0, 1.8, 0.0), Vector3(0.2, 0.5, 0.16), Color("#2a2a30"), 0.0)
-	b.box(Vector3(0.0, 1.94, 0.09), Vector3(0.1, 0.1, 0.02), Color("#e84a3a"), 0.0)
-	b.box(Vector3(0.0, 1.8, 0.09), Vector3(0.1, 0.1, 0.02), Color("#6a5a2a"), 0.0)
-	b.box(Vector3(0.0, 1.66, 0.09), Vector3(0.1, 0.1, 0.02), Color("#4ae85a"), 0.0)
-	return b.build()
-
-
-func _car(body: Color) -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.box(Vector3(0.0, 0.32, 0.0), Vector3(1.7, 0.4, 0.8), body, 0.0, 0.0, body.lightened(0.08))
-	b.box(Vector3(-0.1, 0.68, 0.0), Vector3(0.9, 0.34, 0.7), body.darkened(0.05), 0.0, 0.0, body.lightened(0.15))
-	b.box(Vector3(-0.1, 0.68, 0.0), Vector3(0.94, 0.22, 0.72), Color("#7fb0d8"), 0.0)
-	for x in [-0.55, 0.55]:
-		for z in [-0.38, 0.38]:
-			b.box(Vector3(x, 0.14, z), Vector3(0.28, 0.28, 0.12), Color("#1e1e22"), 0.0)
 	return b.build()
 
 

@@ -69,6 +69,10 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_t += delta
 	_report["seconds"] = _t
+	if _watched != "" and not _done: # (every frame, through the walk and the wait: a bolt may be over before the bot stands still)
+		var watched := _animal_by_id(_watched)
+		if not watched.is_empty():
+			_watch_startle(_startles[_watched], watched)
 	if not _done and _t > seconds:
 		_error("time is up")
 		_finish()
@@ -116,10 +120,11 @@ func _run() -> void:
 	await _wait(0.5)
 	_log("on the farm at %s as %s" % [str(_my_tile()), world.model.me])
 	_home = FarmBotHome.new(self)
+	var _books := FarmBotBooks.new(self, _home)
 	var stages := {
-		"shop": _home.shop_buy, "patch": _farm_patch, "keys": _keys_and_pets, "drop": _drop_and_pick_up, "sell": _home.sell_crop, "gather": _gather, "quests": _quests, "pond": _pond_and_fishing, "bag": _bag_and_chest,
-		"build": _home.build, "house": _home.house_and_cook, "wardrobe": _home.wardrobe, "talk": _home.talk, "pet": _pet_wild,
-		"village": _home.class_and_chapter, "pizza": _home.pizza, "hero": _home.hero_switch, "bus": _home.bus,
+		"shop": _home.shop_buy, "patch": _farm_patch, "keys": _keys_and_pets, "sprint": _sprint, "drop": _drop_and_pick_up, "sell": _home.sell_crop, "gather": _gather, "quests": _quests, "pond": _pond_and_fishing, "bag": _bag_and_chest,
+		"build": _home.build, "house": _home.house_and_cook, "paint": _home.paint, "wardrobe": _home.wardrobe, "talk": _home.talk, "pet": _pet_wild,
+		"village": _home.class_and_chapter, "pizza": _home.pizza, "hero": _home.hero_switch, "smed": _home.smedjan, "ui175": _home.ui_175, "bus": _home.bus, "marks": _home.marks_up_close, "books": _books.books, "hud": _books.hud, "menu": _books.pause_menu, "help": _books.help, "volva": _books.volva_journal, "family": _books.family, "text": _books.large_text,
 	}
 	for key in stages.keys():
 		if _done:
@@ -363,7 +368,26 @@ func _gather() -> void:
 func _quests() -> void:
 	var model := world.model
 	if model.count_item("stone") >= 5:
+		await _home.expect_mark("mark: Elsa has a wish I can fill", "elsa", "❗", "give")
 		await _home.hand_over("elsa", "elsa_flowerbox", "stone")
+		await _home.expect_mark("mark: Elsa's wish is done", "elsa", "<rules>")
+		(_report["books"] as Dictionary)["elsa_after"] = _home.mark_of("elsa")
+		var farm_marks := {}
+		for id in Data.npcs.keys():
+			var shown := _home.mark_of(str(id))
+			if shown != "<not drawn>":
+				farm_marks[str(id)] = shown
+		(_report["books"] as Dictionary)["marks_farm"] = farm_marks
+		# the negative case: the server says nobody wants anything today (a `quests` change with no wishes): every wish mark goes
+		var wishes: Array = world.model.quests().duplicate(true)
+		world.model.apply({"t": "changes", "changes": [{"t": "quests", "quests": []}]})
+		await _wait(0.6)
+		var cleared := {}
+		for id in farm_marks.keys():
+			cleared[id] = _home.mark_of(str(id))
+		(_report["books"] as Dictionary)["marks_farm_cleared"] = cleared
+		world.model.apply({"t": "changes", "changes": [{"t": "quests", "quests": wishes}]})
+		await _wait(0.3)
 	else:
 		_step("Elsas önskning", false, "no stone")
 	if model.count_item("wood") >= 5:
@@ -463,7 +487,12 @@ func _bag_and_chest() -> void:
 ## Walk to the forest in the north and pet a wild animal (the heart and the server's answer). Foxes and hedgehogs
 ## are tame enough; wolves, bears and the roaming monsters bite, so the bot keeps away from them and goes home to try
 ## again if it faints.
-var _startles: Dictionary = {} ## the wild animals watched: id -> {home (px), away (most tiles from home), back (tiles from home when next to me)}
+var _startles: Dictionary = {} ## the wild animals watched: id -> what `_watch_startle` keeps
+var _watched := "" ## the id (as a string) of the wild animal being watched now
+var _standing := false ## the bot stands still, waiting for the animal (only then is its distance to the bot a measure of its coming back)
+## How fast the forest's wild animals wander (px a second, shared/src/data.ts ANIMALS): a bolt is more than 1.8 times this (the
+## server's rule is 2.2 times). Not in the client's game data, which has no use for it; a species missing here is not recognised.
+const WANDER_SPEED := {"fox": 34.0, "boar": 28.0, "moose": 22.0, "hedgehog": 16.0, "hare": 40.0, "deer": 30.0}
 
 
 func _pet_wild() -> void:
@@ -475,10 +504,10 @@ func _pet_wild() -> void:
 			break
 		if model.my_area_key() != "a:0,-1" and not await _leave_by("n", "a:0,-1"):
 			continue
-		var until := Time.get_ticks_msec() + 40000
+		var until := Time.get_ticks_msec() + 150000 # (long enough to try several animals: each one that does not come back is given up on)
 		while Time.get_ticks_msec() < until and not petted and not _done and model.my_area_key() == "a:0,-1":
 			var hearts := int(_report["hearts_seen"])
-			var danger := _hostile_near(Vector2(world.hero.px, world.hero.py), 6.0)
+			var danger := _hostile_near(Vector2(world.hero.px, world.hero.py), 7.0)
 			if danger != Vector2.INF:
 				var away := Vector2(world.hero.px, world.hero.py) - danger
 				world.hero.driven = true
@@ -496,36 +525,59 @@ func _pet_wild() -> void:
 				continue
 			var wild_id := str(int(a.get("id", 0)))
 			if not _startles.has(wild_id): # (every animal watched gets its own record: the nearest one changes as they run)
-				_startles[wild_id] = {"home": _animal_px(a), "away": 0.0, "peak": 0.0, "back": INF}
+				_startles[wild_id] = {"bolted": false, "bolt_t": 0, "peak_b": 0.0, "reached": false, "peak": 0.0, "last_at": _animal_px(a), "last_t": Time.get_ticks_msec(), "speed": float(WANDER_SPEED.get(str(a.get("species", "")), 1000.0))}
 			var rec: Dictionary = _startles[wild_id]
+			_watched = wild_id
 			var far_at := Vector2(world.hero.px, world.hero.py).distance_to(_animal_px(a)) / Data.tile()
 			# Walk right up to it: a hero who walks at a wild animal startles it when within 4 tiles (the server's tickStartle). The
 			# forest is 95 tiles across and the animals can start anywhere in it, so this needs time (25 s, not the 4 s it once had:
 			# a bot that gave up 10 tiles short stood still out of range for the whole wait below, and never startled anything).
-			await _goto(spot["stand"], 25.0)
+			# (in bursts of 3 s, looking for a bear or a wolf between them: a predator within 4 tiles bites, and the hero that fainted
+			# in the forest on a starved runner made the pet step fail for a reason that has nothing to do with animals running)
+			var walk_until := Time.get_ticks_msec() + 25000
+			while Time.get_ticks_msec() < walk_until and not _done and _hostile_near(Vector2(world.hero.px, world.hero.py), 7.0) == Vector2.INF:
+				var burst_at := Time.get_ticks_msec()
+				if await _goto(spot["stand"], 3.0) or Time.get_ticks_msec() - burst_at < 500:
+					break # there, or no way there (it returns at once): either way no more bursts
+			if _hostile_near(Vector2(world.hero.px, world.hero.py), 7.0) != Vector2.INF:
+				continue # the top of the loop walks away from it
 			var left := _animal_by_id(wild_id)
 			rec["far"] = far_at # (kept in the step's detail below: a failing run then shows how far the animals were, and how close the walk got)
 			rec["near"] = Vector2(world.hero.px, world.hero.py).distance_to(_animal_px(left)) / Data.tile() if not left.is_empty() else -1.0
 			# M7b: standing still now (moving would startle it again), it runs off, catches its breath, walks back and creeps up to
 			# me, and then it can be petted. That takes the bolt (1.8 s), about 3 s of calming down, the walk back at a wander pace
 			# (2.5 tiles a second: up to 5 s for 12 tiles) and the creep: about 15 s of game time. The server's game clock runs slower than the
-			# wall clock when a runner is starved (a bot on one CPU saw animals still 6 tiles off after 45 s), so wait up to 120 s and
-			# stop as soon as it is next to me. Watch it all (`_startles`).
+			# wall clock when a runner is starved, and the animals walk in straight lines and do not path-find, so a tree or a rock can keep one
+			# from ever reaching me: wait up to 45 s (about four times what sim.test.ts needs at the slowest tick) and stop as soon as it is
+			# next to me; if it still is not, give up on it (`skip`) and try another. Watch it all (`_startles`).
+			_standing = true
 			await _until(func() -> bool:
 				var b := _animal_by_id(wild_id)
-				if b.is_empty():
-					return true
-				_watch_startle(rec, b)
+				if b.is_empty() or _hostile_near(Vector2(world.hero.px, world.hero.py), 7.0) != Vector2.INF:
+					return true # (a predator coming: stop standing here, the top of the loop walks away from it)
 				var tile := _animal_tile(b)
 				var here := _my_tile()
-				return absi(tile.y - here.y) + absi(tile.x - here.x) == 1, 120.0)
+				return absi(tile.y - here.y) + absi(tile.x - here.x) == 1, 45.0)
+			# (the wait ends the moment the animal is beside me, which can be sooner than the next quarter-second sample: take it now)
+			var finished := _animal_by_id(wild_id)
+			if not finished.is_empty():
+				rec["last_t"] = 0
+				_watch_startle(rec, finished)
+			_standing = false
+			if not _done and _hostile_near(Vector2(world.hero.px, world.hero.py), 7.0) == Vector2.INF and not _animal_by_id(wild_id).is_empty():
+				var tile_b := _animal_tile(_animal_by_id(wild_id))
+				var here_b := _my_tile()
+				if absi(tile_b.x - here_b.x) + absi(tile_b.y - here_b.y) != 1:
+					rec["skip"] = true # (it did not come: another animal)
+			if _hostile_near(Vector2(world.hero.px, world.hero.py), 7.0) != Vector2.INF:
+				continue
 			a = _animal_by_id(wild_id)
 			if a.is_empty():
 				continue
 			var tile := _animal_tile(a)
 			var me := _my_tile()
 			var next_to_it := absi(tile.x - me.x) + absi(tile.y - me.y) == 1
-			if next_to_it and float(rec["away"]) < 3.0 and not rec.has("pushed"):
+			if next_to_it and not bool(rec["bolted"]) and not rec.has("pushed"):
 				# It never bolted: it stood next to where I came in, so I was within its reach but barely moving. Walking away from
 				# it startles it from this close too (the server's rule is "a moving hero within 4 tiles"); then wait for it below.
 				rec["pushed"] = true
@@ -534,12 +586,7 @@ func _pet_wild() -> void:
 				world.hero.drive = from_it.normalized() if from_it.length() > 0.5 else Vector2.RIGHT
 				await _wait(1.0)
 				world.hero.drive = Vector2.ZERO
-				await _until(func() -> bool:
-					var b := _animal_by_id(wild_id)
-					if b.is_empty():
-						return true
-					_watch_startle(rec, b)
-					return float(rec["away"]) >= 3.0, 4.0)
+				await _until(func() -> bool: return bool(rec["bolted"]) or _animal_by_id(wild_id).is_empty(), 4.0)
 				continue
 			if next_to_it:
 				_face("right" if tile.x > me.x else ("left" if tile.x < me.x else ("down" if tile.y > me.y else "up")))
@@ -560,38 +607,62 @@ func _pet_wild() -> void:
 			if model.my_area_key() != "farm":
 				await _leave_by("s", "farm")
 			await _wait(4.0)
-	# an animal counts if it ran off from where it stood (3 tiles or more) and later came back within 2 tiles of that spot, which is
-	# beside me, while I stood still
+	# the step passes if the server made an animal bolt when I walked at it (its speed from the snapshots, see `_watch_startle`). That it
+	# then comes back, to which tile and how soon, is sim.test.ts's to prove on open ground, and the pet step's to show here
 	var best: Dictionary = {}
 	for r in _startles.values():
-		if float(r["away"]) >= 3.0 and float(r["back"]) <= 2.0 and (best.is_empty() or float(r["away"]) > float(best["away"])):
+		if _ran_and_returned(r) and (best.is_empty() or float(r["peak_b"]) > float(best["peak_b"])):
 			best = r
-	_step("startle", not best.is_empty(), "%s (%d watched: %s)" % [("a wild animal ran off and came back to me while I stood still" if not best.is_empty() else "no animal both ran off and came back"), _startles.size(), _startles_detail()])
+	_step("startle", not best.is_empty(), "%s (%d watched: %s)" % [("the server made a wild animal bolt when I walked at it" if not best.is_empty() else "no animal bolted when I walked at it"), _startles.size(), _startles_detail()])
 	await _sounds_any("the forest", ["birds", "crickets", "rain", "wind_hard"]) # (not wind_soft: it has a floor and always sounds)
 	_step("pet", petted, "a wild animal was brushed (%s) and petted, %d hearts seen in all (Elsa's and Sven's are two of them)" % [str(brushed), int(_report["hearts_seen"])])
 
 
-## One sample of a wild animal being watched, in tiles: how far it has been from where it stood (`away`), how far from me at most
-## (`peak`, for the detail only), and, once it has run off (`away` 3 or more: a bolt, not a stroll), how near to its place it has
-## come back (`back`). Its place is next to where I stand, so that is also: back beside me.
+## One sample of a wild animal being watched (every frame, from the moment the bot picks it until the next pick; it only does
+## work every quarter second). A *bolt* is the server's flee: the animal moves faster than 1.8 times its wander speed (the server's
+## rule, sim.ts `tickStartle`, is 2.2 times, for 1.8 s). After a bolt, `peak_b` is the farthest it gets from me, and it *returned*
+## (`reached`) when, at least 2.5 s after the bolt was seen (the flight is over by then) and while I stand still, it is within 3 tiles
+## of me after having been more than 3.5 away: the server calms it, walks it back and creeps it to the tile next to a quiet hero. That
+## it ends exactly beside me, and how soon, is sim.test.ts's to prove for every species; here it is only the end-to-end proof that
+## the server made it run when I walked at it and that it then came back to me.
 func _watch_startle(rec: Dictionary, animal: Dictionary) -> void:
+	var now := Time.get_ticks_msec()
+	var dt := float(now - int(rec["last_t"])) / 1000.0
+	if dt < 0.25:
+		return
 	var tile := Data.tile()
 	var at := _animal_px(animal)
-	var d_home := at.distance_to(rec["home"]) / tile
-	rec["away"] = maxf(float(rec["away"]), d_home)
-	rec["peak"] = maxf(float(rec["peak"]), at.distance_to(Vector2(world.hero.px, world.hero.py)) / tile)
-	if float(rec["away"]) >= 3.0:
-		rec["back"] = minf(float(rec["back"]), d_home)
+	var speed := at.distance_to(rec["last_at"]) / dt
+	rec["last_at"] = at
+	rec["last_t"] = now
+	var d_bot := at.distance_to(Vector2(world.hero.px, world.hero.py)) / tile
+	rec["peak"] = maxf(float(rec["peak"]), d_bot)
+	if not bool(rec["bolted"]):
+		if speed > 1.8 * float(rec["speed"]):
+			rec["bolted"] = true
+			rec["bolt_t"] = now
+		return
+	rec["peak_b"] = maxf(float(rec["peak_b"]), d_bot)
+	if _standing and now - int(rec["bolt_t"]) >= 2500 and float(rec["peak_b"]) > 3.5 and d_bot <= 3.0:
+		rec["reached"] = true
 
 
-## For the startle step's detail: per animal watched, how far it was when the bot set off, how close the walk got, the most it ran
-## from its place, the most it was from me and the nearest it came back to its place after that (INF: it did not).
+## Did the server make this animal bolt when the bot walked at it? That, and only that, is asserted end to end. Whether it then
+## comes back to the bot is reported but not asserted: the animals walk in straight lines and do not path-find, so in the dense
+## forest a tree can be in the way for ever (a run saw one that bolted 10 tiles and never reached the bot in 120 s), while on open
+## ground sim.test.ts proves it for every species at the normal tick and at the slowest the server steps; and the `pet` step, which
+## needs an animal beside the bot, passed in every run.
+static func _ran_and_returned(rec: Dictionary) -> bool:
+	return bool(rec["bolted"])
+
+
+## For the startle step's detail: per animal watched, how far it was when the bot set off, how close the walk got, whether the
+## server made it bolt, the farthest it was from me after that, and whether it came back to me.
 func _startles_detail() -> String:
 	var parts: Array = []
 	for id in _startles.keys():
 		var r: Dictionary = _startles[id]
-		var back: float = r["back"]
-		parts.append("#%s %.0f tiles off, %.1f after the walk, ran %.1f from its place (up to %.1f from me), %s" % [id, float(r.get("far", -1.0)), float(r.get("near", -1.0)), float(r["away"]), float(r["peak"]), ("then came back to %.1f of it" % back) if back < INF else "did not come back"])
+		parts.append("#%s %.0f tiles off, %.1f after the walk, %s" % [id, float(r.get("far", -1.0)), float(r.get("near", -1.0)), ("bolted, got %.1f tiles from me and %s" % [float(r["peak_b"]), "came back to me" if bool(r["reached"]) else "did not come back"]) if bool(r["bolted"]) else "never bolted"])
 	return "; ".join(parts)
 
 
@@ -777,11 +848,117 @@ func _path_to(from: Vector2i, goal: Vector2i, dist: Dictionary) -> Array:
 	return path
 
 
-## Walks to the middle of a tile; false when there is no way or it takes too long.
-func _goto(goal: Vector2i, timeout := 120.0) -> bool:
+## The tile farthest from `home` (at most `max_steps` tiles of walking) that can be walked to.
+func _far_tile(home: Vector2i, dist: Dictionary, max_steps: int) -> Vector2i:
+	var goal := home
+	for t in dist.keys():
+		if int(dist[t]) <= max_steps and int(dist[t]) > int(dist[goal]) and _path_to(home, t, dist).size() > 0:
+			goal = t
+	return goal
+
+
+## What the server says about a walk: the length of the polyline through my positions in its snapshots, counted while the
+## hero was moving, and the time those segments took. (`begin_server_walk`, then walk, then `end_server_walk`.)
+var _sw_on := false
+var _sw_last := Vector2.ZERO
+var _sw_at := 0
+var _sw_px := 0.0
+var _sw_ms := 0
+
+
+func begin_server_walk() -> void:
+	_sw_px = 0.0
+	_sw_ms = 0
+	_sw_at = 0
+	if not _sw_on:
+		_sw_on = true
+		world.model.snapshot.connect(_on_walk_snapshot)
+
+
+func _on_walk_snapshot() -> void:
+	var me: Dictionary = world.model.player_snaps.get(world.model.me, {})
+	if me.is_empty():
+		return
+	var at := Vector2(float(me.get("x", 0.0)), float(me.get("y", 0.0)))
+	var now := Time.get_ticks_msec()
+	if _sw_at != 0 and world.hero.moving:
+		_sw_px += _sw_last.distance_to(at)
+		_sw_ms += now - _sw_at
+	_sw_last = at
+	_sw_at = now
+
+
+## [pixels, seconds] of the walk since `begin_server_walk`.
+func end_server_walk() -> Array:
+	return [_sw_px, _sw_ms / 1000.0]
+
+
+## Typing in the chat: Shift and the movement keys held then (a capital letter, a W) neither run nor walk the hero.
+func _typing_does_not_run() -> void:
+	var hero := world.hero
+	hero.driven = false
+	_press_action("chat")
+	var open := await _until(func() -> bool: return world.chat.is_open(), 3.0)
+	await _wait(0.2)
+	var at := Vector2(hero.px, hero.py)
+	Input.action_press("run")
+	Input.action_press("move_right")
+	await _wait(0.6)
+	var stood := Vector2(hero.px, hero.py).distance_to(at) < 0.01 and not hero.running and not hero.moving
+	Input.action_release("run")
+	Input.action_release("move_right")
+	world.chat.close()
+	await _wait(0.3)
+	_step("sprint: Shift and a movement key held while typing in the chat move nothing", open and stood, "chat open %s, hero stood still %s" % [str(open), str(stood)])
+
+
+## Sprinting (Shift): a stretch of the farm walked and then run back. The run covers ground RUN_SPEED_MUL times as fast,
+## the server follows it (the `move` messages carry the positions) and never puts the hero back (`reconciled` stays 0).
+func _sprint() -> void:
+	var hero := world.hero
+	var home := _my_tile()
+	var dist := _distance_field(home)
+	var goal := _far_tile(home, dist, 16)
+	if int(dist[goal]) < 8:
+		_step("sprint", false, "no stretch of floor of 8 tiles near %s" % str(home))
+		return
+	var snaps0 := hero.reconciled
+	var px0 := hero.walked_px
+	var s0 := hero.moving_s
+	var t0 := Time.get_ticks_msec()
+	var there := await _goto(goal, 60.0, false)
+	var walk_px := hero.walked_px - px0
+	var walk_s := hero.moving_s - s0
+	var walk_wall := (Time.get_ticks_msec() - t0) / 1000.0
+	px0 = hero.walked_px
+	s0 = hero.moving_s
+	t0 = Time.get_ticks_msec()
+	var back := await _goto(home, 60.0, true)
+	hero.run_driven = false
+	var run_px := hero.walked_px - px0
+	var run_s := hero.moving_s - s0
+	var run_wall := (Time.get_ticks_msec() - t0) / 1000.0
+	await _wait(0.6)
+	var v_walk := walk_px / maxf(walk_s, 0.01)
+	var v_run := run_px / maxf(run_s, 0.01)
+	var base := Data.constant("PLAYER_SPEED", 64.0)
+	var mul := Data.constant("RUN_SPEED_MUL", 1.7)
+	var me: Dictionary = world.model.player_snaps.get(world.model.me, {})
+	var off := Vector2(float(me.get("x", hero.px)) - hero.px, float(me.get("y", hero.py)) - hero.py).length()
+	var detail := "%d tiles: walked at %.1f px/s in %.1f s, ran at %.1f px/s in %.1f s (%.2fx, wanted %.1fx), snapped back %d times, the server is %.1f px from me" % [int(dist[goal]), v_walk, walk_wall, v_run, run_wall, v_run / maxf(v_walk, 0.01), mul, hero.reconciled - snaps0, off]
+	_step("sprint: both legs walked", there and back, detail)
+	_step("sprint: walking is PLAYER_SPEED, running RUN_SPEED_MUL times as fast", absf(v_walk - base) < base * 0.06 and absf(v_run - base * mul) < base * mul * 0.06, detail)
+	_step("sprint: the run took clearly less time than the walk", run_wall < walk_wall * 0.75, detail)
+	_step("sprint: the server never put me back and agrees where I stand", hero.reconciled == snaps0 and off < 8.0, detail)
+	await _typing_does_not_run()
+
+
+## Walks to the middle of a tile; false when there is no way or it takes too long. `run`: sprints (the Shift key).
+func _goto(goal: Vector2i, timeout := 120.0, run := false) -> bool:
 	var hero := world.hero
 	var tile := Data.tile()
 	hero.driven = true
+	hero.run_driven = run
 	var until := Time.get_ticks_msec() + int(timeout * 1000.0)
 	var stuck := 0.0
 	var last := Vector2(hero.px, hero.py)
@@ -992,7 +1169,7 @@ func _nearest_wild() -> Dictionary:
 		var def: Dictionary = Data.animals.get(str(a.get("species", "")), {})
 		if not bool(def.get("wild", false)) or bool(def.get("predator", false)) or bool(def.get("mob", false)) or a.get("owner") != null:
 			continue
-		if bool(a.get("petted", false)):
+		if bool(a.get("petted", false)) or bool(_startles.get(str(int(a.get("id", 0))), {}).get("skip", false)):
 			continue
 		var p := _animal_px(a)
 		if _hostile_near(p, 9.0) != Vector2.INF:

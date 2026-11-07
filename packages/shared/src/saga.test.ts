@@ -1,6 +1,7 @@
 // Sagan om Världsträdet: the dungeon maps, classes and spells, monsters and bosses, loot, Völvan's
 // chapters, the villagers' quests and jumping to a family member.
 import { describe, expect, it } from 'vitest';
+import { reachableFrom } from './worldgen.ts';
 import {
   CLASSES,
   DOWN_MS,
@@ -22,13 +23,20 @@ import {
   castSpell,
   chooseClass,
   createPlayer,
+  applyMove,
+  arrivalTile,
+  areaKey,
   enterSaga,
+  previousDungeon,
+  tileIndex,
+  teleport,
   generateSaga,
   generateWorld,
   getArea,
   npcState,
   isSolidForPlayer,
   jumpTo,
+  devSagaBest,
   mobDmgScale,
   objectAt,
   performAction,
@@ -72,6 +80,7 @@ import {
   ITEMS,
   POWER_CAP,
   craftGear,
+  devKit,
   forgeGear,
   forgeStats,
   itemName,
@@ -223,6 +232,80 @@ describe('classes and the way in', () => {
     expect(p.area).toBe(sagaKey('draug'));
     expect(world.areas![sagaKey('draug')]!.saga!.fighters[p.id]!.hp).toBe(CLASSES.vaktare.hp);
   });
+});
+
+describe('the world map\'s jump', () => {
+  it('works from the wild but not from inside a dungeon or a run (you leave by its way out)', () => {
+    const { world, players } = family();
+    const p = players[0]!;
+    p.visited = ['farm', 'a:0,-1'];
+    expect(teleport(world, p.id, 'a:0,-1').length).toBeGreaterThan(0);
+    expect(p.area).toBe('a:0,-1');
+    // the jump is the server's doing: the walking allowance of applyMove starts over at the new place (no snap back to the old one)
+    applyMove(world, p.id, p.x + 2, p.y, 'right', true, 1000);
+    teleport(world, p.id, 'farm');
+    const landed = { x: p.x, y: p.y };
+    applyMove(world, p.id, landed.x + 3, landed.y, 'right', true, 1050);
+    expect(Math.hypot(p.x - landed.x - 3, p.y - landed.y)).toBeLessThan(0.01);
+    teleport(world, p.id, 'a:0,-1');
+    inside(world, p, 'krigare');
+    expect(p.area).toBe(sagaKey('draug'));
+    const start = { x: p.x, y: p.y };
+    applyMove(world, p.id, start.x + 3, start.y, 'right', true, 2000);
+    expect(p.area).toBe(sagaKey('draug'));
+    expect(teleport(world, p.id, 'farm')).toEqual([]);
+    expect(teleport(world, p.id, 'a:0,-1')).toEqual([]);
+    expect(p.area).toBe(sagaKey('draug'));
+    expect(world.areas![sagaKey('draug')]!.saga!.fighters[p.id]).toBeDefined();
+  });
+});
+
+describe('every dungeon\'s arch', () => {
+  it('stands where the plan says, can be walked to from the farm, and goes into its own dungeon once the chapter before it is cleared', () => {
+    for (const id of DUNGEON_IDS) {
+      const { world, players } = family();
+      const p = players[0]!;
+      const plan = DUNGEONS[id].portal;
+      const out = getArea(world, plan.area)!;
+      const arch = Object.values(out.objects).find((o) => o.kind === 'saga_portal' && (o.variant ?? 0) === DUNGEON_IDS.indexOf(id));
+      expect(arch, `the arch of ${id} in ${plan.area}`).toBeDefined();
+      // on foot: from the map's entry to the tile in front of the arch, and every edge gap of the maps on the way is joined to the others
+      const c = /^a:(-?\d+),(-?\d+)$/.exec(plan.area)!;
+      const target = { x: Number(c[1]), y: Number(c[2]) };
+      const path: [number, number][] = [];
+      let x = 0;
+      let y = 0;
+      while (x !== target.x) path.push([(x += Math.sign(target.x - x)), y]);
+      while (y !== target.y) path.push([x, (y += Math.sign(target.y - y))]);
+      let prev: [number, number] = [0, 0];
+      for (const [ax, ay] of path) {
+        const a = getArea(world, areaKey(ax, ay))!;
+        const side = ax - prev[0] === 1 ? 'w' : ax - prev[0] === -1 ? 'e' : ay - prev[1] === 1 ? 'n' : 's';
+        const reach = reachableFrom(a, arrivalTile(a, side));
+        for (const d of ['n', 's', 'e', 'w'] as const) {
+          const t = arrivalTile(a, d);
+          expect(reach[tileIndex(a, t.x, t.y)], `${ax},${ay}: the ${d} gap joins the ${side} gap`).toBeTruthy();
+        }
+        if (ax === target.x && ay === target.y) {
+          const front = portalFront(arch!);
+          expect(reach[tileIndex(a, front.x, front.y)], `the front of ${id}'s arch`).toBeTruthy();
+        }
+        prev = [ax, ay];
+      }
+      // the rules of the way in: a class, then the chapter before it
+      const prevId = previousDungeon(id);
+      if (prevId) {
+        enterSaga(world, p, arch!);
+        expect(p.area).toBe('farm');
+        p.saga = { cls: 'krigare', chapter: DUNGEONS[id].chapter, heard: true, cleared: [], titles: [], quests: {}, done: [], found: [] };
+        enterSaga(world, p, arch!);
+        expect(p.area, `${id} is sealed until ${prevId} is cleared`).toBe('farm');
+        p.saga.cleared = DUNGEON_IDS.slice(0, DUNGEON_IDS.indexOf(id));
+      } else p.saga = { cls: 'krigare', chapter: 0, heard: true, cleared: [], titles: [], quests: {}, done: [], found: [] };
+      enterSaga(world, p, arch!);
+      expect(p.area).toBe(sagaKey(id));
+    }
+  }, 60_000);
 });
 
 describe('fighting', () => {
@@ -499,6 +582,47 @@ describe('the saga', () => {
     expect(b.area).toBe(sagaKey('draug'));
     expect(d.saga!.fighters[b.id]).toBeDefined();
     expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeLessThan(3 * TILE);
+  });
+
+  it('the dev sagaBest records a best time through the real path: faster replaces, slower changes nothing', () => {
+    const { world, players } = family(1);
+    const p = players[0]!;
+    const first = devSagaBest(world, p.id, 'draug', 754000);
+    expect(first).toEqual([{ t: 'sagaBest', dungeon: 'draug', best: { ms: 754000, names: [p.name], day: world.day } }]);
+    expect(world.sagaBest?.draug?.ms).toBe(754000);
+    expect(devSagaBest(world, p.id, 'draug', 800000)).toEqual([]);
+    expect(world.sagaBest?.draug?.ms).toBe(754000);
+    const faster = devSagaBest(world, p.id, 'draug', 600000);
+    expect(faster.map((c) => c.t)).toEqual(['sagaBest', 'toast']);
+    expect(devSagaBest(world, p.id, 'nope', 1)).toEqual([]);
+  });
+
+  // The native client's family window greys "Hoppa till" out before the server would refuse (godot/scripts/family_window.gd, can_jump_to,
+  // which carries this same table in farm_bot_books.gd): each case here is a refusal of jumpTo or a jump that works.
+  it.each([
+    { name: 'offline', me: 'farm', them: 'farm', online: false, sleeping: false, cls: true, ok: false },
+    { name: 'asleep', me: 'farm', them: 'farm', online: true, sleeping: true, cls: true, ok: false },
+    { name: 'they are in the old cave', me: 'farm', them: 'dungeon', online: true, sleeping: false, cls: true, ok: false },
+    { name: 'I am in the old cave', me: 'dungeon', them: 'farm', online: true, sleeping: false, cls: true, ok: false },
+    { name: 'they are in a run', me: 'farm', them: 'saga:run1z0', online: true, sleeping: false, cls: true, ok: false },
+    { name: 'I am in a run', me: 'saga:run1z0', them: 'farm', online: true, sleeping: false, cls: true, ok: false },
+    { name: 'a dungeon and no class', me: 'farm', them: 'saga:draug', online: true, sleeping: false, cls: false, ok: false },
+    { name: 'a dungeon with a class', me: 'farm', them: 'saga:draug', online: true, sleeping: false, cls: true, ok: true },
+    { name: 'both on the farm', me: 'farm', them: 'farm', online: true, sleeping: false, cls: false, ok: true },
+  ])('jumpTo: $name -> ok $ok', ({ me, them, online, sleeping, cls, ok }) => {
+    const { world, players } = family(2);
+    const [a, b] = players as [PlayerState, PlayerState];
+    if (them === 'saga:draug') inside(world, a, 'vaktare');
+    else a.area = them;
+    b.area = me === 'dungeon' ? 'dungeon' : me.startsWith('saga:run') ? me : b.area;
+    if (them === 'dungeon' || them.startsWith('saga:run')) a.area = them;
+    a.online = online;
+    b.sleeping = sleeping;
+    b.saga = cls ? { cls: 'helare', chapter: 0, heard: false, cleared: [], titles: [], quests: {}, done: [], found: [] } : undefined;
+    const before = b.area;
+    const out = jumpTo(world, b.id, a.id);
+    const moved = b.area !== before || out.some((c) => c.t === 'toast' && c.text.includes('hoppade'));
+    expect(moved).toBe(ok);
   });
 
   it('an empty dungeon starts over after a while', () => {
@@ -1242,6 +1366,18 @@ describe('Smedjan', () => {
     expect(said(forgeGear(world, p.id, 'offhand_helskold'), T.forgeNotNear)).toBe(true);
     expect(said(craftGear(world, p.id, 'jarnsvard'), T.forgeNotNear)).toBe(true);
     expect(p.saga!.forge!.offhand_helskold).toBe(1);
+  });
+
+  it('the development kit pays for the first two forge levels and gives paper, paint and a wall piece', () => {
+    const { world, p } = atStina();
+    p.saga!.gear = { weapon: 'runsvard' };
+    expect(devKit(world, p.id).length).toBeGreaterThan(0);
+    expect([count(p, 'paper'), count(p, 'paint_red'), count(p, 'wall_wood'), count(p, 'wall_stone'), count(p, 'door'), count(p, 'window'), p.coins]).toEqual([2, 2, 2, 1, 1, 1, 400]);
+    for (const n of [1, 2]) {
+      expect(said(forgeGear(world, p.id, 'runsvard'), `till +${n}`)).toBe(true);
+    }
+    expect(p.saga!.forge!.runsvard).toBe(2);
+    expect(devKit(world, 'nobody')).toEqual([]);
   });
 
   it('offhands and amulets grow by their own rules', () => {

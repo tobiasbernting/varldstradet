@@ -14,7 +14,7 @@ falling costs nothing. Where a number is written here it is the number in the co
 | Zones | One of seven biomes each, never repeating in a run. 4–6 rooms, one rest stone, an exit. |
 | Runor pick | The party gets **one offer of three cards** and **votes**; a strict majority wins at once, otherwise the most votes after 20 s, ties go to the card voted first. |
 | Sagafrön | Paid to every party member the moment they are earned, so nothing can be lost. Planted at the Yggdrasil shoot. |
-| Party | 1–4. A fourth player and the hired companion need a **långhus** (longhouse) built on the farm. |
+| Party | 1–4. A fourth player needs a **långhus** (longhouse) built on the farm. The hired companion (Hirdmannen) does **not**: one or two players get it from the start (owner, 2026-11-07: "it was hard soloing"). |
 | Falling | A wipe ends the run and everyone is back at the farm with everything they picked up. |
 
 ---
@@ -266,7 +266,7 @@ whole family sees it grow. (The art for variants 1–4 is M5c; the client draws 
 | **Smedja** (building) | A built smithy: your weapon is "tempered": spells +4 %. |
 | **Stall** (the existing stable) | Mounts count as companions. Without a stall, only pets do. |
 | **Örtagård** (herb garden, building) | Two more healing potions at the start, and potions heal 10 % more. |
-| **Långhus** (longhouse, building) | The fourth party slot and the hired companion. |
+| **Långhus** (longhouse, building) | The fourth party slot. (It used to unlock the hired companion too; since 2026-11-07 the companion needs nothing.) |
 | **Kämpastenen** (as today) | Picks the class and with it the four spells and the class's runor. |
 | **Yggdrasil shoot** | Where sagafrön become the tree (section 3). |
 
@@ -311,11 +311,15 @@ bag when the run starts. Nothing chosen is fine.
 * **Scaling.** Exactly the saga's: `mobHpScale`, `bossHpScale`, `addCount`, `mobDmgScale` by the number of fighters in
   the zone. One human with the hired companion counts as two fighters, so monsters get `SOLO_MERCY` = 0.75 of their
   health on top, which made a solo run winnable with every class *(tuned)*.
-* **The hired companion** (longhouse built, exactly one human): **Hirdmannen**, a fighter the server runs with the same
-  brain as the test bots (`runbot.ts`). It takes the class the human lacks (a healer for a tank or a damage dealer,
-  a tank for a healer), is the human's level, wears the starter set, and counts as a party member for monster scaling.
-  It follows, stands out of telegraphs, interrupts, heals and revives. It never takes loot or sagafrön and is gone when the
-  run ends. `g5` makes it 20 % stronger.
+* **The hired companion** (no longhouse needed): **Hirdmannen**, a fighter the server runs with the same brain as the
+  test bots (`runbot.ts`). `companionClass` in `run.ts` chooses its class from what the humans lack: one human gets a
+  healer (a tank for a healer); two humans get one only when the pair has no healer (a healer) or no tank (a tank), so
+  tank + healer goes alone and two damage dealers get a healer; three or four never get one. It is the first human's
+  level, wears the starter set, follows, stands out of telegraphs, interrupts, heals and revives, never takes loot or
+  sagafrön and is gone when the run ends. A friend who joins sends it home (the party is then real people; the party is
+  not re-balanced with a new hire). `g5` makes it 20 % stronger. A player can still start without it (`companion:
+  false` on `run start`), which is the plain, much harder one-fighter run. Monsters count it as a fighter (a duo with it
+  is three fighters), only a single human with the hired companion gets `SOLO_MERCY`.
 
 ---
 
@@ -358,11 +362,34 @@ Minutes until the boss falls (3 runs each):
 
 | Party | Careful | Clumsy |
 | --- | --- | --- |
-| 1 player + Hirdmannen | 6–7 min | 12–16 min |
-| 2 players | 11–13 min | 22–27 min |
+| 1 player + Hirdmannen | 6–7 min | 12–14 min |
+| 2 players | 11–13 min | 22–25 min |
+| 2 players without a healer + Hirdmannen (healer) | 8–11 min | 16–19 min |
 | 3 players | 9–12 min | 19–26 min |
 | 4 players (longhouse) | 7–9 min | 15–19 min |
 
+**Solo, measured 2026-11-07 (level 3, chapter 1, seeds 1–20 for both the farm and the run; wins per 20; minutes are for the runs that won).** The
+owner could not win alone: without the companion (no longhouse) a lone player wins almost never, and with a longhouse a
+clumsy lone player wins almost always, so the fix was to give everybody the companion, not to retune the monsters.
+
+| Alone | Careful, no companion | Clumsy, no companion | Careful + Hirdmannen | Clumsy + Hirdmannen |
+| --- | --- | --- | --- | --- |
+| Väktare | 0/20 (dies in zone 2) | 0/20 (zone 2) | 20/20, 9.9 min | 20/20, 17.7 min |
+| Helare | 19/20, 20.6 min | 17/20, 34.2 min | 20/20, 10.1 min | 19/20, 16.1 min |
+| Krigare | 9/20, 7.2 min | 4/20, 17.1 min | 20/20, 7.0 min | 20/20, 13.9 min |
+| Magiker | 0/20 | 0/20 | 19/20, 11.1 min | 20/20, 18.0 min |
+
+Pairs of two damage dealers were the other hole (a pair with no healer): Krigare + Magiker won 4/20 careful and 0/20
+clumsy; with the Hirdmannen as their healer 20/20 and 20/20 (9.2 and 17.3 min). Väktare + Helare is unchanged (20/20,
+12.7 and 24.8 min, no companion). Level 1 and 2 heroes, clumsy, with the companion: 18–20 of 20 on every class. The
+monsters' numbers were **not** changed: `ZONE_HP`, `ZONE_PACKS`, `SOLO_MERCY` and the saga's scaling stay as they were,
+and three- and four-player parties play exactly as before.
+
+**Lätt and the Sagoandan** (GAME2.md sections 4.5, 5.3 and 5.5): the arch window has a Lätt / Vanlig choice; Lätt gives monsters ×0.6 hp and ×0.5 damage, longer boss warnings, a boss with its first two attacks, half sagafrön and three Sagoandar (a free "everyone up" on a wipe, one more after each zone) so a wipe never ends the run; Vanlig has one Sagoandan and the numbers above. The Lätt and Vanlig tables are in GAME2.md section 5.5.
+
 The exact table from the last run of the tests is in the pull request. Tuned: `ZONE_HP`, `ZONE_PACKS`, `SOLO_MERCY` and
-the hired companion's class (a healer for everyone but the healer). The tests fail if a careful party ever stops
+the hired companion's class (`companionClass` in `run.ts`: a healer if the humans have none, else a tank, else nobody).
+
+`run.test.ts` also has the clumsy solo bot win at least 7 of 10 runs on every class and in the two-damage-dealer pair, with
+no longhouse, in 10–30 minutes. The tests fail if a careful party ever stops
 winning, if any party gets stuck or takes longer than the 30 minutes to reach the boss (the tuning target; the game itself no longer stops there), or if the careful trio's time leaves 4–15 minutes.

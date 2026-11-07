@@ -7,6 +7,8 @@ extends GameWindow
 ## "Jag hjälper dig!" (`saga chapter`), "Ta emot belöningen", and a way to the class stone.
 
 signal class_asked
+## Smed-Stina's window has a button to her forge (forge_window.gd).
+signal forge_asked
 
 const FAR_TILES := 5.0
 
@@ -47,6 +49,7 @@ func _set_tabs() -> void:
 		return
 	add_tab(Strings.t("sagaStoryTab"), _tab == "story", _set_tab.bind("story"))
 	add_tab(Strings.t("sagaTalk"), _tab == "talk", _set_tab.bind("talk"))
+	add_tab(Strings.t("sagaJournalTab"), _tab == "journal", _set_tab.bind("journal"))
 
 
 func _set_tab(t: String) -> void:
@@ -68,6 +71,8 @@ func _fill() -> void:
 		_fill_talk(me)
 	elif npc == Data.volva and _tab == "story":
 		_fill_story(me)
+	elif npc == Data.volva and _tab == "journal":
+		BookPages.journal(self)
 	else:
 		_fill_front(me)
 
@@ -82,10 +87,19 @@ func _fill_front(me: Dictionary) -> void:
 	add_bubble(npc_portrait(npc), line)
 	var chat := make_button(Strings.t("talkChat"), _say.bind("start", ""), "chat")
 	_body.add_child(chat)
+	_add_forge_button()
 	for pair in saga:
 		_saga_row(me, pair[0], str(pair[1]))
 	for q in wishes:
 		_wish_row(me, q)
+
+
+## Stina's forge, for everyone (anyone can own gear): a button in her window, as the browser's forgeButton.
+func _add_forge_button() -> void:
+	if npc == str(Data.gear.get("smith", "stina")):
+		_body.add_child(make_button(Strings.t("forgeBtn"), func() -> void:
+			close()
+			forge_asked.emit(), "forge"))
 
 
 func _wishes(me: Dictionary) -> Array:
@@ -146,6 +160,7 @@ func _fill_talk(me: Dictionary) -> void:
 		i += 1
 	if not _wishes(me).is_empty() or not SagaState.quests_of(me, npc).is_empty():
 		_body.add_child(make_button(Strings.t("talkQuests"), _to_front, "front"))
+	_add_forge_button()
 
 
 func _to_front() -> void:
@@ -227,6 +242,7 @@ func _chapter() -> void:
 
 
 func _process(delta: float) -> void:
+	super(delta)
 	if not is_open():
 		return
 	_far_in -= delta

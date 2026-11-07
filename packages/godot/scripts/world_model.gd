@@ -24,6 +24,7 @@ signal error(text: String)
 ## view draws from these. The area ones carry `area`; the view checks it against the map it draws.
 signal change(c: Dictionary)
 signal quests_changed ## the day's wishes were redrawn by the server
+signal saga_best_changed ## the family beat its best time through a dungeon (the journal shows it)
 ## Runs (M5c): the run as the server last said it (null: none), the three cards being voted on (null: none), how a run ended
 ## for me, the dishes I will bring and the sagaträd (my sagafrön and the nodes I planted).
 signal run_changed
@@ -179,6 +180,28 @@ func held() -> Dictionary:
 func chest(id: int) -> Dictionary:
 	var o: Variant = world_for(my_area_key()).get("objects", {}).get(str(id))
 	return o if o is Dictionary else {}
+
+
+## isCallable in shared/src/sim.ts: an animal of mine that listens to "stay" and the whistle: a pet (a dog or a cat, or a wild animal I
+## caught with a lasso) or a horse or another mount, never a vehicle.
+static func is_callable(a: Dictionary, my_id: String) -> bool:
+	if str(a.get("owner", "")) != my_id or my_id == "":
+		return false
+	var def: Dictionary = Data.animals.get(str(a.get("species", "")), {})
+	if bool(def.get("vehicle", false)):
+		return false
+	return bool(def.get("pet", false)) or bool(def.get("wild", false)) or str(a.get("species", "")) == "horse" or def.has("mount")
+
+
+## Do I own such an animal on any map I know?
+func owns_callable() -> bool:
+	for w in [farm] + areas.values():
+		if not (w is Dictionary):
+			continue
+		for a in w.get("animals", {}).values():
+			if a is Dictionary and is_callable(a, me):
+				return true
+	return false
 
 
 ## My own health in the dungeon I am in: [hp, max, flags], or [] when the server has not said.
@@ -398,6 +421,11 @@ func _change(c: Dictionary) -> void:
 					zones.append(z)
 			elif i >= 0:
 				zones.remove_at(i)
+		"sagaBest":
+			if not (farm.get("sagaBest") is Dictionary):
+				farm["sagaBest"] = {}
+			farm["sagaBest"][str(c.get("dungeon", ""))] = c.get("best")
+			saga_best_changed.emit()
 		"quests":
 			farm["quests"] = c.get("quests", [])
 			quests_changed.emit()
@@ -441,7 +469,7 @@ func _run_change(c: Dictionary) -> void:
 			offer_changed.emit()
 		"ended":
 			if str(c.get("to", "")) == me:
-				ended = {"outcome": str(c.get("outcome", "leave")), "ms": float(c.get("ms", 0)), "seeds": int(c.get("seeds", 0)), "zones": int(c.get("zones", 0)), "runor": c.get("runor", [])}
+				ended = {"outcome": str(c.get("outcome", "leave")), "ms": float(c.get("ms", 0)), "seeds": int(c.get("seeds", 0)), "zones": int(c.get("zones", 0)), "runor": c.get("runor", []), "level": int(c.get("level", 1)), "spirit_used": int(c.get("spiritUsed", 0))}
 				run_ended.emit(ended)
 
 

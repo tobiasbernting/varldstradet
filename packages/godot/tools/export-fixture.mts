@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DUNGEONS, DUNGEON_IDS, ITEMS, NPCS, SAGA_CHAPTERS, SPAWN, TILE, VILLAGE_KEY, VOLVA_SPOT, addAnimal, castSpell, enterSaga, fieldKey, sagaChapter, tick, addObject, objectAt, removeObject, chooseClass, createPlayer, generateWorld, getArea, npcState, placeIn, sagaKey, type AnimalSnap, type Change, type NpcSnap, type PlayerSnap, type ServerMsg, type WorldState } from '../../shared/src/index.ts';
+import { DUNGEONS, DUNGEON_IDS, ITEMS, NPCS, SAGA_CHAPTERS, SPAWN, TILE, VILLAGE_KEY, VOLVA_SPOT, addAnimal, castSpell, enterSaga, fieldKey, sagaChapter, tick, addObject, objectAt, removeObject, chooseClass, createPlayer, generateWorld, getArea, npcState, objectDef, placeIn, sagaKey, type AnimalSnap, type Change, type NpcSnap, type PlayerSnap, type ServerMsg, type WorldState } from '../../shared/src/index.ts';
 
 const out = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../assets/fixtures/draug.json');
 fs.mkdirSync(path.dirname(out), { recursive: true });
@@ -194,6 +194,23 @@ function writeFixture(file: string, messages: ServerMsg[], what: string): void {
       return { id: n.id, x: ns.x, y: ns.y, facing: ns.facing, moving: false, area: key };
     });
   writeFixture('village.json', msgs, `${Object.keys(area.objects).length} objects, ${st.npcs.length} villagers, the stone at 47,29`);
+}
+
+for (const [file, key, kind] of [['volcano', 'a:2,2', 'volcano'], ['mushroom', 'a:1,-1', 'fairy_ring'], ['jungle', 'a:-1,2', 'temple']] as const) {
+  // wild maps with the props of wild_meshes.gd (a volcano with its obsidian and steam, the mushroom wood with its fairy rings,
+  // a temple among banana plants and ruins): `--demo=volcano|mushroom|jungle`, for the placeholder check, the bench and pictures
+  const { farm, me } = demoFarm();
+  const area = getArea(farm, key)!;
+  const at = Object.values(area.objects).find((o) => o.kind === kind)!;
+  const def = objectDef(kind);
+  const changes: Change[] = [];
+  placeIn(farm, me, key, at.x + Math.floor(def.w / 2), at.y + def.h + 3, 'up', changes);
+  for (const c of changes) if (c.t === 'areaData' && c.world) c.world = area;
+  const msgs = farmMsgs(farm, me, key, changes);
+  const st = msgs[msgs.length - 1] as Extract<ServerMsg, { t: 'state' }>;
+  st.animals = [];
+  st.players = st.players.map((q) => (q.id === me.id ? q : { ...q, area: 'farm' }));
+  writeFixture(`${file}.json`, msgs, `${Object.keys(area.objects).length} objects, the ${kind} at ${at.x},${at.y}`);
 }
 
 {

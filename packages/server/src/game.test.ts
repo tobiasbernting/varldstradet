@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DUNGEONS, RUN_MAX_MS, RUN_NUDGE_MS, RUN_T, TICK_HZ, TILE, VILLAGE_KEY, addItem, archFrontOf, areaKey, enterCave, fardportOf, getArea, landmarkOfKind, npcState, objectDef, placeIn, runOf, sagaKey, shootOf, type Change, type ServerMsg } from '../../shared/src/index.ts';
+import { DUNGEONS, DUNGEON_IDS, RUN_MAX_MS, RUN_NUDGE_MS, RUN_T, TICK_HZ, TILE, VILLAGE_KEY, addItem, archFrontOf, areaKey, enterCave, fardportOf, getArea, landmarkOfKind, npcState, objectDef, placeIn, runOf, sagaKey, shootOf, type Change, type ServerMsg } from '../../shared/src/index.ts';
 import { Game, type Link } from './game.ts';
 import { MemoryStore } from './db/store.ts';
 
@@ -290,6 +290,35 @@ describe('cave and dropped connections', () => {
   });
 });
 
+describe('the dev switch for later chapters', () => {
+  const appearance = { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' as const };
+  const mk = async (devTeleport: boolean) => {
+    const g = new Game(new MemoryStore(), { autoStart: false, devTeleport });
+    await g.start();
+    const p = g.createPlayer('Kåre', appearance)!;
+    const link = fakeLink();
+    const h = g.connect(link);
+    h({ t: 'hello', playerId: p.id });
+    return { g, p, link, h };
+  };
+
+  it('`dev unlock` marks the earlier dungeons cleared only with DEV_TELEPORT on and a class chosen', async () => {
+    const off = await mk(false);
+    off.h({ t: 'saga', a: 'class', cls: 'krigare' });
+    off.h({ t: 'dev', a: 'unlock' });
+    expect(off.g.world.players[off.p.id]!.saga!.cleared).toEqual([]);
+    expect(off.link.msgs.some((m) => m.t === 'error')).toBe(true);
+
+    const on = await mk(true);
+    on.h({ t: 'dev', a: 'unlock' }); // no class yet: nothing
+    expect(on.g.world.players[on.p.id]!.saga?.cleared ?? []).toEqual([]);
+    on.h({ t: 'saga', a: 'class', cls: 'krigare' });
+    on.h({ t: 'dev', a: 'unlock' });
+    on.h({ t: 'dev', a: 'unlock' });
+    expect(on.g.world.players[on.p.id]!.saga!.cleared).toEqual(DUNGEON_IDS.slice(0, -1));
+  });
+});
+
 describe('runs over the socket', () => {
   const look = { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' as const };
   const changesOf = (l: ReturnType<typeof fakeLink>): Change[] => l.msgs.flatMap((m) => (m.t === 'changes' ? m.changes : []));
@@ -413,7 +442,30 @@ describe('runs over the socket', () => {
     await game.stop();
   });
 
-  it('a run with one player and a longhouse has a companion that is no character: not listed, not counted, gone afterwards', async () => {
+  it('a run start carries the level: 0 is Lätt, nothing is Vanlig, and a level that is not 0 or 1 starts nothing', async () => {
+    const game = new Game(new MemoryStore(), { autoStart: false });
+    await game.start();
+    const a = game.createPlayer('Astrid', look)!;
+    const l = fakeLink();
+    const h = game.connect(l);
+    h({ t: 'hello', playerId: a.id });
+    const p = game.world.players[a.id]!;
+    p.saga = { cls: 'krigare', chapter: 1, heard: true, cleared: [], titles: [], quests: {}, done: [], found: [] };
+    const front = archFrontOf(game.world);
+    p.x = TILE * front.x + TILE / 2;
+    p.y = TILE * front.y + TILE / 2;
+    h({ t: 'run', a: 'start', level: 7 as unknown as 0 });
+    h({ t: 'run', a: 'start', level: '0' as unknown as 0 });
+    expect(runOf(game.world)).toBeUndefined();
+    expect(changesOf(l).some((c) => c.t === 'toast' && c.text === RUN_T.badLevel)).toBe(true);
+    h({ t: 'run', a: 'start', level: 0 });
+    const run = runOf(game.world)!;
+    expect(run.level).toBe(0);
+    expect(run.spirit).toBe(3);
+    expect(changesOf(l).some((c) => c.t === 'run' && c.ev === 'state' && c.run?.level === 0 && c.run.spirit === 3)).toBe(true);
+  });
+
+  it('a run with one player (no longhouse needed) has a companion that is no character: not listed, not counted, gone afterwards', async () => {
     const game = new Game(new MemoryStore(), { autoStart: false });
     await game.start();
     const a = game.createPlayer('Astrid', look)!;
@@ -423,8 +475,7 @@ describe('runs over the socket', () => {
     const pa = game.world.players[a.id]!;
     pa.saga = { cls: 'krigare', chapter: 1, heard: true, cleared: [], titles: [], quests: {}, done: [], found: [] };
     const front = archFrontOf(game.world);
-    const { addObject } = await import('../../shared/src/index.ts');
-    for (let r = 4; r < 20 && !Object.values(game.world.objects).some((o) => o.kind === 'longhall'); r++) for (let dx = -r; dx <= r; dx++) addObject(game.world, 'longhall', front.x + dx, front.y + r);
+    expect(Object.values(game.world.objects).some((o) => o.kind === 'longhall')).toBe(false);
     pa.x = TILE * front.x + TILE / 2;
     pa.y = TILE * front.y + TILE / 2;
     ha({ t: 'run', a: 'start' });

@@ -54,6 +54,7 @@ import {
   START_COINS,
   TILE,
   RIDE_SPEED_MUL,
+  RUN_SPEED_MUL,
   WATERING_CAN_CHARGES,
   key,
 } from './types.ts';
@@ -1471,7 +1472,62 @@ export function setOnline(world: WorldState, playerId: string, online: boolean):
   return [playerChange(p)];
 }
 
-export function applyMove(world: WorldState, playerId: string, x: number, y: number, facing: Facing, moving: boolean): void {
+/**
+ * A player's allowance for `applyMove` (server only, not saved): `credit` pixels of walking that have built up since
+ * the last accepted position, `x`/`y`/`t` that position and its time. If the player is somewhere else than `x`/`y`
+ * (a warp, a travel, a bus, a respawn: the server moved them) the allowance starts over.
+ */
+const moveCredit = new WeakMap<PlayerState, { x: number; y: number; t: number; credit: number }>();
+/** How much walking a player may save up (seconds at top speed): a stall and a burst of packets, never a teleport. */
+export const MOVE_CREDIT_S = 0.5;
+/** Room on the top speed for the server's clock against the client's (20 messages a second, jitter, a boost that just ended). */
+export const MOVE_SLACK = 1.15;
+
+/** The fastest this player can legitimately go, in pixels a second: the mount's speed, or running, times the boost. */
+export function maxPlayerSpeed(world: WorldState, p: PlayerState, now: number): number {
+  const base = p.riding !== undefined ? Math.max(1, rideSpeedMul(world, p), RUN_SPEED_MUL) : RUN_SPEED_MUL;
+  // (a boost that ended a second ago may still be in the client's step: the snapshot has not reached it yet)
+  const boost = p.boostUntil !== undefined && p.boostUntil + 1000 > now ? BOOST_SPEED_MUL : 1;
+  return PLAYER_SPEED * base * boost * MOVE_SLACK;
+}
+
+/**
+ * The client's walk: it predicts its own steps and says where it stands. The server follows it, but never farther than
+ * the player could walk since the last message (`now`, in ms; leave it out to take any distance, as the tests'
+ * bots do): top speed times the time that passed, with `MOVE_CREDIT_S` saved up. A normal or running player is never
+ * pulled back; a teleport is cut to what the legs allow.
+ */
+export function applyMove(world: WorldState, playerId: string, x: number, y: number, facing: Facing, moving: boolean, now?: number): void {
+  const p = world.players[playerId];
+  if (!p || now === undefined) {
+    applyMoveInner(world, playerId, x, y, facing, moving);
+    return;
+  }
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+  const top = maxPlayerSpeed(world, p, now);
+  let rec = moveCredit.get(p);
+  if (!rec || rec.x !== p.x || rec.y !== p.y) rec = { x: p.x, y: p.y, t: now, credit: top * MOVE_CREDIT_S };
+  else rec.credit = Math.min(top * MOVE_CREDIT_S, rec.credit + (top * Math.max(0, now - rec.t)) / 1000);
+  rec.t = now;
+  const credit = rec.credit;
+  const x0 = p.x;
+  const y0 = p.y;
+  // (a portal's exit is the map's doing, not walked: applyMoveInner only cuts the steps that are walked)
+  applyMoveInner(world, playerId, x, y, facing, moving, (cx, cy) => {
+    const want = Math.hypot(cx - x0, cy - y0);
+    if (want <= credit || want === 0) return [cx, cy];
+    const k = credit / want;
+    return [x0 + (cx - x0) * k, y0 + (cy - y0) * k];
+  });
+  const walked = Math.hypot(p.x - x0, p.y - y0);
+  // (more than the allowance can only be a portal: that is not walked, and the allowance starts over)
+  rec.credit = walked > credit + 0.001 ? top * MOVE_CREDIT_S : Math.max(0, credit - walked);
+  rec.x = p.x;
+  rec.y = p.y;
+  moveCredit.set(p, rec);
+}
+
+function applyMoveInner(world: WorldState, playerId: string, x: number, y: number, facing: Facing, moving: boolean, clamp?: (x: number, y: number) => [number, number]): void {
   const p = world.players[playerId];
   if (!p || !Number.isFinite(x) || !Number.isFinite(y) || p.sleeping) return;
   if (isSagaKey(world.area) && sagaRooted(world, p)) return;
@@ -1493,6 +1549,7 @@ export function applyMove(world: WorldState, playerId: string, x: number, y: num
       return;
     }
   }
+  if (clamp) [x, y] = clamp(x, y);
   const r = resolveMove((tx, ty) => isSolidForPlayer(world, tx, ty), p.x, p.y, x, y, PLAYER_HALF_W, PLAYER_HALF_H, world);
   const moved = r.x !== p.x || r.y !== p.y;
   p.x = r.x;
@@ -1918,7 +1975,8 @@ export function travel(world: WorldState, playerId: string, dir: 'n' | 's' | 'e'
 export function teleport(world: WorldState, playerId: string, keyStr: string): Change[] {
   const farm = farmOf(world);
   const p = farm.players[playerId];
-  if (!p || p.area === 'dungeon' || keyStr === 'dungeon' || isCaveKey(keyStr) || isIndoorKey(keyStr)) return [];
+  // (inside a saga dungeon or a run you leave by its way out: a jump from there would leave your fighter behind)
+  if (!p || p.area === 'dungeon' || isSagaKey(p.area) || keyStr === 'dungeon' || isCaveKey(keyStr) || isIndoorKey(keyStr)) return [];
   if (keyStr !== 'farm' && !(p.visited ?? []).includes(keyStr)) return [];
   const out: Change[] = [];
   if (keyStr === 'farm') placeIn(farm, p, 'farm', SPAWN.x, SPAWN.y, 'down', out);
@@ -2654,17 +2712,35 @@ function tickStartle(world: WorldState, a: AnimalState, ctx: SimCtx, players: Pl
     let nearest = CURIOUS_TILES * TILE;
     for (const p of players) {
       if (p.moving) continue;
+      // beside a quiet hero (in the tile they face, or any of the three others next to theirs, not a diagonal one) it stays put:
+      // that is where it can be petted, and it must not wander off again while they stand there
+      if (Math.abs(tileOf(a.x) - tileOf(p.x)) + Math.abs(tileOf(a.y) - tileOf(p.y)) === 1) {
+        a.waitMs = Math.max(a.waitMs, 500);
+        delete a.tx;
+        delete a.ty;
+        return;
+      }
       const dist = Math.hypot(p.x - a.x, p.y - a.y);
-      if (dist < nearest && dist > 1.6 * TILE) {
+      if (dist < nearest) {
         nearest = dist;
         quiet = p;
       }
     }
     if (!quiet) return;
-    const dx = (a.x - quiet.x) / nearest;
-    const dy = (a.y - quiet.y) / nearest;
-    a.tx = quiet.x + dx * 1.1 * TILE;
-    a.ty = quiet.y + dy * 1.1 * TILE;
+    // it creeps to the middle of the tile next to the hero's on its own side (the one along the longer of the two distances, or
+    // the other axis if that tile is blocked): a point 1.1 tiles along the line to it, as this once was, is often in a *diagonal* tile,
+    // where the hero cannot face it and so cannot pet it
+    const dx = a.x - quiet.x;
+    const dy = a.y - quiet.y;
+    const ptx = tileOf(quiet.x);
+    const pty = tileOf(quiet.y);
+    const horizontal = { x: ptx + Math.sign(dx || 1), y: pty };
+    const vertical = { x: ptx, y: pty + Math.sign(dy || 1) };
+    const [first, second] = Math.abs(dx) >= Math.abs(dy) ? [horizontal, vertical] : [vertical, horizontal];
+    const spot = [first, second].find((c) => inBounds(world, c.x, c.y) && !isSolidForAnimal(world, c.x, c.y));
+    if (!spot) return;
+    a.tx = (spot.x + 0.5) * TILE;
+    a.ty = (spot.y + 0.5) * TILE;
     return;
   }
   a.haunt ??= { x: a.x, y: a.y };
@@ -3006,6 +3082,11 @@ function tickAnimals(world: WorldState, dtMs: number, ctx: SimCtx, out: Change[]
     const speed = ANIMALS[a.species]?.speed ?? 16;
     const step = (speed * dtMs) / 1000;
     if (dist <= step) {
+      // it has arrived: it stands on its target, not up to one step short of it (a step is 10 px when a starved server catches up in
+      // 250 ms ticks, which can be a whole tile short, so that a creeping animal never reached the tile beside the hero)
+      const there = resolveMove((tx, ty) => isSolidForAnimal(world, tx, ty), a.x, a.y, a.tx, a.ty, ANIMAL_HALF_W, ANIMAL_HALF_H, world);
+      a.x = there.x;
+      a.y = there.y;
       a.moving = false;
       delete a.tx;
       delete a.ty;

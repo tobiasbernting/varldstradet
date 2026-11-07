@@ -23,6 +23,11 @@ import {
   BATH_POOL,
   SWIM_SPEED_MUL,
   PLAYER_SPEED,
+  RUN_SPEED_MUL,
+  RIDE_SPEED_MUL,
+  MOVE_CREDIT_S,
+  PORTALS,
+  MOVE_SLACK,
   inPool,
   ensureBathhouse,
   ensureFarmBusStop,
@@ -159,6 +164,124 @@ describe('movement', () => {
     expect(p.moving).toBe(true);
     stepPlayer(world, p, 0, 0, 100);
     expect(p.moving).toBe(false);
+  });
+
+  describe('applyMove bounds the walk (server clock `now`)', () => {
+    /** A client that predicts with stepPlayer at `mul` and reports every `dt` ms; returns the server's and its own x. */
+    function walk(world: WorldState, p: PlayerState, mul: number, ms: number, dt: number, t0: number): { client: PlayerState; t: number } {
+      const client = structuredClone(p);
+      let t = t0;
+      for (let i = 0; i < ms / dt; i++) {
+        t += dt;
+        stepPlayer(world, client, 1, 0, dt, mul);
+        applyMove(world, p.id, client.x, client.y, client.facing, client.moving, t);
+      }
+      return { client, t };
+    }
+
+    it('never pulls back a walking or running client (20 messages a second)', () => {
+      for (const mul of [1, RUN_SPEED_MUL]) {
+        const { world, p } = setup();
+        standAt(world, p, 10, 20);
+        applyMove(world, p.id, p.x, p.y, 'right', false, 1000); // (the first message: the allowance starts full)
+        const x0 = p.x;
+        const { client } = walk(world, p, mul, 3000, 50, 1000);
+        expect(p.x).toBeCloseTo(client.x, 6);
+        expect(p.x - x0).toBeCloseTo((PLAYER_SPEED * mul * 3000) / 1000, 3);
+      }
+    });
+
+    it('takes a burst after a stall (three messages at once, 150 ms of running)', () => {
+      const { world, p } = setup();
+      standAt(world, p, 10, 20);
+      applyMove(world, p.id, p.x, p.y, 'right', false, 1000);
+      const client = structuredClone(p);
+      for (let i = 0; i < 3; i++) {
+        stepPlayer(world, client, 1, 0, 50, RUN_SPEED_MUL);
+        applyMove(world, p.id, client.x, client.y, 'right', true, 1150); // all arrive together
+      }
+      expect(p.x).toBeCloseTo(client.x, 6);
+    });
+
+    it('cuts a teleport-sized move to what the legs allow', () => {
+      const { world, p } = setup();
+      standAt(world, p, 10, 20);
+      applyMove(world, p.id, p.x, p.y, 'right', false, 1000);
+      const x0 = p.x;
+      applyMove(world, p.id, x0 + 20 * TILE, p.y, 'right', true, 1050);
+      expect(p.x).toBeGreaterThan(x0);
+      expect(p.x - x0).toBeLessThanOrEqual(PLAYER_SPEED * RUN_SPEED_MUL * MOVE_SLACK * (MOVE_CREDIT_S + 0.05) + 0.001);
+    });
+
+    it('cannot be beaten by a flood of small moves either', () => {
+      const { world, p } = setup();
+      standAt(world, p, 10, 20);
+      applyMove(world, p.id, p.x, p.y, 'right', false, 1000);
+      const x0 = p.x;
+      for (let i = 1; i <= 1000; i++) applyMove(world, p.id, p.x + 10, p.y, 'right', true, 1000 + i); // 10 px a millisecond
+      const allowed = PLAYER_SPEED * RUN_SPEED_MUL * MOVE_SLACK * (MOVE_CREDIT_S + 1);
+      expect(p.x - x0).toBeLessThanOrEqual(allowed + 0.001);
+    });
+
+    it('lets a boosted runner and a rider go as fast as they legitimately can, and only them', () => {
+      const boosted = setup();
+      standAt(boosted.world, boosted.p, 10, 20);
+      boosted.p.boostUntil = 1_000_000;
+      applyMove(boosted.world, boosted.p.id, boosted.p.x, boosted.p.y, 'right', false, 1000);
+      const w1 = walk(boosted.world, boosted.p, RUN_SPEED_MUL * BOOST_SPEED_MUL, 3000, 50, 1000);
+      expect(boosted.p.x).toBeCloseTo(w1.client.x, 6);
+      // three times the walking speed with no boost or horse is more than the legs allow: the server falls behind
+      const plain = setup();
+      standAt(plain.world, plain.p, 10, 20);
+      applyMove(plain.world, plain.p.id, plain.p.x, plain.p.y, 'right', false, 1000);
+      const w2 = walk(plain.world, plain.p, 3, 3000, 50, 1000);
+      expect(plain.p.x).toBeLessThan(w2.client.x - 5);
+      // riding: the mount's speed
+      const rider = setup();
+      standAt(rider.world, rider.p, 10, 20);
+      const horse = addAnimal(rider.world, 'horse', 0);
+      rider.p.riding = horse.id;
+      applyMove(rider.world, rider.p.id, rider.p.x, rider.p.y, 'right', false, 1000);
+      const w3 = walk(rider.world, rider.p, RIDE_SPEED_MUL, 3000, 50, 1000);
+      expect(rider.p.x).toBeCloseTo(w3.client.x, 6);
+    });
+
+    it('a warp the server did (travel, a door, a bus) starts the allowance over', () => {
+      const { world, p } = setup();
+      standAt(world, p, 10, 20);
+      applyMove(world, p.id, p.x, p.y, 'right', false, 1000);
+      standAt(world, p, 30, 20); // (the server put the player there)
+      const x0 = p.x;
+      applyMove(world, p.id, x0 + 8, p.y, 'right', true, 1050);
+      expect(p.x).toBeCloseTo(x0 + 8, 6);
+    });
+
+    it('the farmhouse door (a portal on the farm) still works with the clock', () => {
+      const { world, p } = setup();
+      const portal = PORTALS[0]!;
+      p.x = (portal.from.x + 0.5) * TILE;
+      p.y = (portal.from.y + 0.5) * TILE;
+      applyMove(world, p.id, p.x, p.y, 'up', false, 1000);
+      const tx = (portal.to.x + 0.5) * TILE;
+      const ty = (portal.to.y + 0.5) * TILE;
+      applyMove(world, p.id, tx, ty, 'up', true, 1050);
+      expect(p.x).toBeCloseTo(tx, 6);
+      expect(p.y).toBeCloseTo(ty, 6);
+    });
+
+    it('without a clock (the bots in the tests) a move is taken as it comes', () => {
+      const { world, p } = setup();
+      standAt(world, p, 10, 20);
+      const x0 = p.x;
+      applyMove(world, p.id, x0 + 6 * TILE, p.y, 'right', true);
+      expect(p.x).toBeGreaterThan(x0 + 3 * TILE);
+    });
+
+    it('the speeds are ordered: walk < run < ride, boost on top is bounded', () => {
+      expect(RUN_SPEED_MUL).toBeGreaterThan(1);
+      expect(RUN_SPEED_MUL).toBeLessThan(RIDE_SPEED_MUL);
+      expect(RUN_SPEED_MUL * BOOST_SPEED_MUL).toBeLessThan(3);
+    });
   });
 
   it('cannot walk into water or trees', () => {
@@ -1683,6 +1806,62 @@ describe('vilda djur skräms och kommer tillbaka (M7b)', () => {
     const other = outdoors('hare', 5);
     for (let i = 0; i < 20; i++) tick(other.world, 100, at(1_000_000 + i * 100));
     expect(other.a.haunt).toBeUndefined();
+  });
+
+  it('a calmed animal creeps to a tile the hero can face (never a diagonal one) and stays there while the hero stands still', () => {
+    for (const deg of [0, 30, 45, 60, 90, 135, 180, 225, 270, 315]) {
+      const { world, p, a } = outdoors('hare', 2);
+      const r = 4.5 * TILE;
+      a.x = p.x + Math.cos((deg * Math.PI) / 180) * r;
+      a.y = p.y + Math.sin((deg * Math.PI) / 180) * r;
+      a.haunt = { x: a.x, y: a.y }; // (it has been startled before)
+      p.moving = false;
+      let adjacent = 0;
+      for (let i = 0; i < 400; i++) {
+        tick(world, 100, at(1_000_000 + i * 100));
+        if (i >= 200) {
+          const off = Math.abs(Math.floor(a.x / TILE) - Math.floor(p.x / TILE)) + Math.abs(Math.floor(a.y / TILE) - Math.floor(p.y / TILE));
+          if (off === 1) adjacent++;
+        }
+      }
+      expect(`${deg}: ${adjacent}`).toBe(`${deg}: 200`); // in the hero's own row or column next to them, for the whole last 20 s
+    }
+  });
+
+  it('it takes the other side of the hero when the tile on its own side is blocked', () => {
+    const { world, p, area, a } = outdoors('hare', 2);
+    a.x = p.x + 4 * TILE; // straight to the right of the hero, who faces the water on that side
+    a.y = p.y + 1.5 * TILE;
+    a.haunt = { x: a.x, y: a.y };
+    area.terrain[tileIndex(area, Math.floor(p.x / TILE) + 1, Math.floor(p.y / TILE))] = 'water';
+    p.moving = false;
+    for (let i = 0; i < 400; i++) tick(world, 100, at(1_000_000 + i * 100));
+    expect([Math.floor(a.x / TILE) - Math.floor(p.x / TILE), Math.floor(a.y / TILE) - Math.floor(p.y / TILE)]).toEqual([0, 1]);
+  });
+
+  it('every shy species ends up next to a hero who walked at it and then stood still, within 30 s of game time, at the normal tick and at the slowest the server steps (250 ms)', () => {
+    const species = Object.values(ANIMALS).filter((d) => d.wild && !d.mob && !d.predator && !d.vehicle && !d.mount);
+    expect(species.length).toBeGreaterThan(10);
+    for (const def of species) {
+      for (const dt of [50, 250]) {
+        const { world, p, a } = outdoors(def.species, 3);
+        let now = 1_000_000;
+        p.moving = true; // the hero walks at it for half a second...
+        for (let ms = 0; ms < 500; ms += dt) tick(world, dt, at((now += dt)));
+        expect(a.startled, `${def.species} was not startled`).toBe(true);
+        p.moving = false; // ...and then stands still
+        let adjacentAt = -1;
+        let stayed = true;
+        for (let ms = 0; ms < 30_000; ms += dt) {
+          tick(world, dt, at((now += dt)));
+          const off = Math.abs(Math.floor(a.x / TILE) - Math.floor(p.x / TILE)) + Math.abs(Math.floor(a.y / TILE) - Math.floor(p.y / TILE));
+          if (off === 1 && adjacentAt < 0) adjacentAt = ms;
+          if (adjacentAt >= 0 && off !== 1) stayed = false;
+        }
+        expect(adjacentAt, `${def.species} at ${dt} ms ticks never got next to the hero`).toBeGreaterThanOrEqual(0);
+        expect(stayed, `${def.species} at ${dt} ms ticks left again`).toBe(true);
+      }
+    }
   });
 
   it('a hero who stands still, an animal out of reach, a petted one, predators, pets and farm animals are left alone', () => {

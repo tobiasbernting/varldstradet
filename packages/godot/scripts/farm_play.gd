@@ -36,6 +36,8 @@ var _totals: Dictionary = {} ## item -> how many I hold, to tell what came in
 var _have_totals := false
 var _ride_mul := 1.0
 var _riding := false
+var _boost_until := 0.0 ## the pizza's speed boost (boostUntil, the server's clock in ms)
+var _ride_lift := 0.0 ## how high the rider sits on this mount (metres)
 var _lifted := false
 var _act_at := 0.0
 var _last_text := "\u0001"
@@ -129,6 +131,12 @@ func enter(w: Dictionary) -> void:
 func leave() -> void:
 	active = false
 	_riding = false
+	_ride_mul = 1.0
+	_boost_until = 0.0
+	# (a dungeon entered from horseback: the hero runs there, and the rule of the pad's B is the dungeon's)
+	hero.riding = false
+	hero.boosted = false
+	hero.speed_mul = 1.0
 	_last_text = "\u0001"
 	hotbar.visible = false
 	target.visible = false
@@ -162,6 +170,8 @@ func handle_input(event: InputEvent) -> bool:
 		return true
 	if event.is_action_pressed("quests"):
 		windows.toggle_quests()
+		return true
+	if windows.handle_key(event):
 		return true
 	if event is InputEventKey and event.pressed and not event.echo:
 		var code: int = event.physical_keycode
@@ -296,12 +306,14 @@ func _on_player_changed(id: String, rec: Variant) -> void:
 	_sleep.visible = _sleeping
 	# riding: the mount's speed (a horse has no speed of its own: RIDE_SPEED_MUL)
 	_ride_mul = 1.0
+	_boost_until = float(rec.get("boostUntil", 0.0))
 	var riding: Variant = rec.get("riding")
 	_riding = riding != null
 	if riding != null:
 		var a: Variant = hero.world.get("animals", {}).get(str(int(riding)))
 		var def: Dictionary = Data.animals.get(str(a.get("species", "")), {}) if a is Dictionary else {}
 		_ride_mul = float(def.get("mount", Data.constant("RIDE_SPEED_MUL", 1.8)))
+		_ride_lift = Data.ride_lift(str(a.get("species", ""))) if a is Dictionary else Data.ride_lift("")
 	# what came into the bag
 	var totals := _totals_of(rec)
 	if _have_totals:
@@ -336,10 +348,13 @@ func tick(delta: float) -> void:
 	if not active:
 		return
 	hero.frozen = is_busy() or _sleeping
-	hero.speed_mul = _ride_mul
+	hero.speed_mul = _ride_mul * (Data.constant("BOOST_SPEED_MUL", 1.3) if _boost_until > model.server_now() else 1.0)
+	hero.riding = _riding
+	hero.boosted = _boost_until > model.server_now()
+	hero.fight = false
 	if _riding != _lifted:
 		_lifted = _riding
-		hero.actor.position.y = 0.32 if _riding else 0.0
+		hero.actor.position.y = _ride_lift if _riding else 0.0
 	drops.tick(delta)
 	target.tick(delta)
 	fishing.tick(delta)

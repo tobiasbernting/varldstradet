@@ -257,11 +257,11 @@ this the browser client was not needed for a farm evening, and on 2026-11-02 (M5
 **M5c** puts the runs (färder) on screen. On the farm the **färdport** is a real 3 × 2 arch with a teal-gold glow, the **Yggdrasil shoot**
 grows in five stages with the family's tree (a mound, a sapling, a young tree, a big tree, the glowing Världsträd), and the smithy, herb garden
 and longhouse are buildings. Using the arch opens **the arch window** (your class as a picture, the färdkost slots with the dishes from your
-bag, one big "Starta färden", or "Följ med" when a run lives); the zones are drawn by the dungeon view with the biome's own ground, the walls and
+bag, a **Lätt / Vanlig** choice, one big "Starta färden", or "Följ med" when a run lives); the zones are drawn by the dungeon view with the biome's own ground, the walls and
 decor of the dungeon it borrows from, its weather and a glowing exit; the HUD has the clock against the 30-minute target (past it the clock keeps
 counting in a warmer colour), zone n of 3 or the boss, and the runor taken; after each zone **three big cards** are voted on by tap, click, the
 pad's A or the keys 1-3; the end of a run shows a summary; and the shoot opens **the sagaträd** with its 18 nodes. The hired Hirdmannen is a hero
-sprite. `pnpm godot:bot` has a run pair (`BOT_ONLY=run`; `-- --full` plays to the boss, `BOT_RUN_SECONDS=2400`): two bots walk to the arch, start,
+sprite; one or two players get him in every run without a longhouse (a healer for a lone fighter, a tank for a lone healer, a healer or tank for a pair that lacks one), a longhouse only adds the fourth place. **To play the easy level** (the kids): walk into the färdport and press the green **Lätt** button before "Starta färden" (Vanlig is lit by default). Lätt has softer monsters, longer warnings, three Sagoandar (the star 🌟 on the clock panel: a free "everyone gets up" if the party falls, one more after each zone) and a fall never ends the run; it pays half the sagafrön. Vanlig has one Sagoande. `pnpm godot:bot` has a run pair (`BOT_ONLY=run`, the lead picks Lätt and the check sees the level and the star on the HUD; `BOT_RUN_LEVEL=1` plays Vanlig; `-- --full` plays to the boss, `BOT_RUN_SECONDS=2400`): two bots walk to the arch, start,
 clear zone 1, vote and enter zone 2. Pictures: [the arch window](packages/godot/docs/m5c-arch.png), [a zone](packages/godot/docs/m5c-zone.png),
 [the cards](packages/godot/docs/m5c-cards.png), [the end of a run](packages/godot/docs/m5c-end.png) and [the sagaträd](packages/godot/docs/m5c-tree.png).
 
@@ -291,6 +291,16 @@ The end of the saga is on screen too: `--demo=loke --ending` plays what the serv
 (the toasts of that moment now take turns instead of wiping each other). Pictures: [Fenrisklyftan](packages/godot/docs/m6c-fenrir.png), [its hall](packages/godot/docs/m6c-fenrir-hall.png),
 [its bosses' moves](packages/godot/docs/m6c-fenrir-bosses.png); [Bifrost](packages/godot/docs/m6c-loke.png), [its hall](packages/godot/docs/m6c-loke-hall.png), [its bosses' moves](packages/godot/docs/m6c-loke-bosses.png).
 
+**M9a** gives the native client what the browser game had and it lacked. **The minimap** is a small map in the top right corner of the map you are on (the farm, a wild map, a dungeon): the terrain, you (a big yellow dot), the other players (white), the villagers (pink), the animals (cream) and the monsters (red), and a marker for what is worth finding: each dungeon's arch in that dungeon's colour, the färdport, doors and caves, the bus stop and the station, Kämpastenen, the landmarks and a dungeon's way out. `M` (or the world map's button) shows and hides it; the choice is remembered in `settings.cfg` and it grows with the text size. **The world map with fast travel** (`N`, the pause menu's "Karta" or a controller's `Share`/`Capture` button) shows the 7 × 7 maps round the one you are on, north up: the ones you have been to with their place's emoji and name, ❔ for the rest, a "?" where you have seen a landmark you have not touched and a 🧭 where you found them all, and "här" on yours. A visited map is a button: it sends `{t:'teleport'}` and the server puts you in the middle of it; "Åk hem" goes to the farm and "Månen" to the moon when you have been there. Exactly as the server allows (`teleport()` in `sim.ts`): never from inside a dungeon or a run (the buttons are greyed; the server now refuses it there too, it used to leave your fighter behind), only to a map you have visited, never into a cave or a building. **Every dungeon has its own arch** (the server has always put all nine out in the world; the client drew one stone arch for all of them): a barrow for Draugkryptan, an ice gate for Frostjättens borg, a black forge door for Surts smedja, a bone gate for Helheim, a timber mine for Svartalfheims gruvor, a sea temple for Havsormens tempel, two living trees for Alvernas lund, a cleft of steel-blue rock for Fenrisklyftan and a rainbow arch for Bifrost, as the browser's art drew them. They stand where the plans put them (`DUNGEONS[id].portal`), all reachable on foot from the farm, and use the server's own rule for going in (a class, and the chapter before it cleared): Draugkryptan in the forest west of the north map (`a:-1,-1`), Frostjättens borg in the icy map two north of the farm (`a:0,-2`, with Fenrisklyftan's arch in the same map's south-west), Surts smedja in the volcano (`a:2,2`), Helheim in the swamp west of the farm (`a:-1,0`), Svartalfheims gruvor in the mountains east of it (`a:2,0`), Havsormens tempel on the beach (`a:-2,0`), Alvernas lund in the mushroom forest (`a:1,-1`) and Bifrost at the space base (`a:1,3`); the world map says which maps you have been to. The pause menu's "Gå in i …" entries stay what they were: a dev shortcut that only works on a server with `DEV_TELEPORT=1`. `--demo=forest --arch=0..8` draws one arch for a picture, `--demo=farm --open-map --visited=a:0,-1=skog|a:1,0=by` the world map with some visited maps. `pnpm godot:bot` has a map walker (`Bot-Kartvandrare`, `BOT_ONLY=walker`): it walks north, opens the world map with `K`, goes home and back by the buttons (the server moved it), toggles the minimap with `M`, meets Frostjättens locked arch, asks `dev unlock`, goes in by the arch and checks that the map is greyed inside. Five more walkers (`Bot-Valv-<id>`, two lanes on a server of their own, each with a time budget from its route's length) walk to Fenrisklyftan's, Helheim's, Havsormens, Svartalfheims' and Alvernas arches over the real maps (`BOT_ARCHES=surt,loke` walks Surts and Bifrost's too: five maps out through the volcano and the space base, where monsters knock an unarmed walker back to the farm, so it is not in the default run; `BOT_ARCHES=hel,orm` picks some), and `saga.test.ts` checks every one of the nine without walking: the arch is where the plan says, its map and every map on the way are walkable from the farm, and it sends you into its own dungeon only once the chapter before it is cleared, meet the chapter lock, ask `dev unlock` and go in by the arch; every dev message a bot's client sends is recorded and none may be `saga`.
+
+![The minimap on the farm](packages/godot/docs/m9a-minimap.png)
+
+![The world map](packages/godot/docs/m9a-worldmap.png)
+
+![Frostjättens arch](packages/godot/docs/m9a-arch-frost.png)
+
+![The nine arches](packages/godot/docs/m9a-arches.png)
+
 **Röstprat** (voice chat) is back in the native client (2026-11-06). Open it from the pause menu ("Röstprat") or the small button at the top right of the HUD. The game picks up the phone for you when you log in (the window's "Lägg på" hangs up and keeps it hung up). Hold **C** (or the window's "Håll här för att prata" button) to talk: push-to-talk is the default, for the kids; "Öppen mikrofon" in the window keeps the microphone open, "Tysta mikrofonen" turns it off, and "Volym" sets how loud the others are (all of it is remembered in `settings.cfg`). Everything about rooms is as before: devices behind the same address are one room and do not hear each other, one device per room is the speakerphone. Sound goes straight between the rooms' speakers as small mu-law packets on a WebRTC data channel (Godot has no WebRTC audio tracks), 16 kB/s a peer.
 
 ![Röstprat](packages/godot/docs/voice.png)
@@ -303,6 +313,19 @@ Home and village (M4c): [the workbench](packages/godot/docs/m4c-workbench.png), 
 [the farmhouse at night](packages/godot/docs/m4c-house-night.png), [the shop](packages/godot/docs/m4c-shop.png),
 [the wardrobe](packages/godot/docs/m4c-wardrobe.png), [Köpingen](packages/godot/docs/m4c-village.png),
 [the class stone](packages/godot/docs/m4c-class.png), [the Völvan](packages/godot/docs/m4c-volva.png) and [the gear window](packages/godot/docs/m4c-gear.png).
+
+Smedjan: [the forge window](packages/godot/docs/smedjan-forge.png), [two levels up](packages/godot/docs/smedjan-forge-level2.png), [the starter set Stina smiths](packages/godot/docs/smedjan-smith.png)
+and [the gear window with "Järnyxa +2"](packages/godot/docs/smedjan-gear.png). Paper and paint: [the paint screen](packages/godot/docs/paint-screen.png),
+[the paint screen at 175 % text](packages/godot/docs/paint-screen-175.png), [the forge at 175 % text](packages/godot/docs/smedjan-forge-175.png), [a painted tavla hung in its frame](packages/godot/docs/paint-frames.png), [a painted wall](packages/godot/docs/paint-walls.png) and [a painted farmhouse](packages/godot/docs/paint-house.png).
+
+Köpingen as a Viking market town (2026-11-07): cobblestone streets, flagstone pavements, pale slabs to cross on, timber houses and shops with
+hanging signs, the Vägvisare signposts and iron lanterns, and the horse cart, the riding horse and Diligensen instead of cars and a bus
+([the main street](packages/godot/docs/koepingen-street.png), [at night](packages/godot/docs/koepingen-street-night.png),
+[the houses and shops](packages/godot/docs/koepingen-houses.png), [the square](packages/godot/docs/koepingen-square.png),
+[the station](packages/godot/docs/koepingen-station.png), [the street on the Låg preset](packages/godot/docs/koepingen-street-lag.png), [what it looked like before](packages/godot/docs/koepingen-before.png) and
+[the browser's art for the same spot beside the native client](packages/godot/docs/koepingen-browser-vs-native.png), the left half drawn by the browser's own art code, not a screenshot of the running browser).
+
+![Köpingen's main street in the native client](packages/godot/docs/koepingen-street.png)
 
 Farming (M4b): [watering](packages/godot/docs/m4b-watering.png), [the bag and a chest](packages/godot/docs/m4b-bag-chest.png),
 [the bag from the demo](packages/godot/docs/m4b-bag-demo.png) [a bite](packages/godot/docs/m4b-fishing-bite.png) and [a wild fox petted](packages/godot/docs/m4b-pet.png).
@@ -346,11 +369,11 @@ generator. `--time=0.9` (a fraction of the day: 0 sunrise, 0.4 midday, 0.9 night
    headless Godot renders nothing. `packages/godot/ART.md` ("Measured") keeps the numbers.
 
 **Run it against a server.** The server is the one in `packages/server` (`pnpm dev` starts it on port 8080). It refuses to start without a choice about access, and dies if
-`DATABASE_URL` points at a Postgres that is not running, so pick one of two recipes. Both set `DEV_TELEPORT=1`: the
-native client draws only Draugkryptan's way in (the arch), so the switch lets the pause menu's "Gå in i …" entries for
-the other eight dungeons ask the server to put you inside, as their arches would, making you a Krigare first if you
-have no class (and, since M4c, the farmer bot's `dev starter` hands a hero with a class the starter weapon Smed-Stina's forge
-makes, which the gear window can then put on). Draugkryptan itself needs no switch. Never set it on the real farm.
+`DATABASE_URL` points at a Postgres that is not running, so pick one of two recipes. Both set `DEV_TELEPORT=1`, which a normal game does not need:
+every dungeon has its own arch out in the world (see "Native client", M9a), and the switch only adds shortcuts for checking: the pause menu's "Gå in i …"
+entries ask the server to put you inside a dungeon at once, as its arch would, making you a Krigare first if you
+have no class; and the bots' dev messages (`dev starter` hands a hero with a class the starter weapon Smed-Stina's forge
+makes, `dev nextDay`, and `dev unlock`, which counts the chapters before the last as cleared so a check can use a later arch, and `dev kit` hands anyone the materials and kronor for two forge levels and a starter piece, two papers, two buckets of red paint and a run of wall pieces, for the smithy and paint checks). Never set it on the real farm.
 
 - *Throwaway, nothing to set up* (no password, no database, nothing saved; a home network only):
 
@@ -415,6 +438,17 @@ Then start the client:
    level, the weapon, shield and amulet you wear and carry (kraft, hälsa, skydd) and the **hero switch**, which puts the
    class's clothes on out in the world and back; `J` lists the day's **önskningar**. *Villagers*: use the key facing one:
    "Prata!" (stories, questions, jokes, riddles, sten sax påse) and their wishes, handed over with "Lämna".
+   **Smedjan**: Smed-Stina's window (in Köpingen) has a "🔨 Smedjan" button. *Förbättra* lists every weapon, shield and
+   amulet you wear or carry with its five stars, what it gives now and after one more level, what the level costs (each
+   material and the kronor green when you have enough, red when not) and the button that forges it; *Smid* is the starter
+   set she makes once for each hero. The server's refusals ("Du behöver mer: …", "Gå till Smed-Stina …") are the toasts.
+   The gear window shows a forged piece as "Järnyxa +2" with its stars.
+   **Paper and paint**: a paper used on nothing opens the **paint screen** (16 × 16 cells, the browser's twelve colours, a
+   brush, a fill and an eraser): drag with the mouse or the touchpad (a right press erases), or use the arrows / d-pad
+   to move the cursor and Enter, space or `A` to paint (held while moving it draws a line; the shoulder buttons and the
+   mouse wheel step through the colours). "Klar" turns the paper into a painted tavla (the bag slot shows its picture);
+   put it down and the frame on the wall shows the drawing. A **paint bucket** used on the farmhouse or a wall piece
+   colours it (a wall with every wall piece joined to it, as the server does).
    **Farming** (M4b) works on the tile in front of you, which is outlined (green when something would happen) with the
    action written under it ("E · Vattna"): `1`–`8` (the shoulder buttons `LB`/`RB`, the mouse wheel, `[` `]`) pick the
    hotbar square; `E`, space, `A` or a click on a tile beside you use it. The hoe tills grass, seeds go in tilled soil, the
@@ -566,18 +600,25 @@ There is still no text chat: players can only use emotes.
 The native client's keys and buttons, read from `packages/godot/project.godot` (the input map) and the scripts that
 use it. A gamepad and the keyboard work at the same time; the mouse is for clicking tiles, monsters and windows. The
 pause menu (`Esc` or Start) has the settings: graphics quality, **Trollformler** (spells on buttons, or one button and
-a wheel), the frame-rate counter and the world's sounds, plus the gear and quest windows and "Röstprat".
+a wheel), the frame-rate counter and the world's sounds, plus the gear, quest, Gårdsbok, journal, family and help windows and "Röstprat".
 
 | | Keyboard and mouse | Gamepad (Xbox names; PlayStation: ✕ ○ □ △) |
 | --- | --- | --- |
 | Walk | `W` `A` `S` `D` or the arrow keys | left stick or the d-pad |
+| Run (1.7 times as fast as walking, no stamina; on a mount the mount's speed counts instead) | hold `Shift` | hold the left trigger, or `B` outside a fight (in a fight `B` is a spell) |
 | Use (talk, open, harvest, hit what is in front of you) | `E` or `Space`, or click a tile next to you | `A`, or the right trigger |
 | Choose tool (the hotbar, 8 squares) | `1`–`8`, the mouse wheel, `[` and `]`, or click a square | `LB` and `RB` |
 | Bag | `Q` or `I` (a click on the held square also opens it) | `Y` |
-| Pets stay / come back | `X` / `V` (the whistle) | press the right stick / the left stick |
+| Pets stay / come back | `X` / `V` (the whistle), or the ✋ / 🎵 buttons on the right edge (shown once you have a pet or a horse) | press the right stick / the left stick |
 | Emotes | `F` opens the wheel; lean the mouse towards one and click | d-pad up opens the wheel; lean the stick, `A` picks |
 | Chat | `T` or `Enter`, type, `Enter` sends, `Esc` closes | `Back` / `Select` |
-| Gear and the saga's quests | `G` and `J` (also in the pause menu) | the pause menu's buttons |
+| Gear and the day's wishes | `G` and `J` (also in the pause menu) | the pause menu's buttons |
+| Gårdsbok (the 78 achievements, with bars and stars) | `B` (again to close) | the pause menu: "Gårdsbok" |
+| Sagans dagbok (hero level, chapters, the nine dungeons with how to beat them and the family's best times, titles) and Upptäcktsboken (the landmarks found, with their lore): tabs of one window | `K`; the level chip at the top right opens it too | the pause menu: "Sagans dagbok" |
+| Familjen: who is online and where, "Hoppa till" a family member | `P`, or the 👪 button on the right edge | the pause menu: "Familjen" |
+| Hjälp (21 topics, the browser's texts) | `H` or `?`; `←` `→` change topic | the pause menu: "Hjälp" |
+| World map (fast travel; also in the pause menu) | `N`, then click a place you have been to (or move with the arrows and `Enter`) | the pause menu's "Karta", or `Share`/`Capture`; then the d-pad and `A` |
+| Minimap (the corner map) on / off | `M` (or the button in the world map) | the button in the world map |
 | Pause menu, close a window, drop the target | `Esc` | `Start` |
 | Talk on Röstprat (push-to-talk) | hold `C` (or choose the open microphone in the voice window) | |
 | Frame-rate counter | `F3` | |
@@ -593,7 +634,11 @@ In a dungeon or a run the same keys fight:
 | Next target | `Tab` | d-pad right |
 | Drop the target / pause | `Esc` | `Start` |
 
-Notes: the d-pad is shared. Its four directions also walk, so d-pad up opens the emote wheel (and walks up) and, in a fight, d-pad right switches target (and walks right); use the left stick for walking if that is in the way. The hotbar numbers and the spell numbers share `1`–`4`, so outdoors on the farm they pick tools and in a
+Notes: the minimap is not on the d-pad's down, which the browser used: down also walks, so the map would flicker with every step. It is the key `M`, and a button in the world map for the pad. The world map is the pause menu's "Karta" for the pad (`Start`, then `A`), or the controller's extra button (`Share` / `Capture`, where it has one); the left trigger is the run button, so it is not the map's. Running is the browser game's 🏃 (there is no touch screen in the native client, so no on-screen run button); the left stick press is the pets' whistle, so it does not run as it did in the browser.
+
+The books and the other windows (Gårdsbok, journal, family, help) work with the keyboard (`Tab`/arrows move between the buttons, `Enter` presses, `Esc` or the same key closes), the mouse (click, wheel) and a pad (d-pad or left stick moves, `A` presses, `B` closes, the right stick scrolls a long page; in the help `←`/`→` or the d-pad change topic). The pad has no button free for them, so it opens them from the pause menu. Villagers show a yellow `!` (a new saga quest to take), a yellow `?` (to hand in), a red-orange `❗` (a wish of the day you can fill from your bag now), a plain `?` (a wish you cannot fill yet) and a dim `?` (a saga quest going on) over their heads, and say their lines when you come close; the saga's chapter and quests stay on the left of the screen once you have heard Völvan (click the header to fold them).
+
+Notes: running is the browser game's 🏃 (there is no touch screen in the native client, so no on-screen run button); the left stick press is the pets' whistle, so it does not run as it did in the browser. The d-pad is shared. Its four directions also walk, so d-pad up opens the emote wheel (and walks up) and, in a fight, d-pad right switches target (and walks right); use the left stick for walking if that is in the way. The hotbar numbers and the spell numbers share `1`–`4`, so outdoors on the farm they pick tools and in a
 dungeon they cast. The gamepad's `Y` is the bag on the farm and the second spell in a dungeon. The kids' setting
 **Hjul** keeps the face buttons free of the spells; the choice is saved per computer in `user://settings.cfg`. To pair a controller with a Mac or a PC use the system's Bluetooth settings.
 

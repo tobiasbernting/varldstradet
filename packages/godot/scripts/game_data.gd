@@ -30,6 +30,7 @@ var cooking: Array = [] ## the stove's recipes, the same shape
 var shop_tabs: Array = [] ## the shop's tabs [{id, name}]
 var shop_items: Array = [] ## the ids the shop lists, in the browser's order
 var painted_sell := 20
+var paint: Dictionary = {} ## the paint screen's palette, its characters and its size (shared/src/paint.ts)
 var transport_price: Dictionary = {"bus": 5, "train": 15}
 var interior: Dictionary = {"x": 52, "y": 55, "w": 10, "h": 6} ## the farmhouse's room on the farm map (INTERIOR in map.ts)
 var floors: Array = []
@@ -39,6 +40,7 @@ var saga_quests: Array = [] ## the villagers' saga quests
 var gear: Dictionary = {}
 var level_rewards: Dictionary = {}
 var dialogue: Dictionary = {}
+var book: Dictionary = {} ## M9b: the Gårdsbok's achievements, the villagers' idle lines, the landmarks, the help topics and the animal houses
 var run: Dictionary = {} ## M5c: the runor, the sagaträd, the dishes, the zones' looks and the run's texts and numbers
 var atlas: Dictionary = {}
 var _icon_sheet: Texture2D = null
@@ -73,6 +75,7 @@ func _ready() -> void:
 		shop_tabs = g.get("shopTabs", [])
 		shop_items = g.get("shopItems", [])
 		painted_sell = int(g.get("paintedSell", 20))
+		paint = g.get("paint", {})
 		transport_price = g.get("transportPrice", transport_price)
 		interior = g.get("interior", interior)
 		floors = g.get("floors", [])
@@ -83,6 +86,7 @@ func _ready() -> void:
 		level_rewards = g.get("levelRewards", {})
 		dialogue = g.get("dialogue", {})
 		run = g.get("run", {})
+		book = g.get("book", {})
 		if g.get("flags") is Dictionary:
 			flags = g.get("flags")
 		if g.get("interruptKinds") is Array:
@@ -354,6 +358,15 @@ func animal_sheet(species: String, baby: bool, jul: bool, variant: int) -> Strin
 	if variants > 1 and variant % variants > 0:
 		n += "_v%d" % (variant % variants)
 	return n if not sheet(n).is_empty() else ""
+
+
+## How high a rider sits on a mount, in metres: the browser's rideInfo (7 px on a horse or a moped, 4 in the cart, where the
+## driver's bench is; the saga's mounts have their own, in the atlas).
+func ride_lift(species: String) -> float:
+	if species == "car":
+		return 4.0 / 16.0
+	var info: Dictionary = atlas.get("farm_animals", {}).get(species, {})
+	return float(info.get("ride_lift", 7.0)) / 16.0
 
 
 func npc_sheet(id: String) -> String:

@@ -794,6 +794,11 @@ export const T = {
   teleportTo: 'Åk hit',
   youAreHere: 'Du är här',
   notVisited: 'Inte upptäckt än',
+  mapHint: 'Norr är uppåt: kallt i norr, varmt i söder, hav i väster, berg i öster. Tryck på en plats du har varit på för att åka dit!',
+  mapNoJump: 'Du kan inte åka härifrån. Gå ut ur äventyret först!',
+  mapHereTag: 'här',
+  mapKey: 'N',
+  minimapKey: 'M',
   newArea: 'Du har kommit till {name}!',
   newBiome: '{emoji} Du har upptäckt {name}! +1 ⭐ ({n} av {total} sorters platser)',
   enteredGrotto: '{name} – leta efter skattkistan längst in!',
@@ -953,7 +958,7 @@ export const T = {
   qualityHighHint: 'Allt på: skuggor från facklorna, globalt ljus, dimma och fler partiklar. För datorer med riktigt grafikkort.',
   devTitle: 'Utvecklare',
   devEnterDungeon: 'Gå in i {name}',
-  devEnterHint: 'Draugkryptan nås genom valvet i skogen nordväst om gården. De andra kryptorna ritas inte än: genvägen kräver att servern körs med DEV_TELEPORT=1, och har du inte valt väg blir du Krigare.',
+  devEnterHint: 'Varje krypta nås genom sitt valv ute i världen, en i taget i den ordning sagan berättar. Genvägarna här är bara för utvecklare: servern måste köras med DEV_TELEPORT=1, och har du inte valt väg blir du Krigare.',
   devTeleportOff: 'Utvecklarvägen är avstängd på servern (DEV_TELEPORT=1 saknas).',
   areaNotDrawn: 'Den här platsen ritas inte än i den nya klienten: {name}.',
   notDrawnDoor: 'Huset ritas inte än i den nya klienten.',
@@ -1019,6 +1024,9 @@ export const T = {
   previewHealthHalf: 'Hälften',
   previewHealthLow: 'Nästan slut',
   settingsPtt: 'Knapp för att prata (håll nere)',
+  settingsRun: 'Spring',
+  boostChipRage: 'Bärsärkaraseri',
+  settingsRunHint: 'Håll nere Skift för att springa (1,7 gånger så fort som att gå). Handkontroll: vänster avtryckare, eller B utanför strider. Ridande går hästen lika fort som alltid.',
   pttChange: 'Byt tangent',
   pttPress: 'Tryck på en tangent… (Esc: avbryt)',
   pttTaken: 'Den tangenten används redan till något annat i spelet. Välj en annan.',
@@ -1098,6 +1106,22 @@ export const T = {
   gearEmpty: 'Tomt',
   gearNoClass: 'Välj väg vid Kämpastenen i Köpingen först.',
   gearKey: 'G',
+  // M9b: the native client's books, help and family window (keys as in project.godot)
+  bookKey: 'B',
+  journalKey: 'K',
+  helpKey: 'H',
+  familyKey: 'P',
+  journalMenu: 'Sagans dagbok',
+  helpTitle: 'Hjälp',
+  helpGoTo: 'Hjälp: {topic}',
+  familyOnRun: '⚔️ På färd i sagan',
+  familyFarm: 'På gården',
+  familyNobodyElse: 'Ingen annan i familjen har varit här än.',
+  familyYouHere: 'Du är här',
+  familyNoJump: 'Du kan inte hoppa härifrån eller dit just nu.',
+  trackerOpen: 'Visa sagans uppdrag',
+  trackerClose: 'Dölj sagans uppdrag',
+  houseLabel: 'Alla djurhus:',
   talkTitle: 'Prata',
   talkQuests: '📜 Uppdrag',
   talkChat: '💬 Prata!',
@@ -1149,6 +1173,11 @@ export const T = {
   runEndedSeeds: 'Sagafrön',
   runEndedZones: 'Zoner',
   runEndedRunor: 'Runor',
+  runEndedSpirit: 'Sagoandar använda',
+  runLevelLatt: 'Lätt',
+  runLevelLattText: 'Snällare monster. Alla reser sig igen om ni faller.',
+  runLevelVanlig: 'Vanlig',
+  runLevelVanligText: 'Som vanligt. En Sagoande hjälper er en gång.',
   runPartyTitle: 'Med på färden',
   treeTitle: 'Sagaträdet',
   treePlant: 'Plantera',
@@ -1349,6 +1378,26 @@ export interface HelpTopic {
   houses?: boolean;
 }
 
+/**
+ * The native client's own lines for the topics that talk about keys (the browser's lines are about touch, the browser and a
+ * pad layout the native client does not have): the whole "Så styr du" topic, and the pad and pairing lines.
+ */
+export const HELP_NATIVE_CONTROLS: HelpStep[] = [
+  { icon: 'emoji:⌨️', text: 'Gå med piltangenterna eller W A S D.' },
+  { icon: 'emoji:⎵', text: 'Tryck E eller mellanslag för att använda det du håller. Du kan också klicka på en ruta bredvid dig.' },
+  { icon: 'emoji:🔢', text: 'Siffrorna 1–8 väljer sak i raden längst ner. Q eller I öppnar ryggsäcken, F visar känslor, T är chatt, X och V säger åt djuren att stanna och komma.' },
+  { icon: 'emoji:🏃', text: 'Håll in Skift för att springa. Med handkontroll: vänster avtryckare, eller B utanför strider.' },
+  { icon: 'emoji:📖', text: 'B öppnar gårdsboken, K sagans dagbok med upptäckterna, J dagens önskningar, G utrustningen, P familjen och H eller ? den här hjälpen. Esc öppnar pausmenyn.' },
+  { icon: 'emoji:🎮', text: 'Med handkontroll: vänster spak går, A använder, LB/RB byter sak, Y öppnar ryggsäcken. Start öppnar pausmenyn, och där finns gårdsboken, dagboken, familjen och hjälpen. I menyerna flyttar du med spaken, A väljer och B stänger.' },
+  { icon: 'hoe', text: 'Raden längst ner visar vad du kan hålla. Tryck på en sak för att hålla den.' },
+  { icon: 'emoji:🎒', text: 'Ryggsäcken har fler platser. Tryck på en sak och sedan på en ruta för att flytta den.' },
+];
+export const HELP_NATIVE_GAMEPAD: HelpStep[] = [
+  { icon: 'emoji:👆', text: 'Starta spelet och tryck på en knapp på kontrollen. Då märker spelet den.' },
+  { icon: 'emoji:⚙️', text: 'Start öppnar pausmenyn. Där väljer du Inställningar, gårdsboken, dagboken, familjen och hjälpen med spaken och A.' },
+];
+export const HELP_NATIVE_SAGA_PAD = 'Med handkontroll i en fängelsehåla: X, Y, B och RB är besvär 1–4, LB är dryck och d-pad höger byter mål. Start öppnar pausmenyn.';
+
 export const HELP: HelpTopic[] = [
   {
     id: 'controls',
@@ -1528,11 +1577,11 @@ export const HELP: HelpTopic[] = [
       { icon: 'emoji:🐻', text: 'Akta dig för björnar i skogen och vargar och lodjur i bergen! De jagar dig en liten bit och bits (ett hjärta). Hjärtan växer tillbaka med tiden. Svärd, båge och sköld fungerar – eller fånga dem med lasso så blir de snälla kompisar.' },
       { icon: 'emoji:🗺️', text: 'Kartknappen visar alla områden du har upptäckt. Tryck på ett område för att åka dit direkt, eller på Hem.' },
       { icon: 'house_small', text: 'Öster om gården ligger Köpingen med Bagar-Bo, Smed-Stina och Fru Lind. På marknaden vid torget kan du köpa och sälja precis som hemma.' },
-      { icon: 'emoji:🚗', text: 'Köpingen har kullerstensgator med hästkärror, ridhästar och Diligensen, och Gruvtåget går längs spåret i norr. Gå över gatan vid övergångsstället – alla hästar och kärror stannar alltid för dig (och gnäggar snällt om du står i vägen).' },
+      { icon: 'vehicle_car_red', text: 'Köpingen har kullerstensgator med hästkärror, ridhästar och Diligensen, och Gruvtåget går längs spåret i norr. Gå över gatan vid övergångsstället – alla hästar och kärror stannar alltid för dig (och gnäggar snällt om du står i vägen).' },
       { icon: 'pizza', text: 'Pizzeria Pino ligger vid torget i Köpingen. Köp en pizza eller saft, håll den i handen och tryck på marken för att äta: hjärtana fylls och du får pizzapower – du springer snabbare en stund!' },
       { icon: 'emoji:🏊', text: 'Söder om torget ligger Badstugan. Gå in genom dörren och hoppa i poolen – i vattnet simmar du lite långsammare. Dörren längst ner tar dig ut igen.' },
       { icon: 'vehicle_motorcycle', text: 'Köp en ridhäst eller hästkärra under Kärror & hästar och åk mellan områdena – hästen eller kärran följer med när du åker över kanten. Gnägg med 🐴 i känslomenyn!' },
-      { icon: 'emoji:🚌', text: 'Åk med Diligensen eller Gruvtåget: vid den östra utgången hemma står en hållplats, och varje köping har hållplats och Gruvtågsstation. Diligensen (5 kr) kör till ställen du redan besökt. Gruvtåget (15 kr), dvärgarnas tåg, går dessutom till en okänd köping långt borta!' },
+      { icon: 'vehicle_motorcycle', text: 'Åk med Diligensen eller Gruvtåget: vid den östra utgången hemma står en hållplats, och varje köping har hållplats och Gruvtågsstation. Diligensen (5 kr) kör till ställen du redan besökt. Gruvtåget (15 kr), dvärgarnas tåg, går dessutom till en okänd köping långt borta!' },
       { icon: 'emoji:🏃', text: 'Världen är oändlig. Hur långt vågar du gå?' },
     ],
   },
@@ -1810,6 +1859,12 @@ export const RUN_T = {
   late: 'Dags att gå hem?',
   lateSub: 'Gör klart det ni håller på med. Sen kan ni gå hem från nästa vilosten eller bossen.',
   wipeSub: 'Ni går hem med allt ni har. Försök igen!',
+  spirit: 'Sagoandan hjälper er!',
+  spiritSub: 'Ni reser er vid vilostenen. {n} Sagoandar kvar.',
+  spiritFree: 'Ingen fara!',
+  spiritFreeSub: 'Ni reser er vid vilostenen och försöker igen.',
+  spiritGained: 'En Sagoande till!',
+  badLevel: 'Det svårighetsvalet finns inte.',
   win: 'Färden är klar!',
   winSub: 'Öppna kistan, sen går vi hem.',
   home: 'Hemma igen',
