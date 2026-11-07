@@ -306,7 +306,7 @@ Home and village (M4c): [the workbench](packages/godot/docs/m4c-workbench.png), 
 
 Smedjan: [the forge window](packages/godot/docs/smedjan-forge.png), [two levels up](packages/godot/docs/smedjan-forge-level2.png), [the starter set Stina smiths](packages/godot/docs/smedjan-smith.png)
 and [the gear window with "Järnyxa +2"](packages/godot/docs/smedjan-gear.png). Paper and paint: [the paint screen](packages/godot/docs/paint-screen.png),
-[a painted tavla hung in its frame](packages/godot/docs/paint-frames.png), [a painted wall](packages/godot/docs/paint-walls.png) and [a painted farmhouse](packages/godot/docs/paint-house.png).
+[the paint screen at 175 % text](packages/godot/docs/paint-screen-175.png), [the forge at 175 % text](packages/godot/docs/smedjan-forge-175.png), [a painted tavla hung in its frame](packages/godot/docs/paint-frames.png), [a painted wall](packages/godot/docs/paint-walls.png) and [a painted farmhouse](packages/godot/docs/paint-house.png).
 
 Farming (M4b): [watering](packages/godot/docs/m4b-watering.png), [the bag and a chest](packages/godot/docs/m4b-bag-chest.png),
 [the bag from the demo](packages/godot/docs/m4b-bag-demo.png) [a bite](packages/godot/docs/m4b-fishing-bite.png) and [a wild fox petted](packages/godot/docs/m4b-pet.png).
