@@ -36,6 +36,7 @@ import {
   RUN_OFFLINE_END_MS,
   RUN_PARTY_MAX,
   RUN_PARTY_MAX_LONGHALL,
+  companionClass,
   RUN_PICK_MS,
   RUN_SEEDS,
   RUN_VICTORY_MS,
@@ -510,7 +511,7 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
     bring(farm, run, q, q.id === p.id && opts.fardkost ? opts.fardkost : undefined, out);
     runSaveOf(q).runs++;
   }
-  if (party.length === 1 && opts.companion !== false && unlocksOf(farm).longhall) hireCompanion(farm, run, p, out);
+  if (opts.companion !== false) hireCompanion(farm, run, party, out);
   RUNS.set(farm, run);
   out.push(...enterZone(farm, run, 0, ctx));
   for (const q of party) out.push(toast(q.id, RUN_T.started));
@@ -518,9 +519,11 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
 }
 
 /** The hired companion (Hirdmannen): a fighter the server runs with the test bots' brain, taking the class the player lacks. */
-function hireCompanion(farm: WorldState, run: RunState, human: PlayerState, out: Change[]): void {
-  const mine = human.saga!.cls!;
-  const cls: ClassId = mine === 'helare' ? 'vaktare' : 'helare';
+function hireCompanion(farm: WorldState, run: RunState, humansIn: PlayerState[], out: Change[]): void {
+  // one or two humans get the Hirdmannen, no longhouse needed (GAME.md section 6): the class the party lacks
+  const cls = companionClass(humansIn.map((q) => q.saga?.cls).filter((x): x is ClassId => !!x));
+  if (!cls) return;
+  const human = humansIn[0]!;
   const c = createPlayer(farm, COMPANION_NAME, { skin: '#c68642', hair: '#6b3e1d', hairStyle: 'short' });
   c.bot = true;
   c.online = true;
@@ -531,7 +534,8 @@ function hireCompanion(farm: WorldState, run: RunState, human: PlayerState, out:
   addItem(c.inventory, 'healing_potion', 3);
   run.companions.push(c.id);
   run.minds.set(c.id, newMind('careful', () => 0.5));
-  out.push(playerChange(c), toast(human.id, fmt(RUN_T.companion, { name: COMPANION_NAME })));
+  out.push(playerChange(c));
+  for (const q of humansIn) out.push(toast(q.id, fmt(RUN_T.companion, { name: COMPANION_NAME })));
 }
 
 function dismissCompanions(farm: WorldState, run: RunState, out: Change[]): void {

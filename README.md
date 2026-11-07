@@ -261,7 +261,7 @@ bag, one big "Starta färden", or "Följ med" when a run lives); the zones are d
 decor of the dungeon it borrows from, its weather and a glowing exit; the HUD has the clock against the 30-minute target (past it the clock keeps
 counting in a warmer colour), zone n of 3 or the boss, and the runor taken; after each zone **three big cards** are voted on by tap, click, the
 pad's A or the keys 1-3; the end of a run shows a summary; and the shoot opens **the sagaträd** with its 18 nodes. The hired Hirdmannen is a hero
-sprite. `pnpm godot:bot` has a run pair (`BOT_ONLY=run`; `-- --full` plays to the boss, `BOT_RUN_SECONDS=2400`): two bots walk to the arch, start,
+sprite; one or two players get him in every run without a longhouse (a healer for a lone fighter, a tank for a lone healer, a healer or tank for a pair that lacks one), a longhouse only adds the fourth place. `pnpm godot:bot` has a run pair (`BOT_ONLY=run`; `-- --full` plays to the boss, `BOT_RUN_SECONDS=2400`): two bots walk to the arch, start,
 clear zone 1, vote and enter zone 2. Pictures: [the arch window](packages/godot/docs/m5c-arch.png), [a zone](packages/godot/docs/m5c-zone.png),
 [the cards](packages/godot/docs/m5c-cards.png), [the end of a run](packages/godot/docs/m5c-end.png) and [the sagaträd](packages/godot/docs/m5c-tree.png).
 
