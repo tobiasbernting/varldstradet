@@ -29,8 +29,8 @@ const DUNGEON_DRAWN := [
 	"saga_wall",
 ]
 ## (the same, as the farm view's fixtures see them)
-const MAP_FIXTURES := ["farm", "forest", "village"]
-const FIXTURES := ["farm", "house", "forest", "village", "draug", "frost", "surt", "hel", "dvarg", "orm", "alv", "fenrir", "loke"]
+const MAP_FIXTURES := ["farm", "forest", "village", "volcano", "mushroom", "jungle"]
+const FIXTURES := ["farm", "house", "forest", "village", "volcano", "mushroom", "jungle", "draug", "frost", "surt", "hel", "dvarg", "orm", "alv", "fenrir", "loke"]
 
 var world: WorldView
 var _bad := 0
