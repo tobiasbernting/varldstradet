@@ -322,8 +322,8 @@ func family() -> void:
 	]
 	var jump_ok := true
 	for c in cases:
-		var me_rec := {"id": "me", "area": c[1], "sleeping": c[3], "saga": {"cls": "helare"} if c[5] else {}}
-		var them := {"id": "them", "area": c[2], "online": c[0] != "offline"}
+		var me_rec := {"id": "me", "area": c[1], "sleeping": c[4], "saga": {"cls": "helare"} if c[5] else {}}
+		var them := {"id": "them", "area": c[2], "online": c[3]}
 		var got := FamilyWindow.can_jump_to("me", me_rec, them)
 		if got != bool(c[6]):
 			jump_ok = false

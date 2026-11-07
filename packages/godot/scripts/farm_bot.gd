@@ -368,6 +368,12 @@ func _quests() -> void:
 		await _home.hand_over("elsa", "elsa_flowerbox", "stone")
 		await _home.expect_mark("mark: Elsa's wish is done", "elsa", "<rules>")
 		(_report["books"] as Dictionary)["elsa_after"] = _home.mark_of("elsa")
+		var farm_marks := {}
+		for id in Data.npcs.keys():
+			var shown := _home.mark_of(str(id))
+			if shown != "<not drawn>":
+				farm_marks[str(id)] = shown
+		(_report["books"] as Dictionary)["marks_farm"] = farm_marks
 	else:
 		_step("Elsas önskning", false, "no stone")
 	if model.count_item("wood") >= 5:

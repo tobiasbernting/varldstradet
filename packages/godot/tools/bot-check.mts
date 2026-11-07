@@ -144,6 +144,7 @@ interface FarmReport {
     achievements?: Record<string, { unlocked: boolean; k: number }>;
     elsa_after?: string;
     marks_village?: Record<string, string>;
+    marks_farm?: Record<string, string>;
     journal?: { chapters: number; dungeons: number; levels: number; level: number; chapter: number; has_level_line: boolean; cleared: number };
     finds?: { total: number; found: number; groups: number; unknown: number; all_line: boolean };
     tracker?: { visible: boolean; lines: string[] };
@@ -401,7 +402,12 @@ function checkBooks(r: FarmReport, rec: ServerRecord): void {
   const quiet = Object.entries(village).filter(([, shown]) => shown === '').length;
   const marked = Object.entries(village).filter(([, shown]) => shown !== '').length;
   check(Object.keys(village).length >= 5 && mismatched.length === 0, `${r.name}: every villager in Köpingen shows the mark the server's record gives (${Object.entries(village).map(([n, s]) => `${n} ${s || '-'}`).join(', ')}${mismatched.length ? '; WRONG: ' + mismatched.map(([n, s]) => `${n} shows ${s || '-'} not ${expectedMark(rec, n) || '-'}`).join(', ') : ''})`);
-  check(quiet >= 1 && marked >= 1, `${r.name}: some villagers show a mark and some, with nothing for me, show none (${marked} with, ${quiet} without)`);
+  // on the farm, with Elsa's wish done: a mark exactly where the server's record has something for me, and none where it has nothing
+  const farmMarks = Object.entries(r.books?.marks_farm ?? {});
+  const farmWrong = farmMarks.filter(([npc, shown]) => (shown === '') !== (expectedMark(rec, npc) === ''));
+  const farmQuiet = farmMarks.filter(([, shown]) => shown === '').length;
+  check(farmMarks.length >= 3 && farmWrong.length === 0 && farmQuiet >= 1, `${r.name}: on the farm a villager shows a mark exactly when the server's record has something for me, and none otherwise (${farmMarks.map(([n, s]) => `${n} ${s || '-'}`).join(', ')}; ${farmQuiet} without)`);
+  check(marked >= 1, `${r.name}: some villagers show a mark and some, with nothing for me, show none (${marked} with, ${quiet} without)`);
   const elsaOpen = (rec.wishes ?? []).filter((w) => w.npc === 'elsa' && !(rec.questsDone ?? []).includes(w.id)).length;
   check(r.books?.elsa_after !== undefined && (elsaOpen > 0 || r.books.elsa_after === ''), `${r.name}: after the hand-in Elsa showed "${r.books?.elsa_after}" and the server says she has ${elsaOpen} wishes left (none: no mark)`);
   const b = r.books ?? {};

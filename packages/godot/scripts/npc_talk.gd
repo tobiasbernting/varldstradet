@@ -49,6 +49,19 @@ static func mark_for(model: WorldModel, me: Dictionary, npc: String) -> Dictiona
 	return {}
 
 
+func _on_player_changed(id: String, _p: Variant) -> void:
+	if _bound != null and id == _bound.me:
+		_marks = {}
+
+
+func _forget_marks() -> void:
+	_marks = {}
+
+
+func _forget_marks_in(_key: String) -> void:
+	_marks = {}
+
+
 ## Once a frame: `npcs` is npc id -> Actor, `me_pos` my place in the scene (a tile is one unit).
 func tick(model: WorldModel, npcs: Dictionary, me_pos: Vector3) -> void:
 	var me := model.my_player()
@@ -57,11 +70,10 @@ func tick(model: WorldModel, npcs: Dictionary, me_pos: Vector3) -> void:
 	if _bound != model:
 		_bound = model
 		_marks = {}
-		model.player_changed.connect(func(id: String, _p: Variant) -> void:
-			if id == model.me:
-				_marks = {})
-		model.quests_changed.connect(func() -> void: _marks = {})
-		model.area_changed.connect(func(_k: String) -> void: _marks = {})
+		# (method callables, not lambdas: a lambda that captures the model keeps it, and this object, alive in a cycle, and leaks at exit)
+		model.player_changed.connect(_on_player_changed)
+		model.quests_changed.connect(_forget_marks)
+		model.area_changed.connect(_forget_marks_in)
 	var now := Time.get_ticks_msec()
 	var f := fposmod(model.time_ms + (0.0 if model.time_at == 0 else float(Time.get_ticks_msec() - model.time_at)), Data.constant("DAY_LENGTH_MS", 600000.0)) / Data.constant("DAY_LENGTH_MS", 600000.0)
 	for id in npcs.keys():
