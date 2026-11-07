@@ -289,6 +289,19 @@ the chimney spots were read from the highest vertices of the KayKit meshes alrea
 | Fireflies · butterflies · leaves | 0 · 0 · 0 | 28 · 9 · 36 | 56 · 16 · 80 |
 | Smoke (per chimney) · mist · window light | 0 · 0 · 0 | 7 · 9 · pools | 12 · 18 · flickering pools |
 
+## The living world's sound and wildlife (M7b)
+
+Sounds are the project's own (CC0): `assets/audio/*.wav` made by `tools/make-audio.py` from noise and sines (licence and
+file list in `assets/LICENSES.md`). One shader (`ambient_sparrow.gdshader`) draws the sparrows. Presets (`quality.gd`):
+
+| | Låg | Mellan | Hög |
+| --- | --- | --- | --- |
+| Footsteps sounding at once | 3 | 6 | 10 |
+| Ambience | the 3 loudest layers, no water or fire nearness, no owl | all layers, water and fire by nearness, the owl | the same |
+| Sparrows | 0 | 6 | 12 |
+
+The wild animals' startling is the server's (`shared/src/sim.ts` `tickStartle`) and the same on every preset.
+
 ### Measured (M7a)
 
 Sandbox only (Mesa llvmpipe under Xvfb, 1280×720; frame times are software and mean little, so read them as before/after

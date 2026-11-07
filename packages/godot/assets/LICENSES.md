@@ -24,6 +24,13 @@ actually uses are committed; `tools/fetch-assets.sh` fetches the whole packs for
 
 ## Generated for this project (no third-party licence)
 
+**Sounds (M7b): `audio/*.wav`, 33 files, 4 MB.** Nothing recorded, nothing downloaded: every sound is synthesized from noise
+and sine waves by `tools/make-audio.py` (Python + numpy, fixed seed, so running it again gives the same files; the script is
+the source and the files are its output). They are the author's own work for this project and released as **CC0 1.0**,
+like the packs above. Loops: `wind_soft`, `wind_hard`, `rain`, `rain_roof`, `birds`, `crickets`, `frogs`, `water`, `surf`,
+`fire`, `murmur`; one-shots: `owl_1`, `owl_2`, and three variants of `step_<ground>` for grass, dirt, stone, wood, sand,
+snow and water. (The dungeons' own sounds are still the code-made ones of `scripts/sfx.gd`.)
+
 The farm's generated props (`scripts/farm_assets.gd`, built with `scripts/farm_mesh.gd`, coloured from the palette in `ART.md`) are listed at the end of this section.
 
 Made in code at runtime by `scripts/dungeon_props.gd` (SurfaceTool / primitive meshes, coloured from the palette in

@@ -345,7 +345,9 @@ Then start the client:
    Lines show as bubbles over heads and in the log in the corner.
 7. Escape → Inställningar: Låg, Mellan, Hög (Mellan is the default; Låg is for a laptop with an Intel GPU);
    *Trollformler: Knappar / Hjul* (the four spells on the face buttons, or one button, `RB`/`Q`, that opens a wheel
-   you lean the stick towards); *Visa bildfrekvens (F3)*.
+   you lean the stick towards); *Visa bildfrekvens (F3)*; *Ljud ute i världen*: *Stegljud*, *Omgivning* (birds, crickets, wind, rain, water, fire,
+   the village's murmur) and *Ljudstyrka* for both. Out in the world, wild animals run from you when you walk up to them and come
+   back; stand still near one that has run off and it creeps up to you.
 
 **Two players.** Start the server with `DEV_TELEPORT=1` and log two Godot clients in as above (two characters, two
 devices, or two bots) and go in through the menu or the arch. Both see each other's spells, the same monster health and
@@ -370,7 +372,7 @@ acknowledged, each other's casts seen, monsters beaten, the same monster health 
 workflow runs it on every pull request. The pictures and benches under Xvfb (software GL, 20+ minutes) are a separate
 `pictures` job that runs only when the workflow is started by hand (Actions → Godot client → Run workflow).
 
-The client stores the server address, its device token, the quality preset and the input settings in `user://settings.cfg`
+The client stores the server address, its device token, the quality preset, the input settings and the world's sound settings in `user://settings.cfg`
 (`~/.local/share/godot/app_userdata/Sagan om Världsträdet/` on Linux, `~/Library/Application Support/Godot/app_userdata/…`
 on macOS, `%APPDATA%\Godot\app_userdata\…` on Windows); "Glöm den här enheten" clears the device. The token is the
 same long random device token the browser keeps in its cookie, sent as `Authorization: Bearer` instead; the parent
