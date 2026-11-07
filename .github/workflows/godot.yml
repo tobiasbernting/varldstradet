@@ -88,6 +88,19 @@ jobs:
           fi
           grep -q "voicecheck: all ok" voicecheck.log
 
+      # Nothing in the world may be drawn with the stand-in look: every recorded world (farm, forest, Köpingen with its traffic and the
+      # dungeons) plays and the views report any object drawn as a placeholder box, any actor with no sprite sheet, any vehicle that is
+      # not a body of its own (scripts/placeholder_check.gd)
+      - name: No placeholder look anywhere (objects, creatures, vehicles)
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          timeout 240 ~/godot/godot --headless --path . -- --placeholdercheck 2>&1 | tee placeholdercheck.log
+          if grep -E "SCRIPT ERROR|Parse Error|placeholdercheck: FAIL|leaked at exit|still in use at exit|Pages in use exist at exit" placeholdercheck.log; then
+            echo "::error::the placeholder check reported errors (see above)"; exit 1
+          fi
+          grep -q "placeholdercheck: all ok" placeholdercheck.log
+
       - name: Run the Draugkryptan demo headless for a moment (the dungeon view, actors and HUD run on the recorded fixture)
         working-directory: packages/godot
         run: |

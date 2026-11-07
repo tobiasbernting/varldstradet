@@ -3,7 +3,7 @@ extends Node3D
 ## Someone standing in the world as a pixel sprite on a billboard (ART.md): a player in a class outfit or one of
 ## the saga's creatures, with a name over the head. The sheets come from assets/sprites (tools/export-sprites.mts).
 ## Heroes have four directions by three frames; creatures one side view (facing right) by two frames, mirrored for
-## left. A missing sheet shows a plain magenta figure, so an unexported creature is visible rather than invisible.
+## left. A missing sheet shows a plain stand-in figure (`is_placeholder`, which --placeholdercheck fails on), so an unexported creature is visible rather than invisible.
 ##
 ## M3b adds what a fight shows on a body: a flash when hit, a lunge when swinging, lying flat when fallen, the ice
 ## block or the web around a frozen friend, a health bar over the head, a chat or emote bubble, and the mark on the
@@ -86,6 +86,9 @@ var _once_t := 0.0 ## seconds left of a one-shot animation (attack, hit), during
 static var _anim_libs: Array = [] ## AnimationLibrary, loaded once from the pack's two rig files
 ## The voxel body (`--people3d`, voxel_body.gd): a creature's sprite frames extruded into meshes, or null.
 var voxel: MeshInstance3D = null
+## True when the actor has no picture and shows the plain stand-in figure (so a missing sheet is seen, not invisible);
+## placeholder_check.gd fails on any actor like that.
+var is_placeholder := false
 ## A vehicle (the cart, the riding horse, Diligensen, the mine train): turns right round to face up or down a street, and
 ## carries a lantern that shines at night (the browser's headlights were lanterns; `set_lantern`).
 var full_turn := false
@@ -162,6 +165,7 @@ func set_texture(tex: Texture2D, frame_names: Array, fw: int, fh: int, headroom:
 
 
 func _placeholder() -> void:
+	is_placeholder = true
 	var img := Image.create(16, 24, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0.8, 0.3, 0.8))
 	sprite.texture = ImageTexture.create_from_image(img)

@@ -156,6 +156,8 @@ const SPECS := {
 	"saga_stone": {"m": ["kampasten"], "node": true, "light": [Color("#38d8f0"), 5.0, 1.2, 1.3, 0.12]},
 }
 
+## What was drawn as a placeholder box or could not be loaded, as the warnings said (empty when every kind has a look).
+var problems: Array[String] = []
 var assets_root := ""
 var _meshes: Dictionary = {}
 var _warned: Dictionary = {}
@@ -280,6 +282,7 @@ func has_spec(kind: String) -> bool:
 func warn_once(what: String, text: String) -> void:
 	if not _warned.has(what):
 		_warned[what] = true
+		problems.append(text) # (the placeholder check, placeholder_check.gd, fails on any)
 		push_warning(text)
 
 

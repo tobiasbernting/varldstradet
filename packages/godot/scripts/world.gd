@@ -1048,6 +1048,22 @@ func _tick_sounds(delta: float) -> void:
 		print("walk: %d footsteps (%s), ambience %s" % [int(steps.stats["steps"]), str(steps.stats["kinds"]), str(soundscape.report()["layers"])])
 
 
+## Everything on screen that is a stand-in and not a look of its own: objects drawn as a placeholder box or that could not be
+## loaded, actors with no picture, and a vehicle that is not a body of its own (--placeholdercheck fails on any).
+func placeholder_report() -> Array[String]:
+	var out: Array[String] = []
+	out.append_array(farm.assets.problems)
+	out.append_array(dungeon.problems)
+	for k in _actors.keys():
+		var a: Actor = _actors[k]
+		if a.is_placeholder:
+			out.append("actor %s (%s) has no sprite sheet and shows the stand-in figure" % [k, a.sheet_name])
+		var rec: Variant = model.areas.get(_area, model.farm if _area == "farm" else {}).get("animals", {}).get(str(k).substr(2))
+		if rec is Dictionary and VEHICLES.has(str(rec.get("species", ""))) and (a.voxel == null or a.sprite.visible):
+			out.append("vehicle %s (%s) is not drawn as a body of its own" % [k, rec.get("species", "")])
+	return out
+
+
 func _is_riding(p: Variant) -> bool:
 	return p is Dictionary and p.get("riding") != null
 
