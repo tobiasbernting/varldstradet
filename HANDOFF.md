@@ -104,6 +104,11 @@ This file is only what the next agent needs: state, decisions, how the work is r
   (GAME2 R2: Lätt and the Sagoandan), PR 38 (every undrawn object kind has a look; Låg/Mellan use cheap giant
   mushrooms). Running: R3 the route (`claude/runs-r3-route`, `session_01KTh22rczdYpWVjNiqviHrd`); PR 31 and PR 37
   re-merging main; the startle check split (`claude/startle-split`); PR 28 last.
+- **Merged by 19:00 UTC:** PR 40 (wild animals land exactly on their target — fixes animals stopping a tile short of a
+  standing hero; the bot's startle step now asserts only the bolt, sim tests prove the return), PR 37 (villager !/?
+  markers and speech, Gårdsbok, journal and quest tracker, Upptäcktsboken, help, family window with "Hoppa till"), PR 31
+  (minimap `M`, world map `N` with fast travel, every dungeon's own arch). Keys now: K journal, N world map, M minimap,
+  Shift/left trigger run. Running: R3 the route (`claude/runs-r3-route`); PR 28 (DESIGN.md rewrite) folding main.
 - **Usage limit:** at ~17:15 UTC several children stopped on the account's 5-hour limit ("resets 5:20pm UTC"). Run
   at most 3–4 children at once; children that stop on it must be told to resume after the reset.
 - **Found, not yet fixed:** the farm's south opening (row 63, x 30–34) cannot be reached on foot: rows ~40–61 south of
