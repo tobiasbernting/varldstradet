@@ -40,7 +40,7 @@
 //   BOT_RUN_MAX_WIPES=0 sets how many wipes the run pair retries (default 2; 0 = a wipe fails the check)
 //   BOT_ONLY=run BOT_RUN_SECONDS=480 pnpm godot:bot [-- --full]   (the run pair alone; --full plays to the boss: BOT_RUN_SECONDS=2400)
 //   BOT_RUN_SHOTS=dir                             (the run pair saves pictures there; needs a window: run it under xvfb-run)
-//   BOT_ONLY=dungeon BOT_DUNGEON=frost BOT_SECONDS=240 pnpm godot:bot   (the fighter pair alone, in Frostjättens borg: draug, frost, surt, hel, dvarg, orm or alv; M6a, M6b)
+//   BOT_ONLY=dungeon BOT_DUNGEON=frost BOT_SECONDS=240 pnpm godot:bot   (the fighter pair alone, in Frostjättens borg: draug, frost, surt, hel, dvarg, orm, alv, fenrir or loke; M6a–M6c)
 //   BOT_SECONDS=120 BOT_PORT=8097 BOT_PACKS=1     (optional; BOT_FARM_SECONDS=600 for the farmer, BOT_ONLY=farm or walker)
 //   BOT_FARM_SHOTS=dir                            (the farmer saves pictures there; needs a window: run under xvfb-run)
 import { spawn, type ChildProcess } from 'node:child_process';
@@ -57,7 +57,7 @@ const godot = process.env.GODOT ?? 'godot';
 const port = Number(process.env.BOT_PORT ?? 8097);
 const seconds = Number(process.env.BOT_SECONDS ?? 120);
 const packs = Number(process.env.BOT_PACKS ?? 1);
-/** Which dungeon the fighter pair asks the dev way into (M6a, M6b: draug, frost, surt, hel, dvarg, orm or alv; BOT_ONLY=dungeon runs just that pair). */
+/** Which dungeon the fighter pair asks the dev way into (M6a–M6c: draug, frost, surt, hel, dvarg, orm, alv, fenrir or loke; BOT_ONLY=dungeon runs just that pair). */
 const dungeon = process.env.BOT_DUNGEON ?? 'draug';
 const names = ['Bot-Ask', 'Bot-Embla'];
 const walkerName = 'Bot-Vandrare';
@@ -98,6 +98,9 @@ interface Report {
   hearts: [number, number, number][];
   mob_hp: [number, number, number, number][];
   bar_samples: number;
+  /** Bifrost only: samples of monsters drawn as Loke's ghostly illusions, and of ones drawn solid (there must be none). */
+  ghosts: number;
+  solid: number;
   rises: [number, number, number, number, string][];
   errors: string[];
   packs_beaten: number;
@@ -496,6 +499,8 @@ async function main(): Promise<void> {
       check(r.hits_dealt > 0 && r.damage_dealt > 0, `${r.name}: hit numbers came back (${r.hits_dealt} hits, ${r.damage_dealt} damage dealt; took ${r.hits_taken} hits, ${r.damage_taken} damage)`);
       // a monster's health, as its bar shows it, only falls (the server's `mend` heal excepted)
       check(r.bar_samples > 0, `${r.name}: sampled the monsters' health bars (${r.bar_samples} samples)`);
+      // Loke's illusions (the server sends `variant: 1`): each monster but the bosses is drawn as the ghostly sheet
+      if (dungeon === 'loke') check(r.ghosts > 0 && r.solid === 0, `${r.name}: the illusions are drawn ghostly (${r.ghosts} samples ghostly, ${r.solid} solid)`);
       check(r.rises.length === 0, `${r.name}: no monster's health rose without a server heal (${r.rises.length}${r.rises.length ? ': ' + r.rises.slice(0, 3).map((x) => `${x[4]} monster ${x[1]} ${x[2]}->${x[3]} at ${x[0]}`).join('; ') : ''})`);
       check(r.hearts.length > 0, `${r.name}: saw its own hearts (${r.hearts.length} samples, last ${JSON.stringify(r.hearts.at(-1))})`);
       console.log(`     ${r.name}: zones seen ${r.zones_seen}, stepped out ${r.stepped_out}, fell ${r.fell}`);

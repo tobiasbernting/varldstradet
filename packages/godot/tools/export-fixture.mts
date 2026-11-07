@@ -11,7 +11,7 @@ import { ITEMS, NPCS, SPAWN, addAnimal, addObject, objectAt, removeObject, choos
 const out = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../assets/fixtures/draug.json');
 fs.mkdirSync(path.dirname(out), { recursive: true });
 // M6a/M6b: the first seven dungeons (Draugkryptan, Frostjättens borg, Surts smedja, Helheim, Svartalfheims gruvor, Havsormens tempel, Alvernas lund), one fixture each: `--demo=<id>`
-for (const id of ['draug', 'frost', 'surt', 'hel', 'dvarg', 'orm', 'alv'] as const) {
+for (const id of ['draug', 'frost', 'surt', 'hel', 'dvarg', 'orm', 'alv', 'fenrir', 'loke'] as const) {
   const key = sagaKey(id);
 
   const farm = generateWorld();

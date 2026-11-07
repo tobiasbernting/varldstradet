@@ -349,7 +349,7 @@ func _check_motes() -> void:
 	if g.length() > 1.0:
 		_fails += 1
 		print("bosses: FAIL the %s motes are pulled by gravity %s" % [kind, str(g)])
-	if kind in ["embers", "bubbles", "spores"]:
+	if kind in ["embers", "bubbles", "spores", "stars"]:
 		_checks += 1
 		if g.y <= 0.0:
 			_fails += 1

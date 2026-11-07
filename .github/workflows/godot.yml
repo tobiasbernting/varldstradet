@@ -130,49 +130,50 @@ jobs:
           test "$(cat runbots.code)" = 0 || { echo "::error::the run pair failed"; bad=1; }
           exit $bad
 
-      # M6a, M6b: the same fighter pair in Frostjättens borg, Surts smedja, Helheim, Svartalfheims gruvor, Havsormens tempel
-      # and Alvernas lund (the dev way in: DEV_TELEPORT=1, `dev saga`): each clears its first two packs against a server in
-      # memory. The six run side by side, each on ports of its own (a run uses its port and the next two; gaps left).
-      - name: Two bots clear the first packs of each of the six dungeons after Draugkryptan (the dev way in)
+      # M6a–M6c: the same fighter pair in Frostjättens borg, Surts smedja, Helheim, Svartalfheims gruvor, Havsormens tempel,
+      # Alvernas lund, Fenrisklyftan and Bifrost (the dev way in: DEV_TELEPORT=1, `dev saga`): each clears its first two packs
+      # against a server in memory. The eight run side by side, each on ports of its own (a run uses its port and the next
+      # two; gaps left). On Bifrost the pair also checks that Loke's illusions are drawn ghostly.
+      - name: Two bots clear the first packs of each of the eight dungeons after Draugkryptan (the dev way in)
         run: |
           set -uo pipefail
           port=8100
-          for d in frost surt hel dvarg orm alv; do
+          for d in frost surt hel dvarg orm alv fenrir loke; do
             (GODOT=~/godot/godot BOT_ONLY=dungeon BOT_DUNGEON=$d BOT_PORT=$port BOT_PACKS=2 BOT_SECONDS=240 pnpm godot:bot > "bot-$d.log" 2>&1; echo $? > "bot-$d.code") &
             port=$((port + 4))
           done
           wait
           bad=0
-          for d in frost surt hel dvarg orm alv; do
+          for d in frost surt hel dvarg orm alv fenrir loke; do
             echo "== $d"; cat "bot-$d.log"
             test "$(cat "bot-$d.code")" = 0 || { echo "::error::the $d bot pair failed"; bad=1; }
           done
           exit $bad
 
-      # M6a, M6b: every move of the mid-boss and the boss of each of the six plays on the recorded dungeon, from the data
+      # M6a–M6c: every move of the mid-boss and the boss of each of the eight plays on the recorded dungeon, from the data
       # (scripts/demo_bosses.gd): the cast bar, the marks on the floor, the landing, the ice block or web, the burning ground,
-      # the helpers, the pull, a mend's glow and the heal. The six run side by side (about 20 s).
-      - name: Play the bosses' moves of the six dungeons headless (telegraphs, cast bars, what they leave)
+      # the helpers, the pull, a mend's glow and the heal. The eight run side by side (about 25 s).
+      - name: Play the bosses' moves of the eight dungeons headless (telegraphs, cast bars, what they leave)
         working-directory: packages/godot
         run: |
           set -uo pipefail
-          for d in frost surt hel dvarg orm alv; do
+          for d in frost surt hel dvarg orm alv fenrir loke; do
             (timeout 150 ~/godot/godot --headless --path . -- --demo=$d --fight --once > "bosses-$d.log" 2>&1; echo $? > "bosses-$d.code") &
           done
           wait
           # every dungeon's log is printed and every failure reported (one failing show must not hide the others)
           bad=0
           fail() { echo "::error::$1"; bad=1; }
-          # every move of each boss cast once: the mid-boss's and the boss's: frost 1 + 4, surt 2 + 3, hel 2 + 3, dvarg 2 + 3, orm 2 + 4, alv 2 + 4
-          declare -A casts=([frost]=5 [surt]=5 [hel]=5 [dvarg]=5 [orm]=6 [alv]=6)
-          for d in frost surt hel dvarg orm alv; do
+          # every move of each boss cast once: the mid-boss's and the boss's: frost 1 + 4, surt 2 + 3, hel 2 + 3, dvarg 2 + 3, orm 2 + 4, alv 2 + 4, fenrir 2 + 4, loke 2 + 7
+          declare -A casts=([frost]=5 [surt]=5 [hel]=5 [dvarg]=5 [orm]=6 [alv]=6 [fenrir]=6 [loke]=9)
+          for d in frost surt hel dvarg orm alv fenrir loke; do
             echo "== $d"; cat "bosses-$d.log"
             if grep -E "^ERROR:|SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate|bosses: FAIL|leaked at exit|still in use at exit|Pages in use exist at exit" "bosses-$d.log"; then
               fail "the $d boss show reported errors or leaked at exit (see above)"
             fi
             test "$(cat "bosses-$d.code")" = 0 || fail "the $d boss show did not end cleanly"
             grep -q "bosses: show finished" "bosses-$d.log" || fail "the $d boss show did not play to its end"
-            # (the show checks what it fed: each mark is in the fx view after the cast, gone after the landing, a helper, an ice block or a web is an actor, a mend glows and its glow ends and the heal floats, a pull puts the hero next to the boss, the air's motes drift)
+            # (the show checks what it fed: each mark is in the fx view after the cast, gone after the landing, a helper, an ice block or a web is an actor, a mend glows and its glow ends and the heal floats, a pull puts the hero next to the boss, the air's motes drift, Loke's helpers are drawn as ghostly illusions)
             grep -q "^bosses: ok" "bosses-$d.log" || fail "the $d boss show's own checks did not pass"
             test "$(grep -c 'casts,' "bosses-$d.log")" = "${casts[$d]}" || fail "the $d boss show did not cast every move"
           done
