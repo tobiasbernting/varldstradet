@@ -51,17 +51,22 @@ This file is only what the next agent needs: state, decisions, how the work is r
   pets/predators/farm animals exempt, cleared on taming; per-terrain footsteps; a per-place/time/weather soundscape;
   sparrows; 34 sounds synthesized by `tools/make-audio.py`, CC0; review fixes) merged 2026-11-07 07:39 UTC as 670df30.
   **M7 is done.** Export job 9m49s (inside ~10 min; the 9-min target was missed).
-- **The art/atmosphere session** `session_01KTh22rMH5UutKMoSA5XCUG` (the owner's, branch `claude/eloquent-rubin-0r5o0h`:
-  KayKit/Kenney art pass, a colour grade, lamps, lantern, weather, 3D creatures behind `--people3d`) is merging main
-  into its branch, keeping M7a's preset framework, water and ambient code, and will open its own PR. Until it is in, no
-  child of the orchestrator touches packages/godot. Whether the orchestrator or that session merges its PR is a question
-  put to the owner.
-- **Running now (M8, outside packages/godot):** the homelab role for the v2 server (second instance on the Hetzner box,
-  `spel.<domain>`, own database, backups, updates, ntfy) `session_01KTh22okor46TcVjiA7m4tQ` on homelab branch
-  `claude/varldstradet-cloud-role`; and M8a in varldstradet (import of the family's lilla-garden save, release
-  dry run, README controls and "running your own server") `session_01KTh22qsQXEMZuS8qdhftjn` on
-  `claude/m8a-cutover-server`. No `v*` tag is pushed without the owner. M8's client parts (settings, accessibility:
-  bigger text, colour-blind telegraph colours) wait for the art PR. The owner tests on the MacBook on 2026-11-07.
+- **PR 23** (the owner's art/atmosphere session `session_01KTh22rMH5UutKMoSA5XCUG`: KayKit/Kenney art, colour
+  grade, lamps, lantern, weather, 3D creatures behind `--people3d`, reconciled with M7) merged by that session at the
+  owner's word, 2026-11-07 ~08:58 UTC, as 1227628; export job 9m10s. Låg's primitives went 34k -> 93k (owner's call).
+- **Homelab PR 32** (the v2 server as a second instance on the Hetzner box, `spel.<domain>`, own database, backups,
+  update timer, ntfy; nothing deployed) merged 2026-11-07 08:47 UTC as 4e1e8f1. The owner deploys by hand
+  (`cloud/YOUR-STEPS.md` J). Found on the way: the running farm's `/srv/lilla-garden` (0750) probably keeps the
+  homelab's nightly dump fetch from reading anything; not changed, the owner's call.
+- **Near-miss, fixed in PR 22:** varldstradet's `docker.yml` still published as `ghcr.io/tobiasbernting/lilla-garden`,
+  the running farm's image (pulled as `:latest` every 10 minutes). Every push was refused (`write_package`), so the farm
+  was never touched; PR 22 renames it to `ghcr.io/tobiasbernting/varldstradet` with a test. The owner must make that
+  package public (or log the server in to ghcr) before the first deploy; pinning the farm's image to a sha is advised.
+- **Running now:** M8a PR 22 (import of the lilla-garden save, release dry run, README, the image rename, a new
+  `server.yml` workflow with Postgres tests) `session_01KTh22qsQXEMZuS8qdhftjn`, merging main before merge; M8b
+  (settings window, UI scale, colour-blind telegraphs, reduced motion) `session_01KTh22o9QNKhg3UbFZ7tk3M` on
+  `claude/m8b-settings-accessibility`; the farmer bot's flaky `startle` step (M7b) is being fixed by
+  `session_01KTh22rF2Y4u6N5YDy7c9rJ` on `claude/m7b-startle-flake`. No `v*` tag without the owner.
 - **Branch `claude/eloquent-rubin-0r5o0h` (sections 1b–1d: the art pass, the atmosphere pass, creatures in 3D) merged `main`
   up to PR 21 (670df30 and the handoff ded1e66) and reconciled the overlap with M7a.** M7a's stay (the preset framework, wind, water, fireflies, butterflies,
   leaves, chimney smoke, dawn mist, window light); dropped from the atmosphere pass as duplicates: its fireflies, chimney
