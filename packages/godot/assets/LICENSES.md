@@ -24,7 +24,7 @@ actually uses are committed; `tools/fetch-assets.sh` fetches the whole packs for
 
 ## Generated for this project (no third-party licence)
 
-**Sounds (M7b): `audio/*.wav`, 33 files, 4 MB.** Nothing recorded, nothing downloaded: every sound is synthesized from noise
+**Sounds (M7b): `audio/*.wav`, 34 files, 4 MB.** Nothing recorded, nothing downloaded: every sound is synthesized from noise
 and sine waves by `tools/make-audio.py` (Python + numpy, fixed seed, so running it again gives the same files; the script is
 the source and the files are its output). They are the author's own work for this project and released as **CC0 1.0**,
 like the packs above. Loops: `wind_soft`, `wind_hard`, `rain`, `rain_roof`, `birds`, `crickets`, `frogs`, `water`, `surf`,

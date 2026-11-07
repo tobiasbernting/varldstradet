@@ -721,8 +721,10 @@ come back, footsteps, and the ambience of the place. The farm, the wild maps and
   and an animal that has been startled before and has calmed down creeps up to a hero standing still within `CURIOUS_TILES` (7),
   to 1.1 tiles from them: so the way to pet a shy animal is to walk near, stop and wait (the farmer bot does exactly this, and
   asserts it). No random numbers are used (deterministic; the jitter of the spot it returns to comes from its id), pets, horses,
-  traffic, farm animals and monsters are untouched, and nothing is saved that was not (`startled` and `haunt` are optional
-  fields; a startled animal that has calmed down also drops its walk back to creep up to a quiet hero). Tests: `sim.test.ts` "vilda djur skräms och kommer tillbaka". There is no toggle in the presets for this: it is the
+  traffic, farm animals and monsters are untouched. `startled` and `haunt` are optional fields of the animal and are saved with it
+  like the rest of it (`haunt` is a coordinate on *that* map); both are cleared when the animal is tamed with the lasso and when it
+  is taken to another map, and a missed throw clears `startled` (the scare then runs at the lasso's 1.5 x, not the bolt's 2.2 x). The
+  players the animals watch are collected once per `tickAnimals`, not once per animal; a startled animal that has calmed down also drops its walk back to creep up to a quiet hero). Tests: `sim.test.ts` "vilda djur skräms och kommer tillbaka". There is no toggle in the presets for this: it is the
   same for every player, because it is the world's, not the screen's. The client-only extra is the **sparrows** (below).
 - **Footsteps** (`scripts/footsteps.gd`). One sound per stride (0.9 tile) walked, so the rate is the speed (a hero at full speed
   makes about 4.4 a second) and standing makes none; the first step after standing comes half a stride on; a jump of more than
@@ -733,7 +735,8 @@ come back, footsteps, and the ambience of the place. The farm, the wild maps and
   come twice in a row, with a little random pitch and a pitch that follows the speed. They are 3D sounds at the walker's feet
   (the camera is the listener, so someone to your left is heard on the left); the distance is set by us, not the engine (the camera
   hovers 13 m above the hero): the hero's own steps are at full level, anyone else's 3 dB lower and 1.6 dB lower for every tile
-  beyond 2 from the hero, none beyond 16 tiles. The `steps` budget of the preset is how many can sound at once (the voices are
+  beyond 2 from the hero, none beyond 16 tiles, and none across the farmhouse's walls (a walker on the other side of the door from
+  you is not heard); volume 0 makes no steps and no owl at all. The `steps` budget of the preset is how many can sound at once (the voices are
   pooled). Settings: `steps_on`, `world_volume`.
 - **Ambience** (`scripts/soundscape.gd`). A mix of eleven looping layers; `Soundscape.targets(ctx)` is the whole rule (a pure
   function: place, hour, weather, season, indoors, nearness of water and fire), `update` eases each layer towards its target with
@@ -742,14 +745,15 @@ come back, footsteps, and the ambience of the place. The farm, the wild maps and
   wind or winter), `frogs` in the swamp (more at night), `wind_soft` always (more with the weather's wind and in the high and cold
   places) and `wind_hard` in strong wind, `rain` outside and `rain_roof` inside the farmhouse when it rains (storm and hail count),
   `surf` on the beach, `water` near ponds and the pool (within 9 tiles, louder nearer), `fire` near a torch, stove, forge or the
-  longhall (within 7 tiles), `murmur` in the village (more by day). Indoors the outdoor layers are at 15 %. An owl hoots now and then
+  longhall (within 7 tiles), `murmur` in the village (more by day). Indoors (the farmhouse's room) the wind layers are at 20 % and the others at 15 %. An owl hoots now and then
   (every 22–55 s) on a clear night in the meadows, woods and village. The dungeons: the world calls `silence`, which fades all out.
   Presets: `ambience` 0 off, 1 (Låg) the three loudest layers only and no nearness or owl, 2 everything. Settings: `ambience_on`,
   `world_volume` (shared with the steps).
 - **The sounds** are synthesized and committed as WAVs (`assets/audio/`): `tools/make-audio.py` makes noise filtered in the
   frequency domain (which makes it periodic, so a loop has no seam), periodic envelopes and events placed with wrap-around; the
   loops are 16 kHz mono, 8–16 s (4 MB in all), the footsteps 22 kHz and 0.3 s. A loop's stream is a looped copy of the imported
-  `AudioStreamWAV` (set up at run time, so no hand-written `.import` options). CC0, our own (`assets/LICENSES.md`). The sandbox
+  `AudioStreamWAV` (set up at run time, ending at the stream's real length; the files import as plain 16-bit PCM,
+  `compress/mode=0`: ADPCM would make a byte count a wrong sample count). CC0, our own (`assets/LICENSES.md`). The sandbox
   and CI play nothing: headless, `Soundscape` and `Footsteps` run everything but `play()` (a playing stream is still held by the
   audio server when the process exits), `Main.quit_clean` releases the streams.
 - **Sparrows** (`ambient_view.gd`, `ambient_sparrow.gdshader`; preset `sparrows` 0 / 6 / 12). Small brown birds on the grass round the
@@ -761,7 +765,7 @@ come back, footsteps, and the ambience of the place. The farm, the wild maps and
   a calmed one creeps up to a quiet hero, the exceptions stay as they were, it is deterministic). The farmer bot (headless, in the
   `export` job) now asserts `startle` (it watches a wild animal run from the walking bot and come back next to it, to be petted),
   the soundscape's layers in the forest (`wind_soft`), indoors by the stove (`fire`, and no birds or crickets), in the village
-  (`murmur`), footsteps over at least three kinds of ground including grass and wood, layers switching on the way (at least four
-  starts or ends), and no pile-up of sound nodes. The bench (`--bench --scene=farm|village`) prints a `sound:` line per preset (steps
+  (`murmur`), footsteps over at least three kinds of ground including grass and wood, layers switching on the way (at least eight
+  starts or ends), and no pile-up of sound nodes. (The headless voice pool stays empty, as nothing is played.) The bench (`--bench --scene=farm|village`) prints a `sound:` line per preset (steps
   made, the layers sounding, the number of players) and the `alive world:` line carries the sparrows' count.
 
