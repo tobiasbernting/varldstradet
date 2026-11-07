@@ -54,6 +54,8 @@ var looks: LookComposer
 ## bodies extruded from their own sprites (voxel_body.gd), instead of pixel sprites. Vehicles stay billboards.
 const VEHICLES: Array[String] = ["bus", "car", "train", "motorcycle"]
 var _people3d := OS.get_cmdline_user_args().has("--people3d")
+## --boost (with --demo): the speed boost's chip is up, for a picture of where it sits.
+var _demo_boost := OS.get_cmdline_user_args().has("--boost")
 var _mode := "" ## "dungeon", "outdoor" (the farm and the wild maps) or "" (nothing drawn)
 var _demo_time := -1.0 ## --time=<0..1>: a fixed time of day for pictures
 var _demo_rain := false
@@ -833,7 +835,7 @@ func _update_hud() -> void:
 
 ## The pizza's power, or a berserker's rage in a dungeon: `boostUntil` is ahead of the server's clock.
 func _boosted(rec: Dictionary) -> bool:
-	return float(rec.get("boostUntil", 0.0)) > model.server_now()
+	return _demo_boost or float(rec.get("boostUntil", 0.0)) > model.server_now()
 
 
 ## sagaSpeed in the browser: fallen or frozen is 0, slowed is SLOW_MUL.

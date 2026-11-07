@@ -117,9 +117,10 @@ func _sync_scene() -> void:
 func _physics_process(delta: float) -> void:
 	if world.is_empty():
 		return
-	var dir := Vector2.ZERO if frozen else (drive if driven else Input.get_vector("move_left", "move_right", "move_up", "move_down"))
+	var typing := _typing()
+	var dir := Vector2.ZERO if (frozen or typing) else (drive if driven else Input.get_vector("move_left", "move_right", "move_up", "move_down"))
 	var was_moving := moving
-	running = dir.length() > 0.01 and not frozen and not riding and (run_driven if driven else _run_held())
+	running = dir.length() > 0.01 and not frozen and not typing and not riding and (run_driven if driven else _run_held())
 	var before := Vector2(px, py)
 	_step(dir, delta)
 	if moving:
@@ -131,6 +132,15 @@ func _physics_process(delta: float) -> void:
 	if send_moves and ((moving and _send_in <= 0.0) or (was_moving and not moving)):
 		_send_in = SEND_EVERY
 		Net.send({"t": "move", "x": px, "y": py, "facing": facing, "moving": moving})
+
+
+## A text box has the keyboard (the chat, a name): Input's action state still sees every key typed in it, so Shift (and W, A,
+## S, D) would move and run the hero while a capital letter is typed. The bot drives without keys and is not stopped.
+func _typing() -> bool:
+	if driven:
+		return false
+	var focus := get_viewport().gui_get_focus_owner()
+	return focus is LineEdit or focus is TextEdit
 
 
 ## Shift (the Input Map's `run`, which also holds the left trigger), or B on a pad outside a fight.

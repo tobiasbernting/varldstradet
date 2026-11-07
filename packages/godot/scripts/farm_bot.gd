@@ -822,6 +822,25 @@ func end_server_walk() -> Array:
 	return [_sw_px, _sw_ms / 1000.0]
 
 
+## Typing in the chat: Shift and the movement keys held then (a capital letter, a W) neither run nor walk the hero.
+func _typing_does_not_run() -> void:
+	var hero := world.hero
+	hero.driven = false
+	_press_action("chat")
+	var open := await _until(func() -> bool: return world.chat.is_open(), 3.0)
+	await _wait(0.2)
+	var at := Vector2(hero.px, hero.py)
+	Input.action_press("run")
+	Input.action_press("move_right")
+	await _wait(0.6)
+	var stood := Vector2(hero.px, hero.py).distance_to(at) < 0.01 and not hero.running and not hero.moving
+	Input.action_release("run")
+	Input.action_release("move_right")
+	world.chat.close()
+	await _wait(0.3)
+	_step("sprint: Shift and a movement key held while typing in the chat move nothing", open and stood, "chat open %s, hero stood still %s" % [str(open), str(stood)])
+
+
 ## Sprinting (Shift): a stretch of the farm walked and then run back. The run covers ground RUN_SPEED_MUL times as fast,
 ## the server follows it (the `move` messages carry the positions) and never puts the hero back (`reconciled` stays 0).
 func _sprint() -> void:
@@ -860,6 +879,7 @@ func _sprint() -> void:
 	_step("sprint: walking is PLAYER_SPEED, running RUN_SPEED_MUL times as fast", absf(v_walk - base) < base * 0.06 and absf(v_run - base * mul) < base * mul * 0.06, detail)
 	_step("sprint: the run took clearly less time than the walk", run_wall < walk_wall * 0.75, detail)
 	_step("sprint: the server never put me back and agrees where I stand", hero.reconciled == snaps0 and off < 8.0, detail)
+	await _typing_does_not_run()
 
 
 ## Walks to the middle of a tile; false when there is no way or it takes too long. `run`: sprints (the Shift key).
