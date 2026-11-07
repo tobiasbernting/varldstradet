@@ -19,6 +19,13 @@ import {
   RUN_PICK_MS,
   RUN_SEEDS,
   RUN_T,
+  LATT,
+  fmt,
+  SAGOANDAN,
+  SAGOANDAN_HP,
+  levelMuls,
+  parseRunLevel,
+  runMessage,
   RUN_WARN_MS,
   SAGA_BOSSES,
   SEED_TREE,
@@ -328,10 +335,10 @@ describe('the data', () => {
 // ---------------------------------------------------------------------------
 
 /** A run of two heroes in its first zone, with the first hero's buffs set to `effect` before the fight begins. */
-function lab(effect: RunEffect, classes: ClassId[] = ['magiker', 'helare']) {
+function lab(effect: RunEffect, classes: ClassId[] = ['magiker', 'helare'], level?: 0 | 1) {
   const party = makeParty(classes, { seed: 3 });
   // the lab is exactly its own fighters: no hired companion (those have their own tests)
-  startRun(party.world, party.players[0]!.id, { seed: 3, companion: false }, party.ctx());
+  startRun(party.world, party.players[0]!.id, { seed: 3, companion: false, ...(level === undefined ? {} : { level }) }, party.ctx());
   const run = runOf(party.world)!;
   const area = party.world.areas![run.key]!;
   const inst = area.saga!;
@@ -1340,6 +1347,9 @@ describe('the clock, the wipe and the end', () => {
     startRun(party.world, party.players[0]!.id, { seed: 6 }, party.ctx());
     const run = runOf(party.world)!;
     const inst = party.world.areas![run.key]!.saga!;
+    // (the Sagoandan would get them up: this is the wipe after the last one is spent)
+    run.spirit = 0;
+    inst.run!.spirit = 0;
     for (const p of party.players) {
       p.coins = 77;
       runSaveOf(p).seeds = 9;
@@ -1810,6 +1820,31 @@ describe('bot parties play whole runs', () => {
     });
   }
 
+  // Lätt (GAME2.md 5.3/5.4): the clumsy (kid-like) bot with the Hirdmannen wins at least 95 % of its runs, none of them ends on a wipe
+  const LATT_SEEDS = Array.from({ length: 8 }, (_, i) => i + 1);
+  const LATT_PARTIES: [string, ClassId[]][] = [...SOLO, ['väktare + helare', ['vaktare', 'helare']]];
+  for (const [label, classes] of LATT_PARTIES.slice(0, 5)) {
+    it(`${label}, clumsy, Lätt: wins at least 95 % of ${LATT_SEEDS.length} runs, none ends on a wipe, in 8-22 minutes`, { timeout: 120_000 }, async () => {
+      let wins = 0;
+      const mins: number[] = [];
+      for (const seed of LATT_SEEDS) {
+        await new Promise((r) => setImmediate(r));
+        const party = makeParty(classes, { style: 'clumsy', seed, level: 3 });
+        const r = playRun(party, { seed, level: 0 });
+        expect(r.outcome).not.toBe('wipe');
+        for (const p of party.players) expect(readRun(p).wipes).toBe(0);
+        if (r.outcome === 'win') {
+          wins++;
+          mins.push(r.winMs! / 60_000);
+        }
+      }
+      expect(wins / LATT_SEEDS.length).toBeGreaterThanOrEqual(0.95);
+      const avg = mins.reduce((a, b) => a + b, 0) / Math.max(1, mins.length);
+      expect(avg).toBeGreaterThan(8);
+      expect(avg).toBeLessThan(22);
+    });
+  }
+
   it('prints the bot minutes per run', () => {
     // eslint-disable-next-line no-console
     console.log(`\nBot minutes until the boss falls (level 3, starter set, chapter 1):\n${rows.join('\n')}\n`);
@@ -1831,6 +1866,186 @@ describe('bot parties play whole runs', () => {
     }
     expect(chains.size).toBe(3);
     expect(offers.size).toBe(3);
+  });
+});
+
+
+describe('Lätt and the Sagoandan (GAME2.md 4.5 and 5.3)', () => {
+  const wipeIt = (l: ReturnType<typeof lab>): Change[] => {
+    for (const f of Object.values(l.inst.fighters)) {
+      f.down = l.party.now;
+      f.hp = 0;
+    }
+    return l.go(WIPE_MS + 400);
+  };
+
+  it('a level is 0 (Lätt) or 1 (Vanlig); left out it is Vanlig; anything else is refused and no run starts', () => {
+    expect([parseRunLevel(0), parseRunLevel(1), parseRunLevel(undefined)]).toEqual([0, 1, 1]);
+    for (const bad of [2, -1, 0.5, '0', '1', null, true, NaN]) expect(parseRunLevel(bad)).toBeNull();
+    for (const bad of [2, '0', null, 0.5]) {
+      const party = makeParty(['krigare']);
+      const out = runMessage(party.world, party.players[0]!.id, { t: 'run', a: 'start', level: bad }, party.ctx());
+      expect(runOf(party.world)).toBeUndefined();
+      expect(listen(out, RUN_T.badLevel)).toBe(true);
+    }
+    const a = makeParty(['krigare']);
+    runMessage(a.world, a.players[0]!.id, { t: 'run', a: 'start', level: 0 }, a.ctx());
+    expect(runOf(a.world)!.level).toBe(0);
+    const b = makeParty(['krigare']);
+    runMessage(b.world, b.players[0]!.id, { t: 'run', a: 'start' }, b.ctx());
+    expect(runOf(b.world)!.level).toBe(1);
+  });
+
+  it('the state the clients get carries the level and the Sagoandans: 3 on Lätt, 1 on Vanlig', () => {
+    for (const level of [0, 1] as const) {
+      const party = makeParty(['krigare']);
+      const out = startRun(party.world, party.players[0]!.id, { seed: 2, level }, party.ctx());
+      const st = out.filter((c) => c.t === 'run' && c.ev === 'state' && c.run).pop();
+      expect(st && st.t === 'run' && st.ev === 'state' ? [st.run!.level, st.run!.spirit, st.run!.spiritUsed] : null).toEqual([level, SAGOANDAN[level], 0]);
+    }
+    expect(SAGOANDAN[0]).toBe(3);
+    expect(SAGOANDAN[1]).toBe(1);
+  });
+
+  it('Lätt: monster health ×0.6, damage ×0.5, warnings +40 %, the boss’s first two attacks only; Vanlig is as before', () => {
+    const v = lab({}, ['magiker', 'helare'], 1);
+    const l = lab({}, ['magiker', 'helare'], 0);
+    expect(l.inst.run!.hpMul / v.inst.run!.hpMul).toBeCloseTo(LATT.hp, 5);
+    expect(l.inst.run!.dmgMul / v.inst.run!.dmgMul).toBeCloseTo(LATT.dmg, 5);
+    expect(l.inst.run!.bossMul / v.inst.run!.bossMul).toBeCloseTo(LATT.hp, 5);
+    expect(l.inst.run!.warnMul).toBe(1.4);
+    expect(v.inst.run!.warnMul).toBeUndefined();
+    expect([LATT.hp, LATT.dmg, LATT.warn, LATT.seeds, LATT.bossMoves]).toEqual([0.6, 0.5, 1.4, 0.5, 2]);
+    expect(levelMuls(1)).toEqual({ hp: 1, dmg: 1, warn: 1, seeds: 1 });
+    // a monster pulled on Lätt has 0.6 of the health it has on Vanlig
+    const max = (x: ReturnType<typeof lab>): number => {
+      const { mob } = x.place('skelett', 3);
+      mob.state = 'idle';
+      castSpell(x.party.world, x.p.id, 'eldboll', mob.id, x.ctx());
+      return mob.max;
+    };
+    expect(max(l) / max(v)).toBeCloseTo(0.6, 1);
+    // the boss: how long its first warning lasts, and which attacks it ever uses
+    const trace = (x: ReturnType<typeof lab>): { warn: number; seen: number[] } => {
+      const boss = x.place('draugkung', 4, 'boss');
+      x.inst.run!.dmgMul = 0;
+      boss.mob.state = 'fight';
+      boss.mob.threat[x.p.id] = 5;
+      boss.mob.phase = 2;
+      boss.mob.next = SAGA_BOSSES.draugkung!.moves.map(() => x.party.now);
+      const seen = new Set<number>();
+      let warn = 0;
+      for (let t = 0; t < 40_000; t += 50) {
+        x.go(50);
+        for (const f of Object.values(x.inst.fighters)) f.hp = f.max;
+        const c = x.inst.mobs[boss.mob.id]?.cast;
+        if (c) {
+          if (!seen.size) warn = c.at - x.party.now;
+          seen.add(c.move);
+        }
+      }
+      return { warn, seen: [...seen].sort() };
+    };
+    const tv = trace(v);
+    const tl = trace(l);
+    expect(tv.seen).toEqual([0, 1, 2]);
+    expect(tl.seen.every((k) => k < 2)).toBe(true);
+    expect(tl.seen.length).toBeGreaterThan(0);
+    // (the first cast is seen on the tick it starts: its warning minus at most that tick)
+    expect(tl.warn / tv.warn).toBeGreaterThan(1.3);
+    expect(tl.warn / tv.warn).toBeLessThan(1.5);
+  });
+
+  it('Lätt pays half the sagafrön (a pack is half a seed; two packs, one)', () => {
+    for (const level of [0, 1] as const) {
+      const l = lab({}, ['magiker', 'helare'], level);
+      for (const i of [0, 1]) {
+        l.inst.packs[i]!.dead = true;
+        for (const id of l.inst.packs[i]!.members) {
+          delete l.inst.mobs[id];
+          delete l.area.animals[id];
+        }
+      }
+      l.go(100);
+      expect(readRun(l.p).seeds).toBe(level === 0 ? 1 : 2);
+    }
+  });
+
+  it('Vanlig: the first wipe is saved by the Sagoandan (half health at the stone, monsters reset, a clear banner), the second ends the run', () => {
+    const l = lab({}, ['magiker', 'helare'], 1);
+    const { mob } = l.place('skelett', 3);
+    mob.state = 'fight';
+    mob.threat[l.p.id] = 5;
+    mob.hp = 5;
+    const out = wipeIt(l);
+    expect(runOf(l.party.world)).toBe(l.run);
+    expect(out.some((c) => c.t === 'banner' && c.kind === 'level' && c.text === RUN_T.spirit && c.sub === fmt(RUN_T.spiritSub, { n: 0 }))).toBe(true);
+    expect(out.some((c) => c.t === 'banner' && c.kind === 'wipe')).toBe(false);
+    for (const f of Object.values(l.inst.fighters)) {
+      expect(f.down).toBeUndefined();
+      expect(f.hp).toBe(Math.round(f.max * SAGOANDAN_HP));
+    }
+    expect(mob.hp).toBe(mob.max);
+    expect(l.run.spirit).toBe(0);
+    expect(l.run.spiritUsed).toBe(1);
+    expect(l.run.phase).toBe('zone');
+    // the next wipe is the end
+    const out2 = wipeIt(l);
+    expect(out2.some((c) => c.t === 'banner' && c.kind === 'wipe')).toBe(true);
+    expect(runOf(l.party.world)).toBeUndefined();
+    expect(l.run.outcome).toBe('wipe');
+    const ended = out2.find((c) => c.t === 'run' && c.ev === 'ended');
+    expect(ended && ended.t === 'run' && ended.ev === 'ended' ? [ended.level, ended.spiritUsed] : null).toEqual([1, 1]);
+  });
+
+  it('Lätt: three Sagoandans, then a wipe still never ends the run (everyone is up, free); one more Sagoande after each zone', () => {
+    const l = lab({}, ['magiker', 'helare'], 0);
+    expect(l.run.spirit).toBe(3);
+    for (let n = 1; n <= 3; n++) {
+      wipeIt(l);
+      expect(l.run.spirit).toBe(3 - n);
+      expect(l.run.spiritUsed).toBe(n);
+    }
+    // none left: the fourth and fifth wipes are free, with full health, and the star stays at 0
+    for (let n = 4; n <= 5; n++) {
+      const out = wipeIt(l);
+      expect(runOf(l.party.world)).toBe(l.run);
+      expect(l.run.spirit).toBe(0);
+      expect(l.run.spiritUsed).toBe(n);
+      expect(out.some((c) => c.t === 'banner' && c.text === RUN_T.spiritFree)).toBe(true);
+      for (const f of Object.values(l.inst.fighters)) expect(f.hp).toBe(f.max);
+    }
+    expect(l.run.phase).toBe('zone');
+    // clearing a zone and voting brings the next one: a Sagoande more
+    for (const pk of l.inst.packs) {
+      pk.dead = true;
+      for (const id of pk.members) {
+        delete l.inst.mobs[id];
+        delete l.area.animals[id];
+      }
+    }
+    l.go(200);
+    expect(l.inst.gateOpen).toBe(true);
+    const ex = l.inst.exit;
+    l.p.x = px(ex.x);
+    l.p.y = px(ex.y) + TILE;
+    performAction(l.area, l.p.id, ex.x, ex.y, l.ctx());
+    expect(l.run.phase).toBe('pick');
+    for (const q of l.party.players) pickRuna(l.party.world, q.id, 0, l.ctx());
+    expect(l.run.zone).toBe(1);
+    expect(l.run.spirit).toBe(1);
+    expect(l.party.world.areas![l.run.key]!.saga!.run!.spirit).toBe(1);
+  });
+
+  it('a wipe after the boss has fallen is not saved: the win stands and the run ends as before', () => {
+    const l = lab({}, ['magiker', 'helare'], 0);
+    l.inst.bossDown = true;
+    l.run.outcome = 'win';
+    const out = wipeIt(l);
+    expect(out.some((c) => c.t === 'banner' && c.kind === 'wipe')).toBe(true);
+    expect(out.some((c) => c.t === 'banner' && c.kind === 'level')).toBe(false);
+    expect(l.run.spiritUsed).toBe(0);
+    expect(l.run.outcome).toBe('win');
   });
 });
 

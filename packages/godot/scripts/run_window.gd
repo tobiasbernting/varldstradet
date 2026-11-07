@@ -8,12 +8,16 @@ extends GameWindow
 
 var start_button: Button
 var join_button: Button
+var latt_button: Button
+var vanlig_button: Button
+## The difficulty for the next run, kept between openings of the window: 0 Lätt (the kids' level), 1 Vanlig (GAME2.md 5.3).
+static var level := 1
 
 
 func _init() -> void:
 	title_text = "⛩️ " + Strings.object_name("fardport")
 	width = 620
-	body_height = 380
+	body_height = 480
 
 
 func _purse_text(_me: Dictionary) -> String:
@@ -33,6 +37,8 @@ func _live() -> bool:
 func _fill() -> void:
 	start_button = null
 	join_button = null
+	latt_button = null
+	vanlig_button = null
 	var me := model.my_player()
 	var cls := Gear.cls_of(me)
 	# the class, as a picture
@@ -153,11 +159,41 @@ func _fill() -> void:
 		join_button.add_theme_font_size_override("font_size", 28)
 		_body.add_child(join_button)
 	else:
+		_add_levels()
 		start_button = make_button("⚔️  " + Strings.t("runStart"), _start, "start")
 		start_button.custom_minimum_size = Vector2(0, 72)
 		start_button.add_theme_font_size_override("font_size", 28)
 		start_button.disabled = cls == ""
 		_body.add_child(start_button)
+
+
+## Two big buttons side by side: Lätt (kind monsters, the Sagoandar come back) and Vanlig. The chosen one is lit; a line says what it means.
+func _add_levels() -> void:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 12)
+	_body.add_child(row)
+	latt_button = _level_button("🌱  " + Strings.t("runLevelLatt"), 0, "latt")
+	vanlig_button = _level_button("⚔️  " + Strings.t("runLevelVanlig"), 1, "vanlig")
+	row.add_child(latt_button)
+	row.add_child(vanlig_button)
+	var l := add_label(Strings.t("runLevelLattText") if level == 0 else Strings.t("runLevelVanligText"), 14, Color(1, 1, 1, 0.75))
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+
+func _level_button(text: String, value: int, key: String) -> Button:
+	var b := make_button(text, _set_level.bind(value), key)
+	b.toggle_mode = true
+	b.button_pressed = level == value
+	b.custom_minimum_size = Vector2(190, 56)
+	b.add_theme_font_size_override("font_size", 22)
+	return b
+
+
+func _set_level(value: int) -> void:
+	level = value
+	Sfx.play("target")
+	refresh()
 
 
 func _focus_first() -> void:
@@ -194,7 +230,7 @@ func _send_food(items: Array) -> void:
 
 func _start() -> void:
 	Net.send({"t": "fardkost", "items": model.fardkost_items})
-	Net.send({"t": "run", "a": "start", "fardkost": model.fardkost_items})
+	Net.send({"t": "run", "a": "start", "fardkost": model.fardkost_items, "level": level})
 	Sfx.play("banner")
 	close()
 

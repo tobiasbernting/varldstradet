@@ -63,7 +63,7 @@ export type Change =
    */
   | { t: 'run'; ev: 'state'; to: string | null; run: RunSnap | null }
   | { t: 'run'; ev: 'offer'; to: string | null; offer: RunOfferSnap | null }
-  | { t: 'run'; ev: 'ended'; to: string; outcome: RunOutcome; ms: number; seeds: number; zones: number; runor: string[] }
+  | { t: 'run'; ev: 'ended'; to: string; outcome: RunOutcome; ms: number; seeds: number; zones: number; runor: string[]; level?: 0 | 1; spiritUsed?: number }
   /** Runs: one player's sagafrön, the nodes they have planted, and how grown the family's tree is (0..4). */
   | { t: 'seed'; ev: 'tree'; to: string; seeds: number; earned: number; tree: string[]; stage: number }
   /** Runs: the dishes this player has chosen to bring and how many they may bring. */
@@ -131,10 +131,10 @@ export type ClientMsg =
    * which has no world map yet. The server answers `error` when the switch is off. */
   /**
    * Runs (GAME.md): whoever stands at the färdport starts a run (`replay`: a cleared boss at random instead of the next
-   * chapter's; `companion: false` goes without the hired Hirdmannen; `fardkost`: the dishes to bring), anyone joins or
+   * chapter's; `companion: false` goes without the hired Hirdmannen; `fardkost`: the dishes to bring; `level`: 0 Lätt or 1 Vanlig, which is also what a message without one means), anyone joins or
    * leaves, the party votes on a card of the offer (`card` is its index 0..2) and may ask for a new offer once.
    */
-  | { t: 'run'; a: 'start'; replay?: boolean; companion?: boolean; fardkost?: string[] }
+  | { t: 'run'; a: 'start'; replay?: boolean; companion?: boolean; fardkost?: string[]; level?: 0 | 1 }
   | { t: 'run'; a: 'join' }
   | { t: 'run'; a: 'pick'; card: number }
   | { t: 'run'; a: 'reroll' }

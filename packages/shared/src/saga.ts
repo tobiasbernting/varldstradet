@@ -96,6 +96,8 @@ export const GCD_MS = 400;
 export const DOWN_MS = 10_000;
 /** Everyone fell: after this long the party gets up at the last rest stone and the monsters reset. */
 export const WIPE_MS = 4_000;
+/** Health a fighter has after the Sagoandan of a run (a fraction of the maximum; GAME2.md section 4.5). */
+export const SAGOANDAN_HP = 0.5;
 /** Out of a fight for this long, health comes back by itself (much faster by a rest stone). */
 export const CALM_MS = 5_000;
 export const REST_RADIUS = 3;
@@ -2118,6 +2120,17 @@ export interface SagaRunLink {
   buffs: Record<string, RunBuffs>;
   /** The line under "Alla föll…" (a run ends there instead of getting up). */
   wipeSub: string;
+  /** Lätt (GAME2.md 5.3): the boss's warnings last this much longer (a multiplier; left out, 1). */
+  warnMul?: number;
+  /**
+   * The Sagoandan: free "everyone gets up" on a wipe. `spirit` is how many are left (the star on the HUD); `soft` (Lätt)
+   * means a wipe never ends the run, so with none left everyone still gets up. `revive` is set while a wipe's pause is
+   * running and it will end in everyone getting up; `used` counts the times so far. runsim.ts keeps the numbers.
+   */
+  spirit?: number;
+  soft?: boolean;
+  revive?: boolean;
+  used?: number;
   /** The packs (indices in `packs`) that must fall before the gate to the exit room opens. */
   required: number[];
 }

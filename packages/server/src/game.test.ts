@@ -413,6 +413,29 @@ describe('runs over the socket', () => {
     await game.stop();
   });
 
+  it('a run start carries the level: 0 is Lätt, nothing is Vanlig, and a level that is not 0 or 1 starts nothing', async () => {
+    const game = new Game(new MemoryStore(), { autoStart: false });
+    await game.start();
+    const a = game.createPlayer('Astrid', look)!;
+    const l = fakeLink();
+    const h = game.connect(l);
+    h({ t: 'hello', playerId: a.id });
+    const p = game.world.players[a.id]!;
+    p.saga = { cls: 'krigare', chapter: 1, heard: true, cleared: [], titles: [], quests: {}, done: [], found: [] };
+    const front = archFrontOf(game.world);
+    p.x = TILE * front.x + TILE / 2;
+    p.y = TILE * front.y + TILE / 2;
+    h({ t: 'run', a: 'start', level: 7 as unknown as 0 });
+    h({ t: 'run', a: 'start', level: '0' as unknown as 0 });
+    expect(runOf(game.world)).toBeUndefined();
+    expect(changesOf(l).some((c) => c.t === 'toast' && c.text === RUN_T.badLevel)).toBe(true);
+    h({ t: 'run', a: 'start', level: 0 });
+    const run = runOf(game.world)!;
+    expect(run.level).toBe(0);
+    expect(run.spirit).toBe(3);
+    expect(changesOf(l).some((c) => c.t === 'run' && c.ev === 'state' && c.run?.level === 0 && c.run.spirit === 3)).toBe(true);
+  });
+
   it('a run with one player (no longhouse needed) has a companion that is no character: not listed, not counted, gone afterwards', async () => {
     const game = new Game(new MemoryStore(), { autoStart: false });
     await game.start();

@@ -1,6 +1,6 @@
 # GAME2.md: Färden, version 2 — the runs are the game
 
-Written 2026-11-07, design only (no code changes). Replaces the *shape* of the run in `GAME.md` (approved 2026-11-06) and
+Written 2026-11-07, design only (no code changes); R1 and R2 of section 8 are built since (marked there). Replaces the *shape* of the run in `GAME.md` (approved 2026-11-06) and
 keeps everything under it: the fight rules of `sagasim.ts`, the classes, spells, bosses and telegraphs of `saga.ts`, the
 farm. Where this file says "today" it means the code in `packages/shared/src/run.ts`, `runmap.ts`, `runsim.ts`,
 `runbot.ts`. Same promise as before: nothing bleeds, monsters poof, falling costs nothing you own.
@@ -350,7 +350,7 @@ Roles are the saga's. What changes is how visible and how forgiving:
 
 * **Role icons** on the party list: 🛡 / 💚 / ⚔. A party without a tank shows a faint "Ingen tank" hint on the first Flock
   (helpful for the kids, not shouting).
-* **Sagoandan** 🌟 — one per run (two with the tree node `g3`, three on Lätt): when everyone is down, the party is up at the
+* **Sagoandan** 🌟 — one per run (two with the tree node `g3`, three on Lätt; **built in R2 without `g3`**, section 5.5): when everyone is down, the party is up at the
   last rest stone with 50 % health and the room's monsters reset, instead of the run ending. This is the roguelite "extra
   life" Tape to Tape does not need (a lost game is a short loss there) but a 30-minute family run does. It does not mean
   failing is free: the pack's progress is lost. Visible as a glowing star on the HUD.
@@ -465,6 +465,56 @@ The numbers above are the **starting values**; section 8 tunes them with the bot
 (Lätt gives **half sagafrön** and no key, so that Lätt is a place to learn and not a way to farm; the first clear still counts
 for the chapter, so the 7-year-old is never blocked from the story.)
 
+### 5.5 What R2 built, and what the bots measured
+
+**Built** (`run.ts`, `runsim.ts`, `sagasim.ts`, `saga.ts`, `protocol.ts`; the Godot arch window, HUD and end summary):
+
+* `run start` takes `level: 0 | 1` (left out = Vanlig, so old clients are unchanged). Anything else (`2`, `"0"`, `0.5`, `null`) is
+  refused with a toast and starts nothing. The level is fixed for the run and is in the `RunSnap` (`level`, `spirit`,
+  `spiritUsed`) and in the end summary (`level`, `spiritUsed`).
+* **Lätt** (`LATT` in `run.ts`): monster hp ×0.6 and boss hp ×0.6 (the zone's own multipliers stay under it), damage ×0.5, the
+  boss's telegraph warnings ×1.4 (`warnMul`: the ground marks, the cast timer and the snapshot's `warn` all use it), the boss
+  and the zones' guards use only their first two attacks (`moves` ∩ `[0, 1]`), half the sagafrön (`pay` multiplies by 0.5; the
+  bonuses of runor and the tree still count, and the remainder is carried), and a wipe never ends the run. Followers were
+  already 0 % mistakes (the Hirdmannen is a careful bot). No Stark vakt, patrols or särdrag exist yet.
+* **The Sagoandan** (`SAGOANDAN`): Vanlig 1, Lätt 3, and on Lätt one more each time a zone is entered after the first ("after each
+  stop"). On a wipe the pause (`WIPE_MS`) shows a gold banner "Sagoandan hjälper er!" (kind `level`, not the sad `wipe`), then
+  everyone is up at the last rest stone with **50 %** health (`SAGOANDAN_HP`), fighting monsters reset, the count goes down.
+  A Lätt wipe with none left is the same banner "Ingen fara!", everyone up at full health, and nothing is counted off:
+  Lätt never ends on a wipe. On Vanlig the next wipe ends the run as before. A wipe after the boss has fallen is not
+  saved (the win stands). The star on the HUD shows the count (and the word Lätt); the end summary has "Sagoandar använda".
+* The tree node `g3` ("two Sagoandar") of section 4.5 is **not** built: `g3` is still the reroll node until the tree v2 (R9).
+* The arch window has two big buttons, **Lätt** and **Vanlig** (Vanlig lit by default; the choice is remembered while the game
+  runs), each with one line of text: "Snällare monster. Alla reser sig igen om ni faller." / "Som vanligt. En Sagoande hjälper er en gång."
+* `runbot.ts`: a fighter whose target is close but behind a wall (no line of sight) now walks round to see it instead of
+  standing still. Before this, a solo Magiker on Lätt got stuck for 40 minutes on 2 of 20 seeds (4 and 13: a sjödraug against a
+  wall that nobody could hit, a stalemate that on Vanlig showed up as a wipe); it was a bot defect, not a number.
+* Tuning script: `node --experimental-transform-types packages/shared/src/runtune.ts --level 0 --style clumsy --seeds 20 [--from 1]`
+  prints the table below (`run.test.ts` keeps the CI versions). (GAME2 section 8 called it `run:tune`.)
+
+**Measured** (level-3 heroes in the starter set, Draugkryptan, the Hirdmannen hired, no longhouse; the human is the bot style named;
+wins per run, "wipes" is runs that *ended* on a wipe; minutes are until the boss falls, for the won runs):
+
+| Party | Level | Style | Seeds | Wins | Ended on wipe | Minutes (avg, min–max) |
+| --- | --- | --- | --- | --- | --- | --- |
+| ensam väktare | Lätt | clumsy | 1–40 | 40/40 | 0 | 13.3 (10.3–16.8) |
+| ensam helare | Lätt | clumsy | 1–40 | 40/40 | 0 | 11.4 (9.3–13.9) |
+| ensam krigare | Lätt | clumsy | 1–40 | 40/40 | 0 | 10.8 (8.3–13.7) |
+| ensam magiker | Lätt | clumsy | 1–40 | 40/40 | 0 | 13.1 (9.9–15.5) |
+| krigare + magiker | Lätt | clumsy | 1–40 | 40/40 | 0 | 12.7 (9.7–16.3) |
+| väktare + helare | Lätt | clumsy | 1–40 | 40/40 | 0 | 18.0 (14.0–21.5) |
+| ensam väktare / helare / krigare / magiker | Lätt | careful | 1–20 | 20/20 each | 0 | 6.3 / 6.4 / 4.6 / 6.4 |
+| ensam väktare / helare / krigare / magiker | Vanlig | clumsy | 1–20 | 20/20 each | 0 | 17.5 / 16.3 / 13.9 / 17.4 |
+| ensam väktare / helare / krigare / magiker | Vanlig | careful | 1–20 | 20/20 each | 0 | 9.9 / 10.1 / 6.9 / 10.6 |
+| krigare + magiker / väktare + helare | Vanlig | clumsy | 1–20 | 20/20 each | 0 | 17.3 / 24.3 |
+
+Two things to read honestly. (1) The bots **never wipe** on Lätt, so the Sagoandan and the free Lätt wipe are exercised by the
+unit tests (`Lätt and the Sagoandan` in `run.test.ts`), not by the bot runs; Lätt is much easier than the target of 95 %.
+Only a real kid on the MacBook can say whether it is *too* easy. (2) The minutes are the three-zone run of today (about
+10–18 min for a clumsy solo bot, against the 15–20 of the §5.4 target); the 10-stop route of R3 is what lengthens it. The Vanlig
+numbers are the clumsy and careful rows of GAME.md section 9 measured again after the line-of-sight fix above (every solo class 20/20;
+GAME.md had 19/20 for the careful Magiker and the clumsy Helare); the Vanlig monsters did not change.
+
 ### 5.4 Target numbers (what the bots must reproduce)
 
 A human is slower than a *careful* bot and faster than a *clumsy* one; calibrate: **adult ≈ 1.7 × careful, 9-year-old ≈
@@ -560,14 +610,15 @@ pairs and boss shows in the Godot job). Keep every CI job under ~9 min: bots sim
 so extra routes are `it.each` over seeds with caps (the generator test at 200 seeds already runs ~120 s: do not add more
 than ~60 s of new route tests), and the Godot workflow gains **one** short bot step per phase, not a new long one.
 
-1. **R1 — never alone.** *The quickest win for the owner's case.* (`runsim.ts`, `run.ts`, `runbot.ts`, `run.test.ts`; no new
+1. **R1 — never alone.** **Done (PR 34).** *The quickest win for the owner's case.* (`runsim.ts`, `run.ts`, `runbot.ts`, `run.test.ts`; no new
    systems.) Hire Hirdmannen for **any** single human without `longhall`, add a *second* follower when the human is not
    a Väktare/Helare, drop the longhouse gate on the fourth player (party max 4), keep `SOLO_MERCY` 0.75 for the first
    follower and 0.7 with two. Tests: the solo-hire test flips (no longhouse is fine), the party-max test updates; the bots
    (careful and clumsy) must win a solo run in 10–16 / 18–28 min. **Done when** the owner can solo Draugkryptan without
    building anything. ~1 evening.
-2. **R2 — Lätt and the Sagoandan.** A `level` on the start message (`0|1`); Lätt multipliers (hp ×0.6, dmg ×0.5, warn +40 %);
+2. **R2 — Lätt and the Sagoandan.** **Done (2026-11-07).** A `level` on the start message (`0|1`); Lätt multipliers (hp ×0.6, dmg ×0.5, warn +40 %);
    Sagoandan as a one-shot revive-all on a wipe; half sagafrön on Lätt. Bots: the clumsy solo bot wins Lätt ≥ 95 %.
+   What was built and measured is in section 5.5.
 3. **R3 — the route.** `generateRoute` + `buildStop`; stops of kind Flock, Mellanboss, Boss, Vilosten only; the walk-onto-a-
    rune vote; the HUD rail. Keep the v1 zone templates as layouts. The bots walk the graph (`runbot.ts` learns "pick the lane
    with the safe icon / random lane"). 10 rows ~28 min target; tune row sizes.
