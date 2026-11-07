@@ -2507,6 +2507,10 @@
       "phases": [
         0.5
       ],
+      "phaseAdds": {
+        "species": "gravrotta",
+        "count": 3
+      },
       "mini": true,
       "moves": [
         {
@@ -2535,6 +2539,10 @@
         0.66,
         0.33
       ],
+      "phaseAdds": {
+        "species": "skelett",
+        "count": 2
+      },
       "moves": [
         {
           "move": "cleave",
@@ -2551,6 +2559,8 @@
           "warn": 1600,
           "radius": 1.5,
           "dmg": 26,
+          "count": 2,
+          "phase": 1,
           "text": "Frost kryper upp ur graven under er. Flytta på er!"
         },
         {
@@ -2580,6 +2590,10 @@
       "phases": [
         0.5
       ],
+      "phaseAdds": {
+        "species": "isvarg",
+        "count": 2
+      },
       "mini": true,
       "moves": [
         {
@@ -2607,6 +2621,10 @@
       "phases": [
         0.5
       ],
+      "phaseAdds": {
+        "species": "isande",
+        "count": 2
+      },
       "moves": [
         {
           "move": "cleave",
@@ -2623,6 +2641,7 @@
           "warn": 1400,
           "radius": 1.3,
           "dmg": 24,
+          "count": 3,
           "text": "Istappar faller från taket där ni står. Flytta på er!"
         },
         {
@@ -2640,6 +2659,7 @@
           "radius": 8,
           "dmg": 32,
           "interrupt": true,
+          "phase": 1,
           "text": "Kallar på en snöstorm runt sig. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!"
         }
       ],
@@ -2659,6 +2679,10 @@
       "phases": [
         0.5
       ],
+      "phaseAdds": {
+        "species": "eldimp",
+        "count": 3
+      },
       "mini": true,
       "moves": [
         {
@@ -2696,6 +2720,10 @@
         0.7,
         0.4
       ],
+      "phaseAdds": {
+        "species": "eldimp",
+        "count": 3
+      },
       "moves": [
         {
           "move": "cleave",
@@ -2722,6 +2750,7 @@
           "radius": 7,
           "dmg": 45,
           "interrupt": true,
+          "phase": 2,
           "text": "Hela salen fylls av eld. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!"
         }
       ],
@@ -2742,6 +2771,10 @@
       "phases": [
         0.5
       ],
+      "phaseAdds": {
+        "species": "helhund",
+        "count": 2
+      },
       "mini": true,
       "moves": [
         {
@@ -2758,6 +2791,8 @@
           "warn": 1500,
           "radius": 0,
           "dmg": 0,
+          "count": 2,
+          "add": "helhund",
           "text": "Garm ylar och kallar på helhundarna. Ta hand om dem snabbt!"
         }
       ],
@@ -2778,6 +2813,10 @@
         0.66,
         0.33
       ],
+      "phaseAdds": {
+        "species": "gengangare",
+        "count": 2
+      },
       "moves": [
         {
           "move": "pull",
@@ -2802,6 +2841,8 @@
           "warn": 1500,
           "radius": 1.5,
           "dmg": 28,
+          "count": 2,
+          "phase": 1,
           "text": "Kall dimma stiger upp ur golvet där ni står. Flytta på er!"
         }
       ],
@@ -2822,6 +2863,10 @@
       "phases": [
         0.5
       ],
+      "phaseAdds": {
+        "species": "guldbagge",
+        "count": 3
+      },
       "mini": true,
       "moves": [
         {
@@ -2859,6 +2904,10 @@
         0.6,
         0.3
       ],
+      "phaseAdds": {
+        "species": "guldbagge",
+        "count": 3
+      },
       "moves": [
         {
           "move": "cleave",
@@ -2885,6 +2934,7 @@
           "radius": 1,
           "dmg": 0,
           "interrupt": true,
+          "phase": 1,
           "text": "Han kryper ihop på sitt guld och sover sig frisk. Väck honom med Sköldslag, Stormsteg eller Isspjut!"
         }
       ],
@@ -2905,6 +2955,10 @@
       "phases": [
         0.5
       ],
+      "phaseAdds": {
+        "species": "manet",
+        "count": 2
+      },
       "mini": true,
       "moves": [
         {
@@ -2943,6 +2997,10 @@
         0.66,
         0.33
       ],
+      "phaseAdds": {
+        "species": "sjodraug",
+        "count": 2
+      },
       "moves": [
         {
           "move": "line",
@@ -2976,6 +3034,8 @@
           "warn": 1600,
           "radius": 1.6,
           "dmg": 30,
+          "count": 3,
+          "phase": 1,
           "text": "Vågor störtar ner från taket där ni står. Flytta på er!"
         }
       ],
@@ -2996,6 +3056,10 @@
       "phases": [
         0.5
       ],
+      "phaseAdds": {
+        "species": "jattespindel",
+        "count": 2
+      },
       "mini": true,
       "moves": [
         {
@@ -3013,6 +3077,7 @@
           "warn": 1400,
           "radius": 1.4,
           "dmg": 28,
+          "count": 2,
           "text": "Gröna droppar faller från taket där ni står. Flytta på er!"
         }
       ],
@@ -3033,6 +3098,10 @@
         0.6,
         0.3
       ],
+      "phaseAdds": {
+        "species": "skuggalv",
+        "count": 2
+      },
       "moves": [
         {
           "move": "nova",
@@ -3059,6 +3128,7 @@
           "radius": 1,
           "dmg": 0,
           "interrupt": true,
+          "phase": 1,
           "text": "Hon somnar och drömmer sig frisk. Väck henne med Sköldslag, Stormsteg eller Isspjut!"
         },
         {
@@ -3067,6 +3137,9 @@
           "warn": 1500,
           "radius": 0,
           "dmg": 0,
+          "count": 2,
+          "add": "skuggalv",
+          "phase": 2,
           "text": "Hon kallar fram skuggalver ur mörkret. Ta hand om dem snabbt!"
         }
       ],
@@ -3087,6 +3160,10 @@
       "phases": [
         0.5
       ],
+      "phaseAdds": {
+        "species": "ulv",
+        "count": 2
+      },
       "mini": true,
       "moves": [
         {
@@ -3124,6 +3201,10 @@
         0.7,
         0.4
       ],
+      "phaseAdds": {
+        "species": "ulv",
+        "count": 2
+      },
       "moves": [
         {
           "move": "charge",
@@ -3148,6 +3229,9 @@
           "warn": 1500,
           "radius": 0,
           "dmg": 0,
+          "count": 2,
+          "add": "ulv",
+          "phase": 1,
           "text": "Han kallar på sin flock. Ta hand om ulvarna snabbt!"
         },
         {
@@ -3157,6 +3241,7 @@
           "radius": 8,
           "dmg": 50,
           "interrupt": true,
+          "phase": 2,
           "text": "Han ylar så att hela klyftan fryser. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!"
         }
       ],
@@ -3177,6 +3262,10 @@
       "phases": [
         0.5
       ],
+      "phaseAdds": {
+        "species": "skelett",
+        "count": 2
+      },
       "mini": true,
       "moves": [
         {
@@ -3185,6 +3274,7 @@
           "warn": 1500,
           "radius": 1.5,
           "dmg": 34,
+          "count": 3,
           "text": "Stjärnor som inte ens är riktiga faller ner där ni står. Flytta på er!"
         },
         {
@@ -3216,6 +3306,10 @@
         0.4,
         0.2
       ],
+      "phaseAdds": {
+        "species": "isvarg",
+        "count": 2
+      },
       "moves": [
         {
           "move": "cleave",
@@ -3233,6 +3327,7 @@
           "radius": 8,
           "dmg": 40,
           "interrupt": true,
+          "phase": 1,
           "text": "Han härmar Rimtursen och kallar på en snöstorm. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!"
         },
         {
@@ -3242,6 +3337,7 @@
           "radius": 1.6,
           "dmg": 11,
           "linger": 9000,
+          "phase": 2,
           "text": "Han härmar Surt, och lava väller upp under er. Flytta på er!"
         },
         {
@@ -3251,6 +3347,7 @@
           "radius": 1,
           "dmg": 0,
           "interrupt": true,
+          "phase": 2,
           "text": "Han låtsas sova och läker sig i smyg. Avbryt med Sköldslag, Stormsteg eller Isspjut!"
         },
         {
@@ -3259,6 +3356,7 @@
           "warn": 2200,
           "radius": 7,
           "dmg": 20,
+          "phase": 3,
           "text": "Han härmar Hel och drar alla nära sig. Akta er, för sedan kommer Helskriket!"
         },
         {
@@ -3268,6 +3366,7 @@
           "radius": 4,
           "dmg": 44,
           "interrupt": true,
+          "phase": 3,
           "text": "Han skriker som Hel. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring ut ur cirkeln!"
         },
         {
@@ -3277,6 +3376,7 @@
           "radius": 8,
           "dmg": 48,
           "width": 2,
+          "phase": 4,
           "text": "Han trollar fram Midgårdsormens svans, som slår ner i en lång rak linje. Gå åt sidan!"
         }
       ],

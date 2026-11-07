@@ -40,6 +40,7 @@
 //   BOT_RUN_MAX_WIPES=0 sets how many wipes the run pair retries (default 2; 0 = a wipe fails the check)
 //   BOT_ONLY=run BOT_RUN_SECONDS=480 pnpm godot:bot [-- --full]   (the run pair alone; --full plays to the boss: BOT_RUN_SECONDS=2400)
 //   BOT_RUN_SHOTS=dir                             (the run pair saves pictures there; needs a window: run it under xvfb-run)
+//   BOT_ONLY=dungeon BOT_DUNGEON=frost BOT_SECONDS=240 pnpm godot:bot   (the fighter pair alone, in Frostjättens borg: draug, frost, surt or hel; M6a)
 //   BOT_SECONDS=120 BOT_PORT=8097 BOT_PACKS=1     (optional; BOT_FARM_SECONDS=600 for the farmer, BOT_ONLY=farm or walker)
 //   BOT_FARM_SHOTS=dir                            (the farmer saves pictures there; needs a window: run under xvfb-run)
 import { spawn, type ChildProcess } from 'node:child_process';
@@ -56,6 +57,8 @@ const godot = process.env.GODOT ?? 'godot';
 const port = Number(process.env.BOT_PORT ?? 8097);
 const seconds = Number(process.env.BOT_SECONDS ?? 120);
 const packs = Number(process.env.BOT_PACKS ?? 1);
+/** Which dungeon the fighter pair asks the dev way into (M6a: draug, frost, surt or hel; BOT_ONLY=dungeon runs just that pair). */
+const dungeon = process.env.BOT_DUNGEON ?? 'draug';
 const names = ['Bot-Ask', 'Bot-Embla'];
 const walkerName = 'Bot-Vandrare';
 const farmerName = 'Bot-Bonde';
@@ -374,8 +377,8 @@ async function main(): Promise<void> {
       console.log(`${name}: ${godot} ${args.join(' ')}`);
       return { name, report, log, child: run(godot, args, { cwd: godotDir, log }) };
     };
-    const bots = mode === '' ? names.map((name) => spawnBot(name, [`--packs=${packs}`])) : [];
-    const walker = mode === '' || mode === 'walker' ? [spawnBot(walkerName, ['--route=arch'])] : [];
+    const bots = mode === '' || mode === 'dungeon' ? names.map((name) => spawnBot(name, [`--packs=${packs}`, `--dungeon=${dungeon}`])) : [];
+    const walker = mode === '' || mode === 'walker' ? [spawnBot(walkerName, ['--route=arch', `--dungeon=${dungeon}`])] : [];
     // the creator check: the login screen's way to a new character (its own empty HOME: it saves settings there, not in yours)
     const creators: { name: string; report: string; log: string; child: ChildProcess }[] = [];
     if (mode === '' || mode === 'creator') {
@@ -472,12 +475,16 @@ async function main(): Promise<void> {
       const botLog = all.find((b) => b.name === r.name)?.log;
       const exitErrors = (botLog && fs.existsSync(botLog) ? fs.readFileSync(botLog, 'utf8') : '').split('\n').filter((l) => /leaked at exit|still in use at exit|Pages in use exist at exit/.test(l));
       check(exitErrors.length === 0, `${r.name}: exits clean, nothing leaked at exit (${exitErrors[0] ?? 'none'})`);
-      check(r.area.startsWith('saga:'), `${r.name}: entered the dungeon (${r.area || 'never'})`);
+      check(r.area === `saga:${dungeon}`, `${r.name}: entered the dungeon saga:${dungeon} (${r.area || 'never'})`);
       if (r.name === walkerName) {
         // the real way in: across the farm, through two forests, through the arch; the dev message never sent
-        const want = ['farm', 'a:0,-1', 'a:-1,-1', 'saga:draug'];
-        check(JSON.stringify(r.route) === JSON.stringify(want), `${r.name}: walked ${r.route.join(' → ')}`);
-        check(r.area === 'saga:draug', `${r.name}: arrived in saga:draug through the arch (${r.area || 'never'}) after ${r.seconds.toFixed(0)} s`);
+        // (Draugkryptan's arch is two forests away; another dungeon's route is whatever the walker found, ending in it)
+        if (dungeon === 'draug') {
+          const want = ['farm', 'a:0,-1', 'a:-1,-1', 'saga:draug'];
+          // (a walker that faints in a forest wakes at home and walks again: the route ends in the way in, it may begin twice)
+          check(r.route.length >= want.length && JSON.stringify(r.route.slice(-want.length)) === JSON.stringify(want), `${r.name}: walked ${r.route.join(' → ')}`);
+        } else check(r.route.at(-1) === `saga:${dungeon}`, `${r.name}: walked ${r.route.join(' → ')}`);
+        check(r.area === `saga:${dungeon}`, `${r.name}: arrived in saga:${dungeon} through the arch (${r.area || 'never'}) after ${r.seconds.toFixed(0)} s`);
         check(r.arrived_via_arch && !r.dev_sent, `${r.name}: the dev way was never used (dev_sent ${r.dev_sent})`);
         continue;
       }

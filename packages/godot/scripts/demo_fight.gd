@@ -20,6 +20,8 @@ var _boss_id := -1
 var _mob_id := -1
 var _hp := 1100.0
 var _area := ""
+var _phase := -1 ## the boss phase the snapshot says (-1: worked out from the health, as the Draugkryptan timeline wants)
+var _boss_name := "Gravväktaren"
 
 
 func _ready() -> void:
@@ -196,7 +198,7 @@ func _state(mobs: Dictionary, fighters: Dictionary, cast: Variant) -> void:
 		f[world.model.me if id == "me" else id] = fighters[id]
 	var snap := {"f": f, "m": mobs}
 	if not mobs.is_empty():
-		snap["b"] = {"id": _boss_id, "phase": 1 if _hp * 0.55 >= float(mobs.get(str(_boss_id), [_hp])[0]) else 0}
+		snap["b"] = {"id": _boss_id, "phase": _phase if _phase >= 0 else (1 if _hp * 0.55 >= float(mobs.get(str(_boss_id), [_hp])[0]) else 0)}
 		if cast is Dictionary:
 			snap["b"]["cast"] = cast
 	var players: Array = []
@@ -246,7 +248,7 @@ func _land(id: String, move: String, x: float, y: float) -> void:
 
 
 func _yell(text: String) -> void:
-	_changes([{"t": "yell", "area": _area, "name": "Gravväktaren", "text": text}])
+	_changes([{"t": "yell", "area": _area, "name": _boss_name, "text": text}])
 
 
 func _banner(text: String, sub: String, kind: String) -> void:

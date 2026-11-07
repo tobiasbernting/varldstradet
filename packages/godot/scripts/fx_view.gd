@@ -32,6 +32,8 @@ const BOLTS := {
 	"isspjut": {"speed": 19.0, "c": Color(0.55, 0.9, 1.0), "size": 0.55},
 	"ljuspil": {"speed": 20.0, "c": Color(1.0, 0.92, 0.45), "size": 0.5},
 	"mob_isande": {"speed": 11.0, "c": Color(0.6, 0.9, 1.0), "size": 0.5},
+	# Helheim's bone spider spits a web (it slows you), pale and a little slower than a bolt
+	"mob_benspindel": {"speed": 10.0, "c": Color(0.92, 0.94, 1.0), "size": 0.5},
 }
 const MOB_BOLT := {"speed": 12.0, "c": Color(0.55, 1.0, 0.55), "size": 0.45}
 const WARN := Color(0.95, 0.12, 0.05)

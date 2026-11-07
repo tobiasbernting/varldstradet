@@ -169,6 +169,17 @@ sprite. `pnpm godot:bot` has a run pair (`BOT_ONLY=run`; `-- --full` plays to th
 clear zone 1, vote and enter zone 2. Pictures: [the arch window](packages/godot/docs/m5c-arch.png), [a zone](packages/godot/docs/m5c-zone.png),
 [the cards](packages/godot/docs/m5c-cards.png), [the end of a run](packages/godot/docs/m5c-end.png) and [the sagaträd](packages/godot/docs/m5c-tree.png).
 
+**M6a** (chapters 2-4) makes the client handle any saga dungeon and finishes the first three after Draugkryptan: **Frostjättens borg**,
+**Surts smedja** and **Helheim**. Each has its own look from one table (`scripts/dungeon_look.gd`: stone and floor palette, torch colour,
+fog, bloom, and something drifting in the air: snow, embers, ghost-lights), its own creatures and bosses as sprites from the existing pixel art
+(Isbjörnen Kall and the Rimtursen; Smeden Glöd and Surt; Garm and Hel), and every boss move drawn with its telegraph. `--demo=frost` (or `surt`,
+`hel`) draws the recorded dungeon, `--fight` plays each boss's moves from the data (`--once` leaves when done) and
+`--boss-move=rimturs:freeze:after` holds one move for a picture. `BOT_ONLY=dungeon BOT_DUNGEON=frost pnpm godot:bot` sends the fighter pair into a chosen
+dungeon the dev way. Pictures: [Frostjättens borg](packages/godot/docs/m6a-frost.png), [its hall](packages/godot/docs/m6a-frost-hall.png),
+[its bosses' moves](packages/godot/docs/m6a-frost-bosses.png); [Surts smedja](packages/godot/docs/m6a-surt.png), [its hall](packages/godot/docs/m6a-surt-hall.png),
+[its bosses' moves](packages/godot/docs/m6a-surt-bosses.png); [Helheim](packages/godot/docs/m6a-hel.png), [its hall](packages/godot/docs/m6a-hel-hall.png),
+[its bosses' moves](packages/godot/docs/m6a-hel-bosses.png).
+
 **Röstprat** (voice chat) is back in the native client (2026-11-06). Open it from the pause menu ("Röstprat") or the small button at the top right of the HUD. The game picks up the phone for you when you log in (the window's "Lägg på" hangs up and keeps it hung up). Hold **C** (or the window's "Håll här för att prata" button) to talk: push-to-talk is the default, for the kids; "Öppen mikrofon" in the window keeps the microphone open, "Tysta mikrofonen" turns it off, and "Volym" sets how loud the others are (all of it is remembered in `settings.cfg`). Everything about rooms is as before: devices behind the same address are one room and do not hear each other, one device per room is the speakerphone. Sound goes straight between the rooms' speakers as small mu-law packets on a WebRTC data channel (Godot has no WebRTC audio tracks), 16 kB/s a peer.
 
 ![Röstprat](packages/godot/docs/voice.png)
@@ -213,7 +224,7 @@ generator. `--time=0.9` (a fraction of the day: 0 sunrise, 0.4 midday, 0.9 night
    login screen comes up instead; the demo needs the command line). The recorded Draugkryptan of
    `packages/godot/assets/fixtures/draug.json` is drawn with its monsters, and you walk in it with WASD, the arrows
    or a gamepad's left stick; Escape or the start button opens the menu with the settings. Add `--at=24,53`
-   to start in the first monster room, `--fight` to play a scripted fight with the mid-boss on the recording
+   to start in the first monster room (`--demo=frost`, `--demo=surt` and `--demo=hel` are the next three dungeons), `--fight` to play a scripted fight with the mid-boss on the recording
    (telegraphs of every shape, the boss bar and cast bar, hit numbers, a wipe, a chest with the loot window; no
    server and no rules, only the pictures), and `--screenshot=/tmp/draug.png` to save a frame after 90 frames and quit.
 2. `godot --path packages/godot -- --bench` runs that scripted fight on each quality preset (a second of settling and
@@ -367,7 +378,7 @@ including the Kenney kits the build sandbox could not reach.
 
 **Builds.** `.github/workflows/godot.yml` checks the generated files, imports the project, runs the login scene, the
 Draugkryptan demo and the scripted fight headless for a moment (script errors fail there), runs the two bots against
-a server in memory, and exports Windows x86_64, macOS universal,
+a server in memory (in Draugkryptan, and in Frostjättens borg, Surts smedja and Helheim), plays the bosses' moves of those three headless, and exports Windows x86_64, macOS universal,
 Linux x86_64 and Linux arm64 with Godot 4.7.2 and its export templates (downloaded by pinned URL and SHA-512, cached
 between runs). Every pull request runs it as a check (the exports are workflow artifacts), and a tag `v*` attaches the
 four zips to a GitHub Release. The macOS app is ad-hoc signed and not notarized: the first start needs right-click →

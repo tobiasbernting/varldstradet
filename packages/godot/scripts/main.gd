@@ -4,6 +4,8 @@ extends Node
 ## player picks "Byt spelare" in the pause menu. The command line (after `--`) can skip the login:
 ##   --demo[=farm|forest] the world plays a recorded fixture (no server needed): Draugkryptan (the default; with
 ##                       --fight a scripted fight runs on it), the farm, or the forest with the dungeon's arch;
+##                       --demo=frost|surt|hel are the next dungeons; --fight plays their bosses' moves (demo_bosses.gd), and
+##                       --once leaves when it has played, --boss-move=<species>:<move>[:after] holds one move's marks for a picture;
 ##                       --time=0.7 --weather=rain --season=jul set the sky, --at=x,y where to stand
 ##   --bench[=preset]    the demo scene on each quality preset (or one: lag, mellan, hog) in steady state, printing
 ##                       frame times, draw calls, lights and the render timings (bench.gd)
@@ -71,11 +73,21 @@ func _ready() -> void:
 		login.visible = false
 		_set_world(true)
 		world.start_demo(_demo_name(args))
-		if args.has("--fight") and _demo_name(args) == "draug":
+		var demo_id := _demo_name(args)
+		if args.has("--fight") and demo_id == "draug":
 			var fight := DemoFight.new()
 			fight.name = "DemoFight"
 			fight.world = world
 			add_child(fight)
+		elif (args.has("--fight") or _flag(args, "--boss-move")) and Data.dungeon(demo_id).size() > 0:
+			# the bosses of any other dungeon (M6a): every move of the mid-boss and the boss, from the data (demo_bosses.gd)
+			var show := DemoBosses.new()
+			show.name = "DemoFight"
+			show.world = world
+			show.only = _arg(args, "--boss-move", "")
+			show.quit_when_done = args.has("--once")
+			show.speed = 3.0 if show.quit_when_done else 1.0
+			add_child(show)
 	else:
 		_show_login()
 

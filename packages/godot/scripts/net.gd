@@ -87,8 +87,12 @@ func _process(delta: float) -> void:
 				_ping_in = PING_SECONDS
 				connection_changed.emit("open", 0)
 				send({"t": "hello", "playerId": player_id})
-			while _ws.get_available_packet_count() > 0:
+			# (a message's handler may close the socket, a bot that quits on a wipe for one: `_ws` is null then, so it is looked at
+			# again for every packet and after the loop)
+			while _ws != null and _ws.get_available_packet_count() > 0:
 				_receive(_ws.get_packet().get_string_from_utf8())
+			if _ws == null:
+				return
 			_ping_in -= delta
 			if _ping_in <= 0.0:
 				_ping_in = PING_SECONDS

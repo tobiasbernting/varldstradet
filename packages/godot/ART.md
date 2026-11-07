@@ -22,7 +22,7 @@ the owner decides otherwise); `assets/LICENSES.md` has every file's origin.
 - **Light.** A dungeon is dark in its own colour: `WorldEnvironment.ambient_light_color` is
   `DUNGEONS[id].ambient × 0.6` (the browser's `dungeonAmbient`), the background the same colour darker. Every
   `saga_torch` is an `OmniLight3D` with the dungeon's torch colour (Draugkryptan's is the green `#9cff8a`, the frost
-  castle's pale blue, Surt's fire; see `TORCH_COLOURS` in `dungeon_view.gd`, copied from the browser's `SAGA_TORCH`),
+  castle's pale blue, Surt's fire; see `LOOKS[id]["torch"]` in `dungeon_look.gd`, from the browser's `SAGA_TORCH`),
   range 4 m, a slow flicker. Candles, a lit rest stone and the exit carry smaller lights. Shadows are a quality-preset
   matter (below), never baked.
 - **Names and numbers.** `Label3D` billboards over heads, white with a dark outline, 2 px of outline per 16 px of text.
@@ -53,8 +53,8 @@ them; new 2D art uses them directly. The sprites themselves keep their own full 
 The KayKit models share one gradient atlas (`dungeon_texture.png`), so they come out in a neutral grey and brown.
 When a dungeon is built, `dungeon_view.gd` duplicates each model's material once and multiplies its albedo with the
 dungeon's **stone tint**: Kryptsten `#5a6257` lifted to `(0.78, 0.84, 0.76)` for Draugkryptan, so the pack's grey turns
-the crypt's grey-green while the atlas's shading survives. The tint per dungeon look (the `wall` index 0–8) is the
-`STONE_TINT` table in `dungeon_view.gd`, and the rule for a new pack is the same: never edit the texture, tint the
+the crypt's grey-green while the atlas's shading survives. The tint per dungeon look is one row of the `LOOKS` table in
+`dungeon_look.gd` (M6a; keyed by the dungeon id, with the `wall` index 0–8 kept for the zones of a run), and the rule for a new pack is the same: never edit the texture, tint the
 material, one tint per dungeon look. Emissive parts (flames, runes, glow) take their colour from the palette directly.
 
 ## What is generated and why
@@ -81,7 +81,10 @@ the sheets are committed under `assets/sprites/` with `atlas.json` (frame size, 
   pictures at ×2, and a few HUD glyphs, in 32 px squares; `atlas.json`'s `icons` says where each sits. The HUD, the
   loot window and the wheels read them; an item without a picture of its own gets its kind's emoji, like the browser.
 - `mob_<species>.png`: the dungeon's monsters and bosses as `SAGA_MOBS`/`SAGA_BOSSES` name them, two walk frames
-  facing right, at the size `SAGA_ANIMAL_SIZE` gives them, outlined as `drawAnimal` outlines them.
+  facing right, at the size `SAGA_ANIMAL_SIZE` gives them, outlined as `drawAnimal` outlines them. M6a: the creatures of
+  Draugkryptan, Frostjättens borg, Surts smedja and Helheim (21, with the ice block a freeze leaves); `pnpm godot:sprites`
+  takes the dungeon ids as its argument (`draug,frost,surt,hel` by default) and `speciesOf` in `tools/sprites-page.ts` lists
+  what each one needs, so a later dungeon is one more id. No new pixel art was drawn: all of it is in `packages/art/src/sagaanimals.ts`.
 - The farm's people (M4a): `farm_<kind>.png`, one PNG per layer kind with one row of 12 frames (`down0..2 up0..2 left0..2
   right0..2`, 16×32, left = right mirrored) per layer; `atlas.json`'s `farm.layers` maps a layer key (`shirt_shirt_red`,
   `hair_ponytail_3`, `hat_hat_viking`) to `{file, x, y}`, the cell of its frame 0 (frame i is at `x + i*16`). Any
