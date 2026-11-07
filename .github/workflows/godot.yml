@@ -153,13 +153,17 @@ jobs:
       # M6a–M6c: every move of the mid-boss and the boss of each of the eight plays on the recorded dungeon, from the data
       # (scripts/demo_bosses.gd): the cast bar, the marks on the floor, the landing, the ice block or web, the burning ground,
       # the helpers, the pull, a mend's glow and the heal. The eight run side by side (about 25 s).
-      - name: Play the bosses' moves of the eight dungeons headless (telegraphs, cast bars, what they leave)
+      - name: Play the bosses' moves of the eight dungeons and the saga's ending headless (telegraphs, cast bars, what they leave; the last banners and toasts)
         working-directory: packages/godot
         run: |
           set -uo pipefail
           for d in frost surt hel dvarg orm alv fenrir loke; do
             (timeout 150 ~/godot/godot --headless --path . -- --demo=$d --fight --once > "bosses-$d.log" 2>&1; echo $? > "bosses-$d.code") &
           done
+          # M6c: the saga's ending, beside them: what the server sends when Loke falls (a "cleared" banner, a toast) and when
+          # Völvan is handed the last chapter (banners, three toasts, the record past the last chapter, her window: "the saga is over")
+          (timeout 150 ~/godot/godot --headless --path . -- --demo=loke --ending --once > ending-dungeon.log 2>&1; echo $? > ending-dungeon.code) &
+          (timeout 150 ~/godot/godot --headless --path . -- --demo=ending --once > ending-village.log 2>&1; echo $? > ending-village.code) &
           wait
           # every dungeon's log is printed and every failure reported (one failing show must not hide the others)
           bad=0
@@ -176,6 +180,14 @@ jobs:
             # (the show checks what it fed: each mark is in the fx view after the cast, gone after the landing, a helper, an ice block or a web is an actor, a mend glows and its glow ends and the heal floats, a pull puts the hero next to the boss, the air's motes drift, Loke's helpers are drawn as ghostly illusions)
             grep -q "^bosses: ok" "bosses-$d.log" || fail "the $d boss show's own checks did not pass"
             test "$(grep -c 'casts,' "bosses-$d.log")" = "${casts[$d]}" || fail "the $d boss show did not cast every move"
+          done
+          for e in dungeon village; do
+            echo "== the ending ($e)"; cat "ending-$e.log"
+            if grep -E "^ERROR:|SCRIPT ERROR|Parse Error|Failed to load script|ending: FAIL|leaked at exit|still in use at exit|Pages in use exist at exit" "ending-$e.log"; then
+              fail "the saga's ending ($e) reported errors or failed a check (see above)"
+            fi
+            test "$(cat "ending-$e.code")" = 0 || fail "the saga's ending ($e) did not end cleanly"
+            grep -q "^ending: ok" "ending-$e.log" || fail "the saga's ending ($e) did not pass its own checks"
           done
           exit $bad
 

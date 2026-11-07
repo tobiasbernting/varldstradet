@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ITEMS, NPCS, SPAWN, addAnimal, addObject, objectAt, removeObject, chooseClass, createPlayer, generateWorld, getArea, npcState, placeIn, sagaKey, type AnimalSnap, type Change, type NpcSnap, type PlayerSnap, type ServerMsg, type WorldState } from '../../shared/src/index.ts';
+import { DUNGEONS, DUNGEON_IDS, ITEMS, NPCS, SAGA_CHAPTERS, SPAWN, TILE, VILLAGE_KEY, VOLVA_SPOT, addAnimal, castSpell, enterSaga, fieldKey, sagaChapter, tick, addObject, objectAt, removeObject, chooseClass, createPlayer, generateWorld, getArea, npcState, placeIn, sagaKey, type AnimalSnap, type Change, type NpcSnap, type PlayerSnap, type ServerMsg, type WorldState } from '../../shared/src/index.ts';
 
 const out = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../assets/fixtures/draug.json');
 fs.mkdirSync(path.dirname(out), { recursive: true });
@@ -194,4 +194,79 @@ function writeFixture(file: string, messages: ServerMsg[], what: string): void {
       return { id: n.id, x: ns.x, y: ns.y, facing: ns.facing, moving: false, area: key };
     });
   writeFixture('village.json', msgs, `${Object.keys(area.objects).length} objects, ${st.npcs.length} villagers, the stone at 47,29`);
+}
+
+{
+  // M6c, the saga's ending (`--demo=ending`, and `--demo=loke --ending`): what the server sends when Loke falls and when the
+  // last chapter is handed in to Völvan, made by running the shared rules (a magician beats Bifrost's boss; a hero with every
+  // other dungeon cleared and the field task done talks to Völvan). `messages` is the village with the hero ready to hand in
+  // (the hero's record as it is *before* the hand-in); `fall` is the banner and toasts of Loke's fall (and the hero's record
+  // after it), `handin` is everything the hand-in sends. The client plays them and checks what is on screen (scripts/demo_ending.gd).
+  const last = SAGA_CHAPTERS.length - 1;
+  const ctxAt = (now: number): { season: 'none'; now: number; rnd: () => number } => {
+    let seed = 7;
+    return { season: 'none', now, rnd: () => ((seed = (seed * 16807) % 2147483647) / 2147483647) };
+  };
+  const heroIn = (farm: WorldState, cls: 'magiker' | 'krigare') => {
+    const hero = createPlayer(farm, 'Demo', { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' });
+    delete farm.players[hero.id];
+    hero.id = 'demo';
+    farm.players[hero.id] = hero;
+    hero.online = true;
+    farm.day = 1;
+    farm.timeMs = 0;
+    chooseClass(farm, hero.id, cls);
+    hero.saga!.chapter = last;
+    hero.saga!.heard = true;
+    hero.saga!.cleared = DUNGEON_IDS.slice(0, -1);
+    return hero;
+  };
+  // 1. Loke falls
+  const fall: Change[] = [];
+  {
+    const farm = generateWorld();
+    const hero = heroIn(farm, 'magiker');
+    const plan = DUNGEONS.loke.portal;
+    const outside = getArea(farm, plan.area)!;
+    const arch = Object.values(outside.objects).find((o) => o.kind === 'saga_portal' && (o.variant ?? 0) === DUNGEON_IDS.indexOf('loke'))!;
+    enterSaga(farm, hero, arch);
+    const dungeon = farm.areas![sagaKey('loke')]!;
+    const inst = dungeon.saga!;
+    const boss = dungeon.animals[inst.boss]!;
+    hero.x = boss.x - 3 * TILE;
+    hero.y = boss.y;
+    tick(farm, 50, ctxAt(1_000_000));
+    inst.mobs[inst.boss]!.hp = 1;
+    const out = castSpell(farm, hero.id, 'eldboll', inst.boss, ctxAt(1_000_100));
+    if (!inst.bossDown) throw new Error('the demo hero did not beat Loke');
+    for (const c of out) if (c.t === 'banner' || c.t === 'toast' || c.t === 'player') fall.push(c);
+    if (!fall.some((c) => c.t === 'banner' && c.kind === 'cleared')) throw new Error('Loke fell without a cleared banner');
+  }
+  // 2. the hand-in
+  {
+    const { farm, me } = demoFarm();
+    me.saga = { cls: 'krigare', chapter: last, heard: true, cleared: [...DUNGEON_IDS], titles: [], quests: { [fieldKey(last)]: SAGA_CHAPTERS[last]!.field!.count }, done: [], found: [] };
+    const key = VILLAGE_KEY;
+    const area = getArea(farm, key)!;
+    const changes: Change[] = [];
+    placeIn(farm, me, key, VOLVA_SPOT.x, VOLVA_SPOT.y + 1, 'up', changes);
+    for (const c of changes) if (c.t === 'areaData' && c.world) c.world = area;
+    const msgs = farmMsgs(farm, me, key, changes);
+    const st = msgs[msgs.length - 1] as Extract<ServerMsg, { t: 'state' }>;
+    st.animals = [];
+    st.players = st.players.map((q) => (q.id === me.id ? q : { ...q, area: 'farm' }));
+    st.npcs = Object.values(NPCS)
+      .filter((n) => n.area === key)
+      .map((n) => {
+        const ns = npcState(area, n.id);
+        return { id: n.id, x: ns.x, y: ns.y, facing: ns.facing, moving: false, area: key };
+      });
+    // (the messages are written down now: the hand-in changes the hero's record)
+    const before = JSON.parse(JSON.stringify(msgs)) as ServerMsg[];
+    const handin = sagaChapter(farm, me.id);
+    if (me.saga!.chapter !== SAGA_CHAPTERS.length) throw new Error('the demo hand-in did not end the saga');
+    const dest = path.resolve(path.dirname(out), 'ending.json');
+    fs.writeFileSync(dest, JSON.stringify({ _comment: 'Generated by `pnpm godot:fixture` from the shared rules. Do not edit.', messages: before, fall, handin }) + '\n');
+    console.log(`${path.relative(process.cwd(), dest)}: Völvan's last hand-in (${handin.length} changes) and Loke's fall (${fall.length}), ${(fs.statSync(dest).size / 1024).toFixed(0)} kB`);
+  }
 }

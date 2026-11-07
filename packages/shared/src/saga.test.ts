@@ -13,6 +13,7 @@ import {
   STONE_SPOT,
   T,
   TILE,
+  fmt,
   VILLAGE_KEY,
   VOLVA_SPOT,
   WIPE_MS,
@@ -927,6 +928,48 @@ describe('Lokes list: out in the world', () => {
     h.p.hearts = 1;
     castSpell(h.world, h.p.id, 'lakerunan', undefined, ctx());
     expect(h.p.hearts).toBe(3);
+  });
+
+  it("the saga's ending: Loke's fall clears Bifrost, and handing in the last chapter pays, says the saga is won and ends it", () => {
+    const { world, players } = family(1);
+    const p = players[0]!;
+    const d = inside(world, p, 'magiker', 'loke');
+    const inst = d.saga!;
+    const boss = d.animals[inst.boss]!;
+    p.x = boss.x - 3 * TILE;
+    p.y = boss.y;
+    run(world, 100);
+    inst.mobs[inst.boss]!.hp = 1;
+    const fall = castSpell(world, p.id, 'eldboll', inst.boss, ctx());
+    expect(inst.bossDown).toBe(true);
+    expect(p.saga!.cleared).toContain('loke');
+    // what the client must put on screen: the "cleared" banner naming Loke and the dungeon, and the family's toast
+    expect(fall.some((c) => c.t === 'banner' && c.kind === 'cleared' && c.to === p.id && c.text === fmt(T.sagaBossDown, { boss: 'Loke' }) && c.sub === fmt(T.sagaCleared, { dungeon: 'Bifrost' }))).toBe(true);
+    expect(fall.some((c) => c.t === 'toast' && c.text.includes('Loke'))).toBe(true);
+    // the last chapter (Ragnarök) is told and its field task done; Völvan pays
+    const last = SAGA_CHAPTERS.length - 1;
+    expect(SAGA_CHAPTERS[last]!.dungeon).toBe('loke');
+    p.saga!.chapter = last;
+    p.saga!.heard = true;
+    p.saga!.quests[fieldKey(last)] = SAGA_CHAPTERS[last]!.field!.count;
+    expect(chapterDone(p.saga!)).toBe(true);
+    placeIn(world, p, VILLAGE_KEY, VOLVA_SPOT.x, VOLVA_SPOT.y + 1, 'up', []);
+    const end = sagaChapter(world, p.id);
+    const r = SAGA_CHAPTERS[last]!.reward;
+    expect(p.saga!.chapter).toBe(SAGA_CHAPTERS.length);
+    expect(p.saga!.titles).toContain(r.title);
+    expect(p.stats?.sagaAct2).toBe(1);
+    expect(p.achievements).toContain('saga_act2');
+    // ...the reward banner with the chapter's name and what was paid, the achievement's toast and a sparkle
+    const banner = end.find((c) => c.t === 'banner' && c.kind === 'reward');
+    expect(banner && banner.t === 'banner' && banner.text).toBe(fmt(T.sagaChapterDone, { title: SAGA_CHAPTERS[last]!.title }));
+    expect(banner && banner.t === 'banner' && banner.sub).toContain(`+${r.coins} kr`);
+    expect(end.some((c) => c.t === 'toast' && c.text.startsWith('Bragd: Ragnaröks hjälte'))).toBe(true);
+    expect(end.some((c) => c.t === 'fx' && c.kind === 'sparkle')).toBe(true);
+    // after the last chapter Völvan has nothing more to tell: "the saga is over"
+    const after = sagaChapter(world, p.id);
+    expect(after).toEqual([{ t: 'toast', to: p.id, text: T.sagaAllDone }]);
+    expect(p.saga!.chapter).toBe(SAGA_CHAPTERS.length);
   });
 
   it('chapter 5 needs both the field task and Helheim', () => {
