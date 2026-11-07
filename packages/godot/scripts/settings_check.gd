@@ -98,6 +98,7 @@ func _run() -> void:
 	_picture()
 	_sound()
 	await _reading()
+	_colours()
 	_controls()
 	_roundtrip()
 	if shot_dir != "":
@@ -216,6 +217,39 @@ func _reading() -> void:
 	hud.queue_free()
 	tag.queue_free()
 	get_window().size = window_was
+
+
+## The colour choice: each palette through its button, what it changes, and that danger, safe and the hearts stay apart for the
+## people it is for (the simulated distances of Palette.distance_under).
+func _colours() -> void:
+	win._show_page("reading")
+	_step("the normal palette is the look the client always had", Palette.colour("danger_fill", "normal") == Color(0.95, 0.12, 0.05) and Palette.colour("hp_high", "normal") == HudLayer.HP_GREEN and Palette.colour("hp_mid", "normal") == HudLayer.HP_YELLOW and Palette.colour("hp_low", "normal") == HudLayer.HP_RED and Palette.colour("foe", "normal") == Color(0.95, 0.3, 0.25))
+	_click(win._colour_buttons["normal"])
+	_step("palette normal: no stripes by itself, hp colours as ever", Settings.colour_mode == "normal" and not Palette.pattern() and HudLayer.hp_colour(0.9) == HudLayer.HP_GREEN and HudLayer.hp_colour(0.1) == HudLayer.HP_RED)
+	for pair in [["rg", ["deut", "prot"]], ["tritan", ["trit"]]]:
+		var mode: String = pair[0]
+		_click(win._colour_buttons[mode])
+		_step("palette %s: kept, saved, and the stripes come on with it" % mode, Settings.colour_mode == mode and _on_disk("access", "colours") == mode and Palette.pattern() and Settings.danger_pattern and win._pattern_check.button_pressed)
+		_step("palette %s: hearts and the danger mark change" % mode, HudLayer.hp_colour(0.9) != HudLayer.HP_GREEN and Palette.colour("danger_fill") != Palette.colour("danger_fill", "normal"))
+		for kind in pair[1]:
+			var hi := Palette.hp(0.9)
+			var mid := Palette.hp(0.4)
+			var lo := Palette.hp(0.1)
+			var d_hm := Palette.distance_under(hi, mid, kind)
+			var d_hl := Palette.distance_under(hi, lo, kind)
+			var d_ml := Palette.distance_under(mid, lo, kind)
+			_step("palette %s under %s: full, half and low hearts are told apart" % [mode, kind], minf(d_hm, minf(d_hl, d_ml)) >= 25.0, "%.0f %.0f %.0f" % [d_hm, d_hl, d_ml])
+			var d_ds := Palette.distance_under(Palette.colour("danger_fill"), Palette.colour("safe"), kind)
+			var d_foe := Palette.distance_under(Palette.colour("foe"), Palette.colour("target"), kind)
+			_step("palette %s under %s: danger and a safe place are told apart" % [mode, kind], d_ds >= 60.0 and d_foe >= 25.0, "%.0f, foe vs target %.0f" % [d_ds, d_foe])
+	# the old palette does not pass for the people it was never for (so the test can fail)
+	_step("the normal hearts are not enough for red-green blindness", Palette.distance_under(Palette.hp(0.9, "normal"), Palette.hp(0.1, "normal"), "deut") < 25.0)
+	# stripes by hand in the normal palette, and off again
+	_click(win._colour_buttons["normal"])
+	win._pattern_check.button_pressed = true
+	_step("stripes can be switched on by hand: kept, saved", Palette.pattern() and _on_disk("access", "pattern") == true)
+	win._pattern_check.button_pressed = false
+	_step("and off", not Palette.pattern())
 
 
 func _controls() -> void:

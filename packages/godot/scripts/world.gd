@@ -973,9 +973,9 @@ func _process(delta: float) -> void:
 				actor.set_health(0.0, false, Color.WHITE)
 			elif not m.is_empty():
 				var kk := float(m[0]) / maxf(1.0, float(m[1]))
-				actor.set_health(kk, true, Color(0.6, 0.9, 1.0) if block else (Color(0.95, 0.3, 0.25) if not is_target else Color(1.0, 0.75, 0.3)), str(rec.get("name", Data.mob_name(species))) if (boss or is_target or block) else "")
+				actor.set_health(kk, true, Palette.colour("block") if block else (Palette.colour("foe") if not is_target else Palette.colour("target")), str(rec.get("name", Data.mob_name(species))) if (boss or is_target or block) else "")
 			elif is_target:
-				actor.set_health(1.0, true, Color(1.0, 0.75, 0.3), str(rec.get("name", Data.mob_name(species))))
+				actor.set_health(1.0, true, Palette.colour("target"), str(rec.get("name", Data.mob_name(species))))
 			else:
 				actor.set_health(0.0, false, Color.WHITE)
 			actor.set_marker(_chasing_me(actor, vel, moving, species, m, me_pos))

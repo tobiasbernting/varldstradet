@@ -457,7 +457,7 @@ func _set_unit(u: Dictionary, icon: Texture2D, unit_name: String, f: Array, colo
 
 
 static func hp_colour(k: float) -> Color:
-	return HP_GREEN if k > 0.5 else (HP_YELLOW if k > 0.25 else HP_RED)
+	return Palette.hp(k) # (the palette of the player's colour setting; HP_GREEN, HP_YELLOW and HP_RED are its "normal")
 
 
 static func flag_glyphs(fl: int) -> String:
@@ -913,6 +913,7 @@ func set_boss(b: Variant, species: String, mob_hp: Array, now: float) -> void:
 		for i in range(phases.size() + 1):
 			pips += "●" if i <= phase else "○"
 		boss_phase.text = "%s %s" % [Strings.t("sagaPhase", {"n": phase + 1}), pips]
+	_set_meter_colour(boss_meter, Color("c23a2c") if Palette.mode() == "normal" else Palette.colour("foe"))
 	if mob_hp.size() >= 2:
 		boss_meter.value = float(mob_hp[0]) / maxf(1.0, float(mob_hp[1]))
 		boss_text.text = "%d / %d" % [int(mob_hp[0]), int(mob_hp[1])]
