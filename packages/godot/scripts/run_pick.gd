@@ -137,7 +137,11 @@ func _build(offer: Dictionary) -> void:
 	_reroll.text = "🔄  %s (%s)" % [Strings.t("runReroll"), Strings.t("runRerollLeft", {"n": rerolls})]
 	if not buttons.is_empty():
 		var f := clampi(_focus, 0, buttons.size() - 1)
-		(buttons[f] as Button).grab_focus.call_deferred()
+		var target := buttons[f] as Button
+		# (the last vote can settle the pick at once and the window go before the deferred call comes)
+		(func() -> void:
+			if is_instance_valid(target) and target.is_inside_tree():
+				target.grab_focus()).call_deferred()
 
 
 func _card(runa: Dictionary, votes: int, leading: bool, mine: bool) -> Button:

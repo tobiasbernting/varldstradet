@@ -25,9 +25,11 @@
 // eats a pizza, equips the starter weapon (the dev message `starter`), switches to hero and back and rides the bus.
 //
 // A fifth pair (M5c, only with BOT_ONLY=run: three servers and six Godot processes would starve the farmer's timed waits) plays a run through the client on a server of its own: two bots (scripts/run_bot.gd) walk to
-// the färdport, the lead presses "Starta färden", the other is taken along (or presses "Följ med"), both fight zone 1, use the
-// exit, vote on a runa card and enter zone 2. With `--full` (local use) they play on to the boss and home. The checks: no errors,
-// both reached zone 2, both voted, a runa was taken, the sagafrön counted.
+// the färdport, the lead presses "Starta färden", the other is taken along (or presses "Följ med"), both fight their way through the
+// first wing of the route (R3, GAME2.md section 2: a Flock, the cards of a runa, then a walk onto one of the väg-runor to choose the next
+// stop; the Vilosten on the way are taken whenever offered, `--lane=rest`) and enter row 5, the Mellanboss's. With `--full` (local use)
+// they play on to the boss and home. The checks: no errors, both reached row 5 by the route (a Vilosten among the stops), both voted, a
+// runa was taken, the sagafrön counted, the HUD's rail showed the ten rows and the map overlay drew the route.
 // A voice check (Röstprat, no Godot needed): two bots join voice on the in-memory server, one in a room of its own (two
 // devices on this machine share an address, so they would be one room that hears nothing), and the check is that the
 // server names each as the other's peer, sends the ice servers to the speakers, relays a `signal` from the one that
@@ -45,6 +47,7 @@
 //   BOT_RUN_LEVEL=1 makes the run pair play Vanlig (default 0: the lead picks Lätt at the arch window and the check sees the level and the star on the HUD)
 //   BOT_RUN_MAX_WIPES=0 sets how many wipes the run pair retries (default 2; 0 = a wipe fails the check)
 //   BOT_ONLY=run BOT_RUN_SECONDS=480 pnpm godot:bot [-- --full]   (the run pair alone; --full plays to the boss: BOT_RUN_SECONDS=2400)
+//   BOT_RUN_ROWS=5 BOT_RUN_LANE=rest|safe|random  (the row the run pair stops at, default 5 = the first wing walked; how the way on is chosen, default rest)
 //   BOT_RUN_SHOTS=dir                             (the run pair saves pictures there; needs a window: run it under xvfb-run)
 //   BOT_ONLY=dungeon BOT_DUNGEON=frost BOT_SECONDS=240 pnpm godot:bot   (the fighter pair alone, in Frostjättens borg: draug, frost, surt, hel, dvarg, orm, alv, fenrir or loke; M6a–M6c)
 //   BOT_SECONDS=120 BOT_PORT=8097 BOT_PACKS=1     (optional; BOT_FARM_SECONDS=600 for the farmer, BOT_ONLY=farm or walker)
@@ -76,6 +79,12 @@ const runSeconds = Number(process.env.BOT_RUN_SECONDS ?? (fullRun ? 2400 : 480))
 const runMaxWipes = process.env.BOT_RUN_MAX_WIPES ?? ''; // (unset: the bot's own default of 2; 0 makes a wipe fail the check)
 if (runMaxWipes !== '' && !/^\d+$/.test(runMaxWipes)) {
   console.error(`BOT_RUN_MAX_WIPES must be a whole number, 0 or more (got '${runMaxWipes}')`);
+  process.exit(2);
+}
+const runRows = Number(process.env.BOT_RUN_ROWS ?? '5');
+const runLane = process.env.BOT_RUN_LANE ?? 'rest';
+if (!Number.isInteger(runRows) || runRows < 2 || runRows > 10 || !['rest', 'safe', 'random'].includes(runLane)) {
+  console.error(`BOT_RUN_ROWS must be 2..10 and BOT_RUN_LANE rest, safe or random (got '${process.env.BOT_RUN_ROWS}' and '${runLane}')`);
   process.exit(2);
 }
 const runShots = process.env.BOT_RUN_SHOTS ?? '';
@@ -120,7 +129,7 @@ interface Report {
   arrived_via_arch: boolean;
   dev_sent: boolean;
   summary?: string;
-  run?: { level?: number; spirit?: number; hud_spirit?: string; role: string; zones: number[]; exits: number; presses: number; picks: number; runor: string[]; started: boolean; joined: boolean; ended: { outcome: string } | null; boss_down: boolean; seeds: number };
+  run?: { level?: number; spirit?: number; hud_spirit?: string; hud_rail?: string; map?: { nodes: number; ways: number; open: boolean }; role: string; rows: number[]; kinds: string[]; runes?: number; exits: number; presses: number; picks: number; runor: string[]; started: boolean; joined: boolean; ended: { outcome: string } | null; boss_down: boolean; seeds: number };
 }
 
 interface FarmReport {
@@ -348,11 +357,15 @@ function checkRunner(r: Report, botLog?: string): void {
   check(exitErrors.length === 0, `${r.name}: no script errors, nothing leaked at exit (${exitErrors[0] ?? 'none'})`);
   check(!!run, `${r.name}: the run report is there`);
   if (!run) return;
-  console.log(`     ${r.name} (${run.role}): zones ${JSON.stringify(run.zones)}, exits taken ${run.exits} (${run.presses} presses), votes the server showed ${run.picks}, runor ${JSON.stringify(run.runor)}, sagafrön ${run.seeds}, started ${run.started}, joined ${run.joined}, ended ${JSON.stringify(run.ended)}`);
+  console.log(`     ${r.name} (${run.role}): rows ${JSON.stringify(run.rows)} ${JSON.stringify(run.kinds)}, route votes seen ${run.exits} (${run.presses} presses), votes the server showed ${run.picks}, runor ${JSON.stringify(run.runor)}, sagafrön ${run.seeds}, rail "${run.hud_rail ?? ''}", map ${JSON.stringify(run.map ?? null)}, started ${run.started}, joined ${run.joined}, ended ${JSON.stringify(run.ended)}`);
   if (run.role === 'lead') check(run.started, `${r.name}: pressed "Starta färden" at the arch window`);
-  check(run.zones.includes(0), `${r.name}: entered zone 1 (${JSON.stringify(run.zones)})`);
-  check(run.zones.includes(1), `${r.name}: cleared zone 1, used the exit, voted and entered zone 2 (${JSON.stringify(run.zones)}) after ${r.seconds.toFixed(0)} s`);
-  check(run.exits >= 1, `${r.name}: the server let it through the way on (${run.exits} exits, ${run.presses} presses)`);
+  check(run.rows.includes(1) && run.kinds[0] === 'flock', `${r.name}: entered row 1, a Flock (${JSON.stringify(run.kinds)})`);
+  check(run.rows.includes(runRows) || (fullRun && run.boss_down), `${r.name}: cleared its way through the route to row ${runRows} by the väg-runor (rows ${JSON.stringify(run.rows)}, ${JSON.stringify(run.kinds)}) after ${r.seconds.toFixed(0)} s`);
+  check(run.rows.every((row, i) => row === i + 1), `${r.name}: walked the rows in order, one stop in each (${JSON.stringify(run.rows)})`);
+  check(runLane !== 'rest' || runRows < 4 || run.kinds[3] === 'rest', `${r.name}: row 4 is the safe lane, a Vilosten, and the bot took it (${JSON.stringify(run.kinds)})`);
+  check(run.exits >= Math.min(runRows - 1, run.rows.length), `${r.name}: the vote on the way on ran in each stop it left (${run.exits} votes, ${run.presses} presses)`);
+  check(typeof run.hud_rail === 'string' && run.hud_rail.split(' ').length === 10, `${r.name}: the HUD's rail shows ten rows (${run.hud_rail ?? 'none'})`);
+  check(!!run.map && run.map.nodes >= 10 && run.map.open, `${r.name}: the map overlay drew the route (${JSON.stringify(run.map ?? null)})`);
   check(run.picks >= 1, `${r.name}: voted on a runa card and the server's offer showed the vote (${run.picks})`);
   check(run.runor.length >= 1, `${r.name}: the pick gave the party a runa (${run.runor.join(', ') || 'none'})`);
   check(run.seeds >= 1, `${r.name}: earned sagafrön in the run (${run.seeds})`);
@@ -361,7 +374,7 @@ function checkRunner(r: Report, botLog?: string): void {
   check(run.level === want, `${r.name}: the run's level is ${want === 0 ? 'Lätt' : 'Vanlig'} (${run.level})`);
   check(typeof run.hud_spirit === 'string' && run.hud_spirit.includes('×') && run.hud_spirit.includes('Lätt') === (want === 0), `${r.name}: the HUD shows the Sagoandar star (${run.hud_spirit ?? 'none'})${want === 0 ? ' and the word Lätt' : ''}`);
   if (fullRun) {
-    check(run.zones.includes(3), `${r.name}: reached the boss's map (${JSON.stringify(run.zones)})`);
+    check(run.kinds.includes('boss'), `${r.name}: reached the boss's stop (${JSON.stringify(run.kinds)})`);
     check(run.boss_down, `${r.name}: the boss fell`);
   }
 }
@@ -478,7 +491,7 @@ async function main(): Promise<void> {
       runNames.forEach((name, i) => {
         const report = path.join(tmp, `${name}.json`);
         const log = path.join(tmp, `${name}.log`);
-        const args = ['--headless', '--path', godotDir, '--', '--runbot', '--route=run', `--server=http://127.0.0.1:${runPort}`, `--name=${name}`, `--report=${report}`, `--seconds=${runSeconds}`, `--role=${i === 0 ? 'lead' : 'follow'}`, ...(i === 0 ? [`--level=${runLevel}`] : [])];
+        const args = ['--headless', '--path', godotDir, '--', '--runbot', '--route=run', `--server=http://127.0.0.1:${runPort}`, `--name=${name}`, `--report=${report}`, `--seconds=${runSeconds}`, `--role=${i === 0 ? 'lead' : 'follow'}`, ...(i === 0 ? [`--level=${runLevel}`] : []), `--lane=${runLane}`, `--rows=${runRows}`];
         if (fullRun) args.push('--full');
         if (runMaxWipes !== '') args.push(`--max-wipes=${runMaxWipes}`);
         if (runShots) {

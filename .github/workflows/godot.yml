@@ -297,7 +297,9 @@ jobs:
       # arch walker, the creator check and the farmer.
       #
       # M5c: two headless bots play a run through the client against a server in memory: they walk to the färdport, the lead
-      # starts, both clear zone 1, use the exit, vote on a runa and enter zone 2 (`--full` plays to the boss, locally).
+      # starts, both fight their way through the first wing of the route (R3: a Flock, the cards of a runa, a walk onto one of the
+      # väg-runor, the Vilosten taken whenever one is offered) and enter row 5, the Mellanboss's; the rail on the HUD and the map
+      # overlay are checked on the way (`--full` plays to the boss, locally). About 5 minutes of the 8 minutes it is given.
       #
       # M6b: these two used to run one after the other (4 + 4 minutes) and the job was over its ~10 minute budget; they
       # are independent (each has servers of its own: 8097 and 8098, and 8200 with its run pair on 8202), so they run side

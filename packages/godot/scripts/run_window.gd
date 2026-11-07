@@ -12,12 +12,19 @@ var latt_button: Button
 var vanlig_button: Button
 ## The difficulty for the next run, kept between openings of the window: 0 Lätt (the kids' level), 1 Vanlig (GAME2.md 5.3).
 static var level := 1
+## The dungeon for the next run (an id), "" for the player's current chapter; kept between openings. A world arch that opens this window
+## with its own dungeon sets `preset` first: the window takes it when it opens (once).
+static var dungeon := ""
+static var preset := ""
+var dungeon_prev: Button
+var dungeon_next: Button
+var dungeon_label: Label
 
 
 func _init() -> void:
 	title_text = "⛩️ " + Strings.object_name("fardport")
 	width = 620
-	body_height = 480
+	body_height = 560
 
 
 func _purse_text(_me: Dictionary) -> String:
@@ -26,7 +33,41 @@ func _purse_text(_me: Dictionary) -> String:
 
 func _on_open() -> void:
 	# ask for the dishes the server remembers for me (it also sends them when the window opens)
-	pass
+	if preset != "":
+		dungeon = preset
+		preset = ""
+
+
+## The dungeons I may run, in the saga's order: the ones cleared, and the next one (the server checks it too).
+func runnable() -> Array:
+	var cleared: Array = []
+	var saga: Variant = model.my_player().get("saga")
+	if saga is Dictionary:
+		cleared = saga.get("cleared", [])
+	var ids: Array = Data.dungeons.keys()
+	ids.sort_custom(func(a: Variant, b: Variant) -> bool: return int(Data.dungeon(str(a)).get("chapter", 0)) < int(Data.dungeon(str(b)).get("chapter", 0)))
+	var out: Array = []
+	var next_found := false
+	for id in ids:
+		if cleared.has(id):
+			out.append(id)
+		elif not next_found:
+			out.append(id)
+			next_found = true
+	return out
+
+
+## The dungeon the next run will be: the one chosen if I may run it, else my current chapter (the next not cleared, or the last).
+func chosen_dungeon() -> String:
+	var ok := runnable()
+	if dungeon != "" and ok.has(dungeon):
+		return dungeon
+	var saga: Variant = model.my_player().get("saga")
+	var cleared: Array = saga.get("cleared", []) if saga is Dictionary else []
+	for id in ok:
+		if not cleared.has(id):
+			return str(id)
+	return str(ok[ok.size() - 1]) if not ok.is_empty() else ""
 
 
 ## Is a run alive that I could still join?
@@ -39,6 +80,9 @@ func _fill() -> void:
 	join_button = null
 	latt_button = null
 	vanlig_button = null
+	dungeon_prev = null
+	dungeon_next = null
+	dungeon_label = null
 	var me := model.my_player()
 	var cls := Gear.cls_of(me)
 	# the class, as a picture
@@ -76,6 +120,8 @@ func _fill() -> void:
 		names.add_child(nm)
 	else:
 		add_label(Strings.t("sagaNeedClass"), 18, BAD)
+	if not _live():
+		_add_dungeon_row()
 	# the färdkost: slots, then the dishes I carry
 	var slots := maxi(1, model.fardkost_slots)
 	var picked: Array = model.fardkost_items
@@ -167,6 +213,46 @@ func _fill() -> void:
 		_body.add_child(start_button)
 
 
+## The dungeon of the run: ◀ the name of the chapter ▶, among the ones I may run (a run is one dungeon, GAME2.md section 2).
+func _add_dungeon_row() -> void:
+	var ok := runnable()
+	if ok.is_empty():
+		return
+	var cur := chosen_dungeon()
+	var at := ok.find(cur)
+	var info: Dictionary = Data.dungeon(cur)
+	var saga: Variant = model.my_player().get("saga")
+	var cleared: Array = saga.get("cleared", []) if saga is Dictionary else []
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 12)
+	_body.add_child(row)
+	dungeon_prev = make_button("◀", _step_dungeon.bind(-1), "dungeon_prev")
+	dungeon_prev.custom_minimum_size = Vector2(56, 48)
+	dungeon_prev.disabled = at <= 0
+	row.add_child(dungeon_prev)
+	dungeon_label = Label.new()
+	dungeon_label.text = "%s %s%s" % [Strings.t("runDungeon"), str(info.get("name", cur)), ("  ✓" if cleared.has(cur) else "  " + Strings.t("runDungeonNext"))]
+	dungeon_label.add_theme_font_size_override("font_size", 22)
+	dungeon_label.add_theme_color_override("font_color", GOLD)
+	dungeon_label.custom_minimum_size = Vector2(360, 0)
+	dungeon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dungeon_label.tooltip_text = str(info.get("intro", ""))
+	row.add_child(dungeon_label)
+	dungeon_next = make_button("▶", _step_dungeon.bind(1), "dungeon_next")
+	dungeon_next.custom_minimum_size = Vector2(56, 48)
+	dungeon_next.disabled = at >= ok.size() - 1
+	row.add_child(dungeon_next)
+
+
+func _step_dungeon(dir: int) -> void:
+	var ok := runnable()
+	var at := ok.find(chosen_dungeon())
+	dungeon = str(ok[clampi(at + dir, 0, ok.size() - 1)])
+	Sfx.play("target")
+	refresh()
+
+
 ## Two big buttons side by side: Lätt (kind monsters, the Sagoandar come back) and Vanlig. The chosen one is lit; a line says what it means.
 func _add_levels() -> void:
 	var row := HBoxContainer.new()
@@ -230,7 +316,11 @@ func _send_food(items: Array) -> void:
 
 func _start() -> void:
 	Net.send({"t": "fardkost", "items": model.fardkost_items})
-	Net.send({"t": "run", "a": "start", "fardkost": model.fardkost_items, "level": level})
+	var msg := {"t": "run", "a": "start", "fardkost": model.fardkost_items, "level": level}
+	var pick := chosen_dungeon()
+	if pick != "":
+		msg["dungeon"] = pick
+	Net.send(msg)
 	Sfx.play("banner")
 	close()
 

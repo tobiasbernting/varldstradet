@@ -41,6 +41,7 @@ var menu: PauseMenu
 var loot: LootWindow
 var chat: ChatUi
 var run_hud: RunHud
+var route_view: RouteView
 var run_pick: RunPick
 var run_end: RunEnd
 var steps: Footsteps ## footsteps on the outdoor maps (M7b)
@@ -106,6 +107,10 @@ func _ready() -> void:
 	run_hud = RunHud.new()
 	run_hud.model = model
 	add_child(run_hud)
+	route_view = RouteView.new()
+	route_view.model = model
+	route_view.world = self
+	add_child(route_view)
 	run_pick = RunPick.new()
 	run_pick.model = model
 	add_child(run_pick)
@@ -570,7 +575,7 @@ func _zone_weather() -> String:
 func _on_run_changed() -> void:
 	if _mode == "dungeon" and Data.is_run_key(_area):
 		var look := Data.zone_look(_area, model.run, model.areas.get(_area, {}))
-		if str(look.get("biome", look.get("name", ""))) != dungeon.look_name:
+		if str(look.get("name", "")) != dungeon.look_name:
 			_rebuild()
 			return
 		dungeon.set_weather(_zone_weather())

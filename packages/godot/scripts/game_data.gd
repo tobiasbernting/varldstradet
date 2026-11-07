@@ -142,8 +142,8 @@ func is_run_key(key: String) -> bool:
 	return key.begins_with("saga:run")
 
 
-## Which map of the run a zone key is: 0..2 the zones, 3 the boss's.
-func zone_index(key: String) -> int:
+## Which stop of the route a run's map key is (`saga:run<n>z<node>`): the node's id in the RunSnap's `route`.
+func stop_node(key: String) -> int:
 	var parts := key.split("z")
 	return int(parts[parts.size() - 1]) if parts.size() >= 2 else 0
 
@@ -187,31 +187,34 @@ func is_food(item: String) -> bool:
 	return food_text(item) != ""
 
 
-## The look of a map of a run, shaped like a dungeon's entry: the biome's own floor, the walls, decor and ambient light
-## of the dungeon it borrows from (game.json `run.zones`), or the boss's own dungeon for the last map. `run_snap` is the
-## RunSnap (null before it arrives: the look then comes from the map itself, and is corrected when the snapshot comes).
-func zone_look(key: String, run_snap: Variant, w: Dictionary) -> Dictionary:
-	var zi := zone_index(key)
-	var biome := ""
-	var boss := ""
+## The look of a stop of a run, shaped like a dungeon's entry: the chapter's own dungeon (floor, walls, decor, ambient light), because a
+## run is one dungeon (GAME2.md section 2). `run_snap` is the RunSnap (null before it arrives: the look then comes from the map
+## itself, and is corrected when the snapshot comes).
+func zone_look(_key: String, run_snap: Variant, w: Dictionary) -> Dictionary:
+	var dungeon_id := ""
 	if run_snap is Dictionary:
-		boss = str(run_snap.get("boss", ""))
-		var biomes: Array = run_snap.get("biomes", [])
-		if zi >= 0 and zi < biomes.size() and biomes[zi] != null:
-			biome = str(biomes[zi])
-	if biome != "":
-		for z in run.get("zones", []):
-			if z is Dictionary and str(z.get("biome", "")) == biome:
-				var look: Dictionary = z.duplicate()
-				look["bossFloor"] = look.get("floor", "grass")
-				return look
-	var dungeon_id := boss
+		dungeon_id = str(run_snap.get("boss", ""))
 	if dungeon_id == "" or not dungeons.has(dungeon_id):
 		var inst: Variant = w.get("saga")
 		dungeon_id = str(inst.get("id", "draug")) if inst is Dictionary else "draug"
-	var d: Dictionary = dungeon(dungeon_id).duplicate()
-	d["boss_zone"] = true
-	return d
+	return dungeon(dungeon_id).duplicate()
+
+
+## The kinds of stop on the route (game.json `run.stops`): {id, name, word, icon}; {} for an unknown kind.
+func stop_kind(kind: String) -> Dictionary:
+	for k in run.get("stops", []):
+		if k is Dictionary and str(k.get("id", "")) == kind:
+			return k
+	return {}
+
+
+func stop_icon(kind: String) -> String:
+	return str(stop_kind(kind).get("icon", "•"))
+
+
+## Which wing (0..2) a row (1..10) of the route is in: rows 1-4, 5-8, 9-10.
+func wing_of(row: int) -> int:
+	return 0 if row <= 4 else (1 if row <= 8 else 2)
 
 
 func dungeon(id: String) -> Dictionary:

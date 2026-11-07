@@ -26,6 +26,8 @@ const FLICKER_EVERY := 1.0 / 30.0
 const CANDLE_COLOUR := Color(1.0, 0.78, 0.45)
 const EXIT_COLOUR := Color(1.0, 0.95, 0.82)
 const REST_COLOUR := Color(0.35, 0.92, 1.0)
+## The glow of a väg-runa by the stop it leads to: a Flock (the old teal), a Vilosten (green), the Mellanboss (amber), the Boss (red).
+const RUNE_COLOURS := [Color(0.55, 1.0, 0.9), Color(0.55, 1.0, 0.5), Color(1.0, 0.72, 0.3), Color(1.0, 0.4, 0.45)]
 const PLATE_COLOUR := Color(1.0, 0.9, 0.5)
 
 var key := ""
@@ -489,24 +491,26 @@ func _make_prop(kind: String, variant: int, x: int, y: int) -> Node3D:
 		"saga_urn":
 			node.add_child(DungeonProps.urn(variant, tint()))
 		"run_exit":
-			# the way on: a glowing rune disc on the floor with a beam of light over it
+			# the way on (a väg-runa): a glowing rune disc on the floor with a beam of light over it, in the colour of the stop it leads
+			# to (the object's variant: 0 a Flock, 1 a Vilosten, 2 the Mellanboss, 3 the Boss)
+			var glow: Color = RUNE_COLOURS[clampi(variant, 0, RUNE_COLOURS.size() - 1)]
 			var disc := CylinderMesh.new()
 			disc.top_radius = 0.48
 			disc.bottom_radius = 0.5
 			disc.height = 0.05
 			disc.radial_segments = 16
-			node.add_child(DungeonProps._mesh_node(disc, DungeonProps.mat(Color(0.12, 0.3, 0.34), DungeonProps.RUNBLATT, 0.5), Vector3(0.0, 0.025, 0.0)))
+			node.add_child(DungeonProps._mesh_node(disc, DungeonProps.mat(glow * 0.3, glow, 0.5), Vector3(0.0, 0.025, 0.0)))
 			var rim := CylinderMesh.new()
 			rim.top_radius = 0.58
 			rim.bottom_radius = 0.6
 			rim.height = 0.03
 			rim.radial_segments = 16
 			node.add_child(DungeonProps._mesh_node(rim, DungeonProps.mat(DungeonProps.KRYPTSTEN * tint(), Color.BLACK, 0.8), Vector3(0.0, 0.015, 0.0)))
-			var beam := DungeonProps.flame(Color(0.55, 1.0, 0.9), 2.2, mini(Quality.particles(), 8))
+			var beam := DungeonProps.flame(glow, 2.2, mini(Quality.particles(), 8))
 			beam.position = Vector3(0.0, 0.1, 0.0)
 			node.add_child(beam)
 			if Quality.preset != "lag":
-				_add_light(node, Vector3(0.0, 1.3, 0.0), Color(0.6, 1.0, 0.9), 5.5, 2.0, 0.15)
+				_add_light(node, Vector3(0.0, 1.3, 0.0), glow, 5.5, 2.0, 0.15)
 		_:
 			var made := ZoneProps.make(kind, variant, _vertex_material())
 			if made != null:
