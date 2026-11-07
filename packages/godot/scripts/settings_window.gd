@@ -326,6 +326,8 @@ func _build_controls(box: VBoxContainer) -> void:
 			Settings.save(), func() -> String: return Settings.spell_input, _spell_buttons)
 	_spell_hint = _note(box, "")
 	_syncs.append(func() -> void: _spell_hint.text = Strings.t("spellsButtonsHint" if Settings.spell_input == "buttons" else "spellsWheelHint"))
+	_heading(box, Strings.t("settingsRun"))
+	_note(box, Strings.t("settingsRunHint"))
 	_heading(box, Strings.t("settingsPtt"))
 	_ptt_button = make_button("", func() -> void:
 		_capturing_key = true

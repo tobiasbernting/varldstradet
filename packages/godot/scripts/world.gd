@@ -795,6 +795,7 @@ func _update_hud() -> void:
 		return str(a["name"]) < str(b["name"]))
 	hud.set_party(rows)
 	hero.speed_mul = _my_speed_mul(f)
+	hero.fight = true
 	# me and my target
 	var b: Variant = snap.get("b")
 	var boss_id := int(b.get("id", -1)) if b is Dictionary else -1
@@ -912,7 +913,7 @@ func _process(delta: float) -> void:
 	combat.tick()
 	fx.tick(delta)
 	play.tick(delta)
-	hero.actor.animate(hero.facing, hero.moving, delta)
+	hero.actor.animate(hero.facing, hero.moving, delta, hero.walk_rate())
 	hero.actor.set_pose(_pose_of(model.me))
 	_bubble_of(model.me, hero.actor)
 	var k := 1.0 - pow(0.001, delta)

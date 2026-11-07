@@ -42,6 +42,8 @@ import {
   POTION_CD,
   REACH,
   RIDE_SPEED_MUL,
+  RUN_SPEED_MUL,
+  BOOST_SPEED_MUL,
   RARITY_COLORS,
   RARITY_NAMES,
   SAGA_BOSSES,
@@ -250,7 +252,7 @@ const run = {
 
 const data = {
   _comment: 'Generated from packages/shared by `pnpm godot:data`. Do not edit; edit the shared data and run the script.',
-  constants: { TILE, MAP_W, MAP_H, MAX_HEARTS, DAY_LENGTH_MS, EDGE_GAP, REACH, PICKUP_RADIUS, RIDE_SPEED_MUL, WATERING_CAN_CHARGES, HOTBAR_SIZE, INVENTORY_SIZE, CHEST_SIZE, MAX_STACK, PLAYER_SPEED, PLAYER_HALF_W, PLAYER_HALF_H, SLOW_MUL, GCD_MS, DOWN_MS, WIPE_MS, POTION_CD, CHAT_MAX_LEN, CHAT_BUBBLE_MS, EMOTE_MS },
+  constants: { TILE, MAP_W, MAP_H, MAX_HEARTS, DAY_LENGTH_MS, EDGE_GAP, REACH, PICKUP_RADIUS, RIDE_SPEED_MUL, RUN_SPEED_MUL, BOOST_SPEED_MUL, WATERING_CAN_CHARGES, HOTBAR_SIZE, INVENTORY_SIZE, CHEST_SIZE, MAX_STACK, PLAYER_SPEED, PLAYER_HALF_W, PLAYER_HALF_H, SLOW_MUL, GCD_MS, DOWN_MS, WIPE_MS, POTION_CD, CHAT_MAX_LEN, CHAT_BUBBLE_MS, EMOTE_MS },
   /** The fighter flags in a saga snapshot (sagasim.ts, SagaSnap.f). */
   flags: { down: 1, wall: 2, rage: 4, hot: 8, slow: 16, frozen: 32 },
   /** Spells that stop a boss's big attack (the browser's INTERRUPTS). */

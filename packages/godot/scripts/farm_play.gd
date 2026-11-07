@@ -36,6 +36,7 @@ var _totals: Dictionary = {} ## item -> how many I hold, to tell what came in
 var _have_totals := false
 var _ride_mul := 1.0
 var _riding := false
+var _boost_until := 0.0 ## the pizza's speed boost (boostUntil, the server's clock in ms)
 var _lifted := false
 var _act_at := 0.0
 var _last_text := "\u0001"
@@ -129,6 +130,7 @@ func enter(w: Dictionary) -> void:
 func leave() -> void:
 	active = false
 	_riding = false
+	_boost_until = 0.0
 	_last_text = "\u0001"
 	hotbar.visible = false
 	target.visible = false
@@ -296,6 +298,7 @@ func _on_player_changed(id: String, rec: Variant) -> void:
 	_sleep.visible = _sleeping
 	# riding: the mount's speed (a horse has no speed of its own: RIDE_SPEED_MUL)
 	_ride_mul = 1.0
+	_boost_until = float(rec.get("boostUntil", 0.0))
 	var riding: Variant = rec.get("riding")
 	_riding = riding != null
 	if riding != null:
@@ -336,7 +339,9 @@ func tick(delta: float) -> void:
 	if not active:
 		return
 	hero.frozen = is_busy() or _sleeping
-	hero.speed_mul = _ride_mul
+	hero.speed_mul = _ride_mul * (Data.constant("BOOST_SPEED_MUL", 1.3) if _boost_until > model.server_now() else 1.0)
+	hero.riding = _riding
+	hero.fight = false
 	if _riding != _lifted:
 		_lifted = _riding
 		hero.actor.position.y = 0.32 if _riding else 0.0

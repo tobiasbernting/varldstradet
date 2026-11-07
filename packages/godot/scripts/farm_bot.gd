@@ -117,7 +117,7 @@ func _run() -> void:
 	_log("on the farm at %s as %s" % [str(_my_tile()), world.model.me])
 	_home = FarmBotHome.new(self)
 	var stages := {
-		"shop": _home.shop_buy, "patch": _farm_patch, "keys": _keys_and_pets, "drop": _drop_and_pick_up, "sell": _home.sell_crop, "gather": _gather, "quests": _quests, "pond": _pond_and_fishing, "bag": _bag_and_chest,
+		"shop": _home.shop_buy, "patch": _farm_patch, "keys": _keys_and_pets, "sprint": _sprint, "drop": _drop_and_pick_up, "sell": _home.sell_crop, "gather": _gather, "quests": _quests, "pond": _pond_and_fishing, "bag": _bag_and_chest,
 		"build": _home.build, "house": _home.house_and_cook, "wardrobe": _home.wardrobe, "talk": _home.talk, "pet": _pet_wild,
 		"village": _home.class_and_chapter, "pizza": _home.pizza, "hero": _home.hero_switch, "bus": _home.bus,
 	}
@@ -777,11 +777,55 @@ func _path_to(from: Vector2i, goal: Vector2i, dist: Dictionary) -> Array:
 	return path
 
 
-## Walks to the middle of a tile; false when there is no way or it takes too long.
-func _goto(goal: Vector2i, timeout := 120.0) -> bool:
+## Sprinting (Shift): a stretch of the farm walked and then run back. The run covers ground RUN_SPEED_MUL times as fast,
+## the server follows it (the `move` messages carry the positions) and never puts the hero back (`reconciled` stays 0).
+func _sprint() -> void:
+	var hero := world.hero
+	var home := _my_tile()
+	var dist := _distance_field(home)
+	var goal := home
+	for t in dist.keys():
+		if int(dist[t]) <= 16 and int(dist[t]) > int(dist[goal]) and _path_to(home, t, dist).size() > 0:
+			goal = t
+	if int(dist[goal]) < 8:
+		_step("sprint", false, "no stretch of floor of 8 tiles near %s" % str(home))
+		return
+	var snaps0 := hero.reconciled
+	var px0 := hero.walked_px
+	var s0 := hero.moving_s
+	var t0 := Time.get_ticks_msec()
+	var there := await _goto(goal, 60.0, false)
+	var walk_px := hero.walked_px - px0
+	var walk_s := hero.moving_s - s0
+	var walk_wall := (Time.get_ticks_msec() - t0) / 1000.0
+	px0 = hero.walked_px
+	s0 = hero.moving_s
+	t0 = Time.get_ticks_msec()
+	var back := await _goto(home, 60.0, true)
+	hero.run_driven = false
+	var run_px := hero.walked_px - px0
+	var run_s := hero.moving_s - s0
+	var run_wall := (Time.get_ticks_msec() - t0) / 1000.0
+	await _wait(0.6)
+	var v_walk := walk_px / maxf(walk_s, 0.01)
+	var v_run := run_px / maxf(run_s, 0.01)
+	var base := Data.constant("PLAYER_SPEED", 64.0)
+	var mul := Data.constant("RUN_SPEED_MUL", 1.7)
+	var me: Dictionary = world.model.player_snaps.get(world.model.me, {})
+	var off := Vector2(float(me.get("x", hero.px)) - hero.px, float(me.get("y", hero.py)) - hero.py).length()
+	var detail := "%d tiles: walked at %.1f px/s in %.1f s, ran at %.1f px/s in %.1f s (%.2fx, wanted %.1fx), snapped back %d times, the server is %.1f px from me" % [int(dist[goal]), v_walk, walk_wall, v_run, run_wall, v_run / maxf(v_walk, 0.01), mul, hero.reconciled - snaps0, off]
+	_step("sprint: both legs walked", there and back, detail)
+	_step("sprint: walking is PLAYER_SPEED, running RUN_SPEED_MUL times as fast", absf(v_walk - base) < base * 0.06 and absf(v_run - base * mul) < base * mul * 0.06, detail)
+	_step("sprint: the run took clearly less time than the walk", run_wall < walk_wall * 0.75, detail)
+	_step("sprint: the server never put me back and agrees where I stand", hero.reconciled == snaps0 and off < 8.0, detail)
+
+
+## Walks to the middle of a tile; false when there is no way or it takes too long. `run`: sprints (the Shift key).
+func _goto(goal: Vector2i, timeout := 120.0, run := false) -> bool:
 	var hero := world.hero
 	var tile := Data.tile()
 	hero.driven = true
+	hero.run_driven = run
 	var until := Time.get_ticks_msec() + int(timeout * 1000.0)
 	var stuck := 0.0
 	var last := Vector2(hero.px, hero.py)

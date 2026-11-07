@@ -23,6 +23,8 @@ import {
   BATH_POOL,
   SWIM_SPEED_MUL,
   PLAYER_SPEED,
+  RUN_SPEED_MUL,
+  RIDE_SPEED_MUL,
   inPool,
   ensureBathhouse,
   ensureFarmBusStop,
@@ -159,6 +161,28 @@ describe('movement', () => {
     expect(p.moving).toBe(true);
     stepPlayer(world, p, 0, 0, 100);
     expect(p.moving).toBe(false);
+  });
+
+  it('a running client (RUN_SPEED_MUL, move messages at 20 a second) is never pulled back by the server', () => {
+    const { world, p } = setup();
+    standAt(world, p, 20, 20);
+    // the client predicts with stepPlayer on its own copy and sends positions, as the Godot hero does
+    const me = structuredClone(p);
+    const x0 = p.x;
+    const dt = 50;
+    let sent = 0;
+    for (let i = 0; i < 40; i++) {
+      stepPlayer(world, me, 1, 0, dt, RUN_SPEED_MUL);
+      applyMove(world, p.id, me.x, me.y, me.facing, me.moving);
+      sent++;
+      expect(p.x).toBeCloseTo(me.x, 6);
+      expect(p.y).toBeCloseTo(me.y, 6);
+    }
+    // two seconds at 1.7 x the walking speed
+    expect(p.x - x0).toBeCloseTo((PLAYER_SPEED * RUN_SPEED_MUL * dt * sent) / 1000, 3);
+    expect(RUN_SPEED_MUL).toBeGreaterThan(1);
+    expect(RUN_SPEED_MUL).toBeLessThan(RIDE_SPEED_MUL);
+    expect(RUN_SPEED_MUL * BOOST_SPEED_MUL).toBeLessThan(3);
   });
 
   it('cannot walk into water or trees', () => {

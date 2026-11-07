@@ -20,6 +20,8 @@ export const DAY_LENGTH_MS = 10 * 60 * 1000; // one game day = 10 real minutes
 export const TICK_HZ = 20;
 export const PLAYER_SPEED = 64; // px per second
 export const RIDE_SPEED_MUL = 1.8; // on horseback
+/** Holding Shift / LT (the browser's 🏃): faster on foot, never stacked with a mount. No stamina. The server takes the walk as it comes (`move` carries positions), so this is the client's rule; see the run test in sim.test.ts. */
+export const RUN_SPEED_MUL = 1.7;
 export const MAX_PLAYERS = 8;
 export const HOTBAR_SIZE = 8;
 export const BACKPACK_SIZE = 24;
