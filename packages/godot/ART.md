@@ -218,6 +218,8 @@ Everything expensive is a toggle in `scripts/quality.gd`, so a scene is built on
 | Volumetric fog | off | off | on |
 | Glow | off | on | on |
 | Torch flame particles | none (a flat flame sprite) | 8 per torch | 16 per torch, plus dust motes |
+| Weather particles (rain, snow, hail; the atmosphere pass) | 150 | 900 | 2000 |
+| Screen grade (one full-screen pass, outdoors only: dungeons are not graded) | on | on | on |
 
 Låg must stay a plain forward render with a handful of unshadowed lights: that is what an Intel integrated GPU does
 at 60 fps. The decision Mobile-vs-Forward+ is made with a frame-time capture in M3b, not here.
@@ -361,6 +363,10 @@ the chimney spots were read from the highest vertices of the KayKit meshes alrea
 | Water | flat, no screen read | waves, foam, reflection (16 steps) | + crest foam, reflection (28 steps) |
 | Fireflies · butterflies · leaves | 0 · 0 · 0 | 28 · 9 · 36 | 56 · 16 · 80 |
 | Smoke (per chimney) · mist · window light | 0 · 0 · 0 | 7 · 9 · pools | 12 · 18 · flickering pools |
+
+The mist is also what fog weather draws (`ambient_view.gd`: the eased fog strength fades it in at three times the dawn's opacity,
+in the sky's own colour), so Låg, which builds no mist, has the depth fog only. The window-light pools are the atmosphere pass's
+warm colour (1, 0.66, 0.35) and come on with the lamps (`dark` 0.35 to 0.75).
 
 ### Measured (M7a)
 
