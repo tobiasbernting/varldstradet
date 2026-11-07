@@ -3,9 +3,10 @@ import { REMOVED_ITEMS, REMOVED_KINDS, SPAWN, TILE, scrubPlayer, type PlayerStat
 import { assertEmpty, formatReport, importInto, isMain, parseArgs, parseDump, sameDatabase, transform, type Sink, type SourceTables, type TableCounts, type TableName, type TargetRows, type Tx } from './importSave.ts';
 import { mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { lillaGardenSave } from './importSave.fixture.ts';
+import { resolveSource, runImport } from './importSaveCli.ts';
 
 const esc = (v: unknown): string => {
   if (v === null || v === undefined) return '\\N';
@@ -217,5 +218,32 @@ describe('import of a lilla-garden save', () => {
     expect(parsed.settings[0]!.value).toBe(src.settings[0]!.value);
     (src.players[1]!.data as { saga?: unknown }).saga = { cls: 'seare', cleared: [] };
     expect(formatReport(transform(src).report, 'dry-run')).toContain('Bo: 85 coins, 6 stars, 1 pets/horses, saga: seare, chapter 1, 0 dungeons cleared');
+  });
+
+  it('a relative dump path is read from where pnpm was run (INIT_CWD), not from packages/server; URLs and absolute paths are untouched', () => {
+    expect(resolveSource('lilla-garden.sql', { INIT_CWD: '/home/me/farm' }, '/repo/packages/server')).toBe(resolve('/home/me/farm', 'lilla-garden.sql'));
+    expect(resolveSource('../dumps/a.sql', { INIT_CWD: '/home/me/farm' }, '/repo/packages/server')).toBe(resolve('/home/me/dumps/a.sql'));
+    expect(resolveSource('lilla-garden.sql', {}, '/somewhere')).toBe(resolve('/somewhere', 'lilla-garden.sql'));
+    expect(resolveSource('lilla-garden.sql', { INIT_CWD: '' }, '/somewhere')).toBe(resolve('/somewhere', 'lilla-garden.sql'));
+    expect(resolveSource('/abs/dump.sql', { INIT_CWD: '/home/me/farm' }, '/x')).toBe(resolve('/abs/dump.sql'));
+    expect(resolveSource('postgres://u@db/garden', { INIT_CWD: '/home/me/farm' }, '/x')).toBe('postgres://u@db/garden');
+  });
+
+  it('import-save --dry-run finds a relative dump through INIT_CWD while the process runs somewhere else', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'import-cwd-'));
+    const old = process.env.INIT_CWD;
+    try {
+      writeFileSync(join(dir, 'lilla-garden.sql'), toDump(lillaGardenSave().src, [...ALL]));
+      process.env.INIT_CWD = dir; // (the test's cwd is packages/server, which has no such file)
+      const out: string[] = [];
+      await runImport(['lilla-garden.sql', '--dry-run'], (l) => out.push(l));
+      expect(out.join('\n')).toContain('No --target given');
+      delete process.env.INIT_CWD;
+      await expect(runImport(['lilla-garden.sql', '--dry-run'], () => {})).rejects.toThrow(/ENOENT/);
+    } finally {
+      if (old === undefined) delete process.env.INIT_CWD;
+      else process.env.INIT_CWD = old;
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
