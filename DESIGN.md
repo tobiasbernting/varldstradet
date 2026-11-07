@@ -905,3 +905,42 @@ GAME2.md section 5.5 has the numbers; this is how it hangs together.
 - **The wipe.** `sagasim.tick` decides at the start of the wipe pause: with `link.spirit > 0` (or `soft`, and the boss not yet down) it sets `link.revive` and shows the gold `level` banner; at the end of the pause it counts `used`, takes one `spirit` off (the star), gets everyone up at `SAGOANDAN_HP` (a free Lätt wipe: full health), resets the fighting monsters and drops the marks. Without `revive` nothing changes: `runsim.watchZone` ends the run as before (it now ignores a wipe whose `revive` is set). `watchZone` copies `spirit`/`used` from the link to `RunState` and sends a state change; `enterZone` hands the totals to the next zone's link and, on Lätt, adds one Sagoande after the first zone.
 - **Client.** `RunWindow.level` (static, kept while the game runs) is sent with `run start`; the HUD star row (`RunHud`) reads `run.spirit` and `run.level` from the state change and swells when the count changes; `RunEnd` shows `spiritUsed`. The run pair bot takes `--level=` (the check passes Lätt by default, `BOT_RUN_LEVEL=1` plays Vanlig) and reads the star's text back from the HUD.
 - **Bots.** `runbot.ts` walks round to a target it cannot see (no line of sight) instead of standing still; `runtune.ts` prints the GAME2 section 5.4 table.
+
+## Godot client: books, markers, help and family (2026-11-07)
+
+Parity with the browser game (the audit after the owner's first play): the six things a child used to get from the web client that the native one lacked.
+The browser files are `clientljs/src/view.ts`, `client/src/ui/{menus,hud,saga,social}.ts` in `tobiasbernting/lilla-garden`; the rules and the Swedish texts
+were already here (`packages/shared`), so this is drawing and sending, not new game rules.
+
+- **Data.** `tools/export-data.mts` writes a `book` object into `game.json`: the 78 achievements with their titles and texts (`ACHIEVEMENTS`, `ACHIEVEMENT_TEXT`),
+  the villagers' idle lines (`NPC_LINES`), the 26 landmarks by biome with their lore, the 21 help topics with `{recipe:}`, `{price:}` and `{name:}` already filled in,
+  the six animal houses, and where Lokes list begins (`actTwo`). `bosses` got `lore`. The help topics that talk about touch, the browser or a pad layout the native
+  client does not have (the whole "Så styr du", the pairing steps, the dungeon pad line) are replaced by `HELP_NATIVE_*` in `sv.ts`; every other line is the
+  browser's. `BIOME_EMOJI` is exported with the strings. The client reads it as `Data.book`.
+- **Markers and speech** (`npc_talk.gd`, `Actor.set_mark`). `NpcTalk.mark_for` is the browser's order: a saga quest to hand in (yellow `?`), a new one (yellow `!`), a wish of the day I
+  can fill from my bag (`❗`, red-orange), a wish I cannot fill yet (`?`, red-orange), a saga quest going on (a dim, smaller `?`). Völvan's chapter counts as a saga quest
+  (`SagaState.marker`). Shape and brightness carry the meaning, so the colour-blind palettes need nothing. A villager greets a player within 2.5 tiles with a line for the
+  time of day, says a "meet" line to another villager within 2.2 tiles, 3.5 s long, 8 s apart; the bubble is the chat bubble (`Actor.set_bubble`) and hides the mark while it is up.
+- **Books** (`book_window.gd`, `book_pages.gd`). One window, three tabs: *Sagan* (hero level with the XP bar and all 17 level rewards, the next one lit; the chapters up to mine
+  with their parts, Lokes list under its own heading; the nine dungeons with how to beat each boss, today's chest per boss, the family's best time, sealed ones as "Ingen vet…";
+  titles), *Upptäckter* (26 places in 14 biomes, `???` until found, then name and lore) and *Gårdsbok* (78 achievements: medal or picture, name, what to do, bar, `+n ⭐` or
+  "x av y"). `B` opens the Gårdsbok, `K` the journal (or the finds before the saga has begun, as the browser does); the same key closes. `sagaBest` is a change the model now keeps
+  (`farm.sagaBest`, signal `saga_best_changed`). Völvan's window has a journal tab (the same page, `BookPages.journal`). The pages are rebuilt from my record whenever it changes.
+- **HUD.** The level chip (⭐ Nivå n, from level 2 or with a class) opens the journal on a click; the tracker on the left (`HudLayer._build_tracker`: my chapter's parts or the
+  line to Völvan, and the saga quests going on, done ones ticked) folds on a click and is hidden in a dungeon; on the right edge 👪 and, once I own a pet or a horse
+  (`WorldModel.owns_callable`), ✋ Stanna! and 🎵 Vissla (the X and V keys' messages).
+- **Help** (`help_window.gd`): `H` or `?`, a chip per topic (at 150 % text and more only ◀ the topic ▶, which leaves room for the page), `←`/`→` (or the d-pad) change topic, the animal houses after "Bygga hönshus och skaffa höns".
+- **Family** (`family_window.gd`): `P` or 👪. The ones online first, with where they are (the farm, a biome, a dungeon, "på färd"), "✨ Hoppa till" sends `{t:'jump'}`; the button
+  is off when the server would refuse (the old cave `dungeon`, a run's zone, a dungeon before a class is picked).
+- **Pad.** Every free pad button is taken by the farm and the dungeon, so the pad opens these from the pause menu (Start): Gårdsbok, Sagans dagbok, Familjen, Hjälp. In a window
+  the d-pad or the left stick moves between buttons, `A` presses, `B` closes, the right stick scrolls a long page, and the d-pad scrolls a page that has no button (`GameWindow`).
+  In a dungeon or a run the keys do nothing (the windows belong to the outdoor view); that is deliberate for now.
+- **Check.** `farm_bot_books.gd` runs inside the farmer: B, K, the finds tab, `sagaBest` (a synthetic change), a real mouse click on the level chip, the tracker, the pet buttons, H and ?,
+  every help topic, the pause menu's four buttons, Völvan's journal tab, P and a jump from Köpingen to `tools/mate.mts` (a second player that stays online on the farm). The
+  farmer's report carries what the windows drew; `bot-check.mts` compares it with the server's own record (the achievements it has and how far each counter is, the chapter, the
+  discovered places) and with the shared data (78 achievements, 26 landmarks, 21 topics, 9 dungeons). The villager marks are asserted against the rules at Elsa's wish (before and
+  after the hand-in) and at Völvan's three states. Pictures from the manual `pictures` job (the farmer's windowed run): `docs/m9b-marks.png`, `m9b-gardsbok.png`, `m9b-journal.png`, `m9b-finds.png`, `m9b-help.png`, `m9b-family.png`, `m9b-volva-journal.png` and, at 175 % text, `m9b-book-175.png`, `m9b-help-175.png`, `m9b-hud-175.png`.
+- **After the review.** The family list redraws on any player change and re-checks before it sends; `WorldModel.is_callable` is the shared `isCallable`; marks are cached until my record changes and
+  `bot-check.mts` works them out again from the server's record; `{t:'dev', a:'sagaBest'}` (DEV_TELEPORT) records a best time through the real path for the journal check; a table of
+  `jumpTo`'s refusals sits in `saga.test.ts` and against `FamilyWindow.can_jump_to`; at 175 % the scale is a run-only override; "down" on a page without buttons scrolls and then goes on to
+  the footer. `pnpm godot:bot` runs with `--experimental-transform-types` (the check imports the shared saga code).

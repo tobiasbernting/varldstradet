@@ -55,6 +55,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { ACHIEVEMENTS } from '../../shared/src/data.ts';
+import { DUNGEON_IDS, LEVEL_REWARDS, SAGA_CHAPTERS, SAGA_QUESTS, VOLVA_ID } from '../../shared/src/saga.ts';
+import { chapterDone, questState, readProgress } from '../../shared/src/sagasim.ts';
+import { countItem } from '../../shared/src/inventory.ts';
+import { LANDMARK_IDS } from '../../shared/src/landmarks.ts';
+import { HELP } from '../../shared/src/sv.ts';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../../..');
@@ -139,10 +145,25 @@ interface FarmReport {
   day: number;
   route: string[];
   hearts_seen: number;
+  /** M9b: what the books, the HUD, the help and the family window showed (farm_bot_books.gd). */
+  books?: {
+    achievements?: Record<string, { unlocked: boolean; k: number }>;
+    elsa_after?: string;
+    marks_village?: Record<string, string>;
+    marks_farm?: Record<string, string>;
+    marks_farm_cleared?: Record<string, string>;
+    journal?: { chapters: number; dungeons: number; levels: number; level: number; chapter: number; has_level_line: boolean; cleared: number };
+    finds?: { total: number; found: number; groups: number; unknown: number; all_line: boolean };
+    tracker?: { visible: boolean; lines: string[] };
+    help?: { topics: number; rows: number; placeholder: boolean; houses: number };
+    family?: { members: number; rows: number; mate_online: boolean; place: string };
+    jump?: { from: string; to: string; tiles: number };
+  };
 }
 
 /** What the server itself keeps of a player: asks over the game socket, as a client does (`hello`, then `welcome`). */
-async function serverRecord(url: string, playerId: string): Promise<{ inventory: ({ item: string; count: number } | null)[]; coins: number; stars: number } | null> {
+type ServerRecord = { inventory: ({ item: string; count: number } | null)[]; coins: number; stars: number; id?: string; name?: string; achievements?: string[]; questsDone?: string[]; wishes?: { id: string; npc: string; want: { item: string; count: number } }[]; saga?: unknown; stats?: Record<string, number>; saga?: { chapter?: number; cleared?: string[]; discovered?: string[]; cls?: string; xp?: number }; players: Record<string, { name: string; online: boolean; area: string }> };
+async function serverRecord(url: string, playerId: string): Promise<ServerRecord | null> {
   const WebSocket = createRequire(path.join(root, 'packages/server/package.json'))('ws') as typeof import('ws').WebSocket;
   return await new Promise((resolve) => {
     const ws = new WebSocket(url);
@@ -157,7 +178,7 @@ async function serverRecord(url: string, playerId: string): Promise<{ inventory:
       clearTimeout(timer);
       const p = msg.world.players[playerId];
       ws.close();
-      resolve(p ? { inventory: p.inventory, coins: p.coins, stars: p.stars } : null);
+      resolve(p ? { inventory: p.inventory, coins: p.coins, stars: p.stars, achievements: p.achievements, questsDone: p.questsDone, wishes: msg.world.quests, saga: p.saga, id: playerId, name: p.name, stats: p.stats, saga: p.saga, players: msg.world.players } : null);
     });
     ws.on('error', () => {
       clearTimeout(timer);
@@ -316,7 +337,16 @@ async function checkFarmer(r: FarmReport, farmPort: number, botLog?: string): Pr
     'the shop opens', 'buy seeds', 'buy a hat', 'plant wheat', 'harvest wheat', 'sell a crop', 'Lilla Elsas önskning', 'Fiskar-Svens önskning',
     'the workbench opens', 'craft fences', 'preview: no fence on water', 'place a fence', 'take my fence down', "someone else's fence is refused",
     // the house, the stove, the wardrobe, the villagers
-    'into the farmhouse', 'the stove opens', 'sound: by the stove indoors', 'cook bread', 'out of the farmhouse', 'change the hat', "a villager's window", 'start a conversation', 'a joke', 'a riddle', 'sten, sax, påse',
+    'into the farmhouse', 'the stove opens', 'sound: by the stove indoors', 'cook bread', 'out of the farmhouse', 'change the hat', "a villager's window", 'start a conversation', 'a joke', 'a riddle', 'sten, sax, påse', 'villagers speak',
+    // quest marks over the villagers (M9b)
+    'mark: Elsa has a wish I can fill', "mark: Elsa's wish is done", 'mark: Völvan has a story', "mark: Völvan's chapter is done", "mark: Völvan's next chapter", 'marks up close',
+    // the books, the HUD, the help and the family window (M9b)
+    'the Gårdsbok', 'the Gårdsbok closes on B', 'every achievement has a picture', 'a pad reaches the tabs, the page and the OK button', 'the pause menu opens the books',
+    'the journal', "the family's best time", 'the level chip', 'the level chip opens the journal', 'the saga tracker', 'the tracker folds', "Völvan's journal tab",
+    'the Upptäcktsbok',
+    'the help', 'the help on ?',
+    'the family window', 'the family list follows the family', 'the family window names every place', 'Hoppa till is on exactly where jumpTo accepts', 'jump to the family', 'the family and pet buttons', 'which animals the pet buttons answer for',
+    'large text fits',
     // the village: the class, Völvan, the pizzeria, the gear and the hero switch, the bus
     'walk to Köpingen', 'sound: the village', 'pick a class', "Völvan's chapter", 'buy a pizza', 'eat the pizza', 'equip the weapon', 'the hero switch', 'back to the farm outfit', 'the bus home', 'the bus to the village', 'sound: footsteps', 'sound: ambience',
   ];
@@ -338,6 +368,84 @@ async function checkFarmer(r: FarmReport, farmPort: number, botLog?: string): Pr
   check(r.hud_coins.startsWith(String(rec.coins)), `${r.name}: the HUD shows the coins ("${r.hud_coins}" for ${rec.coins})`);
   check(rec.stars === 0 || r.hud_stars.includes(String(rec.stars)), `${r.name}: the HUD shows the stars ("${r.hud_stars}" for ${rec.stars})`);
   check(rec.stars >= 3, `${r.name}: the errands and the chapter paid in stars (${rec.coins} kr left, ${rec.stars} stars)`);
+  checkBooks(r, rec);
+}
+
+/** The books the client drew (B, K, H, P) against the server's own record of the player and the shared data. */
+/** The mark a villager should show, worked out from the server's own record of the player (the browser's sagaMarker and updateNpcTalk,
+ * written again here): "?" or "!" yellow for the saga, "❗" a wish I can fill, "?" one I cannot, "" nothing. */
+function expectedMark(rec: ServerRecord, npc: string): string {
+  const p = { inventory: rec.inventory, saga: rec.saga, questsDone: rec.questsDone } as never as Parameters<typeof questState>[0] & { inventory: { item: string; count: number }[]; questsDone: string[] };
+  const prog = readProgress(p);
+  let offer = false;
+  let hand = false;
+  let busy = false;
+  if (npc === VOLVA_ID && SAGA_CHAPTERS[prog.chapter]) {
+    if (!prog.heard) offer = true;
+    else if (chapterDone(prog)) hand = true;
+    else busy = true;
+  }
+  for (const q of SAGA_QUESTS) {
+    if (q.npc !== npc) continue;
+    const st = questState(p, q);
+    if (st === 'ready') hand = true;
+    else if (st === 'offer') offer = true;
+    else if (st === 'active') busy = true;
+  }
+  const wishes = (rec.wishes ?? []).filter((w) => w.npc === npc && !(rec.questsDone ?? []).includes(w.id));
+  const canHand = wishes.some((w) => countItem(rec.inventory as never, w.want.item) >= w.want.count);
+  if (hand) return '?';
+  if (offer) return '!';
+  if (canHand) return '❗';
+  if (wishes.length) return '?';
+  if (busy) return '?';
+  return '';
+}
+
+function checkBooks(r: FarmReport, rec: ServerRecord): void {
+  // the quest marks over the villagers against the server's record of me (not against the client's own rule)
+  const village = r.books?.marks_village ?? {};
+  const mismatched = Object.entries(village).filter(([npc, shown]) => shown !== expectedMark(rec, npc));
+  const quiet = Object.entries(village).filter(([, shown]) => shown === '').length;
+  const marked = Object.entries(village).filter(([, shown]) => shown !== '').length;
+  check(Object.keys(village).length >= 5 && mismatched.length === 0, `${r.name}: every villager in Köpingen shows the mark the server's record gives (${Object.entries(village).map(([n, s]) => `${n} ${s || '-'}`).join(', ')}${mismatched.length ? '; WRONG: ' + mismatched.map(([n, s]) => `${n} shows ${s || '-'} not ${expectedMark(rec, n) || '-'}`).join(', ') : ''})`);
+  // on the farm, with Elsa's wish done: a mark exactly where the server's record has something for me, and none where it has nothing
+  const farmMarks = Object.entries(r.books?.marks_farm ?? {});
+  const farmWrong = farmMarks.filter(([npc, shown]) => (shown === '') !== (expectedMark(rec, npc) === ''));
+  check(farmMarks.length >= 3 && farmWrong.length === 0, `${r.name}: on the farm a villager shows a mark exactly when the server's record has something for me (${farmMarks.map(([n, s]) => `${n} ${s || '-'}`).join(', ')})`);
+  // and when the day's wishes are gone (a `quests` change with none) the marks go, except a saga quest's: here none, so all of them
+  const gone = Object.entries(r.books?.marks_farm_cleared ?? {});
+  const goneWrong = gone.filter(([npc, shown]) => shown !== expectedMark({ ...rec, wishes: [] }, npc));
+  check(gone.length >= 3 && goneWrong.length === 0 && gone.every(([, s]) => s === ''), `${r.name}: with no wishes left every villager's wish mark went (${gone.map(([n, s]) => `${n} ${s || '-'}`).join(', ')})`);
+  check(marked >= 1, `${r.name}: marks were drawn over the villagers in Köpingen (${marked} with a mark, ${quiet} without)`);
+  const elsaOpen = (rec.wishes ?? []).filter((w) => w.npc === 'elsa' && !(rec.questsDone ?? []).includes(w.id)).length;
+  check(r.books?.elsa_after !== undefined && (elsaOpen > 0 || r.books.elsa_after === ''), `${r.name}: after the hand-in Elsa showed "${r.books?.elsa_after}" and the server says she has ${elsaOpen} wishes left (none: no mark)`);
+  const b = r.books ?? {};
+  // the Gårdsbok: all of ACHIEVEMENTS, and each one done exactly when the server says so, its bar as far as the server's counter
+  const ach = b.achievements ?? {};
+  check(Object.keys(ach).length === ACHIEVEMENTS.length, `${r.name}: the Gårdsbok drew all ${ACHIEVEMENTS.length} achievements (${Object.keys(ach).length})`);
+  const wrong = ACHIEVEMENTS.filter((a) => {
+    const shown = ach[a.id];
+    const have = Math.min(a.goal, rec.stats?.[a.stat] ?? 0);
+    return !shown || shown.unlocked !== !!rec.achievements?.includes(a.id) || Math.abs(shown.k - have / a.goal) > 0.001;
+  });
+  check(wrong.length === 0, `${r.name}: each achievement's medal and bar agree with the server's record (${wrong.map((a) => a.id).slice(0, 5).join(', ') || 'all ' + ACHIEVEMENTS.length}); ${rec.achievements?.length ?? 0} unlocked`);
+  check(!!ach['harvest_1']?.unlocked && !!rec.achievements?.includes('harvest_1'), `${r.name}: the first harvest earned a medal, and the book shows it`);
+  // the journal: the chapters up to mine, the nine dungeons, the hero level
+  const j = b.journal;
+  check(!!j && j.chapters === (rec.saga?.chapter ?? 0) + 1 && j.dungeons === DUNGEON_IDS.length && j.levels === Object.keys(LEVEL_REWARDS).length, `${r.name}: the journal lists ${j?.levels} of ${Object.keys(LEVEL_REWARDS).length} level rewards, ${j?.chapters} chapters (the server says chapter ${rec.saga?.chapter}) and ${j?.dungeons} of ${DUNGEON_IDS.length} dungeons`);
+  check(!!j && j.has_level_line && j.chapter === (rec.saga?.chapter ?? 0), `${r.name}: the journal's hero level line and chapter are the server's (level ${j?.level}, chapter ${j?.chapter})`);
+  const f = b.finds;
+  check(!!f && f.total === LANDMARK_IDS.length && f.found === (rec.saga?.discovered?.length ?? 0) && f.unknown === f.total - f.found && f.all_line, `${r.name}: the Upptäcktsbok has all ${LANDMARK_IDS.length} places, ${f?.found} found as the server says, the rest ???`);
+  check(!!b.tracker?.visible && b.tracker.lines.length >= 1, `${r.name}: the saga tracker was on the HUD (${b.tracker?.lines.join(' | ')})`);
+  const h = b.help;
+  check(!!h && h.topics === HELP.length && !h.placeholder, `${r.name}: the help has all ${HELP.length} topics of the shared file (${h?.topics}), ${h?.rows} steps, no {placeholders} left`);
+  // the family window: everyone in the family listed, the second player online on the farm, the jump landed next to them
+  const fam = b.family;
+  const everyone = Object.values(rec.players).length;
+  check(!!fam && fam.members === everyone && fam.rows === everyone && fam.mate_online, `${r.name}: the family window lists all ${everyone} players of the farm (${fam?.rows}) and Bot-Syskon online at "${fam?.place}"`);
+  const mate = Object.values(rec.players).find((p) => p.name === 'Bot-Syskon');
+  check(!!b.jump && b.jump.to === mate?.area && b.jump.tiles < 3.5, `${r.name}: the jump from ${b.jump?.from} put it in the mate's map (${mate?.area}) ${b.jump?.tiles} tiles away`);
 }
 
 /** One bot of the run pair: it played through the client and its report says how far. */
@@ -453,6 +561,8 @@ async function main(): Promise<void> {
       const friendCode = await exited(friend, 90_000);
       const fr = fs.existsSync(friendReport) ? (JSON.parse(fs.readFileSync(friendReport, 'utf8')) as { ok: boolean; note: string }) : { ok: false, note: 'no report' };
       check(friendCode === 0 && fr.ok, `the neighbour (a second player) put fences on the farm: ${fr.note}`);
+      // and a third stays online on the farm for the family window: the farmer finds it in the list and jumps to it from the village
+      farmServers.push(run(process.execPath, [path.join(here, 'mate.mts'), `http://127.0.0.1:${farmPort}`, String(farmSeconds + 30)], { cwd: here, log: path.join(tmp, 'mate.log') }));
       const report = path.join(tmp, `${farmerName}.json`);
       const log = path.join(tmp, `${farmerName}.log`);
       const args = ['--headless', '--path', godotDir, '--', '--farmbot', `--server=http://127.0.0.1:${farmPort}`, `--name=${farmerName}`, `--report=${report}`, `--seconds=${farmSeconds}`];

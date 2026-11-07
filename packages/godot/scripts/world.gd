@@ -76,6 +76,7 @@ var _emote_shown: Dictionary = {} ## player id -> until
 var _shadow_in := 0.0
 var _screenshot := ""
 var _open_chat := false ## --open-chat (with --demo): the chat box is open (pictures)
+var npc_talk := NpcTalk.new() ## M9b: the villagers' speech bubbles and quest marks
 var _open_npc := "" ## --open-npc=<id> (or "volva"): a villager's talk window opens on the farm demo (pictures)
 var _settings_page := "" ## --settings-page=picture|sound|reading|controls: the settings window opens on it (pictures)
 var _frames := 0
@@ -129,9 +130,12 @@ func _ready() -> void:
 	menu.switch_player.connect(func() -> void: left.emit())
 	menu.dev_enter.connect(_on_dev_enter)
 	menu.fps_toggled.connect(hud.set_fps_shown)
-	menu.window_asked.connect(func(which: String) -> void:
-		if _mode == "outdoor" and not demo:
-			play.windows.toggle_gear() if which == "gear" else play.windows.toggle_quests())
+	hud.journal_asked.connect(_on_window_asked.bind("journal"))
+	hud.family_asked.connect(_on_window_asked.bind("family"))
+	hud.pets_asked.connect(func(cmd: String) -> void:
+		if _mode == "outdoor" and not demo and not play.is_busy():
+			Net.send({"t": "pets", "cmd": cmd}))
+	menu.window_asked.connect(_on_window_asked)
 	camera.position = CAMERA_OFFSET
 	camera.look_at_from_position(CAMERA_OFFSET, CAMERA_LOOK)
 	camera.fov = 40.0
@@ -150,6 +154,7 @@ func _ready() -> void:
 	model.player_changed.connect(func(id: String, _p: Variant) -> void:
 		_sync_actors()
 		if id == model.me and _area != "":
+			hud.update_tracker(model.my_player())
 			_update_hud())
 	model.snapshot.connect(_on_snapshot)
 	model.run_changed.connect(_on_run_changed)
@@ -478,6 +483,7 @@ func _on_dev_enter(dungeon_id: String) -> void:
 
 func _on_area_changed(_key: String) -> void:
 	_rebuild()
+	hud.update_tracker(model.my_player())
 
 
 func is_outdoor() -> bool:
@@ -597,6 +603,25 @@ func _dress_hero(me: Dictionary) -> void:
 
 func _look_key(p: Dictionary) -> String:
 	return str(hash(JSON.stringify([p.get("appearance"), p.get("outfit")])))
+
+
+## The pause menu's buttons for the windows a key also opens (for a pad).
+func _on_window_asked(which: String) -> void:
+	if _mode != "outdoor" or demo:
+		return
+	match which:
+		"gear":
+			play.windows.toggle_gear()
+		"book":
+			play.windows.toggle_book("book")
+		"journal":
+			play.windows.toggle_book(BookWindow.page_for_key(model.my_player()))
+		"help":
+			play.windows.toggle_help()
+		"family":
+			play.windows.toggle_family()
+		_:
+			play.windows.toggle_quests()
 
 
 func _on_travel_asked(dir: String) -> void:
@@ -788,6 +813,7 @@ func _update_hud() -> void:
 	hud.set_boost(_boosted(me), _mode != "outdoor")
 	if _mode == "outdoor":
 		hud.set_farm_status(model, me)
+		hud.set_side_buttons(model.owns_callable())
 		return
 	var f := model.my_fighter()
 	var cls := combat.my_class()
@@ -942,6 +968,7 @@ func _process(delta: float) -> void:
 	var boss_id := int(snap.get("b", {}).get("id", -1)) if snap.get("b") is Dictionary else -1
 	var t: Variant = combat.live_target()
 	var me_pos := hero.position
+	var npcs_here: Dictionary = {}
 	for key in _actors.keys():
 		var actor: Actor = _actors[key]
 		var id: String = key.substr(2)
@@ -988,7 +1015,7 @@ func _process(delta: float) -> void:
 			moving = false
 		actor.animate(facing, moving, delta)
 		if key.begins_with("n:"):
-			pass
+			npcs_here[id] = actor
 		elif key.begins_with("p:"):
 			actor.set_pose(_pose_of(id))
 			_bubble_of(id, actor)
@@ -1014,6 +1041,8 @@ func _process(delta: float) -> void:
 			else:
 				actor.set_health(0.0, false, Color.WHITE)
 			actor.set_marker(_chasing_me(actor, vel, moving, species, m, me_pos))
+	if _mode == "outdoor":
+		npc_talk.tick(model, npcs_here, me_pos)
 	_update_prompt()
 	_rest_glow(delta, snap)
 	_frame_camera(delta)

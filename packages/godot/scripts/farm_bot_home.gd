@@ -78,6 +78,26 @@ func _my_tile() -> Vector2i:
 
 ## Walks next to a villager (an orthogonal neighbour of the tile they stand on), faces them and uses the key until their
 ## window is open.
+## The quest mark drawn over a villager now ("" none, "<not drawn>" when the villager is not on this map).
+func mark_of(npc: String) -> String:
+	var a: Variant = bot.world._actors.get("n:" + npc)
+	return (a as Actor).mark_text() if a is Actor else "<not drawn>"
+
+
+## Waits for the mark over `npc` to read `want` and reports it as a step: the mark must be what the client works out from my record
+## (NpcTalk.mark_for) and what the shared rules say, here given as `want`.
+func expect_mark(step: String, npc: String, want: String, want_kind := "") -> bool:
+	# "<rules>": whatever the rules give now, as long as it is not the old "❗" (a villager may have a second wish): the mark waits for it
+	var rule: Dictionary = NpcTalk.mark_for(model, model.my_player(), npc)
+	var target: String = str(rule.get("text", "")) if want == "<rules>" else want
+	if want == "<rules>":
+		want = target
+	var ok := await bot._until(func() -> bool: return mark_of(npc) == target and (want_kind == "" or target == "" or (bot.world._actors["n:" + npc] as Actor).mark_kind() == want_kind), 8.0)
+	rule = NpcTalk.mark_for(model, model.my_player(), npc)
+	bot._step(step, ok and str(rule.get("text", "")) == want and (target != "❗" or step.contains("can fill")), "%s shows \"%s\" (%s); the rules give \"%s\" (%s)" % [npc, mark_of(npc), (bot.world._actors["n:" + npc] as Actor).mark_kind() if bot.world._actors.has("n:" + npc) else "", str(rule.get("text", "")), str(rule.get("kind", ""))])
+	return ok
+
+
 func _talk_to(id: String) -> bool:
 	var tile := Data.tile()
 	for attempt in range(6):
@@ -447,6 +467,19 @@ func talk() -> void:
 	t._to_front()
 	t.close()
 	await bot._wait(0.3)
+	# the villagers spoke by themselves while the bot walked among them: every line is one of NPC_LINES (a greeting for the time of day
+	# when I was close, a line to another villager otherwise)
+	var talk_log: Array = bot.world.npc_talk.said
+	var all_known := not talk_log.is_empty()
+	for e in talk_log:
+		var lines: Dictionary = Data.book.get("npcLines", {}).get(str(e["id"]), {})
+		var pool: Array = []
+		for k in ["morning", "day", "evening", "meet"]:
+			for l in lines.get(k, []):
+				pool.append(str(l).replace("{name}", str(model.my_player().get("name", ""))))
+		if not pool.has(str(e["text"])):
+			all_known = false
+	bot._step("villagers speak", all_known, "%d lines spoken, e.g. %s" % [talk_log.size(), "%s: \"%s\"" % [str(talk_log[0]["id"]), str(talk_log[0]["text"])] if not talk_log.is_empty() else "none"])
 
 
 ## Elsa's wish (the fixed one for five stones) handed over through their window; Sven's for the rod the same way.
@@ -490,6 +523,8 @@ func class_and_chapter() -> void:
 	await bot._sounds("the village", ["murmur"])
 	await bot._wait(1.5)
 	await bot._shot("village", 0.2)
+	await expect_mark("mark: Völvan has a story", Data.volva, "!", "new")
+	await bot._shot("mark-volva", 0.1)
 	var stone := bot._nearest_object(["saga_stone"])
 	if stone.is_empty():
 		bot._step("the class stone", false, "no Kämpastenen in the village")
@@ -520,11 +555,39 @@ func class_and_chapter() -> void:
 	await bot._wait(0.4)
 	var coins := _coins()
 	var stars := _stars()
+	await expect_mark("mark: Völvan's chapter is done", Data.volva, "?", "new")
 	var rewarded := promised and await bot._until(func() -> bool: return SagaState.chapter_done(model.my_player()) and _has_button(t, "chapter"), 3.0)
 	rewarded = rewarded and _press(t, "chapter") and await bot._until(func() -> bool: return SagaState.chapter_index(model.my_player()) == 1, 4.0)
 	await bot._wait(0.5)
 	bot._step("Völvan's chapter", promised and rewarded and _coins() == coins + 20 and _stars() == stars + 1, "%d lines read, promised, reward taken: chapter %d, coins %d -> %d, stars %d -> %d" % [lines + 1, SagaState.chapter_index(model.my_player()), coins, _coins(), stars, _stars()])
 	t.close()
+	await expect_mark("mark: Völvan's next chapter", Data.volva, "!", "new")
+
+
+## Up close, in the village: the mark over Völvan (a yellow ! while she has a chapter to tell) and the quest marks of the others, in a picture.
+func marks_up_close() -> void:
+	windows.close_all()
+	await bot._wait(0.15)
+	if model.my_area_key() != "a:1,0":
+		if not await to_village():
+			bot._step("marks up close", false, "not in the village")
+			return
+	var near := await bot._walk_to_npc(Data.volva)
+	await bot._until(func() -> bool: return mark_of(Data.volva) == "!", 9.0)
+	await bot._shot("marks", 0.2)
+	var seen: Array = []
+	for id in Data.npcs.keys():
+		var m := mark_of(str(id))
+		if m != "" and m != "<not drawn>":
+			seen.append("%s %s" % [str(id), m])
+	var all_marks := {}
+	for id in Data.npcs.keys():
+		var shown := mark_of(str(id))
+		if shown != "<not drawn>":
+			all_marks[str(id)] = shown
+	(bot._report["books"] as Dictionary)["marks_village"] = all_marks
+	bot._step("marks up close", near and mark_of(Data.volva) == "!", "next to Völvan, who shows \"!\"; marks over the villagers in the village: %s" % ", ".join(seen))
+
 
 
 func hero_switch() -> void:

@@ -153,6 +153,8 @@ export type ClientMsg =
   | { t: 'dev'; a: 'starter' }
   /** Development only (same switch): materials and 400 kr for two forge levels and a starter piece, two papers, two buckets of red paint and a run of wall pieces, for a check of the smithy and the paint screen. */
   | { t: 'dev'; a: 'kit' }
+  /** Development only (same switch): record this time (ms) as the family's best through dungeon `id`, by me alone, for a check of the journal. */
+  | { t: 'dev'; a: 'sagaBest'; id: string; ms: number }
   | { t: 'ping' };
 
 export interface PlayerSnap {

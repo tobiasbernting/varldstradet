@@ -591,7 +591,7 @@ There is still no text chat: players can only use emotes.
 The native client's keys and buttons, read from `packages/godot/project.godot` (the input map) and the scripts that
 use it. A gamepad and the keyboard work at the same time; the mouse is for clicking tiles, monsters and windows. The
 pause menu (`Esc` or Start) has the settings: graphics quality, **Trollformler** (spells on buttons, or one button and
-a wheel), the frame-rate counter and the world's sounds, plus the gear and quest windows and "Röstprat".
+a wheel), the frame-rate counter and the world's sounds, plus the gear, quest, Gårdsbok, journal, family and help windows and "Röstprat".
 
 | | Keyboard and mouse | Gamepad (Xbox names; PlayStation: ✕ ○ □ △) |
 | --- | --- | --- |
@@ -600,10 +600,14 @@ a wheel), the frame-rate counter and the world's sounds, plus the gear and quest
 | Use (talk, open, harvest, hit what is in front of you) | `E` or `Space`, or click a tile next to you | `A`, or the right trigger |
 | Choose tool (the hotbar, 8 squares) | `1`–`8`, the mouse wheel, `[` and `]`, or click a square | `LB` and `RB` |
 | Bag | `Q` or `I` (a click on the held square also opens it) | `Y` |
-| Pets stay / come back | `X` / `V` (the whistle) | press the right stick / the left stick |
+| Pets stay / come back | `X` / `V` (the whistle), or the ✋ / 🎵 buttons on the right edge (shown once you have a pet or a horse) | press the right stick / the left stick |
 | Emotes | `F` opens the wheel; lean the mouse towards one and click | d-pad up opens the wheel; lean the stick, `A` picks |
 | Chat | `T` or `Enter`, type, `Enter` sends, `Esc` closes | `Back` / `Select` |
-| Gear and the saga's quests | `G` and `J` (also in the pause menu) | the pause menu's buttons |
+| Gear and the day's wishes | `G` and `J` (also in the pause menu) | the pause menu's buttons |
+| Gårdsbok (the 78 achievements, with bars and stars) | `B` (again to close) | the pause menu: "Gårdsbok" |
+| Sagans dagbok (hero level, chapters, the nine dungeons with how to beat them and the family's best times, titles) and Upptäcktsboken (the landmarks found, with their lore): tabs of one window | `K`; the level chip at the top right opens it too | the pause menu: "Sagans dagbok" |
+| Familjen: who is online and where, "Hoppa till" a family member | `P`, or the 👪 button on the right edge | the pause menu: "Familjen" |
+| Hjälp (21 topics, the browser's texts) | `H` or `?`; `←` `→` change topic | the pause menu: "Hjälp" |
 | Pause menu, close a window, drop the target | `Esc` | `Start` |
 | Talk on Röstprat (push-to-talk) | hold `C` (or choose the open microphone in the voice window) | |
 | Frame-rate counter | `F3` | |
@@ -618,6 +622,8 @@ In a dungeon or a run the same keys fight:
 | Aim at a monster, swing at it | click it, or `E`/`Space` for the nearest in reach | `A` / right trigger |
 | Next target | `Tab` | d-pad right |
 | Drop the target / pause | `Esc` | `Start` |
+
+The books and the other windows (Gårdsbok, journal, family, help) work with the keyboard (`Tab`/arrows move between the buttons, `Enter` presses, `Esc` or the same key closes), the mouse (click, wheel) and a pad (d-pad or left stick moves, `A` presses, `B` closes, the right stick scrolls a long page; in the help `←`/`→` or the d-pad change topic). The pad has no button free for them, so it opens them from the pause menu. Villagers show a yellow `!` (a new saga quest to take), a yellow `?` (to hand in), a red-orange `❗` (a wish of the day you can fill from your bag now), a plain `?` (a wish you cannot fill yet) and a dim `?` (a saga quest going on) over their heads, and say their lines when you come close; the saga's chapter and quests stay on the left of the screen once you have heard Völvan (click the header to fold them).
 
 Notes: running is the browser game's 🏃 (there is no touch screen in the native client, so no on-screen run button); the left stick press is the pets' whistle, so it does not run as it did in the browser. The d-pad is shared. Its four directions also walk, so d-pad up opens the emote wheel (and walks up) and, in a fight, d-pad right switches target (and walks right); use the left stick for walking if that is in the way. The hotbar numbers and the spell numbers share `1`–`4`, so outdoors on the farm they pick tools and in a
 dungeon they cast. The gamepad's `Y` is the bag on the farm and the second spell in a dungeon. The kids' setting

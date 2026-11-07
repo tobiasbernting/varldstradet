@@ -20,6 +20,9 @@ var talk: TalkWindow
 var klass: ClassWindow
 var travel: TravelWindow
 var quests: QuestsWindow
+var book: BookWindow ## B (the Gårdsbok), K (the journal), the level chip
+var help: HelpWindow ## H or ?
+var family: FamilyWindow ## P and the 👪 button
 var forge: ForgeWindow
 var paint: PaintWindow
 var run_arch: RunWindow
@@ -49,12 +52,21 @@ func setup(v: WorldView) -> void:
 	klass = _add(ClassWindow.new())
 	travel = _add(TravelWindow.new())
 	quests = _add(QuestsWindow.new())
+	book = _add(BookWindow.new())
+	help = _add(HelpWindow.new())
+	family = _add(FamilyWindow.new())
+	family.looks = v.looks
 	run_arch = _add(RunWindow.new())
 	seed_tree = _add(SeedWindow.new())
 	model.quests_changed.connect(refresh)
 	model.fardkost_changed.connect(refresh)
 	model.tree_changed.connect(refresh)
 	model.run_changed.connect(refresh)
+	model.saga_best_changed.connect(refresh)
+	# the family list shows everyone: any player's record changing (online, where, asleep) redraws it while it is open
+	model.player_changed.connect(func(_id: String, _p: Variant) -> void:
+		if family.is_open():
+			family.refresh())
 
 
 func _add(w: GameWindow) -> GameWindow:
@@ -137,7 +149,53 @@ func toggle_quests() -> void:
 		quests.open_window()
 
 
+## B, K: the books on a page ("book", "journal" or "finds"); the same key again closes the window.
+func toggle_book(page: String) -> void:
+	if book.is_open():
+		if book.tab == page:
+			book.close()
+		else:
+			book.open_at(page)
+	elif not is_busy():
+		book.open_at(page)
+
+
+## H or ?: the help.
+func toggle_help() -> void:
+	if help.is_open():
+		help.close()
+	elif not is_busy():
+		help.open_window()
+
+
+## P: the family.
+func toggle_family() -> void:
+	if family.is_open():
+		family.close()
+	elif not is_busy():
+		family.open_window()
+
+
+## True when `event` is the key of a book, the help or the family (or `?`), and it was used.
+func handle_key(event: InputEvent) -> bool:
+	if event.is_action_pressed("book"):
+		toggle_book("book")
+	elif event.is_action_pressed("journal"):
+		toggle_book(BookWindow.page_for_key(model.my_player()))
+	elif event.is_action_pressed("help") or (event is InputEventKey and event.pressed and not event.echo and (event as InputEventKey).keycode == KEY_QUESTION):
+		toggle_help()
+	elif event.is_action_pressed("family"):
+		toggle_family()
+	else:
+		return false
+	return true
+
+
 func _unhandled_input(event: InputEvent) -> void:
+	# the key that opened a book, the help or the family closes it again
+	if (book.is_open() or help.is_open() or family.is_open()) and Time.get_ticks_msec() - 250 > maxi(book._opened_at, maxi(help._opened_at, family._opened_at)) and handle_key(event):
+		get_viewport().set_input_as_handled()
+		return
 	# the key that opened the gear or the wishes closes them again
 	if event.is_action_pressed("gear") and gear.is_open():
 		gear.close()
