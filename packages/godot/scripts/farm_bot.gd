@@ -503,7 +503,9 @@ func _pet_wild() -> void:
 			# forest is 95 tiles across and the animals can start anywhere in it, so this needs time (25 s, not the 4 s it once had:
 			# a bot that gave up 10 tiles short stood still out of range for the whole wait below, and never startled anything).
 			await _goto(spot["stand"], 25.0)
-			_log("wild %s: %.0f tiles away, %.1f after walking up to its spot" % [wild_id, far_at, Vector2(world.hero.px, world.hero.py).distance_to(_animal_px(_animal_by_id(wild_id))) / Data.tile() if not _animal_by_id(wild_id).is_empty() else -1.0])
+			var left := _animal_by_id(wild_id)
+			rec["far"] = far_at # (kept in the step's detail below: a failing run then shows how far the animals were, and how close the walk got)
+			rec["near"] = Vector2(world.hero.px, world.hero.py).distance_to(_animal_px(left)) / Data.tile() if not left.is_empty() else -1.0
 			# M7b: standing still now, it creeps up again and can be petted. Watch it run off and come back (`_startles`), and
 			# wait for it quietly.
 			await _until(func() -> bool:
@@ -548,9 +550,18 @@ func _pet_wild() -> void:
 		if float(r["away"]) >= 2.5 and float(r["back"]) <= 4.0 and float(r["away"]) > float(best["away"]):
 			best = r
 	_step("startle", float(best["away"]) >= 2.5 and float(best["back"]) <= 4.0,
-		"a wild animal ran %.1f tiles from where it stood when I walked at it, and was back within %.1f tiles of it (next to me, to be petted) after I stood still (%d watched)" % [float(best["away"]), float(best["back"]), _startles.size()])
+		"a wild animal ran %.1f tiles from where it stood when I walked at it, and was back within %.1f tiles of it (next to me, to be petted) after I stood still (%d watched: %s)" % [float(best["away"]), float(best["back"]), _startles.size(), _startles_detail()])
 	await _sounds_any("the forest", ["birds", "crickets", "rain", "wind_hard"]) # (not wind_soft: it has a floor and always sounds)
 	_step("pet", petted, "a wild animal was brushed (%s) and petted, %d hearts seen in all (Elsa's and Sven's are two of them)" % [str(brushed), int(_report["hearts_seen"])])
+
+
+## For the startle step's detail: per animal watched, how far it was when the bot set off, how far when the walk ended, and the most it ran.
+func _startles_detail() -> String:
+	var parts: Array = []
+	for id in _startles.keys():
+		var r: Dictionary = _startles[id]
+		parts.append("#%s %.0f tiles off, %.1f after the walk, ran %.1f" % [id, float(r.get("far", -1.0)), float(r.get("near", -1.0)), float(r["away"])])
+	return "; ".join(parts)
 
 
 ## The nearest roaming monster or predator within `tiles` of a point (px), or INF.
