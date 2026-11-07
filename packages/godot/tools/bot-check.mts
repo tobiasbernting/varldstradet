@@ -236,7 +236,8 @@ async function checkVoice(base: string): Promise<void> {
 
 /** The settings check's process (started with the other Godot clients, read after they are done). */
 async function checkSettings(proc: { log: string; child: ChildProcess }): Promise<void> {
-  const code = await exited(proc.child, 120_000);
+  // (it was started with the other clients and is long done by now: its exit event has fired, so read the code, don't wait for it)
+  const code = proc.child.exitCode !== null ? proc.child.exitCode : await exited(proc.child, 120_000);
   const log = fs.existsSync(proc.log) ? fs.readFileSync(proc.log, 'utf8') : '';
   const lines = log.split('\n').filter((l) => l.startsWith('settingscheck:'));
   const failed = lines.filter((l) => l.includes('FAIL'));
