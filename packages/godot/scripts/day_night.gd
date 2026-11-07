@@ -610,8 +610,6 @@ func _update_materials(delta: float, kind: String, w: Array, elevation: float, s
 	var mirror := horizon.lerp(zenith, 0.5).lerp(Color(0.62, 0.66, 0.72) * (1.0 - _dark * 0.7), clampf(1.0 - _sun_share, 0.0, 1.0) * 0.7) * 0.82
 	for m in [a.water_mat, a.bog_mat, a.choco_mat]:
 		m.set_shader_parameter("glint", glint)
-		m.set_shader_parameter("night", _dark)
-		m.set_shader_parameter("sky_colour", Vector3(sky_color.r, sky_color.g, sky_color.b))
 		m.set_shader_parameter("frozen", _snow * 0.55 if m == a.water_mat else 0.0)
 		if water_level > 0:
 			m.set_shader_parameter("wave", wave)

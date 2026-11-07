@@ -117,7 +117,7 @@ owner's approval of the pictures (`packages/godot/docs/atm-*.png`) and a time-la
 | Commit | What |
 | --- | --- |
 | 17049df | The browser's ambient curve carried by ambient, sun, moon and fog; soft sun shadows (angular distance, blur); the moon; the ground and prop shaders undo the Compatibility renderer's second sRGB conversion of vertex colours |
-| ea11466 | `screen_grade.gd` + `screen_grade.gdshader`: one full-screen pass under the HUD on every preset (warm grade, saturation, night blue by desaturation, dusk mauve, vignette, lightning double flash); glow threshold and strength from the dark |
+| ea11466 | `screen_grade.gd` + `screen_grade.gdshader`: one full-screen pass under the HUD on every preset (warm grade, saturation, night blue, dusk mauve, vignette, lightning double flash; off in dungeons); glow threshold and strength from the dark |
 | 0aeaf5e | Lamps with bigger OmniLights and a ground pool quad each (`light_pool.gdshader`), ~~a light beam on the ground from the farmhouse window and the village windows~~ (dropped for M7a's window light pools), the hero's lantern outdoors at night |
 | 0d41e51 | Rain streaks (slanted, 2x in storm) and splash rings, puddles that dry over ~40 s, ~~fog banks that double as dawn mist~~ (now M7a's mist), two flake sizes, hail, cloud shadows in cloudy weather and on props |
 | 6a71e02 | ~~Fireflies, chimney smoke, the pond at night, autumn leaves~~ (dropped for M7a's), dew sparkles in the morning sun |

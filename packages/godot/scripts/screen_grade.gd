@@ -21,6 +21,7 @@ func _init() -> void:
 
 ## The look outdoors. `night` 0..1 (the blue push), `flash` 0..1 (lightning), `tint` the weather's cast.
 func set_look(saturation: float, night: float, vignette: float, tint: Color, flash: float, contrast := 1.0, warm := 1.0, dusk := 0.0) -> void:
+	visible = true
 	_mat.set_shader_parameter("saturation", saturation)
 	_mat.set_shader_parameter("night_tint", night)
 	_mat.set_shader_parameter("vignette", vignette)
@@ -31,6 +32,7 @@ func set_look(saturation: float, night: float, vignette: float, tint: Color, fla
 	_mat.set_shader_parameter("warm", warm)
 
 
-## A dungeon keeps what its own lights made of it: a touch of warmth and a light vignette, no night.
+## A dungeon keeps exactly what its own look (dungeon_look.gd) and lights made of it: the pass is off, so the nine
+## dungeons look as they did before the grade existed (and it costs nothing there).
 func dungeon_look() -> void:
-	set_look(1.0, 0.0, 0.2, Color.WHITE, 0.0, 1.0, 0.4)
+	visible = false
