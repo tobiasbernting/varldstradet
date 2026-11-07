@@ -252,6 +252,7 @@ func _init() -> void:
 
 
 func release() -> void:
+	WildMeshes.release() # (its meshes are shared with the dungeon's ZoneProps: both rebuild them on the next ask)
 	_meshes.clear()
 	_gtex.clear()
 	_glow_tex = null

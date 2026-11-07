@@ -206,6 +206,7 @@ func quit_clean(code := 0) -> void:
 	if is_instance_valid(world): # (the --demo=lineup scene has no world: it is freed in _ready)
 		world.release_sounds()
 	Voice.release()
+	WildMeshes.release()
 	for child in get_children():
 		child.queue_free()
 	await get_tree().process_frame

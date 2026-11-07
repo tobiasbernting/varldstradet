@@ -367,6 +367,9 @@ jobs:
           for scene in jungle mushroom; do
             xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- --bench=mellan --scene=$scene 2>&1 | tee "bench-$scene.log"
             grep -q "bench: done" "bench-$scene.log"
+            if grep -E "SCRIPT ERROR|leaked at exit|still in use at exit|Pages in use exist at exit" "bench-$scene.log"; then
+              echo "::error::the $scene bench reported errors or leaked at exit"; exit 1
+            fi
           done
           xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- --bench=mellan --scene=farm 2>&1 | tee bench-farm.log
           grep -q "bench: done" bench-farm.log
