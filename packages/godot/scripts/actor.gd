@@ -38,6 +38,7 @@ var _flash_colour := Color.WHITE
 var _lunge := Vector3.ZERO
 var _lunge_t := 0.0
 var pose := "" ## "", "down", "frozen", "web"
+var sheet_name := "" ## the atlas sheet it was given (set_sheet)
 var _block: Node3D = null
 var _bar: Node3D = null
 var _bar_fill: MeshInstance3D = null
@@ -73,8 +74,9 @@ func _init() -> void:
 
 
 ## Picks a sheet from the atlas; false (and a placeholder figure) when there is none.
-func set_sheet(sheet_name: String) -> bool:
-	var s := Data.sheet(sheet_name)
+func set_sheet(name_of_sheet: String) -> bool:
+	sheet_name = name_of_sheet
+	var s := Data.sheet(name_of_sheet)
 	var tex: Texture2D = null
 	if not s.is_empty():
 		var path := "res://assets/sprites/" + str(s.get("file", ""))
