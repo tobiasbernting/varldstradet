@@ -183,20 +183,20 @@ static func frames(sheet_name: String) -> Array[ArrayMesh]:
 	var fw := int(s.get("frame_w", 16))
 	var fh := int(s.get("frame_h", 16))
 	var px := 1.0 / float(Data.atlas.get("pixel", 16))
-	var tex: Texture2D = null
+	var img: Image = null ## the sheet's picture, read once and only when a frame is missing from the cache
 	for i in range(names.size()):
 		var key := "%s:%s" % [sheet_name, names[i]]
 		if not _cache.has(key):
-			if tex == null:
+			if img == null:
 				var path := "res://assets/sprites/" + str(s.get("file", ""))
-				tex = load(path) if ResourceLoader.exists(path) else null
+				var tex: Texture2D = load(path) if ResourceLoader.exists(path) else null
 				if tex == null:
 					return out
-			var img := tex.get_image()
-			if img == null:
-				return out
-			if img.is_compressed():
-				img.decompress()
+				img = tex.get_image()
+				if img == null:
+					return out
+				if img.is_compressed():
+					img.decompress()
 			var col := i % int(s.get("columns", 1))
 			var row := i / int(s.get("columns", 1))
 			_cache[key] = build(img, Rect2i(col * fw, row * fh, fw, fh), px)

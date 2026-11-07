@@ -41,6 +41,7 @@ var _dark := 0.0
 var _ambient := Color.WHITE
 var _target: Node3D ## what the particles and the rainbow follow
 var _rain: GPUParticles3D
+var _rain_size := Vector3.ZERO ## the streak's size last written to the rain's mesh
 var _flakes: GPUParticles3D
 var _leaves: GPUParticles3D
 var _flakes2: GPUParticles3D ## the big soft flakes (the small sharp ones are `_flakes`)
@@ -119,6 +120,7 @@ func _clear_children() -> void:
 	for c in get_children():
 		c.queue_free()
 	_rain = null
+	_rain_size = Vector3.ZERO
 	_flakes = null
 	_leaves = null
 	_rainbow = null
@@ -532,7 +534,10 @@ func _update_weather(delta: float, kind: String, w: Array) -> void:
 		rpm.direction = Vector3(-_slant, -1.0, 0.0).normalized()
 		rpm.initial_velocity_min = 20.0 if hail else 16.0
 		rpm.initial_velocity_max = 24.0 if hail else 20.0
-		(_rain.draw_pass_1 as BoxMesh).size = Vector3(0.05, 0.08, 0.05) if hail else Vector3(0.02, 1.2 if storm else 0.6, 0.02)
+		var rain_size := Vector3(0.05, 0.08, 0.05) if hail else Vector3(0.02, 1.2 if storm else 0.6, 0.02)
+		if rain_size != _rain_size: # a mesh rebuild: only when the streak changes
+			_rain_size = rain_size
+			(_rain.draw_pass_1 as BoxMesh).size = rain_size
 		(_rain.draw_pass_1.material as StandardMaterial3D).albedo_color = Color(0.9, 0.95, 1.0, 0.95) if hail else Color(0.75, 0.85, 1.0, 0.5)
 		_emit(_rings, _wvis["rain"] > 0.1 and not hail)
 		_rings.amount_ratio = clampf(_wvis["rain"] * (1.0 if storm else 0.6), 0.05, 1.0)
