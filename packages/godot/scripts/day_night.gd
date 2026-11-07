@@ -150,7 +150,7 @@ func _make_particles() -> void:
 	var n := int(Quality.spec().get("sky_weather", 0))
 	if n <= 0:
 		return
-	_rain = _particles(n, 1.1, Vector3(0.0, -18.0, 0.0), Color(0.75, 0.85, 1.0, 0.5), Vector3(0.014, 0.6, 0.014))
+	_rain = _particles(n * 2, 1.1, Vector3(0.0, -18.0, 0.0), Color(0.75, 0.85, 1.0, 0.5), Vector3(0.014, 0.6, 0.014))
 	(_rain.process_material as ParticleProcessMaterial).particle_flag_align_y = true
 	_flakes = _particles(int(n * 0.6), 6.0, Vector3(0.0, -1.4, 0.0), Color(1, 1, 1, 1.0), Vector3(0.08, 0.08, 0.08), 0.9)
 	_flakes2 = _particles(int(n * 0.25), 7.0, Vector3(0.0, -1.0, 0.0), Color(1, 1, 1, 0.5), Vector3(0.14, 0.14, 0.14), 0.9)
@@ -513,8 +513,8 @@ func _update_weather(delta: float, kind: String, w: Array) -> void:
 	if _rain != null:
 		var storm := kind == "storm"
 		_emit(_rain, _wvis["rain"] > 0.05)
-		# a storm is twice the rain
-		_rain.amount_ratio = clampf(_wvis["rain"], 0.05, 1.0)
+		# the system holds twice the budget: rain and hail use half of it, a storm all (twice the streaks)
+		_rain.amount_ratio = clampf(_wvis["rain"] * (1.0 if storm else 0.5), 0.025, 1.0)
 		var rpm := _rain.process_material as ParticleProcessMaterial
 		var hail := kind == "hail"
 		rpm.direction = Vector3(-_slant, -1.0, 0.0).normalized()

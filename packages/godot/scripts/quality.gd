@@ -31,7 +31,7 @@ const PRESETS := {
 ##  water         0 a flat cheap look (Låg: two colours and the bank's foam), 1 waves, animated foam and a sky and shore
 ##                reflection (screen space, 16 steps), 2 a finer reflection (28 steps)
 ##  weather       the dungeons' falling weather and motes (dungeon_view.gd; as on main: 150 / 600 / 1500)
-##  sky_weather   how many rain streaks / flakes / hail stones exist near the hero outdoors (day_night.gd, the atmosphere pass; 150 / 900 / 2000)
+##  sky_weather   how many rain streaks / flakes / hail stones exist near the hero outdoors (day_night.gd, the atmosphere pass; 150 / 900 / 2000; rain uses half of it as streaks, a storm all of it)
 ##  fireflies     on summer nights;   butterflies by day in spring and summer;   leaves falling from the trees in autumn;
 ##  smoke         puffs from a chimney (per chimney);   mist  low drifting mist at dawn;
 ##  window_light  0 the windows' glow only, 1 + a pool of light on the ground in front of them, 2 + it flickers like a fire
