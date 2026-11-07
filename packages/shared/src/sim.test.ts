@@ -1752,6 +1752,19 @@ describe('vilda djur skräms och kommer tillbaka (M7b)', () => {
     expect(Math.hypot(a.x - x0, a.y - y0)).toBeCloseTo(speed * 1.5 * 0.2, 0);
   });
 
+  it('only online players on the animal\'s own map startle it (the watchers are collected once per tick)', () => {
+    let t = outdoors('hare');
+    t.p.moving = true;
+    t.p.online = false;
+    tick(t.world, 100, at(1_000_100));
+    expect(t.a.fleeUntil).toBeUndefined();
+    t = outdoors('hare');
+    t.p.moving = true;
+    t.p.area = 'farm'; // (elsewhere, though standing at the same coordinates)
+    tick(t.world, 100, at(1_000_100));
+    expect(t.a.fleeUntil).toBeUndefined();
+  });
+
   it('it is the same every time (no random numbers) and a lasso scare still ends as before', () => {
     const run = () => {
       const { world, p, a } = outdoors('deer');

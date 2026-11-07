@@ -2633,15 +2633,14 @@ const BOLT_SPEED_MUL = 2.2;
 const CALM_MS = 2000;
 /** A startled animal that has calmed down comes to a hero who stands still within this many tiles. */
 export const CURIOUS_TILES = 7;
-function tickStartle(world: WorldState, a: AnimalState, ctx: SimCtx): void {
+function tickStartle(world: WorldState, a: AnimalState, ctx: SimCtx, players: PlayerState[]): void {
   const def = ANIMALS[a.species];
   if (!def?.wild || a.owner || a.petted || def.mob || def.predator || isVehicle(a) || isMount(a) || a.stay) return;
   if (world.area === 'dungeon' || isIndoorKey(world.area) || a.fleeUntil !== undefined) return;
-  const here = world.area ?? 'farm';
   let near: PlayerState | undefined;
   let best = STARTLE_TILES * TILE;
-  for (const p of Object.values(world.players)) {
-    if (!p.online || p.area !== here || !p.moving) continue;
+  for (const p of players) {
+    if (!p.moving) continue;
     const dist = Math.hypot(p.x - a.x, p.y - a.y);
     if (dist < best) {
       best = dist;
@@ -2653,8 +2652,8 @@ function tickStartle(world: WorldState, a: AnimalState, ctx: SimCtx): void {
     if (!a.haunt || a.waitMs > 0) return;
     let quiet: PlayerState | undefined;
     let nearest = CURIOUS_TILES * TILE;
-    for (const p of Object.values(world.players)) {
-      if (!p.online || p.area !== here || p.moving) continue;
+    for (const p of players) {
+      if (p.moving) continue;
       const dist = Math.hypot(p.x - a.x, p.y - a.y);
       if (dist < nearest && dist > 1.6 * TILE) {
         nearest = dist;
@@ -2972,6 +2971,9 @@ function tickPet(world: WorldState, a: AnimalState, dtMs: number): boolean {
 function tickAnimals(world: WorldState, dtMs: number, ctx: SimCtx, out: Change[]): void {
   if (world.area !== 'dungeon' && !isIndoorKey(world.area)) tickRiding(world, out);
   const walkers = world.biome === 'by' ? npcsIn(world).map((n) => npcState(world, n.id)) : [];
+  // the players the wild animals watch (online, on this map), collected once for all of them
+  const here = world.area ?? 'farm';
+  const watchers = Object.values(world.players).filter((p) => p.online && p.area === here);
   for (const a of Object.values(world.animals)) {
     if ((isMount(a) || isVehicle(a)) && riderOf(world, a)) continue;
     if (world.saga?.mobs[a.id]) continue; // dungeon monsters fight by their own rules (tickSaga)
@@ -2983,7 +2985,7 @@ function tickAnimals(world: WorldState, dtMs: number, ctx: SimCtx, out: Change[]
       continue;
     }
     if (!a.stay && (isPetAnimal(a) || (isMount(a) && a.follow)) && tickPet(world, a, dtMs)) continue;
-    tickStartle(world, a, ctx);
+    tickStartle(world, a, ctx, watchers);
     if (tickFlee(world, a, dtMs, ctx)) continue;
     if (isHostile(a) && tickMob(world, a, dtMs, ctx, out)) continue;
     if (a.waitMs > 0) {
