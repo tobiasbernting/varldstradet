@@ -772,6 +772,7 @@ func _dress(actor: Actor, rec: Dictionary) -> void:
 
 func _update_hud() -> void:
 	var me := model.my_player()
+	hud.set_boost(_boosted(me), _mode != "outdoor")
 	if _mode == "outdoor":
 		hud.set_farm_status(model, me)
 		return
@@ -794,8 +795,9 @@ func _update_hud() -> void:
 			return a["me"]
 		return str(a["name"]) < str(b["name"]))
 	hud.set_party(rows)
-	hero.speed_mul = _my_speed_mul(f)
+	hero.speed_mul = _my_speed_mul(f) * (Data.constant("BOOST_SPEED_MUL", 1.3) if _boosted(me) else 1.0)
 	hero.fight = true
+	hero.boosted = _boosted(me)
 	# me and my target
 	var b: Variant = snap.get("b")
 	var boss_id := int(b.get("id", -1)) if b is Dictionary else -1
@@ -827,6 +829,11 @@ func _update_hud() -> void:
 		if pf.size() < 3 or (int(pf[2]) & Data.flag("down")) == 0:
 			all_down = false
 	hud.set_down(flags, all_down, _webbed(model.me), model.server_now())
+
+
+## The pizza's power, or a berserker's rage in a dungeon: `boostUntil` is ahead of the server's clock.
+func _boosted(rec: Dictionary) -> bool:
+	return float(rec.get("boostUntil", 0.0)) > model.server_now()
 
 
 ## sagaSpeed in the browser: fallen or frozen is 0, slowed is SLOW_MUL.

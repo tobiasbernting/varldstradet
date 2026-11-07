@@ -27,6 +27,8 @@ var speed_mul := 1.0
 ## no word of it: `move` carries positions, and a position 1.7 times as far on is as good as any other.
 var running := false
 var riding := false
+## The pizza's power or a berserker's rage: the legs go faster too, as in the browser.
+var boosted := false
 ## In a dungeon (a fight): B casts, so it does not run.
 var fight := false
 ## Set by the bot: runs while it walks (the keys are not read then, as for `drive`).
@@ -65,6 +67,7 @@ func reset() -> void:
 	run_driven = false
 	running = false
 	riding = false
+	boosted = false
 	fight = false
 	frozen = false
 	px = 0.0
@@ -143,7 +146,7 @@ func _run_held() -> bool:
 
 ## How much faster the walking animation goes: the browser's 1.5 while running.
 func walk_rate() -> float:
-	return RUN_ANIM_RATE if running and moving else 1.0
+	return RUN_ANIM_RATE if (running or (boosted and not riding)) and moving else 1.0
 
 
 ## Walking off an edge of the map inside the opening in its middle asks the server for the next map, as the browser

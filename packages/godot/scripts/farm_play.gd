@@ -341,6 +341,7 @@ func tick(delta: float) -> void:
 	hero.frozen = is_busy() or _sleeping
 	hero.speed_mul = _ride_mul * (Data.constant("BOOST_SPEED_MUL", 1.3) if _boost_until > model.server_now() else 1.0)
 	hero.riding = _riding
+	hero.boosted = _boost_until > model.server_now()
 	hero.fight = false
 	if _riding != _lifted:
 		_lifted = _riding

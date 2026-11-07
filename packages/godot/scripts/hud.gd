@@ -73,8 +73,13 @@ var _frame_times: Array = []
 var _fps_in := 0.0
 
 
+var _boost_chip: PanelContainer
+var _boost_label: Label
+
+
 func _ready() -> void:
 	_build_farm_box()
+	_build_boost_chip()
 	var left := VBoxContainer.new()
 	left.position = Vector2(16, 12)
 	left.add_theme_constant_override("separation", 6)
@@ -597,6 +602,38 @@ static func perf_text(times: Array, with_preset := true) -> String:
 func set_fps_shown(on: bool) -> void:
 	fps_label.visible = on
 	_frame_times = []
+
+
+## The speed boost's chip (the browser's top chip): 🍕💨 for the pizza's power, 🔥💨 for a berserker's rage in a dungeon. Below
+## the farm chips, in every mode.
+func _build_boost_chip() -> void:
+	_boost_chip = PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.1, 0.09, 0.07, 0.72)
+	sb.set_corner_radius_all(8)
+	sb.content_margin_left = 10
+	sb.content_margin_right = 10
+	sb.content_margin_top = 4
+	sb.content_margin_bottom = 4
+	_boost_chip.add_theme_stylebox_override("panel", sb)
+	_boost_chip.anchor_left = 1.0
+	_boost_chip.anchor_right = 1.0
+	_boost_chip.offset_left = -120
+	_boost_chip.offset_right = -16
+	_boost_chip.offset_top = 92
+	_boost_chip.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_boost_label = _label(20)
+	_boost_chip.add_child(_boost_label)
+	_boost_chip.visible = false
+	add_child(_boost_chip)
+
+
+## Shows the chip while the boost lasts (`boostUntil` ahead of the server's clock); `rage` in a dungeon.
+func set_boost(on: bool, rage: bool) -> void:
+	_boost_chip.visible = on
+	if on:
+		_boost_label.text = "🔥💨" if rage else "🍕💨"
+		_boost_chip.tooltip_text = Strings.t("boostChipRage") if rage else Strings.t("pizzaPower")
 
 
 ## The map's name in the corner; on a map the client does not draw, the notice in the middle instead.

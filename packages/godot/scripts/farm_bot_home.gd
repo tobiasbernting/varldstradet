@@ -345,6 +345,10 @@ func pizza() -> void:
 	await bot._wait(0.3)
 	var said: bool = bot._report["toasts"].slice(toasts_before).has(Strings.t("ate", {"item": Data.item_name("pizza")}))
 	bot._step("eat the pizza", ate and said and text == Strings.t("actEat", {"item": Data.item_name("pizza")}), "the prompt said \"%s\", the server said it was eaten: %s" % [text, str(said)])
+	# the pizza's power: the chip is up and the hero walks BOOST_SPEED_MUL as fast (the browser's 🍕💨)
+	await bot._wait(0.3)
+	var boosted: bool = world.hud._boost_chip.visible and world.hud._boost_label.text == "🍕💨" and world.hero.boosted
+	bot._step("the pizza's power: the chip and the speed", boosted and is_equal_approx(world.hero.speed_mul, Data.constant("BOOST_SPEED_MUL", 1.3)), "chip %s, boosted %s, speed x%.2f" % [str(world.hud._boost_chip.visible), str(world.hero.boosted), world.hero.speed_mul])
 
 
 # ---------------------------------------------------------------------------

@@ -1020,6 +1020,7 @@ export const T = {
   previewHealthLow: 'Nästan slut',
   settingsPtt: 'Knapp för att prata (håll nere)',
   settingsRun: 'Spring',
+  boostChipRage: 'Bärsärkaraseri',
   settingsRunHint: 'Håll nere Skift för att springa (1,7 gånger så fort som att gå). Handkontroll: vänster avtryckare, eller B utanför strider. Ridande går hästen lika fort som alltid.',
   pttChange: 'Byt tangent',
   pttPress: 'Tryck på en tangent… (Esc: avbryt)',
