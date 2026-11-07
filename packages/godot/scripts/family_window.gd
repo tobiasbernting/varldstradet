@@ -22,6 +22,10 @@ func _purse_text(_me: Dictionary) -> String:
 func place_of(area: String) -> String:
 	if area == "farm":
 		return "%s %s" % [Strings.biome_emoji("farm"), Strings.place("farm")]
+	if area.begins_with("bath:"):
+		return "🏊 " + Strings.t("bathhouseName")
+	if area == "dungeon":
+		return "%s %s" % [Strings.biome_emoji("dungeon"), Strings.place("dungeon")]
 	if Data.is_run_key(area):
 		return Strings.t("familyOnRun")
 	if Data.is_saga_key(area):

@@ -290,6 +290,17 @@ func family() -> void:
 	for m in members:
 		if txt.contains(str(m.get("name", ""))):
 			rows += 1
+	# where everyone can be, named (not "Äng" for what the table does not know)
+	var places := {"farm": Strings.place("farm"), "dungeon": Strings.place("dungeon"), "bath:1": Strings.t("bathhouseName"), "saga:draug": str(Data.dungeon("draug").get("name", "")), "saga:run2z1": Strings.t("familyOnRun"), "a:1,0": ""}
+	var places_ok := true
+	for k in places.keys():
+		var named := fam.place_of(str(k))
+		if str(places[k]) != "" and not named.contains(str(places[k])):
+			places_ok = false
+			bot._error("place_of(%s) = %s, expected %s in it" % [k, named, places[k]])
+		if named.contains(Strings.place("ang")) and str(k) != "a:1,0" and Strings.place("ang") != str(places[k]):
+			places_ok = false
+	bot._step("the family window names every place", places_ok, "the farm, the old cave, the bath house, a dungeon and a run are each named: %s" % ", ".join(PackedStringArray(places.keys().map(func(k): return fam.place_of(str(k))))))
 	_books()["family"] = {"members": members.size(), "rows": rows, "mate_online": bool(model.players()[mate_id].get("online", false)), "place": where}
 	bot._step("the family window", open and rows == members.size() and txt.contains(where) and bool(model.players()[mate_id].get("online", false)), "P opened it: %d in the family, %s is online \"%s\"" % [members.size(), "Bot-Syskon", where])
 	await bot._shot("family", 0.1)
