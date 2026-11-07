@@ -508,7 +508,9 @@ func _pet_wild() -> void:
 			rec["near"] = Vector2(world.hero.px, world.hero.py).distance_to(_animal_px(left)) / Data.tile() if not left.is_empty() else -1.0
 			# M7b: standing still now (moving would startle it again), it runs off, catches its breath, walks back and creeps up to
 			# me, and then it can be petted. That takes the bolt (1.8 s), about 3 s of calming down, the walk back at a wander pace
-			# (2.5 tiles a second: up to 5 s for 12 tiles) and the creep: about 15 s, and 45 s is generous. Watch it all (`_startles`).
+			# (2.5 tiles a second: up to 5 s for 12 tiles) and the creep: about 15 s of game time. The server's game clock runs slower than the
+			# wall clock when a runner is starved (a bot on one CPU saw animals still 6 tiles off after 45 s), so wait up to 120 s and
+			# stop as soon as it is next to me. Watch it all (`_startles`).
 			await _until(func() -> bool:
 				var b := _animal_by_id(wild_id)
 				if b.is_empty():
@@ -516,14 +518,14 @@ func _pet_wild() -> void:
 				_watch_startle(rec, b)
 				var tile := _animal_tile(b)
 				var here := _my_tile()
-				return absi(tile.x - here.x) + absi(tile.y - here.y) == 1, 45.0)
+				return absi(tile.y - here.y) + absi(tile.x - here.x) == 1, 120.0)
 			a = _animal_by_id(wild_id)
 			if a.is_empty():
 				continue
 			var tile := _animal_tile(a)
 			var me := _my_tile()
 			var next_to_it := absi(tile.x - me.x) + absi(tile.y - me.y) == 1
-			if next_to_it and float(rec["away"]) < 2.5 and not rec.has("pushed"):
+			if next_to_it and float(rec["away"]) < 3.0 and not rec.has("pushed"):
 				# It never bolted: it stood next to where I came in, so I was within its reach but barely moving. Walking away from
 				# it startles it from this close too (the server's rule is "a moving hero within 4 tiles"); then wait for it below.
 				rec["pushed"] = true
@@ -537,7 +539,7 @@ func _pet_wild() -> void:
 					if b.is_empty():
 						return true
 					_watch_startle(rec, b)
-					return float(rec["away"]) >= 2.5, 4.0)
+					return float(rec["away"]) >= 3.0, 4.0)
 				continue
 			if next_to_it:
 				_face("right" if tile.x > me.x else ("left" if tile.x < me.x else ("down" if tile.y > me.y else "up")))
@@ -558,37 +560,38 @@ func _pet_wild() -> void:
 			if model.my_area_key() != "farm":
 				await _leave_by("s", "farm")
 			await _wait(4.0)
-	# an animal counts if it ran off from where it stood (2.5 tiles from home), was seen 6 or more tiles from me, and later came within 4
-	# tiles of me while I stood still
+	# an animal counts if it ran off from where it stood (3 tiles or more) and later came back within 2 tiles of that spot, which is
+	# beside me, while I stood still
 	var best: Dictionary = {}
 	for r in _startles.values():
-		if float(r["away"]) >= 2.5 and float(r["peak"]) >= 6.0 and float(r["back"]) <= 4.0 and (best.is_empty() or float(r["away"]) > float(best["away"])):
+		if float(r["away"]) >= 3.0 and float(r["back"]) <= 2.0 and (best.is_empty() or float(r["away"]) > float(best["away"])):
 			best = r
 	_step("startle", not best.is_empty(), "%s (%d watched: %s)" % [("a wild animal ran off and came back to me while I stood still" if not best.is_empty() else "no animal both ran off and came back"), _startles.size(), _startles_detail()])
 	await _sounds_any("the forest", ["birds", "crickets", "rain", "wind_hard"]) # (not wind_soft: it has a floor and always sounds)
 	_step("pet", petted, "a wild animal was brushed (%s) and petted, %d hearts seen in all (Elsa's and Sven's are two of them)" % [str(brushed), int(_report["hearts_seen"])])
 
 
-## One sample of a wild animal being watched: how far it has been from where it stood (`away`), how far from me at most (`peak`),
-## and, once it has run off from me (`peak` 6 or more), how near it has come back to me (`back`), all in tiles.
+## One sample of a wild animal being watched, in tiles: how far it has been from where it stood (`away`), how far from me at most
+## (`peak`, for the detail only), and, once it has run off (`away` 3 or more: a bolt, not a stroll), how near to its place it has
+## come back (`back`). Its place is next to where I stand, so that is also: back beside me.
 func _watch_startle(rec: Dictionary, animal: Dictionary) -> void:
 	var tile := Data.tile()
 	var at := _animal_px(animal)
-	var d_bot := at.distance_to(Vector2(world.hero.px, world.hero.py)) / tile
-	rec["away"] = maxf(float(rec["away"]), at.distance_to(rec["home"]) / tile)
-	rec["peak"] = maxf(float(rec["peak"]), d_bot)
-	if float(rec["peak"]) >= 6.0 and float(rec["away"]) >= 2.5:
-		rec["back"] = minf(float(rec["back"]), d_bot)
+	var d_home := at.distance_to(rec["home"]) / tile
+	rec["away"] = maxf(float(rec["away"]), d_home)
+	rec["peak"] = maxf(float(rec["peak"]), at.distance_to(Vector2(world.hero.px, world.hero.py)) / tile)
+	if float(rec["away"]) >= 3.0:
+		rec["back"] = minf(float(rec["back"]), d_home)
 
 
 ## For the startle step's detail: per animal watched, how far it was when the bot set off, how close the walk got, the most it ran
-## from its place, the most it was from me and the nearest it came back to me after that (INF: it did not).
+## from its place, the most it was from me and the nearest it came back to its place after that (INF: it did not).
 func _startles_detail() -> String:
 	var parts: Array = []
 	for id in _startles.keys():
 		var r: Dictionary = _startles[id]
 		var back: float = r["back"]
-		parts.append("#%s %.0f tiles off, %.1f after the walk, ran %.1f from its place, up to %.1f from me, %s" % [id, float(r.get("far", -1.0)), float(r.get("near", -1.0)), float(r["away"]), float(r["peak"]), ("came back to %.1f" % back) if back < INF else "did not come back"])
+		parts.append("#%s %.0f tiles off, %.1f after the walk, ran %.1f from its place (up to %.1f from me), %s" % [id, float(r.get("far", -1.0)), float(r.get("near", -1.0)), float(r["away"]), float(r["peak"]), ("then came back to %.1f of it" % back) if back < INF else "did not come back"])
 	return "; ".join(parts)
 
 
