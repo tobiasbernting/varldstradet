@@ -28,7 +28,7 @@ owner decision arrived while this was being written: **no save is ported** (see 
 9. **Eight small PRs** (section 5). The owner can walk the whole continent after PR 4 (before streaming exists), and play it
    with streaming after PR 6. **The riskiest step is the interest-managed wire and client streaming (PR 5 and 6)**; it is
    de-risked by a replica oracle test in Node, a flag, and a "load everything" client path that ships first.
-10. Thirteen open questions for the owner are in section 6, each with a recommended answer.
+10. Fourteen open questions for the owner are in section 6, each with a recommended answer.
 
 ## 1. Goal and scope
 
@@ -96,6 +96,25 @@ but only at a rim gate, and the arrival maps both ways: leaving through the east
 work as today. Six of the nine dungeon arches (`frost`, `fenrir` at `a:0,-2`; `dvarg` `a:2,0`; `orm` `a:-2,0`; `surt`
 `a:2,2`; `loke` `a:1,3`) are in the far world; the three in the core are `draug` (`a:-1,-1`), `alv` (`a:1,-1`), `hel` (`a:-1,0`).
 (Question 3 asks whether to bring all nine into Midgård.)
+
+### 1.4 The world serves the runs
+
+Owner decision (relayed 2026-11-07): *the game's focus is the runs in the dungeons.* Midgård is therefore the **home and hub
+between runs**, not the main content, and is kept modest on purpose (288², one minute across, ~2 MiB on the server, ~16 KB/s
+per client; no PR asks for more). What in it directly serves a run:
+
+* **Quick to the entrance.** The färdport is on the farm plan (about 30 tiles from the farmhouse door). The three core
+  arches are 130 tiles (33 s) or less away, and the world map's fast travel (PR 7) goes to any discovered arch front, so the
+  walk is a choice, never a chore. Runs and dungeons stay instanced (`saga:*`); nothing here changes them. The runs v2 design
+  (GAME2.md, branch `claude/runs-v2-design`) needs from this document only that the färdport and the arches remain objects with
+  a world tile (`fardportOf`, `portalWorld`), which they do.
+* **Preparing:** farm, crops, animals, cooking for färdkost, the smithy, herb garden and longhouse, the shop and Smed-Stina all
+  stay in one walkable place (farm plan and Köpingen, 34 tiles apart).
+* **Gathering** for färdkost and crafting: the seven wild regions around the farm hold the materials (landmark caches, renewable
+  berries, ore, fish, dig spots) within 1–2 minutes' walk; the far world is optional.
+* **Meeting the family:** one shared map, `jump` to a friend, and nobody is ever in a different "map" than their neighbour.
+* **Scope consequence:** the far world (12 rim gates) is the first thing to cut if the runs want the effort elsewhere; it is
+  unchanged code and costs nothing to leave alone (Q4).
 
 Growing Midgård later (5×5 regions, say) is a change of two constants (`CONTINENT = {rw, rh}`) and moves the rim, because a flat
 map of up to about 512×512 is still small in memory (projected 5–25 MB, section 2.3). That is a reason for the flat design, not an obligation.
@@ -388,3 +407,5 @@ on horseback plus sprint, a 32-tile lead is 3 s and a chunk border is 3 chunks �
 | Client, Låg render per frame | 92 / 83 / 80 draw calls; 129 / 122 / 151 objects; 92 k / 61 k / 59 k primitives | `--bench=lag --scene=farm|forest|village` |
 | Camera footprint | ≈ 27 × 14 tiles (16:9) | computed from `world.gd` constants |
 | CI today | `export` ≈ 4 m 28 s, `bots` ≈ 5 m 26 s | HANDOFF.md, PR 27 |
+
+14. **Keep it modest:** since the runs are the focus, treat Midgård as a hub and defer every PR after 6 (maps, polish, clean-up) until the runs v2 work asks for them? *Recommend: yes; PRs 1–6 give a playable, streamed hub, PR 7 (maps) is the next most useful.*
