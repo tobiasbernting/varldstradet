@@ -42,9 +42,13 @@ This file is only what the next agent needs: state, decisions, how the work is r
   `demo_ending.gd`, a toast queue in `hud.gd` that keeps bursts, the bots' gate request retried on no answer
   (`Api.request_json_retrying`), all M6a/M6b pictures re-taken; review fixes) merged 2026-11-07 04:03 UTC as add8a48.
   **M6 is done**: all nine dungeons and the ending are in the Godot client. Export job 8m16s.
-- **Running now:** M7a (the alive world, visuals: wind on foliage, water and reflections, ambient particles, each a
-  preset toggle, benched) `session_01KTh22qWWBKXeP4TboJqexR` on `claude/m7a-alive-world-visuals`. Then M7b (wildlife
-  that flees and returns, footsteps, ambient sound), M8. The owner tests PR 11–19 on the MacBook on 2026-11-07.
+- PR 20 (M7a, the alive world's visuals: wind on foliage, water with waves, shore foam and screen-space reflections on
+  Mellan/Hög, fireflies, butterflies, leaves, chimney smoke, dawn mist, window light, each a preset toggle; a real
+  Forward+ shader compile under Xvfb/lavapipe in the export job; review fixes) merged 2026-11-07 06:03 UTC as b48ce70.
+  Export job 9m51s (M7b's first step cuts it). The screen-texture copy of Mellan/Hög water is the main GPU cost to
+  bench on the MacBook.
+- **Running now:** M7b (wildlife that flees and returns, footsteps, ambient sound) `session_01KTh22rF2Y4u6N5YDy7c9rJ`
+  on `claude/m7b-alive-world-life-sound`. Then M8. The owner tests PR 11–20 on the MacBook on 2026-11-07.
 - **The leftovers below were fixed in PR 16** except the waypoint tolerance and the voice bot using bare sockets.
 - **Small things left over from PR 13 and PR 14, for one tidy-up PR** (none blocks anything): the pick screen shows
   "Välj en runa!" twice, offset (the server's `reward` banner over the pick's own title; `run_pick.gd` / `hud.gd`);
@@ -148,7 +152,7 @@ been tested on the MacBook yet; PR 11, 12, 13 and 14 each carry a "what to check
 
 ## 5. Open items and backlog, in rough order
 
-1. **M6 done (PR 17–19); M7a running, then M7b, M8** (the other eight dungeons as zone sets and all bosses in the Godot client, in chapter order; PLAN.md
+1. **M6 done (PR 17–19); M7a done (PR 20); M7b running, then M8** (the other eight dungeons as zone sets and all bosses in the Godot client, in chapter order; PLAN.md
    M6; the dungeons' plans and bosses exist as data, the client draws Draugkryptan's look and the seven biome looks of
    the run zones). Then M7, M8. Before M6, ask the owner for the MacBook results of PR 11–14 if any have come in.
 2. The tidy-up PR of section 1's leftovers.
@@ -177,6 +181,6 @@ been tested on the MacBook yet; PR 11, 12, 13 and 14 each carry a "what to check
   `session_01KTh22pn3nY1PwSd9U6Gv3B`, M5c `session_01KTh22riKcXRQssJpT6nmes` (stood down), M5c fix-up
   `session_01KTh22s4VK2T6Mc1ipSsM5W`, voice `session_01KTh22ouaSJXMfDZvpaPHMt`, voice fix-up
   `session_01KTh22qka2AJW7nyefZu2x5`.
-- Orchestrator since 2026-11-06 22:36 UTC: `session_01KTh22s6gWj5rerGqj3fNdr`; children (Sonnet): M6a `session_01KTh22qPPYJFNEk4wVjmv5b` (done), tidy-up `session_01KTh22qpJkd4hoGWrPg64yA` (done), M6b `session_01KTh22rTdZexhwmCtMLZuRP` (done), M6c `session_01KTh22s7Dm75532mFbJzr47` (done), M7a `session_01KTh22qWWBKXeP4TboJqexR` (running); a check-in is pending.
+- Orchestrator since 2026-11-06 22:36 UTC: `session_01KTh22s6gWj5rerGqj3fNdr`; children (Sonnet): M6a `session_01KTh22qPPYJFNEk4wVjmv5b` (done), tidy-up `session_01KTh22qpJkd4hoGWrPg64yA` (done), M6b `session_01KTh22rTdZexhwmCtMLZuRP` (done), M6c `session_01KTh22s7Dm75532mFbJzr47` (done), M7a `session_01KTh22qWWBKXeP4TboJqexR` (done), M7b `session_01KTh22rF2Y4u6N5YDy7c9rJ` (running); a check-in is pending.
 - Homelab repo `tobiasbernting/homelab`: `cloud/` (Hetzner + Cloudflare + Tailscale, running), `server/roles/lilla-garden`
   and `lilla-garden-cloud`.
