@@ -308,6 +308,15 @@ Smedjan: [the forge window](packages/godot/docs/smedjan-forge.png), [two levels 
 and [the gear window with "Järnyxa +2"](packages/godot/docs/smedjan-gear.png). Paper and paint: [the paint screen](packages/godot/docs/paint-screen.png),
 [the paint screen at 175 % text](packages/godot/docs/paint-screen-175.png), [the forge at 175 % text](packages/godot/docs/smedjan-forge-175.png), [a painted tavla hung in its frame](packages/godot/docs/paint-frames.png), [a painted wall](packages/godot/docs/paint-walls.png) and [a painted farmhouse](packages/godot/docs/paint-house.png).
 
+Köpingen as a Viking market town (2026-11-07): cobblestone streets, flagstone pavements, pale slabs to cross on, timber houses and shops with
+hanging signs, the Vägvisare signposts and iron lanterns, and the horse cart, the riding horse and Diligensen instead of cars and a bus
+([the main street](packages/godot/docs/koepingen-street.png), [at night](packages/godot/docs/koepingen-street-night.png),
+[the houses and shops](packages/godot/docs/koepingen-houses.png), [the square](packages/godot/docs/koepingen-square.png),
+[the station](packages/godot/docs/koepingen-station.png), [the street on the Låg preset](packages/godot/docs/koepingen-street-lag.png), [what it looked like before](packages/godot/docs/koepingen-before.png) and
+[the browser's art for the same spot beside the native client](packages/godot/docs/koepingen-browser-vs-native.png), the left half drawn by the browser's own art code, not a screenshot of the running browser).
+
+![Köpingen's main street in the native client](packages/godot/docs/koepingen-street.png)
+
 Farming (M4b): [watering](packages/godot/docs/m4b-watering.png), [the bag and a chest](packages/godot/docs/m4b-bag-chest.png),
 [the bag from the demo](packages/godot/docs/m4b-bag-demo.png) [a bite](packages/godot/docs/m4b-fishing-bite.png) and [a wild fox petted](packages/godot/docs/m4b-pet.png).
 
