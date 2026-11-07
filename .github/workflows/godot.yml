@@ -155,29 +155,28 @@ jobs:
       - name: Play the bosses' moves of the six dungeons headless (telegraphs, cast bars, what they leave)
         working-directory: packages/godot
         run: |
-          set -euo pipefail
+          set -uo pipefail
           for d in frost surt hel dvarg orm alv; do
             (timeout 150 ~/godot/godot --headless --path . -- --demo=$d --fight --once > "bosses-$d.log" 2>&1; echo $? > "bosses-$d.code") &
           done
           wait
-          for d in frost surt hel dvarg orm alv; do
-            cat "bosses-$d.log"
-            if grep -E "^ERROR:|SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate|bosses: FAIL|leaked at exit|still in use at exit|Pages in use exist at exit" "bosses-$d.log"; then
-              echo "::error::the $d boss show reported errors or leaked at exit (see above)"; exit 1
-            fi
-            test "$(cat "bosses-$d.code")" = 0 || { echo "::error::the $d boss show did not end cleanly"; exit 1; }
-            grep -q "bosses: show finished" "bosses-$d.log" || { echo "::error::the $d boss show did not play to its end"; exit 1; }
-            # (the show checks what it fed: each mark is in the fx view after the cast, gone after the landing, a helper, an ice block or a web is an actor, a mend glows and its glow ends)
-            grep -q "^bosses: ok" "bosses-$d.log" || { echo "::error::the $d boss show's own checks did not pass"; exit 1; }
-          done
+          # every dungeon's log is printed and every failure reported (one failing show must not hide the others)
+          bad=0
+          fail() { echo "::error::$1"; bad=1; }
           # every move of each boss cast once: the mid-boss's and the boss's: frost 1 + 4, surt 2 + 3, hel 2 + 3, dvarg 2 + 3, orm 2 + 4, alv 2 + 4
-          check_casts() { test "$(grep -c 'casts,' "bosses-$1.log")" = "$2" || { echo "::error::the $1 boss show did not cast every move"; exit 1; }; }
-          check_casts frost 5
-          check_casts surt 5
-          check_casts hel 5
-          check_casts dvarg 5
-          check_casts orm 6
-          check_casts alv 6
+          declare -A casts=([frost]=5 [surt]=5 [hel]=5 [dvarg]=5 [orm]=6 [alv]=6)
+          for d in frost surt hel dvarg orm alv; do
+            echo "== $d"; cat "bosses-$d.log"
+            if grep -E "^ERROR:|SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate|bosses: FAIL|leaked at exit|still in use at exit|Pages in use exist at exit" "bosses-$d.log"; then
+              fail "the $d boss show reported errors or leaked at exit (see above)"
+            fi
+            test "$(cat "bosses-$d.code")" = 0 || fail "the $d boss show did not end cleanly"
+            grep -q "bosses: show finished" "bosses-$d.log" || fail "the $d boss show did not play to its end"
+            # (the show checks what it fed: each mark is in the fx view after the cast, gone after the landing, a helper, an ice block or a web is an actor, a mend glows and its glow ends and the heal floats, a pull puts the hero next to the boss, the air's motes drift)
+            grep -q "^bosses: ok" "bosses-$d.log" || fail "the $d boss show's own checks did not pass"
+            test "$(grep -c 'casts,' "bosses-$d.log")" = "${casts[$d]}" || fail "the $d boss show did not cast every move"
+          done
+          exit $bad
 
       - name: Export all four targets
         working-directory: packages/godot
