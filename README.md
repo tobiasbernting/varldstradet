@@ -179,6 +179,20 @@ pushed), the server's address to type into the game, and the join-code field. A 
 and read the 6-digit number (the page shows it while the device waits to be approved). The links work once the first `v*`
 tag has been pushed. `/access`, `/join` and the parent page are unchanged.
 
+**Releasing, and a dry run first.** A release is a tag: `git tag v0.1.0 && git push origin v0.1.0` starts the "Godot
+client" workflow, whose `export` job builds the four zips and whose `release` job attaches them to a GitHub Release for
+the tag (the page's `releases/latest/download/…` links then resolve). To see the same build without a tag and without a
+Release, run the workflow by hand with the slow pictures job off:
+
+```bash
+gh workflow run godot.yml --ref <branch> -f pictures=false     # or Actions -> Godot client -> Run workflow, untick "pictures"
+```
+
+The run's `export` job exports Windows, Linux x86_64, Linux arm64 and macOS, zips them under the stable names and
+uploads them as the artifact `varldstradet-builds` (download it from the run's page and open a zip on a real machine).
+Nothing is published: only the `release` job makes a Release and it runs on `v*` tags alone.
+`packages/server/src/release.test.ts` reads the workflow and the page and fails if the zip names and the links drift apart.
+
 ## Native client
 
 The game is being rewritten as a native Godot client (`packages/godot`, [PLAN.md](PLAN.md) section 3). Milestone M2
