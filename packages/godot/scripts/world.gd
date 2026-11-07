@@ -173,6 +173,7 @@ func reset() -> void:
 	combat.reset()
 	_area = ""
 	_mode = ""
+	hide_look()
 	hero.reset()
 	hero.send_moves = true
 	play.leave()
@@ -235,6 +236,15 @@ func start_demo(fixture := "draug") -> void:
 		hero.driven = true
 		hero.drive = Vector2(1, 0)
 	print("demo: %s drawn (%s) with %d objects, %d lights and %d actors" % [_area, _mode, (farm.object_count() if _mode == "outdoor" else (dungeon.get_node("Objects").get_child_count() if _area != "" else 0)), (farm.light_count() if _mode == "outdoor" else dungeon.light_count()), _actors.size()])
+
+
+## No world on screen (after logout, in the login): the screen grade is hidden and the lantern and the night lift are off,
+## so nothing of the last scene stays over the login.
+func hide_look() -> void:
+	grade.dungeon_look()
+	Actor.night_lift = 0.0
+	if _lantern != null:
+		_light_lantern(0.0, 0.0)
 
 
 ## The hero's lantern: a warm light that follows them outdoors after dark so the wild stays readable near them. No shadow

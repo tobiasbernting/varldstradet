@@ -140,6 +140,8 @@ func _show_login() -> void:
 
 func _set_world(on: bool) -> void:
 	world.visible = on
+	if not on:
+		world.hide_look()
 	world.process_mode = Node.PROCESS_MODE_INHERIT if on else Node.PROCESS_MODE_DISABLED
 
 
