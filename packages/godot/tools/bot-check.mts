@@ -55,12 +55,11 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { ACHIEVEMENTS } from '../../shared/src/data.ts';
-import { SAGA_CHAPTERS, SAGA_QUESTS, VOLVA_ID } from '../../shared/src/saga.ts';
+import { DUNGEON_IDS, LEVEL_REWARDS, SAGA_CHAPTERS, SAGA_QUESTS, VOLVA_ID } from '../../shared/src/saga.ts';
 import { chapterDone, questState, readProgress } from '../../shared/src/sagasim.ts';
 import { countItem } from '../../shared/src/inventory.ts';
 import { LANDMARK_IDS } from '../../shared/src/landmarks.ts';
 import { HELP } from '../../shared/src/sv.ts';
-import { DUNGEON_IDS } from '../../shared/src/saga.ts';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../../..');
@@ -418,7 +417,7 @@ function checkBooks(r: FarmReport, rec: ServerRecord): void {
   check(!!ach['harvest_1']?.unlocked && !!rec.achievements?.includes('harvest_1'), `${r.name}: the first harvest earned a medal, and the book shows it`);
   // the journal: the chapters up to mine, the nine dungeons, the hero level
   const j = b.journal;
-  check(!!j && j.chapters === (rec.saga?.chapter ?? 0) + 1 && j.dungeons === DUNGEON_IDS.length, `${r.name}: the journal lists ${j?.chapters} chapters (the server says chapter ${rec.saga?.chapter}) and ${j?.dungeons} of ${DUNGEON_IDS.length} dungeons`);
+  check(!!j && j.chapters === (rec.saga?.chapter ?? 0) + 1 && j.dungeons === DUNGEON_IDS.length && j.levels === Object.keys(LEVEL_REWARDS).length, `${r.name}: the journal lists ${j?.levels} of ${Object.keys(LEVEL_REWARDS).length} level rewards, ${j?.chapters} chapters (the server says chapter ${rec.saga?.chapter}) and ${j?.dungeons} of ${DUNGEON_IDS.length} dungeons`);
   check(!!j && j.has_level_line && j.chapter === (rec.saga?.chapter ?? 0), `${r.name}: the journal's hero level line and chapter are the server's (level ${j?.level}, chapter ${j?.chapter})`);
   const f = b.finds;
   check(!!f && f.total === LANDMARK_IDS.length && f.found === (rec.saga?.discovered?.length ?? 0) && f.unknown === f.total - f.found && f.all_line, `${r.name}: the Upptäcktsbok has all ${LANDMARK_IDS.length} places, ${f?.found} found as the server says, the rest ???`);

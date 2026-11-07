@@ -348,10 +348,17 @@ func family() -> void:
 
 ## At the largest text (175 %, where the 1280 × 720 window is 731 × 411 points) every window still lies inside the screen and the HUD's new
 ## parts (the tracker on the left, the level chip row on the right, the family button) do not lie over one another. The text size is put back.
+func hud_pets_for_test(on: bool) -> void:
+	world.hud.set_side_buttons(on)
+
+
 func large_text() -> void:
 	await _close_all()
+	# for this run only (the saved setting is never touched, so an aborted step leaves nothing behind)
 	var before := Settings.ui_scale
-	Settings.set_ui_scale(1.75)
+	Settings._override("ui_scale", 1.75)
+	Settings.apply_ui_scale()
+	hud_pets_for_test(true)
 	await bot._wait(0.6)
 	var view: Rect2 = world.get_viewport().get_visible_rect()
 	var inside := true
@@ -370,6 +377,14 @@ func large_text() -> void:
 		var ok := view.grow(1.0).encloses(r) and win._scroll.size.y >= 100.0
 		inside = inside and ok
 		report.append("%s %s" % [w[0], "fits" if ok else "OUT %s in %s" % [str(r), str(view)]])
+		if w[0] == "book":
+			# the longest Gårdsbok row (name, text, bar, "x av y") stays inside the panel's width, not under the scroll bar
+			var widest := 0.0
+			for row in _nodes_named(win, "ach_"):
+				widest = maxf(widest, (row as Control).get_global_rect().end.x - win._scroll.get_global_rect().position.x)
+			var row_ok := widest <= win._scroll.size.x + 1.0
+			inside = inside and row_ok
+			report.append("a bragd row %s (%.0f of %.0f wide)" % ["fits" if row_ok else "TOO WIDE", widest, win._scroll.size.x])
 		if w[0] == "journal":
 			await bot._shot("book-175", 0.1)
 		if w[0] == "help":
@@ -380,6 +395,9 @@ func large_text() -> void:
 	var rects: Dictionary = {"tracker": hud.tracker.get_global_rect(), "chips": hud.farm_box.get_global_rect(), "side": hud.side_box.get_global_rect()}
 	var apart := not (rects["tracker"] as Rect2).intersects(rects["chips"]) and not (rects["side"] as Rect2).intersects(rects["chips"]) and not (rects["tracker"] as Rect2).intersects(rects["side"]) and view.grow(1.0).encloses(rects["side"]) and view.grow(1.0).encloses(rects["tracker"])
 	await bot._shot("hud-175", 0.1)
-	Settings.set_ui_scale(before)
+	hud_pets_for_test(model.owns_callable())
+	Settings.ui_scale = before
+	Settings._run_only.erase("ui_scale")
+	Settings.apply_ui_scale()
 	await bot._wait(0.4)
 	bot._step("large text fits", inside and apart, "at 175 %% (%s): %s; tracker %s, chips %s, side buttons %s %s" % [str(view.size), ", ".join(report), str(rects["tracker"]), str(rects["chips"]), str(rects["side"]), "apart" if apart else "OVERLAP"])
