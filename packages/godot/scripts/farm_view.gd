@@ -642,6 +642,8 @@ func _instance_object(id: String, obj: Dictionary, groups: Dictionary) -> void:
 			mname = str(list[int(obj.get("variant", 0)) % list.size()])
 		else:
 			mname = str(list[int(_h2(x, y, 1) * list.size()) % list.size()])
+		if (Quality.preset == "lag" or Quality.preset == "mellan") and spec.has("lo"):
+			mname = str(spec["lo"]) # (a cheaper mesh for a wood of a thousand)
 		# a wall, door or window a paint bucket has coloured: the server's `variant` 1..6 (0 is unpainted)
 		if PAINTABLE.has(kind) and int(obj.get("variant", 0)) > 0:
 			mname = "paint:%s:%d" % [mname, int(obj.get("variant", 0))]
@@ -789,7 +791,18 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 	if lt is Array:
 		var night := bool(spec.get("night", false))
 		var lcol: Color = lt[0]
-		_add_light(node, Vector3(0.0, float(lt[3]), 0.0), lcol, float(lt[1]), float(lt[2]), float(lt[4]), night, float(lt[5]) if lt.size() > 5 else -1.0)
+		if bool(spec.get("few_lights", false)):
+			# a cave is lined with torches: on Låg each is a flat glow (no light of its own), elsewhere only the near ones light
+			# (the distance fade of a street's lamps, a short one)
+			if Quality.preset == "lag":
+				var gq0 := assets.glow_quad(lcol, 1.6, 1.1)
+				gq0.position = Vector3(0.0, float(lt[3]), 0.0)
+				_billboard(gq0)
+				node.add_child(gq0)
+			else:
+				_add_light(node, Vector3(0.0, float(lt[3]), 0.0), lcol, float(lt[1]), float(lt[2]), float(lt[4]), night, 9.0)
+		else:
+			_add_light(node, Vector3(0.0, float(lt[3]), 0.0), lcol, float(lt[1]), float(lt[2]), float(lt[4]), night, float(lt[5]) if lt.size() > 5 else -1.0)
 		if night:
 			var gq := assets.glow_quad(lcol, 1.4, 0.0)
 			gq.position = Vector3(0.0, float(lt[3]), 0.0)

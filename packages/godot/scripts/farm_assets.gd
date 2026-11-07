@@ -155,6 +155,63 @@ const SPECS := {
 	"banner_pole": {"m": ["banner_0", "banner_1", "banner_2"], "by_variant": true},
 	"runestone": {"m": ["runestone"], "node": true, "light": [Color("#38d8f0"), 4.0, 0.9, 1.0, 0.1]},
 	"saga_stone": {"m": ["kampasten"], "node": true, "light": [Color("#38d8f0"), 5.0, 1.2, 1.3, 0.12]},
+	# --- the wild maps' own props (wild_meshes.gd): plants, bones, mining, the moon, the landmarks, the seasons' decor
+	"banana_plant": {"m": ["wp_banana_plant"], "yaw": "free"},
+	"beehive": {"m": ["wp_beehive"], "front": true},
+	"candy_cane": {"m": ["wp_candy_cane"], "yaw": "free"},
+	"lollipop_tree": {"m": ["wp_lollipop_tree"], "yaw": "free"},
+	"gingerbread_house": {"m": ["wp_gingerbread_house"], "node": true, "front": true, "light": [Color("#ffc977"), 4.5, 1.0, 1.0, 0.15], "night": true},
+	"dino_bones": {"m": ["wp_dino_bones"]},
+	"dino_skeleton": {"m": ["wp_dino_skeleton"], "front": true},
+	"fossil_rock": {"m": ["wp_fossil_rock"], "yaw": "free"},
+	"bones": {"m": ["wp_bones"], "yaw": "free"},
+	"fairy_ring": {"m": ["wp_fairy_ring"]},
+	"dragon_egg": {"m": ["wp_dragon_egg"]},
+	"wisp_jar": {"m": ["wp_wisp_jar"], "node": true, "few_lights": true, "light": [Color("#bfe8ff"), 3.0, 0.8, 0.5, 0.3]},
+	"ghost_flag": {"m": ["wp_ghost_flag"], "yaw": "free"},
+	"lights": {"m": ["wp_lights"]},
+	"easter_twigs": {"m": ["wp_easter_twigs"], "yaw": "free"},
+	"egg_basket": {"m": ["wp_egg_basket"], "yaw": "free"},
+	"flower_wreath_decor": {"m": ["wp_flower_wreath_decor"]},
+	"cave_wall": {"m": ["wp_cave_wall_0_0", "wp_cave_wall_0_1", "wp_cave_wall_0_0", "wp_cave_wall_0_1", "wp_cave_wall_1_0", "wp_cave_wall_1_1", "wp_cave_wall_2_0", "wp_cave_wall_2_1", "wp_cave_wall_3_0", "wp_cave_wall_3_1", "wp_cave_wall_4_0", "wp_cave_wall_4_1", "wp_cave_wall_5_0", "wp_cave_wall_5_1", "wp_cave_wall_6_0", "wp_cave_wall_6_1", "wp_cave_wall_7_0", "wp_cave_wall_7_1", "wp_cave_wall_8_0", "wp_cave_wall_8_1", "wp_cave_wall_9_0", "wp_cave_wall_9_1", "wp_cave_wall_10_0", "wp_cave_wall_10_1"], "by_variant": true},
+	"cave_torch": {"m": ["wp_cave_torch"], "node": true, "few_lights": true, "light": [FIRE, 5.0, 1.5, 1.2, 0.35]},
+	"cave_exit": {"m": ["wp_cave_exit"]},
+	"bath_exit": {"m": ["wp_bath_exit"]},
+	"cave_rock": {"m": ["wp_cave_rock_0", "wp_cave_rock_1", "wp_cave_rock_2", "wp_cave_rock_3", "wp_cave_rock_4", "wp_cave_rock_5", "wp_cave_rock_6", "wp_cave_rock_7", "wp_cave_rock_8", "wp_cave_rock_9", "wp_cave_rock_10"], "by_variant": true, "yaw": "free"},
+	"stalagmite": {"m": ["wp_stalagmite_0", "wp_stalagmite_1", "wp_stalagmite_2", "wp_stalagmite_3", "wp_stalagmite_4", "wp_stalagmite_5", "wp_stalagmite_6", "wp_stalagmite_7", "wp_stalagmite_8", "wp_stalagmite_9", "wp_stalagmite_10"], "by_variant": true, "yaw": "free"},
+	"ore": {"m": ["wp_ore_0", "wp_ore_1"], "yaw": "free"},
+	"gold_vein": {"m": ["wp_gold_vein"], "yaw": "free"},
+	"gem_vein": {"m": ["wp_gem_vein"], "yaw": "free"},
+	"crystal": {"m": ["wp_crystal_0", "wp_crystal_1", "wp_crystal_2", "wp_crystal_3"], "by_variant": true, "yaw": "free"},
+	"fire_crystal": {"m": ["wp_fire_crystal"], "yaw": "free"},
+	"star_crystal": {"m": ["wp_star_crystal"], "yaw": "free"},
+	"giant_mushroom": {"m": ["wp_giant_mushroom"], "lo": "wp_giant_mushroom_lo", "yaw": "free"},
+	"giant_glowshroom": {"m": ["wp_giant_glowshroom"], "lo": "wp_giant_glowshroom_lo", "yaw": "free"},
+	"obsidian_rock": {"m": ["wp_obsidian_rock"], "yaw": "free"},
+	"moon_rock": {"m": ["wp_moon_rock"], "yaw": "free"},
+	"moon_cheese": {"m": ["wp_moon_cheese"], "yaw": "free"},
+	"crater": {"m": ["wp_crater"]},
+	"earth": {"m": ["wp_earth"]},
+	"flag_se": {"m": ["wp_flag_se"]},
+	"rocket": {"m": ["wp_rocket"], "node": true, "front": true, "light": [Color("#ffd98a"), 4.0, 0.8, 1.5, 0.1]},
+	"satellite_dish": {"m": ["wp_satellite_dish"], "front": true},
+	"ufo": {"m": ["wp_ufo"], "node": true, "front": true, "light": [Color("#8affd0"), 5.0, 1.0, 0.4, 0.25]},
+	"pyramid": {"m": ["wp_pyramid"], "node": true, "front": true, "light": [Color("#ffb060"), 4.0, 1.0, 1.1, 0.35]},
+	"temple": {"m": ["wp_temple"], "node": true, "front": true, "light": [Color("#ffb060"), 4.0, 1.0, 1.0, 0.35]},
+	"volcano": {"m": ["wp_volcano"], "node": true, "light": [Color("#ff6a20"), 7.0, 1.4, 3.1, 0.3]},
+	"shipwreck": {"m": ["wp_shipwreck"], "front": true},
+	"ruin_pillar": {"m": ["wp_ruin_pillar"], "yaw": "free"},
+	"steam_vent": {"m": ["wp_steam_vent"]},
+	"snowman_wild": {"m": ["wp_snowman_wild"]},
+	"signpost": {"m": ["vm_signpost"]},
+	"treasure": {"m": ["wp_treasure"], "front": true},
+	"alvlykta": {"m": ["wp_alvlykta"]},
+	"bifrostbit": {"m": ["wp_bifrostbit"]},
+	"dvargstaty": {"m": ["wp_dvargstaty"], "front": true},
+	"fenrislanka": {"m": ["wp_fenrislanka"]},
+	"hels_lykta": {"m": ["wp_hels_lykta"]},
+	"ormtand": {"m": ["wp_ormtand"]},
+	"solruna": {"m": ["wp_solruna"], "front": true},
 }
 
 ## What was drawn as a placeholder box or could not be loaded, as the warnings said (empty when every kind has a look).
@@ -196,6 +253,7 @@ func _init() -> void:
 
 
 func release() -> void:
+	WildMeshes.release() # (its meshes are shared with the dungeon's ZoneProps: both rebuild them on the next ask)
 	_meshes.clear()
 	_gtex.clear()
 	_glow_tex = null
@@ -335,6 +393,8 @@ func _make(n: String) -> ArrayMesh:
 		return _painted(pp[1], int(pp[2]))
 	if n.begins_with("vm_"):
 		return _village(n.substr(3))
+	if n.begins_with("wp_"):
+		return WildMeshes.mesh(n.substr(3))
 	if n.begins_with("ph_"):
 		var wh := n.substr(3).split("x")
 		return _placeholder(int(wh[0]), int(wh[1]))

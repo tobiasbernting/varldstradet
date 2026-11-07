@@ -17,6 +17,11 @@ var _bar: ProgressBar
 var _fill: StyleBoxFlat
 var _zone: Label
 var _runor: HBoxContainer
+var _spirit_row: HBoxContainer
+var _star: Label
+var _spirit: Label
+var _spirit_shown := -1
+var _level_shown := -1
 var _runor_key := ""
 var _shown_sec := -1
 var _zone_shown := -1
@@ -74,6 +79,17 @@ func _ready() -> void:
 	_zone = Label.new()
 	_zone.add_theme_font_size_override("font_size", 18)
 	col.add_child(_zone)
+	# the Sagoandan: a star with how many are left (a free "everyone gets up" when the party falls), and Lätt as a word beside it
+	_spirit_row = HBoxContainer.new()
+	_spirit_row.add_theme_constant_override("separation", 6)
+	col.add_child(_spirit_row)
+	_star = Label.new()
+	_star.text = "🌟"
+	_star.add_theme_font_size_override("font_size", 24)
+	_spirit_row.add_child(_star)
+	_spirit = Label.new()
+	_spirit.add_theme_font_size_override("font_size", 22)
+	_spirit_row.add_child(_spirit)
 	_runor = HBoxContainer.new()
 	_runor.add_theme_constant_override("separation", 4)
 	col.add_child(_runor)
@@ -87,6 +103,8 @@ func _process(_delta: float) -> void:
 		_shown_sec = -1
 		_zone_shown = -1
 		_runor_key = ""
+		_spirit_shown = -1
+		_level_shown = -1
 		return
 	var run: Dictionary = model.run
 	var elapsed := model.run_elapsed()
@@ -114,6 +132,16 @@ func _process(_delta: float) -> void:
 		dots.append("👑" if zone == 3 else "♔")
 		var label := Strings.t("runBossZone") if zone >= 3 else Strings.t("runZone", {"n": zone + 1})
 		_zone.text = "%s   %s" % [" ".join(dots), label]
+	var spirit := int(run.get("spirit", 0))
+	var level := int(run.get("level", 1))
+	if spirit != _spirit_shown or level != _level_shown:
+		if _spirit_shown >= 0 and spirit != _spirit_shown:
+			_pulse_star()
+		_spirit_shown = spirit
+		_level_shown = level
+		_spirit.text = "×%d" % spirit + ("   " + Strings.t("runLevelLatt") if level == 0 else "")
+		_star.modulate = Color(1, 1, 1, 1.0 if spirit > 0 else 0.35)
+		_spirit_row.tooltip_text = Strings.t("runLevelLattText") if level == 0 else Strings.t("runLevelVanligText")
 	var taken: Array = run.get("runor", [])
 	var key := str(taken.size()) + (str(taken[taken.size() - 1]) if not taken.is_empty() else "")
 	if key != _runor_key:
@@ -127,6 +155,19 @@ func _process(_delta: float) -> void:
 			l.add_theme_font_size_override("font_size", 24)
 			l.tooltip_text = str(Data.runa(str(id)).get("name", id))
 			_runor.add_child(l)
+
+
+## The star swells for a moment when a Sagoandan is used (or one more comes).
+func _pulse_star() -> void:
+	_star.pivot_offset = _star.size / 2.0
+	var t := create_tween()
+	t.tween_property(_star, "scale", Vector2(1.7, 1.7), 0.18)
+	t.tween_property(_star, "scale", Vector2.ONE, 0.35)
+
+
+## What the star row says now (the run pair bot reads it to see that the level reached the HUD).
+func spirit_text() -> String:
+	return _spirit.text if _spirit != null else ""
 
 
 ## 12:34 from milliseconds.

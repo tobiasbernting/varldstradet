@@ -79,6 +79,7 @@ import {
   SMITH_ID,
   forgeLevel,
   type ForgeCost,
+  SAGOANDAN_HP,
 } from './saga.ts';
 import { runHooks } from './runhooks.ts';
 import { sagaCheckpoint, spawnSagaMob } from './sagamap.ts';
@@ -109,7 +110,7 @@ import {
   type SimCtx,
 } from './sim.ts';
 import { isUnderground } from './caves.ts';
-import { T, fmt, fmtDuration, itemName } from './sv.ts';
+import { RUN_T, T, fmt, fmtDuration, itemName } from './sv.ts';
 import { MAP_H, MAP_W, TILE, type AnimalState, type PlayerState, type WorldObject, type WorldState } from './types.ts';
 
 const px = (t: number): number => t * TILE + TILE / 2;
@@ -1000,12 +1001,12 @@ function hurtFighter(h: Here, p: PlayerState, amount: number, by: SagaMob | null
 }
 
 /** Gets a fallen player up at the last rest stone, with full health. */
-function standUp(h: Here, p: PlayerState, now: number, out: Change[]): void {
+function standUp(h: Here, p: PlayerState, now: number, out: Change[], hpFraction = 1): void {
   const f = h.inst.fighters[p.id];
   if (!f) return;
   delete f.down;
   delete f.frozen;
-  f.hp = f.max;
+  f.hp = Math.max(1, Math.round(f.max * hpFraction));
   f.fightAt = now;
   const at = sagaCheckpoint(h.inst);
   const spot = openTileNear(h.area, at.x, at.y);
@@ -1076,7 +1077,7 @@ function hurtMob(h: Here, m: SagaMob, by: string, amount: number, threatMul: num
         const spot = isSolidForAnimal(h.area, tileOf(at.x), tileOf(at.y)) ? { x: a.x, y: a.y } : at;
         const add = spawnSagaMob(h.area, h.inst, boss.phaseAdds.species, spot.x, spot.y, 'add', -1);
         const am = h.inst.mobs[add.id]!;
-        am.max = Math.round(am.max * mobHpScale(partySize(h)));
+        am.max = Math.round(am.max * mobHpScale(partySize(h)) * (h.inst.run?.levelHp ?? 1));
         am.hp = am.max;
         am.state = 'fight';
         am.atkAt = ctx.now + 800;
@@ -1478,11 +1479,13 @@ function startCast(h: Here, m: SagaMob, a: { x: number; y: number; facing: strin
   const i = boss.moves.findIndex((mv, k) => (mv.phase ?? 0) <= (m.phase ?? 0) && now >= m.next![k]! && (!unlocked || unlocked.includes(k)));
   if (i < 0) return false;
   const mv = boss.moves[i]!;
-  m.next![i] = now + mv.every + mv.warn;
+  // Lätt: the warning lasts longer (the zones, the cast and the snapshot all use this)
+  const warn = Math.round(mv.warn * (h.inst.run?.warnMul ?? 1));
+  m.next![i] = now + mv.every + warn;
   const party = partyOf(h).filter((p) => upright(h, p));
   // the ice prison needs a friend to break it: never on someone alone
   if (!party.length || (mv.move === 'freeze' && party.length < 2)) return false;
-  const at = now + mv.warn;
+  const at = now + warn;
   const zones: string[] = [];
   const tank = m.target ? h.farm.players[m.target] : undefined;
   const others = party.filter((p) => p !== tank);
@@ -1623,6 +1626,9 @@ function landCast(h: Here, m: SagaMob, ctx: SimCtx, out: Change[]): void {
     for (let i = 0; i < addCount(mv.count ?? 2, partySize(h)); i++) {
       const add = spawnSagaMob(h.area, h.inst, mv.add, a.x + (i - 0.5) * 2 * TILE, a.y + TILE, 'add', -1);
       const am = h.inst.mobs[add.id]!;
+      // (Lätt: the summoned adds are softer too; `levelHp` is 1 on Vanlig, so nothing else changes)
+      am.max = Math.max(1, Math.round(am.max * (h.inst.run?.levelHp ?? 1)));
+      am.hp = am.max;
       am.state = 'fight';
       am.atkAt = now + 800;
       if (party[0]) am.threat[party[i % party.length]!.id] = 5;
@@ -1658,7 +1664,7 @@ function freeze(h: Here, m: SagaMob, p: PlayerState, mv: BossAbility, ctx: SimCt
   const block = mv.block && BLOCK_SPECIES.has(mv.block) ? mv.block : 'isblock';
   const ice = spawnSagaMob(h.area, h.inst, block, p.x, p.y + 1, 'ice', -1);
   const im = h.inst.mobs[ice.id]!;
-  im.max = Math.round(ICE_HP * mobHpScale(partySize(h)));
+  im.max = Math.round(ICE_HP * mobHpScale(partySize(h)) * (h.inst.run?.levelHp ?? 1));
   im.hp = im.max;
   im.state = 'fight';
   im.holds = p.id;
@@ -1755,20 +1761,42 @@ export function tickSaga(area: WorldState, key: string, dtMs: number, ctx: SimCt
     if (Math.floor(now / 1000) === Math.floor((now - dtMs) / 1000)) continue;
     for (const p of party) if (upright(h, p) && inZone(z, p)) hurtFighter(h, p, z.dmg, inst.mobs[z.by] ?? null, now, out);
   }
-  // everyone fell: a short pause, then up at the last rest stone, and the monsters go home
+  // everyone fell: a short pause, then up at the last rest stone, and the monsters go home. In a run that happens only with
+  // a Sagoandan (or on Lätt, where a wipe never ends the run); otherwise runsim.ts ends the run when the pause is over.
   if (party.length && party.every((p) => !upright(h, p))) {
+    const link = inst.run;
     if (inst.wipeAt === undefined) {
       inst.wipeAt = now + WIPE_MS;
+      // a Sagoandan is for a run still being fought; once the boss is down only Lätt (which never ends on a wipe) gets everyone up, free
+      const spirits = inst.bossDown ? 0 : (link?.spirit ?? 0);
+      if (link && (spirits > 0 || link.soft)) link.revive = true;
       const boss = Object.values(inst.mobs).find((m) => (m.kind === 'boss' || m.kind === 'mini') && m.state === 'fight');
       if (boss) out.push(yell(h, boss.species, SAGA_BOSSES[boss.species]!.yells.wipe));
-      for (const p of party) out.push({ t: 'banner', to: p.id, area: key, text: T.sagaWipe, sub: inst.run?.wipeSub ?? T.sagaWipeSub, kind: 'wipe' });
-    } else if (now >= inst.wipeAt && !inst.run) {
+      for (const p of party) {
+        if (link?.revive) {
+          const left = Math.max(0, spirits - 1);
+          out.push({ t: 'banner', to: p.id, area: key, text: spirits > 0 ? RUN_T.spirit : RUN_T.spiritFree, sub: spirits > 0 ? fmt(RUN_T.spiritSub, { n: left }) : RUN_T.spiritFreeSub, kind: 'level' });
+        } else out.push({ t: 'banner', to: p.id, area: key, text: T.sagaWipe, sub: link?.wipeSub ?? T.sagaWipeSub, kind: 'wipe' });
+      }
+    } else if (now >= inst.wipeAt && (!link || link.revive)) {
       delete inst.wipeAt;
+      let fraction = 1;
+      if (link) {
+        delete link.revive;
+        if (!inst.bossDown) link.used = (link.used ?? 0) + 1;
+        if (!inst.bossDown && (link.spirit ?? 0) > 0) {
+          link.spirit = (link.spirit ?? 0) - 1;
+          fraction = SAGOANDAN_HP;
+        }
+      }
       for (const m of Object.values(inst.mobs)) if (m.state === 'fight') resetMob(h, m, out);
       for (const z of [...inst.zones]) dropZone(h, z.id, out);
-      for (const p of party) standUp(h, p, now, out);
+      for (const p of party) standUp(h, p, now, out, fraction);
     }
-  } else delete inst.wipeAt;
+  } else {
+    delete inst.wipeAt;
+    if (inst.run) delete inst.run.revive;
+  }
 }
 
 /** Every plate is lit: the puzzle room's gate goes, like the gate after the mid-boss. */
@@ -1846,7 +1874,7 @@ export function sagaSnapshot(farm: WorldState, now: number): Record<string, Saga
       if ((m.kind === 'boss' || m.kind === 'mini') && m.state === 'fight') {
         const mv = m.cast ? SAGA_BOSSES[m.species]?.moves[m.cast.move] : undefined;
         snap.b = { id: m.id, phase: m.phase ?? 0 };
-        if (mv && m.cast) snap.b.cast = { name: mv.name, at: m.cast.at, warn: mv.warn, kick: !!mv.interrupt };
+        if (mv && m.cast) snap.b.cast = { name: mv.name, at: m.cast.at, warn: Math.round(mv.warn * (inst.run?.warnMul ?? 1)), kick: !!mv.interrupt };
       }
     }
     (res ??= {})[k] = snap;

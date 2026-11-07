@@ -78,6 +78,7 @@ func _show(summary: Dictionary) -> void:
 	_row("⏱  " + Strings.t("runEndedTime"), RunHud.format_time(float(summary.get("ms", 0))))
 	_row("🌱  " + Strings.t("runEndedSeeds"), "+%d" % int(summary.get("seeds", 0)))
 	_row("🗺  " + Strings.t("runEndedZones"), "%d / 3" % mini(3, int(summary.get("zones", 0))))
+	_row("🌟  " + Strings.t("runEndedSpirit"), "%d" % int(summary.get("spirit_used", 0)))
 	for c in _runor.get_children():
 		_runor.remove_child(c)
 		c.queue_free()

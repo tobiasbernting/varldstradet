@@ -42,6 +42,7 @@
 // BOT_ONLY=settings runs only this.
 //
 //   GODOT=~/godot/godot pnpm godot:bot            (GODOT defaults to `godot` on the PATH)
+//   BOT_RUN_LEVEL=1 makes the run pair play Vanlig (default 0: the lead picks Lätt at the arch window and the check sees the level and the star on the HUD)
 //   BOT_RUN_MAX_WIPES=0 sets how many wipes the run pair retries (default 2; 0 = a wipe fails the check)
 //   BOT_ONLY=run BOT_RUN_SECONDS=480 pnpm godot:bot [-- --full]   (the run pair alone; --full plays to the boss: BOT_RUN_SECONDS=2400)
 //   BOT_RUN_SHOTS=dir                             (the run pair saves pictures there; needs a window: run it under xvfb-run)
@@ -82,6 +83,8 @@ const archLanes: string[][] = [
 ];
 /** How many maps a walker crosses to reach each arch (the farm is one): the far ones go first in a lane and get a time budget from the route, which only matters when a runner is slow (a walker is done as soon as it is in). */
 const archMaps: Record<string, number> = { fenrir: 3, hel: 2, orm: 3, dvarg: 3, alv: 3, surt: 5, loke: 5 };
+/** Surts and Bifrost's arches are five maps out, through the volcano and the space base, where wandering monsters knock an unarmed walker back to the farm again and again (it failed once that way with 470 s): they are walked with `BOT_ARCHES=surt,loke` (they passed in earlier runs), and the shared package's arch test covers all nine without walking. */
+const archLong = ['surt', 'loke'];
 const archWanted = (process.env.BOT_ARCHES ?? '') === 'none' ? [] : (process.env.BOT_ARCHES ?? '').split(',').filter(Boolean);
 const farmerName = 'Bot-Bonde';
 const creatorName = 'Bot-Skapare';
@@ -95,6 +98,11 @@ if (runMaxWipes !== '' && !/^\d+$/.test(runMaxWipes)) {
   process.exit(2);
 }
 const runShots = process.env.BOT_RUN_SHOTS ?? '';
+const runLevel = process.env.BOT_RUN_LEVEL ?? '0'; // the difficulty the lead picks at the arch: 0 Lätt (the default of the check), 1 Vanlig
+if (runLevel !== '0' && runLevel !== '1') {
+  console.error(`BOT_RUN_LEVEL must be 0 or 1 (got '${runLevel}')`);
+  process.exit(2);
+}
 const runNames = ['Run-Ask', 'Run-Embla'];
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'varldstradet-bot-'));
 
@@ -136,7 +144,7 @@ interface Report {
   locked_seen?: boolean;
   unlock_sent?: boolean;
   summary?: string;
-  run?: { role: string; zones: number[]; exits: number; presses: number; picks: number; runor: string[]; started: boolean; joined: boolean; ended: { outcome: string } | null; boss_down: boolean; seeds: number };
+  run?: { level?: number; spirit?: number; hud_spirit?: string; role: string; zones: number[]; exits: number; presses: number; picks: number; runor: string[]; started: boolean; joined: boolean; ended: { outcome: string } | null; boss_down: boolean; seeds: number };
 }
 
 interface FarmReport {
@@ -399,6 +407,10 @@ function checkRunner(r: Report, botLog?: string): void {
   check(run.picks >= 1, `${r.name}: voted on a runa card and the server's offer showed the vote (${run.picks})`);
   check(run.runor.length >= 1, `${r.name}: the pick gave the party a runa (${run.runor.join(', ') || 'none'})`);
   check(run.seeds >= 1, `${r.name}: earned sagafrön in the run (${run.seeds})`);
+  // the level chosen at the arch reached the server's state and the HUD's star (3 Sagoandar on Lätt, 1 on Vanlig, a word for Lätt)
+  const want = Number(runLevel);
+  check(run.level === want, `${r.name}: the run's level is ${want === 0 ? 'Lätt' : 'Vanlig'} (${run.level})`);
+  check(typeof run.hud_spirit === 'string' && run.hud_spirit.includes('×') && run.hud_spirit.includes('Lätt') === (want === 0), `${r.name}: the HUD shows the Sagoandar star (${run.hud_spirit ?? 'none'})${want === 0 ? ' and the word Lätt' : ''}`);
   if (fullRun) {
     check(run.zones.includes(3), `${r.name}: reached the boss's map (${JSON.stringify(run.zones)})`);
     check(run.boss_down, `${r.name}: the boss fell`);
@@ -517,7 +529,7 @@ async function main(): Promise<void> {
       runNames.forEach((name, i) => {
         const report = path.join(tmp, `${name}.json`);
         const log = path.join(tmp, `${name}.log`);
-        const args = ['--headless', '--path', godotDir, '--', '--runbot', '--route=run', `--server=http://127.0.0.1:${runPort}`, `--name=${name}`, `--report=${report}`, `--seconds=${runSeconds}`, `--role=${i === 0 ? 'lead' : 'follow'}`];
+        const args = ['--headless', '--path', godotDir, '--', '--runbot', '--route=run', `--server=http://127.0.0.1:${runPort}`, `--name=${name}`, `--report=${report}`, `--seconds=${runSeconds}`, `--role=${i === 0 ? 'lead' : 'follow'}`, ...(i === 0 ? [`--level=${runLevel}`] : [])];
         if (fullRun) args.push('--full');
         if (runMaxWipes !== '') args.push(`--max-wipes=${runMaxWipes}`);
         if (runShots) {
@@ -540,7 +552,7 @@ async function main(): Promise<void> {
     }
     // the other arches: lanes of walkers, one after another in a lane (a lane's results are checked at the end)
     const archResults: { id: string; report: string; log: string; code: number | null }[] = [];
-    const lanes = mode === '' || mode === 'walker' ? archLanes.map((lane) => lane.filter((id) => (archWanted.length === 0 || archWanted.includes(id)))).filter((lane) => lane.length) : [];
+    const lanes = mode === '' || mode === 'walker' ? archLanes.map((lane) => lane.filter((id) => (archWanted.length === 0 ? !archLong.includes(id) : archWanted.includes(id)))).filter((lane) => lane.length) : [];
     // (a server of its own: a server takes eight characters, and every walker is one)
     const archPort = port + 3;
     if (lanes.length) {

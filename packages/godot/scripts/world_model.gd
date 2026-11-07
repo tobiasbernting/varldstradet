@@ -441,7 +441,7 @@ func _run_change(c: Dictionary) -> void:
 			offer_changed.emit()
 		"ended":
 			if str(c.get("to", "")) == me:
-				ended = {"outcome": str(c.get("outcome", "leave")), "ms": float(c.get("ms", 0)), "seeds": int(c.get("seeds", 0)), "zones": int(c.get("zones", 0)), "runor": c.get("runor", [])}
+				ended = {"outcome": str(c.get("outcome", "leave")), "ms": float(c.get("ms", 0)), "seeds": int(c.get("seeds", 0)), "zones": int(c.get("zones", 0)), "runor": c.get("runor", []), "level": int(c.get("level", 1)), "spirit_used": int(c.get("spiritUsed", 0))}
 				run_ended.emit(ended)
 
 

@@ -15,6 +15,7 @@ extends Bot
 ## `--max-wipes=N`: how many wipes the bot retries from the arch (default 2, the CI's tolerance; 0 makes a wipe fail the run).
 
 var role := "lead"
+var level := -1 ## --level=0|1: the difficulty the lead picks at the arch window (-1: leave the window's own choice, Vanlig)
 var full := false
 var shots_dir := ""
 var _zones: Array = []
@@ -58,6 +59,13 @@ func _ready() -> void:
 				get_tree().quit(2)
 				return
 			max_wipes = int(v)
+		elif arg.begins_with("--level="):
+			var lv := arg.substr(8)
+			if lv != "0" and lv != "1":
+				push_error("--level needs 0 (Lätt) or 1 (Vanlig) (got '%s')" % lv)
+				get_tree().quit(2)
+				return
+			level = int(lv)
 		elif arg == "--full":
 			full = true
 		elif arg.begins_with("--shots="):
@@ -172,7 +180,10 @@ func _rb_tick(delta: float) -> void:
 			_shot("m5c-arch", 0.0)
 		if role == "lead":
 			var ready := _partner_near() or _window_t > 45.0
-			if ready and not _started and _window_t > 1.2 and win.start_button != null and not win.start_button.disabled:
+			if ready and level >= 0 and RunWindow.level != level and _window_t > 1.0 and win.latt_button != null:
+				_log("picks the level: %s" % ("Lätt" if level == 0 else "Vanlig"))
+				(win.latt_button if level == 0 else win.vanlig_button).pressed.emit()
+			elif ready and not _started and _window_t > 1.2 and win.start_button != null and not win.start_button.disabled and (level < 0 or RunWindow.level == level):
 				_started = true
 				_started_at = _t
 				_report["run"]["started"] = true
@@ -222,6 +233,10 @@ func _rb_tick(delta: float) -> void:
 	if m.run is Dictionary:
 		_report["run"]["runor"] = m.run.get("runor", [])
 		_report["run"]["seeds"] = int(m.run.get("earned", {}).get(m.me, 0))
+		_report["run"]["level"] = int(m.run.get("level", 1))
+		_report["run"]["spirit"] = int(m.run.get("spirit", 0))
+		if world.run_hud != null and world.run_hud.visible:
+			_report["run"]["hud_spirit"] = world.run_hud.spirit_text()
 		if str(m.run.get("phase", "")) == "victory" and not _leave_sent:
 			_report["run"]["boss_down"] = true
 			_leave_sent = true
