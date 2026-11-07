@@ -1,6 +1,7 @@
 // pnpm --filter @lilla-garden/server import-save <dump.sql | postgres://source> --target postgres://… [--dry-run]
 // See README, "Moving the family's save from lilla-garden".
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { sql } from 'drizzle-orm';
 import postgres from 'postgres';
@@ -76,6 +77,16 @@ export function pgSink(url: string): Sink & { close(): Promise<void> } {
 }
 
 /**
+ * A relative dump path is the one the user typed where they ran the command. `pnpm --filter … import-save` runs the tool inside
+ * packages/server, so pnpm's INIT_CWD (the directory the user ran pnpm from) is what it is relative to; without it, the cwd.
+ * A database URL and an absolute path are left as they are.
+ */
+export function resolveSource(source: string, env: { INIT_CWD?: string } = process.env, cwd: string = process.cwd()): string {
+  if (isPgUrl(source)) return source;
+  return resolve(env.INIT_CWD || cwd, source);
+}
+
+/**
  * The whole run. Order matters: the source is read, the target is looked at (read only) and refused if it is the
  * source or holds a world, and only then is anything migrated or written.
  */
@@ -83,7 +94,7 @@ export async function runImport(argv: string[], log: (line: string) => void = co
   const args = parseArgs(argv);
   if (args.help) return log(USAGE);
   if (args.target && isPgUrl(args.source) && sameDatabase(args.source, args.target)) throw new Error('The source and the target are the same database.');
-  const src = isPgUrl(args.source) ? await readLive(args.source) : parseDump(readFileSync(args.source, 'utf8'));
+  const src = isPgUrl(args.source) ? await readLive(args.source) : parseDump(readFileSync(resolveSource(args.source), 'utf8'));
   const { rows, report } = transform(src);
   const checkTarget = async (): Promise<void> => {
     const sink = pgSink(args.target!);
