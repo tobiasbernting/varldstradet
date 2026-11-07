@@ -97,7 +97,7 @@ const SPECS := {
 	"trough": {"m": ["trough"], "front": true},
 	"well": {"m": ["well"], "node": true},
 	"town_well": {"m": ["well"], "node": true},
-	"bus_stop": {"m": ["bus_stop"], "node": true, "front": true},
+	"bus_stop": {"m": ["vm_bus_stop"], "node": true, "front": true},
 	"cave": {"m": ["cave_mouth"], "node": true},
 	"cave_mouth": {"m": ["cave_mouth"], "node": true},
 	"saga_portal": {"m": ["arch"], "node": true},
@@ -119,7 +119,7 @@ const SPECS := {
 	"stall": {"m": ["stall"], "front": true},
 	"pigsty": {"m": ["pigsty"], "front": true},
 	"lamp": {"m": ["lamp"], "node": true, "light": [WARM, 7.5, 1.6, 1.5, 0.15], "night": true},
-	"street_lamp": {"m": ["street_lamp"], "node": true, "light": [Color(1.0, 0.78, 0.5), 9.0, 1.7, 2.2, 0.1, 12.0], "night": true},
+	"street_lamp": {"m": ["vm_street_lamp"], "node": true, "light": [Color(1.0, 0.78, 0.5), 7.5, 1.5, 1.7, 0.1, 12.0], "night": true},
 	"lantern": {"m": ["lantern"], "node": true, "light": [WARM, 6.0, 1.4, 0.6, 0.25], "night": true},
 	"torch": {"m": ["torch"], "node": true, "light": [FIRE, 6.0, 1.7, 1.3, 0.35], "night": true},
 	"crystal_lamp": {"m": ["lantern"], "node": true, "light": [Color("#9fe8ff"), 5.0, 1.0, 0.6, 0.1]},
@@ -141,21 +141,23 @@ const SPECS := {
 	"maypole": {"m": ["maypole"]},
 	"pumpkin_lantern": {"m": ["jack_o_lantern"], "node": true, "light": [Color("#ff9a3c"), 3.0, 0.9, 0.4, 0.3]},
 	# --- Köpingen (city.ts): the Norse market town; its streets are ground, these are what stands on them
-	"house_small": {"m": ["house_b"], "front": true, "chimney": Vector3(0.33, 3.05, -1.02)},
-	"apartment": {"m": ["apartment"], "front": true, "chimney": Vector3(0.9, 3.7, -0.3)},
-	"shop": {"m": ["village_shop"], "node": true, "front": true, "glows": [[-0.8, 0.8, 0.95], [0.8, 0.8, 0.95]], "light": [WARM, 6.0, 1.3, 1.2, 0.1], "night": true},
+	"house_small": {"m": ["vm_house_0", "vm_house_1", "vm_house_2", "vm_house_3"], "by_variant": true, "front": true, "chimney": Vector3(0.75, 2.8, -0.2)},
+	"apartment": {"m": ["vm_apartment_0", "vm_apartment_1", "vm_apartment_2", "vm_apartment_3"], "by_variant": true, "front": true, "chimney": Vector3(0.9, 3.4, -0.3)},
+	"shop": {"m": ["vm_shop_0", "vm_shop_1", "vm_shop_2"], "by_variant": true, "node": true, "front": true, "glows": [[0.15, 0.74, 0.96]], "light": [WARM, 6.0, 1.3, 1.2, 0.1], "night": true},
 	"market": {"m": ["market"], "front": true},
 	"sellstall": {"m": ["sell_stall"], "front": true},
-	"pizzeria": {"m": ["pizzeria"], "node": true, "front": true, "chimney": Vector3(0.7, 2.35, -0.3), "glows": [[-0.8, 0.75, 0.9], [0.8, 0.75, 0.9]], "light": [WARM, 6.0, 1.4, 1.2, 0.15], "night": true},
-	"bathhouse": {"m": ["bathhouse"], "front": true, "chimney": Vector3(-1.0, 2.4, -0.4)},
-	"train_station": {"m": ["station"], "node": true, "front": true, "glows": [[-0.8, 0.7, 0.75], [0.8, 0.7, 0.75]], "light": [Color(1.0, 0.78, 0.5), 7.0, 1.3, 1.6, 0.1], "night": true},
-	"traffic_light": {"m": ["traffic_light"]},
-	"parked_car": {"m": ["car_0", "car_1", "car_2"], "by_variant": true},
+	"pizzeria": {"m": ["vm_pizzeria"], "node": true, "front": true, "chimney": Vector3(1.0, 2.3, -0.3), "glows": [[-0.85, 0.62, 0.94]], "light": [WARM, 6.0, 1.4, 1.2, 0.15], "night": true},
+	"bathhouse": {"m": ["vm_bathhouse"], "front": true, "chimney": Vector3(-1.0, 2.2, -0.4)},
+	"train_station": {"m": ["vm_station"], "node": true, "front": true, "glows": [[-0.95, 0.6, 0.93], [0.95, 0.6, 0.93]], "light": [Color(1.0, 0.78, 0.5), 7.0, 1.3, 1.6, 0.1], "night": true},
+	"traffic_light": {"m": ["vm_signpost"]},
+	"parked_car": {"m": ["vm_cart_0", "vm_cart_1", "vm_cart_2"], "by_variant": true},
 	"banner_pole": {"m": ["banner_0", "banner_1", "banner_2"], "by_variant": true},
 	"runestone": {"m": ["runestone"], "node": true, "light": [Color("#38d8f0"), 4.0, 0.9, 1.0, 0.1]},
 	"saga_stone": {"m": ["kampasten"], "node": true, "light": [Color("#38d8f0"), 5.0, 1.2, 1.3, 0.12]},
 }
 
+## What was drawn as a placeholder box or could not be loaded, as the warnings said (empty when every kind has a look).
+var problems: Array[String] = []
 var assets_root := ""
 var _meshes: Dictionary = {}
 var _warned: Dictionary = {}
@@ -280,6 +282,7 @@ func has_spec(kind: String) -> bool:
 func warn_once(what: String, text: String) -> void:
 	if not _warned.has(what):
 		_warned[what] = true
+		problems.append(text) # (the placeholder check, placeholder_check.gd, fails on any)
 		push_warning(text)
 
 
@@ -317,6 +320,8 @@ func _make(n: String) -> ArrayMesh:
 		return _baked(NATURE + rock, 1.0, "cliff_" + cb[1])
 	if n.begins_with("gen:"):
 		return _landmark_mesh(n.substr(4))
+	if n.begins_with("vm_"):
+		return _village(n.substr(3))
 	if n.begins_with("ph_"):
 		var wh := n.substr(3).split("x")
 		return _placeholder(int(wh[0]), int(wh[1]))
@@ -379,7 +384,6 @@ func _make(n: String) -> ArrayMesh:
 		"chest": return _chest()
 		"workbench": return _workbench()
 		"trough": return _trough()
-		"bus_stop": return _bus_stop()
 		"cave_mouth": return _merged(_turned(_baked(NATURE + "cliff_cave_rock.glb", 2.0, "cliff", Vector2.ZERO, null, Vector3(0.0, 0.0, -0.85)), PI), _cave_dark())
 		"arch": return _arch()
 		"fardport": return RunMeshes.fardport()
@@ -402,7 +406,6 @@ func _make(n: String) -> ArrayMesh:
 		"pigsty": return _shed(2, 2, Color("#b27a5a"), Color("#8a4a3a"), 0.8, 0.45)
 		# the post's lantern hangs 1 unit south of the post: the pivot puts it over the tile's middle, where the light is
 		"lamp": return _baked(HALLOWEEN + "post_lantern.gltf", 0.75, "lamp", Vector2.ZERO, Vector3(0.0, 0.0, 1.0))
-		"street_lamp": return _baked(HALLOWEEN + "post_lantern.gltf", 1.1, "lamp", Vector2.ZERO, Vector3(0.0, 0.0, 1.0))
 		"lantern": return _baked(HALLOWEEN + "lantern_standing.gltf", 0.6, "lamp")
 		"torch": return _torch()
 		"wisp": return _wisp()
@@ -421,18 +424,8 @@ func _make(n: String) -> ArrayMesh:
 		"snowman": return _snowman()
 		"xmas_tree": return _xmas_tree()
 		"maypole": return _maypole()
-		"house_b": return _baked(HEX + "building_home_B_red.gltf", 0.0, "house", Vector2(2.7, 2.6))
-		"apartment": return _apartment()
-		"village_shop": return _baked(HEX + "building_tavern_red.gltf", 0.0, "house", Vector2(2.8, 1.8))
 		"market": return _baked(HEX + "building_market_red.gltf", 0.0, "house", Vector2(1.9, 1.9))
 		"sell_stall": return _sell_stall()
-		"pizzeria": return _pizzeria()
-		"bathhouse": return _bathhouse()
-		"station": return _station()
-		"traffic_light": return _traffic_light()
-		"car_0": return _car(Color("#c8473a"))
-		"car_1": return _car(Color("#3a6ac8"))
-		"car_2": return _car(Color("#e8c43a"))
 		"banner_0": return _banner(Color("#c8473a"))
 		"banner_1": return _banner(Color("#3a6ac8"))
 		"banner_2": return _banner(Color("#e8c43a"))
@@ -810,6 +803,26 @@ func _landmark_mesh(n: String) -> ArrayMesh:
 	return b.build()
 
 
+## Köpingen's timber buildings and street furniture (village_meshes.gd): "house_2", "apartment_1", "shop_0", "signpost", ...
+func _village(n: String) -> ArrayMesh:
+	var parts := n.rsplit("_", true, 1)
+	var v := int(parts[1]) if parts.size() == 2 and parts[1].is_valid_int() else 0
+	var base: String = parts[0] if parts.size() == 2 and parts[1].is_valid_int() else n
+	match base:
+		"house": return VillageMeshes.house(v)
+		"apartment": return VillageMeshes.apartment(v)
+		"shop": return VillageMeshes.shop(v)
+		"cart": return VillageMeshes.hand_cart(v)
+		"pizzeria": return VillageMeshes.pizzeria()
+		"bathhouse": return VillageMeshes.bathhouse()
+		"station": return VillageMeshes.station()
+		"signpost": return VillageMeshes.signpost()
+		"street_lamp": return VillageMeshes.scaled(VillageMeshes.street_lamp(), 0.85)
+		"bus_stop": return VillageMeshes.bus_stop()
+	warn_once(n, "farm: no village mesh '%s'" % n)
+	return null
+
+
 func _placeholder(w: int, h: int) -> ArrayMesh:
 	var b := FarmMesh.new()
 	b.box(Vector3(0.0, 0.4, 0.0), Vector3(maxf(0.5, w - 0.2), 0.8, maxf(0.5, h - 0.2)), Color("#9a80b8"), 0.0, 0.0, Color("#b89ad4"))
@@ -896,17 +909,6 @@ func _workbench() -> ArrayMesh:
 func _trough() -> ArrayMesh:
 	var b := FarmMesh.new()
 	b.box(Vector3(0.0, 0.2, 0.0), Vector3(0.9, 0.4, 0.46), WOOD, 0.0, 0.0, Color("#c8b45a"))
-	return b.build()
-
-
-func _bus_stop() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.box(Vector3(0.0, 1.0, 0.0), Vector3(0.08, 2.0, 0.08), IRON, 0.0)
-	b.box(Vector3(0.0, 1.85, 0.04), Vector3(0.62, 0.34, 0.05), Color("#2f6ec8"), 0.0)
-	b.box(Vector3(0.0, 1.85, 0.07), Vector3(0.46, 0.2, 0.02), Color("#f4f0e4"), 0.0)
-	b.box(Vector3(0.0, 0.3, 0.35), Vector3(0.7, 0.06, 0.3), WOOD, 0.0)
-	b.box(Vector3(-0.3, 0.15, 0.35), Vector3(0.06, 0.3, 0.26), WOOD.darkened(0.1), 0.0)
-	b.box(Vector3(0.3, 0.15, 0.35), Vector3(0.06, 0.3, 0.26), WOOD.darkened(0.1), 0.0)
 	return b.build()
 
 
@@ -1105,36 +1107,7 @@ func _maypole() -> ArrayMesh:
 
 
 # ---------------------------------------------------------------------------
-# Köpingen's buildings and street furniture (generated: the packs have no pizzeria, station or stone with runes)
-
-
-## A gable roof along x over a box of w × d, its ridge `rise` high.
-func _gable(b: FarmMesh, w: float, d: float, y0: float, rise: float, roof: Color, wall: Color) -> void:
-	var ov := 0.14
-	var hx := w * 0.5 + ov
-	var hz := d * 0.5 + ov
-	b.quad(Vector3(-hx, y0, hz), Vector3(hx, y0, hz), Vector3(hx, y0 + rise, 0.0), Vector3(-hx, y0 + rise, 0.0), roof.lightened(0.05))
-	b.quad(Vector3(hx, y0, -hz), Vector3(-hx, y0, -hz), Vector3(-hx, y0 + rise, 0.0), Vector3(hx, y0 + rise, 0.0), roof.darkened(0.1))
-	var wx := w * 0.5 - 0.02
-	var wz := d * 0.5 - 0.02
-	b.tri(Vector3(-wx, y0, wz), Vector3(-wx, y0 + rise - 0.05, 0.0), Vector3(-wx, y0, -wz), wall.darkened(0.1), wall.darkened(0.1), wall.darkened(0.1))
-	b.tri(Vector3(wx, y0, -wz), Vector3(wx, y0 + rise - 0.05, 0.0), Vector3(wx, y0, wz), wall.darkened(0.1), wall.darkened(0.1), wall.darkened(0.1))
-
-
-func _apartment() -> ArrayMesh:
-	var b := FarmMesh.new()
-	var wall := Color("#c9a77a")
-	b.box(Vector3(0.0, 1.35, 0.0), Vector3(2.8, 2.7, 2.8), wall, 0.0, 0.0, wall.darkened(0.05))
-	for floor_y in [0.55, 1.45, 2.3]:
-		b.box(Vector3(0.0, floor_y - 0.45, 1.41), Vector3(2.8, 0.05, 0.04), WOOD.darkened(0.2), 0.0)
-	for x in [-0.9, 0.0, 0.9]:
-		for y in [1.15, 2.0]:
-			b.box(Vector3(x, y, 1.42), Vector3(0.42, 0.5, 0.03), Color("#7fb0d8"), 0.0)
-			b.box(Vector3(x, y - 0.3, 1.43), Vector3(0.5, 0.06, 0.06), Color("#f4f0e4"), 0.0)
-	b.box(Vector3(0.0, 0.4, 1.42), Vector3(0.5, 0.8, 0.04), Color("#3a2a1e"), 0.0)
-	_gable(b, 2.8, 2.8, 2.7, 0.8, ROOF_RED.darkened(0.1), wall)
-	b.box(Vector3(0.9, 3.35, -0.3), Vector3(0.3, 0.7, 0.3), STONE_DARK, 0.0)
-	return b.build()
+# Köpingen's street furniture that is not timber (generated; the timber town is in village_meshes.gd)
 
 
 func _sell_stall() -> ArrayMesh:
@@ -1151,75 +1124,6 @@ func _sell_stall() -> ArrayMesh:
 	b.box(Vector3(0.1, 1.0, 0.3), Vector3(0.4, 0.2, 0.4), Color("#78a848"), 0.0)
 	b.box(Vector3(0.6, 1.0, 0.3), Vector3(0.36, 0.2, 0.4), Color("#c8473a"), 0.0)
 	b.box(Vector3(0.0, 0.2, -0.4), Vector3(1.6, 0.4, 0.3), WOOD.darkened(0.2), 0.0)
-	return b.build()
-
-
-func _pizzeria() -> ArrayMesh:
-	var b := FarmMesh.new()
-	var wall := Color("#e8d8b0")
-	b.box(Vector3(0.0, 0.8, 0.0), Vector3(2.8, 1.6, 1.8), wall, 0.0, 0.0, wall.darkened(0.05))
-	_gable(b, 2.8, 1.8, 1.6, 0.7, ROOF_RED, wall)
-	# the striped awning over the door and the windows, and the pizza on the sign
-	for i in range(8):
-		var col := Color("#f4f0e4") if i % 2 == 0 else Color("#c8473a")
-		var x0 := -1.25 + i * 0.31
-		b.quad(Vector3(x0, 1.35, 0.9), Vector3(x0 + 0.31, 1.35, 0.9), Vector3(x0 + 0.31, 1.0, 1.35), Vector3(x0, 1.0, 1.35), col)
-	b.box(Vector3(0.0, 0.4, 0.91), Vector3(0.5, 0.8, 0.04), Color("#3a2a1e"), 0.0)
-	for x in [-0.9, 0.9]:
-		b.box(Vector3(x, 0.8, 0.91), Vector3(0.5, 0.45, 0.03), Color("#ffd98a"), 0.0)
-	b.cylinder(Vector3(0.0, 1.75, 0.5), 0.34, 0.34, 0.06, 10, Color("#e8a83a"), Color("#e8a83a"), 0.0)
-	b.cylinder(Vector3(0.0, 1.78, 0.5), 0.2, 0.2, 0.04, 8, Color("#c8473a"), Color("#c8473a"), 0.0)
-	b.box(Vector3(1.0, 2.0, -0.4), Vector3(0.26, 0.7, 0.26), STONE_DARK, 0.0)
-	return b.build()
-
-
-func _bathhouse() -> ArrayMesh:
-	var b := FarmMesh.new()
-	var wall := Color("#b8b2a2")
-	b.box(Vector3(0.0, 0.75, 0.0), Vector3(2.8, 1.5, 1.8), wall, 0.0, 0.0, wall.lightened(0.05))
-	b.box(Vector3(0.0, 1.55, 0.0), Vector3(3.0, 0.12, 2.0), Color("#5e6a78"), 0.0)
-	_gable(b, 2.8, 1.8, 1.6, 0.55, Color("#5e6a78"), wall)
-	b.box(Vector3(0.0, 0.5, 0.91), Vector3(0.6, 1.0, 0.04), Color("#5a3a26"), 0.0)
-	for x in [-0.95, 0.95]:
-		b.box(Vector3(x, 0.9, 0.91), Vector3(0.4, 0.4, 0.03), Color("#9ad0e8"), 0.0)
-	b.box(Vector3(-1.0, 2.0, -0.4), Vector3(0.3, 0.8, 0.3), STONE_DARK, 0.0)
-	return b.build()
-
-
-func _station() -> ArrayMesh:
-	var b := FarmMesh.new()
-	# a platform with a waiting hall and a long roof on posts; the sign says where the dwarves' train goes
-	b.box(Vector3(0.0, 0.1, 0.0), Vector3(2.95, 0.2, 1.95), STONE, 0.0, 0.0, STONE.lightened(0.1))
-	b.box(Vector3(0.0, 0.8, -0.35), Vector3(2.5, 1.2, 0.9), Color("#a8793f"), 0.0, 0.0, WOOD_LIGHT)
-	for x in [-1.3, 1.3]:
-		b.box(Vector3(x, 0.9, 0.7), Vector3(0.1, 1.4, 0.1), WOOD.darkened(0.15), 0.0)
-	b.box(Vector3(0.0, 1.7, 0.2), Vector3(3.0, 0.12, 1.7), Color("#4a5a6a"), 0.0)
-	b.box(Vector3(0.0, 1.35, 0.12), Vector3(1.2, 0.3, 0.05), Color("#f4f0e4"), 0.0)
-	b.box(Vector3(0.0, 1.35, 0.15), Vector3(1.0, 0.1, 0.02), Color("#2f6ec8"), 0.0)
-	for x in [-0.8, 0.8]:
-		b.box(Vector3(x, 0.75, 0.11), Vector3(0.4, 0.45, 0.03), Color("#ffd98a"), 0.0)
-	b.box(Vector3(0.0, 0.55, 0.11), Vector3(0.38, 0.7, 0.03), Color("#3a2a1e"), 0.0)
-	return b.build()
-
-
-func _traffic_light() -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.cylinder(Vector3.ZERO, 0.05, 0.04, 1.9, 5, IRON, IRON, 0.0)
-	b.box(Vector3(0.0, 1.8, 0.0), Vector3(0.2, 0.5, 0.16), Color("#2a2a30"), 0.0)
-	b.box(Vector3(0.0, 1.94, 0.09), Vector3(0.1, 0.1, 0.02), Color("#e84a3a"), 0.0)
-	b.box(Vector3(0.0, 1.8, 0.09), Vector3(0.1, 0.1, 0.02), Color("#6a5a2a"), 0.0)
-	b.box(Vector3(0.0, 1.66, 0.09), Vector3(0.1, 0.1, 0.02), Color("#4ae85a"), 0.0)
-	return b.build()
-
-
-func _car(body: Color) -> ArrayMesh:
-	var b := FarmMesh.new()
-	b.box(Vector3(0.0, 0.32, 0.0), Vector3(1.7, 0.4, 0.8), body, 0.0, 0.0, body.lightened(0.08))
-	b.box(Vector3(-0.1, 0.68, 0.0), Vector3(0.9, 0.34, 0.7), body.darkened(0.05), 0.0, 0.0, body.lightened(0.15))
-	b.box(Vector3(-0.1, 0.68, 0.0), Vector3(0.94, 0.22, 0.72), Color("#7fb0d8"), 0.0)
-	for x in [-0.55, 0.55]:
-		for z in [-0.38, 0.38]:
-			b.box(Vector3(x, 0.14, z), Vector3(0.28, 0.28, 0.12), Color("#1e1e22"), 0.0)
 	return b.build()
 
 

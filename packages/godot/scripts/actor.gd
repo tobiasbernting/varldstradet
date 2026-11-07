@@ -3,7 +3,7 @@ extends Node3D
 ## Someone standing in the world as a pixel sprite on a billboard (ART.md): a player in a class outfit or one of
 ## the saga's creatures, with a name over the head. The sheets come from assets/sprites (tools/export-sprites.mts).
 ## Heroes have four directions by three frames; creatures one side view (facing right) by two frames, mirrored for
-## left. A missing sheet shows a plain magenta figure, so an unexported creature is visible rather than invisible.
+## left. A missing sheet shows a plain stand-in figure (`is_placeholder`, which --placeholdercheck fails on), so an unexported creature is visible rather than invisible.
 ##
 ## M3b adds what a fight shows on a body: a flash when hit, a lunge when swinging, lying flat when fallen, the ice
 ## block or the web around a frozen friend, a health bar over the head, a chat or emote bubble, and the mark on the
@@ -86,6 +86,15 @@ var _once_t := 0.0 ## seconds left of a one-shot animation (attack, hit), during
 static var _anim_libs: Array = [] ## AnimationLibrary, loaded once from the pack's two rig files
 ## The voxel body (`--people3d`, voxel_body.gd): a creature's sprite frames extruded into meshes, or null.
 var voxel: MeshInstance3D = null
+## True when the actor has no picture and shows the plain stand-in figure (so a missing sheet is seen, not invisible);
+## placeholder_check.gd fails on any actor like that.
+var is_placeholder := false
+## A vehicle (the cart, the riding horse, Diligensen, the mine train): turns right round to face up or down a street, and
+## carries a lantern that shines at night (the browser's headlights were lanterns; `set_lantern`; none on the Låg preset).
+var full_turn := false
+var _lantern: OmniLight3D = null
+var _lantern_at := Vector3.ZERO
+var _wants_lantern := false
 var _vframes: Array[ArrayMesh] = []
 var _vmat: ShaderMaterial = null
 var _vframe := -1
@@ -143,6 +152,7 @@ func set_sheet(name_of_sheet: String) -> bool:
 
 ## Shows a texture that is a row of frames (`frames` names them in order): a composed player, an animal, a villager.
 func set_texture(tex: Texture2D, frame_names: Array, fw: int, fh: int, headroom: int) -> void:
+	is_placeholder = false # (a real picture replaces the stand-in)
 	_frames = frame_names
 	_frame_w = fw
 	_frame_h = fh
@@ -157,6 +167,7 @@ func set_texture(tex: Texture2D, frame_names: Array, fw: int, fh: int, headroom:
 
 
 func _placeholder() -> void:
+	is_placeholder = true
 	var img := Image.create(16, 24, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0.8, 0.3, 0.8))
 	sprite.texture = ImageTexture.create_from_image(img)
@@ -241,6 +252,30 @@ func set_voxel(frames: Array[ArrayMesh], key: String) -> bool:
 	return true
 
 
+## A lantern light (the hanging lantern of the cart, the coach and the engine) at `at` (metres, in the body's own frame,
+## +x forward). It only shines at night (night_lift).
+func set_lantern(at: Vector3) -> void:
+	_lantern_at = at
+	_wants_lantern = true
+	_sync_lantern()
+
+
+## The light exists on Mellan and Hög and not on Låg, and follows a change of preset while the actor lives.
+func _sync_lantern() -> void:
+	var on := _wants_lantern and Quality.preset != "lag"
+	if on and _lantern == null:
+		_lantern = OmniLight3D.new()
+		_lantern.light_color = Color(1.0, 0.8, 0.45)
+		_lantern.omni_range = 3.2
+		_lantern.omni_attenuation = 1.6
+		_lantern.shadow_enabled = false
+		_lantern.visible = false
+		add_child(_lantern)
+	elif not on and _lantern != null:
+		_lantern.queue_free()
+		_lantern = null
+
+
 func has_voxel(key: String) -> bool:
 	return voxel != null and voxel.get_meta("key", "") == key
 
@@ -260,7 +295,13 @@ func _animate_voxel(facing: String, moving: bool, delta: float) -> void:
 	if facing == "left" or facing == "right":
 		_last_facing = facing
 	var want := 0.0 if _last_facing == "right" else PI
-	if moving:
+	if full_turn:
+		# a vehicle on a street: right 0, left PI, down the screen -PI/2, up it +PI/2 (a sprite faces +x)
+		if facing == "down":
+			want = -PI * 0.5
+		elif facing == "up":
+			want = PI * 0.5
+	elif moving:
 		# toward the camera (down) or away (up): +z is the way the camera sits
 		var s := 1.0 if _last_facing == "left" else -1.0
 		if facing == "down":
@@ -273,6 +314,11 @@ func _animate_voxel(facing: String, moving: bool, delta: float) -> void:
 	# standing breathes: the height swells and settles by 2 %
 	var breath := 0.0 if moving else 0.02 * sin(_vt * 2.4)
 	voxel.basis = Basis(Vector3.UP, _vyaw) * Basis.from_scale(Vector3(1.0, 1.0 + breath, 1.0))
+	_sync_lantern()
+	if _lantern != null:
+		_lantern.position = voxel.position + Basis(Vector3.UP, _vyaw) * _lantern_at
+		_lantern.light_energy = 1.1 * night_lift
+		_lantern.visible = night_lift > 0.04
 
 
 ## Gives the figure its own copy of every material (the looks share them between actors), with the texture as an

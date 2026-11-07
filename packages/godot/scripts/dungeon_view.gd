@@ -42,6 +42,8 @@ var _scenes: Dictionary = {} ## path -> PackedScene
 var _materials: Dictionary = {} ## [material id, tint] -> tinted material
 var _meshes: Dictionary = {} ## [path, tint] -> tinted mesh for MultiMeshes
 var _warned: Dictionary = {}
+## What was drawn as a placeholder box (empty when every kind has a look; placeholder_check.gd fails on any).
+var problems: Array[String] = []
 var _static: Node3D
 var _objects_root: Node3D
 var _env: WorldEnvironment
@@ -516,6 +518,7 @@ func _make_prop(kind: String, variant: int, x: int, y: int) -> Node3D:
 				return node
 			if not _warned.has(kind):
 				_warned[kind] = true
+				problems.append("dungeon: no model for '%s' yet, a placeholder box is shown" % kind)
 				push_warning("dungeon: no model for '%s' yet, a placeholder box is shown" % kind)
 			node.add_child(DungeonProps.placeholder(tint()))
 			if Data.object_def(kind).get("light", false):
