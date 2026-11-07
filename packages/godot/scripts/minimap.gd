@@ -42,6 +42,8 @@ var _t := 0.0
 var _redraw_t := 0.0
 var _cave := false
 var _built_objects := -1
+var _rebuild_t := 0.0 ## seconds since the picture was last made: it is made at most four times a second (an object change burst is one rebuild)
+static var _colours: Dictionary = {} ## COLORS as Color, made once
 
 
 func _ready() -> void:
@@ -106,9 +108,10 @@ func _process(delta: float) -> void:
 		return
 	_t += delta
 	_redraw_t += delta
+	_rebuild_t += delta
 	var key := model.my_area_key()
 	var objects: Dictionary = model.world_for(key).get("objects", {})
-	if key != _map_key or _dirty or objects.size() != _built_objects:
+	if key != _map_key or ((_dirty or objects.size() != _built_objects) and _rebuild_t >= REDRAW_EVERY):
 		_rebuild(key)
 	if _redraw_t >= REDRAW_EVERY:
 		_redraw_t = 0.0
@@ -121,6 +124,7 @@ func _rebuild(key: String) -> void:
 	if world.is_empty():
 		return
 	_dirty = false
+	_rebuild_t = 0.0
 	_map_key = key
 	_w = model.map_w(world)
 	_h = model.map_h(world)
@@ -128,9 +132,10 @@ func _rebuild(key: String) -> void:
 	var img := Image.create(_w, _h, false, Image.FORMAT_RGBA8)
 	img.fill(CAVE_GROUND if _cave else GROUND)
 	var terrain: Array = world.get("terrain", [])
-	var cols: Dictionary = {}
-	for k in COLORS:
-		cols[k] = Color(COLORS[k])
+	if _colours.is_empty():
+		for k in COLORS:
+			_colours[k] = Color(COLORS[k])
+	var cols := _colours
 	for y in range(_h):
 		for x in range(_w):
 			var i := y * _w + x
