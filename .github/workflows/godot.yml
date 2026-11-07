@@ -111,28 +111,16 @@ jobs:
         working-directory: packages/godot
         run: |
           set -euo pipefail
+          # M7b: the hero also walks east in each (`--walk`, no server): footsteps are made by the ground under them and the ambience
+          # mixes layers (nothing is played headless, but every step and layer is counted)
           for run in "farm lag summer" "village mellan summer" "farm hog autumn"; do
             set -- $run
-            timeout 120 ~/godot/godot --headless --path . --quit-after 300 -- --demo=$1 --quality=$2 --alive=all --year=$3 --time=0.9 2>&1 | tee "alive-$1-$2.log"
+            timeout 120 ~/godot/godot --headless --path . --quit-after 400 -- --demo=$1 --quality=$2 --alive=all --year=$3 --time=0.9 --walk 2>&1 | tee "alive-$1-$2.log"
+            grep -q "^walk: .* footsteps" "alive-$1-$2.log" || { echo "::error::the hero made no footsteps on $1 / $2"; exit 1; }
             if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate|leaked at exit|still in use at exit|Pages in use exist at exit|SHADER ERROR" "alive-$1-$2.log"; then
               echo "::error::the alive world on $1 / $2 reported errors or leaked at exit (see above)"; exit 1
             fi
             grep -q "drawn (outdoor)" "alive-$1-$2.log" || { echo "::error::the $1 demo drew nothing"; exit 1; }
-          done
-
-      # M7b: the hero walks east on the recorded farm and village (`--walk`, no server): footsteps are made by the ground under them
-      # and the ambience mixes layers (nothing is played headless, but every step and layer is counted); the farmer bot checks the
-      # same against a server, with startling wild animals. Under 10 s.
-      - name: The hero walks the farm and the village headless (footsteps by ground, ambience layers)
-        working-directory: packages/godot
-        run: |
-          set -euo pipefail
-          for demo in farm village; do
-            timeout 120 ~/godot/godot --headless --path . --quit-after 700 -- --demo=$demo --walk --time=0.4 2>&1 | tee "walk-$demo.log"
-            if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|leaked at exit|still in use at exit|Pages in use exist at exit" "walk-$demo.log"; then
-              echo "::error::the $demo walk reported errors or leaked at exit (see above)"; exit 1
-            fi
-            grep -q "^walk: .* footsteps" "walk-$demo.log" || { echo "::error::the $demo walk made no footsteps"; exit 1; }
           done
 
       # Shaders are not compiled by the headless renderer, so this is the one real compile check: a few seconds of a real

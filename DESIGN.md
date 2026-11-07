@@ -715,14 +715,14 @@ come back, footsteps, and the ambience of the place. The farm, the wild maps and
   on one screen only and be where it was for everyone else (and for the lasso and the petting). `shared/src/sim.ts`
   `tickStartle` (called in `tickAnimals` before the old lasso flee): a *wild* animal (`ANIMALS[..].wild`, not a predator, a
   monster, a pet, a mount or traffic, not one that has been petted today) that has a **moving** hero within `STARTLE_TILES` (4)
-  bolts away from them for `BOLT_MS` (2.4 s) at 2.2 × its speed (`startled`, the same `fleeUntil`/`fleeX` as the lasso scare, which is
-  unchanged), after remembering where it stood (`haunt`). When the flight ends it catches its breath (3.5 s and a little more) and
+  bolts away from them for `BOLT_MS` (1.8 s) at 2.2 × its speed (`startled`, the same `fleeUntil`/`fleeX` as the lasso scare, which is
+  unchanged), after remembering where it stood (`haunt`). When the flight ends it catches its breath (2 s and a little more) and
   walks back to its spot; from then on it potters around `haunt` instead of drifting. A hero who **stands still** startles nothing,
   and an animal that has been startled before and has calmed down creeps up to a hero standing still within `CURIOUS_TILES` (7),
   to 1.1 tiles from them: so the way to pet a shy animal is to walk near, stop and wait (the farmer bot does exactly this, and
   asserts it). No random numbers are used (deterministic; the jitter of the spot it returns to comes from its id), pets, horses,
   traffic, farm animals and monsters are untouched, and nothing is saved that was not (`startled` and `haunt` are optional
-  fields). Tests: `sim.test.ts` "vilda djur skräms och kommer tillbaka". There is no toggle in the presets for this: it is the
+  fields; a startled animal that has calmed down also drops its walk back to creep up to a quiet hero). Tests: `sim.test.ts` "vilda djur skräms och kommer tillbaka". There is no toggle in the presets for this: it is the
   same for every player, because it is the world's, not the screen's. The client-only extra is the **sparrows** (below).
 - **Footsteps** (`scripts/footsteps.gd`). One sound per stride (0.9 tile) walked, so the rate is the speed (a hero at full speed
   makes about 4.4 a second) and standing makes none; the first step after standing comes half a stride on; a jump of more than

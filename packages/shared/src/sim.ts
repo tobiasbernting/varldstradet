@@ -2623,9 +2623,9 @@ function tickHearts(world: WorldState, ctx: SimCtx, out: Change[]): void {
  * to a hero who stands still within CURIOUS_TILES; an animal that has been petted today knows you. Deterministic: no random numbers.
  */
 export const STARTLE_TILES = 4;
-export const BOLT_MS = 2400;
+export const BOLT_MS = 1800;
 const BOLT_SPEED_MUL = 2.2;
-const CALM_MS = 3500;
+const CALM_MS = 2000;
 /** A startled animal that has calmed down comes to a hero who stands still within this many tiles. */
 export const CURIOUS_TILES = 7;
 function tickStartle(world: WorldState, a: AnimalState, ctx: SimCtx): void {
@@ -2645,7 +2645,7 @@ function tickStartle(world: WorldState, a: AnimalState, ctx: SimCtx): void {
   }
   if (!near) {
     // an animal that has been startled before, and has caught its breath, sidles up to a hero who stands quietly near it
-    if (!a.haunt || a.waitMs > 0 || a.tx !== undefined) return;
+    if (!a.haunt || a.waitMs > 0) return;
     let quiet: PlayerState | undefined;
     let nearest = CURIOUS_TILES * TILE;
     for (const p of Object.values(world.players)) {
@@ -2682,7 +2682,7 @@ function tickFlee(world: WorldState, a: AnimalState, dtMs: number, ctx: SimCtx):
       delete a.fleeY;
       if (a.haunt) {
         // a startled animal catches its breath, then walks back to where it was (a spot of its own near it)
-        a.waitMs = CALM_MS + (a.id % 5) * 500;
+        a.waitMs = CALM_MS + (a.id % 5) * 250;
         a.tx = a.haunt.x + ((a.id % 3) - 1) * 6;
         a.ty = a.haunt.y + (((a.id >> 2) % 3) - 1) * 6;
       }

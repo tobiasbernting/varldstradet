@@ -60,12 +60,15 @@ func _ready() -> void:
 	get_window().size_changed.connect(_apply_viewport)
 
 
-func set_preset(p: String) -> void:
+## `persist` false for a run that only borrows a preset (the bench): the choice must not be written to settings.cfg, which
+## the next program on the same machine (a bot in CI) would read as the player's.
+func set_preset(p: String, persist := true) -> void:
 	if not PRESETS.has(p):
 		return
 	preset = p
-	Settings.quality = p
-	Settings.save()
+	if persist:
+		Settings.quality = p
+		Settings.save()
 	_apply_viewport()
 	changed.emit(p)
 

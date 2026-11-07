@@ -87,7 +87,7 @@ func _next() -> void:
 	if _stage >= _presets.size():
 		_finish()
 		return
-	Quality.set_preset(str(_presets[_stage]))
+	Quality.set_preset(str(_presets[_stage]), false) # (not saved: settings.cfg is the player's)
 	_enter("settle")
 
 
