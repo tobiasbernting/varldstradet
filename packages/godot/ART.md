@@ -515,3 +515,22 @@ The pixel art it follows is `packages/art/src/world.ts` (terrain, objects) and `
 Pictures (`docs/`): [the main street](docs/koepingen-street.png), [at night](docs/koepingen-street-night.png),
 [the houses and shops](docs/koepingen-houses.png), [the square](docs/koepingen-square.png), [the station](docs/koepingen-station.png),
 [before](docs/koepingen-before.png), and [the browser's art for the same spot beside the native client](docs/koepingen-browser-vs-native.png) (the left half is the same map, objects and vehicles drawn by the browser's own art code in `packages/art` on a canvas, laid out as the browser's client lays them out; the repository `lilla-garden` has no picture files and the browser client needs a database to run, so it is not a screenshot of the running browser).
+
+## The wild maps' own props (`scripts/wild_meshes.gd`)
+
+Every object kind of the data now has a look; the lilac placeholder box is gone from the wild maps. `PlaceholderCheck`'s old
+`KNOWN_UNDRAWN` list is gone. What is left is `DUNGEON_DRAWN` (the saga's torches, candles, exit stairs, gate, rest stone, chests,
+plate, coffins, bones, urns, the run's rune disc and the wall tiles): the dungeon view draws those with its own cases, and the check
+proves the dungeon view makes each without a stand-in and that no farm, forest, village, volcano, mushroom-wood or jungle fixture holds one.
+
+The props are generated with `FarmMesh` (vertex colours in the palette, one metre a tile, the footprint's middle at the origin, the front on
++z) after the browser's pixel art, so nothing needs a licence. `FarmAssets.SPECS` names them `wp_<kind>` (a cave wall by its theme and
+torch, a crystal by its colour, a stalagmite by its rock); the dungeon's `ZoneProps` falls back to the same meshes. Repeated props (rocks, ore, crystals,
+mushrooms, bones) are MultiMesh instances like the trees; only the lone landmarks carry a light (volcano, rocket, UFO, pyramid, temple,
+gingerbread house, wisp jar, cave torches), and the 600 glow mushrooms of the mushroom wood carry none. Every prop you can use has a clue on it:
+the fairy ring its toadstools and motes, the fossil rock a bone and a pick, the beehive its bees and honey, the shipwreck a chest on its deck,
+the rocket a ladder, the pyramid and temple a lit doorway, the treasure an open lid.
+
+Pictures: `docs/wild-props-sheet-*.png` (`--demo=lineup --props=kind,kind,... --zoom=1.2`, no world) and `docs/wild-map-*.png`
+(`--demo=jungle|mushroom|volcano`, fixtures from `pnpm godot:fixture`).
+

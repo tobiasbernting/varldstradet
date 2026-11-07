@@ -385,6 +385,8 @@ clumsy; with the Hirdmannen as their healer 20/20 and 20/20 (9.2 and 17.3 min). 
 monsters' numbers were **not** changed: `ZONE_HP`, `ZONE_PACKS`, `SOLO_MERCY` and the saga's scaling stay as they were,
 and three- and four-player parties play exactly as before.
 
+**Lätt and the Sagoandan** (GAME2.md sections 4.5, 5.3 and 5.5): the arch window has a Lätt / Vanlig choice; Lätt gives monsters ×0.6 hp and ×0.5 damage, longer boss warnings, a boss with its first two attacks, half sagafrön and three Sagoandar (a free "everyone up" on a wipe, one more after each zone) so a wipe never ends the run; Vanlig has one Sagoandan and the numbers above. The Lätt and Vanlig tables are in GAME2.md section 5.5.
+
 The exact table from the last run of the tests is in the pull request. Tuned: `ZONE_HP`, `ZONE_PACKS`, `SOLO_MERCY` and
 the hired companion's class (`companionClass` in `run.ts`: a healer if the humans have none, else a tank, else nobody).
 

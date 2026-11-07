@@ -51,6 +51,7 @@ var _frame_h := 32
 var _headroom := 0
 var _side_only := false
 var _anim_t := 0.0
+var _rate := 1.0 ## how much faster than walking the legs go (running: 1.5)
 var _last_facing := "down"
 var _flash_t := 0.0
 var _flash_colour := Color.WHITE
@@ -398,7 +399,11 @@ func _animate_model(facing: String, moving: bool, delta: float) -> void:
 	model.rotation.y = _yaw
 	if _once_t > 0.0:
 		_once_t -= delta
+		if _anim != null:
+			_anim.speed_scale = 1.0
 		return
+	if _anim != null:
+		_anim.speed_scale = _rate if moving else 1.0
 	_play(_rig["walk"] if moving else _rig["idle"])
 
 
@@ -444,9 +449,10 @@ func _show(frame_name: String) -> void:
 
 
 ## One frame of walking or standing, facing a way (down, up, left, right).
-func animate(facing: String, moving: bool, delta: float) -> void:
+func animate(facing: String, moving: bool, delta: float, rate := 1.0) -> void:
+	_rate = rate
 	if moving and pose == "":
-		_anim_t += delta
+		_anim_t += delta * rate
 	else:
 		_anim_t = 0.0
 	_tick_looks(delta)

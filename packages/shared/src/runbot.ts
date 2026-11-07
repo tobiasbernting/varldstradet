@@ -4,7 +4,7 @@
 // clumsy one that does neither) and of the hired companion (Hirdmannen) the server runs for a lone player. It only does
 // what a person at a keyboard can: it walks with `applyMove`, casts with `castSpell`, presses the use key with
 // `performAction`; it never touches the rules.
-import { applyMove, farmOf, isSolidForPlayer, performAction, type SimCtx } from './sim.ts';
+import { applyMove, farmOf, isSolidForPlayer, lineOfSight, performAction, type SimCtx } from './sim.ts';
 import { SLOW_MUL, castSpell, drinkPotion, inZone } from './sagasim.ts';
 import { CLASSES, REST_RADIUS, SAGA_BOSSES, SPELLS, type ClassId, type SagaMob } from './saga.ts';
 import { PLAYER_SPEED, TILE, type AnimalState, type Facing, type PlayerState, type WorldState } from './types.ts';
@@ -245,8 +245,9 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
       const n = Math.hypot(dx, dy) || 1;
       const step = (PLAYER_SPEED * (slowed ? SLOW_MUL : 1) * dtMs) / 1000;
       applyMove(area, p.id, p.x + (dx / n) * step, p.y + (dy / n) * step, facingOf(dx, dy), true);
-    } else if (d > want) {
-      walkTo(area, p, mind, { x: tileOf(a.x), y: tileOf(a.y) }, dtMs, now, slowed, want > 2 ? want - 0.5 : 1.2);
+    } else if (d > want || !lineOfSight(area, p.x, p.y, a.x, a.y)) {
+      // (a monster that is close but behind a wall cannot be hit: walk round to where it can be seen)
+      walkTo(area, p, mind, { x: tileOf(a.x), y: tileOf(a.y) }, dtMs, now, slowed, d > want && want > 2 ? want - 0.5 : 1.2);
     } else p.moving = false;
     return out;
   }

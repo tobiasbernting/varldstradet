@@ -356,6 +356,21 @@ jobs:
           shot koepingen-street --demo=village --time=0.4 --stage=street --at=37,36
           shot koepingen-street-night --demo=village --time=0.9 --stage=street --at=37,36
           shot koepingen-houses --demo=village --time=0.4 --at=18,28
+          # the wild maps' own props (wild_meshes.gd): the picture sheets of every kind and three wild maps
+          shot wild-props-1 --demo=lineup --zoom=1.3 --props=banana_plant,beehive,candy_cane,lollipop_tree,gingerbread_house,fairy_ring,dragon_egg,wisp_jar,egg_basket,easter_twigs,flower_wreath_decor,ghost_flag,lights,snowman_wild,signpost,treasure
+          shot wild-props-2 --demo=lineup --zoom=1.3 --props=dino_bones,dino_skeleton,fossil_rock,bones,shipwreck,ruin_pillar,steam_vent,obsidian_rock,fire_crystal,star_crystal,crystal,giant_mushroom,giant_glowshroom
+          shot wild-props-3 --demo=lineup --zoom=1.4 --props=cave_wall,cave_torch,cave_exit,bath_exit,cave_rock,stalagmite,ore,gold_vein,gem_vein,moon_rock,moon_cheese,crater,earth,flag_se,rocket,satellite_dish,ufo,alvlykta,bifrostbit,dvargstaty,fenrislanka,hels_lykta,ormtand,solruna
+          shot wild-props-4 --demo=lineup --zoom=1.15 --props=pyramid,temple,volcano
+          shot wild-jungle --demo=jungle --time=0.45
+          shot wild-mushroom --demo=mushroom --time=0.45
+          shot wild-volcano --demo=volcano --time=0.45
+          for scene in jungle mushroom; do
+            xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- --bench=mellan --scene=$scene 2>&1 | tee "bench-$scene.log"
+            grep -q "bench: done" "bench-$scene.log"
+            if grep -E "SCRIPT ERROR|leaked at exit|still in use at exit|Pages in use exist at exit" "bench-$scene.log"; then
+              echo "::error::the $scene bench reported errors or leaked at exit"; exit 1
+            fi
+          done
           xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- --bench=mellan --scene=farm 2>&1 | tee bench-farm.log
           grep -q "bench: done" bench-farm.log
           if grep -E "SCRIPT ERROR|leaked at exit|still in use at exit|Pages in use exist at exit" bench-farm.log; then

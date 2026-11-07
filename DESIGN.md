@@ -899,6 +899,13 @@ The owner played the native client and saw Köpingen as a modern town: asphalt, 
 - **No stand-ins.** `--placeholdercheck` (`scripts/placeholder_check.gd`, a headless step of the Godot workflow) plays every recorded world and fails if an object is drawn as a placeholder box, an actor has no sprite sheet, a vehicle is not a body, or a kind's mesh cannot be made.
 - **Pictures** (`packages/godot/docs/koepingen-*.png`, with the browser's art for the same spot beside the native one) are made with `--demo=village --stage=street`, which lays the main street out (a demo-only flag). Nothing here is third-party: `assets/LICENSES.md` notes it, `ART.md` has the details.
 
+## Runs R2: Lätt and the Sagoandan (2026-11-07)
+GAME2.md section 5.5 has the numbers; this is how it hangs together.
+- **Where the level lives.** `RunState.level` (`0` Lätt, `1` Vanlig; `parseRunLevel` in `run.ts` is the only reader of the wire value, `runMessage` refuses anything else with `RUN_T.badLevel`). `enterZone` turns it into the zone's `SagaRunLink`: `hpMul`/`bossMul` ×0.6 and `dmgMul` ×0.5 (they multiply the zone's own and `SOLO_MERCY`), `warnMul` 1.4, `moves` cut to the first two, `soft: true`; `pay` multiplies the sagafrön by `levelMuls(level).seeds`. The sagasim rules read only the link (`hurtFighter`, `pull`, `startCast`, `sagaSnapshot`), never the level.
+- **The wipe.** `sagasim.tick` decides at the start of the wipe pause: with `link.spirit > 0` (or `soft`, and the boss not yet down) it sets `link.revive` and shows the gold `level` banner; at the end of the pause it counts `used`, takes one `spirit` off (the star), gets everyone up at `SAGOANDAN_HP` (a free Lätt wipe: full health), resets the fighting monsters and drops the marks. Without `revive` nothing changes: `runsim.watchZone` ends the run as before (it now ignores a wipe whose `revive` is set). `watchZone` copies `spirit`/`used` from the link to `RunState` and sends a state change; `enterZone` hands the totals to the next zone's link and, on Lätt, adds one Sagoande after the first zone.
+- **Client.** `RunWindow.level` (static, kept while the game runs) is sent with `run start`; the HUD star row (`RunHud`) reads `run.spirit` and `run.level` from the state change and swells when the count changes; `RunEnd` shows `spiritUsed`. The run pair bot takes `--level=` (the check passes Lätt by default, `BOT_RUN_LEVEL=1` plays Vanlig) and reads the star's text back from the HUD.
+- **Bots.** `runbot.ts` walks round to a target it cannot see (no line of sight) instead of standing still; `runtune.ts` prints the GAME2 section 5.4 table.
+
 ## Godot client: books, markers, help and family (2026-11-07)
 
 Parity with the browser game (the audit after the owner's first play): the six things a child used to get from the web client that the native one lacked.
@@ -937,4 +944,3 @@ were already here (`packages/shared`), so this is drawing and sending, not new g
   `bot-check.mts` works them out again from the server's record; `{t:'dev', a:'sagaBest'}` (DEV_TELEPORT) records a best time through the real path for the journal check; a table of
   `jumpTo`'s refusals sits in `saga.test.ts` and against `FamilyWindow.can_jump_to`; at 175 % the scale is a run-only override; "down" on a page without buttons scrolls and then goes on to
   the footer. `pnpm godot:bot` runs with `--experimental-transform-types` (the check imports the shared saga code).
-

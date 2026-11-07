@@ -257,11 +257,11 @@ this the browser client was not needed for a farm evening, and on 2026-11-02 (M5
 **M5c** puts the runs (färder) on screen. On the farm the **färdport** is a real 3 × 2 arch with a teal-gold glow, the **Yggdrasil shoot**
 grows in five stages with the family's tree (a mound, a sapling, a young tree, a big tree, the glowing Världsträd), and the smithy, herb garden
 and longhouse are buildings. Using the arch opens **the arch window** (your class as a picture, the färdkost slots with the dishes from your
-bag, one big "Starta färden", or "Följ med" when a run lives); the zones are drawn by the dungeon view with the biome's own ground, the walls and
+bag, a **Lätt / Vanlig** choice, one big "Starta färden", or "Följ med" when a run lives); the zones are drawn by the dungeon view with the biome's own ground, the walls and
 decor of the dungeon it borrows from, its weather and a glowing exit; the HUD has the clock against the 30-minute target (past it the clock keeps
 counting in a warmer colour), zone n of 3 or the boss, and the runor taken; after each zone **three big cards** are voted on by tap, click, the
 pad's A or the keys 1-3; the end of a run shows a summary; and the shoot opens **the sagaträd** with its 18 nodes. The hired Hirdmannen is a hero
-sprite; one or two players get him in every run without a longhouse (a healer for a lone fighter, a tank for a lone healer, a healer or tank for a pair that lacks one), a longhouse only adds the fourth place. `pnpm godot:bot` has a run pair (`BOT_ONLY=run`; `-- --full` plays to the boss, `BOT_RUN_SECONDS=2400`): two bots walk to the arch, start,
+sprite; one or two players get him in every run without a longhouse (a healer for a lone fighter, a tank for a lone healer, a healer or tank for a pair that lacks one), a longhouse only adds the fourth place. **To play the easy level** (the kids): walk into the färdport and press the green **Lätt** button before "Starta färden" (Vanlig is lit by default). Lätt has softer monsters, longer warnings, three Sagoandar (the star 🌟 on the clock panel: a free "everyone gets up" if the party falls, one more after each zone) and a fall never ends the run; it pays half the sagafrön. Vanlig has one Sagoande. `pnpm godot:bot` has a run pair (`BOT_ONLY=run`, the lead picks Lätt and the check sees the level and the star on the HUD; `BOT_RUN_LEVEL=1` plays Vanlig; `-- --full` plays to the boss, `BOT_RUN_SECONDS=2400`): two bots walk to the arch, start,
 clear zone 1, vote and enter zone 2. Pictures: [the arch window](packages/godot/docs/m5c-arch.png), [a zone](packages/godot/docs/m5c-zone.png),
 [the cards](packages/godot/docs/m5c-cards.png), [the end of a run](packages/godot/docs/m5c-end.png) and [the sagaträd](packages/godot/docs/m5c-tree.png).
 
@@ -596,6 +596,7 @@ a wheel), the frame-rate counter and the world's sounds, plus the gear, quest, G
 | | Keyboard and mouse | Gamepad (Xbox names; PlayStation: ✕ ○ □ △) |
 | --- | --- | --- |
 | Walk | `W` `A` `S` `D` or the arrow keys | left stick or the d-pad |
+| Run (1.7 times as fast as walking, no stamina; on a mount the mount's speed counts instead) | hold `Shift` | hold the left trigger, or `B` outside a fight (in a fight `B` is a spell) |
 | Use (talk, open, harvest, hit what is in front of you) | `E` or `Space`, or click a tile next to you | `A`, or the right trigger |
 | Choose tool (the hotbar, 8 squares) | `1`–`8`, the mouse wheel, `[` and `]`, or click a square | `LB` and `RB` |
 | Bag | `Q` or `I` (a click on the held square also opens it) | `Y` |
@@ -624,7 +625,7 @@ In a dungeon or a run the same keys fight:
 
 The books and the other windows (Gårdsbok, journal, family, help) work with the keyboard (`Tab`/arrows move between the buttons, `Enter` presses, `Esc` or the same key closes), the mouse (click, wheel) and a pad (d-pad or left stick moves, `A` presses, `B` closes, the right stick scrolls a long page; in the help `←`/`→` or the d-pad change topic). The pad has no button free for them, so it opens them from the pause menu. Villagers show a yellow `!` (a new saga quest to take), a yellow `?` (to hand in), a red-orange `❗` (a wish of the day you can fill from your bag now), a plain `?` (a wish you cannot fill yet) and a dim `?` (a saga quest going on) over their heads, and say their lines when you come close; the saga's chapter and quests stay on the left of the screen once you have heard Völvan (click the header to fold them).
 
-Notes: the d-pad is shared. Its four directions also walk, so d-pad up opens the emote wheel (and walks up) and, in a fight, d-pad right switches target (and walks right); use the left stick for walking if that is in the way. The hotbar numbers and the spell numbers share `1`–`4`, so outdoors on the farm they pick tools and in a
+Notes: running is the browser game's 🏃 (there is no touch screen in the native client, so no on-screen run button); the left stick press is the pets' whistle, so it does not run as it did in the browser. The d-pad is shared. Its four directions also walk, so d-pad up opens the emote wheel (and walks up) and, in a fight, d-pad right switches target (and walks right); use the left stick for walking if that is in the way. The hotbar numbers and the spell numbers share `1`–`4`, so outdoors on the farm they pick tools and in a
 dungeon they cast. The gamepad's `Y` is the bag on the farm and the second spell in a dungeon. The kids' setting
 **Hjul** keeps the face buttons free of the spells; the choice is saved per computer in `user://settings.cfg`. To pair a controller with a Mac or a PC use the system's Bluetooth settings.
 

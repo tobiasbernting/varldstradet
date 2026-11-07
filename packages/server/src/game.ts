@@ -395,7 +395,7 @@ export class Game {
     let changes: Change[] = [];
     switch (msg.t) {
       case 'move':
-        applyMove(w, pid, msg.x, msg.y, msg.facing, msg.moving);
+        applyMove(w, pid, msg.x, msg.y, msg.facing, msg.moving, Date.now());
         return;
       case 'act':
         changes = tagArea(performAction(w, pid, Math.floor(msg.tx), Math.floor(msg.ty), this.ctx()), areaK);

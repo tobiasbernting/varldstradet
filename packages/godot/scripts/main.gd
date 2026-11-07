@@ -7,6 +7,7 @@ extends Node
 ##                       --demo=frost|surt|hel are the next dungeons; --demo=ending (Völvan's last hand-in) and --demo=loke --ending play the saga's ending (demo_ending.gd); --fight plays their bosses' moves (demo_bosses.gd), and
 ##                       --once leaves when it has played, --boss-move=<species>:<move>[:after] holds one move's marks for a picture;
 ##                       --time=0.7 --weather=rain --season=jul set the sky, --at=x,y where to stand
+##                       --boost shows the speed boost's chip (a picture of where it sits)
 ##                       --people3d 3D bodies for people and creatures (figure_3d.gd, voxel_body.gd, skeleton_figure.gd)
 ##   --demo=lineup       the 3D bodies side by side on green, no world (demo_lineup.gd; --set=undead|animals, --zoom=0.9)
 ##   --bench[=preset]    the demo scene on each quality preset (or one: lag, mellan, hog) in steady state, printing
@@ -206,6 +207,7 @@ func quit_clean(code := 0) -> void:
 	if is_instance_valid(world): # (the --demo=lineup scene has no world: it is freed in _ready)
 		world.release_sounds()
 	Voice.release()
+	WildMeshes.release()
 	for child in get_children():
 		child.queue_free()
 	await get_tree().process_frame
