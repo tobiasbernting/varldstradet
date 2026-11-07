@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DUNGEONS, RUN_MAX_MS, RUN_NUDGE_MS, RUN_T, TICK_HZ, TILE, VILLAGE_KEY, addItem, archFrontOf, areaKey, enterCave, fardportOf, getArea, landmarkOfKind, npcState, objectDef, placeIn, runOf, sagaKey, shootOf, type Change, type ServerMsg } from '../../shared/src/index.ts';
+import { DUNGEONS, DUNGEON_IDS, RUN_MAX_MS, RUN_NUDGE_MS, RUN_T, TICK_HZ, TILE, VILLAGE_KEY, addItem, archFrontOf, areaKey, enterCave, fardportOf, getArea, landmarkOfKind, npcState, objectDef, placeIn, runOf, sagaKey, shootOf, type Change, type ServerMsg } from '../../shared/src/index.ts';
 import { Game, type Link } from './game.ts';
 import { MemoryStore } from './db/store.ts';
 
@@ -287,6 +287,35 @@ describe('cave and dropped connections', () => {
     on.h({ t: 'dev', a: 'starter' });
     const inv = on.g.world.players[on.p.id]!.inventory;
     for (const item of ['jarnyxa', 'traskold', 'stenamulett']) expect(inv.filter((s) => s?.item === item).reduce((n, s) => n + s!.count, 0)).toBe(1);
+  });
+});
+
+describe('the dev switch for later chapters', () => {
+  const appearance = { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' as const };
+  const mk = async (devTeleport: boolean) => {
+    const g = new Game(new MemoryStore(), { autoStart: false, devTeleport });
+    await g.start();
+    const p = g.createPlayer('Kåre', appearance)!;
+    const link = fakeLink();
+    const h = g.connect(link);
+    h({ t: 'hello', playerId: p.id });
+    return { g, p, link, h };
+  };
+
+  it('`dev unlock` marks the earlier dungeons cleared only with DEV_TELEPORT on and a class chosen', async () => {
+    const off = await mk(false);
+    off.h({ t: 'saga', a: 'class', cls: 'krigare' });
+    off.h({ t: 'dev', a: 'unlock' });
+    expect(off.g.world.players[off.p.id]!.saga!.cleared).toEqual([]);
+    expect(off.link.msgs.some((m) => m.t === 'error')).toBe(true);
+
+    const on = await mk(true);
+    on.h({ t: 'dev', a: 'unlock' }); // no class yet: nothing
+    expect(on.g.world.players[on.p.id]!.saga?.cleared ?? []).toEqual([]);
+    on.h({ t: 'saga', a: 'class', cls: 'krigare' });
+    on.h({ t: 'dev', a: 'unlock' });
+    on.h({ t: 'dev', a: 'unlock' });
+    expect(on.g.world.players[on.p.id]!.saga!.cleared).toEqual(DUNGEON_IDS.slice(0, -1));
   });
 });
 

@@ -151,6 +151,8 @@ export type ClientMsg =
   | { t: 'dev'; a: 'nextDay' }
   /** Development only (same switch): the starter set Smed-Stina makes (a weapon, a shield, an amulet) for my class, for free. */
   | { t: 'dev'; a: 'starter' }
+  /** Development only (same switch): every dungeon before the last counts as cleared, so a check can use a later chapter's arch. */
+  | { t: 'dev'; a: 'unlock' }
   | { t: 'ping' };
 
 export interface PlayerSnap {

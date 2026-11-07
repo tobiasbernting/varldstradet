@@ -23,6 +23,7 @@ import {
   chooseClass,
   createPlayer,
   enterSaga,
+  teleport,
   generateSaga,
   generateWorld,
   getArea,
@@ -222,6 +223,22 @@ describe('classes and the way in', () => {
     enterSaga(world, p, arch);
     expect(p.area).toBe(sagaKey('draug'));
     expect(world.areas![sagaKey('draug')]!.saga!.fighters[p.id]!.hp).toBe(CLASSES.vaktare.hp);
+  });
+});
+
+describe('the world map\'s jump', () => {
+  it('works from the wild but not from inside a dungeon or a run (you leave by its way out)', () => {
+    const { world, players } = family();
+    const p = players[0]!;
+    p.visited = ['farm', 'a:0,-1'];
+    expect(teleport(world, p.id, 'a:0,-1').length).toBeGreaterThan(0);
+    expect(p.area).toBe('a:0,-1');
+    inside(world, p, 'krigare');
+    expect(p.area).toBe(sagaKey('draug'));
+    expect(teleport(world, p.id, 'farm')).toEqual([]);
+    expect(teleport(world, p.id, 'a:0,-1')).toEqual([]);
+    expect(p.area).toBe(sagaKey('draug'));
+    expect(world.areas![sagaKey('draug')]!.saga!.fighters[p.id]).toBeDefined();
   });
 });
 

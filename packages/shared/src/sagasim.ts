@@ -333,6 +333,18 @@ export function devEnterSaga(world: WorldState, playerId: string, id: string): C
 }
 
 /**
+ * Development only (DEV_TELEPORT=1, `dev unlock`): every dungeon but the last counts as cleared, so a check can walk to the
+ * arch of a later chapter and go in by the arch's own rules (the class and the chapter lock stay; only the clearing is skipped).
+ * Nothing for a player without a class.
+ */
+export function devUnlockChapters(world: WorldState, playerId: string): Change[] {
+  const p = farmOf(world).players[playerId];
+  if (!p?.saga?.cls) return [];
+  for (const id of DUNGEON_IDS.slice(0, -1)) if (!p.saga.cleared.includes(id)) p.saga.cleared.push(id);
+  return [playerChange(p)];
+}
+
+/**
  * Development only (DEV_TELEPORT=1, `dev starter`): the starter set Smed-Stina makes, without gold or her forge, for the
  * class the player has (a weapon, the wooden shield and the stone amulet), so a check of the native client, which has no
  * smithy yet, has something to put on in the gear window. Nothing for a player without a class.
