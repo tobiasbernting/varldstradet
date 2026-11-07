@@ -78,6 +78,8 @@ const archLanes: string[][] = [
   ['fenrir', 'hel', 'orm', 'surt'],
   ['dvarg', 'alv', 'loke'],
 ];
+/** Surts and Bifrost's arches are four maps from the farm (about 100 s each, longer on a loaded runner, which timed one out in CI): they are walked with `BOT_ARCHES=surt,loke`, and every arch (those two included) is covered without walking by the shared package's test of the arches (saga.test.ts). */
+const archLong = ['surt', 'loke'];
 const archWanted = (process.env.BOT_ARCHES ?? '') === 'none' ? [] : (process.env.BOT_ARCHES ?? '').split(',').filter(Boolean);
 const farmerName = 'Bot-Bonde';
 const creatorName = 'Bot-Skapare';
@@ -536,7 +538,7 @@ async function main(): Promise<void> {
     }
     // the other arches: lanes of walkers, one after another in a lane (a lane's results are checked at the end)
     const archResults: { id: string; report: string; log: string; code: number | null }[] = [];
-    const lanes = mode === '' || mode === 'walker' ? archLanes.map((lane) => lane.filter((id) => archWanted.length === 0 || archWanted.includes(id))).filter((lane) => lane.length) : [];
+    const lanes = mode === '' || mode === 'walker' ? archLanes.map((lane) => lane.filter((id) => (archWanted.length === 0 ? !archLong.includes(id) : archWanted.includes(id)))).filter((lane) => lane.length) : [];
     // (a server of its own: a server takes eight characters, and every walker is one)
     const archPort = port + 3;
     if (lanes.length) {

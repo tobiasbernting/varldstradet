@@ -1,6 +1,7 @@
 // Sagan om Världsträdet: the dungeon maps, classes and spells, monsters and bosses, loot, Völvan's
 // chapters, the villagers' quests and jumping to a family member.
 import { describe, expect, it } from 'vitest';
+import { reachableFrom } from './worldgen.ts';
 import {
   CLASSES,
   DOWN_MS,
@@ -22,7 +23,11 @@ import {
   castSpell,
   chooseClass,
   createPlayer,
+  arrivalTile,
+  areaKey,
   enterSaga,
+  previousDungeon,
+  tileIndex,
   teleport,
   generateSaga,
   generateWorld,
@@ -240,6 +245,54 @@ describe('the world map\'s jump', () => {
     expect(p.area).toBe(sagaKey('draug'));
     expect(world.areas![sagaKey('draug')]!.saga!.fighters[p.id]).toBeDefined();
   });
+});
+
+describe('every dungeon\'s arch', () => {
+  it('stands where the plan says, can be walked to from the farm, and goes into its own dungeon once the chapter before it is cleared', () => {
+    for (const id of DUNGEON_IDS) {
+      const { world, players } = family();
+      const p = players[0]!;
+      const plan = DUNGEONS[id].portal;
+      const out = getArea(world, plan.area)!;
+      const arch = Object.values(out.objects).find((o) => o.kind === 'saga_portal' && (o.variant ?? 0) === DUNGEON_IDS.indexOf(id));
+      expect(arch, `the arch of ${id} in ${plan.area}`).toBeDefined();
+      // on foot: from the map's entry to the tile in front of the arch, and every edge gap of the maps on the way is joined to the others
+      const c = /^a:(-?\d+),(-?\d+)$/.exec(plan.area)!;
+      const target = { x: Number(c[1]), y: Number(c[2]) };
+      const path: [number, number][] = [];
+      let x = 0;
+      let y = 0;
+      while (x !== target.x) path.push([(x += Math.sign(target.x - x)), y]);
+      while (y !== target.y) path.push([x, (y += Math.sign(target.y - y))]);
+      let prev: [number, number] = [0, 0];
+      for (const [ax, ay] of path) {
+        const a = getArea(world, areaKey(ax, ay))!;
+        const side = ax - prev[0] === 1 ? 'w' : ax - prev[0] === -1 ? 'e' : ay - prev[1] === 1 ? 'n' : 's';
+        const reach = reachableFrom(a, arrivalTile(a, side));
+        for (const d of ['n', 's', 'e', 'w'] as const) {
+          const t = arrivalTile(a, d);
+          expect(reach[tileIndex(a, t.x, t.y)], `${ax},${ay}: the ${d} gap joins the ${side} gap`).toBeTruthy();
+        }
+        if (ax === target.x && ay === target.y) {
+          const front = portalFront(arch!);
+          expect(reach[tileIndex(a, front.x, front.y)], `the front of ${id}'s arch`).toBeTruthy();
+        }
+        prev = [ax, ay];
+      }
+      // the rules of the way in: a class, then the chapter before it
+      const prevId = previousDungeon(id);
+      if (prevId) {
+        enterSaga(world, p, arch!);
+        expect(p.area).toBe('farm');
+        p.saga = { cls: 'krigare', chapter: DUNGEONS[id].chapter, heard: true, cleared: [], titles: [], quests: {}, done: [], found: [] };
+        enterSaga(world, p, arch!);
+        expect(p.area, `${id} is sealed until ${prevId} is cleared`).toBe('farm');
+        p.saga.cleared = DUNGEON_IDS.slice(0, DUNGEON_IDS.indexOf(id));
+      } else p.saga = { cls: 'krigare', chapter: 0, heard: true, cleared: [], titles: [], quests: {}, done: [], found: [] };
+      enterSaga(world, p, arch!);
+      expect(p.area).toBe(sagaKey(id));
+    }
+  }, 60_000);
 });
 
 describe('fighting', () => {
