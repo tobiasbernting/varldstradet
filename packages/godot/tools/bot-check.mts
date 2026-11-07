@@ -333,7 +333,7 @@ async function checkFarmer(r: FarmReport, farmPort: number, botLog?: string): Pr
     // quest marks over the villagers (M9b)
     'mark: Elsa has a wish I can fill', "mark: Elsa's wish is done", 'mark: Völvan has a story', "mark: Völvan's chapter is done", "mark: Völvan's next chapter", 'marks up close',
     // the books, the HUD, the help and the family window (M9b)
-    'the Gårdsbok', 'the Gårdsbok closes on B', 'the pause menu opens the books',
+    'the Gårdsbok', 'the Gårdsbok closes on B', 'every achievement has a picture', 'a pad reaches the tabs, the page and the OK button', 'the pause menu opens the books',
     'the journal', "the family's best time", 'the level chip', 'the level chip opens the journal', 'the saga tracker', 'the tracker folds', "Völvan's journal tab",
     'the Upptäcktsbok',
     'the help', 'the help on ?',

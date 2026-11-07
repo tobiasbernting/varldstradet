@@ -241,9 +241,18 @@ func _input(event: InputEvent) -> void:
 	if not _open or _scroll == null:
 		return
 	var down := event.is_action_pressed("ui_down")
-	if (down or event.is_action_pressed("ui_up")) and not _has_focusable_rows():
+	if (down or event.is_action_pressed("ui_up")) and not _has_focusable_rows() and not scroll_at_edge(down):
 		_scroll.scroll_vertical += (90 if down else -90)
 		get_viewport().set_input_as_handled()
+	# (at the end of the page the key goes on to the focus: down from the last of the page reaches the footer's OK, up the tabs)
+
+
+## Is the page already scrolled as far as it goes in this direction?
+func scroll_at_edge(down: bool) -> bool:
+	var bar := _scroll.get_v_scroll_bar()
+	if down:
+		return float(_scroll.scroll_vertical) >= bar.max_value - bar.page - 1.0
+	return _scroll.scroll_vertical <= 0
 
 
 func _has_focusable_rows() -> bool:

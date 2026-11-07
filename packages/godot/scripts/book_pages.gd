@@ -8,6 +8,8 @@ extends RefCounted
 
 const GOLD := Color("e8b830")
 const DIM := Color(1, 1, 1, 0.65)
+## Achievement pictures that have no icon in the sprite sheet: the signpost of "areas" (a place found).
+const NO_ICON := {"signpost": "🧭"}
 
 
 # ---------------------------------------------------------------------------
@@ -121,7 +123,17 @@ static func achievements(w: GameWindow) -> void:
 			medal.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			top.add_child(medal)
 		else:
-			top.add_child(GameWindow.picture(Data.item_icon(str(a.get("icon", ""))), 40))
+			var own := Data.icon("item_" + str(a.get("icon", "")))
+			if own != null:
+				top.add_child(GameWindow.picture(own, 40))
+			else:
+				# no icon of its own (the signpost is a 3D object here, not a picture): a glyph that says the same, never the chest
+				var glyph := Label.new()
+				glyph.text = str(NO_ICON.get(str(a.get("icon", "")), "🏅"))
+				glyph.add_theme_font_size_override("font_size", 28)
+				glyph.custom_minimum_size = Vector2(40, 40)
+				glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				top.add_child(glyph)
 		var col := VBoxContainer.new()
 		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		col.add_theme_constant_override("separation", 0)

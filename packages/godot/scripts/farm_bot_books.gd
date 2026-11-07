@@ -81,6 +81,11 @@ func books() -> void:
 		shown[id] = {"unlocked": unlocked, "k": snappedf(k, 0.0001)}
 		medals += 1 if unlocked else 0
 	_books()["achievements"] = shown
+	var chest_fallbacks: Array = []
+	for a in Data.book["achievements"]:
+		if Data.icon("item_" + str(a["icon"])) == null and not BookPages.NO_ICON.has(str(a["icon"])):
+			chest_fallbacks.append(str(a["icon"]))
+	bot._step("every achievement has a picture", chest_fallbacks.is_empty(), "no Gårdsbok row falls back to the chest (without: %s)" % ", ".join(chest_fallbacks))
 	var head := _texts(windows.book).get_slice("\n", 0)
 	bot._step("the Gårdsbok", open and rows.size() == Data.book["achievements"].size() and rows.size() >= 70, "B opened it: %d bragder drawn (%d done), \"%s\"" % [rows.size(), medals, head])
 	await bot._shot("book", 0.1)
@@ -88,6 +93,21 @@ func books() -> void:
 	bot._press_action("book")
 	var closed := await bot._until(func() -> bool: return not windows.book.is_open(), 3.0)
 	bot._step("the Gårdsbok closes on B", closed, "the same key shuts it")
+	# a pad can reach every button of the window: the tabs and the footer's OK take the focus, and at the end of a page "down" goes on to them
+	windows.book.open_at("book")
+	await bot._wait(0.3)
+	var reach_ok := true
+	var buttons: Array = windows.book._find_buttons(windows.book._tabs) + windows.book._find_buttons(windows.book._foot)
+	for b in buttons:
+		reach_ok = reach_ok and (b as Button).focus_mode == Control.FOCUS_ALL and (b as Button).is_visible_in_tree() and not (b as Button).disabled
+	windows.book._scroll.scroll_vertical = 0
+	var top_edge: bool = windows.book.scroll_at_edge(false) and not windows.book.scroll_at_edge(true)
+	windows.book._scroll.scroll_vertical = 100000
+	await bot._wait(0.1)
+	var bottom_edge: bool = windows.book.scroll_at_edge(true)
+	bot._step("a pad reaches the tabs, the page and the OK button", reach_ok and not buttons.is_empty() and top_edge and bottom_edge, "%d buttons take the focus; \"down\" scrolls the page and, at its end, goes on to the footer (top edge %s, bottom edge %s)" % [buttons.size(), str(top_edge), str(bottom_edge)])
+	windows.book.close()
+	await bot._wait(0.15)
 	# the journal on K
 	bot._press_action("journal")
 	open = await bot._until(func() -> bool: return windows.book.is_open() and windows.book.tab == "journal", 3.0)

@@ -933,3 +933,8 @@ were already here (`packages/shared`), so this is drawing and sending, not new g
   farmer's report carries what the windows drew; `bot-check.mts` compares it with the server's own record (the achievements it has and how far each counter is, the chapter, the
   discovered places) and with the shared data (78 achievements, 26 landmarks, 21 topics, 9 dungeons). The villager marks are asserted against the rules at Elsa's wish (before and
   after the hand-in) and at Völvan's three states. Pictures from the manual `pictures` job (the farmer's windowed run): `docs/m9b-marks.png`, `m9b-gardsbok.png`, `m9b-journal.png`, `m9b-finds.png`, `m9b-help.png`, `m9b-family.png`, `m9b-volva-journal.png` and, at 175 % text, `m9b-book-175.png`, `m9b-help-175.png`, `m9b-hud-175.png`.
+- **After the review.** The family list redraws on any player change and re-checks before it sends; `WorldModel.is_callable` is the shared `isCallable`; marks are cached until my record changes and
+  `bot-check.mts` works them out again from the server's record; `{t:'dev', a:'sagaBest'}` (DEV_TELEPORT) records a best time through the real path for the journal check; a table of
+  `jumpTo`'s refusals sits in `saga.test.ts` and against `FamilyWindow.can_jump_to`; at 175 % the scale is a run-only override; "down" on a page without buttons scrolls and then goes on to
+  the footer. `pnpm godot:bot` runs with `--experimental-transform-types` (the check imports the shared saga code).
+
