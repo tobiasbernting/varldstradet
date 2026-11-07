@@ -207,6 +207,11 @@ func _glow(colour: Color, size: float) -> MeshInstance3D:
 	return mi
 
 
+## How bright a landing's big glow is (M8b): a third with "less shaking and flashing".
+static func _glare() -> float:
+	return 0.35 if Settings.reduce_motion else 1.0
+
+
 static func _set_colour(mi: MeshInstance3D, colour: Color) -> void:
 	var m: StandardMaterial3D = mi.material_override
 	if m != null:
@@ -1104,7 +1109,7 @@ func _land(move: String, at: Vector3, by: Variant) -> void:
 		_set_colour(ring2, Color(1, 1, 1, 0.8 * (1.0 - k)))
 		glow.position = fx.at + Vector3(0, 0.4, 0)
 		_set_size(glow, maxf(0.05, r * (0.6 + e)))
-		_set_colour(glow, Color(c.r, c.g, c.b, 0.5 * (1.0 - k)))
+		_set_colour(glow, Color(c.r, c.g, c.b, 0.5 * (1.0 - k) * _glare()))
 	var f := _add(0.8 if big else 0.55, step, at)
 	f.nodes = [disc, ring1, ring2, glow]
 	for i in range(8):
@@ -1167,7 +1172,7 @@ func _land_pull(at: Vector3, r: float, by: Variant, c: Color) -> void:
 			_set_colour(streaks[i], Color(c.r, c.g, c.b, 0.9 * (1.0 - k)))
 		glow.position = m + Vector3(0, 0.5, 0)
 		glow.visible = k > 0.6
-		_set_colour(glow, Color(c.r, c.g, c.b, (1.0 - k) * 2.0))
+		_set_colour(glow, Color(c.r, c.g, c.b, (1.0 - k) * 2.0 * _glare()))
 	var f := _add(0.45, step, at, Vector3.INF, by)
 	f.nodes = [ring, glow] + streaks
 	shake = maxf(shake, 0.4)

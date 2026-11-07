@@ -302,6 +302,11 @@ func set_danger_pattern(on: bool) -> void:
 	access_changed.emit()
 
 
+## A shake or a flash of strength `v`, as the player wants to see it: none with "less shaking and flashing".
+func calm(v: float) -> float:
+	return 0.0 if reduce_motion else v
+
+
 func set_reduce_motion(on: bool) -> void:
 	reduce_motion = on
 	save()

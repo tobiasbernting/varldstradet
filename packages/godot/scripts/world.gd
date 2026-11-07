@@ -982,7 +982,7 @@ func _process(delta: float) -> void:
 	_update_prompt()
 	_rest_glow(delta, snap)
 	_frame_camera(delta)
-	var shake := fx.shake
+	var shake := Settings.calm(fx.shake) # (M8b: "less shaking and flashing")
 	var wobble := Vector3((_rng.randf() - 0.5) * shake * 0.5, (_rng.randf() - 0.5) * shake * 0.3, 0.0) if shake > 0.0 else Vector3.ZERO
 	rig.position = rig.position.lerp(hero.position, 1.0 - pow(0.002, delta)) + wobble
 	_shadow_in -= delta

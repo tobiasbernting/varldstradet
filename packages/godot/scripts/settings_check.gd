@@ -99,6 +99,7 @@ func _run() -> void:
 	_sound()
 	await _reading()
 	_colours()
+	_motion()
 	_controls()
 	_roundtrip()
 	if shot_dir != "":
@@ -252,8 +253,39 @@ func _colours() -> void:
 	_step("and off", not Palette.pattern())
 
 
+## Less shaking and flashing: the checkbox, the file, and what reads it (the camera's shake, the lightning, the landings' glow).
+func _motion() -> void:
+	win._show_page("reading")
+	win._motion_check.button_pressed = true
+	_step("less shaking and flashing: kept and saved", Settings.reduce_motion and _on_disk("access", "reduce_motion") == true)
+	_step("the shake and the lightning are 0, the landing glow a third", Settings.calm(0.7) == 0.0 and Settings.calm(1.0) == 0.0 and is_equal_approx(FxView._glare(), 0.35))
+	win._motion_check.button_pressed = false
+	_step("and back: shake and flash as they were", Settings.calm(0.7) == 0.7 and FxView._glare() == 1.0 and _on_disk("access", "reduce_motion") == false)
+
+
 func _controls() -> void:
 	win._show_page("controls")
+	var other := "wheel" if Settings.spell_input == "buttons" else "buttons"
+	_click(win._spell_buttons[other])
+	_step("gamepad layout %s: kept, saved, hint changed" % other, Settings.spell_input == other and _on_disk("input", "spells") == other and win._spell_hint.text == Strings.t("spellsWheelHint" if other == "wheel" else "spellsButtonsHint"))
+	# the push-to-talk key: the button waits for a key, the next key becomes the action's event, Escape cancels
+	win._ptt_button.pressed.emit()
+	_step("the key button waits for a key", win._capturing_key and win._ptt_button.text == Strings.t("pttPress"))
+	var ev := InputEventKey.new()
+	ev.physical_keycode = KEY_F5
+	ev.pressed = true
+	win._input(ev)
+	var mapped := false
+	for e in InputMap.action_get_events("voice_ptt"):
+		mapped = mapped or (e is InputEventKey and (e as InputEventKey).physical_keycode == KEY_F5)
+	_step("push-to-talk key F5: kept, saved and applied to the input map", Settings.ptt_key == KEY_F5 and int(_on_disk("input", "ptt_key", 0)) == KEY_F5 and mapped and InputMap.action_get_events("voice_ptt").size() == 1 and not win._capturing_key)
+	_step("the key is named", Settings.ptt_key_name().contains("F5"), Settings.ptt_key_name())
+	win._ptt_button.pressed.emit()
+	var esc := InputEventKey.new()
+	esc.physical_keycode = KEY_ESCAPE
+	esc.pressed = true
+	win._input(esc)
+	_step("Escape cancels the capture and keeps the key", Settings.ptt_key == KEY_F5 and not win._capturing_key and win.is_open())
 
 
 ## A new start: the values read back from the file are the ones in memory.

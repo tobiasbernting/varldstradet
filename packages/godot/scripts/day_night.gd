@@ -409,6 +409,10 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 			_flash = 1.0
 			_flash_again = 0.12 + _rng.randf() * 0.1
 			_bolt_in = _rng.randf_range(4.0, 11.0)
+	if Settings.reduce_motion:
+		_bolt = Settings.calm(_bolt) # (M8b: a storm without the flashes: no light spike, no white screen)
+		_flash = Settings.calm(_flash)
+		_flash_again = -1.0
 	if _bolt > 0.0:
 		sun.light_energy += _bolt * 2.5
 		env.ambient_light_energy += _bolt * 1.2
