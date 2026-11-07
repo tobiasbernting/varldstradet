@@ -141,7 +141,7 @@ func toggle_map() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("worldmap") and world_map.is_open():
+	if world_map.is_open() and MapWindow.key_pressed(event):
 		world_map.close()
 		get_viewport().set_input_as_handled()
 		return

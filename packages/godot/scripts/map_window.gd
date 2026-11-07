@@ -13,6 +13,25 @@ const R := 3 ## the grid reaches this many maps each way
 const MOON_KEY := "moon"
 const HERE_COLOUR := Color("e8b830")
 
+## The left trigger is an axis: past the dead zone it sends a motion event for every change of its value, and each would count as a press.
+## So the `worldmap` action counts once as the trigger goes down (past half) and again only after it was let go (under a third).
+static var _trigger_down := false
+
+
+static func key_pressed(event: InputEvent) -> bool:
+	if event is InputEventJoypadMotion:
+		if not event.is_action("worldmap"):
+			return false
+		var down: bool = absf(event.axis_value) > 0.5
+		if down and not _trigger_down:
+			_trigger_down = true
+			return true
+		if absf(event.axis_value) < 0.33:
+			_trigger_down = false
+		return false
+	return event.is_action_pressed("worldmap")
+
+
 var on_minimap: Callable ## the corner map's toggle (world.gd)
 var _grid: GridContainer
 

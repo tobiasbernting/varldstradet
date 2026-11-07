@@ -373,7 +373,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		minimap.toggle()
 		get_viewport().set_input_as_handled()
 		return
-	if event.is_action_pressed("worldmap"):
+	if MapWindow.key_pressed(event):
 		_open_world_map()
 		get_viewport().set_input_as_handled()
 		return

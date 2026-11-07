@@ -474,6 +474,17 @@ func _press(action: String) -> void:
 	await get_tree().process_frame
 
 
+## The left trigger (joypad axis 4) going through `values` one after another, a frame apart.
+func _trigger(values: Array) -> void:
+	for v in values:
+		var e := InputEventJoypadMotion.new()
+		e.axis = JOY_AXIS_TRIGGER_LEFT
+		e.axis_value = float(v)
+		Input.parse_input_event(e)
+		await get_tree().process_frame
+		await get_tree().process_frame
+
+
 func _wait_until(cond: Callable, limit: float) -> bool:
 	var t := 0.0
 	while t < limit:
@@ -517,6 +528,11 @@ func _map_check() -> void:
 	await _press("worldmap")
 	await _wait_until(func() -> bool: return not win.is_open(), 2.0)
 	_check("closed_by_key", not win.is_open())
+	# the left trigger is an axis: as it ramps down (0.6, 1.0) it opens the window once, and once let go it closes it again
+	await _trigger([0.6, 1.0])
+	_check("trigger_opens_once", win.is_open())
+	await _trigger([0.0, 0.7, 1.0, 0.0])
+	_check("trigger_closes_once", not win.is_open())
 	# home by the button
 	await _press("worldmap")
 	await _wait_until(func() -> bool: return win.is_open(), 2.0)
