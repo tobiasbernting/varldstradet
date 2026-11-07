@@ -151,6 +151,7 @@ func set_sheet(name_of_sheet: String) -> bool:
 
 ## Shows a texture that is a row of frames (`frames` names them in order): a composed player, an animal, a villager.
 func set_texture(tex: Texture2D, frame_names: Array, fw: int, fh: int, headroom: int) -> void:
+	is_placeholder = false # (a real picture replaces the stand-in)
 	_frames = frame_names
 	_frame_w = fw
 	_frame_h = fh
