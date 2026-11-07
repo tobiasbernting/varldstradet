@@ -43,6 +43,18 @@ const SHOP_SIGNS := [
 # ---------------------------------------------------------------------------
 # Small shapes
 
+## The same mesh `k` times the size (the browser's lantern post is a metre and a half; the first draft stood two metres tall).
+static func scaled(m: ArrayMesh, k: float) -> ArrayMesh:
+	var arr := m.surface_get_arrays(0)
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	for i in range(v.size()):
+		v[i] *= k
+	arr[Mesh.ARRAY_VERTEX] = v
+	var out := ArrayMesh.new()
+	out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	return out
+
+
 ## A flat rectangle on the plane z, facing +z (the front of a building).
 static func rect_z(b: FarmMesh, cx: float, cy: float, w: float, h: float, z: float, col: Color) -> void:
 	b.quad(Vector3(cx - w * 0.5, cy + h * 0.5, z), Vector3(cx - w * 0.5, cy - h * 0.5, z), Vector3(cx + w * 0.5, cy - h * 0.5, z), Vector3(cx + w * 0.5, cy + h * 0.5, z), col)
@@ -507,7 +519,7 @@ static func signpost() -> ArrayMesh:
 	b.box(Vector3(0.0, 0.09, 0.0), Vector3(0.4, 0.18, 0.4), STONE_D, 0.0, 0.0, STONE_L)
 	b.box(Vector3(0.0, 0.8, 0.0), Vector3(0.12, 1.4, 0.12), WOOD_D, 0.0, 0.0, WOOD)
 	# the arms: planks with a pointed end, one each way
-	for arm in [[0.5, 1.05, 0.7, 0.2], [-0.5, 0.78, 0.7, 0.2]]:
+	for arm in [[0.5, 1.05, 0.42, 0.2], [-0.5, 0.78, 0.42, 0.2]]:
 		var side: float = signf(arm[0])
 		var y: float = arm[1]
 		var arm_len: float = arm[2]
