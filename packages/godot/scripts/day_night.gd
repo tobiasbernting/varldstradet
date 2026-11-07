@@ -127,6 +127,18 @@ func _clear_children() -> void:
 	_dew = null
 
 
+## The hero went somewhere this sky does not cover (a dungeon): every particle system stops, the rainbow hides. `update_sky`
+## starts them again where the weather wants them.
+func suspend() -> void:
+	for p in [_rain, _flakes, _flakes2, _leaves, _rings, _dew]:
+		if p != null:
+			p.emitting = false
+	_rainbow_until = 0.0
+	_rainbow_k = 0.0
+	if _rainbow != null:
+		_rainbow.visible = false
+
+
 func follow(target: Node3D) -> void:
 	_target = target
 

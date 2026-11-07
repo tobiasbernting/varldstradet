@@ -245,6 +245,8 @@ func hide_look() -> void:
 	Actor.night_lift = 0.0
 	if _lantern != null:
 		_light_lantern(0.0, 0.0)
+	if farm.sky != null:
+		farm.sky.suspend()
 
 
 ## The hero's lantern: a warm light that follows them outdoors after dark so the wild stays readable near them. No shadow
@@ -514,6 +516,7 @@ func _rebuild() -> void:
 			look = Data.zone_look(key, model.run, w)
 		dungeon.build(w, key, look)
 		_mode = "dungeon"
+		farm.sky.suspend()
 		_area = key
 		hud.farm_box.visible = false
 		hero.set_world(w)
