@@ -2520,6 +2520,7 @@ function throwLasso(world: WorldState, p: PlayerState, ctx: SimCtx, out: Change[
       out.push(fx(tx, ty, 'heart'), toast(p.id, fmt(T.tamed, { name })), { t: 'animal', id: a.id, animal: a }, playerChange(p), { t: 'open', to: p.id, ui: 'nameAnimal', id: a.id });
     } else {
       a.fleeUntil = ctx.now + FLEE_MS;
+      delete a.startled; // (a missed throw scares it at the lasso's own pace, not a bolt's)
       a.fleeX = p.x;
       a.fleeY = p.y;
       delete a.tx;
