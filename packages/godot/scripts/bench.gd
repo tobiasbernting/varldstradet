@@ -87,7 +87,7 @@ func _next() -> void:
 	if _stage >= _presets.size():
 		_finish()
 		return
-	Quality.set_preset(str(_presets[_stage]))
+	Quality.set_preset(str(_presets[_stage]), false) # (not saved: settings.cfg is the player's)
 	_enter("settle")
 
 
@@ -180,6 +180,11 @@ func _report() -> void:
 		var alive := "  %s alive world: wind %d, water %d, window light %d; on screen now: %s" % [name, int(spec.get("wind", 0)), int(spec.get("water", 0)), int(spec.get("window_light", 0)), str(world.farm.ambient.counts())]
 		_say(alive)
 		_results.append(alive)
+		# M7b: the sounds that ran in this preset (steps made while the hero walked, the layers sounding, the sparrows are in the counts)
+		var rep: Dictionary = world.soundscape.report()
+		var sound := "  %s sound: steps %d of at most %d at once (%s), ambience level %d: %s, %d players" % [name, int(world.steps.stats["steps"]), int(spec.get("steps", 0)), str(world.steps.stats["kinds"]), int(spec.get("ambience", 0)), str(rep["layers"]), int(rep["players"])]
+		_say(sound)
+		_results.append(sound)
 
 
 func _finish() -> void:

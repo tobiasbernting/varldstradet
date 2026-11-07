@@ -43,6 +43,8 @@ var chat: ChatUi
 var run_hud: RunHud
 var run_pick: RunPick
 var run_end: RunEnd
+var steps: Footsteps ## footsteps on the outdoor maps (M7b)
+var soundscape: Soundscape ## the ambience of the outdoor maps (M7b)
 var wheel: Wheel
 var play: FarmPlay
 var demo := false
@@ -73,6 +75,8 @@ var _frames := 0
 var _rest_glow_in := 0.0
 var _cam_k := 0.0 ## 0 outdoors, 1 inside the farmhouse: how far the camera has moved to its closer, steeper place
 var _hint_for := ""
+var _walk_demo := false
+var _walk_said := false
 var _rng := RandomNumberGenerator.new()
 
 
@@ -84,6 +88,12 @@ func _ready() -> void:
 	add_child(fx)
 	fx.setup(model, _find_actor)
 	add_child(grade)
+	steps = Footsteps.new()
+	steps.name = "Footsteps"
+	add_child(steps)
+	soundscape = Soundscape.new()
+	soundscape.name = "Soundscape"
+	add_child(soundscape)
 	hud = HudLayer.new()
 	add_child(hud)
 	run_hud = RunHud.new()
@@ -219,6 +229,11 @@ func start_demo(fixture := "draug") -> void:
 				var tile := Data.tile()
 				hero.place((float(parts[0]) + 0.5) * tile, (float(parts[1]) + 0.5) * tile)
 				rig.position = hero.position
+	# --walk (with --demo): the hero walks east, for the footsteps' check (no server needed)
+	_walk_demo = "--walk" in OS.get_cmdline_user_args()
+	if _walk_demo:
+		hero.driven = true
+		hero.drive = Vector2(1, 0)
 	print("demo: %s drawn (%s) with %d objects, %d lights and %d actors" % [_area, _mode, (farm.object_count() if _mode == "outdoor" else (dungeon.get_node("Objects").get_child_count() if _area != "" else 0)), (farm.light_count() if _mode == "outdoor" else dungeon.light_count()), _actors.size()])
 
 
@@ -471,6 +486,7 @@ func _rebuild() -> void:
 		_clear_views()
 		farm.build(w, key)
 		farm.sky.follow(rig)
+		steps.setup(farm)
 		_mode = "outdoor"
 		_area = key
 		fx.area = key
@@ -846,6 +862,7 @@ func _process(delta: float) -> void:
 	if demo:
 		_demo_clock(delta)
 	if _area == "":
+		soundscape.silence(delta)
 		return
 	if _mode == "outdoor":
 		farm.sky.grade = grade
@@ -853,13 +870,16 @@ func _process(delta: float) -> void:
 		_light_lantern(farm.sky.dark_now(), 1.0 - _cam_k)
 		Actor.night_lift = smoothstep(0.3, 0.8, farm.sky.dark_now()) * (1.0 - _cam_k)
 		farm.sky.update_sky(delta, _clock_ms(), model.season, model.weather, model.server_now())
+		_tick_sounds(delta)
 	elif _mode == "dungeon":
 		grade.dungeon_look()
 		Actor.night_lift = 0.0
 		_light_lantern(0.0, 0.0)
+		soundscape.silence(delta) # (the dungeons have sounds of their own)
 	else:
 		_light_lantern(0.0, 0.0)
 		Actor.night_lift = 0.0
+		soundscape.silence(delta)
 	combat.tick()
 	fx.tick(delta)
 	play.tick(delta)
@@ -961,6 +981,34 @@ func _process(delta: float) -> void:
 			img.save_png(_screenshot)
 			print("screenshot saved to %s" % _screenshot)
 		(get_tree().current_scene as Main).quit_clean()
+
+
+## Footsteps and the ambience (M7b), after the actors have moved this frame.
+func _tick_sounds(delta: float) -> void:
+	var tile := Data.tile()
+	var indoors := _area == "farm" and Data.in_interior(floori(hero.px / tile), floori(hero.py / tile))
+	soundscape.update(delta, farm.sky.sound_state(), hero.position, indoors, farm)
+	var walkers: Array = []
+	if not _is_riding(model.my_player()):
+		walkers.append({"key": "me", "at": hero.position, "me": true, "indoors": indoors})
+	for key in _actors.keys():
+		if key.begins_with("p:") and not _is_riding(model.players().get(key.substr(2), {})):
+			var at: Vector3 = (_actors[key] as Actor).position
+			walkers.append({"key": key, "at": at, "me": false, "indoors": _area == "farm" and Data.in_interior(floori(at.x), floori(at.z))})
+	steps.tick(delta, walkers, hero.position, indoors)
+	if _walk_demo and not _walk_said and int(steps.stats["steps"]) >= 5:
+		_walk_said = true
+		print("walk: %d footsteps (%s), ambience %s" % [int(steps.stats["steps"]), str(steps.stats["kinds"]), str(soundscape.report()["layers"])])
+
+
+func _is_riding(p: Variant) -> bool:
+	return p is Dictionary and p.get("riding") != null
+
+
+## Lets go of the sounds (Main.quit_clean calls this: a playing stream is held by the audio server when the process exits).
+func release_sounds() -> void:
+	steps.release()
+	soundscape.release()
 
 
 ## The browser closes in inside the farmhouse (a small room at the same zoom would be a postage stamp): the camera

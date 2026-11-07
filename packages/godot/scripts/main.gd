@@ -187,6 +187,7 @@ func quit_clean(code := 0) -> void:
 	_quitting = true
 	Net.disconnect_now()
 	Sfx.release()
+	world.release_sounds()
 	Voice.release()
 	for child in get_children():
 		child.queue_free()

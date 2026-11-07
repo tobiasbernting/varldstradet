@@ -20,12 +20,14 @@ const SMOKE_PUFFS := 12 ## puffs in one chimney's loop at most (Quality "smoke" 
 var view: FarmView
 var force_all := false
 
-var _fade := {"fireflies": 0.0, "butterflies": 0.0, "leaves": 0.0, "smoke": 0.0, "mist": 0.0}
+var _fade := {"fireflies": 0.0, "butterflies": 0.0, "leaves": 0.0, "smoke": 0.0, "mist": 0.0, "sparrows": 0.0}
 var _nodes := {} ## what -> MultiMeshInstance3D
 var _built := {} ## what -> the budget it was built for
 var _mats := {} ## what -> ShaderMaterial
 var _ver := {} ## what -> the FarmView.objects_version its anchors were made for
 var _leaf_at := Vector3(1.0e9, 0.0, 0.0)
+var _sparrow_homes := PackedVector3Array() ## where each sparrow sits on the ground
+var _sparrow_in := 0.0
 var _rng := RandomNumberGenerator.new()
 
 
@@ -47,6 +49,7 @@ func setup(v: FarmView) -> void:
 	_mats.clear()
 	_ver.clear()
 	_leaf_at = Vector3(1.0e9, 0.0, 0.0)
+	_sparrow_homes = PackedVector3Array()
 	for k in _fade.keys():
 		_fade[k] = 0.0
 
@@ -71,6 +74,7 @@ func update(delta: float, st: Dictionary, at: Vector3) -> void:
 		"leaves": 1.0 if (force_all or (year == "autumn" and seasons and dry)) else 0.0,
 		"smoke": 1.0,
 		"mist": 1.0 if force_all else maxf(dawn if (dry and kind != "wind") else 0.0, fog),
+		"sparrows": 1.0 if (force_all or (dark < 0.35 and dry and kind != "wind")) else 0.0,
 	}
 	var k := 1.0 - pow(0.25, delta) # about two seconds to fade
 	var shade := 1.0 - dark * 0.7
@@ -118,6 +122,13 @@ func update(delta: float, st: Dictionary, at: Vector3) -> void:
 				# dawn: pale and thin; fog weather: the sky's own colour (dark at night) and about three times as thick
 				m.set_shader_parameter("colour", Color(0.9, 0.92, 0.95).lerp(sky, 0.35).lerp(sky.lerp(Color.WHITE, 0.25 * (1.0 - dark)), fog))
 				m.set_shader_parameter("strength", 1.0 + FOG_THICKER * fog)
+			"sparrows":
+				m.set_shader_parameter("center", at)
+				m.set_shader_parameter("shade", shade)
+				_sparrow_in -= delta
+				if _sparrow_in <= 0.0:
+					_sparrow_in = 0.5
+					_tend_sparrows(budget, at, false)
 
 
 func _drop(what: String) -> void:
@@ -152,6 +163,11 @@ func _ensure(what: String, budget: int, at: Vector3) -> void:
 			mm.use_colors = true
 			mm.instance_count = budget
 			_scatter(mm, budget, 0.5, 1.6, true)
+		"sparrows":
+			mat.shader = load(SHADER_DIR + "ambient_sparrow.gdshader")
+			mm.mesh = quad
+			mm.instance_count = budget
+			_sparrow_homes.resize(budget)
 		"mist":
 			mat.shader = load(SHADER_DIR + "ambient_mist.gdshader")
 			var flat := QuadMesh.new()
@@ -181,6 +197,8 @@ func _ensure(what: String, budget: int, at: Vector3) -> void:
 		_place_leaves(budget, at)
 	elif what == "smoke":
 		_build_smoke(budget)
+	elif what == "sparrows":
+		_tend_sparrows(budget, at, true)
 
 
 ## `n` instances at random places in the box (they wrap round the hero, so where they start does not matter).
@@ -231,6 +249,33 @@ func _build_smoke(budget: int) -> void:
 			var i := c * puffs + j
 			mm.set_instance_transform(i, Transform3D(Basis.IDENTITY, tops[c]))
 			mm.set_instance_custom_data(i, Color(float(j) / puffs, _h(i, 6), 0.0, 0.0))
+
+
+## The sparrows sit on open grass round the hero (3.5 to 9 m away when they are first put there, 8 to 11 m when put down again). Every half second the ones
+## that have fallen behind (more than 15 m away) are put down again somewhere on the edge of the hero's surroundings, on
+## ground a bird could stand on (grass without anything on it); with `all`, every one is placed.
+func _tend_sparrows(budget: int, at: Vector3, all: bool) -> void:
+	var node: MultiMeshInstance3D = _nodes.get("sparrows")
+	if node == null:
+		return
+	var mm := node.multimesh
+	if _sparrow_homes.size() != budget:
+		_sparrow_homes.resize(budget)
+	for i in range(budget):
+		var home := _sparrow_homes[i]
+		if not all and home.y > -50.0 and home != Vector3.ZERO and Vector2(home.x - at.x, home.z - at.z).length() < 15.0:
+			continue
+		var found := Vector3(0.0, -100.0, 0.0) # (no ground to stand on: hidden below the map)
+		for attempt in range(8):
+			var a := _rng.randf() * TAU
+			var r := (3.5 + _rng.randf() * 5.5) if all else (8.0 + _rng.randf() * 3.0)
+			var p := Vector3(at.x + cos(a) * r, 0.0, at.z + sin(a) * r)
+			if view.free_grass_at(floori(p.x), floori(p.z)):
+				found = Vector3(p.x, 0.02, p.z)
+				break
+		_sparrow_homes[i] = found
+		mm.set_instance_transform(i, Transform3D(Basis.IDENTITY, found))
+		mm.set_instance_custom_data(i, Color(_rng.randf(), _rng.randf(), 0.0, 0.0))
 
 
 static func _h(i: int, salt: int) -> float:

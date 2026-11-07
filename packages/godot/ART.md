@@ -368,6 +368,19 @@ The mist is also what fog weather draws (`ambient_view.gd`: the eased fog streng
 in the sky's own colour), so Låg, which builds no mist, has the depth fog only. The window-light pools are the atmosphere pass's
 warm colour (1, 0.66, 0.35) and come on with the lamps (`dark` 0.35 to 0.75).
 
+## The living world's sound and wildlife (M7b)
+
+Sounds are the project's own (CC0): `assets/audio/*.wav` made by `tools/make-audio.py` from noise and sines (licence and
+file list in `assets/LICENSES.md`). One shader (`ambient_sparrow.gdshader`) draws the sparrows. Presets (`quality.gd`):
+
+| | Låg | Mellan | Hög |
+| --- | --- | --- | --- |
+| Footsteps sounding at once | 3 | 6 | 10 |
+| Ambience | the 3 loudest layers, no water or fire nearness, no owl | all layers, water and fire by nearness, the owl | the same |
+| Sparrows | 0 | 6 | 12 |
+
+The wild animals' startling is the server's (`shared/src/sim.ts` `tickStartle`) and the same on every preset.
+
 ### Measured (M7a)
 
 Sandbox only (Mesa llvmpipe under Xvfb, 1280×720; frame times are software and mean little, so read them as before/after

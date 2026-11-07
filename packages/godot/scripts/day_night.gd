@@ -63,6 +63,7 @@ var _under := false ## no sky here (a cave): the light stays what the map says
 var _since := 0.0
 var _lit := Color.WHITE ## the clock's light colour (the horizon of the sky the water mirrors)
 var _sun_share := 1.0
+var _f_now := 0.0
 var _wind := -1.0 ## the weather's wind, eased so a gust front does not snap the trees
 var _year_override := "" ## --year=summer|autumn|...: a fixed season of the year for pictures and the bench
 var _rainbow_until := 0.0
@@ -322,6 +323,7 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 		_rainbow_until = Time.get_ticks_msec() / 1000.0 + 45.0
 	_year = _year_season(season)
 	var f := fposmod(time_ms / Data.constant("DAY_LENGTH_MS", 600000.0), 1.0)
+	_f_now = f
 	var w: Array = WEATHER.get(kind, WEATHER["sun"])
 	var night := clampf((f - 0.74) / 0.08, 0.0, 1.0) * clampf((0.99 - f) / 0.04, 0.0, 1.0)
 	var amb := _sample(f)
@@ -623,6 +625,12 @@ func _biome_has_seasons() -> bool:
 ## For tests and screenshots: how white the map is now.
 func snow_cover() -> float:
 	return _snow
+
+
+## What the soundscape needs of the sky (M7b): how dark it is, the weather here, its wind, the season of the year and the
+## day's fraction.
+func sound_state() -> Dictionary:
+	return {"dark": _dark, "kind": _weather, "wind": maxf(0.0, _wind), "year": _year, "f": _f_now, "seasons": _biome_has_seasons(), "snow": _snow}
 
 
 func weather_now() -> String:
