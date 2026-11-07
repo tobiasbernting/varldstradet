@@ -9,6 +9,8 @@ extends CanvasLayer
 
 signal menu_asked
 signal journal_asked ## M9b: the level chip was clicked
+signal family_asked ## M9b: the 👪 button
+signal pets_asked(cmd: String) ## M9b: the stay / whistle buttons ("stay" or "come")
 signal centre_busy(on: bool) ## on a narrow screen: a banner, a toast or the fallen box is up (the chat feed makes room)
 
 const HP_GREEN := Color("4fcf5a")
@@ -74,6 +76,10 @@ var tracker_lines: VBoxContainer
 var tracker_open := true
 var _tracker_key := ""
 var _tracker_me: Dictionary = {}
+var side_box: VBoxContainer ## M9b: the family button and (with a pet or a horse) stay and whistle, on the right edge
+var family_button: Button
+var stay_button: Button
+var come_button: Button
 var _busy := false
 var _top: VBoxContainer ## the boss at the top, in the middle (to the right when the screen is narrow, see `_layout`)
 var _frame_times: Array = []
@@ -114,6 +120,7 @@ func _ready() -> void:
 	party_box.add_theme_constant_override("separation", 2)
 	left.add_child(party_box)
 	_build_tracker(left)
+	_build_side_buttons()
 
 	var right := HBoxContainer.new()
 	right.anchor_left = 1.0
@@ -529,6 +536,7 @@ func reset() -> void:
 	not_drawn.visible = false
 	farm_box.visible = false
 	tracker.visible = false
+	side_box.visible = false
 	boss_box.visible = false
 	cast_box.visible = false
 	down_box.visible = false
@@ -677,6 +685,7 @@ func set_area(area_name: String, drawn: bool) -> void:
 	area_label.text = area_name if drawn else ""
 	farm_box.visible = farm_box.visible and drawn
 	tracker.visible = tracker.visible and drawn
+	side_box.visible = side_box.visible and drawn
 	not_drawn.visible = not drawn
 	not_drawn_label.text = "" if drawn else Strings.t("areaNotDrawn", {"name": area_name})
 
@@ -692,6 +701,7 @@ static func hearts_string(hp: float, max_hp: float) -> String:
 
 func set_hearts(hp: float, max_hp: float) -> void:
 	tracker.visible = false # (in a dungeon the fight is the whole screen)
+	side_box.visible = false
 	hearts_label.text = hearts_string(hp, max_hp)
 	hearts_text.text = "%d/%d" % [ceili(hp), ceili(max_hp)] if max_hp > 0.0 else ""
 
@@ -1027,7 +1037,7 @@ func set_down(flags: int, all_down: bool, webbed: bool, now: float) -> void:
 
 
 # ---------------------------------------------------------------------------
-# M9b: the saga tracker
+# M9b: the saga tracker, the family button and the pet buttons
 
 func _panel_style(alpha := 0.72) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
@@ -1091,3 +1101,45 @@ func _set_tracker(me: Dictionary) -> void:
 		t.modulate = Color(1, 1, 1, 0.6 if bool(l["done"]) else 1.0)
 		tracker_lines.add_child(t)
 
+
+## On the right edge: 👪 (the family: hoppa till), and once I have a pet or a horse ✋ Stanna! and 🎵 Vissla (the X and V keys).
+func _build_side_buttons() -> void:
+	side_box = VBoxContainer.new()
+	side_box.name = "SideButtons"
+	side_box.anchor_left = 1.0
+	side_box.anchor_right = 1.0
+	side_box.anchor_top = 0.5
+	side_box.anchor_bottom = 0.5
+	side_box.offset_left = -150
+	side_box.offset_right = -16
+	side_box.offset_top = 40
+	side_box.grow_vertical = Control.GROW_DIRECTION_END
+	side_box.add_theme_constant_override("separation", 6)
+	side_box.visible = false
+	add_child(side_box)
+	family_button = _side_button("👪 " + Strings.t("familyTitle"), Strings.t("familyBtn") + " (" + Strings.t("familyKey") + ")", func() -> void: family_asked.emit())
+	stay_button = _side_button("✋ " + Strings.t("petsStayBtn"), Strings.t("petsStayBtn") + " (" + Strings.t("petsStayKey") + ")", func() -> void: pets_asked.emit("stay"))
+	come_button = _side_button("🎵 " + Strings.t("petsComeBtn"), Strings.t("petsComeBtn") + " (" + Strings.t("petsComeKey") + ")", func() -> void: pets_asked.emit("come"))
+	stay_button.visible = false
+	come_button.visible = false
+
+
+func _side_button(text: String, tip: String, call: Callable) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.tooltip_text = tip
+	b.focus_mode = Control.FOCUS_NONE
+	b.add_theme_font_size_override("font_size", 16)
+	b.add_theme_stylebox_override("normal", _panel_style(0.72))
+	b.add_theme_stylebox_override("hover", _panel_style(0.92))
+	b.add_theme_stylebox_override("pressed", _panel_style(1.0))
+	b.pressed.connect(call)
+	side_box.add_child(b)
+	return b
+
+
+## Called outdoors with whether I have a pet or a horse on any map.
+func set_side_buttons(has_pets: bool) -> void:
+	side_box.visible = farm_box.visible
+	stay_button.visible = has_pets
+	come_button.visible = has_pets

@@ -137,18 +137,20 @@ interface FarmReport {
   day: number;
   route: string[];
   hearts_seen: number;
-  /** M9b: what the books, the HUD and the help showed (farm_bot_books.gd). */
+  /** M9b: what the books, the HUD, the help and the family window showed (farm_bot_books.gd). */
   books?: {
     achievements?: Record<string, { unlocked: boolean; k: number }>;
     journal?: { chapters: number; dungeons: number; levels: number; level: number; chapter: number; has_level_line: boolean; cleared: number };
     finds?: { total: number; found: number; groups: number; unknown: number; all_line: boolean };
     tracker?: { visible: boolean; lines: string[] };
     help?: { topics: number; rows: number; placeholder: boolean; houses: number };
+    family?: { members: number; rows: number; mate_online: boolean; place: string };
+    jump?: { from: string; to: string; tiles: number };
   };
 }
 
 /** What the server itself keeps of a player: asks over the game socket, as a client does (`hello`, then `welcome`). */
-type ServerRecord = { inventory: ({ item: string; count: number } | null)[]; coins: number; stars: number; achievements?: string[]; stats?: Record<string, number>; saga?: { chapter?: number; cleared?: string[]; discovered?: string[]; cls?: string; xp?: number } };
+type ServerRecord = { inventory: ({ item: string; count: number } | null)[]; coins: number; stars: number; achievements?: string[]; stats?: Record<string, number>; saga?: { chapter?: number; cleared?: string[]; discovered?: string[]; cls?: string; xp?: number }; players: Record<string, { name: string; online: boolean; area: string }> };
 async function serverRecord(url: string, playerId: string): Promise<ServerRecord | null> {
   const WebSocket = createRequire(path.join(root, 'packages/server/package.json'))('ws') as typeof import('ws').WebSocket;
   return await new Promise((resolve) => {
@@ -164,7 +166,7 @@ async function serverRecord(url: string, playerId: string): Promise<ServerRecord
       clearTimeout(timer);
       const p = msg.world.players[playerId];
       ws.close();
-      resolve(p ? { inventory: p.inventory, coins: p.coins, stars: p.stars, achievements: p.achievements, stats: p.stats, saga: p.saga } : null);
+      resolve(p ? { inventory: p.inventory, coins: p.coins, stars: p.stars, achievements: p.achievements, stats: p.stats, saga: p.saga, players: msg.world.players } : null);
     });
     ws.on('error', () => {
       clearTimeout(timer);
@@ -331,6 +333,7 @@ async function checkFarmer(r: FarmReport, farmPort: number, botLog?: string): Pr
     'the journal', "the family's best time", 'the level chip', 'the level chip opens the journal', 'the saga tracker', 'the tracker folds', "Völvan's journal tab",
     'the Upptäcktsbok',
     'the help', 'the help on ?',
+    'the family window', 'jump to the family', 'the family and pet buttons',
     'large text fits',
     // the village: the class, Völvan, the pizzeria, the gear and the hero switch, the bus
     'walk to Köpingen', 'sound: the village', 'pick a class', "Völvan's chapter", 'buy a pizza', 'eat the pizza', 'equip the weapon', 'the hero switch', 'back to the farm outfit', 'the bus home', 'the bus to the village', 'sound: footsteps', 'sound: ambience',
@@ -378,6 +381,12 @@ function checkBooks(r: FarmReport, rec: ServerRecord): void {
   check(!!b.tracker?.visible && b.tracker.lines.length >= 1, `${r.name}: the saga tracker was on the HUD (${b.tracker?.lines.join(' | ')})`);
   const h = b.help;
   check(!!h && h.topics === HELP.length && !h.placeholder, `${r.name}: the help has all ${HELP.length} topics of the shared file (${h?.topics}), ${h?.rows} steps, no {placeholders} left`);
+  // the family window: everyone in the family listed, the second player online on the farm, the jump landed next to them
+  const fam = b.family;
+  const everyone = Object.values(rec.players).length;
+  check(!!fam && fam.members === everyone && fam.rows === everyone && fam.mate_online, `${r.name}: the family window lists all ${everyone} players of the farm (${fam?.rows}) and Bot-Syskon online at "${fam?.place}"`);
+  const mate = Object.values(rec.players).find((p) => p.name === 'Bot-Syskon');
+  check(!!b.jump && b.jump.to === mate?.area && b.jump.tiles < 3.5, `${r.name}: the jump from ${b.jump?.from} put it in the mate's map (${mate?.area}) ${b.jump?.tiles} tiles away`);
 }
 
 /** One bot of the run pair: it played through the client and its report says how far. */
@@ -489,6 +498,8 @@ async function main(): Promise<void> {
       const friendCode = await exited(friend, 90_000);
       const fr = fs.existsSync(friendReport) ? (JSON.parse(fs.readFileSync(friendReport, 'utf8')) as { ok: boolean; note: string }) : { ok: false, note: 'no report' };
       check(friendCode === 0 && fr.ok, `the neighbour (a second player) put fences on the farm: ${fr.note}`);
+      // and a third stays online on the farm for the family window: the farmer finds it in the list and jumps to it from the village
+      farmServers.push(run(process.execPath, [path.join(here, 'mate.mts'), `http://127.0.0.1:${farmPort}`, String(farmSeconds + 30)], { cwd: here, log: path.join(tmp, 'mate.log') }));
       const report = path.join(tmp, `${farmerName}.json`);
       const log = path.join(tmp, `${farmerName}.log`);
       const args = ['--headless', '--path', godotDir, '--', '--farmbot', `--server=http://127.0.0.1:${farmPort}`, `--name=${farmerName}`, `--report=${report}`, `--seconds=${farmSeconds}`];

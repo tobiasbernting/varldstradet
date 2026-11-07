@@ -1,7 +1,8 @@
 class_name FarmBotBooks
 extends RefCounted
 ## The farmer's M9b steps (farm_bot.gd runs them): the Gårdsbok on B, the journal on K and Völvan's journal tab, the finds, the level chip
-## and the saga tracker on the HUD, the help on H and ?, the pause menu's way to the books. Every step goes through the keys, the
+## and the saga tracker on the HUD, the help on H and ?, the pause menu's way to the books, the pet buttons, and (from the village,
+## with a second player `tools/mate.mts` online on the farm) the family window and "Hoppa till". Every step goes through the keys, the
 ## clicks and the buttons a person uses; what the windows show is put in the report (`books`), and tools/bot-check.mts compares it with
 ## the server's own record of the player (the achievements it has and how far each is) and with the shared data.
 
@@ -127,7 +128,7 @@ func books() -> void:
 	await bot._wait(0.2)
 
 
-## The HUD: the level chip (a click opens the journal) and the tracker (folds on a click).
+## The HUD: the level chip (a click opens the journal), the tracker (folds on a click), the side buttons.
 func hud() -> void:
 	await _close_all()
 	var hud: HudLayer = world.hud
@@ -165,6 +166,14 @@ func hud() -> void:
 	hud.tracker_head.pressed.emit()
 	await bot._wait(0.2)
 	bot._step("the tracker folds", folded and hud.tracker_lines.get_child_count() == lines.size(), "a click on the header hid the lines, another showed them again")
+	# the family button is there; the pet buttons only with a pet or a horse
+	var pets_before := hud.stay_button.visible
+	var before: int = bot._report["toasts"].size()
+	hud.set_side_buttons(true)
+	hud.stay_button.pressed.emit()
+	var told := await bot._until(func() -> bool: return bot._report["toasts"].slice(before).has(Strings.t("noPetsHere")), 3.0)
+	hud.set_side_buttons(model.owns_callable())
+	bot._step("the family and pet buttons", hud.family_button.visible and not pets_before and told and not hud.stay_button.visible, "👪 is on the HUD; stay and whistle show only with a pet (none here); pressed, stay reached the server (\"%s\")" % Strings.t("noPetsHere"))
 
 
 ## H and ?: the help, every topic.
@@ -212,11 +221,11 @@ func help() -> void:
 	await bot._wait(0.2)
 
 
-## The pause menu has the books and the help (a pad's way: Start, then A), and each button opens its window.
+## The pause menu has the books, the family and the help (a pad's way: Start, then A), and each button opens its window.
 func pause_menu() -> void:
 	await _close_all()
 	var pressed_all := true
-	for which in ["book", "journal", "help"]:
+	for which in ["book", "journal", "family", "help"]:
 		world.menu.open()
 		await bot._wait(0.1)
 		var b := _menu_button(which)
@@ -224,11 +233,11 @@ func pause_menu() -> void:
 			pressed_all = false
 			continue
 		b.pressed.emit()
-		var win: GameWindow = {"book": windows.book, "journal": windows.book, "help": windows.help}[which]
+		var win: GameWindow = {"book": windows.book, "journal": windows.book, "family": windows.family, "help": windows.help}[which]
 		pressed_all = pressed_all and await bot._until(func() -> bool: return win.is_open(), 2.0)
 		windows.close_all()
 		await bot._wait(0.15)
-	bot._step("the pause menu opens the books", pressed_all, "Paus has Gårdsbok, Sagans dagbok and Hjälp, and each opens its window")
+	bot._step("the pause menu opens the books", pressed_all, "Paus has Gårdsbok, Sagans dagbok, Familjen and Hjälp, and each opens its window")
 
 
 func _menu_button(which: String) -> Button:
@@ -250,8 +259,45 @@ func volva_journal() -> void:
 	windows.talk.close()
 
 
+## P: the family, and a jump to the second player (tools/mate.mts, online on the farm) from wherever I stand.
+func family() -> void:
+	await _close_all()
+	var mate_id := ""
+	for id in model.players().keys():
+		if str(model.players()[id].get("name", "")) == "Bot-Syskon":
+			mate_id = str(id)
+	if mate_id == "":
+		bot._step("the family window", false, "the second player was not in the family list at all")
+		return
+	await bot._until(func() -> bool: return bool(model.players()[mate_id].get("online", false)), 6.0)
+	bot._press_action("family")
+	var open := await bot._until(func() -> bool: return windows.family.is_open(), 3.0)
+	await bot._wait(0.3)
+	var fam: FamilyWindow = windows.family
+	var members := fam.members()
+	var txt := _texts(fam)
+	var where := fam.place_of(str(model.players()[mate_id].get("area", "farm")))
+	var rows := 0
+	for m in members:
+		if txt.contains(str(m.get("name", ""))):
+			rows += 1
+	_books()["family"] = {"members": members.size(), "rows": rows, "mate_online": bool(model.players()[mate_id].get("online", false)), "place": where}
+	bot._step("the family window", open and rows == members.size() and txt.contains(where) and bool(model.players()[mate_id].get("online", false)), "P opened it: %d in the family, %s is online \"%s\"" % [members.size(), "Bot-Syskon", where])
+	await bot._shot("family", 0.1)
+	var from := model.my_area_key()
+	var jumped := home._press(fam, "jump:" + mate_id) and await bot._until(func() -> bool: return model.my_area_key() == str(model.players()[mate_id].get("area", "farm")), 6.0)
+	await bot._wait(0.8)
+	var mate_snap: Variant = model.player_snaps.get(mate_id)
+	var my_snap: Variant = model.player_snaps.get(model.me)
+	var dist := 999.0
+	if mate_snap is Dictionary and my_snap is Dictionary:
+		dist = Vector2(float(mate_snap.get("x", 0)), float(mate_snap.get("y", 0))).distance_to(Vector2(float(my_snap.get("x", 0)), float(my_snap.get("y", 0)))) / Data.tile()
+	bot._step("jump to the family", jumped and dist < 3.5 and not fam.is_open(), "from %s to %s, %.1f tiles from Bot-Syskon, the toast said \"%s\"" % [from, model.my_area_key(), dist, str(bot._report["toasts"][-1]) if not (bot._report["toasts"] as Array).is_empty() else ""])
+	_books()["jump"] = {"from": from, "to": model.my_area_key(), "tiles": snappedf(dist, 0.1)}
+
+
 ## At the largest text (175 %, where the 1280 × 720 window is 731 × 411 points) every window still lies inside the screen and the HUD's new
-## parts (the tracker on the left, the level chip row on the right) do not lie over one another. The text size is put back.
+## parts (the tracker on the left, the level chip row on the right, the family button) do not lie over one another. The text size is put back.
 func large_text() -> void:
 	await _close_all()
 	var before := Settings.ui_scale
@@ -260,10 +306,12 @@ func large_text() -> void:
 	var view: Rect2 = world.get_viewport().get_visible_rect()
 	var inside := true
 	var report: Array = []
-	var wins: Array = [["book", windows.book, "book"], ["journal", windows.book, "journal"], ["finds", windows.book, "finds"], ["help", windows.help, ""]]
+	var wins: Array = [["book", windows.book, "book"], ["journal", windows.book, "journal"], ["finds", windows.book, "finds"], ["help", windows.help, ""], ["family", windows.family, ""]]
 	for w in wins:
 		var win: GameWindow = w[1]
 		if w[0] == "help":
+			win.open_window()
+		elif w[0] == "family":
 			win.open_window()
 		else:
 			(win as BookWindow).open_at(w[2])
@@ -279,9 +327,9 @@ func large_text() -> void:
 		win.close()
 		await bot._wait(0.2)
 	var hud: HudLayer = world.hud
-	var rects: Dictionary = {"tracker": hud.tracker.get_global_rect(), "chips": hud.farm_box.get_global_rect()}
-	var apart := not (rects["tracker"] as Rect2).intersects(rects["chips"]) and view.grow(1.0).encloses(rects["tracker"])
+	var rects: Dictionary = {"tracker": hud.tracker.get_global_rect(), "chips": hud.farm_box.get_global_rect(), "side": hud.side_box.get_global_rect()}
+	var apart := not (rects["tracker"] as Rect2).intersects(rects["chips"]) and not (rects["side"] as Rect2).intersects(rects["chips"]) and not (rects["tracker"] as Rect2).intersects(rects["side"]) and view.grow(1.0).encloses(rects["side"]) and view.grow(1.0).encloses(rects["tracker"])
 	await bot._shot("hud-175", 0.1)
 	Settings.set_ui_scale(before)
 	await bot._wait(0.4)
-	bot._step("large text fits", inside and apart, "at 175 %% (%s): %s; tracker %s, chips %s %s" % [str(view.size), ", ".join(report), str(rects["tracker"]), str(rects["chips"]), "apart" if apart else "OVERLAP"])
+	bot._step("large text fits", inside and apart, "at 175 %% (%s): %s; tracker %s, chips %s, side buttons %s %s" % [str(view.size), ", ".join(report), str(rects["tracker"]), str(rects["chips"]), str(rects["side"]), "apart" if apart else "OVERLAP"])

@@ -127,6 +127,10 @@ func _ready() -> void:
 	menu.dev_enter.connect(_on_dev_enter)
 	menu.fps_toggled.connect(hud.set_fps_shown)
 	hud.journal_asked.connect(_on_window_asked.bind("journal"))
+	hud.family_asked.connect(_on_window_asked.bind("family"))
+	hud.pets_asked.connect(func(cmd: String) -> void:
+		if _mode == "outdoor" and not demo and not play.is_busy():
+			Net.send({"t": "pets", "cmd": cmd}))
 	menu.window_asked.connect(_on_window_asked)
 	camera.position = CAMERA_OFFSET
 	camera.look_at_from_position(CAMERA_OFFSET, CAMERA_LOOK)
@@ -605,6 +609,8 @@ func _on_window_asked(which: String) -> void:
 			play.windows.toggle_book(BookWindow.page_for_key(model.my_player()))
 		"help":
 			play.windows.toggle_help()
+		"family":
+			play.windows.toggle_family()
 		_:
 			play.windows.toggle_quests()
 
@@ -791,6 +797,7 @@ func _update_hud() -> void:
 	var me := model.my_player()
 	if _mode == "outdoor":
 		hud.set_farm_status(model, me)
+		hud.set_side_buttons(model.owns_callable())
 		return
 	var f := model.my_fighter()
 	var cls := combat.my_class()

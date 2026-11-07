@@ -182,6 +182,17 @@ func chest(id: int) -> Dictionary:
 	return o if o is Dictionary else {}
 
 
+## Do I own a pet or a horse on any map I know (isCallable in the browser: the animals the whistle and the stay command reach)?
+func owns_callable() -> bool:
+	for w in [farm] + areas.values():
+		if not (w is Dictionary):
+			continue
+		for a in w.get("animals", {}).values():
+			if a is Dictionary and str(a.get("owner", "")) == me and (bool(Data.animals.get(str(a.get("species", "")), {}).get("pet", false)) or Data.animals.get(str(a.get("species", "")), {}).has("mount")):
+				return true
+	return false
+
+
 ## My own health in the dungeon I am in: [hp, max, flags], or [] when the server has not said.
 func my_fighter() -> Array:
 	var snap: Dictionary = saga.get(my_area_key(), {})
