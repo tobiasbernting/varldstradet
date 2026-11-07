@@ -254,8 +254,10 @@ describe('the route generator (generateRoute)', () => {
     expect(routeSnap(a)).toHaveLength(a.nodes.length);
   });
 
-  it('builds the stops: 100 seeded runs, each on a path through the route, walkable from the start with the gate and the rest stone where they should be', { timeout: 120_000 }, () => {
+  it('builds the stops: 100 seeded runs, each on a path through the route, walkable from the start with the gate and the rest stone where they should be', { timeout: 120_000 }, async () => {
     for (let seed = 1; seed <= 100; seed++) {
+      // (let the test runner report in now and then: a worker that never does gets a timeout from the runner on a busy machine)
+      if (seed % 10 === 0) await new Promise((r) => setImmediate(r));
       const boss = DUNGEON_IDS[seed % DUNGEON_IDS.length]!;
       const plan = generateRun(seed, { boss, replay: seed % 3 === 0, clears: 1 + (seed % 3) });
       expect(plan.stops).toHaveLength(plan.route.nodes.length);
@@ -266,11 +268,12 @@ describe('the route generator (generateRoute)', () => {
     }
   });
 
-  it('builds every stop of nine routes, one per dungeon', { timeout: 120_000 }, () => {
-    DUNGEON_IDS.forEach((boss, i) => {
+  it('builds every stop of nine routes, one per dungeon', { timeout: 120_000 }, async () => {
+    for (const [i, boss] of DUNGEON_IDS.entries()) {
+      await new Promise((r) => setImmediate(r));
       const plan = generateRun(100 + i, { boss });
       for (const n of plan.route.nodes) checkStop(plan, n.id, `saga:all${i}z${n.id}`);
-    });
+    }
   });
 
   it('lays a Flock out in the rooms of one of the seven biome templates, in the chapter’s own look and with its monsters', () => {

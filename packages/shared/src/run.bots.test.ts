@@ -1,12 +1,14 @@
 // Whole runs played by bot parties (GAME2.md section 5.6): families of one to four heroes, careful and clumsy, through the route of
 // Draugkryptan to the boss. Kept apart from run.test.ts so the two run side by side on the CI (each is a minute or so of simulated runs);
-// run.solo.test.ts has the one-hero and Lätt tables.
+// run.solo.test.ts (Vanlig) and run.latt.test.ts (Lätt) have the one-hero tables.
 import { describe, expect, it } from 'vitest';
 import { DUNGEONS, DUNGEON_IDS, RUN_SEEDS, generateRun, mulberry32, offerRunor, readRun, runOf, type ClassId } from './index.ts';
 import { makeParty, playRun } from './runplay.ts';
 
 /** The longest a bot run may take (run time): the soft 30 minutes are a target, a route of ten stops may run past them with a clumsy party. */
 const BOT_LIMIT = 60 * 60_000;
+/** Lets the test runner report in between whole runs (a worker that never does gets a timeout from the runner on a busy machine). */
+const yieldToRunner = (): Promise<void> => new Promise((r) => setImmediate(r));
 
 describe('bot parties play whole runs', () => {
   // [label, classes, longhouse, careful minutes (low, high), clumsy minutes (low, high)]: the ranges are the measured averages of GAME2.md
@@ -22,10 +24,11 @@ describe('bot parties play whole runs', () => {
 
   for (const [label, classes, longhall, careful, clumsy] of FAMILIES) {
     for (const style of ['careful', 'clumsy'] as const) {
-      it(`${label}, ${style}: finishes inside the limit (${SEEDS.length} runs)`, { timeout: 120_000 }, () => {
+      it(`${label}, ${style}: finishes inside the limit (${SEEDS.length} runs)`, { timeout: 120_000 }, async () => {
         const mins: number[] = [];
         let wins = 0;
         for (const seed of SEEDS) {
+          await yieldToRunner();
           const party = makeParty(classes, { style, seed, longhall: longhall || classes.length === 4, level: 3 });
           const r = playRun(party, { seed }, BOT_LIMIT);
           // nothing is ever stuck: every run ends, in a win or a wipe, inside the limit
@@ -60,11 +63,12 @@ describe('bot parties play whole runs', () => {
     expect(rows.length).toBe(FAMILIES.length * 2);
   });
 
-  it('a run is different every time: three runs of one chapter have different routes, packs and runor offers', { timeout: 120_000 }, () => {
+  it('a run is different every time: three runs of one chapter have different routes, packs and runor offers', { timeout: 120_000 }, async () => {
     const routes = new Set<string>();
     const stops = new Set<string>();
     const offers = new Set<string>();
     for (const seed of [11, 12, 13]) {
+      await yieldToRunner();
       const party = makeParty(['vaktare', 'helare', 'magiker'], { seed });
       const r = playRun(party, { seed }, BOT_LIMIT);
       expect(r.outcome).toBe('win');
@@ -79,14 +83,15 @@ describe('bot parties play whole runs', () => {
     expect(offers.size).toBe(3);
   });
 
-  it('every dungeon can be run through by the careful bot: the route, the Mellanboss and the boss of each chapter', { timeout: 120_000 }, () => {
-    DUNGEON_IDS.forEach((boss, i) => {
+  it('every dungeon can be run through by the careful bot: the route, the Mellanboss and the boss of each chapter', { timeout: 120_000 }, async () => {
+    for (const [i, boss] of DUNGEON_IDS.entries()) {
+      await yieldToRunner();
       const party = makeParty(['krigare'], { style: 'careful', seed: 4, level: 3 });
       // (the chapters before it are cleared, so it is the next one to run)
       party.players[0]!.saga!.cleared = DUNGEON_IDS.slice(0, i);
       const r = playRun(party, { seed: 4, dungeon: boss }, BOT_LIMIT);
       expect(r.outcome, `${DUNGEONS[boss].name}: ${r.outcome} after ${(r.ms / 60_000).toFixed(0)} min`).not.toBe('running');
       expect(r.ms).toBeLessThan(BOT_LIMIT);
-    });
+    }
   });
 });

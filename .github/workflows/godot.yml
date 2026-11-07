@@ -584,7 +584,7 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/shots/run"
           GODOT=~/godot/godot BOT_ONLY=run BOT_RUN_SECONDS=900 BOT_RUN_SHOTS="$GITHUB_WORKSPACE/shots/run" \
             xvfb-run -a -s "-screen 0 1280x720x24" pnpm godot:bot 2>&1 | tee runpair.log
-          for f in m5c-arch m5c-zone m5c-cards m5c-end m5c-tree; do test "$(stat -c %s "$GITHUB_WORKSPACE/shots/run/$f.png")" -gt 20000; done
+          for f in m5c-arch m5c-zone m5c-cards route-map route-runes m5c-end m5c-tree; do test "$(stat -c %s "$GITHUB_WORKSPACE/shots/run/$f.png")" -gt 20000; done
 
       - uses: actions/upload-artifact@v4
         if: always()

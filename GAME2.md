@@ -1,6 +1,6 @@
 # GAME2.md: Färden, version 2 — the runs are the game
 
-Written 2026-11-07, design only (no code changes); R1 and R2 of section 8 are built since (marked there). Replaces the *shape* of the run in `GAME.md` (approved 2026-11-06) and
+Written 2026-11-07, design only (no code changes); R1, R2 and R3 of section 8 are built since (marked there; what R3 built and measured is section 5.6). Replaces the *shape* of the run in `GAME.md` (approved 2026-11-06) and
 keeps everything under it: the fight rules of `sagasim.ts`, the classes, spells, bosses and telegraphs of `saga.ts`, the
 farm. Where this file says "today" it means the code in `packages/shared/src/run.ts`, `runmap.ts`, `runsim.ts`,
 `runbot.ts`. Same promise as before: nothing bleeds, monsters poof, falling costs nothing you own.
@@ -132,6 +132,8 @@ Wings (Tape to Tape's three acts, in three lines of text): rows 1–4 **Första 
 Hard rules for the generator: at least one ⛺ and one 🪙 **reachable** in each wing; never two ❓ in a row on every lane;
 no ⚔⚔ in rows 1–2; rows 4 and 8 always have a safe lane. Deterministic from the seed like `generateRun`.
 
+*R3 built the rules that apply to the kinds it has (Flock, Mellanboss, Vilosten, Boss): section 5.6 lists them. The Köpman, Händelse, Skatt and Stark vakt lanes come with R5.*
+
 ### 2.2 How a route is chosen (co-op)
 
 At the end of a stop, once the gate is open, the exit room shows **up to three väg-runor** on the floor — glowing discs
@@ -141,7 +143,7 @@ rune with most players wins; ties go to the **Stigfinnare** (path-finder): the p
 row and shown with a small compass on their head (so the 7-year-old gets to decide too). Nobody is pulled by a window; the
 vote is spatial and visible, which suits kids better than a menu. Followers never vote.
 
-This reuses the machinery of `offerRunor`'s vote (strict majority, 20 s, ties to the first), moved from cards to discs.
+This reuses the machinery of `offerRunor`'s vote (strict majority, 20 s, ties to the first), moved from cards to discs (R3: `tally` in `run.ts` is the one rule of both votes; the exact rules of the discs are in section 5.6).
 
 ### 2.3 What a stop is (WoW feel, small maps)
 
@@ -531,6 +533,70 @@ clumsy, 7-year-old ≈ 1.2 × clumsy**.
 (Today's bot times, GAME.md §9, are 6–13 min careful because the run had 4 stops of fighting; the new route has ~10 stops
 and events, which is the point: 20–28 min with a careful adult.)
 
+### 5.6 What R3 built, and what the bots measured
+
+**Built** (`run.ts`, `runmap.ts`, `runsim.ts`, `runbot.ts`, `saga.ts`, `protocol.ts`; the Godot HUD rail, `route_view.gd`, the arch window, the end summary and the run pair bot):
+
+* **The route** (`generateRoute(seed, {dungeon, level})`): ten rows, node kinds `flock | mini | rest | boss` (the others come with R5). Row 1 is one Flock, row 5 the Mellanboss, row 9 the last Vilosten, row 10 the Boss; rows 2–4 and 6–8 have two or
+  three lanes (45 % three); rows 4 and 8 always have **one** Vilosten (the safe lane), and every stop of the row before can walk to it; rows 2 and 6 have one now and then (30 %); rows 3 and 7 never (no two in a row). Every
+  stop has a way in and a way on (so all can be reached and all lead to the boss), a node leads to the nearest lane of the next row and sometimes to its neighbour as well. The generator test makes 300 routes (every dungeon)
+  and checks all of that and that a Vilosten can be reached in each wing; the level does not change the map.
+* **The stops** (`generateRun` adds the plan of every node; `buildStop(plan, node, key)` builds one map with `sagamap.buildDungeon`): the chapter's own floor, walls, light and decor and its monsters (`dungeonMobs`: the dungeon's
+  species by health, the weakest as "small", the strongest as "big"). A **Flock** is laid out in the start room, the two rooms of packs and the exit room of one of the seven biome templates (the rest stone and the side room go; the exit room
+  is behind the gate); 3 + 3 packs of 4–5 (Lätt 2 + 2–3 packs of 3–4). A **Vilosten** is start, the stone's room and the exit room (no gate, no packs). The **Mellanboss** stop is start, a room of three packs, the dungeon's own mid-boss hall and the
+  exit room behind the gate it opens. The **Boss** stop is start, a room of three packs and the dungeon's own boss hall (with the replay modifier `vakten`, a guard before it). Monster health by wing is `WING_HP` = 1.6 / 1.75 / 1.95 (rows 1–4,
+  5–8, 9–10) on top of the saga's party scaling, times `SOLO_MERCY` for one human with the Hirdmannen (kept: the `fightersEff` scaling of §5.3 is later work).
+* **The flow of a stop**: fight → the gate opens (a Flock) or the Mellanboss falls → sagafrön for the stop (3, the mid-boss 5, a pack still 1) → the **cards** of a runa as before (`pick`, started at once now, not by using the exit; a Vilosten has none) → the
+  **väg-runor** appear on the floor of the exit room (`run_exit`, one for each stop the next row leads to, the object's variant is the kind of stop and decides the glow) → the vote → the next stop.
+* **The vote on the way on** (`tickRoute`): a player counts on the rune within 1 tile of its middle, after **1 s** on it (so crossing a rune on the way to another is no vote; pressing the action key on it counts at once, for key and pad
+  players); the vote ends when **every online human in the stop** is on a rune, or **20 s after the first** player stepped onto one (it waits for ever with nobody on one); the rune with **most players** wins and a **tie goes to the Stigfinnare**
+  if they stand on one of the tied runes, else to the rune stood on first. The Stigfinnare is the human whose turn it is, in party order, one step on after every vote; followers and offline players never vote; a friend who joins during the cards waits
+  on the farm and is brought into the next stop; one who joins during the vote is put at the stone and is asked. `tally` (`run.ts`) is the one rule of both votes. The state names the runes, who stands on each and the seconds left; the client shows
+  the stop's picture and the names on each rune, a ring that fills while I stand on one and a 🧭 over the Stigfinnare's head (when two humans or more play).
+* **The Vilosten**: when the party arrives it gets 40 % of its maximum health back and everyone who had fallen up (`VILOSTEN_HEAL`); the stone in its middle heals as any rest stone does. No cards and no sagafrön for the stop. (The choice
+  Vila / Skärp en runa waits for R4.)
+* **A run is one dungeon**: `run start` takes `dungeon` (an id); a player may run the dungeons they have cleared and the next in the saga's order (`runnableDungeons`), anything else is refused with a toast (`RUN_T.badDungeon`); left out it is the player's
+  current chapter (or, with `replay`, a cleared one at random, as before). The arch window has a ◀ ▶ row for it (the default is the current chapter). PR 31's world arches were not on main when R3 began, so the window only offers
+  `RunWindow.preset` (set it to a dungeon id before opening the window, and the window starts with that dungeon chosen); the arches should set it.
+* **Lätt**: the Sagoandan after each stop comes up to **5** at a time (the route has ten stops: `SAGOANDAN_LATT_MAX`), and Lätt has smaller packs (`LATT_*_PACKS`), on top of R2's multipliers.
+* **Earnings**: a pack 1, a stop 3 (was 4 for a zone), the mid-boss 5 (the old guard's 3), the boss 20/12 as before (`RUN_SEEDS`).
+* **The client**: the **rail** on the clock panel (a picture for each of the ten rows: the stops walked, the one now lit and larger, the mid-boss, last rest and boss to come, a dot for the rest, and "Steg 3 av 10 · Första vingen"), the **map**
+  (R, or the pad's misc button: ten columns, the three wings, the walked path in gold, the ways on in green, where we are ringed; the world goes on behind it), the rune marks and the compass above, the glow of a rune by the stop it leads to
+  (teal Flock, green Vilosten, amber Mellanboss, red Boss), the route taken on the summary, the ◀ ▶ dungeon row. `Data.zone_look` is the chapter's dungeon for every stop.
+* **Bots**: `BotMind.lane` — the careful bot takes the safe lane (a Vilosten when it or a friend is below 70 %/60 % health or there is no fight to take, else a fight), the clumsy bot a random lane; both walk onto the rune and stay. At a Vilosten they rest to 90 %
+  first. The run pair bot of the Godot job takes `--lane=rest` (the Vilosten whenever one is offered) and stops at `--rows=5`, the first wing walked.
+
+**Measured** (level-3 heroes in the starter set, Draugkryptan, the Hirdmannen hired, no longhouse, seeds 1–20 for the one-hero rows; the human is the bot style named; "min" is until the boss falls; `runtune.ts`):
+
+| Party | Level | Style | Wins | Ended on wipe | Minutes (avg, min–max) |
+| --- | --- | --- | --- | --- | --- |
+| ensam väktare / helare / krigare / magiker | Vanlig | careful | 20/20 each | 0 | 19.6 (17.6–22.5) / 18.4 (15.9–21.9) / 13.2 (11.6–15.9) / 17.5 (15.2–20.9) |
+| ensam väktare / helare / krigare / magiker | Vanlig | clumsy | 20/20 each | 0 | 35.9 (31.8–40.3) / 31.2 (26.1–35.5) / 27.3 (22.3–32.5) / 32.8 (27.4–38.7) |
+| krigare + magiker | Vanlig | careful / clumsy | 20/20 / 20/20 | 0 | 16.3 (14.0–17.4) / 33.3 (28.1–38.5) |
+| väktare + helare (no follower) | Vanlig | careful / clumsy | 20/20 / 20/20 | 0 | 24.3 (20.3–29.1) / 47.6 (39.9–54.9) |
+| ensam väktare / helare / krigare / magiker | Lätt | careful | 20/20 each | 0 | 10.4 (8.8–11.6) / 10.5 (8.9–11.7) / 7.8 (6.7–8.4) / 9.2 (7.8–9.9) |
+| ensam väktare / helare / krigare / magiker | Lätt | clumsy | 20/20 each | 0 | 24.6 (20.3–28.6) / 21.2 (18.5–23.6) / 20.4 (17.2–23.0) / 23.0 (19.1–25.5) |
+| krigare + magiker / väktare + helare | Lätt | clumsy | 20/20 each | 0 | 23.2 (19.7–26.3) / 32.4 (25.7–38.3) |
+| tre spelare (väktare, helare, magiker) | Vanlig | careful / clumsy | 3/3 each (seeds 1–3, the CI test) | 0 | 19.0 (17.6–19.8) / 37.0 (34.9–39.7) |
+| fyra spelare (all four classes) | Vanlig | careful / clumsy | 3/3 each (seeds 1–3, the CI test) | 0 | 16.1 (14.9–16.7) / 32.4 (29.3–36.8) |
+
+The route a bot walks has on average 5.3–6.6 Flocks and 1.4–2.8 Vilosten (row 9 always one) of its ten stops. The careful bot takes a Vilosten when it or a friend is hurt (so 1.8–2.8 Vilosten on Vanlig and fewer on Lätt, where it is seldom hurt), the clumsy bot a random lane.
+The other eight dungeons run through too: the careful solo bots (level-3 heroes in the starter set, seeds 1–2) finish every one of them, in 15–46 minutes when they win (Frostjättens borg 15.5–27.3, Surts smedja 17.2–33.7, Helheim 17.9–25.1, Svartalfheims gruvor 20.7–34.4,
+Havsormens tempel 22.0–34.3, Alvernas lund 33.0–35.8, Fenrisklyftan 32.4–46.1, Bifrost 25.0–33.7); a solo Krigare or Magiker wipes a run in Alvernas lund and Fenrisklyftan, where a level-3 hero is weak. This is the stall check (no run hangs; `run.bots.test.ts` runs it for all nine), not a tuning of those chapters.
+A sagafrön count: a careful Krigare earns **93 per run on Vanlig** (79–107) and **49 on Lätt**; GAME2 §6 aimed at 55–65, because a Flock has 6 packs (1 each) and a stop pays 3. Left as it is for the owner to decide; `RUN_SEEDS.pack` at ⅓ would give about 60.
+
+**Reading this honestly.**
+
+1. *The two time targets cannot both hold with these bots.* R3's brief asked for the careful bot in about 20–28 minutes and the clumsy bot in 28–35. The clumsy bot is about 1.9 times the careful one (its pauses between moves and its misses make it walk and fight far slower), so the two
+   ranges are 1.4 times apart and cannot be met together. The numbers here put the **clumsy bot (the 9-year-old) at 27–36 (avg 32)** and the **careful bot at 13–20 (avg 17)**, which with §5.4's own calibration (an adult is about 1.7 times the careful bot) is **an adult at 22–33 minutes**,
+   against §1's "careful adult 20–28". A real adult is the thing to measure on the MacBook. The levers are `WING_HP` and `FLOCK_PACKS`; raising the careful bot to 20 minutes would put the clumsy one near 38. Lätt: the careful bot 8–11 (as §5.4's 8–11), the clumsy bot 20–25 (§5.4 wanted 15–20; R2's 11–18 was for three zones).
+2. *The Flock is not "1–2 packs".* GAME2 §2.3 imagined a Flock of two minutes for a careful adult; the bots need ten stops to take 15–35 minutes, so a Flock has 6 packs here, and a route has about 6 Flocks, 2 Vilosten, the Mellanboss and the Boss. Fewer, smaller Flocks and more stop kinds
+   (Händelse, Köpman, Skatt, R5) are the way back to the design's idea; the tables will need re-tuning then.
+3. *A tank and a healer together are slow.* Two humans who are Väktare and Helare get no follower (`companionClass`) and their damage is small: the clumsy pair needs about 48 minutes (the careful pair 24). GAME2 §5.2 gives them a dps follower; that is not built yet and is the first thing to build for a parent
+   and a child who play those two.
+4. *The Lätt bot rows* never wipe, as in R2: the Sagoandan and the free Lätt wipe are exercised by the unit tests, not by the bot runs.
+5. *Where the time goes.* A good part of a clumsy run is walking (64 × 64 tile maps with long corridors; the Flock layouts are the templates of v1, and the clumsy bot pauses between steps). Shorter corridors would shorten the run without touching a monster, and are the first lever if the kids find it long.
+
 ---
 
 ## 6. Meta-progression between runs
@@ -572,9 +638,9 @@ as is, and *färdkost* is also sold by the Köpman. One extra: **"Kökets dagens
 | System (file) | Verdict | Change |
 | --- | --- | --- |
 | `run.ts` constants (`RUN_MAX_MS` and nudges) | **keep** | the 30:00 soft target and the banners stay |
-| `ZONES_PER_RUN = 3`, `ZONE_HP`, `ZONE_PACKS`, `SOLO_MERCY` | **replace** | route rows, `wingHp`, followers instead of mercy (§5.3) |
+| `ZONES_PER_RUN = 3`, `ZONE_HP`, `ZONE_PACKS`, `SOLO_MERCY` | **replace** | route rows, `wingHp`, followers instead of mercy (§5.3). **R3 did** `ZONES_PER_RUN` → `ROUTE_ROWS`, `ZONE_HP` → `WING_HP`, `ZONE_PACKS` → `FLOCK_PACKS`; `SOLO_MERCY` stays until the `fightersEff` scaling (§5.3) is built |
 | `ZONE_TEMPLATES`, `RunBiome` (`run.ts`) | **change** | become *room layouts* for stops; biomes only look/ground in the world |
-| `generateRun` (`runmap.ts`) | **replace** | `generateRoute(seed, {dungeon, level})` returns a graph of nodes (§2); `buildZone` becomes `buildStop` |
+| `generateRun` (`runmap.ts`) | **replace** | `generateRoute(seed, {dungeon, level})` returns a graph of nodes (§2); `buildZone` becomes `buildStop`. **Done in R3**; `generateRun` stays as the wrapper that adds the plan of every stop |
 | `RunPlan`, `ZonePlan`, modifiers (`fler`, `segare`, …) | **change** | modifiers → levels and särdrag; plan carries the graph |
 | `RunState` / `runsim.ts` `startRun` / `enterZone` / `tickRuns` | **change** | phases `zone|pick|victory|ended` → `stop|route|…`; route vote by position; Hacksilver, Sagoandan, levels |
 | `offerRunor` and the vote (`pickRuna`, `rerollOffer`) | **change** | personal offers (§3.2); vote machinery reused for routes and party runor |
@@ -619,7 +685,7 @@ than ~60 s of new route tests), and the Godot workflow gains **one** short bot s
 2. **R2 — Lätt and the Sagoandan.** **Done (2026-11-07).** A `level` on the start message (`0|1`); Lätt multipliers (hp ×0.6, dmg ×0.5, warn +40 %);
    Sagoandan as a one-shot revive-all on a wipe; half sagafrön on Lätt. Bots: the clumsy solo bot wins Lätt ≥ 95 %.
    What was built and measured is in section 5.5.
-3. **R3 — the route.** `generateRoute` + `buildStop`; stops of kind Flock, Mellanboss, Boss, Vilosten only; the walk-onto-a-
+3. **R3 — the route.** **Done (2026-11-07).** What was built and measured is section 5.6. `generateRoute` + `buildStop`; stops of kind Flock, Mellanboss, Boss, Vilosten only; the walk-onto-a-
    rune vote; the HUD rail. Keep the v1 zone templates as layouts. The bots walk the graph (`runbot.ts` learns "pick the lane
    with the safe icon / random lane"). 10 rows ~28 min target; tune row sizes.
 4. **R4 — runor v2.** Personal offers, rarities and tags, the card overlay, set bonuses, ~30 new runor (the combo tags come
