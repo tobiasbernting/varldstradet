@@ -111,7 +111,9 @@ This file is only what the next agent needs: state, decisions, how the work is r
   Shift/left trigger run. Running: R3 the route (`claude/runs-r3-route`); PR 28 (DESIGN.md rewrite) folding main.
 - **PAUSED by the owner at ~19:10 UTC on 2026-11-07.** Everything from today is on main (last: PR 28, the DESIGN.md
   rewrite, 667060e). Only unfinished work: GAME2 R3 (the route) on `claude/runs-r3-route`
-  (`session_01KTh22rczdYpWVjNiqviHrd`), told to push a WIP commit and stop; no PR. No check-in is scheduled.
+  (`session_01KTh22rczdYpWVjNiqviHrd`), stopped at ea37386 with **PR 41 open** (complete, local gate and Godot bots passed per the child; not
+  reviewed or merged; its body lists owner decisions: bot times, 6-pack Flocks, ~93 sagafrön per run, the slow
+  tank+healer duo). No check-in is scheduled.
   **GitHub Actions has assigned no runners since ~19:01 UTC** (every job fails in 1–2 s, runner_id 0): most likely the
   account's Actions minutes are used up; the owner checks billing. Until it runs again, verify PRs locally (install,
   typecheck, tests, godot:gen clean, Godot import, godot:bot, --placeholdercheck) before merging.
