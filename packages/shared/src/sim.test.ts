@@ -1617,6 +1617,97 @@ describe('badhuset', () => {
   });
 });
 
+describe('vilda djur skräms och kommer tillbaka (M7b)', () => {
+  const at = (now: number): SimCtx => ({ season: 'none', rnd: () => 0.5, now });
+  function outdoors(species: string, dx = 3) {
+    const { world, p } = setup();
+    standAt(world, p, 32, 0);
+    travel(world, p.id, 'n');
+    const area = areaOf(world, p);
+    for (const a of Object.values(area.animals)) delete area.animals[a.id];
+    standAt(world, p, 30, 30);
+    for (let x = 14; x <= 50; x++) for (let y = 24; y <= 36; y++) clearTile(area, x, y);
+    const a = spawnMob(area, species, 30 + dx, 30);
+    a.hp = 1;
+    return { world, p, area, a };
+  }
+
+  it('an animal runs from a hero who walks at it, and walks back once the hero has stopped', () => {
+    const { world, p, area, a } = outdoors('hare');
+    const home = { x: a.x, y: a.y };
+    p.moving = true;
+    let now = 1_000_000;
+    tick(world, 100, at((now += 100)));
+    expect(a.fleeUntil).toBeDefined();
+    expect(a.haunt).toEqual(home);
+    // a few steps of running: farther from the hero each time
+    let last = Math.hypot(a.x - p.x, a.y - p.y);
+    for (let i = 0; i < 6; i++) {
+      tick(world, 100, at((now += 100)));
+      const d = Math.hypot(a.x - p.x, a.y - p.y);
+      expect(d).toBeGreaterThan(last);
+      last = d;
+    }
+    expect(a.moving).toBe(true);
+    expect(a.x).toBeGreaterThan(home.x + 2 * TILE);
+    // the hero stops: nothing startles it again, and after a while it is back where it was
+    p.moving = false;
+    let closest = Infinity;
+    let farthest = 0;
+    for (let i = 0; i < 400; i++) {
+      tick(world, 100, at((now += 100)));
+      const d = Math.hypot(a.x - home.x, a.y - home.y);
+      if (i > 30) closest = Math.min(closest, d);
+      if (i > 150) farthest = Math.max(farthest, d);
+    }
+    expect(closest).toBeLessThan(0.7 * TILE); // it came back to its spot...
+    expect(farthest).toBeLessThan(8 * TILE); // ...and then potters about it, as before
+    expect(a.startled).toBeUndefined();
+    expect(a.fleeUntil).toBeUndefined();
+  });
+
+  it('a hero who stands still, an animal out of reach, a petted one, predators, pets and farm animals are left alone', () => {
+    // standing still, 3 tiles away
+    let t = outdoors('hare');
+    tick(t.world, 100, at(1_000_100));
+    expect(t.a.fleeUntil).toBeUndefined();
+    // moving, but 6 tiles away
+    t = outdoors('hare', 6);
+    t.p.moving = true;
+    tick(t.world, 100, at(1_000_100));
+    expect(t.a.fleeUntil).toBeUndefined();
+    // moving and close, but it has been petted today
+    t = outdoors('hare');
+    t.p.moving = true;
+    t.a.petted = true;
+    tick(t.world, 100, at(1_000_100));
+    expect(t.a.fleeUntil).toBeUndefined();
+    // a tamed one follows its owner instead
+    t = outdoors('hare');
+    t.p.moving = true;
+    t.a.owner = t.p.id;
+    tick(t.world, 100, at(1_000_100));
+    expect(t.a.fleeUntil).toBeUndefined();
+    expect(t.a.haunt).toBeUndefined();
+    // a bear comes for the hero (it is not startled)
+    t = outdoors('bear');
+    t.p.moving = true;
+    tick(t.world, 100, at(1_000_100));
+    expect(t.a.startled).toBeUndefined();
+    expect(t.a.haunt).toBeUndefined();
+  });
+
+  it('it is the same every time (no random numbers) and a lasso scare still ends as before', () => {
+    const run = () => {
+      const { world, p, a } = outdoors('deer');
+      p.moving = true;
+      for (let i = 0; i < 20; i++) tick(world, 100, { season: 'none', rnd: () => 0.5, now: 1_000_000 + i * 100 });
+      return [a.x, a.y, a.fleeUntil];
+    };
+    expect(run()).toEqual(run());
+  });
+});
+
 describe('lasso och rovdjur', () => {
   const at = (now: number, r: number): SimCtx => ({ season: 'none', rnd: () => r, now });
   /** Player in the area north of the farm with a lasso in hand and a wild animal two tiles to the right. */

@@ -2615,6 +2615,42 @@ function tickHearts(world: WorldState, ctx: SimCtx, out: Change[]): void {
   }
 }
 
+/**
+ * M7b: the wild animals (not predators, monsters, pets, mounts or traffic) startle when a hero who is MOVING comes within
+ * STARTLE_TILES of them: they bolt away from the hero for BOLT_MS, then wait, then walk back to where they were first
+ * startled (`haunt`). A hero who stands still never startles anything, so waiting quietly lets an animal come near again
+ * (petting and the lasso work as before); an animal that has been petted today knows you. Deterministic: no random numbers.
+ */
+export const STARTLE_TILES = 4;
+export const BOLT_MS = 2400;
+const BOLT_SPEED_MUL = 2.2;
+const CALM_MS = 3500;
+function tickStartle(world: WorldState, a: AnimalState, ctx: SimCtx): void {
+  const def = ANIMALS[a.species];
+  if (!def?.wild || a.owner || a.petted || def.mob || def.predator || isVehicle(a) || isMount(a) || a.stay) return;
+  if (world.area === 'dungeon' || isIndoorKey(world.area) || a.fleeUntil !== undefined) return;
+  const here = world.area ?? 'farm';
+  let near: PlayerState | undefined;
+  let best = STARTLE_TILES * TILE;
+  for (const p of Object.values(world.players)) {
+    if (!p.online || p.area !== here || !p.moving) continue;
+    const dist = Math.hypot(p.x - a.x, p.y - a.y);
+    if (dist < best) {
+      best = dist;
+      near = p;
+    }
+  }
+  if (!near) return;
+  a.haunt ??= { x: a.x, y: a.y };
+  a.startled = true;
+  a.fleeUntil = ctx.now + BOLT_MS;
+  a.fleeX = near.x;
+  a.fleeY = near.y;
+  delete a.tx;
+  delete a.ty;
+  a.waitMs = 0;
+}
+
 /** Scared animals run away from where the lasso came from. */
 function tickFlee(world: WorldState, a: AnimalState, dtMs: number, ctx: SimCtx): boolean {
   if (a.fleeUntil === undefined || ctx.now >= a.fleeUntil) {
@@ -2622,13 +2658,20 @@ function tickFlee(world: WorldState, a: AnimalState, dtMs: number, ctx: SimCtx):
       delete a.fleeUntil;
       delete a.fleeX;
       delete a.fleeY;
+      if (a.haunt) {
+        // a startled animal catches its breath, then walks back to where it was (a spot of its own near it)
+        a.waitMs = CALM_MS + (a.id % 5) * 500;
+        a.tx = a.haunt.x + ((a.id % 3) - 1) * 6;
+        a.ty = a.haunt.y + (((a.id >> 2) % 3) - 1) * 6;
+      }
     }
+    delete a.startled;
     return false;
   }
   const dx = a.x - (a.fleeX ?? a.x);
   const dy = a.y - (a.fleeY ?? a.y);
   const dist = Math.hypot(dx, dy) || 1;
-  const speed = (ANIMALS[a.species]?.speed ?? 20) * 1.5;
+  const speed = (ANIMALS[a.species]?.speed ?? 20) * (a.startled ? BOLT_SPEED_MUL : 1.5);
   const step = (speed * dtMs) / 1000;
   const r = resolveMove((tx, ty) => isSolidForAnimal(world, tx, ty), a.x, a.y, a.x + (dx / dist) * step, a.y + (dy / dist) * step, ANIMAL_HALF_W, ANIMAL_HALF_H, world);
   a.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up';
@@ -2913,6 +2956,7 @@ function tickAnimals(world: WorldState, dtMs: number, ctx: SimCtx, out: Change[]
       continue;
     }
     if (!a.stay && (isPetAnimal(a) || (isMount(a) && a.follow)) && tickPet(world, a, dtMs)) continue;
+    tickStartle(world, a, ctx);
     if (tickFlee(world, a, dtMs, ctx)) continue;
     if (isHostile(a) && tickMob(world, a, dtMs, ctx, out)) continue;
     if (a.waitMs > 0) {
@@ -2921,7 +2965,7 @@ function tickAnimals(world: WorldState, dtMs: number, ctx: SimCtx, out: Change[]
       continue;
     }
     if (a.tx === undefined || a.ty === undefined) {
-      const c = a.stay ?? homeCenter(world, a);
+      const c = a.stay ?? a.haunt ?? homeCenter(world, a);
       const ang = ctx.rnd() * Math.PI * 2;
       const r = ctx.rnd() * (a.stay ? STAY_LEASH : LEASH);
       a.tx = Math.min(mapW(world) * TILE - 8, Math.max(8, c.x + Math.cos(ang) * r));
