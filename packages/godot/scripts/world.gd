@@ -126,9 +126,7 @@ func _ready() -> void:
 	menu.switch_player.connect(func() -> void: left.emit())
 	menu.dev_enter.connect(_on_dev_enter)
 	menu.fps_toggled.connect(hud.set_fps_shown)
-	menu.window_asked.connect(func(which: String) -> void:
-		if _mode == "outdoor" and not demo:
-			play.windows.toggle_gear() if which == "gear" else play.windows.toggle_quests())
+	menu.window_asked.connect(_on_window_asked)
 	camera.position = CAMERA_OFFSET
 	camera.look_at_from_position(CAMERA_OFFSET, CAMERA_LOOK)
 	camera.fov = 40.0
@@ -591,6 +589,19 @@ func _dress_hero(me: Dictionary) -> void:
 
 func _look_key(p: Dictionary) -> String:
 	return str(hash(JSON.stringify([p.get("appearance"), p.get("outfit")])))
+
+
+## The pause menu's buttons for the windows a key also opens (for a pad).
+func _on_window_asked(which: String) -> void:
+	if _mode != "outdoor" or demo:
+		return
+	match which:
+		"gear":
+			play.windows.toggle_gear()
+		"book":
+			play.windows.toggle_book("book")
+		_:
+			play.windows.toggle_quests()
 
 
 func _on_travel_asked(dir: String) -> void:

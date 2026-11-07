@@ -20,6 +20,7 @@ var talk: TalkWindow
 var klass: ClassWindow
 var travel: TravelWindow
 var quests: QuestsWindow
+var book: BookWindow ## B (the Gårdsbok)
 var run_arch: RunWindow
 var seed_tree: SeedWindow
 var _all: Array = []
@@ -44,6 +45,7 @@ func setup(v: WorldView) -> void:
 	klass = _add(ClassWindow.new())
 	travel = _add(TravelWindow.new())
 	quests = _add(QuestsWindow.new())
+	book = _add(BookWindow.new())
 	run_arch = _add(RunWindow.new())
 	seed_tree = _add(SeedWindow.new())
 	model.quests_changed.connect(refresh)
@@ -130,7 +132,31 @@ func toggle_quests() -> void:
 		quests.open_window()
 
 
+## B: the Gårdsbok; the same key again closes the window.
+func toggle_book(page: String) -> void:
+	if book.is_open():
+		if book.tab == page:
+			book.close()
+		else:
+			book.open_at(page)
+	elif not is_busy():
+		book.open_at(page)
+
+
+## True when `event` is the key of a book, and it was used.
+func handle_key(event: InputEvent) -> bool:
+	if event.is_action_pressed("book"):
+		toggle_book("book")
+	else:
+		return false
+	return true
+
+
 func _unhandled_input(event: InputEvent) -> void:
+	# the key that opened a book closes it again
+	if book.is_open() and Time.get_ticks_msec() - 250 > book._opened_at and handle_key(event):
+		get_viewport().set_input_as_handled()
+		return
 	# the key that opened the gear or the wishes closes them again
 	if event.is_action_pressed("gear") and gear.is_open():
 		gear.close()

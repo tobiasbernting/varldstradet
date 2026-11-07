@@ -54,6 +54,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { ACHIEVEMENTS } from '../../shared/src/data.ts';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../../..');
@@ -133,10 +134,15 @@ interface FarmReport {
   day: number;
   route: string[];
   hearts_seen: number;
+  /** M9b: what the books and the HUD showed (farm_bot_books.gd). */
+  books?: {
+    achievements?: Record<string, { unlocked: boolean; k: number }>;
+  };
 }
 
 /** What the server itself keeps of a player: asks over the game socket, as a client does (`hello`, then `welcome`). */
-async function serverRecord(url: string, playerId: string): Promise<{ inventory: ({ item: string; count: number } | null)[]; coins: number; stars: number } | null> {
+type ServerRecord = { inventory: ({ item: string; count: number } | null)[]; coins: number; stars: number; achievements?: string[]; stats?: Record<string, number> };
+async function serverRecord(url: string, playerId: string): Promise<ServerRecord | null> {
   const WebSocket = createRequire(path.join(root, 'packages/server/package.json'))('ws') as typeof import('ws').WebSocket;
   return await new Promise((resolve) => {
     const ws = new WebSocket(url);
@@ -151,7 +157,7 @@ async function serverRecord(url: string, playerId: string): Promise<{ inventory:
       clearTimeout(timer);
       const p = msg.world.players[playerId];
       ws.close();
-      resolve(p ? { inventory: p.inventory, coins: p.coins, stars: p.stars } : null);
+      resolve(p ? { inventory: p.inventory, coins: p.coins, stars: p.stars, achievements: p.achievements, stats: p.stats } : null);
     });
     ws.on('error', () => {
       clearTimeout(timer);
@@ -313,6 +319,9 @@ async function checkFarmer(r: FarmReport, farmPort: number, botLog?: string): Pr
     'into the farmhouse', 'the stove opens', 'sound: by the stove indoors', 'cook bread', 'out of the farmhouse', 'change the hat', "a villager's window", 'start a conversation', 'a joke', 'a riddle', 'sten, sax, påse', 'villagers speak',
     // quest marks over the villagers (M9b)
     'mark: Elsa has a wish I can fill', "mark: Elsa's wish is done", 'mark: Völvan has a story', "mark: Völvan's chapter is done", "mark: Völvan's next chapter", 'marks up close',
+    // the books, the HUD, the help and the family window (M9b)
+    'the Gårdsbok', 'the Gårdsbok closes on B', 'the pause menu opens the books',
+    'large text fits',
     // the village: the class, Völvan, the pizzeria, the gear and the hero switch, the bus
     'walk to Köpingen', 'sound: the village', 'pick a class', "Völvan's chapter", 'buy a pizza', 'eat the pizza', 'equip the weapon', 'the hero switch', 'back to the farm outfit', 'the bus home', 'the bus to the village', 'sound: footsteps', 'sound: ambience',
   ];
@@ -334,6 +343,22 @@ async function checkFarmer(r: FarmReport, farmPort: number, botLog?: string): Pr
   check(r.hud_coins.startsWith(String(rec.coins)), `${r.name}: the HUD shows the coins ("${r.hud_coins}" for ${rec.coins})`);
   check(rec.stars === 0 || r.hud_stars.includes(String(rec.stars)), `${r.name}: the HUD shows the stars ("${r.hud_stars}" for ${rec.stars})`);
   check(rec.stars >= 3, `${r.name}: the errands and the chapter paid in stars (${rec.coins} kr left, ${rec.stars} stars)`);
+  checkBooks(r, rec);
+}
+
+/** The books the client drew (B, K, H, P) against the server's own record of the player and the shared data. */
+function checkBooks(r: FarmReport, rec: ServerRecord): void {
+  const b = r.books ?? {};
+  // the Gårdsbok: all of ACHIEVEMENTS, and each one done exactly when the server says so, its bar as far as the server's counter
+  const ach = b.achievements ?? {};
+  check(Object.keys(ach).length === ACHIEVEMENTS.length, `${r.name}: the Gårdsbok drew all ${ACHIEVEMENTS.length} achievements (${Object.keys(ach).length})`);
+  const wrong = ACHIEVEMENTS.filter((a) => {
+    const shown = ach[a.id];
+    const have = Math.min(a.goal, rec.stats?.[a.stat] ?? 0);
+    return !shown || shown.unlocked !== !!rec.achievements?.includes(a.id) || Math.abs(shown.k - have / a.goal) > 0.001;
+  });
+  check(wrong.length === 0, `${r.name}: each achievement's medal and bar agree with the server's record (${wrong.map((a) => a.id).slice(0, 5).join(', ') || 'all ' + ACHIEVEMENTS.length}); ${rec.achievements?.length ?? 0} unlocked`);
+  check(!!ach['harvest_1']?.unlocked && !!rec.achievements?.includes('harvest_1'), `${r.name}: the first harvest earned a medal, and the book shows it`);
 }
 
 /** One bot of the run pair: it played through the client and its report says how far. */

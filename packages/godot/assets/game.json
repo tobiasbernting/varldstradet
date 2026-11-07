@@ -9080,6 +9080,710 @@
     }
   },
   "book": {
+    "achievements": [
+      {
+        "id": "harvest_1",
+        "stat": "harvest",
+        "goal": 1,
+        "stars": 1,
+        "icon": "carrot",
+        "title": "Första skörden",
+        "text": "Skörda en gröda"
+      },
+      {
+        "id": "harvest_25",
+        "stat": "harvest",
+        "goal": 25,
+        "stars": 2,
+        "icon": "strawberry",
+        "title": "Grönsaksland",
+        "text": "Skörda 25 grödor"
+      },
+      {
+        "id": "harvest_100",
+        "stat": "harvest",
+        "goal": 100,
+        "stars": 3,
+        "icon": "pumpkin",
+        "title": "Storbonde",
+        "text": "Skörda 100 grödor"
+      },
+      {
+        "id": "chop_10",
+        "stat": "chop",
+        "goal": 10,
+        "stars": 1,
+        "icon": "axe",
+        "title": "Vedhuggare",
+        "text": "Hugg 10 träd"
+      },
+      {
+        "id": "chop_50",
+        "stat": "chop",
+        "goal": 50,
+        "stars": 2,
+        "icon": "wood",
+        "title": "Skogsmästare",
+        "text": "Hugg 50 träd"
+      },
+      {
+        "id": "mine_10",
+        "stat": "mine",
+        "goal": 10,
+        "stars": 1,
+        "icon": "pick",
+        "title": "Stenknackare",
+        "text": "Knacka 10 stenar"
+      },
+      {
+        "id": "mine_50",
+        "stat": "mine",
+        "goal": 50,
+        "stars": 2,
+        "icon": "stone",
+        "title": "Bergsprängare",
+        "text": "Knacka 50 stenar"
+      },
+      {
+        "id": "build_10",
+        "stat": "build",
+        "goal": 10,
+        "stars": 1,
+        "icon": "fence",
+        "title": "Snickarlärling",
+        "text": "Bygg 10 saker"
+      },
+      {
+        "id": "build_50",
+        "stat": "build",
+        "goal": 50,
+        "stars": 3,
+        "icon": "coop",
+        "title": "Byggmästare",
+        "text": "Bygg 50 saker"
+      },
+      {
+        "id": "walls_20",
+        "stat": "walls",
+        "goal": 20,
+        "stars": 2,
+        "icon": "wall_wood",
+        "title": "Hemmabyggare",
+        "text": "Bygg 20 väggar, fönster eller dörrar"
+      },
+      {
+        "id": "painted_1",
+        "stat": "painted",
+        "goal": 1,
+        "stars": 1,
+        "icon": "paint_red",
+        "title": "Målare",
+        "text": "Måla huset eller en vägg"
+      },
+      {
+        "id": "rooms_1",
+        "stat": "rooms",
+        "goal": 1,
+        "stars": 2,
+        "icon": "floor_wood",
+        "title": "Taklagsfest",
+        "text": "Bygg väggar runt om så att huset får tak"
+      },
+      {
+        "id": "fed_5",
+        "stat": "fed",
+        "goal": 5,
+        "stars": 1,
+        "icon": "hay",
+        "title": "Djurvän",
+        "text": "Mata djur 5 gånger"
+      },
+      {
+        "id": "fed_30",
+        "stat": "fed",
+        "goal": 30,
+        "stars": 2,
+        "icon": "animal_cow",
+        "title": "Djurskötare",
+        "text": "Mata djur 30 gånger"
+      },
+      {
+        "id": "product_10",
+        "stat": "product",
+        "goal": 10,
+        "stars": 2,
+        "icon": "egg",
+        "title": "Äggplockare",
+        "text": "Hämta 10 ägg, ull eller mjölk"
+      },
+      {
+        "id": "fish_1",
+        "stat": "fish",
+        "goal": 1,
+        "stars": 1,
+        "icon": "rod",
+        "title": "Första nappet",
+        "text": "Fånga en fisk"
+      },
+      {
+        "id": "fish_20",
+        "stat": "fish",
+        "goal": 20,
+        "stars": 2,
+        "icon": "fish_pike",
+        "title": "Fiskare",
+        "text": "Fånga 20 fiskar"
+      },
+      {
+        "id": "fish_gold",
+        "stat": "fish_gold",
+        "goal": 1,
+        "stars": 3,
+        "icon": "fish_gold",
+        "title": "Guldfisken!",
+        "text": "Fånga den sällsynta guldfisken"
+      },
+      {
+        "id": "cook_5",
+        "stat": "cook",
+        "goal": 5,
+        "stars": 2,
+        "icon": "pancakes",
+        "title": "Kock",
+        "text": "Laga 5 rätter"
+      },
+      {
+        "id": "pizza_5",
+        "stat": "pizza",
+        "goal": 5,
+        "stars": 2,
+        "icon": "pizza",
+        "title": "Pizzaälskare",
+        "text": "Ät 5 pizzor"
+      },
+      {
+        "id": "quests_3",
+        "stat": "quests",
+        "goal": 3,
+        "stars": 1,
+        "icon": "egg_basket",
+        "title": "Hjälpsam",
+        "text": "Hjälp byborna 3 gånger"
+      },
+      {
+        "id": "quests_15",
+        "stat": "quests",
+        "goal": 15,
+        "stars": 3,
+        "icon": "maypole",
+        "title": "Byns hjälte",
+        "text": "Hjälp byborna 15 gånger"
+      },
+      {
+        "id": "coins_500",
+        "stat": "earned",
+        "goal": 500,
+        "stars": 1,
+        "icon": "animal_hen",
+        "title": "Sparbössa",
+        "text": "Tjäna 500 kr"
+      },
+      {
+        "id": "coins_3000",
+        "stat": "earned",
+        "goal": 3000,
+        "stars": 3,
+        "icon": "animal_cow",
+        "title": "Rik bonde",
+        "text": "Tjäna 3000 kr"
+      },
+      {
+        "id": "areas_5",
+        "stat": "areas",
+        "goal": 5,
+        "stars": 2,
+        "icon": "signpost",
+        "title": "Upptäckare",
+        "text": "Besök 5 områden"
+      },
+      {
+        "id": "areas_15",
+        "stat": "areas",
+        "goal": 15,
+        "stars": 4,
+        "icon": "signpost",
+        "title": "Världsresenär",
+        "text": "Besök 15 områden"
+      },
+      {
+        "id": "wild_5",
+        "stat": "wildpet",
+        "goal": 5,
+        "stars": 2,
+        "icon": "animal_rabbit",
+        "title": "Djurvän i det vilda",
+        "text": "Klappa 5 vilda djur"
+      },
+      {
+        "id": "wild_20",
+        "stat": "wildpet",
+        "goal": 20,
+        "stars": 3,
+        "icon": "animal_sheep",
+        "title": "Zoolog",
+        "text": "Klappa 20 vilda djur"
+      },
+      {
+        "id": "mobs_10",
+        "stat": "mobs",
+        "goal": 10,
+        "stars": 1,
+        "icon": "sword",
+        "title": "Grottkämpe",
+        "text": "Besegra 10 troll och slemklumpar"
+      },
+      {
+        "id": "mobs_50",
+        "stat": "mobs",
+        "goal": 50,
+        "stars": 2,
+        "icon": "bow",
+        "title": "Grottmästare",
+        "text": "Besegra 50 monster"
+      },
+      {
+        "id": "boss_1",
+        "stat": "boss",
+        "goal": 1,
+        "stars": 3,
+        "icon": "gem",
+        "title": "Trollbesegrare",
+        "text": "Besegra Stora Trollet"
+      },
+      {
+        "id": "boss_5",
+        "stat": "boss",
+        "goal": 5,
+        "stars": 5,
+        "icon": "hat_viking",
+        "title": "Trollkung",
+        "text": "Besegra Stora Trollet 5 gånger"
+      },
+      {
+        "id": "boom_1",
+        "stat": "boom",
+        "goal": 1,
+        "stars": 1,
+        "icon": "bazooka",
+        "title": "Boom!",
+        "text": "Skjut med bazookan"
+      },
+      {
+        "id": "boom_25",
+        "stat": "boom",
+        "goal": 25,
+        "stars": 2,
+        "icon": "rocket",
+        "title": "Raketmästare",
+        "text": "Skjut 25 raketer"
+      },
+      {
+        "id": "paint_1",
+        "stat": "paint",
+        "goal": 1,
+        "stars": 2,
+        "icon": "painting",
+        "title": "Konstnär",
+        "text": "Rita en tavla på ett papper"
+      },
+      {
+        "id": "paint_10",
+        "stat": "paint",
+        "goal": 10,
+        "stars": 3,
+        "icon": "paper",
+        "title": "Galleri",
+        "text": "Rita 10 tavlor"
+      },
+      {
+        "id": "ride_1",
+        "stat": "ride",
+        "goal": 1,
+        "stars": 1,
+        "icon": "animal_horse",
+        "title": "Första ridturen",
+        "text": "Rid på en häst"
+      },
+      {
+        "id": "ride_25",
+        "stat": "ride",
+        "goal": 25,
+        "stars": 2,
+        "icon": "stall",
+        "title": "Hästkompis",
+        "text": "Hoppa upp på din häst 25 gånger"
+      },
+      {
+        "id": "drive_1",
+        "stat": "drive",
+        "goal": 1,
+        "stars": 1,
+        "icon": "vehicle_car_red",
+        "title": "Kusk",
+        "text": "Kör en hästkärra eller rid en ridhäst"
+      },
+      {
+        "id": "drive_1000",
+        "stat": "drive_tiles",
+        "goal": 1000,
+        "stars": 2,
+        "icon": "vehicle_motorcycle",
+        "title": "Långfärd",
+        "text": "Kör 1000 rutor"
+      },
+      {
+        "id": "truffle_1",
+        "stat": "truffle",
+        "goal": 1,
+        "stars": 1,
+        "icon": "truffle",
+        "title": "Grisbonde",
+        "text": "Hämta din första tryffel från en gris"
+      },
+      {
+        "id": "truffle_20",
+        "stat": "truffle",
+        "goal": 20,
+        "stars": 2,
+        "icon": "animal_pig",
+        "title": "Tryffeljägare",
+        "text": "Hämta 20 tryfflar"
+      },
+      {
+        "id": "swim_1",
+        "stat": "swim",
+        "goal": 1,
+        "stars": 1,
+        "icon": "shell",
+        "title": "Simmare",
+        "text": "Simma i badstugans pool"
+      },
+      {
+        "id": "swim_25",
+        "stat": "swim",
+        "goal": 25,
+        "stars": 2,
+        "icon": "shell",
+        "title": "Badkruka",
+        "text": "Hoppa i poolen 25 gånger"
+      },
+      {
+        "id": "trip_1",
+        "stat": "rides",
+        "goal": 1,
+        "stars": 1,
+        "icon": "lemonade",
+        "title": "Resenär",
+        "text": "Åk Diligensen eller Gruvtåget för första gången"
+      },
+      {
+        "id": "train_10",
+        "stat": "train_rides",
+        "goal": 10,
+        "stars": 2,
+        "icon": "gem",
+        "title": "Gruvtågsluffare",
+        "text": "Åk Gruvtåget 10 gånger"
+      },
+      {
+        "id": "tame_1",
+        "stat": "tame",
+        "goal": 1,
+        "stars": 1,
+        "icon": "lasso",
+        "title": "Lassokung",
+        "text": "Fånga ett vilt djur med lasso"
+      },
+      {
+        "id": "tame_bear",
+        "stat": "tame_bear",
+        "goal": 1,
+        "stars": 2,
+        "icon": "fur",
+        "title": "Björntämjare",
+        "text": "Tämj en björn"
+      },
+      {
+        "id": "tame_5",
+        "stat": "tame_species",
+        "goal": 5,
+        "stars": 3,
+        "icon": "animal_dog",
+        "title": "Zoolog",
+        "text": "Tämj fem olika sorters djur"
+      },
+      {
+        "id": "biomes_5",
+        "stat": "biomes",
+        "goal": 5,
+        "stars": 2,
+        "icon": "signpost",
+        "title": "Äventyrare",
+        "text": "Upptäck 5 olika sorters platser"
+      },
+      {
+        "id": "biomes_all",
+        "stat": "biomes",
+        "goal": 15,
+        "stars": 6,
+        "icon": "star_crystal",
+        "title": "Hela världen",
+        "text": "Upptäck alla 15 sorters platser, månen också"
+      },
+      {
+        "id": "caves_1",
+        "stat": "caves",
+        "goal": 1,
+        "stars": 1,
+        "icon": "crystal",
+        "title": "Grottforskare",
+        "text": "Utforska en grotta ute i världen"
+      },
+      {
+        "id": "caves_10",
+        "stat": "caves",
+        "goal": 10,
+        "stars": 3,
+        "icon": "gem",
+        "title": "Grottkung",
+        "text": "Utforska 10 olika grottor"
+      },
+      {
+        "id": "loot_5",
+        "stat": "loot",
+        "goal": 5,
+        "stars": 2,
+        "icon": "old_coin",
+        "title": "Skattletare",
+        "text": "Öppna 5 skattkistor ute i världen"
+      },
+      {
+        "id": "loot_25",
+        "stat": "loot",
+        "goal": 25,
+        "stars": 4,
+        "icon": "idol",
+        "title": "Skattjägare",
+        "text": "Öppna 25 skattkistor"
+      },
+      {
+        "id": "dig_5",
+        "stat": "dig",
+        "goal": 5,
+        "stars": 2,
+        "icon": "pearl",
+        "title": "Sjörövare",
+        "text": "Gräv upp 5 skatter där det är ett kryss"
+      },
+      {
+        "id": "fossil_5",
+        "stat": "fossil",
+        "goal": 5,
+        "stars": 2,
+        "icon": "fossil",
+        "title": "Fossiljägare",
+        "text": "Hitta 5 fossil"
+      },
+      {
+        "id": "moon_1",
+        "stat": "moon",
+        "goal": 1,
+        "stars": 3,
+        "icon": "moon_rock",
+        "title": "Astronaut",
+        "text": "Åk raket till månen"
+      },
+      {
+        "id": "dragon_1",
+        "stat": "dragon",
+        "goal": 1,
+        "stars": 5,
+        "icon": "dragon_egg",
+        "title": "Drakmamma",
+        "text": "Kläck ett drakägg"
+      },
+      {
+        "id": "saga_class",
+        "stat": "sagaClass",
+        "goal": 1,
+        "stars": 1,
+        "icon": "hat_vaktarhjalm",
+        "title": "Hjältens väg",
+        "text": "Välj en klass vid Kämpastenen"
+      },
+      {
+        "id": "saga_draug",
+        "stat": "sagaDraug",
+        "goal": 1,
+        "stars": 3,
+        "icon": "runsvard",
+        "title": "Draugdödare",
+        "text": "Besegra Draugkungen Hrolf"
+      },
+      {
+        "id": "saga_frost",
+        "stat": "sagaFrost",
+        "goal": 1,
+        "stars": 4,
+        "icon": "frostbett",
+        "title": "Frostbrytare",
+        "text": "Besegra Rimtursen"
+      },
+      {
+        "id": "saga_surt",
+        "stat": "sagaSurt",
+        "goal": 1,
+        "stars": 5,
+        "icon": "surtsvard",
+        "title": "Världsträdets väktare",
+        "text": "Besegra Surt"
+      },
+      {
+        "id": "saga_mobs_50",
+        "stat": "sagaMobs",
+        "goal": 50,
+        "stars": 2,
+        "icon": "draugyxa",
+        "title": "Monsterjägare",
+        "text": "Besegra 50 monster i fängelsehålorna"
+      },
+      {
+        "id": "saga_quests_6",
+        "stat": "sagaQuests",
+        "goal": 6,
+        "stars": 3,
+        "icon": "healing_potion",
+        "title": "Byns hjälte",
+        "text": "Gör alla sex uppdrag åt byborna"
+      },
+      {
+        "id": "saga_hel",
+        "stat": "sagaHel",
+        "goal": 1,
+        "stars": 4,
+        "icon": "helsvard",
+        "title": "Helfarare",
+        "text": "Besegra Hel i Helheim"
+      },
+      {
+        "id": "saga_dvarg",
+        "stat": "sagaDvarg",
+        "goal": 1,
+        "stars": 4,
+        "icon": "fafnerstand",
+        "title": "Dvärgavän",
+        "text": "Besegra Fafner i Svartalfheims gruvor"
+      },
+      {
+        "id": "saga_orm",
+        "stat": "sagaOrm",
+        "goal": 1,
+        "stars": 5,
+        "icon": "korallspjut",
+        "title": "Ormtämjare",
+        "text": "Besegra Jörmungandr i Havsormens tempel"
+      },
+      {
+        "id": "saga_alv",
+        "stat": "sagaAlv",
+        "goal": 1,
+        "stars": 5,
+        "icon": "alvklinga",
+        "title": "Ljusbärare",
+        "text": "Besegra Nattmaran i Alvernas lund"
+      },
+      {
+        "id": "saga_fenrir",
+        "stat": "sagaFenrir",
+        "goal": 1,
+        "stars": 6,
+        "icon": "fenristand",
+        "title": "Ulvbindare",
+        "text": "Besegra Fenrisulven i Fenrisklyftan"
+      },
+      {
+        "id": "saga_loke",
+        "stat": "sagaLoke",
+        "goal": 1,
+        "stars": 8,
+        "icon": "heimdallshorn",
+        "title": "Lokes besegrare",
+        "text": "Besegra Loke på Bifrost"
+      },
+      {
+        "id": "saga_act2",
+        "stat": "sagaAct2",
+        "goal": 1,
+        "stars": 10,
+        "icon": "bifrostbit",
+        "title": "Ragnaröks hjälte",
+        "text": "Gör klart hela Lokes list, sagans andra del"
+      },
+      {
+        "id": "saga_level_5",
+        "stat": "sagaLevel",
+        "goal": 5,
+        "stars": 3,
+        "icon": "amulet_vegvisir",
+        "title": "Erfaren hjälte",
+        "text": "Nå hjältenivå 5"
+      },
+      {
+        "id": "saga_level_10",
+        "stat": "sagaLevel",
+        "goal": 10,
+        "stars": 6,
+        "icon": "amulet_brisingamen",
+        "title": "Sagans hjälte",
+        "text": "Nå hjältenivå 10"
+      },
+      {
+        "id": "saga_gear_legendary",
+        "stat": "sagaLegendary",
+        "goal": 1,
+        "stars": 4,
+        "icon": "offhand_tyrshandske",
+        "title": "Legendarisk",
+        "text": "Bär något legendariskt"
+      },
+      {
+        "id": "landmarks_5",
+        "stat": "landmarks",
+        "goal": 5,
+        "stars": 2,
+        "icon": "signpost",
+        "title": "Upptäcktsresande",
+        "text": "Hitta 5 märkliga platser ute i världen"
+      },
+      {
+        "id": "landmarks_15",
+        "stat": "landmarks",
+        "goal": 15,
+        "stars": 4,
+        "icon": "gem",
+        "title": "Kartritare",
+        "text": "Hitta 15 märkliga platser ute i världen"
+      },
+      {
+        "id": "landmarks_26",
+        "stat": "landmarks",
+        "goal": 26,
+        "stars": 6,
+        "icon": "star_crystal",
+        "title": "Världens kännare",
+        "text": "Hitta alla 26 märkliga platser"
+      }
+    ],
     "npcLines": {
       "sigrun": {
         "morning": [

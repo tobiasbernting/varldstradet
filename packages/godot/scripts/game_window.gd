@@ -226,6 +226,33 @@ func _find_buttons(root: Node) -> Array:
 	return out
 
 
+## M9b: a pad can scroll a long page: the right stick always, and the d-pad / left stick up and down when the page has no button to move to
+## (the books). Rows with buttons scroll by the focus, as before.
+func _process(delta: float) -> void:
+	if not _open or _scroll == null:
+		return
+	for pad in Input.get_connected_joypads():
+		var v := Input.get_joy_axis(pad, JOY_AXIS_RIGHT_Y)
+		if absf(v) > 0.3:
+			_scroll.scroll_vertical += int(v * 900.0 * delta)
+
+
+func _input(event: InputEvent) -> void:
+	if not _open or _scroll == null:
+		return
+	var down := event.is_action_pressed("ui_down")
+	if (down or event.is_action_pressed("ui_up")) and not _has_focusable_rows():
+		_scroll.scroll_vertical += (90 if down else -90)
+		get_viewport().set_input_as_handled()
+
+
+func _has_focusable_rows() -> bool:
+	for b in _find_buttons(_body):
+		if not b.disabled:
+			return true
+	return false
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not _open:
 		return

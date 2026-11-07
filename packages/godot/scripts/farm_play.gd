@@ -163,6 +163,8 @@ func handle_input(event: InputEvent) -> bool:
 	if event.is_action_pressed("quests"):
 		windows.toggle_quests()
 		return true
+	if windows.handle_key(event):
+		return true
 	if event is InputEventKey and event.pressed and not event.echo:
 		var code: int = event.physical_keycode
 		if code >= KEY_1 and code <= KEY_8:

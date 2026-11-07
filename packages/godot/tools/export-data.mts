@@ -116,6 +116,8 @@ import {
   MODIFIER_SEEDS,
   RUN_T,
   COMPANION_NAME,
+  ACHIEVEMENTS,
+  ACHIEVEMENT_TEXT,
   NPC_LINES,
 } from '../../shared/src/index.ts';
 
@@ -249,8 +251,12 @@ const run = {
   texts: { ...RUN_T },
 };
 
-/** The villagers' idle lines (M9b, parity with the browser: NPC_LINES in data.ts, which they say to a player or to each other). */
+/**
+ * The books (M9b, parity with the browser): the Gårdsbok's achievements with their texts, the villagers' idle lines and the
+ * Upptäcktsboken's landmarks by biome with their lore.
+ */
 const book = {
+  achievements: ACHIEVEMENTS.map((a) => ({ id: a.id, stat: a.stat, goal: a.goal, stars: a.stars, icon: a.icon, title: ACHIEVEMENT_TEXT[a.id]?.title ?? a.id, text: ACHIEVEMENT_TEXT[a.id]?.text ?? '' })),
   npcLines: NPC_LINES,
 };
 

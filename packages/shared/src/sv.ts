@@ -1098,6 +1098,8 @@ export const T = {
   gearEmpty: 'Tomt',
   gearNoClass: 'Välj väg vid Kämpastenen i Köpingen först.',
   gearKey: 'G',
+  // M9b: the native client's books (keys as in project.godot)
+  bookKey: 'B',
   talkTitle: 'Prata',
   talkQuests: '📜 Uppdrag',
   talkChat: '💬 Prata!',

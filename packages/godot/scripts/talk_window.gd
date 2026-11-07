@@ -227,6 +227,7 @@ func _chapter() -> void:
 
 
 func _process(delta: float) -> void:
+	super(delta)
 	if not is_open():
 		return
 	_far_in -= delta
