@@ -484,7 +484,7 @@ func _pet_wild() -> void:
 			break
 		if model.my_area_key() != "a:0,-1" and not await _leave_by("n", "a:0,-1"):
 			continue
-		var until := Time.get_ticks_msec() + 40000
+		var until := Time.get_ticks_msec() + 150000 # (long enough to try several animals: each one that does not come back is given up on)
 		while Time.get_ticks_msec() < until and not petted and not _done and model.my_area_key() == "a:0,-1":
 			var hearts := int(_report["hearts_seen"])
 			var danger := _hostile_near(Vector2(world.hero.px, world.hero.py), 7.0)
@@ -527,8 +527,9 @@ func _pet_wild() -> void:
 			# M7b: standing still now (moving would startle it again), it runs off, catches its breath, walks back and creeps up to
 			# me, and then it can be petted. That takes the bolt (1.8 s), about 3 s of calming down, the walk back at a wander pace
 			# (2.5 tiles a second: up to 5 s for 12 tiles) and the creep: about 15 s of game time. The server's game clock runs slower than the
-			# wall clock when a runner is starved (a bot on one CPU saw animals still 6 tiles off after 45 s), so wait up to 120 s and
-			# stop as soon as it is next to me. Watch it all (`_startles`).
+			# wall clock when a runner is starved, and the animals walk in straight lines and do not path-find, so a tree or a rock can keep one
+			# from ever reaching me: wait up to 45 s (about four times what sim.test.ts needs at the slowest tick) and stop as soon as it is
+			# next to me; if it still is not, give up on it (`skip`) and try another. Watch it all (`_startles`).
 			_standing = true
 			await _until(func() -> bool:
 				var b := _animal_by_id(wild_id)
@@ -536,13 +537,18 @@ func _pet_wild() -> void:
 					return true # (a predator coming: stop standing here, the top of the loop walks away from it)
 				var tile := _animal_tile(b)
 				var here := _my_tile()
-				return absi(tile.y - here.y) + absi(tile.x - here.x) == 1, 120.0)
+				return absi(tile.y - here.y) + absi(tile.x - here.x) == 1, 45.0)
 			# (the wait ends the moment the animal is beside me, which can be sooner than the next quarter-second sample: take it now)
 			var finished := _animal_by_id(wild_id)
 			if not finished.is_empty():
 				rec["last_t"] = 0
 				_watch_startle(rec, finished)
 			_standing = false
+			if not _done and _hostile_near(Vector2(world.hero.px, world.hero.py), 7.0) == Vector2.INF and not _animal_by_id(wild_id).is_empty():
+				var tile_b := _animal_tile(_animal_by_id(wild_id))
+				var here_b := _my_tile()
+				if absi(tile_b.x - here_b.x) + absi(tile_b.y - here_b.y) != 1:
+					rec["skip"] = true # (it did not come: another animal)
 			if _hostile_near(Vector2(world.hero.px, world.hero.py), 7.0) != Vector2.INF:
 				continue
 			a = _animal_by_id(wild_id)
@@ -1037,7 +1043,7 @@ func _nearest_wild() -> Dictionary:
 		var def: Dictionary = Data.animals.get(str(a.get("species", "")), {})
 		if not bool(def.get("wild", false)) or bool(def.get("predator", false)) or bool(def.get("mob", false)) or a.get("owner") != null:
 			continue
-		if bool(a.get("petted", false)):
+		if bool(a.get("petted", false)) or bool(_startles.get(str(int(a.get("id", 0))), {}).get("skip", false)):
 			continue
 		var p := _animal_px(a)
 		if _hostile_near(p, 9.0) != Vector2.INF:
