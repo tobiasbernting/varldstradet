@@ -202,6 +202,8 @@ func set_figure(figure: Node3D, key: String, height_m := 1.5, rig := {}) -> bool
 		_anim.add_animation_library(str(lib.get_meta("name")), lib)
 	sprite.visible = false
 	label.position.y = height_m + 0.3
+	_lift = -1.0 # the next tick writes the night lift and the fx overlay to the new materials
+	_fx_colour = Color(0.0, 0.0, 0.0, 0.0)
 	_play(_rig["idle"])
 	return true
 
@@ -234,6 +236,8 @@ func set_voxel(frames: Array[ArrayMesh], key: String) -> bool:
 	voxel.position = Vector3(0.0, FOOT_LIFT, 0.0)
 	sprite.visible = false
 	label.position.y = _vh + 0.3
+	_lift = -1.0
+	_fx_colour = Color(0.0, 0.0, 0.0, 0.0)
 	return true
 
 
