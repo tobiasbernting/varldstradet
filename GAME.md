@@ -368,9 +368,9 @@ Minutes until the boss falls (3 runs each):
 | 3 players | 9–12 min | 19–26 min |
 | 4 players (longhouse) | 7–9 min | 15–19 min |
 
-**Solo, measured 2026-11-07 (level 3, chapter 1, 20 seeds each; wins per 20; minutes are for the runs that won).** The
+**Solo, measured 2026-11-07 (level 3, chapter 1, seeds 1–20 for both the farm and the run; wins per 20; minutes are for the runs that won).** The
 owner could not win alone: without the companion (no longhouse) a lone player wins almost never, and with a longhouse a
-clumsy lone player wins every time, so the fix was to give everybody the companion, not to retune the monsters.
+clumsy lone player wins almost always, so the fix was to give everybody the companion, not to retune the monsters.
 
 | Alone | Careful, no companion | Clumsy, no companion | Careful + Hirdmannen | Clumsy + Hirdmannen |
 | --- | --- | --- | --- | --- |
@@ -380,11 +380,14 @@ clumsy lone player wins every time, so the fix was to give everybody the compani
 | Magiker | 0/20 | 0/20 | 19/20, 11.1 min | 20/20, 18.0 min |
 
 Pairs of two damage dealers were the other hole (a pair with no healer): Krigare + Magiker won 4/20 careful and 0/20
-clumsy; with the Hirdmannen as their healer 20/20 and 20/20 (9.2 and 17.3 min). Vaktare + Helare is unchanged (20/20,
+clumsy; with the Hirdmannen as their healer 20/20 and 20/20 (9.2 and 17.3 min). Väktare + Helare is unchanged (20/20,
 12.7 and 24.8 min, no companion). Level 1 and 2 heroes, clumsy, with the companion: 18–20 of 20 on every class. The
 monsters' numbers were **not** changed: `ZONE_HP`, `ZONE_PACKS`, `SOLO_MERCY` and the saga's scaling stay as they were,
 and three- and four-player parties play exactly as before.
 
 The exact table from the last run of the tests is in the pull request. Tuned: `ZONE_HP`, `ZONE_PACKS`, `SOLO_MERCY` and
-the hired companion's class (a healer for everyone but the healer). `run.test.ts` also has the clumsy solo bot win at least 7 of 10 runs on every class and in the two-damage-dealer pair, with no longhouse, in 10–30 minutes. The tests fail if a careful party ever stops
+the hired companion's class (`companionClass` in `run.ts`: a healer if the humans have none, else a tank, else nobody).
+
+`run.test.ts` also has the clumsy solo bot win at least 7 of 10 runs on every class and in the two-damage-dealer pair, with
+no longhouse, in 10–30 minutes. The tests fail if a careful party ever stops
 winning, if any party gets stuck or takes longer than the 30 minutes to reach the boss (the tuning target; the game itself no longer stops there), or if the careful trio's time leaves 4–15 minutes.

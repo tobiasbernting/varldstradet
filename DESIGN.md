@@ -523,8 +523,7 @@ in `packages/shared`, before any client draws them (M5c). Every fight rule is th
   30:00 and every 10 minutes after, never a forced end: owner, 2026-11-06): three zones and the chapter's boss. Started with `{t:'run', a:'start'}` at the **färdport**
   (`fardport`, 3 × 2, placed by `ensureRunPlaces` beside the **Yggdrasil shoot** `yggdrasil`, which the family may already have
   planted; the same function puts both back every 20 s of play, on load and at server start). Family members within 6 tiles come
-  along; others `join` and appear at the last lit rest stone of the zone. Three players, four with a longhouse; one human with a
-  longhouse gets the hired **Hirdmannen** (a `PlayerState` with `bot: true`, created by `createPlayer`, played by `botStep`, never
+  along; others `join` and appear at the last lit rest stone of the zone. Three players, four with a longhouse; one or two humans get the hired **Hirdmannen** (no longhouse needed; `companionClass`: a healer if the humans have none, else a tank, else nobody) (a `PlayerState` with `bot: true`, created by `createPlayer`, played by `botStep`, never
   saved, listed, or counted against `MAX_PLAYERS`).
 - **A zone** is a `saga:run<n>z<i>` area (`isRunKey`) built by `runmap.ts` with `sagamap.ts`'s new `buildDungeon(def, rnd, solid,
   key)` (`generateSaga` calls it, output unchanged): a template per biome (`ZONE_TEMPLATES`, six rooms, 4–6 kept, four flips),
