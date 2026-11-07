@@ -55,6 +55,9 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { ACHIEVEMENTS } from '../../shared/src/data.ts';
+import { SAGA_CHAPTERS, SAGA_QUESTS, VOLVA_ID } from '../../shared/src/saga.ts';
+import { chapterDone, questState, readProgress } from '../../shared/src/sagasim.ts';
+import { countItem } from '../../shared/src/inventory.ts';
 import { LANDMARK_IDS } from '../../shared/src/landmarks.ts';
 import { HELP } from '../../shared/src/sv.ts';
 import { DUNGEON_IDS } from '../../shared/src/saga.ts';
@@ -140,6 +143,8 @@ interface FarmReport {
   /** M9b: what the books, the HUD, the help and the family window showed (farm_bot_books.gd). */
   books?: {
     achievements?: Record<string, { unlocked: boolean; k: number }>;
+    elsa_after?: string;
+    marks_village?: Record<string, string>;
     journal?: { chapters: number; dungeons: number; levels: number; level: number; chapter: number; has_level_line: boolean; cleared: number };
     finds?: { total: number; found: number; groups: number; unknown: number; all_line: boolean };
     tracker?: { visible: boolean; lines: string[] };
@@ -150,7 +155,7 @@ interface FarmReport {
 }
 
 /** What the server itself keeps of a player: asks over the game socket, as a client does (`hello`, then `welcome`). */
-type ServerRecord = { inventory: ({ item: string; count: number } | null)[]; coins: number; stars: number; achievements?: string[]; stats?: Record<string, number>; saga?: { chapter?: number; cleared?: string[]; discovered?: string[]; cls?: string; xp?: number }; players: Record<string, { name: string; online: boolean; area: string }> };
+type ServerRecord = { inventory: ({ item: string; count: number } | null)[]; coins: number; stars: number; id?: string; name?: string; achievements?: string[]; questsDone?: string[]; wishes?: { id: string; npc: string; want: { item: string; count: number } }[]; saga?: unknown; stats?: Record<string, number>; saga?: { chapter?: number; cleared?: string[]; discovered?: string[]; cls?: string; xp?: number }; players: Record<string, { name: string; online: boolean; area: string }> };
 async function serverRecord(url: string, playerId: string): Promise<ServerRecord | null> {
   const WebSocket = createRequire(path.join(root, 'packages/server/package.json'))('ws') as typeof import('ws').WebSocket;
   return await new Promise((resolve) => {
@@ -166,7 +171,7 @@ async function serverRecord(url: string, playerId: string): Promise<ServerRecord
       clearTimeout(timer);
       const p = msg.world.players[playerId];
       ws.close();
-      resolve(p ? { inventory: p.inventory, coins: p.coins, stars: p.stars, achievements: p.achievements, stats: p.stats, saga: p.saga, players: msg.world.players } : null);
+      resolve(p ? { inventory: p.inventory, coins: p.coins, stars: p.stars, achievements: p.achievements, questsDone: p.questsDone, wishes: msg.world.quests, saga: p.saga, id: playerId, name: p.name, stats: p.stats, saga: p.saga, players: msg.world.players } : null);
     });
     ws.on('error', () => {
       clearTimeout(timer);
@@ -360,7 +365,46 @@ async function checkFarmer(r: FarmReport, farmPort: number, botLog?: string): Pr
 }
 
 /** The books the client drew (B, K, H, P) against the server's own record of the player and the shared data. */
+/** The mark a villager should show, worked out from the server's own record of the player (the browser's sagaMarker and updateNpcTalk,
+ * written again here): "?" or "!" yellow for the saga, "❗" a wish I can fill, "?" one I cannot, "" nothing. */
+function expectedMark(rec: ServerRecord, npc: string): string {
+  const p = { inventory: rec.inventory, saga: rec.saga, questsDone: rec.questsDone } as never as Parameters<typeof questState>[0] & { inventory: { item: string; count: number }[]; questsDone: string[] };
+  const prog = readProgress(p);
+  let offer = false;
+  let hand = false;
+  let busy = false;
+  if (npc === VOLVA_ID && SAGA_CHAPTERS[prog.chapter]) {
+    if (!prog.heard) offer = true;
+    else if (chapterDone(prog)) hand = true;
+    else busy = true;
+  }
+  for (const q of SAGA_QUESTS) {
+    if (q.npc !== npc) continue;
+    const st = questState(p, q);
+    if (st === 'ready') hand = true;
+    else if (st === 'offer') offer = true;
+    else if (st === 'active') busy = true;
+  }
+  const wishes = (rec.wishes ?? []).filter((w) => w.npc === npc && !(rec.questsDone ?? []).includes(w.id));
+  const canHand = wishes.some((w) => countItem(rec.inventory as never, w.want.item) >= w.want.count);
+  if (hand) return '?';
+  if (offer) return '!';
+  if (canHand) return '❗';
+  if (wishes.length) return '?';
+  if (busy) return '?';
+  return '';
+}
+
 function checkBooks(r: FarmReport, rec: ServerRecord): void {
+  // the quest marks over the villagers against the server's record of me (not against the client's own rule)
+  const village = r.books?.marks_village ?? {};
+  const mismatched = Object.entries(village).filter(([npc, shown]) => shown !== expectedMark(rec, npc));
+  const quiet = Object.entries(village).filter(([, shown]) => shown === '').length;
+  const marked = Object.entries(village).filter(([, shown]) => shown !== '').length;
+  check(Object.keys(village).length >= 5 && mismatched.length === 0, `${r.name}: every villager in Köpingen shows the mark the server's record gives (${Object.entries(village).map(([n, s]) => `${n} ${s || '-'}`).join(', ')}${mismatched.length ? '; WRONG: ' + mismatched.map(([n, s]) => `${n} shows ${s || '-'} not ${expectedMark(rec, n) || '-'}`).join(', ') : ''})`);
+  check(quiet >= 1 && marked >= 1, `${r.name}: some villagers show a mark and some, with nothing for me, show none (${marked} with, ${quiet} without)`);
+  const elsaOpen = (rec.wishes ?? []).filter((w) => w.npc === 'elsa' && !(rec.questsDone ?? []).includes(w.id)).length;
+  check(r.books?.elsa_after !== undefined && (elsaOpen > 0 || r.books.elsa_after === ''), `${r.name}: after the hand-in Elsa showed "${r.books?.elsa_after}" and the server says she has ${elsaOpen} wishes left (none: no mark)`);
   const b = r.books ?? {};
   // the Gårdsbok: all of ACHIEVEMENTS, and each one done exactly when the server says so, its bar as far as the server's counter
   const ach = b.achievements ?? {};

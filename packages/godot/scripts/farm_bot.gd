@@ -367,6 +367,7 @@ func _quests() -> void:
 		await _home.expect_mark("mark: Elsa has a wish I can fill", "elsa", "❗", "give")
 		await _home.hand_over("elsa", "elsa_flowerbox", "stone")
 		await _home.expect_mark("mark: Elsa's wish is done", "elsa", "<rules>")
+		(_report["books"] as Dictionary)["elsa_after"] = _home.mark_of("elsa")
 	else:
 		_step("Elsas önskning", false, "no stone")
 	if model.count_item("wood") >= 5:

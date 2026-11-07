@@ -551,6 +551,12 @@ func marks_up_close() -> void:
 		var m := mark_of(str(id))
 		if m != "" and m != "<not drawn>":
 			seen.append("%s %s" % [str(id), m])
+	var all_marks := {}
+	for id in Data.npcs.keys():
+		var shown := mark_of(str(id))
+		if shown != "<not drawn>":
+			all_marks[str(id)] = shown
+	(bot._report["books"] as Dictionary)["marks_village"] = all_marks
 	bot._step("marks up close", near and mark_of(Data.volva) == "!", "next to Völvan, who shows \"!\"; marks over the villagers in the village: %s" % ", ".join(seen))
 
 
