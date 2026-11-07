@@ -20,7 +20,7 @@ var talk: TalkWindow
 var klass: ClassWindow
 var travel: TravelWindow
 var quests: QuestsWindow
-var book: BookWindow ## B (the Gårdsbok)
+var book: BookWindow ## B (the Gårdsbok), K (the journal), the level chip
 var run_arch: RunWindow
 var seed_tree: SeedWindow
 var _all: Array = []
@@ -52,6 +52,7 @@ func setup(v: WorldView) -> void:
 	model.fardkost_changed.connect(refresh)
 	model.tree_changed.connect(refresh)
 	model.run_changed.connect(refresh)
+	model.saga_best_changed.connect(refresh)
 
 
 func _add(w: GameWindow) -> GameWindow:
@@ -132,7 +133,7 @@ func toggle_quests() -> void:
 		quests.open_window()
 
 
-## B: the Gårdsbok; the same key again closes the window.
+## B, K: the books on a page ("book", "journal" or "finds"); the same key again closes the window.
 func toggle_book(page: String) -> void:
 	if book.is_open():
 		if book.tab == page:
@@ -147,6 +148,8 @@ func toggle_book(page: String) -> void:
 func handle_key(event: InputEvent) -> bool:
 	if event.is_action_pressed("book"):
 		toggle_book("book")
+	elif event.is_action_pressed("journal"):
+		toggle_book(BookWindow.page_for_key(model.my_player()))
 	else:
 		return false
 	return true

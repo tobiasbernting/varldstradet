@@ -2589,6 +2589,7 @@
     "gravvaktare": {
       "name": "Gravväktaren",
       "title": "Kryptans vakt",
+      "lore": "En jättelik skelettkrigare som har vaktat kryptans port i tusen år.",
       "phases": [
         0.5
       ],
@@ -2620,6 +2621,7 @@
     "draugkung": {
       "name": "Draugkungen Hrolf",
       "title": "Kryptans herre",
+      "lore": "Hrolf var en girig hövding för länge sedan. Nu har han vaknat som en draug och stulit Solrunan, som håller vintern borta från Midgård.",
       "phases": [
         0.66,
         0.33
@@ -2672,6 +2674,7 @@
     "isbjorn": {
       "name": "Isbjörnen Kall",
       "title": "Borgens vaktbjörn",
+      "lore": "Rimturs egen björn, stor som en lada och med päls av rimfrost.",
       "phases": [
         0.5
       ],
@@ -2703,6 +2706,7 @@
     "rimturs": {
       "name": "Rimtursen",
       "title": "Frostjätten",
+      "lore": "Rimtursen är en frostjätte från Jötunheim. Han vill att det ska vara vinter för alltid, och har frusit alla källor i norr.",
       "phases": [
         0.5
       ],
@@ -2761,6 +2765,7 @@
     "smeden": {
       "name": "Smeden Glöd",
       "title": "Surts smed",
+      "lore": "Surts smed, som har hamrat på det flammande svärdet i hundra år.",
       "phases": [
         0.5
       ],
@@ -2801,6 +2806,7 @@
     "surt": {
       "name": "Surt",
       "title": "Eldjätten från Muspelheim",
+      "lore": "Surt är eldjätten från Muspelheim. I sin smedja under vulkanen smider han ett svärd av eld för att bränna Yggdrasil, Världsträdet som håller ihop alla världar.",
       "phases": [
         0.7,
         0.4
@@ -2853,6 +2859,7 @@
     "garm": {
       "name": "Garm",
       "title": "Hels hund",
+      "lore": "Garm är hunden som vaktar porten till Helheim. Han skäller på alla, men mest för att ingen vill leka med honom.",
       "phases": [
         0.5
       ],
@@ -2894,6 +2901,7 @@
     "hel": {
       "name": "Hel",
       "title": "Dödsrikets drottning",
+      "lore": "Hel är Lokes dotter och drottning över dödsriket. Ena halvan av henne är blek som snö och den andra mörk som natten, och Loke har lovat henne Midgård.",
       "phases": [
         0.66,
         0.33
@@ -2945,6 +2953,7 @@
     "jarnvakten": {
       "name": "Järnväktaren",
       "title": "Dvärgarnas vakt",
+      "lore": "En väktare av järn och ånga som dvärgarna smidde för länge sedan. Han har glömt att dvärgarna flyttade härifrån för hundra år sedan.",
       "phases": [
         0.5
       ],
@@ -2985,6 +2994,7 @@
     "fafner": {
       "name": "Fafner",
       "title": "Guldets drake",
+      "lore": "Fafner var en dvärg som tyckte så mycket om guld att han blev en drake. Nu ligger han på sin skatt och vill aldrig någonsin dela med sig.",
       "phases": [
         0.6,
         0.3
@@ -3038,6 +3048,7 @@
     "blackis": {
       "name": "Bläckis",
       "title": "Tempelbläckfisken",
+      "lore": "En jättelik bläckfisk som håller rent i Havsormens tempel. Han blir väldigt arg när någon smutsar ner.",
       "phases": [
         0.5
       ],
@@ -3079,6 +3090,7 @@
     "jormungand": {
       "name": "Jörmungandr",
       "title": "Midgårdsormen",
+      "lore": "Jörmungandr är Midgårdsormen, Lokes son. Han är så lång att han ligger i havet runt hela världen och biter sig själv i svansen.",
       "phases": [
         0.66,
         0.33
@@ -3139,6 +3151,7 @@
     "spindeldrottning": {
       "name": "Spindeldrottningen",
       "title": "Lundens väverska",
+      "lore": "En jättelik spindel som har spunnit nät över hela Alvernas lund. Näten är starka som rep och glittrar i månljuset.",
       "phases": [
         0.5
       ],
@@ -3180,6 +3193,7 @@
     "nattmara": {
       "name": "Nattmaran",
       "title": "Drömmarnas skugga",
+      "lore": "Nattmaran smyger in i drömmar och gör dem otäcka. Loke har gett henne makten över Alvernas lund, och nu har ljusalverna slutat lysa.",
       "phases": [
         0.6,
         0.3
@@ -3244,6 +3258,7 @@
     "skoll": {
       "name": "Sköll",
       "title": "Solens jägare",
+      "lore": "Sköll är vargen som jagar solen över himlen. Han är snabb som vinden, men han har aldrig hunnit ikapp henne.",
       "phases": [
         0.5
       ],
@@ -3284,6 +3299,7 @@
     "fenrisulven": {
       "name": "Fenrisulven",
       "title": "Den bundne",
+      "lore": "Fenrisulven är Lokes jättelika varg. Gudarna band honom med Gleipner, ett band mjukt som silke, men Loke har släppt honom fri.",
       "phases": [
         0.7,
         0.4
@@ -3346,6 +3362,7 @@
     "lokesskugga": {
       "name": "Lokes skugga",
       "title": "En lögn i mörkret",
+      "lore": "En skugga som Loke har trollat fram av en lögn. Den härmar allt han gör, fast lite sämre.",
       "phases": [
         0.5
       ],
@@ -3387,6 +3404,7 @@
     "loke": {
       "name": "Loke",
       "title": "Lögnernas fader",
+      "lore": "Loke är en gud som älskar spratt och lögner. Han släppte loss Draugkungen, Rimtursen och Surt, och nu vill han starta Ragnarök. Men han tycker lite för mycket om att visa upp sig.",
       "phases": [
         0.8,
         0.6,
@@ -9939,7 +9957,8 @@
           "Jag vann!"
         ]
       }
-    }
+    },
+    "actTwo": 4
   },
   "dialogue": {
     "npcs": {

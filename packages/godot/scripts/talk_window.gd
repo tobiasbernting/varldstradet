@@ -47,6 +47,7 @@ func _set_tabs() -> void:
 		return
 	add_tab(Strings.t("sagaStoryTab"), _tab == "story", _set_tab.bind("story"))
 	add_tab(Strings.t("sagaTalk"), _tab == "talk", _set_tab.bind("talk"))
+	add_tab(Strings.t("sagaJournalTab"), _tab == "journal", _set_tab.bind("journal"))
 
 
 func _set_tab(t: String) -> void:
@@ -68,6 +69,8 @@ func _fill() -> void:
 		_fill_talk(me)
 	elif npc == Data.volva and _tab == "story":
 		_fill_story(me)
+	elif npc == Data.volva and _tab == "journal":
+		BookPages.journal(self)
 	else:
 		_fill_front(me)
 

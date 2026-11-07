@@ -161,6 +161,7 @@ for (const [species, b] of Object.entries(SAGA_BOSSES)) {
   bosses[species] = {
     name: b.name,
     title: b.title,
+    lore: b.lore,
     phases: b.phases,
     ...(b.phaseAdds ? { phaseAdds: b.phaseAdds } : {}),
     ...(b.mini ? { mini: true } : {}),
@@ -258,6 +259,8 @@ const run = {
 const book = {
   achievements: ACHIEVEMENTS.map((a) => ({ id: a.id, stat: a.stat, goal: a.goal, stars: a.stars, icon: a.icon, title: ACHIEVEMENT_TEXT[a.id]?.title ?? a.id, text: ACHIEVEMENT_TEXT[a.id]?.text ?? '' })),
   npcLines: NPC_LINES,
+  /** Lokes list begins here (a heading over it in the journal). */
+  actTwo: 4,
 };
 
 const data = {

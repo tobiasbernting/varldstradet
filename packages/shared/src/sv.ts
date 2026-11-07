@@ -1100,6 +1100,10 @@ export const T = {
   gearKey: 'G',
   // M9b: the native client's books (keys as in project.godot)
   bookKey: 'B',
+  journalKey: 'K',
+  journalMenu: 'Sagans dagbok',
+  trackerOpen: 'Visa sagans uppdrag',
+  trackerClose: 'Dölj sagans uppdrag',
   talkTitle: 'Prata',
   talkQuests: '📜 Uppdrag',
   talkChat: '💬 Prata!',

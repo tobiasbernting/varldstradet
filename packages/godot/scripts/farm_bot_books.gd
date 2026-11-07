@@ -1,6 +1,7 @@
 class_name FarmBotBooks
 extends RefCounted
-## The farmer's M9b steps (farm_bot.gd runs them): the Gårdsbok on B and the pause menu's way to it. Every step goes through the keys, the
+## The farmer's M9b steps (farm_bot.gd runs them): the Gårdsbok on B, the journal on K and Völvan's journal tab, the level chip
+## and the saga tracker on the HUD, the pause menu's way to the books. Every step goes through the keys, the
 ## clicks and the buttons a person uses; what the windows show is put in the report (`books`), and tools/bot-check.mts compares it with
 ## the server's own record of the player (the achievements it has and how far each is) and with the shared data.
 
@@ -56,7 +57,7 @@ func _close_all() -> void:
 	await bot._wait(0.15)
 
 
-## B: the Gårdsbok through its key.
+## B, K: the Gårdsbok and the journal through their keys.
 func books() -> void:
 	await _close_all()
 	# the Gårdsbok on B
@@ -86,15 +87,79 @@ func books() -> void:
 	bot._press_action("book")
 	var closed := await bot._until(func() -> bool: return not windows.book.is_open(), 3.0)
 	bot._step("the Gårdsbok closes on B", closed, "the same key shuts it")
+	# the journal on K
+	bot._press_action("journal")
+	open = await bot._until(func() -> bool: return windows.book.is_open() and windows.book.tab == "journal", 3.0)
+	await bot._wait(0.3)
+	var me := model.my_player()
+	var chapters := _nodes_named(windows.book, "chapter_").size()
+	var dungeons := _nodes_named(windows.book, "dungeon_").size()
+	var levels := _nodes_named(windows.book, "level_").size()
+	var level_text := _texts(windows.book)
+	var journal := {"chapters": chapters, "dungeons": dungeons, "levels": levels, "level": Gear.level_of(me), "chapter": SagaState.chapter_index(me), "has_level_line": level_text.contains(Strings.t("sagaLevelOf", {"n": Gear.level_of(me), "max": Gear.max_level()})), "cleared": (Gear.progress(me).get("cleared", []) as Array).size()}
+	_books()["journal"] = journal
+	bot._step("the journal", open and chapters == SagaState.chapter_index(me) + 1 and dungeons == Data.dungeons.size() and levels == Data.level_rewards.size() and journal["has_level_line"], "K opened it: %d chapters (the saga is at %d), %d dungeons, %d level rewards, hero level %d" % [chapters, SagaState.chapter_index(me), dungeons, levels, Gear.level_of(me)])
+	await bot._shot("journal", 0.1)
+	# the dungeons' best times: the server says a record in a `sagaBest` change; the card shows the time and the names
+	var change := {"t": "sagaBest", "dungeon": "draug", "best": {"ms": 754000, "names": ["Bot-Bonde", "Bot-Syskon"], "day": model.day}}
+	model.apply({"t": "changes", "changes": [change]})
+	await bot._wait(0.3)
+	var card_text := ""
+	for d in _nodes_named(windows.book, "dungeon_draug"):
+		for e in _descend(d):
+			if e is RichTextLabel:
+				card_text += (e as RichTextLabel).get_parsed_text() + "\n"
+	bot._step("the family's best time", card_text.contains("12:34") and card_text.contains("Bot-Syskon"), "Draugkryptan's card shows the time of a sagaBest change (12:34, both names)")
+	(model.farm["sagaBest"] as Dictionary).erase("draug")
 	windows.book.close()
 	await bot._wait(0.2)
+
+
+## The HUD: the level chip (a click opens the journal) and the tracker (folds on a click).
+func hud() -> void:
+	await _close_all()
+	var hud: HudLayer = world.hud
+	var me := model.my_player()
+	var chip: Label = hud.farm_labels["level"]
+	var want := "⭐ " + Strings.t("sagaLevelChip", {"n": Gear.level_of(me)})
+	var panel: Control = chip.get_meta("panel")
+	bot._step("the level chip", chip.text == want and panel.visible, "the HUD shows \"%s\" for hero level %d" % [chip.text, Gear.level_of(me)])
+	# a click on the chip: the left button pressed, delivered to the chip's own handler (headless there is no pointer for the engine to
+	# hit-test with, so the event is handed to the control; the chip must be a visible, mouse-stopping control with a size)
+	var at := panel.get_global_rect().get_center()
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_LEFT
+	ev.pressed = true
+	ev.position = panel.size / 2.0
+	ev.global_position = at
+	var hit := panel.is_visible_in_tree() and panel.mouse_filter == Control.MOUSE_FILTER_STOP and panel.size.x > 20.0
+	panel.gui_input.emit(ev)
+	var opened := await bot._until(func() -> bool: return windows.book.is_open() and windows.book.tab == "journal", 3.0)
+	bot._step("the level chip opens the journal", opened and hit, "a left click on the chip (at %s, %s) opened the journal" % [str(at), "a visible, mouse-stopping control" if hit else "NOT clickable"])
+	windows.book.close()
+	await bot._wait(0.2)
+	# the tracker
+	var lines := SagaState.tracker_lines(model.my_player())
+	var shown: Array = []
+	for l in hud.tracker_lines.get_children():
+		shown.append((l as Label).text)
+	var first_ok: bool = not lines.is_empty() and shown.size() == lines.size() and shown[0].ends_with(str(lines[0]["text"]))
+	_books()["tracker"] = {"visible": hud.tracker.visible, "lines": shown}
+	bot._step("the saga tracker", hud.tracker.visible and first_ok, "the tracker is on the HUD with %d lines: \"%s\"" % [shown.size(), shown[0] if not shown.is_empty() else ""])
+	await bot._shot("tracker", 0.1)
+	hud.tracker_head.pressed.emit()
+	await bot._wait(0.2)
+	var folded := hud.tracker_lines.get_child_count() == 0
+	hud.tracker_head.pressed.emit()
+	await bot._wait(0.2)
+	bot._step("the tracker folds", folded and hud.tracker_lines.get_child_count() == lines.size(), "a click on the header hid the lines, another showed them again")
 
 
 ## The pause menu has the books (a pad's way: Start, then A), and each button opens its window.
 func pause_menu() -> void:
 	await _close_all()
 	var pressed_all := true
-	for which in ["book"]:
+	for which in ["book", "journal"]:
 		world.menu.open()
 		await bot._wait(0.1)
 		var b := _menu_button(which)
@@ -102,19 +167,34 @@ func pause_menu() -> void:
 			pressed_all = false
 			continue
 		b.pressed.emit()
-		var win: GameWindow = windows.book
+		var win: GameWindow = {"book": windows.book, "journal": windows.book}[which]
 		pressed_all = pressed_all and await bot._until(func() -> bool: return win.is_open(), 2.0)
 		windows.close_all()
 		await bot._wait(0.15)
-	bot._step("the pause menu opens the books", pressed_all, "Paus has Gårdsbok, and it opens its window")
+	bot._step("the pause menu opens the books", pressed_all, "Paus has Gårdsbok and Sagans dagbok, and each opens its window")
 
 
 func _menu_button(which: String) -> Button:
 	return world.menu.find_child("Ask_" + which, true, false) as Button
 
 
-## At the largest text (175 %, where the 1280 × 720 window is 731 × 411 points) every window still lies inside the screen.
-## The text size is put back.
+## Völvan's window has a journal tab.
+func volva_journal() -> void:
+	await _close_all()
+	if not await home._talk_to(Data.volva):
+		bot._step("Völvan's journal tab", false, "could not get her window open")
+		return
+	await bot._wait(0.3)
+	var pressed := home._press(windows.talk, "tab:" + Strings.t("sagaJournalTab"))
+	await bot._wait(0.3)
+	var txt := _texts(windows.talk)
+	bot._step("Völvan's journal tab", pressed and txt.contains(Strings.t("sagaChapters")) and txt.contains(Strings.t("sagaDungeons")), "her window has the journal as a tab: chapters and dungeons are there")
+	await bot._shot("volva-journal", 0.1)
+	windows.talk.close()
+
+
+## At the largest text (175 %, where the 1280 × 720 window is 731 × 411 points) every window still lies inside the screen and the HUD's new
+## parts (the tracker on the left, the level chip row on the right) do not lie over one another. The text size is put back.
 func large_text() -> void:
 	await _close_all()
 	var before := Settings.ui_scale
@@ -123,7 +203,7 @@ func large_text() -> void:
 	var view: Rect2 = world.get_viewport().get_visible_rect()
 	var inside := true
 	var report: Array = []
-	var wins: Array = [["book", windows.book, "book"]]
+	var wins: Array = [["book", windows.book, "book"], ["journal", windows.book, "journal"]]
 	for w in wins:
 		var win: GameWindow = w[1]
 		(win as BookWindow).open_at(w[2])
@@ -132,9 +212,14 @@ func large_text() -> void:
 		var ok := view.grow(1.0).encloses(r) and win._scroll.size.y >= 100.0
 		inside = inside and ok
 		report.append("%s %s" % [w[0], "fits" if ok else "OUT %s in %s" % [str(r), str(view)]])
-		await bot._shot("book-175", 0.1)
+		if w[0] == "journal":
+			await bot._shot("book-175", 0.1)
 		win.close()
 		await bot._wait(0.2)
+	var hud: HudLayer = world.hud
+	var rects: Dictionary = {"tracker": hud.tracker.get_global_rect(), "chips": hud.farm_box.get_global_rect()}
+	var apart := not (rects["tracker"] as Rect2).intersects(rects["chips"]) and view.grow(1.0).encloses(rects["tracker"])
+	await bot._shot("hud-175", 0.1)
 	Settings.set_ui_scale(before)
 	await bot._wait(0.4)
-	bot._step("large text fits", inside, "at 175 %% (%s): %s" % [str(view.size), ", ".join(report)])
+	bot._step("large text fits", inside and apart, "at 175 %% (%s): %s; tracker %s, chips %s %s" % [str(view.size), ", ".join(report), str(rects["tracker"]), str(rects["chips"]), "apart" if apart else "OVERLAP"])

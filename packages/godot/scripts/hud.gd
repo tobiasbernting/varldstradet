@@ -8,6 +8,7 @@ extends CanvasLayer
 ## assets/sv.json.
 
 signal menu_asked
+signal journal_asked ## M9b: the level chip was clicked
 signal centre_busy(on: bool) ## on a narrow screen: a banner, a toast or the fallen box is up (the chat feed makes room)
 
 const HP_GREEN := Color("4fcf5a")
@@ -67,6 +68,12 @@ var _hint_t := 0.0
 var fps_label: Label
 var voice_button: Button
 var _narrow := false
+var tracker: PanelContainer ## M9b: the saga's chapter and quests, always on the left outdoors once the saga has begun
+var tracker_head: Button
+var tracker_lines: VBoxContainer
+var tracker_open := true
+var _tracker_key := ""
+var _tracker_me: Dictionary = {}
 var _busy := false
 var _top: VBoxContainer ## the boss at the top, in the middle (to the right when the screen is narrow, see `_layout`)
 var _frame_times: Array = []
@@ -106,6 +113,7 @@ func _ready() -> void:
 	party_box = VBoxContainer.new()
 	party_box.add_theme_constant_override("separation", 2)
 	left.add_child(party_box)
+	_build_tracker(left)
 
 	var right := HBoxContainer.new()
 	right.anchor_left = 1.0
@@ -520,6 +528,7 @@ func reset() -> void:
 	hint_label.text = ""
 	not_drawn.visible = false
 	farm_box.visible = false
+	tracker.visible = false
 	boss_box.visible = false
 	cast_box.visible = false
 	down_box.visible = false
@@ -611,7 +620,7 @@ func _build_farm_box() -> void:
 	farm_box.add_theme_constant_override("separation", 8)
 	farm_box.visible = false
 	add_child(farm_box)
-	for k in ["clock", "season", "weather", "coins", "stars", "hearts"]:
+	for k in ["clock", "season", "weather", "level", "coins", "stars", "hearts"]:
 		var panel := PanelContainer.new()
 		var sb := StyleBoxFlat.new()
 		sb.bg_color = Color(0.1, 0.09, 0.07, 0.72)
@@ -627,6 +636,14 @@ func _build_farm_box() -> void:
 		farm_labels[k] = l
 		panel.visible = false
 		l.set_meta("panel", panel)
+		if k == "level":
+			# the level chip opens the journal's level page (a click; the pause menu is the pad's way)
+			panel.mouse_filter = Control.MOUSE_FILTER_STOP
+			panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+			panel.tooltip_text = Strings.t("sagaLevelChipTip")
+			panel.gui_input.connect(func(ev: InputEvent) -> void:
+				if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+					journal_asked.emit())
 
 
 func _farm_chip(k: String, text: String) -> void:
@@ -646,6 +663,8 @@ func set_farm_status(model: WorldModel, me: Dictionary) -> void:
 	var kind := str(model.weather.get("kind", "sun")) if model.weather is Dictionary else "sun"
 	_farm_chip("weather", Strings.weather_emoji(kind))
 	farm_labels["weather"].tooltip_text = Strings.weather(kind)
+	_farm_chip("level", "⭐ " + Strings.t("sagaLevelChip", {"n": Gear.level_of(me)}) if SagaState.shows_level(me) else "")
+	_set_tracker(me)
 	_farm_chip("coins", "%d %s" % [int(me.get("coins", 0)), Strings.t("coins")])
 	var stars := int(me.get("stars", 0))
 	_farm_chip("stars", "⭐ %d" % stars if stars > 0 else "")
@@ -657,6 +676,7 @@ func set_farm_status(model: WorldModel, me: Dictionary) -> void:
 func set_area(area_name: String, drawn: bool) -> void:
 	area_label.text = area_name if drawn else ""
 	farm_box.visible = farm_box.visible and drawn
+	tracker.visible = tracker.visible and drawn
 	not_drawn.visible = not drawn
 	not_drawn_label.text = "" if drawn else Strings.t("areaNotDrawn", {"name": area_name})
 
@@ -671,6 +691,7 @@ static func hearts_string(hp: float, max_hp: float) -> String:
 
 
 func set_hearts(hp: float, max_hp: float) -> void:
+	tracker.visible = false # (in a dungeon the fight is the whole screen)
 	hearts_label.text = hearts_string(hp, max_hp)
 	hearts_text.text = "%d/%d" % [ceili(hp), ceili(max_hp)] if max_hp > 0.0 else ""
 
@@ -1003,3 +1024,70 @@ func set_down(flags: int, all_down: bool, webbed: bool, now: float) -> void:
 		sub = Strings.t("sagaWipeSub") if all_down else Strings.t("sagaFallenSub", {"s": left})
 	down_title.text = "%s %s" % [glyph, title]
 	down_sub.text = sub
+
+
+# ---------------------------------------------------------------------------
+# M9b: the saga tracker
+
+func _panel_style(alpha := 0.72) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.1, 0.09, 0.07, alpha)
+	sb.set_corner_radius_all(8)
+	sb.content_margin_left = 10
+	sb.content_margin_right = 10
+	sb.content_margin_top = 4
+	sb.content_margin_bottom = 4
+	return sb
+
+
+## The chapter and the quests that go on (the browser's renderTracker): a header that folds it, one line each, a tick on the done ones.
+## Hidden before the saga has begun and in a dungeon.
+func _build_tracker(parent: Control) -> void:
+	tracker = PanelContainer.new()
+	tracker.name = "Tracker"
+	tracker.add_theme_stylebox_override("panel", _panel_style())
+	tracker.custom_minimum_size = Vector2(270, 0)
+	tracker.visible = false
+	parent.add_child(tracker)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 2)
+	tracker.add_child(v)
+	tracker_head = Button.new()
+	tracker_head.flat = true
+	tracker_head.focus_mode = Control.FOCUS_NONE
+	tracker_head.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	tracker_head.add_theme_font_size_override("font_size", 16)
+	tracker_head.pressed.connect(func() -> void:
+		tracker_open = not tracker_open
+		_tracker_key = ""
+		_set_tracker(_tracker_me))
+	v.add_child(tracker_head)
+	tracker_lines = VBoxContainer.new()
+	tracker_lines.add_theme_constant_override("separation", 2)
+	v.add_child(tracker_lines)
+
+
+func _set_tracker(me: Dictionary) -> void:
+	_tracker_me = me
+	var lines: Array = SagaState.tracker_lines(me) if SagaState.started(me) else []
+	tracker.visible = SagaState.started(me) and farm_box.visible
+	var key := JSON.stringify([lines, tracker_open, Settings.ui_scale])
+	if key == _tracker_key:
+		return
+	_tracker_key = key
+	tracker_head.text = "%s %s" % [Strings.t("sagaJournalTab"), "▾" if tracker_open else "▸"]
+	tracker_head.tooltip_text = Strings.t("trackerClose" if tracker_open else "trackerOpen")
+	for c in tracker_lines.get_children():
+		tracker_lines.remove_child(c)
+		c.queue_free()
+	if not tracker_open:
+		return
+	for l in lines:
+		var t := Label.new()
+		t.text = ("✓ " if bool(l["done"]) else "") + str(l["text"])
+		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		t.custom_minimum_size = Vector2(250, 0)
+		t.add_theme_font_size_override("font_size", 15)
+		t.modulate = Color(1, 1, 1, 0.6 if bool(l["done"]) else 1.0)
+		tracker_lines.add_child(t)
+

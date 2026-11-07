@@ -126,6 +126,7 @@ func _ready() -> void:
 	menu.switch_player.connect(func() -> void: left.emit())
 	menu.dev_enter.connect(_on_dev_enter)
 	menu.fps_toggled.connect(hud.set_fps_shown)
+	hud.journal_asked.connect(_on_window_asked.bind("journal"))
 	menu.window_asked.connect(_on_window_asked)
 	camera.position = CAMERA_OFFSET
 	camera.look_at_from_position(CAMERA_OFFSET, CAMERA_LOOK)
@@ -600,6 +601,8 @@ func _on_window_asked(which: String) -> void:
 			play.windows.toggle_gear()
 		"book":
 			play.windows.toggle_book("book")
+		"journal":
+			play.windows.toggle_book(BookWindow.page_for_key(model.my_player()))
 		_:
 			play.windows.toggle_quests()
 

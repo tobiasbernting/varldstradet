@@ -24,6 +24,7 @@ signal error(text: String)
 ## view draws from these. The area ones carry `area`; the view checks it against the map it draws.
 signal change(c: Dictionary)
 signal quests_changed ## the day's wishes were redrawn by the server
+signal saga_best_changed ## the family beat its best time through a dungeon (the journal shows it)
 ## Runs (M5c): the run as the server last said it (null: none), the three cards being voted on (null: none), how a run ended
 ## for me, the dishes I will bring and the sagaträd (my sagafrön and the nodes I planted).
 signal run_changed
@@ -398,6 +399,11 @@ func _change(c: Dictionary) -> void:
 					zones.append(z)
 			elif i >= 0:
 				zones.remove_at(i)
+		"sagaBest":
+			if not (farm.get("sagaBest") is Dictionary):
+				farm["sagaBest"] = {}
+			farm["sagaBest"][str(c.get("dungeon", ""))] = c.get("best")
+			saga_best_changed.emit()
 		"quests":
 			farm["quests"] = c.get("quests", [])
 			quests_changed.emit()

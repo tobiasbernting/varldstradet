@@ -55,6 +55,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { ACHIEVEMENTS } from '../../shared/src/data.ts';
+import { DUNGEON_IDS } from '../../shared/src/saga.ts';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../../..');
@@ -137,11 +138,13 @@ interface FarmReport {
   /** M9b: what the books and the HUD showed (farm_bot_books.gd). */
   books?: {
     achievements?: Record<string, { unlocked: boolean; k: number }>;
+    journal?: { chapters: number; dungeons: number; levels: number; level: number; chapter: number; has_level_line: boolean; cleared: number };
+    tracker?: { visible: boolean; lines: string[] };
   };
 }
 
 /** What the server itself keeps of a player: asks over the game socket, as a client does (`hello`, then `welcome`). */
-type ServerRecord = { inventory: ({ item: string; count: number } | null)[]; coins: number; stars: number; achievements?: string[]; stats?: Record<string, number> };
+type ServerRecord = { inventory: ({ item: string; count: number } | null)[]; coins: number; stars: number; achievements?: string[]; stats?: Record<string, number>; saga?: { chapter?: number; cleared?: string[]; discovered?: string[]; cls?: string; xp?: number } };
 async function serverRecord(url: string, playerId: string): Promise<ServerRecord | null> {
   const WebSocket = createRequire(path.join(root, 'packages/server/package.json'))('ws') as typeof import('ws').WebSocket;
   return await new Promise((resolve) => {
@@ -157,7 +160,7 @@ async function serverRecord(url: string, playerId: string): Promise<ServerRecord
       clearTimeout(timer);
       const p = msg.world.players[playerId];
       ws.close();
-      resolve(p ? { inventory: p.inventory, coins: p.coins, stars: p.stars, achievements: p.achievements, stats: p.stats } : null);
+      resolve(p ? { inventory: p.inventory, coins: p.coins, stars: p.stars, achievements: p.achievements, stats: p.stats, saga: p.saga } : null);
     });
     ws.on('error', () => {
       clearTimeout(timer);
@@ -321,6 +324,7 @@ async function checkFarmer(r: FarmReport, farmPort: number, botLog?: string): Pr
     'mark: Elsa has a wish I can fill', "mark: Elsa's wish is done", 'mark: Völvan has a story', "mark: Völvan's chapter is done", "mark: Völvan's next chapter", 'marks up close',
     // the books, the HUD, the help and the family window (M9b)
     'the Gårdsbok', 'the Gårdsbok closes on B', 'the pause menu opens the books',
+    'the journal', "the family's best time", 'the level chip', 'the level chip opens the journal', 'the saga tracker', 'the tracker folds', "Völvan's journal tab",
     'large text fits',
     // the village: the class, Völvan, the pizzeria, the gear and the hero switch, the bus
     'walk to Köpingen', 'sound: the village', 'pick a class', "Völvan's chapter", 'buy a pizza', 'eat the pizza', 'equip the weapon', 'the hero switch', 'back to the farm outfit', 'the bus home', 'the bus to the village', 'sound: footsteps', 'sound: ambience',
@@ -359,6 +363,11 @@ function checkBooks(r: FarmReport, rec: ServerRecord): void {
   });
   check(wrong.length === 0, `${r.name}: each achievement's medal and bar agree with the server's record (${wrong.map((a) => a.id).slice(0, 5).join(', ') || 'all ' + ACHIEVEMENTS.length}); ${rec.achievements?.length ?? 0} unlocked`);
   check(!!ach['harvest_1']?.unlocked && !!rec.achievements?.includes('harvest_1'), `${r.name}: the first harvest earned a medal, and the book shows it`);
+  // the journal: the chapters up to mine, the nine dungeons, the hero level
+  const j = b.journal;
+  check(!!j && j.chapters === (rec.saga?.chapter ?? 0) + 1 && j.dungeons === DUNGEON_IDS.length, `${r.name}: the journal lists ${j?.chapters} chapters (the server says chapter ${rec.saga?.chapter}) and ${j?.dungeons} of ${DUNGEON_IDS.length} dungeons`);
+  check(!!j && j.has_level_line && j.chapter === (rec.saga?.chapter ?? 0), `${r.name}: the journal's hero level line and chapter are the server's (level ${j?.level}, chapter ${j?.chapter})`);
+  check(!!b.tracker?.visible && b.tracker.lines.length >= 1, `${r.name}: the saga tracker was on the HUD (${b.tracker?.lines.join(' | ')})`);
 }
 
 /** One bot of the run pair: it played through the client and its report says how far. */

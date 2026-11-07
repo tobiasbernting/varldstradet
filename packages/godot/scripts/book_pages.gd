@@ -1,8 +1,9 @@
 class_name BookPages
 extends RefCounted
-## The pages of the books, drawn into a GameWindow's body: the Gårdsbok (the achievements with progress bars and stars; the browser's
-## renderBook in client/src/ui/menus.ts). All of it is read from my player record; the server owns every number. A page is rebuilt
-## whenever the window refreshes (a new record), never per frame.
+## The pages of the books, drawn into a GameWindow's body: the journal (the hero's level and what each level gives, the chapters,
+## the nine dungeons with how to beat their bosses, the family's best times, the titles) and the Gårdsbok (the achievements with progress bars and stars). The browser's renderJournal, renderLevels
+## and renderBook (client/src/ui/saga.ts, menus.ts). All of it is read from my player record, the day, and the farm's
+## `sagaBest`; the server owns every number. A page is rebuilt whenever the window refreshes (a new record), never per frame.
 
 const GOLD := Color("e8b830")
 const DIM := Color(1, 1, 1, 0.65)
@@ -42,6 +43,11 @@ static func _text(parent: Control, text: String, size := 15, colour := Color(1, 
 	r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(r)
 	return r
+
+
+static func heading(w: GameWindow, text: String) -> Label:
+	var l := w.add_label(text, 20, GOLD)
+	return l
 
 
 ## A thin bar `k` full (0..1) with a line of text on it, the Gårdsbok's and the level's meter. The fill is a bright colour on a dark
@@ -133,3 +139,113 @@ static func achievements(w: GameWindow) -> void:
 		meter(box, float(got) / float(maxi(1, goal)), "", 8)
 	if list.is_empty():
 		w.add_label(Strings.t("achievementsDone", {"done": 0, "total": 0}), 16)
+
+
+# ---------------------------------------------------------------------------
+# The journal
+
+static func journal(w: GameWindow) -> void:
+	var me := w.model.my_player()
+	var prog := Gear.progress(me)
+	_levels(w, me)
+	heading(w, Strings.t("sagaChapters"))
+	var chapter_now := int(prog.get("chapter", 0))
+	var heard_it := bool(prog.get("heard", false))
+	var act_two := int(Data.book.get("actTwo", 4))
+	var list: Array = Data.chapters
+	for i in range(list.size()):
+		if i > chapter_now:
+			break
+		if i == act_two:
+			w.add_label("🌀 " + Strings.t("sagaActTwo"), 17, GOLD)
+		var ch: Dictionary = list[i]
+		var done := i < chapter_now
+		var name_text := str(ch.get("title", "")) if i == 0 else Strings.t("sagaChapter", {"n": i, "title": str(ch.get("title", ""))})
+		var need := str((ch.get("done", [""]) as Array)[0]) if done else (str(ch.get("goal", "")) if heard_it else Strings.t("sagaVisitVolva"))
+		var box := _panel(w._body, Color(0.12, 0.2, 0.12, 0.9) if done else Color(0.16, 0.13, 0.1, 0.9))
+		box.name = "chapter_%d" % i
+		var parts: Array = SagaState.chapter_parts(me, i) if (not done and heard_it) else []
+		var line := "%s [b]%s[/b]%s\n[color=#aaaaaa]%s[/color]" % ["✅" if done else "📜", name_text, "" if done else "  [color=#e8b830](%s)[/color]" % Strings.t("sagaChapterNow"), need]
+		for p in parts:
+			line += "\n" + str(p["text"])
+		_text(box, line, 15)
+	heading(w, Strings.t("sagaDungeons"))
+	var ids: Array = Data.dungeons.keys()
+	for k in range(ids.size()):
+		_dungeon_card(w, me, prog, str(ids[k]), str(ids[k - 1]) if k > 0 else "")
+	heading(w, Strings.t("sagaTitles"))
+	var titles: Array = prog.get("titles", [])
+	if titles.is_empty():
+		w.add_label(Strings.t("sagaNoTitles"), 15, DIM)
+	else:
+		var parts: Array = []
+		for t in titles:
+			parts.append("👑 " + str(t))
+		w.add_label("   ".join(parts), 17)
+
+
+## The hero level: where you are, the experience bar, and what every level gives (the ones reached are ticked, the next is lit).
+static func _levels(w: GameWindow, me: Dictionary) -> void:
+	var xp := Gear.xp_of(me)
+	var level := Gear.level_of(me)
+	heading(w, "⭐ " + Strings.t("sagaHeroLevelHead"))
+	var box := _panel(w._body)
+	box.name = "levels"
+	_text(box, "[b]%s[/b]" % Strings.t("sagaLevelOf", {"n": level, "max": Gear.max_level()}), 18)
+	var span := Gear.span(xp)
+	var next: int = span[1]
+	meter(box, 1.0 if next < 0 else float(xp - int(span[0])) / float(maxi(1, next - int(span[0]))), Strings.t("sagaXpMax") if next < 0 else Strings.t("sagaXpOf", {"xp": xp, "next": next}), 20)
+	_text(box, Strings.t("sagaLevelIntro"), 14, DIM)
+	var lv_keys: Array = []
+	for k in Data.level_rewards.keys():
+		lv_keys.append(int(k))
+	lv_keys.sort()
+	var next_shown := false
+	for n in lv_keys:
+		var got: bool = level >= n
+		var is_next := not got and not next_shown
+		if not got:
+			next_shown = true
+		var row := _panel(w._body, Color(0.2, 0.17, 0.08, 0.95) if is_next else Color(0.16, 0.13, 0.1, 0.9))
+		row.name = "level_%d" % n
+		var r: Dictionary = Data.level_rewards[str(n)] if Data.level_rewards.has(str(n)) else Data.level_rewards.get(n, {})
+		var bits: Array = []
+		if r.get("item") != null:
+			bits.append(Data.item_name(str(r["item"])))
+		if r.get("title") != null:
+			bits.append("👑 " + Strings.t("sagaRewardTitle", {"title": str(r["title"])}))
+		if r.get("aura") != null:
+			bits.append(("🌈 " if int(r["aura"]) == 2 else "✨ ") + Strings.t("sagaRewardAura2" if int(r["aura"]) == 2 else "sagaRewardAura1"))
+		_text(row, "[b]%s[/b]   %s%s" % [("✓ %d" % n) if got else Strings.t("sagaRewardLocked", {"n": n}), "  ".join(bits), "   [color=#e8b830]◀[/color]" if is_next else ""], 15, Color.WHITE if got else DIM)
+
+
+static func _dungeon_card(w: GameWindow, me: Dictionary, prog: Dictionary, id: String, prev: String) -> void:
+	var d := Data.dungeon(id)
+	var cleared: bool = (prog.get("cleared", []) as Array).has(id)
+	var open: bool = cleared or (str(prog.get("cls", "")) != "" and (prev == "" or (prog.get("cleared", []) as Array).has(prev)))
+	var box := _panel(w._body, Color(0.12, 0.2, 0.12, 0.9) if cleared else (Color(0.16, 0.13, 0.1, 0.9) if open else Color(0.12, 0.1, 0.09, 0.9)))
+	box.name = "dungeon_" + id
+	var tag := Strings.t("sagaClearedTag") if cleared else ("" if open else "🔒 " + Strings.t("sagaSealed"))
+	_text(box, "[b]⚔️ %s[/b]   [color=#e8b830]%s[/color]" % [str(d.get("name", id)), tag], 18)
+	if not open:
+		_text(box, Strings.t("sagaUnknown"), 14, DIM)
+		return
+	# today's treasure from each boss (full once a day, a smaller chest after that), and the family's best time
+	var chest_day: Dictionary = prog.get("chestDay", {}) if prog.get("chestDay") is Dictionary else {}
+	for b in [str(d.get("mini", "")), str(d.get("boss", ""))]:
+		var taken: bool = chest_day.has(b) and int(chest_day[b]) == w.model.day
+		_text(box, "%s %s: [b]%s %s[/b]" % ["📦" if taken else "🎁", str(Data.boss(b).get("name", b)), Strings.t("sagaChestToday"), Strings.t("sagaChestTaken") if taken else Strings.t("sagaChestLeft")], 14, DIM if taken else Color.WHITE)
+	var best: Variant = (w.model.farm.get("sagaBest", {}) as Dictionary).get(id) if w.model.farm.get("sagaBest") is Dictionary else null
+	if best is Dictionary:
+		_text(box, "⏱️ " + Strings.t("sagaBestTime", {"time": SagaState.clock(float(best.get("ms", 0))), "names": ", ".join(best.get("names", []))}), 14, GOLD)
+	else:
+		_text(box, "⏱️ " + Strings.t("sagaNoBestTime"), 14, DIM)
+	for b in [str(d.get("mini", "")), str(d.get("boss", ""))]:
+		var def := Data.boss(b)
+		var line := "[b]%s %s[/b] · %s" % ["💀" if bool(def.get("mini", false)) else "👑", str(def.get("name", b)), str(def.get("title", ""))]
+		if cleared and str(def.get("lore", "")) != "":
+			line += "\n[color=#aaaaaa]%s[/color]" % str(def.get("lore", ""))
+		line += "\n" + Strings.t("sagaHowToFight", {"boss": str(def.get("name", b))})
+		for mv in def.get("moves", []):
+			line += "\n  %s [b]%s:[/b] %s" % ["🛡️" if bool(mv.get("interrupt", false)) else "🔴", str(mv.get("name", "")), str(mv.get("text", ""))]
+		_text(box, line, 14)
