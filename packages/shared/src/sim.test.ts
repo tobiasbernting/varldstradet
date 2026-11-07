@@ -1716,6 +1716,24 @@ describe('vilda djur skräms och kommer tillbaka (M7b)', () => {
     expect(t.a.haunt).toBeUndefined();
   });
 
+  it('a startled animal that is then tamed with the lasso loses its wild spot', () => {
+    const { world, p, area, a } = outdoors('hare', 2);
+    const spot = { x: a.x, y: a.y };
+    p.moving = true;
+    tick(world, 100, at(1_000_100));
+    expect(a.haunt).toBeDefined();
+    p.moving = false;
+    a.x = spot.x; // (it has come back: the throw is at the tile next to the hero, as in the lasso tests)
+    a.y = spot.y;
+    delete a.fleeUntil;
+    addItem(p.inventory, 'lasso', 1);
+    p.selected = p.inventory.findIndex((s) => s?.item === 'lasso');
+    performAction(area, p.id, 31, 30, { season: 'none', rnd: () => 0.1, now: 1_000_200 });
+    expect(a.owner).toBe(p.id);
+    expect(a.haunt).toBeUndefined();
+    expect(a.startled).toBeUndefined();
+  });
+
   it('it is the same every time (no random numbers) and a lasso scare still ends as before', () => {
     const run = () => {
       const { world, p, a } = outdoors('deer');

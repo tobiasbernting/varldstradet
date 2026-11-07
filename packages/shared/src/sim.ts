@@ -1873,6 +1873,8 @@ function moveAnimalAlong(from: WorldState, to: WorldState, toKey: string, a: Ani
   a.moving = false;
   delete a.tx;
   delete a.ty;
+  delete a.haunt; // (its coordinates were the other map's)
+  delete a.startled;
   to.animals[a.id] = a;
   const here: Change = { t: 'animal', id: a.id, animal: a };
   if (toKey !== 'farm') here.area = toKey;
@@ -2505,6 +2507,8 @@ function throwLasso(world: WorldState, p: PlayerState, ctx: SimCtx, out: Change[
       a.owner = p.id;
       a.named = false;
       a.petted = true;
+      delete a.haunt; // (a pet follows its owner: no wild spot to go back to)
+      delete a.startled;
       delete a.fleeUntil;
       delete a.tx;
       delete a.ty;
