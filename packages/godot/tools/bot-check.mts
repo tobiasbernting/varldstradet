@@ -282,14 +282,14 @@ async function checkFarmer(r: FarmReport, farmPort: number, botLog?: string): Pr
   check(exitErrors.length === 0, `${r.name}: no script errors, nothing leaked at exit (${exitErrors[0] ?? 'none'})`);
   const wanted = [
     // the farm (M4b)
-    'till', 'plant', 'water', 'grow', 'harvest', 'hotbar keys', 'pets commands', 'drop', 'pick up', 'chop', 'mine', 'fill the can', 'fishing', 'open the chest', 'move a stack', 'pet',
+    'till', 'plant', 'water', 'grow', 'harvest', 'hotbar keys', 'pets commands', 'drop', 'pick up', 'chop', 'mine', 'fill the can', 'fishing', 'open the chest', 'move a stack', 'startle', 'sound: the forest', 'pet',
     // the shop, the sell box, the wishes and the workbench (M4c)
     'the shop opens', 'buy seeds', 'buy a hat', 'plant wheat', 'harvest wheat', 'sell a crop', 'Lilla Elsas önskning', 'Fiskar-Svens önskning',
     'the workbench opens', 'craft fences', 'preview: no fence on water', 'place a fence', 'take my fence down', "someone else's fence is refused",
     // the house, the stove, the wardrobe, the villagers
-    'into the farmhouse', 'the stove opens', 'cook bread', 'out of the farmhouse', 'change the hat', "a villager's window", 'start a conversation', 'a joke', 'a riddle', 'sten, sax, påse',
+    'into the farmhouse', 'the stove opens', 'sound: by the stove indoors', 'cook bread', 'out of the farmhouse', 'change the hat', "a villager's window", 'start a conversation', 'a joke', 'a riddle', 'sten, sax, påse',
     // the village: the class, Völvan, the pizzeria, the gear and the hero switch, the bus
-    'walk to Köpingen', 'pick a class', "Völvan's chapter", 'buy a pizza', 'eat the pizza', 'equip the weapon', 'the hero switch', 'back to the farm outfit', 'the bus home', 'the bus to the village',
+    'walk to Köpingen', 'sound: the village', 'pick a class', "Völvan's chapter", 'buy a pizza', 'eat the pizza', 'equip the weapon', 'the hero switch', 'back to the farm outfit', 'the bus home', 'the bus to the village', 'sound: footsteps', 'sound: ambience',
   ];
   for (const want of wanted) {
     const st = r.steps.find((x) => x.name === want);

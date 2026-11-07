@@ -397,6 +397,10 @@ export interface AnimalState {
   fleeUntil?: number;
   fleeX?: number;
   fleeY?: number;
+  /** Wild animals (M7b): startled by a hero who comes close while moving, it bolts (faster than a lasso scare). */
+  startled?: boolean;
+  /** Wild animals (M7b): where it was when it was first startled; it goes back there after the hero has gone quiet. */
+  haunt?: { x: number; y: number };
   /** Wander target (vehicles: the next corner of their route). */
   tx?: number;
   ty?: number;

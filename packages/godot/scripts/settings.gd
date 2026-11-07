@@ -1,7 +1,7 @@
 extends Node
 ## What this machine remembers, in user://settings.cfg: the server's address, this device's token (the same long
 ## random token the browser keeps in a cookie; the server stores only its hash), the number to show while a parent
-## approves the device, the last character picked, and the graphics quality preset (quality.gd).
+## approves the device, the last character picked, the graphics quality preset (quality.gd) and the world's sound settings.
 
 const FILE := "user://settings.cfg"
 const DEFAULT_URL := "https://example.invalid"
@@ -20,6 +20,10 @@ var voice_auto: bool = true
 var voice_mode: String = "ptt"
 var voice_mic: bool = true
 var voice_volume: float = 1.0
+## The world's own sounds (M7b): footsteps and the ambience (soundscape.gd), each switchable, and how loud they are, 0 to 1.
+var steps_on: bool = true
+var ambience_on: bool = true
+var world_volume: float = 0.8
 
 
 func _ready() -> void:
@@ -37,6 +41,9 @@ func _ready() -> void:
 	voice_mode = str(cfg.get_value("voice", "mode", "ptt"))
 	voice_mic = bool(cfg.get_value("voice", "mic", true))
 	voice_volume = clampf(float(cfg.get_value("voice", "volume", 1.0)), 0.0, 1.0)
+	steps_on = bool(cfg.get_value("sound", "steps", true))
+	ambience_on = bool(cfg.get_value("sound", "ambience", true))
+	world_volume = clampf(float(cfg.get_value("sound", "volume", 0.8)), 0.0, 1.0)
 
 
 func save() -> void:
@@ -52,6 +59,9 @@ func save() -> void:
 	cfg.set_value("voice", "mode", voice_mode)
 	cfg.set_value("voice", "mic", voice_mic)
 	cfg.set_value("voice", "volume", voice_volume)
+	cfg.set_value("sound", "steps", steps_on)
+	cfg.set_value("sound", "ambience", ambience_on)
+	cfg.set_value("sound", "volume", world_volume)
 	var err := cfg.save(FILE)
 	if err != OK:
 		push_warning("could not save %s: %s" % [FILE, error_string(err)])

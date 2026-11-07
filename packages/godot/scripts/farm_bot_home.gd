@@ -306,6 +306,7 @@ func house_and_cook() -> void:
 	await bot._wait(0.3)
 	await bot._shot("cook", 0.1)
 	bot._step("the stove opens", true, "%d recipes; the bread needs wheat 3 and I have %d" % [Data.cooking.size(), wheat])
+	await bot._sounds("by the stove indoors", ["fire"], ["birds", "crickets", "wind_soft"])
 	var bread := model.count_item("bread")
 	var cooked := wheat >= 3 and _press(windows.stove, "r:bread") and await bot._until(func() -> bool: return model.count_item("bread") >= bread + 2, 4.0)
 	bot._step("cook bread", cooked and model.count_item("wheat") == wheat - 3, "wheat %d -> %d, bread %d -> %d" % [wheat, model.count_item("wheat"), bread, model.count_item("bread")])
@@ -457,6 +458,7 @@ func class_and_chapter() -> void:
 		bot._step("walk to Köpingen", false, "never arrived in a:1,0 (in %s)" % model.my_area_key())
 		return
 	bot._step("walk to Köpingen", world._mode == "outdoor" and world._area == "a:1,0", "east through the opening: the village is drawn with %d objects" % world.farm.object_count())
+	await bot._sounds("the village", ["murmur"])
 	await bot._wait(1.5)
 	await bot._shot("village", 0.2)
 	var stone := bot._nearest_object(["saga_stone"])

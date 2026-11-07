@@ -1,7 +1,7 @@
 class_name PauseMenu
 extends CanvasLayer
 ## The pause menu (the `menu` action: Escape or the gamepad's start button): continue, settings (the quality
-## presets of quality.gd), the development way into the dungeons that have no arch drawn yet (the server's `dev` message, DEV_TELEPORT=1), and
+## presets of quality.gd, the spells' buttons, the frame rate and the world's sounds), the development way into the dungeons that have no arch drawn yet (the server's `dev` message, DEV_TELEPORT=1), and
 ## back to the login screen. Built in code; the texts come from assets/sv.json.
 
 signal resumed
@@ -18,6 +18,9 @@ var _hint: Label
 var _spell_buttons: Dictionary = {}
 var _spell_hint: Label
 var _fps_check: CheckButton
+var _steps_check: CheckButton
+var _ambience_check: CheckButton
+var _volume_slider: HSlider
 
 
 func _ready() -> void:
@@ -142,6 +145,37 @@ func _ready() -> void:
 		Settings.save()
 		fps_toggled.emit(on))
 	_settings.add_child(_fps_check)
+	# the world's own sounds (M7b): footsteps and the ambience, each on or off, and how loud
+	var sound_label := Label.new()
+	sound_label.text = Strings.t("settingsWorldSound")
+	_settings.add_child(sound_label)
+	_steps_check = CheckButton.new()
+	_steps_check.text = Strings.t("settingsSteps")
+	_steps_check.button_pressed = Settings.steps_on
+	_steps_check.toggled.connect(func(on: bool) -> void:
+		Settings.steps_on = on
+		Settings.save())
+	_settings.add_child(_steps_check)
+	_ambience_check = CheckButton.new()
+	_ambience_check.text = Strings.t("settingsAmbience")
+	_ambience_check.button_pressed = Settings.ambience_on
+	_ambience_check.toggled.connect(func(on: bool) -> void:
+		Settings.ambience_on = on
+		Settings.save())
+	_settings.add_child(_ambience_check)
+	var volume_label := Label.new()
+	volume_label.text = Strings.t("settingsWorldVolume")
+	_settings.add_child(volume_label)
+	_volume_slider = HSlider.new()
+	_volume_slider.min_value = 0.0
+	_volume_slider.max_value = 1.0
+	_volume_slider.step = 0.05
+	_volume_slider.value = Settings.world_volume
+	_volume_slider.custom_minimum_size = Vector2(0, 28)
+	_volume_slider.value_changed.connect(func(v: float) -> void:
+		Settings.world_volume = v
+		Settings.save())
+	_settings.add_child(_volume_slider)
 	_settings.add_child(_button(Strings.t("back"), func() -> void: _show_settings(false)))
 	_refresh_quality()
 	_refresh_spells()
@@ -177,6 +211,9 @@ func toggle() -> void:
 func open() -> void:
 	visible = true
 	_fps_check.button_pressed = Settings.show_fps
+	_steps_check.button_pressed = Settings.steps_on
+	_ambience_check.button_pressed = Settings.ambience_on
+	_volume_slider.value = Settings.world_volume
 	_show_settings(false)
 
 
