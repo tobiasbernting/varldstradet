@@ -74,6 +74,7 @@ var _swing_side := 1.0
 ## The 3D trial (`--people3d`): a KayKit Adventurers figure in place of the pixel sprite, or null.
 var model: Node3D = null
 var _anim: AnimationPlayer = null
+var _played := "" ## the last animation asked for (a finished one-shot clip leaves `current_animation` empty, so that cannot be compared)
 var _model_h := 0.0
 var _yaw := 0.0
 var _rig := {} ## the animations this figure plays: idle, walk, death, attack, hit (set_figure's `rig`)
@@ -193,6 +194,7 @@ func set_figure(figure: Node3D, key: String, height_m := 1.5, rig := {}) -> bool
 	_model_h = height_m
 	add_child(model)
 	_anim = AnimationPlayer.new()
+	_played = ""
 	model.add_child(_anim)
 	_anim.root_node = NodePath("..")
 	_rig = DEFAULT_RIG.merged(rig, true)
@@ -319,7 +321,8 @@ static func _libs() -> Array:
 
 
 func _play(anim_name: String) -> void:
-	if _anim != null and _anim.has_animation(anim_name) and _anim.current_animation != anim_name:
+	if _anim != null and _anim.has_animation(anim_name) and _played != anim_name:
+		_played = anim_name
 		_anim.play(anim_name, 0.15)
 
 
@@ -327,6 +330,7 @@ func _play(anim_name: String) -> void:
 func _play_once(anim_name: String, speed := 1.0) -> void:
 	if _anim == null or anim_name == "" or not _anim.has_animation(anim_name) or pose == "down":
 		return
+	_played = anim_name
 	_anim.play(anim_name, 0.05, speed)
 	_anim.seek(0.0, true)
 	_once_t = _anim.get_animation(anim_name).length / speed
