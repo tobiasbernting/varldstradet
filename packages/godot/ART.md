@@ -406,6 +406,26 @@ Village Låg 48.4 → 48.3, Farm Mellan natural 104.8 → 109.1, Village Mellan 
 104.9 → 109.4, Village Mellan everything on 97.5 → 102.8. Draw calls rise by 2–7 (the ambient MultiMeshes, one each), primitives
 by under 1 % (an unrelated rise on Hög in the village is the same ±1 %), Låg's draw calls and primitives are unchanged.
 
+### Measured after merging the atmosphere pass, the art pass and creatures in 3D with M7a and M7b
+
+`--bench=<preset> --scene=farm`, 1280×720, sandbox only (software GL under Xvfb: compare rows, not absolute numbers). "main" is
+origin/main at M7b (670df30), "merged" is this branch. Average frame ms; Låg is the mean of two runs:
+
+| Farm, Compatibility (OpenGL) | main | merged | primitives main → merged |
+| --- | --- | --- | --- |
+| Låg | 30.0 | 52.3 | 34 000 → 93 400 |
+| Mellan | 67.2 | 102.2 | 86 700 → 244 000 |
+| Hög | 81.4 | 120.2 | 141 200 → 304 700 |
+| Farm, Forward+ (lavapipe) | main | merged | |
+| Låg | 75.8 | 105.3 | 34 100 → 95 000 |
+| Mellan | 133.5 | 133.3 | 89 400 → 250 300 |
+
+Draw calls are the same (91 → 92 on Låg). **Låg is slower than main's, and it is the art pass's models, not the atmosphere pass:**
+the branch before the merge (5a259fb) already draws 91 000 primitives on Låg and 45.7 ms; the pack trees, bushes and grass
+(KayKit Forest, Kenney Nature Kit) have three times the triangles of the generated meshes they replaced. The merge itself adds
+about 2 ms on Låg (M7a's wind at level 1 is the old sway; the grade is one pass). On Forward+ the Mellan frame is capped by the
+swapchain in lavapipe, so it reads equal. Mellan pays the one full-screen grade pass on top of M7a's budgets.
+
 ## The fight on screen (M3b)
 
 - **Telegraphs** are flat shapes 4.5 cm over the floor: a dim red base in the zone's full size, a brighter fill that

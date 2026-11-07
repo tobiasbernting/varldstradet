@@ -54,7 +54,8 @@ This file is only what the next agent needs: state, decisions, how the work is r
   leaves, chimney smoke, dawn mist, window light); dropped from the atmosphere pass as duplicates: its fireflies, chimney
   smoke, autumn leaves in the trees, dawn mist, the window beams and the pond at night, plus its old wind sway and its
   fog banks (fog weather now drives M7a's mist at a higher alpha). Kept: the day/night grade, screen grade, lamp pools,
-  the hero's lantern, rain/snow/hail/puddles/cloud shadows and dew. Details in `DESIGN.md` and `ART.md`.
+  the hero's lantern, rain/snow/hail/puddles/cloud shadows and dew. Details in `DESIGN.md` and `ART.md`. PR 21 (M7b) is merged in too. Open: the pack models draw ~3x the primitives of the generated ones, so
+  Låg is ~1.7x slower than main's in the sandbox bench (the art pass, not the merge; `ART.md` "Measured after merging").
 - **The leftovers below were fixed in PR 16** except the waypoint tolerance and the voice bot using bare sockets.
 - **Small things left over from PR 13 and PR 14, for one tidy-up PR** (none blocks anything): the pick screen shows
   "Välj en runa!" twice, offset (the server's `reward` banner over the pick's own title; `run_pick.gd` / `hud.gd`);
