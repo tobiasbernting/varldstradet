@@ -80,7 +80,7 @@ func _ready() -> void:
 	dev_title.add_theme_font_size_override("font_size", 16)
 	dev_title.modulate = Color(1, 1, 1, 0.7)
 	_main.add_child(dev_title)
-	# Draugkryptan has its real way in (the arch in the forest); the other eight have none drawn yet
+	# Every dungeon has its own arch out in the world (M9a); these are the server's dev shortcut (DEV_TELEPORT=1 only: it answers with an error otherwise)
 	for id in Data.dungeons.keys():
 		if str(id) == "draug":
 			continue

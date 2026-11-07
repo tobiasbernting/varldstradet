@@ -23,7 +23,7 @@ const SHADOW_EVERY := 0.3
 ## same direction would put it among the crowns of the trees behind the room's south wall).
 const INSIDE_OFFSET := Vector3(0.0, 9.6, 5.2)
 const USABLE := {"saga_exit": "actExit", "saga_chest": "actChest", "saga_rest": "actRest", "saga_plate": "actPlate", "saga_gate": "actGate", "run_exit": "actRunExit"}
-## Outdoors only the dungeons' arches work yet; the other things you can use say so (M4b and M4c make them work).
+
 const ARCH := "saga_portal"
 
 @onready var dungeon: DungeonView = $Dungeon
@@ -224,8 +224,19 @@ func start_demo(fixture := "draug") -> void:
 	if not (parsed is Dictionary):
 		push_error("assets/fixtures/%s.json is missing or broken: run `pnpm godot:fixture`" % fixture)
 		return
+	# --arch=<0..8>: the forest's arch is another dungeon's (its variant), for the pictures of each gateway
+	var arch_variant := -1
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--arch="):
+			arch_variant = int(arg.substr(7))
 	for m in parsed.get("messages", []):
 		if m is Dictionary:
+			if arch_variant >= 0:
+				for c in m.get("changes", []):
+					if c is Dictionary and str(c.get("t", "")) == "areaData":
+						for o in c.get("world", {}).get("objects", {}).values():
+							if str(o.get("kind", "")) == ARCH:
+								o["variant"] = arch_variant
 			model.apply(m)
 	# --time=0.7 (a fraction of the day), --weather=rain, --season=jul: a fixed sky, for pictures
 	for arg in OS.get_cmdline_user_args():

@@ -100,7 +100,8 @@ const SPECS := {
 	"bus_stop": {"m": ["bus_stop"], "node": true, "front": true},
 	"cave": {"m": ["cave_mouth"], "node": true},
 	"cave_mouth": {"m": ["cave_mouth"], "node": true},
-	"saga_portal": {"m": ["arch"], "node": true},
+	# M9a: each dungeon's own gateway (arch_meshes.gd), by the object's variant (the dungeon's index)
+	"saga_portal": {"m": ["arch", "arch_1", "arch_2", "arch_3", "arch_4", "arch_5", "arch_6", "arch_7", "arch_8"], "node": true, "by_variant": true},
 	# --- M5c: the runs. The färdport (3 × 2) and the Yggdrasil shoot, five stages by the object's variant, and the three buildings.
 	"fardport": {"m": ["fardport"], "node": true},
 	"yggdrasil": {"m": ["ygg_0", "ygg_1", "ygg_2", "ygg_3", "ygg_4"], "node": true, "by_variant": true},
@@ -382,6 +383,7 @@ func _make(n: String) -> ArrayMesh:
 		"bus_stop": return _bus_stop()
 		"cave_mouth": return _merged(_turned(_baked(NATURE + "cliff_cave_rock.glb", 2.0, "cliff", Vector2.ZERO, null, Vector3(0.0, 0.0, -0.85)), PI), _cave_dark())
 		"arch": return _arch()
+		"arch_1", "arch_2", "arch_3", "arch_4", "arch_5", "arch_6", "arch_7", "arch_8": return ArchMeshes.mesh(int(n.substr(5)))
 		"fardport": return RunMeshes.fardport()
 		"ygg_0": return RunMeshes.yggdrasil(0)
 		"ygg_1": return RunMeshes.yggdrasil(1)
