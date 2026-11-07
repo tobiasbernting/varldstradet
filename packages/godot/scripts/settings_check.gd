@@ -101,6 +101,7 @@ func _run() -> void:
 	_colours()
 	_motion()
 	_controls()
+	_run_only()
 	_roundtrip()
 	if shot_dir != "":
 		await _shots()
@@ -272,7 +273,7 @@ func _colours() -> void:
 	for pair in [["rg", ["deut", "prot"]], ["tritan", ["trit"]]]:
 		var mode: String = pair[0]
 		_click(win._colour_buttons[mode])
-		_step("palette %s: kept, saved, and the stripes come on with it" % mode, Settings.colour_mode == mode and _on_disk("access", "colours") == mode and Palette.pattern() and Settings.danger_pattern and win._pattern_check.button_pressed)
+		_step("palette %s: kept, saved, and the stripes come on with it" % mode, Settings.colour_mode == mode and _on_disk("access", "colours") == mode and Palette.pattern() and not Settings.danger_pattern and win._pattern_check.button_pressed and win._pattern_check.disabled)
 		_step("palette %s: hearts and the danger mark change" % mode, HudLayer.hp_colour(0.9) != HudLayer.HP_GREEN and Palette.colour("danger_fill") != Palette.colour("danger_fill", "normal"))
 		for kind in pair[1]:
 			var hi := Palette.hp(0.9)
@@ -287,8 +288,11 @@ func _colours() -> void:
 			_step("palette %s under %s: danger and a safe place are told apart" % [mode, kind], d_ds >= 60.0 and d_foe >= 25.0, "%.0f, foe vs target %.0f" % [d_ds, d_foe])
 	# the old palette does not pass for the people it was never for (so the test can fail)
 	_step("the normal hearts are not enough for red-green blindness", Palette.distance_under(Palette.hp(0.9, "normal"), Palette.hp(0.1, "normal"), "deut") < 25.0)
-	# stripes by hand in the normal palette, and off again
+	# back to the normal palette: no stripes of their own are left behind, and the checkbox is free again
+	_click(win._colour_buttons["rg"])
 	_click(win._colour_buttons["normal"])
+	_step("rg back to normal: the stripes are gone, the checkbox is free and off", not Palette.pattern() and not Settings.danger_pattern and _on_disk("access", "pattern") == false and not win._pattern_check.disabled and not win._pattern_check.button_pressed)
+	# stripes by hand in the normal palette, and off again
 	win._pattern_check.button_pressed = true
 	_step("stripes can be switched on by hand: kept, saved", Palette.pattern() and _on_disk("access", "pattern") == true)
 	win._pattern_check.button_pressed = false
@@ -331,6 +335,38 @@ func _controls() -> void:
 
 
 ## A new start: the values read back from the file are the ones in memory.
+## Command-line flags are for one run: they change what is in use, never what is written, however many other settings are saved.
+func _run_only() -> void:
+	Settings.save()
+	var before := FileAccess.get_file_as_string(Settings.FILE)
+	for flag in ["--ui-scale=1.75", "--colours=rg", "--pattern", "--reduce-motion", "--res-scale=0.5"]:
+		_step("flag %s is a run-only override" % flag, Settings.apply_run_only(flag))
+	_step("the flags are in use", Settings.ui_scale == 1.75 and Settings.colour_mode == "rg" and Settings.danger_pattern and Settings.reduce_motion and Settings.res_scale == 0.5)
+	Settings.show_fps = not Settings.show_fps # (any other setting saved later: F3, the login screen, a setter, the window closing)
+	Settings.save()
+	Settings.show_fps = not Settings.show_fps
+	Settings.set_master_volume(Settings.master_volume)
+	win.close()
+	win.open_window()
+	var after := FileAccess.get_file_as_string(Settings.FILE)
+	var cfg_before := ConfigFile.new()
+	var cfg_after := ConfigFile.new()
+	cfg_before.parse(before)
+	cfg_after.parse(after)
+	var same := true
+	for sec_key in [["access", "ui_scale"], ["access", "colours"], ["access", "pattern"], ["access", "reduce_motion"], ["graphics", "res_scale"]]:
+		same = same and cfg_before.get_value(sec_key[0], sec_key[1]) == cfg_after.get_value(sec_key[0], sec_key[1])
+	_step("saving other settings leaves the flagged ones in settings.cfg as they were", same, "%s" % str(cfg_after.get_value("access", "ui_scale")))
+	Settings.set_ui_scale(1.25)
+	_step("the player's own choice ends the override and is saved", _on_disk("access", "ui_scale") == 1.25 and Settings.ui_scale == 1.25)
+	Settings._run_only.clear()
+	Settings.colour_mode = _saved["colours"]
+	Settings.danger_pattern = _saved["pattern"]
+	Settings.reduce_motion = _saved["motion"]
+	Settings.res_scale = _saved["res"]
+	Settings.set_ui_scale(_saved["ui"])
+
+
 func _roundtrip() -> void:
 	Settings.save()
 	var mem := {"ui": Settings.ui_scale, "res": Settings.res_scale, "master": Settings.master_volume, "world": Settings.world_volume, "mode": Settings.window_mode}

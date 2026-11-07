@@ -286,7 +286,8 @@ func _build_reading(box: VBoxContainer) -> void:
 		func(m: String) -> void: Settings.set_colour_mode(m), func() -> String: return Settings.colour_mode, _colour_buttons)
 	_colour_hint = _note(box, "")
 	_syncs.append(func() -> void: _colour_hint.text = Strings.t({"normal": "coloursNormalHint", "rg": "coloursRgHint", "tritan": "coloursTritanHint"}[Settings.colour_mode]))
-	_pattern_check = _check(box, Strings.t("settingsPattern"), func() -> bool: return Settings.danger_pattern, func(on: bool) -> void: Settings.set_danger_pattern(on))
+	_pattern_check = _check(box, Strings.t("settingsPattern"), func() -> bool: return Palette.pattern(), func(on: bool) -> void: Settings.set_danger_pattern(on))
+	_syncs.append(func() -> void: _pattern_check.disabled = Settings.colour_mode != "normal") # (a colour-blind palette always has the stripes: shown on, not to be switched off)
 	_preview = Preview.new()
 	_preview.custom_minimum_size = Vector2(0, 150)
 	_preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL

@@ -60,20 +60,43 @@ func _ready() -> void:
 	_apply_all.call_deferred()
 
 
-## --ui-scale=1.75 --colours=rg|tritan --pattern --reduce-motion --res-scale=0.7: this run only, never saved (pictures and checks).
+## --ui-scale=1.75 --colours=rg|tritan --pattern --reduce-motion --res-scale=0.7: for this run only (pictures and checks). The value in use is
+## the flag's; what `save()` writes stays what the file had (`_run_only` remembers it), so nothing here ever reaches settings.cfg, however
+## many other settings are saved meanwhile. The player choosing the same setting in the window ends the override: that choice is saved.
+var _run_only: Dictionary = {} ## setting -> the persisted value it had before the flag
+
+
 func _command_line() -> void:
 	for arg in OS.get_cmdline_user_args():
-		if arg.begins_with("--ui-scale="):
-			ui_scale = nearest_of(UI_SCALES, float(arg.substr(11)))
-		elif arg.begins_with("--colours=") and arg.substr(10) in COLOUR_MODES:
-			colour_mode = arg.substr(10)
-			danger_pattern = colour_mode != "normal"
-		elif arg == "--pattern":
-			danger_pattern = true
-		elif arg == "--reduce-motion":
-			reduce_motion = true
-		elif arg.begins_with("--res-scale="):
-			res_scale = nearest_of(RES_SCALES, float(arg.substr(12)))
+		apply_run_only(arg)
+
+
+## One command-line flag as a run-only override; false when it is not one.
+func apply_run_only(arg: String) -> bool:
+	if arg.begins_with("--ui-scale="):
+		_override("ui_scale", nearest_of(UI_SCALES, float(arg.substr(11))))
+	elif arg.begins_with("--colours=") and arg.substr(10) in COLOUR_MODES:
+		_override("colour_mode", arg.substr(10))
+	elif arg == "--pattern":
+		_override("danger_pattern", true)
+	elif arg == "--reduce-motion":
+		_override("reduce_motion", true)
+	elif arg.begins_with("--res-scale="):
+		_override("res_scale", nearest_of(RES_SCALES, float(arg.substr(12))))
+	else:
+		return false
+	return true
+
+
+func _override(setting: String, value: Variant) -> void:
+	if not _run_only.has(setting):
+		_run_only[setting] = get(setting)
+	set(setting, value)
+
+
+## What goes to the file for `setting`: the persisted value, not a flag's.
+func _kept(setting: String) -> Variant:
+	return _run_only[setting] if _run_only.has(setting) else get(setting)
 
 
 func _load() -> void:
@@ -131,14 +154,14 @@ func save() -> void:
 	cfg.set_value("sound", "master", master_volume)
 	cfg.set_value("sound", "effects", effects_volume)
 	cfg.set_value("graphics", "window", window_mode)
-	cfg.set_value("graphics", "res_scale", res_scale)
+	cfg.set_value("graphics", "res_scale", _kept("res_scale"))
 	for id in effect_overrides.keys():
 		cfg.set_value("effects", str(id), bool(effect_overrides[id]))
 	cfg.set_value("input", "ptt_key", ptt_key)
-	cfg.set_value("access", "ui_scale", ui_scale)
-	cfg.set_value("access", "colours", colour_mode)
-	cfg.set_value("access", "pattern", danger_pattern)
-	cfg.set_value("access", "reduce_motion", reduce_motion)
+	cfg.set_value("access", "ui_scale", _kept("ui_scale"))
+	cfg.set_value("access", "colours", _kept("colour_mode"))
+	cfg.set_value("access", "pattern", _kept("danger_pattern"))
+	cfg.set_value("access", "reduce_motion", _kept("reduce_motion"))
 	var err := cfg.save(FILE)
 	if err != OK:
 		push_warning("could not save %s: %s" % [FILE, error_string(err)])
@@ -261,12 +284,14 @@ func apply_window() -> void:
 
 func set_res_scale(v: float) -> void:
 	res_scale = nearest_of(RES_SCALES, v)
+	_run_only.erase("res_scale")
 	save()
 	Quality.refresh_viewport()
 
 
 func set_ui_scale(v: float) -> void:
 	ui_scale = nearest_of(UI_SCALES, v)
+	_run_only.erase("ui_scale")
 	save()
 	apply_ui_scale()
 
@@ -290,14 +315,14 @@ func scaled_label(l: Label3D, base: float) -> void:
 
 func set_colour_mode(mode: String) -> void:
 	colour_mode = mode if mode in COLOUR_MODES else "normal"
-	if colour_mode != "normal":
-		danger_pattern = true # the stripes are what shows danger when the colour does not
+	_run_only.erase("colour_mode") # (the stripes of a colour-blind palette are Palette.pattern()'s doing, not a saved choice)
 	save()
 	access_changed.emit()
 
 
 func set_danger_pattern(on: bool) -> void:
 	danger_pattern = on
+	_run_only.erase("danger_pattern")
 	save()
 	access_changed.emit()
 
@@ -309,6 +334,7 @@ func calm(v: float) -> float:
 
 func set_reduce_motion(on: bool) -> void:
 	reduce_motion = on
+	_run_only.erase("reduce_motion")
 	save()
 	access_changed.emit()
 

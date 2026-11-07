@@ -793,7 +793,10 @@ server and `shared` are untouched (the strings are in `sv.ts`, exported by `pnpm
   the headless check all go the same way and nothing needs a restart. Sections of the file: `graphics` (quality, fps, window, res_scale),
   `effects` (one boolean per hand-made switch), `sound` (steps, ambience, volume = the world's, master, effects), `voice`, `input` (spells,
   ptt_key), `access` (ui_scale, colours, pattern, reduce_motion). Command-line forms (`--ui-scale=`, `--colours=`, `--pattern`,
-  `--reduce-motion`, `--res-scale=`) set a value for one run without saving it, for pictures and checks.
+  `--reduce-motion`, `--res-scale=`) are run-only overrides for pictures and checks: the value in use is the flag's, `save()` keeps writing the
+  persisted one (`_run_only`), so no later save (F3, the login screen, a setter) ever carries a flag into `settings.cfg`; choosing the same setting in the
+  window ends the override. A colour-blind palette's stripes are `Palette.pattern()`'s doing (mode ≠ normal OR the saved switch), never a saved choice,
+  so going back to "Vanliga" takes them away; the checkbox shows them on and disabled meanwhile.
 - **The window** (`SettingsWindow`, a `GameWindow` on layer 11, opened from the pause menu's "Inställningar" and from a button on the login
   screen) has four pages built once (a redraw would drop a slider that is being dragged): *Bild*, *Ljud*, *Läsa och se*, *Styrning*; `sync`
   reads every control back from `Settings` when it opens or after a click. Escape or `B` closes it (it takes the key before the pause menu below it).
