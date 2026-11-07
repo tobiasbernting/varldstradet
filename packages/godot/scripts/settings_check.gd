@@ -415,6 +415,13 @@ func _controls() -> void:
 	var other := "wheel" if Settings.spell_input == "buttons" else "buttons"
 	_click(win._spell_buttons[other])
 	_step("gamepad layout %s: kept, saved, hint changed" % other, Settings.spell_input == other and _on_disk("input", "spells") == other and win._spell_hint.text == Strings.t("spellsWheelHint" if other == "wheel" else "spellsButtonsHint"))
+	# sprinting: Shift and the left trigger run (B too, outside a fight, in the hero's code), none of them another action's
+	var run_keys := false
+	var run_pad := false
+	for e in InputMap.action_get_events("run"):
+		run_keys = run_keys or (e is InputEventKey and (e as InputEventKey).physical_keycode == KEY_SHIFT)
+		run_pad = run_pad or (e is InputEventJoypadMotion and (e as InputEventJoypadMotion).axis == JOY_AXIS_TRIGGER_LEFT)
+	_step("the input map has Shift and the left trigger for run, and Shift is taken from push-to-talk", run_keys and run_pad and Settings.ptt_key_problem(KEY_SHIFT) != "")
 	# the push-to-talk key: the button waits for a key, the next key becomes the action's event, Escape cancels
 	win._ptt_button.pressed.emit()
 	_step("the key button waits for a key", win._capturing_key and win._ptt_button.text == Strings.t("pttPress"))

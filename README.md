@@ -596,6 +596,7 @@ a wheel), the frame-rate counter and the world's sounds, plus the gear and quest
 | | Keyboard and mouse | Gamepad (Xbox names; PlayStation: ✕ ○ □ △) |
 | --- | --- | --- |
 | Walk | `W` `A` `S` `D` or the arrow keys | left stick or the d-pad |
+| Run (1.7 times as fast as walking, no stamina; on a mount the mount's speed counts instead) | hold `Shift` | hold the left trigger, or `B` outside a fight (in a fight `B` is a spell) |
 | Use (talk, open, harvest, hit what is in front of you) | `E` or `Space`, or click a tile next to you | `A`, or the right trigger |
 | Choose tool (the hotbar, 8 squares) | `1`–`8`, the mouse wheel, `[` and `]`, or click a square | `LB` and `RB` |
 | Bag | `Q` or `I` (a click on the held square also opens it) | `Y` |
@@ -618,7 +619,7 @@ In a dungeon or a run the same keys fight:
 | Next target | `Tab` | d-pad right |
 | Drop the target / pause | `Esc` | `Start` |
 
-Notes: the d-pad is shared. Its four directions also walk, so d-pad up opens the emote wheel (and walks up) and, in a fight, d-pad right switches target (and walks right); use the left stick for walking if that is in the way. The hotbar numbers and the spell numbers share `1`–`4`, so outdoors on the farm they pick tools and in a
+Notes: running is the browser game's 🏃 (there is no touch screen in the native client, so no on-screen run button); the left stick press is the pets' whistle, so it does not run as it did in the browser. The d-pad is shared. Its four directions also walk, so d-pad up opens the emote wheel (and walks up) and, in a fight, d-pad right switches target (and walks right); use the left stick for walking if that is in the way. The hotbar numbers and the spell numbers share `1`–`4`, so outdoors on the farm they pick tools and in a
 dungeon they cast. The gamepad's `Y` is the bag on the farm and the second spell in a dungeon. The kids' setting
 **Hjul** keeps the face buttons free of the spells; the choice is saved per computer in `user://settings.cfg`. To pair a controller with a Mac or a PC use the system's Bluetooth settings.
 

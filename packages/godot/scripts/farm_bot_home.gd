@@ -345,6 +345,35 @@ func pizza() -> void:
 	await bot._wait(0.3)
 	var said: bool = bot._report["toasts"].slice(toasts_before).has(Strings.t("ate", {"item": Data.item_name("pizza")}))
 	bot._step("eat the pizza", ate and said and text == Strings.t("actEat", {"item": Data.item_name("pizza")}), "the prompt said \"%s\", the server said it was eaten: %s" % [text, str(said)])
+	# the pizza's power: the chip is up and the hero walks BOOST_SPEED_MUL as fast (the browser's 🍕💨)
+	await bot._wait(0.3)
+	var boosted: bool = world.hud._boost_chip.visible and world.hud._boost_label.text == "🍕💨" and world.hero.boosted
+	bot._step("the pizza's power: the chip and the speed", boosted and is_equal_approx(world.hero.speed_mul, Data.constant("BOOST_SPEED_MUL", 1.3)), "chip %s, boosted %s, speed x%.2f" % [str(world.hud._boost_chip.visible), str(world.hero.boosted), world.hero.speed_mul])
+	# ... and the server's own positions agree: walked out and run back (boost x run x the server's bound), its snapshots
+	# show the distance a second the boost allows, and it never put the hero back
+	var hero: Hero = world.hero
+	var home: Vector2i = bot._my_tile()
+	var dist: Dictionary = bot._distance_field(home)
+	var goal: Vector2i = bot._far_tile(home, dist, 12)
+	if int(dist[goal]) < 6:
+		bot._step("the pizza's speed on the server's positions", false, "no stretch of floor of 6 tiles near %s" % str(home))
+		return
+	var base: float = Data.constant("PLAYER_SPEED", 64.0)
+	var boost: float = Data.constant("BOOST_SPEED_MUL", 1.3)
+	var run: float = Data.constant("RUN_SPEED_MUL", 1.7)
+	var snaps0: int = hero.reconciled
+	bot.begin_server_walk()
+	var out_ok: bool = await bot._goto(goal, 60.0, false)
+	var walked: Array = bot.end_server_walk()
+	bot.begin_server_walk()
+	var back_ok: bool = await bot._goto(home, 60.0, true)
+	hero.run_driven = false
+	var ran: Array = bot.end_server_walk()
+	var v_walk: float = float(walked[0]) / maxf(float(walked[1]), 0.01)
+	var v_run: float = float(ran[0]) / maxf(float(ran[1]), 0.01)
+	var detail := "boosted: the server saw %.1f px/s walking (want %.1f) and %.1f px/s running (want %.1f), %d snap-backs" % [v_walk, base * boost, v_run, base * boost * run, hero.reconciled - snaps0]
+	# (a polyline through snapshots cuts corners and the end waits are left out: it may read a little low, never high)
+	bot._step("the pizza's speed on the server's positions", out_ok and back_ok and v_walk > base * boost * 0.85 and v_walk < base * boost * 1.1 and v_run > base * boost * run * 0.85 and v_run < base * boost * run * 1.1 and hero.reconciled == snaps0, detail)
 
 
 # ---------------------------------------------------------------------------

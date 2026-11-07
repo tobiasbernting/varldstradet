@@ -10,6 +10,7 @@ signal travel_asked(dir: String)
 
 const SEND_EVERY := 0.05
 const RECONCILE_PX := 40.0
+const RUN_ANIM_RATE := 1.5
 
 var actor: Actor
 ## Position in the server's pixels (16 a tile), like the browser's player record.
@@ -21,6 +22,22 @@ var moving := false
 var world: Dictionary = {}
 ## 0 when fallen or frozen, SLOW_MUL when slowed (the dungeon's rules), 1 otherwise.
 var speed_mul := 1.0
+## Running (the browser's 🏃): hold Shift, or the left trigger on a gamepad, or B outside a fight (in a fight B is a spell).
+## RUN_SPEED_MUL faster on foot, no stamina; on a mount the mount's speed counts instead (never both). The server needs
+## no word of it: `move` carries positions, and a position 1.7 times as far on is as good as any other.
+var running := false
+var riding := false
+## The pizza's power or a berserker's rage: the legs go faster too, as in the browser.
+var boosted := false
+## In a dungeon (a fight): B casts, so it does not run.
+var fight := false
+## Set by the bot: runs while it walks (the keys are not read then, as for `drive`).
+var run_driven := false
+## Snapshots that put me somewhere else than I thought (reconcile): a run must never cause one, the bot counts them.
+var reconciled := 0
+## What the bot measures a run with: pixels walked and seconds spent moving, since the start.
+var walked_px := 0.0
+var moving_s := 0.0
 var send_moves := true
 ## An outdoor map (the farm, the wild): its edges lead to the next map, and the farmhouse door is not drawn yet.
 var outdoor := false
@@ -47,6 +64,11 @@ func reset() -> void:
 	world = {}
 	drive = Vector2.ZERO
 	driven = false
+	run_driven = false
+	running = false
+	riding = false
+	boosted = false
+	fight = false
 	frozen = false
 	px = 0.0
 	py = 0.0
@@ -83,6 +105,7 @@ func reconcile(snap: Dictionary) -> void:
 	if Time.get_ticks_msec() / 1000.0 - _portal_at < 0.8:
 		return # the server has not heard of the door yet: its snapshot still has me outside (or inside)
 	if Vector2(sx - px, sy - py).length() > RECONCILE_PX:
+		reconciled += 1
 		place(sx, sy)
 
 
@@ -94,15 +117,46 @@ func _sync_scene() -> void:
 func _physics_process(delta: float) -> void:
 	if world.is_empty():
 		return
-	var dir := Vector2.ZERO if frozen else (drive if driven else Input.get_vector("move_left", "move_right", "move_up", "move_down"))
+	var typing := _typing()
+	var dir := Vector2.ZERO if (frozen or typing) else (drive if driven else Input.get_vector("move_left", "move_right", "move_up", "move_down"))
 	var was_moving := moving
+	running = dir.length() > 0.01 and not frozen and not typing and not riding and (run_driven if driven else _run_held())
+	var before := Vector2(px, py)
 	_step(dir, delta)
+	if moving:
+		walked_px += before.distance_to(Vector2(px, py))
+		moving_s += delta
 	if outdoor:
 		_edge_travel(dir)
 	_send_in -= delta
 	if send_moves and ((moving and _send_in <= 0.0) or (was_moving and not moving)):
 		_send_in = SEND_EVERY
 		Net.send({"t": "move", "x": px, "y": py, "facing": facing, "moving": moving})
+
+
+## A text box has the keyboard (the chat, a name): Input's action state still sees every key typed in it, so Shift (and W, A,
+## S, D) would move and run the hero while a capital letter is typed. The bot drives without keys and is not stopped.
+func _typing() -> bool:
+	if driven:
+		return false
+	var focus := get_viewport().gui_get_focus_owner()
+	return focus is LineEdit or focus is TextEdit
+
+
+## Shift (the Input Map's `run`, which also holds the left trigger), or B on a pad outside a fight.
+func _run_held() -> bool:
+	if Input.is_action_pressed("run"):
+		return true
+	if not fight:
+		for pad in Input.get_connected_joypads():
+			if Input.is_joy_button_pressed(pad, JOY_BUTTON_B):
+				return true
+	return false
+
+
+## How much faster the walking animation goes: the browser's 1.5 while running.
+func walk_rate() -> float:
+	return RUN_ANIM_RATE if (running or (boosted and not riding)) and moving else 1.0
 
 
 ## Walking off an edge of the map inside the opening in its middle asks the server for the next map, as the browser
@@ -147,7 +201,8 @@ func _step(dir: Vector2, delta: float) -> void:
 		return
 	var ux := dir.x / len
 	var uy := dir.y / len
-	var dist := Data.constant("PLAYER_SPEED", 64.0) * speed_mul * delta
+	var mul := speed_mul * (Data.constant("RUN_SPEED_MUL", 1.7) if running else 1.0)
+	var dist := Data.constant("PLAYER_SPEED", 64.0) * mul * delta
 	var r := _resolve_move(px, py, px + ux * dist, py + uy * dist)
 	moving = r.x != px or r.y != py
 	px = r.x
