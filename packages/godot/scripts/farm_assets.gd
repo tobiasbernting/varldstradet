@@ -17,6 +17,7 @@ const DUNGEON_KAYKIT := "res://assets/kaykit/"
 const PROP_SHADER := "res://assets/shaders/farm_prop.gdshader"
 const GROUND_SHADER := "res://assets/shaders/farm_ground.gdshader"
 const WATER_SHADER := "res://assets/shaders/farm_water.gdshader"
+const WATER_FX_SHADER := "res://assets/shaders/farm_water_fx.gdshader"
 
 # The palette (ART.md): the named colours of the twelve, and the farm's own beside them.
 const GRASS := Color("#64a848")
@@ -68,7 +69,7 @@ const SPECS := {
 	"dig_spot": {"m": ["dig"], "yaw": "free"},
 	"glowshroom": {"m": ["mushroom"], "yaw": "free", "light": [Color("#9cff8a"), 2.4, 0.7, 0.3, 0.2], "node": true},
 	# --- the farm
-	"house": {"m": ["house"], "node": true, "front": true},
+	"house": {"m": ["house"], "node": true, "front": true, "chimney": Vector3(0.0, 3.95, -1.1)},
 	"fence": {"m": ["fence"], "fence": true},
 	"gate": {"m": ["gate"], "fence": true},
 	"wall_wood": {"m": ["wall_wood"]},
@@ -94,9 +95,9 @@ const SPECS := {
 	# --- M5c: the runs. The färdport (3 × 2) and the Yggdrasil shoot, five stages by the object's variant, and the three buildings.
 	"fardport": {"m": ["fardport"], "node": true},
 	"yggdrasil": {"m": ["ygg_0", "ygg_1", "ygg_2", "ygg_3", "ygg_4"], "node": true, "by_variant": true},
-	"smithy": {"m": ["smithy"], "node": true, "front": true, "light": [Color("#ff8a3a"), 4.5, 1.1, 1.1, 0.3], "night": true},
+	"smithy": {"m": ["smithy"], "node": true, "front": true, "chimney": Vector3(0.3, 1.5, -0.3), "light": [Color("#ff8a3a"), 4.5, 1.1, 1.1, 0.3], "night": true},
 	"herb_garden": {"m": ["herb_garden"], "front": true},
-	"longhall": {"m": ["longhall"], "node": true, "front": true, "glows": [[-1.3, 0.62, 1.3], [1.3, 0.62, 1.3]], "light": [Color("#ffc977"), 6.0, 1.2, 1.4, 0.1], "night": true},
+	"longhall": {"m": ["longhall"], "node": true, "front": true, "chimney": Vector3(0.0, 2.85, 0.0), "glows": [[-1.3, 0.62, 1.3], [1.3, 0.62, 1.3]], "light": [Color("#ffc977"), 6.0, 1.2, 1.4, 0.1], "night": true},
 	"scarecrow": {"m": ["scarecrow"]},
 	"bench": {"m": ["bench"], "front": true},
 	"flowerbox": {"m": ["flowerbox"]},
@@ -131,13 +132,13 @@ const SPECS := {
 	"maypole": {"m": ["maypole"]},
 	"pumpkin_lantern": {"m": ["pumpkin"], "node": true, "light": [Color("#ff9a3c"), 3.0, 0.9, 0.4, 0.3]},
 	# --- Köpingen (city.ts): the Norse market town; its streets are ground, these are what stands on them
-	"house_small": {"m": ["house_b"], "front": true},
-	"apartment": {"m": ["apartment"], "front": true},
+	"house_small": {"m": ["house_b"], "front": true, "chimney": Vector3(0.33, 3.05, -1.02)},
+	"apartment": {"m": ["apartment"], "front": true, "chimney": Vector3(0.9, 3.7, -0.3)},
 	"shop": {"m": ["village_shop"], "node": true, "front": true, "glows": [[-0.8, 0.8, 0.95], [0.8, 0.8, 0.95]], "light": [Color("#ffc977"), 5.5, 1.2, 1.2, 0.1], "night": true},
 	"market": {"m": ["market"], "front": true},
 	"sellstall": {"m": ["sell_stall"], "front": true},
-	"pizzeria": {"m": ["pizzeria"], "node": true, "front": true, "glows": [[-0.8, 0.75, 0.9], [0.8, 0.75, 0.9]], "light": [Color("#ffb55a"), 5.5, 1.3, 1.2, 0.15], "night": true},
-	"bathhouse": {"m": ["bathhouse"], "front": true},
+	"pizzeria": {"m": ["pizzeria"], "node": true, "front": true, "chimney": Vector3(0.7, 2.35, -0.3), "glows": [[-0.8, 0.75, 0.9], [0.8, 0.75, 0.9]], "light": [Color("#ffb55a"), 5.5, 1.3, 1.2, 0.15], "night": true},
+	"bathhouse": {"m": ["bathhouse"], "front": true, "chimney": Vector3(-1.0, 2.4, -0.4)},
 	"train_station": {"m": ["station"], "node": true, "front": true, "glows": [[-0.8, 0.7, 0.75], [0.8, 0.7, 0.75]], "light": [Color("#ffd98a"), 6.0, 1.2, 1.6, 0.1], "night": true},
 	"traffic_light": {"m": ["traffic_light"]},
 	"parked_car": {"m": ["car_0", "car_1", "car_2"], "by_variant": true},
@@ -157,6 +158,7 @@ var lava_mat: ShaderMaterial
 var choco_mat: ShaderMaterial
 var glow_mat: ShaderMaterial ## unshaded additive glows (arch, windows' light pool)
 var _gtex: Dictionary = {}
+var _water_level := -1
 var _glow_tex: Texture2D
 
 
@@ -185,6 +187,23 @@ func release() -> void:
 	lava_mat = null
 	choco_mat = null
 	glow_mat = null
+
+
+## The liquids' look by preset (Quality "water"): 0 the flat cheap shader, 1 and 2 the one with waves and reflections.
+## The materials stay the same objects (the chunks hold them), only their shader and its level change; the uniforms they
+## share stay as they were set.
+func set_water_level(level: int) -> void:
+	if level == _water_level or water_mat == null:
+		return
+	_water_level = level
+	var sh: Shader = load(WATER_FX_SHADER if level > 0 else WATER_SHADER)
+	# how much each liquid mirrors the sky and the shore: water, a little for the bog, a gloss on chocolate, none on lava
+	for pair in [[water_mat, 1.0], [bog_mat, 0.3], [choco_mat, 0.45], [lava_mat, 0.0]]:
+		var m: ShaderMaterial = pair[0]
+		m.shader = sh
+		if level > 0:
+			m.set_shader_parameter("quality", level)
+			m.set_shader_parameter("reflect_k", float(pair[1]))
 
 
 func _water(shallow: Color, deep: Color, alpha: float) -> ShaderMaterial:
@@ -404,7 +423,7 @@ func _baked(path: String, scale: float, recolour: String, fit := Vector2.ZERO) -
 	var mid := Vector3((lo.x + hi.x) * 0.5, lo.y, (lo.z + hi.z) * 0.5)
 	for i in range(verts.size()):
 		verts[i] = (verts[i] - mid) * k
-		uvs.append(Vector2.ZERO)
+		uvs.append(Vector2(0.0, -1.0 if recolour == "pine" else 0.0)) # (pines sway as a stiff crown: farm_prop.gdshader)
 	var arrays: Array = []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = verts
@@ -525,6 +544,7 @@ func _palm() -> ArrayMesh:
 
 func _bush(col: Color, seed_v: int, berry := Color(-1, 0, 0), berry_k := 0.5) -> ArrayMesh:
 	var b := FarmMesh.new()
+	b.sway = 0.5
 	b.blob(Vector3(0.0, 0.28, 0.0), Vector3(0.45, 0.32, 0.45), 6, 3, col.darkened(0.3), col.lightened(0.18), 1.0, 0.12, seed_v)
 	b.blob(Vector3(0.22, 0.2, 0.1), Vector3(0.28, 0.22, 0.28), 5, 2, col.darkened(0.3), col.lightened(0.1), 1.0, 0.1, seed_v + 1.0)
 	if berry.r >= 0.0:
@@ -543,6 +563,7 @@ func _pumpkin() -> ArrayMesh:
 
 func _tuft(seed_v: int) -> ArrayMesh:
 	var b := FarmMesh.new()
+	b.sway = 1.0
 	for i in range(5):
 		var a := TAU * (i + _rnd(seed_v, i)) / 5.0
 		var h := 0.2 + 0.18 * _rnd(seed_v, i + 3)
@@ -552,6 +573,7 @@ func _tuft(seed_v: int) -> ArrayMesh:
 
 func _flower(petal: Color, seed_v: int) -> ArrayMesh:
 	var b := FarmMesh.new()
+	b.sway = 1.0
 	b.blade(Vector3.ZERO, Vector3(0.0, 0.3, 0.0), 0.04, GRASS.darkened(0.2), GRASS, 1.0)
 	b.blade(Vector3(0.0, 0.1, 0.0), Vector3(0.1, 0.2, 0.0), 0.08, GRASS.darkened(0.1), GRASS.lightened(0.1), 1.0, 0.4 * seed_v)
 	b.blob(Vector3(0.0, 0.33, 0.0), Vector3(0.1, 0.05, 0.1), 5, 2, petal.darkened(0.15), petal, 0.0, 0.0)
@@ -569,6 +591,7 @@ func _mushroom() -> ArrayMesh:
 
 func _fern() -> ArrayMesh:
 	var b := FarmMesh.new()
+	b.sway = 1.0
 	for i in range(6):
 		var a := TAU * i / 6.0
 		b.blade(Vector3.ZERO, Vector3(cos(a) * 0.32, 0.28, sin(a) * 0.32), 0.1, Color("#2f6a2c"), Color("#6aa84a"), 1.0, a)
@@ -577,6 +600,7 @@ func _fern() -> ArrayMesh:
 
 func _reed() -> ArrayMesh:
 	var b := FarmMesh.new()
+	b.sway = 1.0
 	for i in range(4):
 		var a := TAU * i / 4.0
 		b.blade(Vector3(cos(a) * 0.05, 0.0, sin(a) * 0.05), Vector3(cos(a) * 0.1, 0.85 + 0.15 * (i % 2), sin(a) * 0.1), 0.05, Color("#6a7a3a"), Color("#b0b06a"), 0.0, a)
@@ -606,6 +630,7 @@ func _dig() -> ArrayMesh:
 
 func _crop(id: String, tier: int) -> ArrayMesh:
 	var b := FarmMesh.new()
+	b.sway = 1.0
 	var leaf := Color("#4f9a3a")
 	var ripe := Color("#e8832a")
 	match id:

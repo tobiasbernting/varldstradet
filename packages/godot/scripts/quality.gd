@@ -14,10 +14,22 @@ signal changed(preset: String)
 
 const ORDER := ["lag", "mellan", "hog"]
 const PRESETS := {
-	"lag": {"scale": 0.8, "mpix": 1.3, "shadows": 0, "ssao": false, "gi": false, "fog": false, "glow": false, "particles": 0, "sun_shadow": 0, "weather": 150},
-	"mellan": {"scale": 1.0, "mpix": 2.1, "shadows": 0, "ssao": true, "gi": false, "fog": false, "glow": true, "particles": 8, "sun_shadow": 1, "weather": 600},
-	"hog": {"scale": 1.0, "mpix": 3.7, "shadows": 6, "ssao": true, "gi": true, "fog": true, "glow": true, "particles": 16, "sun_shadow": 2, "weather": 1500},
+	"lag": {"scale": 0.8, "mpix": 1.3, "shadows": 0, "ssao": false, "gi": false, "fog": false, "glow": false, "particles": 0, "sun_shadow": 0, "weather": 150,
+		"wind": 1, "water": 0, "fireflies": 0, "butterflies": 0, "leaves": 0, "smoke": 0, "mist": 0, "window_light": 0},
+	"mellan": {"scale": 1.0, "mpix": 2.1, "shadows": 0, "ssao": true, "gi": false, "fog": false, "glow": true, "particles": 8, "sun_shadow": 1, "weather": 600,
+		"wind": 2, "water": 1, "fireflies": 28, "butterflies": 9, "leaves": 36, "smoke": 7, "mist": 9, "window_light": 1},
+	"hog": {"scale": 1.0, "mpix": 3.7, "shadows": 6, "ssao": true, "gi": true, "fog": true, "glow": true, "particles": 16, "sun_shadow": 2, "weather": 1500,
+		"wind": 3, "water": 2, "fireflies": 56, "butterflies": 16, "leaves": 80, "smoke": 12, "mist": 18, "window_light": 2},
 }
+## The alive world's toggles on the outdoor maps (M7a), per preset. The counts are budgets (how many of each thing exist
+## near the hero at most; 0 is off), the levels pick a shader's quality:
+##  wind          0 none, 1 crowns of trees and bushes only, one sine (what it was before M7a: Låg), 2 + gusts that cross the
+##                map and grass, crops and reeds that lean with them, 3 + a fast flutter of leaves
+##  water         0 a flat cheap look (Låg: two colours and the bank's foam), 1 waves, animated foam and a sky and shore
+##                reflection (screen space, 16 steps), 2 a finer reflection (28 steps) and foam on the wave crests
+##  fireflies     on summer nights;   butterflies by day in spring and summer;   leaves falling from the trees in autumn;
+##  smoke         puffs from a chimney (per chimney);   mist  low drifting mist at dawn;
+##  window_light  0 the windows' glow only, 1 + a pool of light on the ground in front of them, 2 + it flickers like a fire
 ## The torch shadows' map: Hög only (the others have no positional shadows at all, so no atlas to clear every frame).
 const SHADOW_ATLAS := 4096
 ## Torches farther than this from the camera are not lit at all, and farther than SHADOW_FADE throw no shadow
@@ -31,6 +43,10 @@ var preset := "mellan"
 
 func _ready() -> void:
 	preset = Settings.quality if PRESETS.has(Settings.quality) else "mellan"
+	# --quality=lag|mellan|hog: this run only (pictures and benches; it is not saved)
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--quality=") and PRESETS.has(arg.substr(10)):
+			preset = arg.substr(10)
 	_apply_viewport()
 	get_window().size_changed.connect(_apply_viewport)
 
@@ -52,6 +68,11 @@ func spec() -> Dictionary:
 ## How many lights (the nearest torches) throw shadows.
 func shadow_lights() -> int:
 	return int(spec().get("shadows", 0))
+
+
+## One of the alive-world toggles of the current preset (see PRESETS).
+func alive(what: String) -> int:
+	return int(spec().get(what, 0))
 
 
 ## Particles per torch flame (0: a flat flame only).

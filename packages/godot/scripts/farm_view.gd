@@ -43,6 +43,8 @@ var map_w := 64
 var map_h := 64
 var assets := FarmAssets.new()
 var sky: DayNight
+var ambient: AmbientView ## fireflies, butterflies, falling leaves, chimney smoke and dawn mist (M7a)
+var objects_version := 0 ## counts every change to the objects (the ambient things find their anchors again)
 
 var _ground_root: Node3D
 var _objects_root: Node3D
@@ -52,6 +54,7 @@ var _ground: Dictionary = {} ## Vector2i -> Node3D
 var _lights: Array[OmniLight3D] = []
 var _flicker: Array = [] ## [light, base energy, phase, flicker amount, night kind]
 var _night_glows: Array = [] ## [MeshInstance3D glow, base energy]
+var _window_pools: Array = [] ## [MeshInstance3D pool of light on the ground, base energy, phase]
 var _flicker_in := 0.0
 var _t := 0.0
 var _dark := 0.0
@@ -71,6 +74,9 @@ func _ready() -> void:
 	sky = DayNight.new()
 	sky.name = "Sky"
 	add_child(sky)
+	ambient = AmbientView.new()
+	ambient.name = "Ambient"
+	add_child(ambient)
 
 
 func _exit_tree() -> void:
@@ -108,7 +114,7 @@ func _process(delta: float) -> void:
 
 func clear() -> void:
 	for child in get_children():
-		if child != sky:
+		if child != sky and child != ambient:
 			child.queue_free()
 	_chunks = {}
 	_nodes = {}
@@ -116,6 +122,7 @@ func clear() -> void:
 	_lights = []
 	_flicker = []
 	_night_glows = []
+	_window_pools = []
 	_crops = {}
 	_dirty_ground = {}
 	world = {}
@@ -149,6 +156,7 @@ func build(w: Dictionary, k: String) -> void:
 			_chunk_at(int(p[0]), int(p[1])).crop_keys[ck] = true
 	# the map's own light: the sky works from the biome and the key
 	sky.setup(self, str(w.get("biome", "")), k)
+	ambient.setup(self)
 	if k == "farm":
 		_light_the_house()
 
@@ -226,6 +234,7 @@ func _add_object(id: String, obj: Dictionary) -> void:
 	var x := int(obj.get("x", 0))
 	var y := int(obj.get("y", 0))
 	_last_objects[id] = obj
+	objects_version += 1
 	var spec := assets.spec(kind)
 	if bool(spec.get("node", false)) or kind.begins_with("lm_"):
 		var node := _make_node(kind, obj, spec)
@@ -245,6 +254,7 @@ func _add_object(id: String, obj: Dictionary) -> void:
 
 
 func _remove_object(id: String, obj: Dictionary) -> void:
+	objects_version += 1
 	var x := int(obj.get("x", 0))
 	var y := int(obj.get("y", 0))
 	var node: Variant = _nodes.get(id)
@@ -617,6 +627,7 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 				g.position = Vector3(wx, 1.1, 1.9)
 				node.add_child(g)
 				_night_glows.append([g, 1.6])
+				_window_pool(node, Vector3(wx, 0.0, 2.9))
 			_add_light(node, Vector3(0.0, 1.0, 2.8), Color("#ffc977"), 6.0, 1.3, 0.12, true)
 		"saga_portal":
 			var col: Color = DungeonLook.portal_colour(variant)
@@ -663,6 +674,7 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 			gw.position = Vector3(float(gp[0]), float(gp[1]), float(gp[2]))
 			node.add_child(gw)
 			_night_glows.append([gw, 1.6])
+			_window_pool(node, Vector3(float(gp[0]), 0.0, float(gp[2]) + 0.9))
 	var lt: Variant = spec.get("light")
 	if lt is Array:
 		var night := bool(spec.get("night", false))
@@ -722,9 +734,29 @@ func _add_light(parent: Node3D, at: Vector3, colour: Color, range_m: float, ener
 	_flicker.append([light, energy, randf() * TAU, flicker, night])
 
 
+## A pool of warm light on the ground in front of a lit window (Quality "window_light": 1 steady, 2 flickering like a
+## fire). The same switch as the windows' own glow; hidden on Låg.
+func _window_pool(parent: Node3D, at: Vector3) -> void:
+	var pool := assets.glow_quad(Color("#ffc977"), 2.6, 0.0, true)
+	pool.position = at + Vector3(0.0, 0.03, 0.0)
+	pool.scale = Vector3(1.0, 1.0, 0.7)
+	pool.visible = false
+	parent.add_child(pool)
+	_window_pools.append([pool, 0.55, randf() * TAU])
+
+
 ## 0 bright day … 1 deep night: the lamps' strength and the windows' shine (day_night.gd calls this).
 func set_dark(dark: float) -> void:
 	_dark = dark
+	var pool_level := Quality.alive("window_light")
+	var pool_k := smoothstep(0.4, 0.9, dark) if pool_level > 0 else 0.0
+	for p in _window_pools:
+		var pm: MeshInstance3D = p[0]
+		if is_instance_valid(pm):
+			pm.visible = pool_k > 0.02
+			if pm.visible:
+				var flick := 1.0 + (0.12 * sin(_t * 7.0 + float(p[2])) + 0.06 * sin(_t * 17.0 + float(p[2]) * 2.3) if pool_level > 1 else 0.0)
+				(pm.material_override as ShaderMaterial).set_shader_parameter("energy", float(p[1]) * pool_k * flick)
 	for g in _night_glows:
 		var mi: MeshInstance3D = g[0]
 		if is_instance_valid(mi):
@@ -755,6 +787,42 @@ func shadow_light_count() -> int:
 
 func update_shadows(_at: Vector3, _n: int) -> void:
 	pass
+
+
+## The nearest deciduous trees (their foot on the ground) within `radius` of `at`, nearest first, at most 12: the
+## leaves of autumn fall from their crowns.
+func trees_near(at: Vector3, radius: float) -> Array[Vector3]:
+	var found: Array = []
+	for id in _last_objects.keys():
+		var o: Dictionary = _last_objects[id]
+		var kind := str(o.get("kind", ""))
+		if kind != "tree" and kind != "tree_apple":
+			continue
+		var p := Vector3(float(o.get("x", 0)) + 0.5, 0.0, float(o.get("y", 0)) + 0.5)
+		var d := p.distance_to(at)
+		if d < radius:
+			found.append([d, p])
+	found.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
+	var out: Array[Vector3] = []
+	for i in range(mini(12, found.size())):
+		out.append(found[i][1])
+	return out
+
+
+## Where the chimneys' smoke leaves the roofs: the objects whose SPECS entry has a "chimney" offset from the middle of
+## their footprint (at most 24).
+func chimneys() -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	for id in _last_objects.keys():
+		var o: Dictionary = _last_objects[id]
+		var spec := assets.spec(str(o.get("kind", "")))
+		var c: Variant = spec.get("chimney")
+		if c is Vector3:
+			var def := Data.object_def(str(o.get("kind", "")))
+			out.append(Vector3(float(o.get("x", 0)) + float(def.get("w", 1)) * 0.5, 0.0, float(o.get("y", 0)) + float(def.get("h", 1)) * 0.5) + c)
+			if out.size() >= 24:
+				break
+	return out
 
 
 func object_count() -> int:

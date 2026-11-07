@@ -96,6 +96,22 @@ jobs:
             grep -q "drawn (outdoor)" "demo-$demo.log" || { echo "::error::the $demo demo drew nothing"; exit 1; }
           done
 
+      # M7a: the alive world (wind, water, fireflies, butterflies, falling leaves, chimney smoke, dawn mist, window light) with every
+      # toggle on, on each quality preset, headless: the scripts, the MultiMeshes and the uniforms run (the shaders themselves are
+      # compiled and looked at in the `pictures` job under Xvfb; the headless renderer draws nothing)
+      - name: The alive world on every preset headless (--alive=all)
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          for run in "farm lag summer" "village mellan summer" "farm hog autumn"; do
+            set -- $run
+            timeout 120 ~/godot/godot --headless --path . --quit-after 300 -- --demo=$1 --quality=$2 --alive=all --year=$3 --time=0.9 2>&1 | tee "alive-$1-$2.log"
+            if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate|leaked at exit|still in use at exit|Pages in use exist at exit|SHADER ERROR" "alive-$1-$2.log"; then
+              echo "::error::the alive world on $1 / $2 reported errors or leaked at exit (see above)"; exit 1
+            fi
+            grep -q "drawn (outdoor)" "alive-$1-$2.log" || { echo "::error::the $1 demo drew nothing"; exit 1; }
+          done
+
       - name: Run the bench headless for a moment (the bench's scripts run and the process exits clean; headless frame times mean nothing)
         working-directory: packages/godot
         run: |
@@ -388,6 +404,36 @@ jobs:
           shot m6c-loke-hel --demo=loke --boss-move=loke:nova#1
           shot m6c-loke-line --demo=loke --boss-move=loke:line
 
+      # M7a: the alive world under Xvfb (software GL): the pictures (all on Mellan, the pond also on Låg and Hög for the comparison)
+      # and the farm and the village benches with everything on at once (`--alive=all`, night, summer). The ones worth keeping are
+      # copied into packages/godot/docs/ by hand (m7a-lag-vs-hog is the two pond pictures side by side).
+      - name: Pictures and benches of the alive world (wind, water, fireflies, leaves, smoke, mist) under Xvfb
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/shots/m7a"
+          shot() { # name, demo args...
+            local name="$1"; shift
+            xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- "$@" --screenshot="$GITHUB_WORKSPACE/shots/m7a/$name.png" 2>&1 | tee "shot-$name.log"
+            if grep -v "status < 0" "shot-$name.log" | grep -E "SCRIPT ERROR|SHADER ERROR|Parse Error|leaked at exit|still in use at exit|Pages in use exist at exit"; then
+              echo "::error::$name: errors or leaks (see above)"; exit 1
+            fi
+            test "$(stat -c %s "$GITHUB_WORKSPACE/shots/m7a/$name.png")" -gt 20000
+          }
+          shot m7a-farm-windy --demo=farm --at=22,10 --time=0.4 --weather=wind --year=summer --quality=mellan
+          shot m7a-pond-dusk --demo=farm --at=44,39 --time=0.69 --year=summer --quality=mellan
+          shot m7a-summer-night --demo=farm --at=11,9 --time=0.92 --year=summer --quality=mellan
+          shot m7a-autumn-leaves --demo=farm --at=12,5 --time=0.4 --year=autumn --quality=mellan
+          shot m7a-pond-lag --demo=farm --at=44,39 --time=0.45 --year=summer --quality=lag
+          shot m7a-pond-hog --demo=farm --at=44,39 --time=0.45 --year=summer --quality=hog
+          for scene in farm village; do
+            xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- --bench --scene=$scene --alive=all --time=0.9 --year=summer 2>&1 | tee "bench-alive-$scene.log"
+            grep -q "bench: done" "bench-alive-$scene.log"
+            if grep -E "SCRIPT ERROR|SHADER ERROR|leaked at exit|still in use at exit|Pages in use exist at exit" "bench-alive-$scene.log"; then
+              echo "::error::the $scene alive-world bench reported errors or leaked at exit"; exit 1
+            fi
+          done
+
       # The farmer works a farm of its own (a second in-memory server) in a window under Xvfb and takes pictures at the
       # moments the owner asked for: watering, the bag and a chest open, a fish biting, a wild animal petted (M4b); and
       # the shop, the workbench, a refused fence, the farmhouse, the stove, the wardrobe, a talk, Köpingen, the class
@@ -419,6 +465,7 @@ jobs:
           path: |
             shots/*.png
             shots/dungeons/*.png
+            shots/m7a/*.png
             shots/farmer/*.png
             shots/run/*.png
           if-no-files-found: warn

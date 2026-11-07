@@ -644,3 +644,64 @@ Röstprat in the native client, on the server side exactly as designed under "R�
 - **The window** (`voice_window.gd`, a `GameWindow`, opened by the pause menu and a HUD button, reached from `Voice` so it needs no world): ring up / hang up, my room and who is its speaker (with "Använd den här som högtalare"), the other rooms with their speaker, the connection state and "pratar" while that room talks, "Jag sitter i ett annat rum" / "Jag sitter hos …" / back, the microphone on or off, push-to-talk or open, volume. The controls that must survive a redraw sit outside the list. It is a child of the running scene so the leak check at exit stays clean; no glyph the default font lacks goes into it (a fallback system font leaks at exit).
 - **The extension** is `godotengine/webrtc-native` 1.2.2-stable (all four export targets have a binary: Windows x86_64, Linux x86_64 and arm64, macOS universal), not committed: `tools/fetch-webrtc.sh` fetches the release pinned in the workflow's env into `addons/webrtc/` (git-ignored) for CI and for a developer; the exports pick up the GDExtension's libraries by themselves. The macOS export has the microphone usage description and the audio-input entitlement (and library validation off so the extension's dylib loads).
 - **Checks.** `--voicecheck` (codec, rules, and two peers in one process handing each other their handshakes and sending packets; `--require-webrtc` fails when the extension is missing, as it must in CI), `BOT_ONLY=voice pnpm godot:bot` (two bots on the in-memory server: both named as the other's peer, ice servers sent, an offer, an answer and a candidate relayed, a signal inside one room refused, hanging up). Microphones and speakers cannot be checked headless.
+
+## Godot client: the alive world (visuals) (2026-11-07)
+Milestone M7a of `PLAN.md`: the farm, the wild maps and the village get wind, a better water, and the small living things
+of the old client's "cozy extras" (see "2D client: LittleJS") that fit 3D. Dungeons are untouched; day and night, the
+seasons' colours and the weather's rain, snow, hail, fog and lightning are M4a's (`day_night.gd`) and were not redone.
+Wildlife that flees and returns, footsteps and ambient sound are M7b. The server and `shared` are unchanged.
+- **Every part is a toggle in `quality.gd` `PRESETS`** (documented in the constant's comment): `wind` (0–3), `water`
+  (0–2), and budgets `fireflies`, `butterflies`, `leaves`, `smoke`, `mist` and `window_light`. Låg has all of it off
+  except the wind of before (level 1) and the flat water. A budget of 0 builds nothing; a preset change (the bench does it
+  mid-scene) rebuilds the budgets and swaps the water's shader, there is no restart. `--quality=lag|mellan|hog`,
+  `--alive=all` (every ambient thing on whatever the hour and season) and `--year=spring|summer|autumn|winter` exist for
+  pictures and the bench; none is saved.
+- **Wind** (`farm_prop.gdshader`, one vertex shader for every prop). Level 1 is the old sway, instruction for instruction
+  (Låg is not slower). From level 2 the strength is the weather's (`WEATHER` in `day_night.gd`: calm about 0.35, wind 1.7,
+  storm 1.5; eased over a second or two so a front does not snap the trees) and the wind has a *direction* (towards
+  south-east) and *gusts*: bands of stronger wind that cross the map along it, quicker the stronger it blows (travelling
+  sines, no texture). Trees and baked pines (stiffer) bend from the trunk by height, and plants lean from the foot by the
+  square of their height: the sway weight is the mesh's UV y (`FarmMesh.sway`: grass tufts, flowers, ferns, reeds and
+  crops 1, bushes 0.5, crowns 0 and baked pines -1, which is how `farm_assets.gd` tells the shader); the displacement is
+  turned into each instance's own axes (a tree is yawed at random). Level 3 adds a fast flutter on leaves.
+- **Water** (`farm_water.gdshader` Låg, `farm_water_fx.gdshader` Mellan and Hög; `FarmAssets.set_water_level` swaps the
+  shader of the same materials, so uniforms and chunks stay). Låg is flat: two colours, the bank's pale line and nothing
+  else (no noise, and it reads no screen texture, which the engine would otherwise copy every frame the water is in view:
+  that is why the cheap look is a different file and not a branch). The fx shader draws four crossing swells whose
+  *slope* tilts the surface's normal (the sun glint, the light and the reflection all ripple together; calmer next to the
+  bank, rougher in open water, and stronger in wind weather: `wave`), foam that washes in and out along the bank and, on
+  Hög, flecks on the crests, and a **screen-space reflection**: the view ray is mirrored in the surface and marched
+  through the depth buffer (16 steps on Mellan, 28 on Hög, 8 m, the ray flattened by about half so the far bank and its trees are found from the camera's steep angle) to find what stands above the water; the pixel it meets
+  (a tree on the far bank, a house) is the reflection, otherwise the sky's colour (`sky_colour`, from the horizon colour
+  of the clock). Only what stands on the *far* side of a pond mirrors in it, which is how a real
+  mirror would look from there, and it is why nothing is mirrored under the hero's feet. Things lower than 25 cm
+  (grass, flowers, the ground itself) never count as a hit, which also keeps noise out of the picture. Bog and
+  chocolate mirror less, lava not at all. The ray points are tested in view space with helper functions that take the
+  matrices as arguments (a Godot shader function cannot see `INV_PROJECTION_MATRIX`), and the depth is rebuilt with
+  the Compatibility renderer's own clip range through `CURRENT_RENDERER`, so the same file compiles on Forward+,
+  Mobile and Compatibility (the sandbox's Xvfb falls back to Compatibility without a Vulkan driver: both were run). The
+  fishing line is unaffected: the surface stays within 1 cm of its old height and the bobber is placed by tile.
+- **Ambient things** (`scripts/ambient_view.gd`, `assets/shaders/ambient_*.gdshader`): each is one `MultiMesh` whose
+  instances move entirely in a vertex shader from `TIME`, so the CPU sends one `center` (the hero) and a fade per frame and
+  nothing per instance; no simulation, no `GPUParticles3D`, and the same shader on every renderer. Quads face the camera by
+  the shader's own billboarding (`POSITION` is written), so a MultiMesh's bounds do not matter (`custom_aabb` is huge).
+  Fireflies, butterflies and the mist live in a 30 × 24 m box that wraps round the hero. Each fades in and out over about
+  two seconds when its moment comes (`day_night.gd` passes the darkness, the season of the *year*, the weather and the
+  day's fraction):
+  fireflies on summer nights (dry or foggy, not in the biomes without seasons), butterflies by day in spring and summer in
+  sun or cloud, leaves in autumn whenever it is not wet or snowing (they fall from the crowns of the nearest twelve
+  deciduous trees, found again when the hero has walked 4 m or the objects changed, and are carried along the wind),
+  smoke from the chimneys of the farmhouse, the longhall, the smithy, the pizzeria, the bath house, the small houses and
+  the apartments (the `chimney` offset in `SPECS`, found with the meshes' highest vertices; `FarmView.chimneys()`) at
+  any hour, bending with the wind, and low patchy mist at dawn (from 0.955 of the day to 0.14, not in rain, storm,
+  snow or hail). The mist's flat quads read no depth, so a trunk crossing one shows a hard edge; its alpha is low
+  enough (at most about 0.3) that this is not noticed.
+- **Window light.** The windows' glow and the lamps were M4a's; what is new is the pool of warm light on the ground in
+  front of each lit window (Mellan, steady; Hög, flickering like a fire), on the same switch as the windows (`set_dark`).
+  Houses that had no lit windows (the cottages and apartments) still have none: their window positions are in the
+  KayKit meshes, not in the specs, and are not marked yet.
+- **Checks.** The export job runs `--alive=all` headless on three preset/map pairs (scripts and uniforms; the headless
+  renderer draws nothing). The bench (`--bench --scene=farm|village`) prints what is on screen per preset (the `alive
+  world:` line) and with `--alive=all --time=0.9 --year=summer` measures everything on at once. Pictures (manual `pictures`
+  job; copies in `packages/godot/docs/`): `m7a-farm-windy`, `m7a-pond-dusk`, `m7a-summer-night`, `m7a-autumn-leaves` and
+  `m7a-lag-vs-hog`.

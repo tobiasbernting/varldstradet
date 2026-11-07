@@ -49,6 +49,10 @@ var _season := "none"
 var _year := "summer"
 var _under := false ## no sky here (a cave): the light stays what the map says
 var _since := 0.0
+var _lit := Color.WHITE ## the clock's light colour (the horizon of the sky the water mirrors)
+var _sun_share := 1.0
+var _wind := -1.0 ## the weather's wind, eased so a gust front does not snap the trees
+var _year_override := "" ## --year=summer|autumn|...: a fixed season of the year for pictures and the bench
 var _rainbow_until := 0.0
 var _rainbow_k := 0.0
 var _rng := RandomNumberGenerator.new()
@@ -57,6 +61,9 @@ var sky_color := Color("#9ec8e8")
 
 func _init() -> void:
 	_rng.randomize()
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--year="):
+			_year_override = arg.substr(7)
 
 
 func setup(v: FarmView, biome: String, key: String) -> void:
@@ -210,6 +217,8 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 	_ambient = _ambient.lerp(amb, 1.0 - pow(0.05, delta))
 	_dark = lerpf(_dark, dark, 1.0 - pow(0.05, delta))
 	var lit := amb
+	_lit = lit
+	_sun_share = sun_share
 	env.ambient_light_color = _ambient.lerp(Color(0.35, 0.4, 0.6), _dark * 0.4)
 	env.ambient_light_energy = 0.28 + 0.14 * (1.0 - _dark)
 	# the sun climbs in the east, stands south at noon and sets in the west; at night a pale moon takes its place
@@ -245,6 +254,9 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 	_update_materials(delta, kind, w, elevation, sun_share)
 	view.set_dark(_dark)
 	var cam := get_viewport().get_camera_3d()
+	if view.ambient != null:
+		view.ambient.update(delta, {"dark": _dark, "year": _year, "kind": kind, "wind": _wind, "f": f, "sky": sky_color, "seasons": _biome_has_seasons(), "under": under_roof},
+			_target.global_position if _target != null else Vector3.ZERO)
 	if _target != null:
 		var at := _target.global_position
 		for p in [_rain, _flakes, _leaves]:
@@ -293,6 +305,8 @@ func _sample(f: float) -> Color:
 
 ## The browser's yearSeason: Christmas is always winter, otherwise the calendar (December to February winter).
 func _year_season(season: String) -> String:
+	if _year_override != "":
+		return _year_override
 	if season == "jul":
 		return "winter"
 	var m := int(Time.get_datetime_dict_from_system().get("month", 6))
@@ -370,14 +384,26 @@ func _update_materials(delta: float, kind: String, w: Array, elevation: float, s
 	a.prop_mat.set_shader_parameter("leaf_mix", mix)
 	a.prop_mat.set_shader_parameter("snow", _snow)
 	a.prop_mat.set_shader_parameter("wet", _wet)
-	a.prop_mat.set_shader_parameter("wind", float(w[2]))
+	_wind = float(w[2]) if _wind < 0.0 else lerpf(_wind, float(w[2]), 1.0 - pow(0.3, delta))
+	a.prop_mat.set_shader_parameter("wind", _wind)
+	a.prop_mat.set_shader_parameter("wind_level", Quality.alive("wind"))
 	a.ground_mat.set_shader_parameter("snow", _snow)
 	a.ground_mat.set_shader_parameter("wet", _wet)
 	a.ground_mat.set_shader_parameter("cloud", 0.0 if Quality.preset == "lag" else sun_share * elevation)
 	var glint := clampf(elevation * sun_share + 0.15, 0.0, 1.0)
+	var water_level := Quality.alive("water")
+	a.set_water_level(water_level)
+	var wave := 0.45 + 0.6 * _wind
+	# what the water mirrors: the clock's colour at the horizon, deep blue overhead (navy at night), grey under cloud
+	var zenith := Color(0.30, 0.52, 0.95).lerp(Color(0.05, 0.07, 0.2), _dark)
+	var horizon := _lit.lerp(Color(0.07, 0.09, 0.24), _dark * 0.8)
+	var mirror := horizon.lerp(zenith, 0.5).lerp(Color(0.62, 0.66, 0.72) * (1.0 - _dark * 0.7), clampf(1.0 - _sun_share, 0.0, 1.0) * 0.7) * 0.82
 	for m in [a.water_mat, a.bog_mat, a.choco_mat]:
 		m.set_shader_parameter("glint", glint)
 		m.set_shader_parameter("frozen", _snow * 0.55 if m == a.water_mat else 0.0)
+		if water_level > 0:
+			m.set_shader_parameter("wave", wave)
+			m.set_shader_parameter("sky_colour", mirror)
 
 
 func _biome_has_seasons() -> bool:
