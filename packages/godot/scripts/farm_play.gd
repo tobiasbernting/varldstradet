@@ -130,7 +130,12 @@ func enter(w: Dictionary) -> void:
 func leave() -> void:
 	active = false
 	_riding = false
+	_ride_mul = 1.0
 	_boost_until = 0.0
+	# (a dungeon entered from horseback: the hero runs there, and the rule of the pad's B is the dungeon's)
+	hero.riding = false
+	hero.boosted = false
+	hero.speed_mul = 1.0
 	_last_text = "\u0001"
 	hotbar.visible = false
 	target.visible = false
