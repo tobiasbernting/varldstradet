@@ -478,6 +478,40 @@ jobs:
             fi
           done
 
+      # M8b: the settings window, the HUD and a window at 175 % text, and one boss telegraph in each colour-blind palette, under
+      # Xvfb (software GL). The ones worth keeping are copied into packages/godot/docs/ by hand (m8b-*.png).
+      - name: Pictures of the settings window, the text at 175 % and the telegraph palettes under Xvfb
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/shots/m8b"
+          shot() { # name, demo args...
+            local name="$1"; shift
+            xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- "$@" --screenshot="$GITHUB_WORKSPACE/shots/m8b/$name.png" 2>&1 | tee "shot-$name.log"
+            if grep -v "status < 0" "shot-$name.log" | grep -E "SCRIPT ERROR|SHADER ERROR|Parse Error|leaked at exit|still in use at exit|Pages in use exist at exit"; then
+              echo "::error::$name: errors or leaks (see above)"; exit 1
+            fi
+            test "$(stat -c %s "$GITHUB_WORKSPACE/shots/m8b/$name.png")" -gt 20000
+          }
+          for page in picture sound reading controls; do
+            shot m8b-settings-$page --demo=draug --settings-page=$page
+          done
+          shot m8b-settings-reading-175 --demo=draug --settings-page=reading --ui-scale=1.75
+          shot m8b-hud-175 --demo=draug --fight --ui-scale=1.75
+          shot m8b-farm-175 --demo=farm --time=0.4 --ui-scale=1.75
+          shot m8b-talk-175 --demo=farm --time=0.4 --open-npc=volva --ui-scale=1.75
+          shot m8b-hud-125 --demo=draug --fight --ui-scale=1.25
+          shot m8b-bag-chest-175 --demo=farm --at=18,14 --time=0.4 --bag=chest --ui-scale=1.75
+          shot m8b-loot-175 --demo=draug --fight --loot --ui-scale=1.75
+          shot m8b-chat-175 --demo=draug --fight --open-chat --ui-scale=1.75
+          xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- --creatorcheck --ui-scale=1.75 --shot="$GITHUB_WORKSPACE/shots/m8b/m8b-creator-175.png" 2>&1 | tee shot-creator.log
+          test "$(stat -c %s "$GITHUB_WORKSPACE/shots/m8b/m8b-creator-175.png")" -gt 20000
+          for palette in normal rg tritan; do
+            shot m8b-telegraph-$palette --demo=frost --boss-move=rimturs:cleave --colours=$palette
+          done
+          shot m8b-telegraph-pull-rg --demo=loke --boss-move=loke:pull --colours=rg
+          shot m8b-telegraph-rg-175 --demo=frost --boss-move=rimturs:cleave --colours=rg --ui-scale=1.75
+
       # The farmer works a farm of its own (a second in-memory server) in a window under Xvfb and takes pictures at the
       # moments the owner asked for: watering, the bag and a chest open, a fish biting, a wild animal petted (M4b); and
       # the shop, the workbench, a refused fence, the farmhouse, the stove, the wardrobe, a talk, Köpingen, the class

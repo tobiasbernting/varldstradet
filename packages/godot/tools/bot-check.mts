@@ -36,6 +36,11 @@
 // codec and, with the webrtc-native extension, two peers in one process; the rest is for two real machines.
 // BOT_ONLY=voice runs only this.
 //
+// A settings check (M8b, scripts/settings_check.gd, `--settingscheck`; no server and no window, a few seconds, in its own empty HOME)
+// opens the settings window from the pause menu, changes every setting through its controls and asserts each is kept, saved to the
+// settings file and applied (the preset's scale, the audio buses, the text size, the palettes, the key map), then puts it all back.
+// BOT_ONLY=settings runs only this.
+//
 //   GODOT=~/godot/godot pnpm godot:bot            (GODOT defaults to `godot` on the PATH)
 //   BOT_RUN_MAX_WIPES=0 sets how many wipes the run pair retries (default 2; 0 = a wipe fails the check)
 //   BOT_ONLY=run BOT_RUN_SECONDS=480 pnpm godot:bot [-- --full]   (the run pair alone; --full plays to the boss: BOT_RUN_SECONDS=2400)
@@ -229,6 +234,24 @@ async function checkVoice(base: string): Promise<void> {
   }
 }
 
+/** The settings check's process (started with the other Godot clients, read after they are done). */
+async function checkSettings(proc: { log: string; child: ChildProcess }): Promise<void> {
+  // (it was started with the other clients and is long done by now: its exit event has fired, so read the code, don't wait for it)
+  const code = proc.child.exitCode !== null ? proc.child.exitCode : await exited(proc.child, 120_000);
+  const log = fs.existsSync(proc.log) ? fs.readFileSync(proc.log, 'utf8') : '';
+  const lines = log.split('\n').filter((l) => l.startsWith('settingscheck:'));
+  const failed = lines.filter((l) => l.includes('FAIL'));
+  const bad = log.split('\n').filter((l) => /SCRIPT ERROR|Parse Error|^ERROR:|leaked at exit|still in use at exit|Pages in use exist at exit/.test(l));
+  console.log(`\n--- settings check (exit ${code === null ? 'killed' : code}) ---`);
+  for (const l of failed.slice(0, 20)) console.log(l);
+  console.log(`     ${lines.filter((l) => l.includes(' ok ')).length} steps ok, ${failed.length} failed`);
+  check(code === 0, `settings: the check exits 0 (${code})`);
+  check(failed.length === 0, `settings: no step failed (${failed[0] ?? 'none'})`);
+  check(lines.some((l) => l.startsWith('settingscheck: all ok')), 'settings: the check ends with "all ok"');
+  check(lines.filter((l) => l.includes(' ok ')).length >= 60, `settings: it ran its steps (${lines.length} lines)`);
+  check(bad.length === 0, `settings: no script errors and nothing leaked at exit (${bad[0] ?? 'none'})`);
+}
+
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 function run(cmd: string, args: string[], opts: { cwd: string; env?: Record<string, string>; log: string }): ChildProcess {
@@ -393,6 +416,15 @@ async function main(): Promise<void> {
       console.log(`${creatorName}: ${godot} ${args.join(' ')}`);
       creators.push({ name: creatorName, report, log, child: run(godot, args, { cwd: godotDir, log, env: { HOME: home, XDG_DATA_HOME: path.join(home, 'data') } }) });
     }
+    // the settings check: the settings window, every setting changed and put back (its own empty HOME: it saves settings there)
+    let settingsRun: { log: string; child: ChildProcess } | null = null;
+    if (mode === '' || mode === 'settings') {
+      const log = path.join(tmp, 'settingscheck.log');
+      const home = fs.mkdtempSync(path.join(tmp, 'home-settings-'));
+      const args = ['--headless', '--path', godotDir, '--', '--settingscheck'];
+      console.log(`settingscheck: ${godot} ${args.join(' ')}`);
+      settingsRun = { log, child: run(godot, args, { cwd: godotDir, log, env: { HOME: home, XDG_DATA_HOME: path.join(home, 'data') } }) };
+    }
     // the farmer gets a server of its own (the day rolls over for everyone on a server)
     const farmPort = port + 1;
     const farmers: { name: string; report: string; log: string; child: ChildProcess }[] = [];
@@ -449,6 +481,7 @@ async function main(): Promise<void> {
     }
     const all = [...bots, ...walker, ...farmers, ...creators, ...runBots];
     const codes = await Promise.all(all.map((b) => exited(b.child, ((b.name === farmerName ? farmSeconds : runNames.includes(b.name) ? runSeconds : seconds) + 40) * 1000)));
+    if (settingsRun) await checkSettings(settingsRun);
     const reports: (Report | FarmReport | null)[] = all.map((b, i) => {
       console.log(`\n--- ${b.name} (exit ${codes[i] === null ? 'killed' : codes[i]}) ---`);
       const log = fs.existsSync(b.log) ? fs.readFileSync(b.log, 'utf8') : '';

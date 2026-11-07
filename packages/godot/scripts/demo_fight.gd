@@ -53,6 +53,8 @@ func _ready() -> void:
 		[7.0, "_s_line_zone"], [8.0, "_s_rage"], [8.6, "_s_nova_stopped"], [9.0, "_s_line_lands"], [9.5, "_s_wipe"], [12.0, "_s_up_again"],
 		[12.5, "_s_axe_big"], [13.0, "_s_loot"],
 	]
+	if OS.get_cmdline_user_args().has("--loot"):
+		_timeline = [[0.4, "_s_loot"]] # (a picture of the loot window alone)
 
 
 func _s_boss_comes() -> void:

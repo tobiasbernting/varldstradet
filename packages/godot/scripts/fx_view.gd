@@ -36,7 +36,6 @@ const BOLTS := {
 	"mob_benspindel": {"speed": 10.0, "c": Color(0.92, 0.94, 1.0), "size": 0.5},
 }
 const MOB_BOLT := {"speed": 12.0, "c": Color(0.55, 1.0, 0.55), "size": 0.45}
-const WARN := Color(0.95, 0.12, 0.05)
 const FLOOR_Y := 0.045
 const HIT_COLOURS := {"dmg": Color(1.0, 0.95, 0.9), "crit": Color(1.0, 0.85, 0.3), "heal": Color(0.5, 1.0, 0.55), "block": Color(0.75, 0.85, 1.0), "stun": Color(1.0, 0.95, 0.4), "kick": Color(0.55, 0.85, 1.0), "miss": Color(0.8, 0.8, 0.8), "xp": Color(1.0, 0.85, 0.4), "me": Color(1.0, 0.45, 0.4)}
 
@@ -58,6 +57,8 @@ class ZoneNode:
 	var base: MeshInstance3D
 	var fill: MeshInstance3D
 	var edge: MeshInstance3D
+	var hatch: MeshInstance3D ## the stripes (M8b), only drawn with Palette.pattern()
+	var pattern := false ## was it built with stripes and the thick edge
 	var rings: Array = []
 	var shape := "circle"
 	var born := 0.0
@@ -82,6 +83,7 @@ var _t := 0.0
 var _glow_tex: Texture2D
 var _glow_mat: StandardMaterial3D
 var _flat_mat: StandardMaterial3D
+var _hatch_shader: Shader = load("res://assets/shaders/danger_hatch.gdshader")
 var _last_hurt := 0.0
 var _last_crit := 0.0
 var _rng := RandomNumberGenerator.new()
@@ -205,6 +207,11 @@ func _glow(colour: Color, size: float) -> MeshInstance3D:
 	return mi
 
 
+## How bright a landing's big glow is (M8b): a third with "less shaking and flashing".
+static func _glare() -> float:
+	return 0.35 if Settings.reduce_motion else 1.0
+
+
 static func _set_colour(mi: MeshInstance3D, colour: Color) -> void:
 	var m: StandardMaterial3D = mi.material_override
 	if m != null:
@@ -302,7 +309,7 @@ func _label(text: String, colour: Color, size := 56) -> Label3D:
 	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	l.text = text
 	l.font_size = size
-	l.pixel_size = 0.006
+	Settings.scaled_label(l, 0.006)
 	l.outline_size = 14
 	l.outline_modulate = Color("2b2419")
 	l.modulate = colour
@@ -368,8 +375,8 @@ func move_colour(move: String, by: Variant) -> Color:
 	var species := _species_of(by)
 	var own: Variant = BOSS_MOVE_COLOUR.get(species, {}).get(move)
 	if own is Color:
-		return own
-	return MOVE_COLOUR.get(move, Color(1.0, 0.4, 0.2))
+		return Palette.move(own, move)
+	return Palette.move(MOVE_COLOUR.get(move, Color(1.0, 0.4, 0.2)), move)
 
 
 # ---------------------------------------------------------------------------
@@ -1102,7 +1109,7 @@ func _land(move: String, at: Vector3, by: Variant) -> void:
 		_set_colour(ring2, Color(1, 1, 1, 0.8 * (1.0 - k)))
 		glow.position = fx.at + Vector3(0, 0.4, 0)
 		_set_size(glow, maxf(0.05, r * (0.6 + e)))
-		_set_colour(glow, Color(c.r, c.g, c.b, 0.5 * (1.0 - k)))
+		_set_colour(glow, Color(c.r, c.g, c.b, 0.5 * (1.0 - k) * _glare()))
 	var f := _add(0.8 if big else 0.55, step, at)
 	f.nodes = [disc, ring1, ring2, glow]
 	for i in range(8):
@@ -1165,7 +1172,7 @@ func _land_pull(at: Vector3, r: float, by: Variant, c: Color) -> void:
 			_set_colour(streaks[i], Color(c.r, c.g, c.b, 0.9 * (1.0 - k)))
 		glow.position = m + Vector3(0, 0.5, 0)
 		glow.visible = k > 0.6
-		_set_colour(glow, Color(c.r, c.g, c.b, (1.0 - k) * 2.0))
+		_set_colour(glow, Color(c.r, c.g, c.b, (1.0 - k) * 2.0 * _glare()))
 	var f := _add(0.45, step, at, Vector3.INF, by)
 	f.nodes = [ring, glow] + streaks
 	shake = maxf(shake, 0.4)
@@ -1505,7 +1512,7 @@ func _tick_zones() -> void:
 		if move == "mend":
 			continue
 		var zn: ZoneNode = _zones.get(zid)
-		if zn == null or zn.move != move:
+		if zn == null or zn.move != move or zn.pattern != Palette.pattern():
 			if zn != null:
 				zn.root.queue_free()
 			zn = _make_zone(z, move)
@@ -1525,13 +1532,19 @@ func _make_zone(z: Dictionary, move: String) -> ZoneNode:
 	zn.shape = str(z.get("shape", "circle"))
 	zn.root = Node3D.new()
 	add_child(zn.root)
-	var c := WARN
+	var c := Palette.colour("danger_fill")
 	var pulling := move == "pull"
 	if pulling:
 		var pc := move_colour("pull", int(z.get("by", -1)))
 		c = Color(pc.r * 0.5, pc.g * 0.5, pc.b * 0.7)
 	var wide := float(z.get("w", 1.6))
 	var arc := deg_to_rad(float(z.get("arc", 90)))
+	var pat := Palette.pattern()
+	zn.pattern = pat
+	var edge_w := 0.12 if pat else 0.08 # (a thicker edge is the second cue besides the stripes)
+	var edge_c := Palette.colour("danger_edge")
+	edge_c.a = 0.8
+	var hatch_points := PackedVector2Array()
 	match zn.shape:
 		"cone":
 			zn.base = _flat(sector_points(arc), Color(c.r, c.g, c.b, 0.25), zn.root)
@@ -1540,18 +1553,30 @@ func _make_zone(z: Dictionary, move: String) -> ZoneNode:
 			for i in range(15):
 				var a := -arc / 2.0 + arc * i / 14.0
 				outline.append(Vector2(cos(a), sin(a)))
-			zn.edge = _flat(band_points(outline, 0.08, true), Color(1.0, 0.18, 0.1, 0.8), zn.root)
+			zn.edge = _flat(band_points(outline, edge_w, true), edge_c, zn.root)
+			hatch_points = sector_points(arc)
 		"line":
 			zn.base = _flat(strip_points(wide), Color(c.r, c.g, c.b, 0.25), zn.root)
 			zn.fill = _flat(strip_points(wide), Color(c.r, c.g, c.b, 0.35), zn.root)
 			zn.edge = null
+			if pat:
+				var h := wide / 2.0
+				zn.edge = _flat(band_points(PackedVector2Array([Vector2(0, -h), Vector2(1, -h), Vector2(1, h), Vector2(0, h)]), edge_w * 0.5, true), edge_c, zn.root)
+			hatch_points = strip_points(wide)
 		_:
 			zn.base = _flat(disc_points(), Color(c.r, c.g, c.b, 0.25), zn.root)
 			zn.fill = _flat(disc_points(), Color(c.r, c.g, c.b, 0.35), zn.root)
-			zn.edge = _flat(band_points(ring_line(1.0), 0.08, true), Color(1.0, 0.18, 0.1, 0.8), zn.root)
+			zn.edge = _flat(band_points(ring_line(1.0), edge_w, true), edge_c, zn.root)
+			hatch_points = disc_points()
 			if pulling:
 				for i in range(3):
 					zn.rings.append(_flat(band_points(ring_line(1.0), 0.05, true), Color(1, 1, 1, 0.5), zn.root))
+	if pat:
+		zn.hatch = _flat(hatch_points, Color.WHITE, zn.root)
+		var hm := ShaderMaterial.new()
+		hm.shader = _hatch_shader
+		zn.hatch.material_override = hm
+		zn.hatch.position.y = FLOOR_Y + 0.006
 	zn.fill.position.y = FLOOR_Y + 0.004
 	if zn.edge != null:
 		zn.edge.position.y = FLOOR_Y + 0.008
@@ -1570,6 +1595,12 @@ func _update_zone(zn: ZoneNode, z: Dictionary, now: float) -> void:
 	zn.base.scale = dir_scale.call(maxf(0.01, r))
 	if zn.edge != null:
 		zn.edge.scale = dir_scale.call(maxf(0.01, r))
+	if zn.hatch != null:
+		zn.hatch.scale = dir_scale.call(maxf(0.01, r))
+		var sc := Palette.colour("stripe")
+		var hm := zn.hatch.material_override as ShaderMaterial
+		hm.set_shader_parameter("colour", Color(sc.r, sc.g, sc.b, 0.55 + 0.25 * k))
+		hm.set_shader_parameter("drift", Settings.calm(0.35)) # (the stripes stand still with "less shaking and flashing")
 	if zn.move == "pull" and now < at:
 		# a whirlpool: a dark violet disc turning, darker as it gets ready, rings sliding in towards the boss
 		var pc := move_colour("pull", int(z.get("by", -1)))
@@ -1587,21 +1618,27 @@ func _update_zone(zn: ZoneNode, z: Dictionary, now: float) -> void:
 		# burning ground: lava that pulses until it cools
 		var left := clampf((float(z.get("until", now)) - now) / 2000.0, 0.0, 1.0)
 		var pulse := 0.85 + 0.15 * sin(_t * 4.0 + float(z.get("x", 0)) * 0.1)
-		_set_colour(zn.base, Color(0.95, 0.32, 0.05, 0.55 * left * pulse))
+		var lava := Color(0.95, 0.32, 0.05) if Palette.mode() == "normal" else Palette.colour("danger_fill")
+		var lava_hot := Color(1.0, 0.6, 0.15) if Palette.mode() == "normal" else Palette.colour("danger_edge")
+		_set_colour(zn.base, Color(lava.r, lava.g, lava.b, 0.55 * left * pulse))
 		zn.fill.visible = true
 		zn.fill.scale = dir_scale.call(maxf(0.01, r * 0.7))
-		_set_colour(zn.fill, Color(1.0, 0.6, 0.15, 0.45 * left * pulse))
+		_set_colour(zn.fill, Color(lava_hot.r, lava_hot.g, lava_hot.b, 0.45 * left * pulse))
 		if zn.edge != null:
-			_set_colour(zn.edge, Color(1.0, 0.75, 0.3, 0.8 * left))
+			var le := Color(1.0, 0.75, 0.3) if Palette.mode() == "normal" else Palette.colour("danger_edge")
+			_set_colour(zn.edge, Color(le.r, le.g, le.b, 0.8 * left))
 		return
-	var blink := 0.5 + 0.5 * sin(_t * (6.0 + k * 18.0))
-	_set_colour(zn.base, Color(0.85, 0.08, 0.06, 0.22 + 0.1 * blink))
+	var blink := 0.5 + 0.5 * sin(_t * (6.0 + k * 18.0)) if not Settings.reduce_motion else 0.5 # (steady, not a flicker, with "less shaking and flashing")
+	var db := Palette.colour("danger_base")
+	var df := Palette.colour("danger_fill")
+	var de := Palette.colour("danger_edge")
+	_set_colour(zn.base, Color(db.r, db.g, db.b, 0.22 + 0.1 * blink))
 	# it fills up from the middle (from the boss for a cone or a line) until it lands
 	zn.fill.visible = true
 	zn.fill.scale = dir_scale.call(maxf(0.01, r * k))
-	_set_colour(zn.fill, Color(0.95, 0.12, 0.05, 0.3 + 0.1 * k))
+	_set_colour(zn.fill, Color(df.r, df.g, df.b, 0.3 + 0.1 * k))
 	if zn.edge != null:
-		_set_colour(zn.edge, Color(1.0, 0.18, 0.1, 0.55 + 0.4 * blink))
+		_set_colour(zn.edge, Color(de.r, de.g, de.b, 0.55 + 0.4 * blink))
 
 
 ## Is a point (px) inside a zone? inZone in sagasim.ts (the bot steps out with this).

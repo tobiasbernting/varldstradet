@@ -681,7 +681,7 @@ func set_weather(kind: String) -> void:
 			"wind":
 				fog = 0.04
 		_env.environment.fog_density = fog
-	var budget := int(Quality.spec().get("weather", 0)) / 3 if Quality.preset != "lag" else 0
+	var budget := Quality.dungeon_budget(3)
 	if budget <= 0 or not (kind in ["rain", "storm", "snow", "hail", "wind"]):
 		return
 	var quad := QuadMesh.new()
@@ -745,6 +745,20 @@ func set_weather(kind: String) -> void:
 	_weather_node = p
 
 
+## The falling weather and the motes made again after the weather switch changed in the settings (the room itself is not touched).
+func refresh_effects() -> void:
+	if _motes_node != null:
+		_motes_node.queue_free()
+		_motes_node = null
+	if world.is_empty():
+		return
+	_make_motes()
+	var kind := _weather
+	_weather = "" # (set_weather returns early for the kind it already has)
+	if kind != "":
+		set_weather(kind)
+
+
 ## The falling weather and the look's motes go where the hero goes.
 func follow_weather(at: Vector3) -> void:
 	if _motes_node != null:
@@ -759,7 +773,7 @@ func follow_weather(at: Vector3) -> void:
 
 func _make_motes() -> void:
 	var kind := str(look.get("motes", ""))
-	var budget := int(Quality.spec().get("weather", 0)) / 4 if Quality.preset != "lag" else 0
+	var budget := Quality.dungeon_budget(4)
 	if kind == "" or budget <= 0:
 		return
 	var quad := QuadMesh.new()

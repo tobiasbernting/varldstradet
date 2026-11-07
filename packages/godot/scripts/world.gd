@@ -71,6 +71,9 @@ var _prev_pos: Dictionary = {} ## actor key -> last scene position (facing from 
 var _emote_shown: Dictionary = {} ## player id -> until
 var _shadow_in := 0.0
 var _screenshot := ""
+var _open_chat := false ## --open-chat (with --demo): the chat box is open (pictures)
+var _open_npc := "" ## --open-npc=<id> (or "volva"): a villager's talk window opens on the farm demo (pictures)
+var _settings_page := "" ## --settings-page=picture|sound|reading|controls: the settings window opens on it (pictures)
 var _frames := 0
 var _rest_glow_in := 0.0
 var _cam_k := 0.0 ## 0 outdoors, 1 inside the farmhouse: how far the camera has moved to its closer, steeper place
@@ -111,6 +114,7 @@ func _ready() -> void:
 	add_child(loot)
 	chat = ChatUi.new()
 	add_child(chat)
+	hud.centre_busy.connect(chat.set_log_hidden)
 	wheel = Wheel.new()
 	add_child(wheel)
 	play = FarmPlay.new()
@@ -158,10 +162,21 @@ func _ready() -> void:
 	Net.message.connect(_on_message)
 	Net.connection_changed.connect(_on_connection)
 	Quality.changed.connect(func(_p: String) -> void: _rebuild())
+	# an effect switched by hand (settings): only the weather's particles are made again, a fight in progress is left alone
+	Quality.effects_updated.connect(func() -> void:
+		if farm.sky != null:
+			farm.sky.rebuild_particles()
+		dungeon.refresh_effects())
 	_rng.randomize()
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--screenshot="):
 			_screenshot = arg.substr("--screenshot=".length())
+		elif arg == "--open-chat":
+			_open_chat = true
+		elif arg.begins_with("--open-npc="):
+			_open_npc = arg.substr("--open-npc=".length())
+		elif arg.begins_with("--settings-page="):
+			_settings_page = arg.substr("--settings-page=".length())
 
 
 func reset() -> void:
@@ -311,6 +326,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		Settings.show_fps = not Settings.show_fps
 		Settings.save()
 		hud.set_fps_shown(Settings.show_fps)
+		menu.settings_window().refresh() # (the checkbox in the settings window, if it is open)
 		get_viewport().set_input_as_handled()
 		return
 	if menu.is_open() or chat.is_open() or loot.is_open() or wheel.is_open() or run_pick.is_open() or _area == "" or play.is_busy():
@@ -967,16 +983,16 @@ func _process(delta: float) -> void:
 				actor.set_health(0.0, false, Color.WHITE)
 			elif not m.is_empty():
 				var kk := float(m[0]) / maxf(1.0, float(m[1]))
-				actor.set_health(kk, true, Color(0.6, 0.9, 1.0) if block else (Color(0.95, 0.3, 0.25) if not is_target else Color(1.0, 0.75, 0.3)), str(rec.get("name", Data.mob_name(species))) if (boss or is_target or block) else "")
+				actor.set_health(kk, true, Palette.colour("block") if block else (Palette.colour("foe") if not is_target else Palette.colour("target")), str(rec.get("name", Data.mob_name(species))) if (boss or is_target or block) else "")
 			elif is_target:
-				actor.set_health(1.0, true, Color(1.0, 0.75, 0.3), str(rec.get("name", Data.mob_name(species))))
+				actor.set_health(1.0, true, Palette.colour("target"), str(rec.get("name", Data.mob_name(species))))
 			else:
 				actor.set_health(0.0, false, Color.WHITE)
 			actor.set_marker(_chasing_me(actor, vel, moving, species, m, me_pos))
 	_update_prompt()
 	_rest_glow(delta, snap)
 	_frame_camera(delta)
-	var shake := fx.shake
+	var shake := Settings.calm(fx.shake) # (M8b: "less shaking and flashing")
 	var wobble := Vector3((_rng.randf() - 0.5) * shake * 0.5, (_rng.randf() - 0.5) * shake * 0.3, 0.0) if shake > 0.0 else Vector3.ZERO
 	rig.position = rig.position.lerp(hero.position, 1.0 - pow(0.002, delta)) + wobble
 	_shadow_in -= delta
@@ -988,6 +1004,12 @@ func _process(delta: float) -> void:
 		hero.frozen = run_pick.is_open()
 	hud.tick_spell_bar(combat, snap.get("b") is Dictionary and snap["b"].get("cast") is Dictionary and bool(snap["b"]["cast"].get("kick", false)))
 	_frames += 1
+	if _open_chat and _frames == 30:
+		chat.open()
+	if _open_npc != "" and _frames == 30:
+		play.windows.talk.open_npc(Data.volva if _open_npc == "volva" else _open_npc)
+	if _settings_page != "" and _frames == 30:
+		menu.open_settings()._show_page(_settings_page)
 	if _screenshot != "" and _frames == 90:
 		var img := get_viewport().get_texture().get_image()
 		if img != null:

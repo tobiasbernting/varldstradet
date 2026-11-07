@@ -8,6 +8,7 @@ extends CanvasLayer
 ## assets/sv.json.
 
 signal menu_asked
+signal centre_busy(on: bool) ## on a narrow screen: a banner, a toast or the fallen box is up (the chat feed makes room)
 
 const HP_GREEN := Color("4fcf5a")
 const HP_YELLOW := Color("f2c33a")
@@ -65,6 +66,9 @@ var hint_label: Label
 var _hint_t := 0.0
 var fps_label: Label
 var voice_button: Button
+var _narrow := false
+var _busy := false
+var _top: VBoxContainer ## the boss at the top, in the middle (to the right when the screen is narrow, see `_layout`)
 var _frame_times: Array = []
 var _fps_in := 0.0
 
@@ -133,6 +137,7 @@ func _ready() -> void:
 
 	# the boss at the top, in the middle
 	var top := VBoxContainer.new()
+	_top = top
 	top.anchor_left = 0.5
 	top.anchor_right = 0.5
 	top.offset_left = -260
@@ -297,6 +302,87 @@ func _ready() -> void:
 	box.add_child(button)
 	fps_label.visible = Settings.show_fps
 	reset()
+	get_viewport().size_changed.connect(_layout)
+	Settings.ui_scale_changed.connect(_layout)
+	Settings.access_changed.connect(_repaint)
+	_layout()
+
+
+## The colours of the health bars after the player chose another palette: at once, not at the next snapshot.
+func _repaint() -> void:
+	for u in [me_frame, target_frame]:
+		if u.has("k"):
+			_set_meter_colour(u["meter"], hp_colour(float(u["k"])))
+	_set_meter_colour(boss_meter, Color("c23a2c") if Palette.mode() == "normal" else Palette.colour("foe"))
+
+
+## M8b: at 175 % text a 1280 px window is only 731 logical points wide, and the boss's bar in the middle would lie over the hearts
+## and the frames on the left: on a narrow screen it moves to the right (under the connection dot), and the "fallen" box a little
+## down from the banner.
+func _layout() -> void:
+	if _top == null:
+		return
+	var vw := get_viewport().get_visible_rect().size.x
+	var narrow := vw < 1050.0
+	_narrow = narrow
+	if narrow:
+		var w := minf(520.0, vw - 350.0)
+		_top.anchor_left = 1.0
+		_top.anchor_right = 1.0
+		_top.offset_right = -16.0
+		_top.offset_left = -16.0 - w
+		_top.offset_top = 44.0
+	else:
+		_top.anchor_left = 0.5
+		_top.anchor_right = 0.5
+		_top.offset_left = -260.0
+		_top.offset_right = 260.0
+		_top.offset_top = 10.0
+	# the lines that stand across the middle and along the bottom are no wider than the screen
+	var half := minf(400.0, (vw - 40.0) / 2.0)
+	for l in [hint_label, toast_label]:
+		l.offset_left = -half
+		l.offset_right = half
+	hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint_label.offset_top = -44.0 if half < 400.0 else -24.0
+	(banner_label.get_parent() as Control).offset_left = -half
+	(banner_label.get_parent() as Control).offset_right = half
+	# the hint under the bar wraps to two lines on a narrow screen: the bar and what stands over it go up to make room
+	var up := -24.0 if half < 400.0 else 0.0
+	spell_bar.offset_top = -130.0 + up
+	spell_bar.offset_bottom = -30.0 + up
+	prompt_label.offset_top = -170.0 + up
+	prompt_label.offset_bottom = -140.0 + up
+	# the middle of a narrow screen is a stack, top to bottom, that never overlaps: the banner (smaller), the toast, the fallen box
+	# (while it is up the spell bar, which cannot be used then, is hidden and the chat feed makes room)
+	var centre_box := banner_label.get_parent() as Control
+	banner_label.add_theme_font_size_override("font_size", 32 if narrow else 44)
+	banner_sub.add_theme_font_size_override("font_size", 16 if narrow else 20)
+	if narrow:
+		# one column from y0 down, all anchored to the top so their order cannot depend on the screen's height: banner 72, toast 34, fallen box 88
+		var vh := get_viewport().get_visible_rect().size.y
+		var y0 := maxf(160.0, 0.39 * vh)
+		centre_box.anchor_top = 0.0
+		centre_box.offset_top = y0
+		toast_label.anchor_top = 0.0
+		toast_label.anchor_bottom = 0.0
+		toast_label.offset_top = y0 + 76.0
+		toast_label.offset_bottom = y0 + 110.0
+		down_box.anchor_top = 0.0
+		down_box.anchor_bottom = 0.0
+		down_box.offset_top = y0 + 114.0
+		down_box.offset_bottom = y0 + 202.0
+	else:
+		centre_box.anchor_top = 0.22
+		centre_box.offset_top = 0.0
+		toast_label.anchor_top = 1.0
+		toast_label.anchor_bottom = 1.0
+		toast_label.offset_top = -210.0
+		toast_label.offset_bottom = -170.0
+		down_box.anchor_top = 0.5
+		down_box.anchor_bottom = 0.5
+		down_box.offset_top = -60.0
+		down_box.offset_bottom = 60.0
 
 
 ## Röstprat's button (voice.gd): opens its window; its colour says whether you are on the phone and whether you are heard.
@@ -403,6 +489,7 @@ func _set_unit(u: Dictionary, icon: Texture2D, unit_name: String, f: Array, colo
 	u["name"].add_theme_color_override("font_color", colour)
 	u["flags"].text = flag_glyphs(int(f[2]) if f.size() >= 3 else 0)
 	u["meter"].value = k
+	u["k"] = k # (kept so a change of palette can repaint it at once, see `_repaint`)
 	_set_meter_colour(u["meter"], hp_colour(k))
 	u["text"].text = text
 	var downed := f.size() >= 3 and (int(f[2]) & Data.flag("down")) != 0
@@ -410,7 +497,7 @@ func _set_unit(u: Dictionary, icon: Texture2D, unit_name: String, f: Array, colo
 
 
 static func hp_colour(k: float) -> Color:
-	return HP_GREEN if k > 0.5 else (HP_YELLOW if k > 0.25 else HP_RED)
+	return Palette.hp(k) # (the palette of the player's colour setting; HP_GREEN, HP_YELLOW and HP_RED are its "normal")
 
 
 static func flag_glyphs(fl: int) -> String:
@@ -446,6 +533,14 @@ func reset() -> void:
 
 
 func _process(delta: float) -> void:
+	var busy := _narrow and (banner_label.text != "" or toast_label.text != "" or down_box.visible)
+	if busy != _busy:
+		_busy = busy
+		centre_busy.emit(busy)
+		spell_bar.modulate.a = 1.0
+	var bar_alpha := 0.0 if (_narrow and down_box.visible) else 1.0
+	if spell_bar.modulate.a != bar_alpha:
+		spell_bar.modulate.a = bar_alpha
 	if _banner_t > 0.0:
 		_banner_t -= delta
 		if _banner_t <= 0.0:
@@ -866,6 +961,7 @@ func set_boss(b: Variant, species: String, mob_hp: Array, now: float) -> void:
 		for i in range(phases.size() + 1):
 			pips += "●" if i <= phase else "○"
 		boss_phase.text = "%s %s" % [Strings.t("sagaPhase", {"n": phase + 1}), pips]
+	_set_meter_colour(boss_meter, Color("c23a2c") if Palette.mode() == "normal" else Palette.colour("foe"))
 	if mob_hp.size() >= 2:
 		boss_meter.value = float(mob_hp[0]) / maxf(1.0, float(mob_hp[1]))
 		boss_text.text = "%d / %d" % [int(mob_hp[0]), int(mob_hp[1])]

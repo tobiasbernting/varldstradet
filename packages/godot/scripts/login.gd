@@ -33,6 +33,8 @@ var _can_create := true ## the gate's canCreate: a guest device may not make cha
 @onready var forget_button: Button = %Forget
 
 var new_button: Button
+var _settings_window: SettingsWindow
+var _settings_button: Button
 var _creator: CreatorWindow
 var _api: Api
 var _polling := false
@@ -68,6 +70,25 @@ func _ready() -> void:
 	BagWindow.style_button(new_button)
 	new_button.pressed.connect(_on_new_character)
 	picker.add_child(new_button)
+	# the settings (M8b): the text size and the colours matter before the game starts, so the login screen has them too
+	_settings_window = SettingsWindow.new()
+	add_child(_settings_window)
+	_settings_button = Button.new()
+	_settings_button.text = Strings.t("menuSettings")
+	_settings_button.anchor_left = 1.0
+	_settings_button.anchor_right = 1.0
+	_settings_button.anchor_top = 1.0
+	_settings_button.anchor_bottom = 1.0
+	_settings_button.offset_left = -190
+	_settings_button.offset_right = -16
+	_settings_button.offset_top = -64
+	_settings_button.offset_bottom = -16
+	_settings_button.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_settings_button.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	BagWindow.style_button(_settings_button)
+	_settings_button.pressed.connect(_settings_window.open_window)
+	_settings_window.closed.connect(func() -> void: _settings_button.grab_focus())
+	add_child(_settings_button)
 	_creator = CreatorWindow.new()
 	add_child(_creator)
 	_creator.created.connect(_on_created)

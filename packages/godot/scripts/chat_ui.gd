@@ -38,6 +38,16 @@ func _ready() -> void:
 	_box.offset_right = 520
 	_box.offset_top = -150
 	_box.offset_bottom = -20
+	# M8b: at large text the box is taller than 130 points: it grows upwards from its bottom edge, on a solid panel, and the log
+	# above it makes room (`_place_log`)
+	_box.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.12, 0.1, 0.09, 0.97)
+	sb.set_corner_radius_all(10)
+	sb.set_content_margin_all(8)
+	_box.add_theme_stylebox_override("panel", sb)
+	_box.resized.connect(_place_log)
+	get_viewport().size_changed.connect(_place_log)
 	_box.visible = false
 	add_child(_box)
 	var stack := VBoxContainer.new()
@@ -82,11 +92,28 @@ func is_open() -> bool:
 	return _open
 
 
+## Makes room in the middle of a narrow screen (hud.gd's `centre_busy`): the small log in the corner is hidden for a while.
+func set_log_hidden(on: bool) -> void:
+	_log.modulate.a = 0.0 if on else 1.0
+
+
+## The log stands above the box while it is open, and where it always was when it is not.
+func _place_log() -> void:
+	var view := get_viewport().get_visible_rect().size
+	_box.offset_right = minf(520.0, view.x - 16.0)
+	var bottom := -150.0
+	if _open:
+		bottom = -(_box.size.y + 28.0)
+	_log.offset_bottom = bottom
+	_log.offset_top = bottom - 180.0
+
+
 func open() -> void:
 	if _open:
 		return
 	_open = true
 	_box.visible = true
+	_place_log.call_deferred()
 	_fade()
 	toggled.emit(true)
 	_input.grab_focus()
@@ -97,6 +124,7 @@ func close() -> void:
 		return
 	_open = false
 	_box.visible = false
+	_place_log()
 	_input.release_focus()
 	_input.text = ""
 	_fade()

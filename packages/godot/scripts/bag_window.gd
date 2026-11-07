@@ -21,6 +21,7 @@ var _search: LineEdit
 var _chips: Dictionary = {}
 var _bag_slots: Array[ItemSlot] = []
 var _chest_slots: Array[ItemSlot] = []
+var pinned := false ## `--demo --bag=chest` (a picture): the chest window stays open though the demo has no chest to be near
 var _chest_box: VBoxContainer
 var _chest_sort: Button
 var _hold: Button
@@ -69,6 +70,7 @@ func _ready() -> void:
 	sb.content_margin_bottom = 14
 	panel.add_theme_stylebox_override("panel", sb)
 	centre.add_child(panel)
+	UiFit.attach(panel)
 	var stack := VBoxContainer.new()
 	stack.add_theme_constant_override("separation", 8)
 	panel.add_child(stack)
@@ -394,6 +396,8 @@ func _process(delta: float) -> void:
 	if _far_in > 0.0:
 		return
 	_far_in = 0.25
+	if pinned:
+		return
 	# walked away from the chest, or someone took it down
 	var c := model.chest(_chest_id)
 	if c.is_empty():

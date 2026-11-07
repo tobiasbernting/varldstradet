@@ -30,6 +30,7 @@ var _foot: HBoxContainer
 var _open := false
 var _opened_at := 0
 var _focus_key := ""
+var _stack: VBoxContainer
 
 
 func _ready() -> void:
@@ -62,7 +63,9 @@ func _ready() -> void:
 	sb.content_margin_bottom = 14
 	panel.add_theme_stylebox_override("panel", sb)
 	centre.add_child(panel)
+	UiFit.attach(panel)
 	var stack := VBoxContainer.new()
+	_stack = stack
 	stack.add_theme_constant_override("separation", 8)
 	stack.custom_minimum_size = Vector2(width, 0)
 	panel.add_child(stack)
@@ -101,6 +104,19 @@ func _ready() -> void:
 	done.name = "Close"
 	_foot.add_child(done)
 	_build()
+	get_viewport().size_changed.connect(_fit)
+	Settings.ui_scale_changed.connect(_fit)
+
+
+## M8b: a window must fit the screen at 175 % text, where the 1280 × 720 window is 731 × 411 logical points: the body gets the
+## height that is left (it scrolls), and the panel is no wider than the screen.
+func _fit() -> void:
+	if _scroll == null or not is_inside_tree():
+		return
+	var view := get_viewport().get_visible_rect().size
+	var w := minf(float(width), view.x - 48.0)
+	_stack.custom_minimum_size.x = w
+	_scroll.custom_minimum_size = Vector2(w, clampf(view.y - 240.0, 110.0, float(body_height)))
 
 
 ## Subclasses add their fixed parts (tabs, a search box) here.
@@ -123,6 +139,7 @@ func open_window() -> void:
 	_opened_at = Time.get_ticks_msec()
 	_focus_key = ""
 	visible = true
+	_fit()
 	_on_open()
 	refresh()
 	_focus_first()
@@ -252,7 +269,7 @@ func add_label(text: String, size := 16, colour := Color(1, 1, 1, 0.9)) -> Label
 	l.add_theme_font_size_override("font_size", size)
 	l.add_theme_color_override("font_color", colour)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.custom_minimum_size = Vector2(width - 40, 0)
+	l.custom_minimum_size = Vector2(minf(float(width), get_viewport().get_visible_rect().size.x - 48.0) - 40.0, 0)
 	_body.add_child(l)
 	return l
 

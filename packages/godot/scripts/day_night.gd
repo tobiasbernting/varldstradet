@@ -116,6 +116,20 @@ func setup(v: FarmView, biome: String, key: String) -> void:
 	_make_rainbow()
 
 
+## The weather's particles made again after the player switched the weather on or off in the settings (nothing else is touched).
+func rebuild_particles() -> void:
+	for p in [_rain, _flakes, _flakes2, _leaves, _rings]:
+		if p != null:
+			p.queue_free()
+	_rain = null
+	_rain_size = Vector3.ZERO
+	_flakes = null
+	_flakes2 = null
+	_leaves = null
+	_rings = null
+	_make_particles()
+
+
 func _clear_children() -> void:
 	for c in get_children():
 		c.queue_free()
@@ -161,7 +175,7 @@ func _apply_quality() -> void:
 
 
 func _make_particles() -> void:
-	var n := int(Quality.spec().get("sky_weather", 0))
+	var n := int(Quality.value("sky_weather"))
 	if n <= 0:
 		return
 	_rain = _particles(n * 2, 1.1, Vector3(0.0, -18.0, 0.0), Color(0.75, 0.85, 1.0, 0.5), Vector3(0.014, 0.6, 0.014))
@@ -409,6 +423,10 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 			_flash = 1.0
 			_flash_again = 0.12 + _rng.randf() * 0.1
 			_bolt_in = _rng.randf_range(4.0, 11.0)
+	if Settings.reduce_motion:
+		_bolt = Settings.calm(_bolt) # (M8b: a storm without the flashes: no light spike, no white screen)
+		_flash = Settings.calm(_flash)
+		_flash_again = -1.0
 	if _bolt > 0.0:
 		sun.light_energy += _bolt * 2.5
 		env.ambient_light_energy += _bolt * 1.2
