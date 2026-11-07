@@ -91,7 +91,7 @@ pnpm build                     # the server bundle (the native client is built b
 DATABASE_URL=postgres://… node packages/server/dist/server/src/main.js   # the server and the download page on :8080
 ```
 
-Or use the container image built by GitHub Actions: `ghcr.io/tobiasbernting/lilla-garden:latest`.
+Or use the container image built by GitHub Actions: `ghcr.io/tobiasbernting/varldstradet:latest` (a new package is private by default: make it public in the package settings, or log the server in to ghcr, before another machine can pull it; it is deliberately not the old farm's `lilla-garden` image).
 It needs `DATABASE_URL` and listens on 8080; it holds only the server (no game files: the game is downloaded from the
 GitHub Release). Migrations run on boot.
 The public farm takes each new `:latest` the night after it's built (03:30 Swedish time): it dumps the database,
@@ -126,7 +126,7 @@ The game needs one server that everybody connects to; the family's runs on a sma
 the same Cloudflare tunnel as the old farm, as a second instance next to it. What the instance looks like, so that you
 can run another one yourself:
 
-- **The game** is the container built from this repository (`ghcr.io/tobiasbernting/lilla-garden`, see "Production";
+- **The game** is the container built from this repository (`ghcr.io/tobiasbernting/varldstradet`, see "Production";
   check the tag the deploy uses) or `pnpm build && node packages/server/dist/server/src/main.js`. One process, one
   Postgres database of its own (never the old farm's), `DATABASE_URL`, and `PARENT_PASSWORD` (12+ characters).
 - **Players** come in over the internet through the tunnel at `spel.<your domain>`: set `PUBLIC_URL=https://spel.<your

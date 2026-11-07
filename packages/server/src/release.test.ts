@@ -54,4 +54,12 @@ describe('the release path: what the workflow builds and what the download page 
     expect(workflow).toMatch(/workflow_dispatch:\n\s+inputs:\n\s+pictures:\n\s+description: [^\n]+\n\s+type: boolean\n\s+default: true/);
     expect(job('pictures')).toMatch(/if: github\.event_name == 'workflow_dispatch' && inputs\.pictures/);
   });
+
+  it('the image workflow never pushes to the old farm\'s image (lilla-garden), which the running farm pulls as :latest', () => {
+    const docker = readFileSync(resolve(root, '.github/workflows/docker.yml'), 'utf8');
+    const image = /IMAGE: (\S+)/.exec(docker)?.[1];
+    expect(image).toBe('ghcr.io/tobiasbernting/varldstradet');
+    expect(docker).not.toMatch(/lilla-garden/);
+    expect(readFileSync(resolve(root, 'README.md'), 'utf8')).not.toMatch(/ghcr\.io\/tobiasbernting\/lilla-garden/);
+  });
 });
