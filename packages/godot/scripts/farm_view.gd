@@ -928,14 +928,21 @@ func _street_tile(g: _Surf, x: int, y: int, t: String, vary: float) -> void:
 		"road":
 			_cobble_tile(g, x, y, variant, vary)
 		"crossing":
-			_cobble_tile(g, x, y, 40, vary)
-			# two big pale slabs laid across the street the way people walk over it (stripes run with the street)
+			_px_rect(g, x, y, 0.0, 0.0, 16.0, 16.0, 0.0, MORTAR)
+			# a continuous band of pale slabs across the street (no stripes): the whole tile is slab, with a faint joint down the
+			# middle (the walking way) and a shaded edge where it meets the cobbles at either end
 			var along_x := not _is_street(_terrain_at(x, y - 1)) or not _is_street(_terrain_at(x, y + 1))
-			for o in [1, 9]:
-				var r: Array = [2, o, 12, 6] if along_x else [o, 2, 6, 12]
-				_px_rect(g, x, y, r[0], r[1], r[2], r[3], 0.016, Color("#ddd6c4"))
-				_px_rect(g, x, y, r[0], r[1], r[2], 1.0, 0.02, Color("#efe9d9"))
-				_px_rect(g, x, y, r[0], r[1] + r[3] - 1, r[2], 1.0, 0.02, Color("#a9a191"))
+			var slab := Color("#ddd6c4")
+			slab = Color(slab.r * vary, slab.g * vary, slab.b * vary)
+			_px_rect(g, x, y, 0.0, 0.0, 16.0, 16.0, 0.016, slab)
+			if along_x:
+				_px_rect(g, x, y, 0.0, 7.5, 16.0, 1.0, 0.02, Color("#bdb5a2"))
+				_px_rect(g, x, y, 0.0, 0.0, 16.0, 1.0, 0.02, Color("#a9a191"))
+				_px_rect(g, x, y, 0.0, 15.0, 16.0, 1.0, 0.02, Color("#a9a191"))
+			else:
+				_px_rect(g, x, y, 7.5, 0.0, 1.0, 16.0, 0.02, Color("#bdb5a2"))
+				_px_rect(g, x, y, 0.0, 0.0, 1.0, 16.0, 0.02, Color("#a9a191"))
+				_px_rect(g, x, y, 15.0, 0.0, 1.0, 16.0, 0.02, Color("#a9a191"))
 		"sidewalk":
 			var v := int(_h2(x, y, 22) * 4.0) % 4
 			_px_rect(g, x, y, 0.0, 0.0, 16.0, 16.0, 0.0, Color("#8a8478"))

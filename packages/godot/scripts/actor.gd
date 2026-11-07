@@ -94,6 +94,7 @@ var is_placeholder := false
 var full_turn := false
 var _lantern: OmniLight3D = null
 var _lantern_at := Vector3.ZERO
+var _wants_lantern := false
 var _vframes: Array[ArrayMesh] = []
 var _vmat: ShaderMaterial = null
 var _vframe := -1
@@ -255,7 +256,14 @@ func set_voxel(frames: Array[ArrayMesh], key: String) -> bool:
 ## +x forward). It only shines at night (night_lift).
 func set_lantern(at: Vector3) -> void:
 	_lantern_at = at
-	if _lantern == null and Quality.preset != "lag": # (Låg has no lights of its own, the lamps' glow billboards stay)
+	_wants_lantern = true
+	_sync_lantern()
+
+
+## The light exists on Mellan and Hög and not on Låg, and follows a change of preset while the actor lives.
+func _sync_lantern() -> void:
+	var on := _wants_lantern and Quality.preset != "lag"
+	if on and _lantern == null:
 		_lantern = OmniLight3D.new()
 		_lantern.light_color = Color(1.0, 0.8, 0.45)
 		_lantern.omni_range = 3.2
@@ -263,6 +271,9 @@ func set_lantern(at: Vector3) -> void:
 		_lantern.shadow_enabled = false
 		_lantern.visible = false
 		add_child(_lantern)
+	elif not on and _lantern != null:
+		_lantern.queue_free()
+		_lantern = null
 
 
 func has_voxel(key: String) -> bool:
@@ -303,6 +314,7 @@ func _animate_voxel(facing: String, moving: bool, delta: float) -> void:
 	# standing breathes: the height swells and settles by 2 %
 	var breath := 0.0 if moving else 0.02 * sin(_vt * 2.4)
 	voxel.basis = Basis(Vector3.UP, _vyaw) * Basis.from_scale(Vector3(1.0, 1.0 + breath, 1.0))
+	_sync_lantern()
 	if _lantern != null:
 		_lantern.position = voxel.position + Basis(Vector3.UP, _vyaw) * _lantern_at
 		_lantern.light_energy = 1.1 * night_lift
