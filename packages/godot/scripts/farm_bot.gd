@@ -463,7 +463,7 @@ func _bag_and_chest() -> void:
 ## Walk to the forest in the north and pet a wild animal (the heart and the server's answer). Foxes and hedgehogs
 ## are tame enough; wolves, bears and the roaming monsters bite, so the bot keeps away from them and goes home to try
 ## again if it faints.
-var _startle: Dictionary = {} ## the wild animal being watched: id, home (px), away (most tiles from home), back (tiles from home when next to me)
+var _startles: Dictionary = {} ## the wild animals watched: id -> {home (px), away (most tiles from home), back (tiles from home when next to me)}
 
 
 func _pet_wild() -> void:
@@ -495,8 +495,9 @@ func _pet_wild() -> void:
 				await _wait(0.5)
 				continue
 			var wild_id := str(int(a.get("id", 0)))
-			if _startle.is_empty() or str(_startle["id"]) != wild_id:
-				_startle = {"id": wild_id, "home": _animal_px(a), "away": 0.0, "back": INF}
+			if not _startles.has(wild_id): # (every animal watched gets its own record: the nearest one changes as they run)
+				_startles[wild_id] = {"home": _animal_px(a), "away": 0.0, "back": INF}
+			var rec: Dictionary = _startles[wild_id]
 			await _goto(spot["stand"], 4.0)
 			# M7b: a hero who walks at a wild animal startles it (the server's tickStartle); standing still, it creeps up again
 			# and can be petted. Watch it run off and come back (`_startle`), and wait for it quietly.
@@ -504,13 +505,13 @@ func _pet_wild() -> void:
 				var b := _animal_by_id(wild_id)
 				if b.is_empty():
 					return true
-				var d: float = _animal_px(b).distance_to(_startle["home"]) / Data.tile()
-				_startle["away"] = maxf(float(_startle["away"]), d)
+				var d: float = _animal_px(b).distance_to(rec["home"]) / Data.tile()
+				rec["away"] = maxf(float(rec["away"]), d)
 				var tile := _animal_tile(b)
 				var here := _my_tile()
 				var adjacent := absi(tile.x - here.x) + absi(tile.y - here.y) == 1
-				if adjacent and float(_startle["away"]) >= 2.5:
-					_startle["back"] = minf(float(_startle["back"]), d)
+				if adjacent and float(rec["away"]) >= 2.5:
+					rec["back"] = minf(float(rec["back"]), d)
 				return adjacent, 16.0)
 			a = _animal_by_id(wild_id)
 			if a.is_empty():
@@ -536,8 +537,13 @@ func _pet_wild() -> void:
 			if model.my_area_key() != "farm":
 				await _leave_by("s", "farm")
 			await _wait(4.0)
-	_step("startle", float(_startle.get("away", 0.0)) >= 2.5 and float(_startle.get("back", INF)) <= 4.0,
-		"the wild animal ran %.1f tiles from where it stood when I walked at it, and was back within %.1f tiles of it (next to me, to be petted) after I stood still" % [float(_startle.get("away", 0.0)), float(_startle.get("back", INF))])
+	# the animal that ran furthest and came back nearest is the one that counts (any of those watched)
+	var best: Dictionary = {"away": 0.0, "back": INF}
+	for r in _startles.values():
+		if float(r["away"]) >= 2.5 and float(r["back"]) <= 4.0 and float(r["away"]) > float(best["away"]):
+			best = r
+	_step("startle", float(best["away"]) >= 2.5 and float(best["back"]) <= 4.0,
+		"a wild animal ran %.1f tiles from where it stood when I walked at it, and was back within %.1f tiles of it (next to me, to be petted) after I stood still (%d watched)" % [float(best["away"]), float(best["back"]), _startles.size()])
 	await _sounds_any("the forest", ["birds", "crickets", "rain", "wind_hard"]) # (not wind_soft: it has a floor and always sounds)
 	_step("pet", petted, "a wild animal was brushed (%s) and petted, %d hearts seen in all (Elsa's and Sven's are two of them)" % [str(brushed), int(_report["hearts_seen"])])
 
