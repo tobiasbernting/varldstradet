@@ -19,10 +19,15 @@ var _actors: Array[Actor] = []
 
 func _ready() -> void:
 	var names: Array = SETS["undead"]
+	var props: Array = []
 	var zoom := 0.95
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--set="):
 			names = SETS.get(a.substr(6), names)
+		elif a.begins_with("--props="):
+			# object kinds of the wild maps, drawn as the farm view draws them (SPECS, wild_meshes.gd), in rows by footprint
+			props = a.substr(8).split(",")
+			names = []
 		elif a.begins_with("--sheets="):
 			names = a.substr(9).split(",")
 		elif a.begins_with("--zoom="):
@@ -41,6 +46,9 @@ func _ready() -> void:
 	sun.rotation_degrees = Vector3(-55, -35, 0)
 	sun.light_energy = 1.1
 	add_child(sun)
+	if not props.is_empty():
+		_props(props, zoom)
+		return
 	var n := names.size() + 1
 	for i in range(names.size()):
 		var a := Actor.new()
@@ -67,6 +75,64 @@ func _ready() -> void:
 	cam.position = Vector3(0.0, 9.2 * zoom, 8.0 * zoom)
 	cam.look_at(Vector3(0.0, 0.5, -0.5))
 	cam.make_current()
+
+
+## `--props=a,b,c`: the object kinds standing side by side in rows (a kind's footprint decides its room), lit like day, with the
+## camera pulled back to hold them all. `--zoom` scales the camera distance.
+func _props(kinds: Array, zoom: float) -> void:
+	var assets := FarmAssets.new()
+	var row_w := 15.0
+	var x := 0.0
+	var z := 0.0
+	var row_d := 1.0
+	var max_x := 0.0
+	var cells: Array = []
+	for k in kinds:
+		var kind := str(k)
+		var def := Data.object_def(kind)
+		var w := float(def.get("w", 1))
+		var h := float(def.get("h", 1))
+		if x > 0.0 and x + w > row_w:
+			x = 0.0
+			z += row_d + 0.9
+			row_d = 1.0
+		cells.append([kind, x + w * 0.5, z + h * 0.5, w, h])
+		x += w + 0.7
+		row_d = maxf(row_d, h)
+		max_x = maxf(max_x, x - 0.7)
+	var depth := z + row_d
+	for c in cells:
+		var spec := assets.spec(c[0])
+		var list: Array = spec.get("m", [])
+		if list.is_empty():
+			continue
+		for v in range(maxi(1, int(spec.get("show", 1)))):
+			var m := assets.mesh(str(list[0]))
+			if m == null:
+				continue
+			var mi := MeshInstance3D.new()
+			mi.mesh = m
+			mi.material_override = assets.prop_mat
+			add_child(mi)
+			mi.position = Vector3(float(c[1]) - max_x * 0.5, float(spec.get("lift", 0.0)), float(c[2]) - depth * 0.5)
+			var lab := Label3D.new()
+			lab.text = c[0]
+			lab.font_size = 28
+			lab.pixel_size = 0.012
+			lab.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+			lab.no_depth_test = true
+			lab.modulate = Color.WHITE
+			lab.outline_size = 8
+			add_child(lab)
+			lab.position = Vector3(float(c[1]) - max_x * 0.5, 0.05, float(c[2]) + float(c[4]) * 0.5 - depth * 0.5 + 0.35)
+	var span := maxf(max_x * 0.5, depth * 1.0) * 0.8 + 2.0
+	var cam := Camera3D.new()
+	cam.fov = 40.0
+	add_child(cam)
+	cam.position = Vector3(0.0, span * 1.05 * zoom, span * 0.9 * zoom + 1.5)
+	cam.look_at(Vector3(0.0, 0.5, 0.0))
+	cam.make_current()
+	set_meta("assets", assets)
 
 
 func _process(delta: float) -> void:
