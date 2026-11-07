@@ -1249,7 +1249,7 @@ describe('Smedjan', () => {
     const { world, p } = atStina();
     p.saga!.gear = { weapon: 'runsvard' };
     expect(devKit(world, p.id).length).toBeGreaterThan(0);
-    expect([count(p, 'paper'), count(p, 'paint_red'), count(p, 'wall_wood'), p.coins]).toEqual([2, 2, 1, 400]);
+    expect([count(p, 'paper'), count(p, 'paint_red'), count(p, 'wall_wood'), count(p, 'wall_stone'), count(p, 'door'), count(p, 'window'), p.coins]).toEqual([2, 2, 2, 1, 1, 1, 400]);
     for (const n of [1, 2]) {
       expect(said(forgeGear(world, p.id, 'runsvard'), `till +${n}`)).toBe(true);
     }

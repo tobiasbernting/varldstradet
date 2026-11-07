@@ -113,12 +113,36 @@ func _fill() -> void:
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	actions.add_child(sp)
 	actions.add_child(make_button("✔ " + Strings.t("paintOk"), _done, "ok"))
-	# the focus walks canvas -> colours -> tools -> the buttons below
-	canvas.focus_neighbor_right = _swatches["0"].get_path()
-	canvas.focus_neighbor_bottom = actions.get_child(0).get_path()
+	_wire_focus(grid, actions)
 	_pick_colour(canvas.colour if canvas.colour != "" else "0")
 	_pick_tool("brush")
 	_fit()
+
+
+## Focus for a pad or the keys, set explicitly on all four sides of every control (the engine's guess would take the nearest
+## in space): the canvas's edges lead to the colours (right), "Rensa" (down) and, kept where they are, left and up; the colours
+## are a grid of four columns that leads left to the canvas and down to the tools; the tools go down in turn to "Klar"; "Rensa"
+## and "Klar" lead up to the canvas and the tools and down to "Avbryt" (the window's close button), which leads back up to "Klar".
+func _wire_focus(grid: GridContainer, actions: HBoxContainer) -> void:
+	var sw: Array = grid.get_children()
+	var tools: Array = [_tools["brush"], _tools["fill"], _tools["eraser"]]
+	var clear_b: Control = actions.get_child(0)
+	var ok_b: Control = actions.get_child(2)
+	var close_b: Control = _foot.get_node("Close")
+	var set_n := func(c: Control, l: Control, r: Control, u: Control, d: Control) -> void:
+		c.focus_neighbor_left = (l if l != null else c).get_path()
+		c.focus_neighbor_right = (r if r != null else c).get_path()
+		c.focus_neighbor_top = (u if u != null else c).get_path()
+		c.focus_neighbor_bottom = (d if d != null else c).get_path()
+	set_n.call(canvas, null, sw[0], null, clear_b)
+	for i in range(sw.size()):
+		var col := i % 4
+		set_n.call(sw[i], canvas if col == 0 else sw[i - 1], sw[i + 1] if col < 3 and i + 1 < sw.size() else null, sw[i - 4] if i >= 4 else null, sw[i + 4] if i + 4 < sw.size() else tools[0])
+	for i in range(tools.size()):
+		set_n.call(tools[i], canvas, null, sw[8] if i == 0 else tools[i - 1], tools[i + 1] if i + 1 < tools.size() else ok_b)
+	set_n.call(clear_b, null, ok_b, canvas, close_b)
+	set_n.call(ok_b, clear_b, null, tools[2], close_b)
+	set_n.call(close_b, null, null, ok_b, null)
 
 
 func _on_open() -> void:

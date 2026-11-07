@@ -858,7 +858,7 @@ Smed-Stina's forge (the rules are the server's: `forgeGear`, `craftGear`, `forge
 - **Refusals** are the server's toasts (not near her, not owned, short of material or kronor); the window does not repeat them.
 - **Gear window.** A forged piece shows "Järnyxa +2" and its stars; the sums (`Gear.stats`) already counted the forge level.
 - **Check and `dev kit`.** The farmer bot's new `smed` step (`farm_bot_home.gd`, `smedjan()`) takes `{t:'dev', a:'kit'}` (DEV_TELEPORT only: 20 stone, 10 gold,
-  4 crystal, 400 kr, two papers, two buckets of red paint and a wall piece; tested in `saga.test.ts`), opens Stina's window and the forge, asserts the worn weapon's "now" and "next"
+  4 crystal, 400 kr, two papers, two buckets of red paint and a run of wall pieces (wood ×2, stone, door, window); tested in `saga.test.ts`), opens Stina's window and the forge, asserts the worn weapon's "now" and "next"
   lines against the numbers computed from the item data, forges twice and asserts the server's forge level, the bag and the purse against `FORGE_COSTS`, that the window then
   says the new numbers, that level 3 is out of reach (the button is off), the server's own refusal for a piece I do not own, that a starter piece is smithed
   and the gear window says "+2" with its stars.
@@ -882,8 +882,12 @@ The server already did all of it (`paint` makes a painted tavla of a paper, `dat
 - **Colours.** `farm_view.gd` asks `farm_assets.gd` for `paint:<mesh>:<variant>` when the server's `variant` is above 0 on a wall, a door, a window or the house: walls,
   doors and windows are built again in the bucket's colour, and the farmhouse keeps its roof and timber and recolours the model's cool-grey plaster vertices (shade
   kept, so the plaster's ambient occlusion still reads). The old code ignored `variant` there.
-- **Check.** The farmer bot's `paint` step (`farm_bot_home.gd`, after the farmhouse): `dev kit` (two papers, two buckets, a wall piece), a paper opens the screen,
-  an empty drawing is refused, a drawing is made through the canvas's own input (a mouse press and drag, the arrows and accept, the fill, the eraser) and sent, the
-  server's bag has a `painting` whose `data` is exactly the cells drawn, hung on the grass the frame's `Picture` texture equals the server's `data` cell by cell, a
-  wall piece painted with a bucket has the server's `variant` and is drawn with the mesh `paint:wall_wood:1` (red), and so is the farmhouse. `docs/paint-*.png` are
-  the screen, the hung picture, the red wall and the red house.
+- **Focus.** `PaintWindow._wire_focus` sets all four focus neighbours of every control: the canvas's right edge leads to the colours, its bottom to "Rensa"; the colours
+  are a grid whose left column leads back to the canvas and whose last row leads to the tools; the tools lead down to "Klar", which leads down to "Avbryt".
+- **Check.** The farmer bot's `paint` step (`farm_bot_home.gd`, after the farmhouse; `dev kit`: two papers, two buckets, wall wood ×2, stone, a door, a window) works through
+  the client's real input: a paper opens the screen, an empty drawing is refused, a mouse press and drag, the wheel and `slot_next` step the colour (the hotbar keeps its
+  square), then InputEventActions through the viewport (`Input.parse_input_event`) so the focus navigation runs: accept paints, the cursor leaves the canvas for the
+  colours, a colour is picked, the tools are reached and fill chosen, "Klar" is reached from the canvas by focus and pressed. The server's bag has a `painting` whose `data` is
+  exactly the cells drawn; hung on the grass the frame's `Picture` texture equals `data` cell by cell; a run of wood wall, stone wall, door and window painted with one bucket
+  all have the server's `variant` (it flood-paints) and are drawn with `paint:<kind>:1` meshes with red vertices; the farmhouse's recoloured vertices are sampled (hundreds turned
+  red, none that were not plaster, the roof and timber unchanged). `docs/paint-*.png` are the screen, the hung picture, the red wall run and the red house.

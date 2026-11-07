@@ -355,7 +355,7 @@ native client draws only Draugkryptan's way in (the arch), so the switch lets th
 the other eight dungeons ask the server to put you inside, as their arches would, making you a Krigare first if you
 have no class (and, since M4c, the farmer bot's `dev starter` hands a hero with a class the starter weapon Smed-Stina's forge
 makes, which the gear window can then put on; `dev kit` hands anyone the materials and kronor for two forge levels and a starter piece, two papers, two
-buckets of red paint and a wall piece, for the smithy and paint checks). Draugkryptan itself needs no switch. Never set it on the real farm.
+buckets of red paint and a run of wall pieces, for the smithy and paint checks). Draugkryptan itself needs no switch. Never set it on the real farm.
 
 - *Throwaway, nothing to set up* (no password, no database, nothing saved; a home network only):
 
