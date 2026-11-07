@@ -167,7 +167,7 @@ without a server (`scenes/lineup.tscn`, `scripts/demo_lineup.gd`).
 
 | Commit | What |
 | --- | --- |
-| 4032327 | All 44 mobs and bosses exported as `mob_<id>` sheets (39 were missing) |
+| 4032327 | The 44 `mob_<id>` sheets main already had are used for the creatures in 3D |
 | 56b9718 | `voxel_body.gd` + `voxel_body.gdshader`: a creature mesh extruded from a sprite frame (pillow depth profile, the shallower of row and column, floor 1.5 px, cap 3.5 px; outline pixels only on the front and back; per-face shading baked into the vertex colours), cached per sheet and frame |
 | e827ce2 | `Actor.set_voxel`: frame swapping, yaw facing (at most 35° toward a walk up or down the screen), breathing, hit flash, lunge, lying on its side when fallen, the night lift; `world.gd` gives every animal and monster a voxel body under the flag; vehicles stay billboards |
 | 7cf12f7 | KayKit Skeletons (CC0, GitHub `KayKit-Character-Pack-Skeletons-1.0`, 5.5 MB, the Rogue's and Minion's animations stripped by `tools/strip_glb_animations.py`): `skelett` Warrior 1.45 m, `gravvaktare` Warrior 2.5 m, `draugkung` Rogue 2.75 m with a purple cloak and green eyes, `vandrardraug`/`sjodraug` tinted Minions, `gengangare` a 40 % Minion; idle, walk, attack on the swing, Hit_A on the flash, Death_A when fallen (`skeleton_figure.gd`, the `KINDS` table) |

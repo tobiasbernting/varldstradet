@@ -36,7 +36,7 @@ const PRESETS := {
 ##  smoke         puffs from a chimney (per chimney);   mist  low drifting mist at dawn;
 ##  window_light  0 the windows' glow only, 1 + a pool of light on the ground in front of them, 2 + it flickers like a fire
 ## The screen grade (screen_grade.gd: tone, vignette, the night's navy and a warm lift) is on for every preset: it is one
-## cheap full-screen pass, so it has no toggle here (Mellan and Hög pay it, Låg runs its flat variant).
+## cheap full-screen pass, so it has no toggle here (Låg pays it too).
 ## The living world's sound and wildlife (M7b), per preset (the sound ones are also switched in Settings: steps_on, ambience_on):
 ##  steps      how many footsteps can sound at once (the hero's and the others'; 0 is off). Låg: 3, so the hero and two others
 ##  ambience   0 off, 1 (Låg) only the three loudest layers of the place's soundscape, chosen by place, hour and weather, 2 all
