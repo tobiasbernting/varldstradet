@@ -23,8 +23,8 @@ const GROUND := {
 	"grass": [Color("#64a848"), 1.0, 0.0], "soil": [Color("#6e4a2c"), 0.8, 0.0], "soil_wet": [Color("#4c3220"), 0.5, 0.0],
 	"sand": [Color("#e2d196"), 0.7, 0.0], "path_stone": [Color("#a7a49a"), 0.35, 0.0], "path_dirt": [Color("#a98a58"), 0.6, 0.0],
 	"floor_wood": [Color("#a8793f"), 0.0, 0.0], "floor_stone": [Color("#8c8a84"), 0.2, 0.0], "snow": [Color("#f0f4f8"), 1.0, 0.0],
-	"gravel": [Color("#9a968c"), 0.5, 0.0], "ice": [Color("#bfe3f2"), 0.2, 0.0], "road": [Color("#4d4f56"), 0.3, 0.0],
-	"sidewalk": [Color("#b5b2aa"), 0.3, 0.0], "crossing": [Color("#4d4f56"), 0.3, 0.0], "rail": [Color("#8a8278"), 0.4, 0.0],
+	"gravel": [Color("#9a968c"), 0.5, 0.0], "ice": [Color("#bfe3f2"), 0.2, 0.0], "road": [Color("#9c9184"), 0.3, 0.0],
+	"sidewalk": [Color("#bcb5a4"), 0.3, 0.0], "crossing": [Color("#9c9184"), 0.3, 0.0], "rail": [Color("#8f8a80"), 0.4, 0.0],
 	"dirt": [Color("#7a5a3a"), 0.7, 0.0], "stone": [Color("#7c7d78"), 0.3, 0.0], "ash": [Color("#5a5654"), 0.5, 0.0],
 	"mud": [Color("#5a4630"), 0.4, 0.0], "moss": [Color("#5f8a48"), 0.8, 0.0], "redsand": [Color("#c8704a"), 0.4, 0.0],
 	"candy": [Color("#f0a8c8"), 0.0, 0.0], "moon": [Color("#b8b6b0"), 0.0, 0.0], "crypt": [Color("#5a6257"), 0.0, 0.0],
@@ -333,14 +333,8 @@ func _build_ground_chunk(ck: Vector2i) -> void:
 					for i in range(4):
 						var k := 0.86 if i % 2 == 0 else 1.06
 						g.quad(Vector3(x, 0.0, y + 0.25 * i), Vector3(x, 0.0, y + 0.25 * (i + 1)), Vector3(x + 1, 0.0, y + 0.25 * (i + 1)), Vector3(x + 1, 0.0, y + 0.25 * i), Color(col.r * k, col.g * k, col.b * k), float(def[1]), float(def[2]))
-				elif t == "crossing":
-					for i in range(4):
-						var kc := Color("#e8e4d8") if i % 2 == 0 else col
-						g.quad(Vector3(x + 0.25 * i, 0.0, y), Vector3(x + 0.25 * i, 0.0, y + 1), Vector3(x + 0.25 * (i + 1), 0.0, y + 1), Vector3(x + 0.25 * (i + 1), 0.0, y), kc, 0.3, 0.0)
-				elif t == "rail":
-					g.quad(Vector3(x, 0.0, y), Vector3(x, 0.0, y + 1), Vector3(x + 1, 0.0, y + 1), Vector3(x + 1, 0.0, y), col, float(def[1]), 0.0)
-					for rz in [0.3, 0.7]:
-						g.quad(Vector3(x, 0.02, y + rz - 0.04), Vector3(x, 0.02, y + rz + 0.04), Vector3(x + 1, 0.02, y + rz + 0.04), Vector3(x + 1, 0.02, y + rz - 0.04), Color("#6a6a70"), 0.0, 0.0)
+				elif t == "road" or t == "crossing" or t == "sidewalk" or t == "rail":
+					_street_tile(g, x, y, t, vary)
 				else:
 					g.quad(Vector3(x, 0.0, y), Vector3(x, 0.0, y + 1), Vector3(x + 1, 0.0, y + 1), Vector3(x + 1, 0.0, y), col, float(def[1]), float(def[2]))
 	var root := Node3D.new()
@@ -858,6 +852,116 @@ func set_dark(dark: float) -> void:
 			(mi.material_override as ShaderMaterial).set_shader_parameter("energy", float(g[1]) * k)
 			mi.visible = k > 0.02
 
+
+
+# ---------------------------------------------------------------------------
+# Köpingen's streets, as the browser drew them (art/src/world.ts): cobbles, flagstones, pale slabs, iron rails on ties
+
+const COBBLES := [Color("#a39a8c"), Color("#978d80"), Color("#ab9f90"), Color("#9c9184"), Color("#a09a92"), Color("#a8998a")]
+const MORTAR := Color("#6a6056")
+const KERB := Color("#4e463e")
+## The flagstones of a pavement tile: [x, y, w, h] in sixteenths, four ways of cutting the slabs.
+const FLAGS := [
+	[[1, 1, 8, 6], [10, 1, 6, 6], [1, 8, 4, 8], [6, 8, 10, 8]],
+	[[1, 1, 7, 9], [9, 1, 7, 4], [9, 6, 7, 10], [1, 11, 7, 5]],
+	[[1, 1, 15, 8], [1, 10, 5, 6], [7, 10, 9, 6]],
+	[[1, 1, 10, 5], [12, 1, 4, 15], [1, 7, 10, 9]],
+]
+const SLABS := [Color("#c2baa8"), Color("#b8b09e"), Color("#cbc4b2"), Color("#b4ad9d"), Color("#bfb5a0")]
+## The cobbles' rows: where each row starts (in sixteenths) and how wide its three stones are.
+const COBBLE_ROWS := [[0, [6, 5, 5]], [3, [5, 6, 5]], [1, [5, 5, 6]], [4, [6, 5, 5]]]
+
+
+## A rectangle of the ground in sixteenths of the tile at (x, y), `lift` metres above it.
+func _px_rect(g: _Surf, x: int, y: int, px: float, py: float, pw: float, ph: float, lift: float, col: Color) -> void:
+	var x0 := x + px / 16.0
+	var z0 := y + py / 16.0
+	var x1 := x0 + pw / 16.0
+	var z1 := z0 + ph / 16.0
+	g.quad(Vector3(x0, lift, z0), Vector3(x0, lift, z1), Vector3(x1, lift, z1), Vector3(x1, lift, z0), col, 0.3, 0.0)
+
+
+func _is_street(t: String) -> bool:
+	return t == "road" or t == "crossing"
+
+
+## Cobbles: rows of stones over mortar, the same stones in the same places on every tile (so they run on across the
+## tiles), only their colours change; a dark kerb along the pavement. The stones wrap round the tile edge like the browser's.
+func _cobble_tile(g: _Surf, x: int, y: int, seed_v: int, vary: float) -> void:
+	_px_rect(g, x, y, 0.0, 0.0, 16.0, 16.0, 0.0, MORTAR)
+	for r in range(4):
+		var row: Array = COBBLE_ROWS[r]
+		var cx: int = row[0]
+		var widths: Array = row[1]
+		for i in range(3):
+			var w: int = widths[i]
+			var base: Color = COBBLES[absi(r * 7 + i * 3 + seed_v * 11 + seed_v * 5 + r + i) % COBBLES.size()]
+			base = Color(base.r * vary, base.g * vary, base.b * vary)
+			var sw := w - 1
+			# a stone: its top row lighter, its bottom row darker (the sprite's three rows); wrapping at the tile edge
+			for part in range(2):
+				var sx0 := cx if part == 0 else cx - 16
+				if part == 1 and cx + sw <= 16:
+					continue
+				var x0 := maxi(sx0, 0)
+				var x1 := mini(sx0 + sw, 16)
+				if x1 <= x0:
+					continue
+				_px_rect(g, x, y, x0, r * 4, x1 - x0, 1, 0.012, base.lightened(0.12))
+				_px_rect(g, x, y, x0, r * 4 + 1, x1 - x0, 1, 0.012, base)
+				_px_rect(g, x, y, x0, r * 4 + 2, x1 - x0, 1, 0.012, base.darkened(0.2))
+			cx += w
+	# the kerb: where the pavement (or anything that is not street) begins
+	if not _is_street(_terrain_at(x, y - 1)) and _terrain_at(x, y - 1) != "":
+		_px_rect(g, x, y, 0.0, 0.0, 16.0, 1.0, 0.02, KERB)
+	if not _is_street(_terrain_at(x, y + 1)) and _terrain_at(x, y + 1) != "":
+		_px_rect(g, x, y, 0.0, 15.0, 16.0, 1.0, 0.02, KERB)
+	if not _is_street(_terrain_at(x - 1, y)) and _terrain_at(x - 1, y) != "":
+		_px_rect(g, x, y, 0.0, 0.0, 1.0, 16.0, 0.02, KERB)
+	if not _is_street(_terrain_at(x + 1, y)) and _terrain_at(x + 1, y) != "":
+		_px_rect(g, x, y, 15.0, 0.0, 1.0, 16.0, 0.02, KERB)
+
+
+func _street_tile(g: _Surf, x: int, y: int, t: String, vary: float) -> void:
+	var variant := int(_h2(x, y, 21) * 3.0) % 3
+	match t:
+		"road":
+			_cobble_tile(g, x, y, variant, vary)
+		"crossing":
+			_px_rect(g, x, y, 0.0, 0.0, 16.0, 16.0, 0.0, MORTAR)
+			# a continuous band of pale slabs across the street (no stripes): the whole tile is slab, with a faint joint down the
+			# middle (the walking way) and a shaded edge where it meets the cobbles at either end
+			var along_x := not _is_street(_terrain_at(x, y - 1)) or not _is_street(_terrain_at(x, y + 1))
+			var slab := Color("#ddd6c4")
+			slab = Color(slab.r * vary, slab.g * vary, slab.b * vary)
+			_px_rect(g, x, y, 0.0, 0.0, 16.0, 16.0, 0.016, slab)
+			if along_x:
+				_px_rect(g, x, y, 0.0, 7.5, 16.0, 1.0, 0.02, Color("#bdb5a2"))
+				_px_rect(g, x, y, 0.0, 0.0, 16.0, 1.0, 0.02, Color("#a9a191"))
+				_px_rect(g, x, y, 0.0, 15.0, 16.0, 1.0, 0.02, Color("#a9a191"))
+			else:
+				_px_rect(g, x, y, 7.5, 0.0, 1.0, 16.0, 0.02, Color("#bdb5a2"))
+				_px_rect(g, x, y, 0.0, 0.0, 1.0, 16.0, 0.02, Color("#a9a191"))
+				_px_rect(g, x, y, 15.0, 0.0, 1.0, 16.0, 0.02, Color("#a9a191"))
+		"sidewalk":
+			var v := int(_h2(x, y, 22) * 4.0) % 4
+			_px_rect(g, x, y, 0.0, 0.0, 16.0, 16.0, 0.0, Color("#8a8478"))
+			var slabs: Array = FLAGS[v]
+			for i in range(slabs.size()):
+				var s: Array = slabs[i]
+				var c: Color = SLABS[(v * 3 + i * 2) % SLABS.size()]
+				c = Color(c.r * vary, c.g * vary, c.b * vary)
+				_px_rect(g, x, y, s[0], s[1], s[2], s[3], 0.012, c)
+				_px_rect(g, x, y, s[0], s[1], s[2], 1.0, 0.016, c.lightened(0.1))
+				_px_rect(g, x, y, s[0], s[1] + s[3] - 1, s[2], 1.0, 0.016, c.darkened(0.1))
+		"rail":
+			# a bed of gravel, sleepers and two iron rails along the track
+			_px_rect(g, x, y, 0.0, 0.0, 16.0, 16.0, 0.0, Color("#8f8a80"))
+			for tx in [1, 5, 9, 13]:
+				_px_rect(g, x, y, tx, 3.0, 2.0, 10.0, 0.012, Color("#5a3d20"))
+			for ry in [5, 10]:
+				_px_rect(g, x, y, 0.0, ry, 16.0, 1.0, 0.03, Color("#b8b8c0"))
+				_px_rect(g, x, y, 0.0, ry + 1, 16.0, 1.0, 0.03, Color("#6e6e78"))
 
 # ---------------------------------------------------------------------------
 # Counters for the HUD and the bench

@@ -1685,6 +1685,37 @@ describe('vilda djur skräms och kommer tillbaka (M7b)', () => {
     expect(other.a.haunt).toBeUndefined();
   });
 
+  it('a calmed animal creeps to a tile the hero can face (never a diagonal one) and stays there while the hero stands still', () => {
+    for (const deg of [0, 30, 45, 60, 90, 135, 180, 225, 270, 315]) {
+      const { world, p, a } = outdoors('hare', 2);
+      const r = 4.5 * TILE;
+      a.x = p.x + Math.cos((deg * Math.PI) / 180) * r;
+      a.y = p.y + Math.sin((deg * Math.PI) / 180) * r;
+      a.haunt = { x: a.x, y: a.y }; // (it has been startled before)
+      p.moving = false;
+      let adjacent = 0;
+      for (let i = 0; i < 400; i++) {
+        tick(world, 100, at(1_000_000 + i * 100));
+        if (i >= 200) {
+          const off = Math.abs(Math.floor(a.x / TILE) - Math.floor(p.x / TILE)) + Math.abs(Math.floor(a.y / TILE) - Math.floor(p.y / TILE));
+          if (off === 1) adjacent++;
+        }
+      }
+      expect(`${deg}: ${adjacent}`).toBe(`${deg}: 200`); // in the hero's own row or column next to them, for the whole last 20 s
+    }
+  });
+
+  it('it takes the other side of the hero when the tile on its own side is blocked', () => {
+    const { world, p, area, a } = outdoors('hare', 2);
+    a.x = p.x + 4 * TILE; // straight to the right of the hero, who faces the water on that side
+    a.y = p.y + 1.5 * TILE;
+    a.haunt = { x: a.x, y: a.y };
+    area.terrain[tileIndex(area, Math.floor(p.x / TILE) + 1, Math.floor(p.y / TILE))] = 'water';
+    p.moving = false;
+    for (let i = 0; i < 400; i++) tick(world, 100, at(1_000_000 + i * 100));
+    expect([Math.floor(a.x / TILE) - Math.floor(p.x / TILE), Math.floor(a.y / TILE) - Math.floor(p.y / TILE)]).toEqual([0, 1]);
+  });
+
   it('a hero who stands still, an animal out of reach, a petted one, predators, pets and farm animals are left alone', () => {
     // standing still, 3 tiles away
     let t = outdoors('hare');

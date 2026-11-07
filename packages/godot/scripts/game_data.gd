@@ -358,6 +358,15 @@ func animal_sheet(species: String, baby: bool, jul: bool, variant: int) -> Strin
 	return n if not sheet(n).is_empty() else ""
 
 
+## How high a rider sits on a mount, in metres: the browser's rideInfo (7 px on a horse or a moped, 4 in the cart, where the
+## driver's bench is; the saga's mounts have their own, in the atlas).
+func ride_lift(species: String) -> float:
+	if species == "car":
+		return 4.0 / 16.0
+	var info: Dictionary = atlas.get("farm_animals", {}).get(species, {})
+	return float(info.get("ride_lift", 7.0)) / 16.0
+
+
 func npc_sheet(id: String) -> String:
 	return str(atlas.get("npcs", {}).get(id, {}).get("sheet", ""))
 
