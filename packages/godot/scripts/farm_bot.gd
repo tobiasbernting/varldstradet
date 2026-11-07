@@ -573,8 +573,8 @@ func _pet_wild() -> void:
 			if model.my_area_key() != "farm":
 				await _leave_by("s", "farm")
 			await _wait(4.0)
-	# an animal counts if the server made it bolt when I walked at it (it ran more than 3 tiles from where the bolt began) and it was
-	# later on its way back (at least 1.5 tiles nearer to that place than its farthest point). Which tile it ends in beside a quiet
+	# an animal counts if the server made it bolt when I walked at it (it ran 2 tiles or more from where the bolt began) and it was
+	# later on its way back (at least a tile nearer to that place than its farthest point). Which tile it ends in beside a quiet
 	# hero, and how soon, is sim.test.ts's to prove for every species, not this bot's
 	var best: Dictionary = {}
 	for r in _startles.values():
@@ -616,10 +616,11 @@ func _watch_startle(rec: Dictionary, animal: Dictionary) -> void:
 		rec["back"] = minf(float(rec["back"]), d)
 
 
-## Did this animal run off and head back? It bolted, got more than 3 tiles from where it began, and afterwards came at least 1.5
-## tiles nearer to that place than its farthest point.
+## Did this animal run off and head back? The proof that the server made it flee is the speed (`bolted`); the distances only guard
+## against nonsense: it got 2 tiles or more from where the bolt began (a bolt is 4 to 10 tiles; a slow one can end early) and afterwards
+## came at least a tile nearer to that place than its farthest point.
 static func _ran_and_returned(rec: Dictionary) -> bool:
-	return bool(rec["bolted"]) and float(rec["ran"]) > 3.0 and float(rec["back"]) <= float(rec["ran"]) - 1.5
+	return bool(rec["bolted"]) and float(rec["ran"]) >= 2.0 and float(rec["back"]) <= float(rec["ran"]) - 1.0
 
 
 ## For the startle step's detail: per animal watched, how far it was when the bot set off, how close the walk got, whether the
