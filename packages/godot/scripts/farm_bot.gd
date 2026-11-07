@@ -374,6 +374,16 @@ func _quests() -> void:
 			if shown != "<not drawn>":
 				farm_marks[str(id)] = shown
 		(_report["books"] as Dictionary)["marks_farm"] = farm_marks
+		# the negative case: the server says nobody wants anything today (a `quests` change with no wishes): every wish mark goes
+		var wishes: Array = world.model.quests().duplicate(true)
+		world.model.apply({"t": "changes", "changes": [{"t": "quests", "quests": []}]})
+		await _wait(0.6)
+		var cleared := {}
+		for id in farm_marks.keys():
+			cleared[id] = _home.mark_of(str(id))
+		(_report["books"] as Dictionary)["marks_farm_cleared"] = cleared
+		world.model.apply({"t": "changes", "changes": [{"t": "quests", "quests": wishes}]})
+		await _wait(0.3)
 	else:
 		_step("Elsas önskning", false, "no stone")
 	if model.count_item("wood") >= 5:

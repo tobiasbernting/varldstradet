@@ -145,6 +145,7 @@ interface FarmReport {
     elsa_after?: string;
     marks_village?: Record<string, string>;
     marks_farm?: Record<string, string>;
+    marks_farm_cleared?: Record<string, string>;
     journal?: { chapters: number; dungeons: number; levels: number; level: number; chapter: number; has_level_line: boolean; cleared: number };
     finds?: { total: number; found: number; groups: number; unknown: number; all_line: boolean };
     tracker?: { visible: boolean; lines: string[] };
@@ -405,9 +406,12 @@ function checkBooks(r: FarmReport, rec: ServerRecord): void {
   // on the farm, with Elsa's wish done: a mark exactly where the server's record has something for me, and none where it has nothing
   const farmMarks = Object.entries(r.books?.marks_farm ?? {});
   const farmWrong = farmMarks.filter(([npc, shown]) => (shown === '') !== (expectedMark(rec, npc) === ''));
-  const farmQuiet = farmMarks.filter(([, shown]) => shown === '').length;
-  check(farmMarks.length >= 3 && farmWrong.length === 0 && farmQuiet >= 1, `${r.name}: on the farm a villager shows a mark exactly when the server's record has something for me, and none otherwise (${farmMarks.map(([n, s]) => `${n} ${s || '-'}`).join(', ')}; ${farmQuiet} without)`);
-  check(marked >= 1, `${r.name}: some villagers show a mark and some, with nothing for me, show none (${marked} with, ${quiet} without)`);
+  check(farmMarks.length >= 3 && farmWrong.length === 0, `${r.name}: on the farm a villager shows a mark exactly when the server's record has something for me (${farmMarks.map(([n, s]) => `${n} ${s || '-'}`).join(', ')})`);
+  // and when the day's wishes are gone (a `quests` change with none) the marks go, except a saga quest's: here none, so all of them
+  const gone = Object.entries(r.books?.marks_farm_cleared ?? {});
+  const goneWrong = gone.filter(([npc, shown]) => shown !== expectedMark({ ...rec, wishes: [] }, npc));
+  check(gone.length >= 3 && goneWrong.length === 0 && gone.every(([, s]) => s === ''), `${r.name}: with no wishes left every villager's wish mark went (${gone.map(([n, s]) => `${n} ${s || '-'}`).join(', ')})`);
+  check(marked >= 1, `${r.name}: marks were drawn over the villagers in Köpingen (${marked} with a mark, ${quiet} without)`);
   const elsaOpen = (rec.wishes ?? []).filter((w) => w.npc === 'elsa' && !(rec.questsDone ?? []).includes(w.id)).length;
   check(r.books?.elsa_after !== undefined && (elsaOpen > 0 || r.books.elsa_after === ''), `${r.name}: after the hand-in Elsa showed "${r.books?.elsa_after}" and the server says she has ${elsaOpen} wishes left (none: no mark)`);
   const b = r.books ?? {};
