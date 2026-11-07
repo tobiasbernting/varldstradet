@@ -177,7 +177,8 @@ func _stream(l: String) -> AudioStream:
 	var looped: AudioStreamWAV = loaded.duplicate()
 	looped.loop_mode = AudioStreamWAV.LOOP_FORWARD
 	looped.loop_begin = 0
-	looped.loop_end = looped.data.size() / 2
+	# the loop ends at the last sample, whatever the import did to the data (16-bit mono is 2 bytes a sample, ADPCM is not)
+	looped.loop_end = int(round(loaded.get_length() * float(loaded.mix_rate)))
 	_streams[l] = looped
 	return looped
 
