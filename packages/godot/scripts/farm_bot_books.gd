@@ -173,6 +173,15 @@ func hud() -> void:
 	hud.stay_button.pressed.emit()
 	var told := await bot._until(func() -> bool: return bot._report["toasts"].slice(before).has(Strings.t("noPetsHere")), 3.0)
 	hud.set_side_buttons(model.owns_callable())
+	# which animals count: the shared isCallable (a table: pets, horses, mounts and tamed wild animals; never a vehicle, a stranger's, a wild one nobody owns)
+	var table := [["dog", "me", true], ["cat", "me", true], ["horse", "me", true], ["fox", "me", true], ["sleipner", "me", true], ["fox", "", false], ["dog", "other", false], ["car", "me", false], ["hen", "me", false]]
+	var table_ok := true
+	for row in table:
+		var got := WorldModel.is_callable({"species": row[0], "owner": row[1] if row[1] != "me" else model.me}, model.me)
+		if got != bool(row[2]):
+			table_ok = false
+			bot._error("is_callable(%s owned by %s) = %s, the rules say %s" % [row[0], row[1], str(got), str(row[2])])
+	bot._step("which animals the pet buttons answer for", table_ok, "%d cases of isCallable: pets, horses, tamed wild animals yes; vehicles, strangers', unowned wild and hens no" % table.size())
 	bot._step("the family and pet buttons", hud.family_button.visible and not pets_before and told and not hud.stay_button.visible, "👪 is on the HUD; stay and whistle show only with a pet (none here); pressed, stay reached the server (\"%s\")" % Strings.t("noPetsHere"))
 
 

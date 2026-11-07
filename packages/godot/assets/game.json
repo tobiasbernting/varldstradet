@@ -1617,16 +1617,20 @@
       "predator": true
     },
     "car": {
-      "growDays": 0
+      "growDays": 0,
+      "vehicle": true
     },
     "motorcycle": {
-      "growDays": 0
+      "growDays": 0,
+      "vehicle": true
     },
     "bus": {
-      "growDays": 0
+      "growDays": 0,
+      "vehicle": true
     },
     "train": {
-      "growDays": 0
+      "growDays": 0,
+      "vehicle": true
     },
     "slime": {
       "growDays": 0,

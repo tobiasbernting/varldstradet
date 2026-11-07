@@ -333,7 +333,7 @@ async function checkFarmer(r: FarmReport, farmPort: number, botLog?: string): Pr
     'the journal', "the family's best time", 'the level chip', 'the level chip opens the journal', 'the saga tracker', 'the tracker folds', "Völvan's journal tab",
     'the Upptäcktsbok',
     'the help', 'the help on ?',
-    'the family window', 'the family list follows the family', 'jump to the family', 'the family and pet buttons',
+    'the family window', 'the family list follows the family', 'jump to the family', 'the family and pet buttons', 'which animals the pet buttons answer for',
     'large text fits',
     // the village: the class, Völvan, the pizzeria, the gear and the hero switch, the bus
     'walk to Köpingen', 'sound: the village', 'pick a class', "Völvan's chapter", 'buy a pizza', 'eat the pizza', 'equip the weapon', 'the hero switch', 'back to the farm outfit', 'the bus home', 'the bus to the village', 'sound: footsteps', 'sound: ambience',

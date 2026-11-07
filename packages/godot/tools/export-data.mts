@@ -150,8 +150,8 @@ for (const [id, c] of Object.entries(CROPS)) crops[id] = { stages: c.stages.leng
 
 /** How long a baby animal stays a baby (isBaby: age < growDays), by species; M4b adds what the farm tells apart: pets
  * (they follow their owner), what it gives, wild ones, and the speed of a mount (a horse has none of its own: RIDE_SPEED_MUL). */
-const animals: Record<string, { growDays: number; pet?: true; wild?: true; predator?: true; mob?: true; product?: string; mount?: number }> = {};
-for (const [id, a] of Object.entries(ANIMALS)) animals[id] = { growDays: a.growDays, ...(a.pet ? { pet: true as const } : {}), ...(a.wild ? { wild: true as const } : {}), ...(a.predator ? { predator: true as const } : {}), ...(a.mob ? { mob: true as const } : {}), ...(a.product ? { product: a.product } : {}), ...(a.mount ? { mount: a.mount.speed } : {}) };
+const animals: Record<string, { growDays: number; vehicle?: true; pet?: true; wild?: true; predator?: true; mob?: true; product?: string; mount?: number }> = {};
+for (const [id, a] of Object.entries(ANIMALS)) animals[id] = { growDays: a.growDays, ...(a.vehicle ? { vehicle: true as const } : {}), ...(a.pet ? { pet: true as const } : {}), ...(a.wild ? { wild: true as const } : {}), ...(a.predator ? { predator: true as const } : {}), ...(a.mob ? { mob: true as const } : {}), ...(a.product ? { product: a.product } : {}), ...(a.mount ? { mount: a.mount.speed } : {}) };
 
 /** The villagers: who they are and which map they live on (the sprite is npc_<id> in the atlas). */
 const npcs: Record<string, { name: string; area: string; greeting: string[]; appearance?: unknown; outfit?: unknown }> = {};

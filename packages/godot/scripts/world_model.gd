@@ -182,13 +182,24 @@ func chest(id: int) -> Dictionary:
 	return o if o is Dictionary else {}
 
 
-## Do I own a pet or a horse on any map I know (isCallable in the browser: the animals the whistle and the stay command reach)?
+## isCallable in shared/src/sim.ts: an animal of mine that listens to "stay" and the whistle: a pet (a dog or a cat, or a wild animal I
+## caught with a lasso) or a horse or another mount, never a vehicle.
+static func is_callable(a: Dictionary, my_id: String) -> bool:
+	if str(a.get("owner", "")) != my_id or my_id == "":
+		return false
+	var def: Dictionary = Data.animals.get(str(a.get("species", "")), {})
+	if bool(def.get("vehicle", false)):
+		return false
+	return bool(def.get("pet", false)) or bool(def.get("wild", false)) or str(a.get("species", "")) == "horse" or def.has("mount")
+
+
+## Do I own such an animal on any map I know?
 func owns_callable() -> bool:
 	for w in [farm] + areas.values():
 		if not (w is Dictionary):
 			continue
 		for a in w.get("animals", {}).values():
-			if a is Dictionary and str(a.get("owner", "")) == me and (bool(Data.animals.get(str(a.get("species", "")), {}).get("pet", false)) or Data.animals.get(str(a.get("species", "")), {}).has("mount")):
+			if a is Dictionary and is_callable(a, me):
 				return true
 	return false
 
