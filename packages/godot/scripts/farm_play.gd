@@ -16,7 +16,7 @@ extends Node
 
 const ARCH := "saga_portal"
 ## The objects whose `interact` is safe to ask the server for from here (it answers with changes this client draws).
-const INTERACT_OK := ["chest", "water", "feed", "saga", "loot", "fairy", "landmark", "workbench", "cook", "catalogue", "sell", "wardrobe", "pizzeria", "sagaclass", "bus", "train", "sleep"]
+const INTERACT_OK := ["chest", "water", "feed", "saga", "loot", "fairy", "landmark", "workbench", "cook", "catalogue", "sell", "wardrobe", "pizzeria", "sagaclass", "bus", "train", "sleep", "fardport", "yggdrasil", "runexit"]
 const ACT_GAP := 0.16
 
 var view: WorldView

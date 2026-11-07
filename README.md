@@ -158,6 +158,43 @@ this the browser client was not needed for a farm evening, and on 2026-11-02 (M5
 
 ![The farm in the native client](packages/godot/docs/m4a-farm-day.png)
 
+**M5c** puts the runs (färder) on screen. On the farm the **färdport** is a real 3 × 2 arch with a teal-gold glow, the **Yggdrasil shoot**
+grows in five stages with the family's tree (a mound, a sapling, a young tree, a big tree, the glowing Världsträd), and the smithy, herb garden
+and longhouse are buildings. Using the arch opens **the arch window** (your class as a picture, the färdkost slots with the dishes from your
+bag, one big "Starta färden", or "Följ med" when a run lives); the zones are drawn by the dungeon view with the biome's own ground, the walls and
+decor of the dungeon it borrows from, its weather and a glowing exit; the HUD has the clock against the 30-minute target (past it the clock keeps
+counting in a warmer colour), zone n of 3 or the boss, and the runor taken; after each zone **three big cards** are voted on by tap, click, the
+pad's A or the keys 1-3; the end of a run shows a summary; and the shoot opens **the sagaträd** with its 18 nodes. The hired Hirdmannen is a hero
+sprite. `pnpm godot:bot` has a run pair (`BOT_ONLY=run`; `-- --full` plays to the boss, `BOT_RUN_SECONDS=2400`): two bots walk to the arch, start,
+clear zone 1, vote and enter zone 2. Pictures: [the arch window](packages/godot/docs/m5c-arch.png), [a zone](packages/godot/docs/m5c-zone.png),
+[the cards](packages/godot/docs/m5c-cards.png), [the end of a run](packages/godot/docs/m5c-end.png) and [the sagaträd](packages/godot/docs/m5c-tree.png).
+
+**M6a** (chapters 2-4) makes the client handle any saga dungeon and finishes the first three after Draugkryptan: **Frostjättens borg**,
+**Surts smedja** and **Helheim**. Each has its own look from one table (`scripts/dungeon_look.gd`: stone and floor palette, torch colour,
+fog, bloom, and something drifting in the air: snow, embers, ghost-lights), its own creatures and bosses as sprites from the existing pixel art
+(Isbjörnen Kall and the Rimtursen; Smeden Glöd and Surt; Garm and Hel), and every boss move drawn with its telegraph. `--demo=frost` (or `surt`,
+`hel`) draws the recorded dungeon, `--fight` plays each boss's moves from the data (`--once` leaves when done) and
+`--boss-move=rimturs:freeze:after` holds one move for a picture. `BOT_ONLY=dungeon BOT_DUNGEON=frost pnpm godot:bot` sends the fighter pair into a chosen
+dungeon the dev way. Pictures: [Frostjättens borg](packages/godot/docs/m6a-frost.png), [its hall](packages/godot/docs/m6a-frost-hall.png),
+[its bosses' moves](packages/godot/docs/m6a-frost-bosses.png); [Surts smedja](packages/godot/docs/m6a-surt.png), [its hall](packages/godot/docs/m6a-surt-hall.png),
+[its bosses' moves](packages/godot/docs/m6a-surt-bosses.png); [Helheim](packages/godot/docs/m6a-hel.png), [its hall](packages/godot/docs/m6a-hel-hall.png),
+[its bosses' moves](packages/godot/docs/m6a-hel-bosses.png).
+
+**M6b** (chapters 5-7) does the same for **Svartalfheims gruvor** (`dvarg`: amber lamps in dark rock, dust and gold glints; the Järnväktaren and Fafner),
+**Havsormens tempel** (`orm`: a teal haze with bubbles rising; Bläckis and Jörmungandr) and **Alvernas lund** (`alv`: violet bark, green moss and glowing
+mushrooms with spores in the air; the Spindeldrottningen and the Nattmaran). `--demo=dvarg` (or `orm`, `alv`) draws the recorded dungeon and `--fight` plays every move of
+both bosses, the helpers they call, a mend's glow and heal, and the spider's web round a friend. `BOT_ONLY=dungeon BOT_DUNGEON=orm pnpm godot:bot` sends the fighter pair in the dev way.
+Pictures: [Svartalfheims gruvor](packages/godot/docs/m6b-dvarg.png), [its hall](packages/godot/docs/m6b-dvarg-hall.png), [its bosses' moves](packages/godot/docs/m6b-dvarg-bosses.png);
+[Havsormens tempel](packages/godot/docs/m6b-orm.png), [its hall](packages/godot/docs/m6b-orm-hall.png), [its bosses' moves](packages/godot/docs/m6b-orm-bosses.png);
+[Alvernas lund](packages/godot/docs/m6b-alv.png), [its hall](packages/godot/docs/m6b-alv-hall.png), [its bosses' moves](packages/godot/docs/m6b-alv-bosses.png).
+
+**M6c** (chapters 9-10) finishes the saga's dungeons: **Fenrisklyftan** (`fenrir`: steel-blue rock, trampled snow and a gale; Sköll and Fenrisulven) and **Bifrost**
+(`loke`: pearly glass, rose-gold lanterns and rainbow stars; Lokes skugga and Loke, whose monsters are drawn as ghostly illusions). `--demo=fenrir` (or `loke`) draws the
+recorded dungeon, `--fight` plays every move of both bosses (Loke's seven, one for each boss he copies) and `BOT_ONLY=dungeon BOT_DUNGEON=loke pnpm godot:bot` sends the fighter pair in the dev way.
+The end of the saga is on screen too: `--demo=loke --ending` plays what the server sends when Loke falls and `--demo=ending` what it sends when Völvan is handed the last chapter
+(the toasts of that moment now take turns instead of wiping each other). Pictures: [Fenrisklyftan](packages/godot/docs/m6c-fenrir.png), [its hall](packages/godot/docs/m6c-fenrir-hall.png),
+[its bosses' moves](packages/godot/docs/m6c-fenrir-bosses.png); [Bifrost](packages/godot/docs/m6c-loke.png), [its hall](packages/godot/docs/m6c-loke-hall.png), [its bosses' moves](packages/godot/docs/m6c-loke-bosses.png).
+
 **Röstprat** (voice chat) is back in the native client (2026-11-06). Open it from the pause menu ("Röstprat") or the small button at the top right of the HUD. The game picks up the phone for you when you log in (the window's "Lägg på" hangs up and keeps it hung up). Hold **C** (or the window's "Håll här för att prata" button) to talk: push-to-talk is the default, for the kids; "Öppen mikrofon" in the window keeps the microphone open, "Tysta mikrofonen" turns it off, and "Volym" sets how loud the others are (all of it is remembered in `settings.cfg`). Everything about rooms is as before: devices behind the same address are one room and do not hear each other, one device per room is the speakerphone. Sound goes straight between the rooms' speakers as small mu-law packets on a WebRTC data channel (Godot has no WebRTC audio tracks), 16 kB/s a peer.
 
 ![Röstprat](packages/godot/docs/voice.png)
@@ -202,7 +239,7 @@ generator. `--time=0.9` (a fraction of the day: 0 sunrise, 0.4 midday, 0.9 night
    login screen comes up instead; the demo needs the command line). The recorded Draugkryptan of
    `packages/godot/assets/fixtures/draug.json` is drawn with its monsters, and you walk in it with WASD, the arrows
    or a gamepad's left stick; Escape or the start button opens the menu with the settings. Add `--at=24,53`
-   to start in the first monster room, `--fight` to play a scripted fight with the mid-boss on the recording
+   to start in the first monster room (`--demo=frost`, `--demo=surt` and `--demo=hel` are the next three dungeons), `--fight` to play a scripted fight with the mid-boss on the recording
    (telegraphs of every shape, the boss bar and cast bar, hit numbers, a wipe, a chest with the loot window; no
    server and no rules, only the pictures), and `--screenshot=/tmp/draug.png` to save a frame after 90 frames and quit.
 2. `godot --path packages/godot -- --bench` runs that scripted fight on each quality preset (a second of settling and
@@ -356,7 +393,7 @@ including the Kenney kits the build sandbox could not reach.
 
 **Builds.** `.github/workflows/godot.yml` checks the generated files, imports the project, runs the login scene, the
 Draugkryptan demo and the scripted fight headless for a moment (script errors fail there), runs the two bots against
-a server in memory, and exports Windows x86_64, macOS universal,
+a server in memory (in Draugkryptan, and in each of the six dungeons after it, side by side), plays the bosses' moves of those six headless, and exports Windows x86_64, macOS universal,
 Linux x86_64 and Linux arm64 with Godot 4.7.2 and its export templates (downloaded by pinned URL and SHA-512, cached
 between runs). Every pull request runs it as a check (the exports are workflow artifacts), and a tag `v*` attaches the
 four zips to a GitHub Release. The macOS app is ad-hoc signed and not notarized: the first start needs right-click →

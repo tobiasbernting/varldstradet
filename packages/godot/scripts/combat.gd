@@ -46,7 +46,7 @@ static func local_ms() -> float:
 
 
 func in_saga() -> bool:
-	return Data.dungeon_of_key(model.my_area_key()) != ""
+	return Data.is_saga_key(model.my_area_key())
 
 
 func my_class() -> String:

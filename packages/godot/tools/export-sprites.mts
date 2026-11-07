@@ -1,6 +1,6 @@
 // Renders the game's drawn-in-code pixel art (packages/art/src) to PNG sprite sheets for the native client:
-// the hero in each class's outfit for each skin tone (4 directions × 3 frames), every monster and boss of the
-// nine dungeons (two walk frames, the bosses at their own bigger size), and for the farm (M4a): the character layers Godot composes (checked here
+// the hero in each class's outfit for each skin tone (4 directions × 3 frames), the monsters and bosses of the
+// dungeons listed below (two walk frames), and for the farm (M4a): the character layers Godot composes (checked here
 // against drawCharacter pixel for pixel), the villagers, and the pets, farm, wild and roaming animals. The art needs a canvas, so tools/sprites-page.ts is bundled with Vite
 // (packages/art/vite.config.ts) and run in Playwright's Chromium; the sheets and assets/sprites/atlas.json are committed.
 // Run `pnpm godot:sprites` after changing the art or adding a dungeon. See ART.md, "Sprites from the drawn-in-code art".
@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const artDir = path.resolve(here, '../../art');
 const outDir = path.resolve(here, '../assets/sprites');
-/** The dungeons whose creatures and loot are exported (all nine; every mob and boss gets a `mob_<id>` sheet). */
+/** The dungeons whose creatures are exported (M3a: Draugkryptan; M6a: Frostjättens borg, Surts smedja and Helheim; M6b: Svartalfheims gruvor, Havsormens tempel and Alvernas lund; the rest follow in M6). */
 const DUNGEONS = (process.argv[2] ?? 'draug,frost,surt,hel,dvarg,orm,alv,fenrir,loke').split(',');
 
 // vite comes from the art package (the godot package has no node_modules); Playwright from wherever the machine

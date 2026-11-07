@@ -71,3 +71,8 @@ to the Kenney and KayKit models. Placeholders in the sense that a pack model may
 | `cave`, `cave_mouth`, `saga_portal` | A rock mouth; the dungeon's arch: two pillars, a lintel with a rune band and a glowing doorway in the dungeon's torch colour. |
 | `wall_wood`, `wall_stone`, `door`, `window`, `rug`, `bookshelf`, `clock`, `stove` (the bed, table, chairs, sofa, plant and painting are KayKit Furniture Bits) | The farmhouse's room, in boxes. |
 | any other kind | A lilac box on the object's footprint and one warning in the log. |
+
+## M5c additions
+No new third-party files. `kaykit_hex/building_blacksmith_red.gltf` (KayKit Medieval Hexagon Pack, CC0, already imported in M4c) is now drawn as the smithy. The färdport,
+the Yggdrasil shoot, the herb garden, the longhouse, the smithy's anvil and coals and the 22 zone decor props are generated meshes (`scripts/run_meshes.gd`,
+`scripts/zone_props.gd`); they are the project's own.

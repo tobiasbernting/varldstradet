@@ -4,12 +4,17 @@ extends Node
 ## player picks "Byt spelare" in the pause menu. The command line (after `--`) can skip the login:
 ##   --demo[=farm|forest] the world plays a recorded fixture (no server needed): Draugkryptan (the default; with
 ##                       --fight a scripted fight runs on it), the farm, or the forest with the dungeon's arch;
+##                       --demo=frost|surt|hel are the next dungeons; --demo=ending (Völvan's last hand-in) and --demo=loke --ending play the saga's ending (demo_ending.gd); --fight plays their bosses' moves (demo_bosses.gd), and
+##                       --once leaves when it has played, --boss-move=<species>:<move>[:after] holds one move's marks for a picture;
 ##                       --time=0.7 --weather=rain --season=jul set the sky, --at=x,y where to stand
 ##                       --people3d 3D bodies for people and creatures (figure_3d.gd, voxel_body.gd, skeleton_figure.gd)
 ##   --demo=lineup       the 3D bodies side by side on green, no world (demo_lineup.gd; --set=undead|animals, --zoom=0.9)
 ##   --bench[=preset]    the demo scene on each quality preset (or one: lag, mellan, hog) in steady state, printing
 ##                       frame times, draw calls, lights and the render timings (bench.gd)
+##   --quality=lag|mellan|hog   (with --demo) this run's preset, not saved; --alive=all (M7a) turns the alive world's fireflies, butterflies,
+##                       leaves, smoke and mist all on whatever the hour and season; --year=spring|summer|autumn|winter sets the season of the year
 ##   --farmbot           a headless player that farms against a local server (farm_bot.gd, M4b)
+##   --runbot            a headless player that walks to the färdport, starts (or joins) a run and fights through its zones (run_bot.gd, M5c)
 ##   --voicecheck        Röstprat's codec, rules and (with the webrtc extension) a connection between two peers (voice_check.gd)
 ##   --bot               a headless player that logs in against a local server (ACCESS=open, DEV_TELEPORT=1), walks
 ##                       to the first pack, fights it and writes a report (bot.gd)
@@ -33,6 +38,13 @@ func _ready() -> void:
 		farmer.name = "FarmBot"
 		farmer.world = world
 		add_child(farmer)
+	elif args.has("--runbot"):
+		login.visible = false
+		_set_world(true)
+		var runner := RunBot.new()
+		runner.name = "Bot"
+		runner.world = world
+		add_child(runner)
 	elif args.has("--voicecheck"):
 		login.visible = false
 		var vc := VoiceCheck.new()
@@ -70,11 +82,28 @@ func _ready() -> void:
 		login.visible = false
 		_set_world(true)
 		world.start_demo(_demo_name(args))
-		if args.has("--fight") and _demo_name(args) == "draug":
+		var demo_id := _demo_name(args)
+		if args.has("--ending") or demo_id == "ending":
+			# the saga's ending (M6c): what comes on screen when Loke falls (`--demo=loke --ending`) and when Völvan pays the last chapter (`--demo=ending`)
+			var ending := DemoEnding.new()
+			ending.name = "DemoEnding"
+			ending.world = world
+			ending.quit_when_done = args.has("--once")
+			add_child(ending)
+		elif args.has("--fight") and demo_id == "draug":
 			var fight := DemoFight.new()
 			fight.name = "DemoFight"
 			fight.world = world
 			add_child(fight)
+		elif (args.has("--fight") or _flag(args, "--boss-move")) and Data.dungeon(demo_id).size() > 0:
+			# the bosses of any other dungeon (M6a): every move of the mid-boss and the boss, from the data (demo_bosses.gd)
+			var show := DemoBosses.new()
+			show.name = "DemoFight"
+			show.world = world
+			show.only = _arg(args, "--boss-move", "")
+			show.quit_when_done = args.has("--once")
+			show.speed = 3.0 if show.quit_when_done else 1.0
+			add_child(show)
 	else:
 		_show_login()
 

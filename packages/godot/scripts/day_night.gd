@@ -45,13 +45,8 @@ var _flakes: GPUParticles3D
 var _leaves: GPUParticles3D
 var _flakes2: GPUParticles3D ## the big soft flakes (the small sharp ones are `_flakes`)
 var _rings: GPUParticles3D ## splash rings on the ground in rain
-var _flies: Array = [] ## fireflies: little green-yellow glows that blink and drift round the hero on warm nights
-var _fly_k := 0.0
 var _dew: GPUParticles3D ## sparkles on the morning grass
-var _banks: Array = [] ## fog banks / dawn mist: big soft flat patches drifting over the ground
-var _bank_k := 0.0
 var _puddle := 0.0 ## puddles fill in rain and linger ~40 s after it
-var _mist := 0.0 ## dawn mist 0..1
 var _cloudy := 0.0
 var _slant := 0.2 ## how far the rain leans (the wind's)
 var _rainbow: MeshInstance3D
@@ -66,6 +61,10 @@ var _season := "none"
 var _year := "summer"
 var _under := false ## no sky here (a cave): the light stays what the map says
 var _since := 0.0
+var _lit := Color.WHITE ## the clock's light colour (the horizon of the sky the water mirrors)
+var _sun_share := 1.0
+var _wind := -1.0 ## the weather's wind, eased so a gust front does not snap the trees
+var _year_override := "" ## --year=summer|autumn|...: a fixed season of the year for pictures and the bench
 var _rainbow_until := 0.0
 var _rainbow_k := 0.0
 var _rng := RandomNumberGenerator.new()
@@ -74,6 +73,9 @@ var sky_color := Color("#9ec8e8")
 
 func _init() -> void:
 	_rng.randomize()
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--year="):
+			_year_override = arg.substr(7)
 
 
 func setup(v: FarmView, biome: String, key: String) -> void:
@@ -108,8 +110,7 @@ func setup(v: FarmView, biome: String, key: String) -> void:
 	add_child(sun)
 	_apply_quality()
 	_make_particles()
-	_make_banks()
-	_make_extras()
+	_make_dew()
 	_make_rainbow()
 
 
@@ -122,8 +123,6 @@ func _clear_children() -> void:
 	_rainbow = null
 	_flakes2 = null
 	_rings = null
-	_banks = []
-	_flies = []
 	_dew = null
 
 
@@ -219,17 +218,7 @@ func _make_rings(amount: int) -> GPUParticles3D:
 
 ## Fog banks and dawn mist: a handful of big soft patches lying over the ground that drift slowly and wrap round the hero.
 ## The cozy extras that are not weather: fireflies and the morning's dew sparkle.
-func _make_extras() -> void:
-	for i in 14:
-		var g := view.assets.glow_quad(Color(0.75, 1.0, 0.35), 0.28, 0.0)
-		g.rotation_degrees = Vector3(-51.0, 0.0, 0.0)
-		g.visible = false
-		g.set_meta("phase", _rng.randf() * 6.28)
-		g.set_meta("ox", _rng.randf_range(-8.0, 8.0))
-		g.set_meta("oz", _rng.randf_range(-6.0, 6.0))
-		g.set_meta("h", _rng.randf_range(0.3, 1.2))
-		add_child(g)
-		_flies.append(g)
+func _make_dew() -> void:
 	_dew = GPUParticles3D.new()
 	_dew.amount = 60
 	_dew.lifetime = 1.1
@@ -262,50 +251,13 @@ func _make_extras() -> void:
 	add_child(_dew)
 
 
-## Fireflies and dew each frame: `warm_night` (May to September, the midsummer season) and the morning sun.
-func _update_extras(delta: float, kind: String, f: float, up: bool, at: Vector3) -> void:
-	var month := int(Time.get_datetime_dict_from_system().get("month", 6))
-	var warm_night := (month >= 5 and month <= 9) or _season == "midsommar"
-	var calm := kind == "sun" or kind == "cloudy" or kind == "wind"
-	var want := 1.0 if (warm_night and calm and _dark > 0.5 and indoors < 0.5 and not _under) else 0.0
-	_fly_k = lerpf(_fly_k, want, 1.0 - pow(0.3, delta))
-	for g in _flies:
-		var mi := g as MeshInstance3D
-		mi.visible = _fly_k > 0.02
-		if not mi.visible:
-			continue
-		var ph: float = mi.get_meta("phase")
-		var blink := maxf(0.0, sin(_t * 2.3 + ph * 7.0))
-		var drift := Vector3(sin(_t * 0.3 + ph * 3.0) * 1.2, 0.0, cos(_t * 0.25 + ph * 2.0) * 1.2)
-		mi.global_position = Vector3(at.x + float(mi.get_meta("ox")) + drift.x, float(mi.get_meta("h")) + 0.25 * sin(_t * 0.7 + ph), at.z + float(mi.get_meta("oz")) + drift.z)
-		(mi.material_override as ShaderMaterial).set_shader_parameter("energy", blink * _fly_k * 1.6)
+## The dew each frame: it sparkles in the morning sun.
+func _update_dew(f: float, kind: String, up: bool, at: Vector3) -> void:
 	if _dew != null:
 		var morning := up and f < 0.17 and (kind == "sun" or kind == "wind") and indoors < 0.5 and not _under
 		_dew.emitting = morning
 		_dew.amount_ratio = clampf(1.0 - f / 0.17, 0.1, 1.0) if morning else 0.1
 		_dew.global_position = Vector3(at.x, 0.08, at.z)
-
-
-func _make_banks() -> void:
-	if Quality.spec().get("weather", 0) <= 0:
-		return
-	var n := 8
-	for i in n:
-		var mi := MeshInstance3D.new()
-		var q := QuadMesh.new()
-		q.size = Vector2.ONE * (9.0 + 5.0 * fmod(float(i) * 0.37, 1.0))
-		q.orientation = PlaneMesh.FACE_Y
-		mi.mesh = q
-		var m := ShaderMaterial.new()
-		m.shader = _soft_shader()
-		m.set_shader_parameter("seed", float(i) * 3.7)
-		mi.material_override = m
-		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		mi.visible = false
-		mi.set_meta("phase", float(i) / float(n))
-		mi.set_meta("row", float(i % 4))
-		add_child(mi)
-		_banks.append(mi)
 
 
 func _particles(amount: int, life: float, vel: Vector3, col: Color, size: Vector3, spread := 0.08) -> GPUParticles3D:
@@ -388,6 +340,8 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 	_ambient = _ambient.lerp(amb, 1.0 - pow(0.05, delta))
 	_dark = lerpf(_dark, dark, 1.0 - pow(0.05, delta))
 	var lit := amb
+	_lit = lit
+	_sun_share = sun_share
 	# The browser multiplies the whole picture by `amb`; in 3D that is the ambient light, the sun and the fog all
 	# carrying the tint, with enough ambient that a sun shadow is a quarter darker than lit ground, not black.
 	var tw := _dark * _dark
@@ -442,20 +396,14 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 	if _bolt > 0.0:
 		sun.light_energy += _bolt * 2.5
 		env.ambient_light_energy += _bolt * 1.2
-	# dawn mist: builds before sunrise and burns off as the sun climbs, never in rain, storm, wind or hail
-	var mist_want := smoothstep(0.0, 1.0, (f - 0.9) / 0.08) if f > 0.9 else 1.0 - smoothstep(0.0, 1.0, (f - 0.04) / 0.1)
-	if kind == "rain" or kind == "storm" or kind == "wind" or kind == "hail" or kind == "snow" or _under:
-		mist_want = 0.0
-	_mist = move_toward(_mist, mist_want, delta * 0.25)
-	if _t < 0.2:
-		_mist = mist_want
 	_update_weather(delta, kind, w)
 	_update_grade(delta, w)
 	_update_materials(delta, kind, w, elevation, sun_share)
 	view.set_dark(_dark)
-	var winter := 0.3 if _year == "winter" or _season == "jul" else 0.0
-	view.set_smoke(0.3 + 0.5 * _dark + winter, float(w[2]) * 0.5, Color(0.72, 0.72, 0.74).lerp(lit, 0.5))
 	var cam := get_viewport().get_camera_3d()
+	if view.ambient != null:
+		view.ambient.update(delta, {"dark": _dark, "year": _year, "kind": kind, "wind": _wind, "f": f, "sky": sky_color, "fog": _wvis["fog"], "seasons": _biome_has_seasons()},
+			_target.global_position if _target != null else Vector3.ZERO)
 	if _target != null:
 		var at := _target.global_position
 		for p in [_rain, _flakes, _flakes2, _leaves]:
@@ -463,8 +411,7 @@ func update_sky(delta: float, time_ms: float, season: String, weather: Variant, 
 				p.global_position = at + Vector3(0.0, 11.0, -1.0)
 		if _rings != null:
 			_rings.global_position = Vector3(at.x, 0.06, at.z)
-		_drift_banks(delta, at)
-		_update_extras(delta, kind, f, up, at)
+			_update_dew(f, kind, up, at)
 		if _rainbow != null:
 			_rainbow.global_position = at + Vector3(0.0, 4.5, -15.0)
 			_rainbow.rotation_degrees = Vector3(-8.0, 0.0, 0.0)
@@ -531,6 +478,8 @@ func _sample(f: float) -> Color:
 
 ## The browser's yearSeason: Christmas is always winter, otherwise the calendar (December to February winter).
 func _year_season(season: String) -> String:
+	if _year_override != "":
+		return _year_override
 	if season == "jul":
 		return "winter"
 	var m := int(Time.get_datetime_dict_from_system().get("month", 6))
@@ -582,10 +531,8 @@ func _update_weather(delta: float, kind: String, w: Array) -> void:
 		# flakes drift sideways in the wind
 		for fp in [_flakes, _flakes2]:
 			(fp.process_material as ParticleProcessMaterial).direction = Vector3(-0.25 * wind - 0.05, -1.0, 0.1).normalized()
-		# leaves: always a few in autumn, more in wind
-		var autumn := _year == "autumn" and kind != "rain" and kind != "storm" and kind != "snow"
-		_emit(_leaves, kind == "wind" or autumn)
-		_leaves.amount_ratio = 1.0 if kind == "wind" else 0.2
+		# leaves blown across the map in wind weather (the autumn leaves in the trees are ambient_view.gd's)
+		_emit(_leaves, kind == "wind")
 		(_leaves.draw_pass_1.material as StandardMaterial3D).albedo_color = Color(0.85, 0.62, 0.22, 0.9) if _year != "spring" else Color(0.95, 0.75, 0.85, 0.9)
 
 
@@ -596,33 +543,6 @@ func _emit(p: GPUParticles3D, on: bool) -> void:
 		p.restart()
 	elif not on and p.emitting:
 		p.emitting = false
-
-
-## The fog banks: pale flat patches that drift across the ground and wrap round the hero. Their strength is the fog
-## weather's (eased) plus the dawn mist, so a change of weather fades them in and out.
-func _drift_banks(delta: float, at: Vector3) -> void:
-	var amount := float(_wvis["fog"]) * 0.3 + _mist * 0.6
-	_bank_k = move_toward(_bank_k, amount, delta * 0.1) # ~6 s from full to nothing
-	if _t < 0.2:
-		_bank_k = amount
-	var span := 30.0
-	var col := sky_color.lerp(Color.WHITE, 0.25 * (1.0 - _dark))
-	for mi in _banks:
-		var b := mi as MeshInstance3D
-		b.visible = _bank_k > 0.01
-		if not b.visible:
-			continue
-		var ph: float = b.get_meta("phase")
-		var row: float = b.get_meta("row")
-		var drift := fposmod(_t * (0.35 + 0.1 * row) + ph * span, span)
-		var x := at.x - span * 0.5 + drift
-		var z := at.z + (row - 1.5) * 5.0 + sin(_t * 0.05 + ph * 6.0) * 2.0
-		b.global_position = Vector3(x, 0.55 + 0.1 * row, z)
-		var m := b.material_override as ShaderMaterial
-		# fade at the wrap so a bank never pops
-		var edge := minf(drift, span - drift) / 6.0
-		m.set_shader_parameter("alpha", _bank_k * clampf(edge, 0.0, 1.0))
-		m.set_shader_parameter("colour", Vector3(col.r, col.g, col.b))
 
 
 func _is_farm() -> bool:
@@ -669,7 +589,9 @@ func _update_materials(delta: float, kind: String, w: Array, elevation: float, s
 	a.prop_mat.set_shader_parameter("leaf_mix", mix)
 	a.prop_mat.set_shader_parameter("snow", _snow)
 	a.prop_mat.set_shader_parameter("wet", _wet)
-	a.prop_mat.set_shader_parameter("wind", float(w[2]))
+	_wind = float(w[2]) if _wind < 0.0 else lerpf(_wind, float(w[2]), 1.0 - pow(0.3, delta))
+	a.prop_mat.set_shader_parameter("wind", _wind)
+	a.prop_mat.set_shader_parameter("wind_level", Quality.alive("wind"))
 	a.ground_mat.set_shader_parameter("snow", _snow)
 	a.ground_mat.set_shader_parameter("wet", _wet)
 	# cloud shadows: faint in sun, slow and big under cloudy skies; props darken with the ground
@@ -679,11 +601,21 @@ func _update_materials(delta: float, kind: String, w: Array, elevation: float, s
 	a.ground_mat.set_shader_parameter("puddle", _puddle)
 	a.ground_mat.set_shader_parameter("sky_colour", Vector3(sky_color.r, sky_color.g, sky_color.b))
 	var glint := clampf(elevation * sun_share + 0.15, 0.0, 1.0)
+	var water_level := Quality.alive("water")
+	a.set_water_level(water_level)
+	var wave := 0.45 + 0.6 * _wind
+	# what the water mirrors: the clock's colour at the horizon, deep blue overhead (navy at night), grey under cloud
+	var zenith := Color(0.30, 0.52, 0.95).lerp(Color(0.05, 0.07, 0.2), _dark)
+	var horizon := _lit.lerp(Color(0.07, 0.09, 0.24), _dark * 0.8)
+	var mirror := horizon.lerp(zenith, 0.5).lerp(Color(0.62, 0.66, 0.72) * (1.0 - _dark * 0.7), clampf(1.0 - _sun_share, 0.0, 1.0) * 0.7) * 0.82
 	for m in [a.water_mat, a.bog_mat, a.choco_mat]:
 		m.set_shader_parameter("glint", glint)
 		m.set_shader_parameter("night", _dark)
 		m.set_shader_parameter("sky_colour", Vector3(sky_color.r, sky_color.g, sky_color.b))
 		m.set_shader_parameter("frozen", _snow * 0.55 if m == a.water_mat else 0.0)
+		if water_level > 0:
+			m.set_shader_parameter("wave", wave)
+			m.set_shader_parameter("sky_colour", mirror)
 
 
 func _biome_has_seasons() -> bool:

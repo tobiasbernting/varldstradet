@@ -16,30 +16,11 @@ const KAYKIT := "res://assets/kaykit/"
 const HALLOWEEN := "res://assets/kaykit_halloween/" ## KayKit Halloween Bits: coffins, bones, the rest shrine
 const FLOOR_MODELS := ["floor_tile_small.gltf.glb", "floor_tile_small_broken_A.gltf.glb", "floor_tile_small_weeds_A.gltf.glb"]
 const FLOOR_BOSS := "floor_tile_small_decorated.gltf.glb"
-## The stone tint per look (the dungeon's `wall` index): ART.md, "Recolouring imported packs".
-const STONE_TINT := [
-	Color(0.78, 0.84, 0.76), # Draugkryptan: Kryptsten
-	Color(0.82, 0.9, 1.0), # Frostjättens borg
-	Color(0.55, 0.5, 0.52), # Surts smedja
-	Color(0.6, 0.78, 0.76), # Helheim
-	Color(0.7, 0.7, 0.76), # Svartalfheims gruvor
-	Color(0.6, 0.76, 0.9), # Havsormens tempel
-	Color(0.72, 0.62, 0.82), # Alvernas lund
-	Color(0.78, 0.82, 0.9), # Fenrisklyftan
-	Color(0.9, 0.86, 1.0), # Bifrost
-]
-## The torches' light per look, from the browser's SAGA_TORCH (lighting.ts): the first three are copied, the rest
-## are the dungeons' moods as that file describes them (ghost-light, lanterns, pearls, fairy lights, cold fire, rainbow).
-const TORCH_COLOURS := [
-	Color(0.62, 1.0, 0.55), Color(0.6, 0.86, 1.0), Color(1.0, 0.58, 0.26), Color(0.6, 1.0, 0.82), Color(1.0, 0.86, 0.6),
-	Color(0.7, 0.92, 1.0), Color(0.82, 0.7, 1.0), Color(0.62, 0.8, 1.0), Color(1.0, 0.82, 0.9),
-]
-## What the floor models are tinted with per terrain (the dungeons' floors: crypt flagstones, the boss halls' stone,
-## snow, ice, the forge's black stone, Bifrost's glass; the rest in case a plan uses them).
-const FLOOR_TINT := {
-	"crypt": Color(1.0, 1.0, 1.0), "floor_stone": Color(1.1, 1.08, 1.05), "snow": Color(1.3, 1.35, 1.45), "ice": Color(0.9, 1.2, 1.4),
-	"forge": Color(0.45, 0.4, 0.42), "bifrost": Color(1.3, 1.25, 1.4), "moss": Color(0.8, 1.1, 0.75), "stone": Color(0.95, 0.95, 0.95),
-	"gravel": Color(0.9, 0.88, 0.85), "sand": Color(1.2, 1.1, 0.85), "dirt": Color(0.9, 0.8, 0.7), "floor_wood": Color(1.1, 0.9, 0.7),
+## The ground of a run's zones (the biome's own floor: GAME.md section 1.1), drawn flat in the biome's colour with a little
+## variation per tile; the walls, torches and decor are the dungeon's the biome borrows from.
+const FLAT_FLOOR := {
+	"grass": Color("#5f9a44"), "mud": Color("#5e4a34"), "gravel": Color("#8b877e"), "sand": Color("#d6c086"),
+	"moss": Color("#4b7a3a"), "snow": Color("#e8eef4"), "ash": Color("#4b4745"),
 }
 const FLICKER_EVERY := 1.0 / 30.0
 const CANDLE_COLOUR := Color(1.0, 0.78, 0.45)
@@ -49,7 +30,7 @@ const PLATE_COLOUR := Color(1.0, 0.9, 0.5)
 
 var key := ""
 var dungeon_id := ""
-var look := 0
+var look: Dictionary = DungeonLook.NEUTRAL ## the dungeon's row of the look table (dungeon_look.gd)
 var world: Dictionary = {}
 var map_w := 64
 var map_h := 64
@@ -68,6 +49,13 @@ var _t := 0.0
 var _flicker_in := 0.0
 var _shadow_order: Array[OmniLight3D] = [] ## the lights with a shadow now, nearest first (update_shadows)
 var _exit_walls: Dictionary = {} ## "x,y" of wall tiles the way out's stairs go into (no cap or faces there)
+var zone := false ## a zone of a run (`saga:run<n>z<i>`)
+var flat_floor := false ## a biome's ground (the zones) instead of the dungeon's flagstones
+var look_name := "" ## which look this was built with (the biome, or the dungeon), so the view can tell when it is stale
+var _vc_mat: StandardMaterial3D ## the vertex-colour material of the zone props (zone_props.gd)
+var _weather := ""
+var _weather_node: GPUParticles3D
+var _motes_node: GPUParticles3D ## what drifts through the air of this look (snow, embers, wisps), following the hero
 
 
 func _process(delta: float) -> void:
@@ -100,19 +88,31 @@ func clear() -> void:
 	_meshes = {}
 	_materials = {}
 	_exit_walls = {}
+	_vc_mat = null
+	_weather = ""
+	_weather_node = null
+	_motes_node = null
 	world = {}
 	key = ""
 	dungeon_id = ""
+	zone = false
+	flat_floor = false
+	look_name = ""
 
 
-## Builds the whole map from its WorldState (`w`) under the area key `k`.
-func build(w: Dictionary, k: String) -> void:
+## Builds the whole map from its WorldState (`w`) under the area key `k`. A zone of a run passes its look (Data.zone_look).
+func build(w: Dictionary, k: String, zone_look: Dictionary = {}) -> void:
 	clear()
 	world = w
 	key = k
 	dungeon_id = Data.dungeon_of_key(k)
-	var d := Data.dungeon(dungeon_id)
-	look = int(d.get("wall", 0)) % STONE_TINT.size()
+	zone = Data.is_run_key(k)
+	var d: Dictionary = zone_look if not zone_look.is_empty() else Data.dungeon(dungeon_id)
+	flat_floor = zone and d.has("biome")
+	look_name = str(d.get("biome", d.get("name", dungeon_id)))
+	look = DungeonLook.resolve(dungeon_id, d)
+	if flat_floor:
+		look = DungeonLook.plain_air(look)
 	map_w = int(w.get("w", 64))
 	map_h = int(w.get("h", 64))
 	_static = Node3D.new()
@@ -122,6 +122,7 @@ func build(w: Dictionary, k: String) -> void:
 	_objects_root.name = "Objects"
 	add_child(_objects_root)
 	_make_environment(d)
+	_make_motes()
 	var objects: Dictionary = w.get("objects", {})
 	for obj in objects.values():
 		if str(obj.get("kind", "")) == "saga_exit":
@@ -200,11 +201,11 @@ func object_count() -> int:
 
 
 func tint() -> Color:
-	return STONE_TINT[look]
+	return look["stone"]
 
 
 func torch_colour() -> Color:
-	return TORCH_COLOURS[look % TORCH_COLOURS.size()]
+	return look["torch"]
 
 
 # ---------------------------------------------------------------------------
@@ -216,18 +217,18 @@ func _make_environment(d: Dictionary) -> void:
 	var amb := Color(float(amb_arr[0]), float(amb_arr[1]), float(amb_arr[2]))
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = amb * 0.12
+	env.background_color = amb * float(look["bg_k"])
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = amb
-	env.ambient_light_energy = 0.7 # the browser's dungeonAmbient: the dungeon's colour turned down, so torches pool light
+	env.ambient_light_energy = float(look["ambient_energy"]) # the browser's dungeonAmbient: the dungeon's colour turned down, so torches pool light
 	env.fog_enabled = true
-	env.fog_light_color = amb * 0.45
-	env.fog_density = 0.035
+	env.fog_light_color = amb * float(look["fog_k"])
+	env.fog_density = float(look["fog_density"])
 	env.fog_sky_affect = 0.0
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.volumetric_fog_albedo = amb
 	env.volumetric_fog_density = 0.03
-	env.glow_intensity = 0.5
+	env.glow_intensity = float(look["glow"])
 	env.glow_bloom = 0.05
 	# Screen-space occlusion (Mellan and Hög; Forward+ only) darkens creases. Its defaults (a 1 m radius, intensity 2)
 	# are made for rooms: on 2 m walls seen from above they paint a dark band along every wall's foot and halos at the
@@ -270,6 +271,9 @@ func _is_open(x: int, y: int) -> bool:
 
 
 func _build_floor(d: Dictionary) -> void:
+	if flat_floor:
+		_build_floor_flat(d)
+		return
 	var floor_t := str(d.get("floor", "crypt"))
 	var boss_t := str(d.get("bossFloor", floor_t))
 	var groups: Dictionary = {} # [model, terrain] -> Array[Transform3D]
@@ -279,22 +283,54 @@ func _build_floor(d: Dictionary) -> void:
 			if t == "" or Data.is_wall_terrain(t) or _is_wall_tile(x, y):
 				continue
 			var model: String
-			if t == boss_t and boss_t != floor_t:
+			var h := absi((x * 73856093) ^ (y * 19349663) ^ (x * y * 83492791))
+			var v := h % 9
+			if t == boss_t and boss_t != floor_t and bool(look["boss_decor"]):
 				model = FLOOR_BOSS
 			else:
-				var h := absi((x * 73856093) ^ (y * 19349663) ^ (x * y * 83492791))
-				var v := h % 9
-				model = FLOOR_MODELS[1] if v == 0 else (FLOOR_MODELS[2] if v == 1 else FLOOR_MODELS[0])
+				model = FLOOR_MODELS[1] if v == 0 else (FLOOR_MODELS[2] if v == 1 and bool(look["weeds"]) else FLOOR_MODELS[0])
 			var gk := [model, t, x / CHUNK, y / CHUNK]
 			if not groups.has(gk):
 				groups[gk] = []
 			groups[gk].append(Transform3D(Basis.from_scale(Vector3.ONE * SCALE), Vector3(x + 0.5, 0.0, y + 0.5)))
 	for gk in groups.keys():
-		var colour: Color = tint() * FLOOR_TINT.get(gk[1], Color(1, 1, 1))
+		var colour: Color = DungeonLook.floor_tint(look, str(gk[1]))
 		var mesh := _tinted_mesh(KAYKIT + gk[0], colour)
 		if mesh == null:
 			continue
 		_static.add_child(_multimesh(mesh, groups[gk], false))
+
+
+## The biome's ground: one flat quad per tile in the biome's colour, a little lighter or darker by tile, one mesh per chunk
+## (so a chunk is still lit by its own torches only).
+func _build_floor_flat(d: Dictionary) -> void:
+	var base: Color = FLAT_FLOOR.get(str(d.get("floor", "grass")), Color(0.5, 0.5, 0.5))
+	var chunks: Dictionary = {} # Vector2i -> FarmMesh
+	for y in range(map_h):
+		for x in range(map_w):
+			var t := _terrain_at(x, y)
+			if t == "" or Data.is_wall_terrain(t) or _is_wall_tile(x, y):
+				continue
+			var ck := Vector2i(x / CHUNK, y / CHUNK)
+			if not chunks.has(ck):
+				chunks[ck] = FarmMesh.new()
+			var h := float(absi((x * 73856093) ^ (y * 19349663) ^ (x * y * 83492791)) % 1000) / 1000.0
+			var k := 0.9 + 0.2 * h
+			var col := Color(base.r * k, base.g * k, base.b * k)
+			var fb: FarmMesh = chunks[ck]
+			fb.quad(Vector3(x, 0.0, y + 1), Vector3(x + 1, 0.0, y + 1), Vector3(x + 1, 0.0, y), Vector3(x, 0.0, y), col)
+	for ck in chunks.keys():
+		var mi := MeshInstance3D.new()
+		mi.mesh = (chunks[ck] as FarmMesh).build()
+		mi.material_override = _vertex_material()
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_static.add_child(mi)
+
+
+func _vertex_material() -> StandardMaterial3D:
+	if _vc_mat == null:
+		_vc_mat = ZoneProps.material()
+	return _vc_mat
 
 
 func _build_walls() -> void:
@@ -329,7 +365,7 @@ func _build_walls() -> void:
 			var t := Transform3D(Basis(Vector3.UP, angle), origin) * Transform3D(Basis(Vector3(SCALE, 0.0, 0.0), Vector3(0.0, SCALE * (0.99 - 0.001 * side), 0.0), Vector3(0.0, 0.0, SCALE)), Vector3(-0.5, 0.0, 0.0))
 			side += 1
 			faces[chunk].append(t)
-	var cap_mesh := DungeonProps.wall_cap_mesh(tint())
+	var cap_mesh := DungeonProps.wall_cap_mesh(tint() * float(look["cap_k"]))
 	var face_mesh := _tinted_mesh(KAYKIT + "wall_half.gltf.glb", tint())
 	for chunk in caps.keys():
 		# the blocks are what the torches' shadows fall from; the slabs on their sides are 1 cm from the block
@@ -450,7 +486,34 @@ func _make_prop(kind: String, variant: int, x: int, y: int) -> Node3D:
 			node.add_child(heap if heap != null else DungeonProps.bones(variant, tint()))
 		"saga_urn":
 			node.add_child(DungeonProps.urn(variant, tint()))
+		"run_exit":
+			# the way on: a glowing rune disc on the floor with a beam of light over it
+			var disc := CylinderMesh.new()
+			disc.top_radius = 0.48
+			disc.bottom_radius = 0.5
+			disc.height = 0.05
+			disc.radial_segments = 16
+			node.add_child(DungeonProps._mesh_node(disc, DungeonProps.mat(Color(0.12, 0.3, 0.34), DungeonProps.RUNBLATT, 0.5), Vector3(0.0, 0.025, 0.0)))
+			var rim := CylinderMesh.new()
+			rim.top_radius = 0.58
+			rim.bottom_radius = 0.6
+			rim.height = 0.03
+			rim.radial_segments = 16
+			node.add_child(DungeonProps._mesh_node(rim, DungeonProps.mat(DungeonProps.KRYPTSTEN * tint(), Color.BLACK, 0.8), Vector3(0.0, 0.015, 0.0)))
+			var beam := DungeonProps.flame(Color(0.55, 1.0, 0.9), 2.2, mini(Quality.particles(), 8))
+			beam.position = Vector3(0.0, 0.1, 0.0)
+			node.add_child(beam)
+			if Quality.preset != "lag":
+				_add_light(node, Vector3(0.0, 1.3, 0.0), Color(0.6, 1.0, 0.9), 5.5, 2.0, 0.15)
 		_:
+			var made := ZoneProps.make(kind, variant, _vertex_material())
+			if made != null:
+				node.add_child(made)
+				var lt: Variant = ZoneProps.LIGHTS.get(kind)
+				# (Låg gets the prop's glow and no light of its own)
+				if lt is Array and Quality.preset != "lag":
+					_add_light(node, Vector3(0.0, float(lt[3]), 0.0), lt[0], float(lt[1]), float(lt[2]), float(lt[4]))
+				return node
 			if not _warned.has(kind):
 				_warned[kind] = true
 				push_warning("dungeon: no model for '%s' yet, a placeholder box is shown" % kind)
@@ -591,3 +654,239 @@ func _first_mesh(node: Node) -> MeshInstance3D:
 		if found != null:
 			return found
 	return null
+
+
+# ---------------------------------------------------------------------------
+# Weather in a zone (the RunSnap says which): fog in the air, and on Mellan and Hög something falling
+
+
+## `kind` is a WeatherKind (sun, cloudy, rain, fog, wind, snow, hail, storm). Låg changes the fog only; the others add a
+## falling-particle box that follows the hero (`follow_weather`), sized by the preset's weather budget.
+func set_weather(kind: String) -> void:
+	if kind == _weather:
+		return
+	_weather = kind
+	if _weather_node != null:
+		_weather_node.queue_free()
+		_weather_node = null
+	if _env != null and _env.environment != null:
+		var fog: float = float(look["fog_density"])
+		match kind:
+			"fog":
+				fog = 0.095
+			"rain", "storm":
+				fog = 0.05
+			"snow", "hail":
+				fog = 0.045
+			"wind":
+				fog = 0.04
+		_env.environment.fog_density = fog
+	var budget := int(Quality.spec().get("weather", 0)) / 3 if Quality.preset != "lag" else 0
+	if budget <= 0 or not (kind in ["rain", "storm", "snow", "hail", "wind"]):
+		return
+	var quad := QuadMesh.new()
+	var pm := ParticleProcessMaterial.new()
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	pm.emission_box_extents = Vector3(11.0, 0.2, 9.0)
+	var colour := Color(0.75, 0.85, 1.0, 0.55)
+	var life := 1.0
+	match kind:
+		"rain", "storm":
+			quad.size = Vector2(0.02, 0.55)
+			pm.direction = Vector3(0.12, -1.0, 0.0)
+			pm.spread = 3.0
+			pm.initial_velocity_min = 9.0
+			pm.initial_velocity_max = 11.0
+			life = 0.85
+			if kind == "storm":
+				budget = budget * 3 / 2
+		"snow":
+			quad.size = Vector2(0.07, 0.07)
+			pm.direction = Vector3(0.1, -1.0, 0.0)
+			pm.spread = 30.0
+			pm.initial_velocity_min = 0.7
+			pm.initial_velocity_max = 1.1
+			colour = Color(1, 1, 1, 0.85)
+			life = 7.5
+		"hail":
+			quad.size = Vector2(0.05, 0.12)
+			pm.direction = Vector3(0.2, -1.0, 0.0)
+			pm.spread = 6.0
+			pm.initial_velocity_min = 9.0
+			pm.initial_velocity_max = 12.0
+			colour = Color(0.92, 0.97, 1.0, 0.85)
+			life = 0.8
+		_:
+			# wind: pale dust blowing across
+			quad.size = Vector2(0.06, 0.06)
+			pm.direction = Vector3(1.0, -0.05, 0.25)
+			pm.spread = 12.0
+			pm.initial_velocity_min = 3.0
+			pm.initial_velocity_max = 5.0
+			colour = Color(0.85, 0.85, 0.8, 0.4)
+			life = 4.0
+			budget = budget / 3
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	m.albedo_color = colour
+	quad.material = m
+	var p := GPUParticles3D.new()
+	p.amount = maxi(8, budget)
+	p.lifetime = life
+	p.preprocess = life
+	p.local_coords = false
+	p.process_material = pm
+	p.draw_pass_1 = quad
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	p.visibility_aabb = AABB(Vector3(-14, -9, -12), Vector3(28, 12, 24))
+	add_child(p)
+	_weather_node = p
+
+
+## The falling weather and the look's motes go where the hero goes.
+func follow_weather(at: Vector3) -> void:
+	if _motes_node != null:
+		_motes_node.position = at + Vector3(0.0, 3.0, 0.0)
+	if _weather_node != null:
+		_weather_node.position = at + Vector3(0.0, 7.0, 0.0)
+
+
+# ---------------------------------------------------------------------------
+# What drifts through a dungeon's air (the look's `motes`): Mellan and Hög only, a quarter of the weather budget
+
+
+func _make_motes() -> void:
+	var kind := str(look.get("motes", ""))
+	var budget := int(Quality.spec().get("weather", 0)) / 4 if Quality.preset != "lag" else 0
+	if kind == "" or budget <= 0:
+		return
+	var quad := QuadMesh.new()
+	var pm := ParticleProcessMaterial.new()
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	pm.emission_box_extents = Vector3(10.0, 2.5, 8.0)
+	var colour := Color(1, 1, 1, 0.8)
+	var life := 6.0
+	var additive := false
+	var stars_ramp := false
+	match kind:
+		"snow":
+			# slow flakes falling through the cold air
+			quad.size = Vector2(0.06, 0.06)
+			pm.direction = Vector3(0.15, -1.0, 0.0)
+			pm.gravity = Vector3(0.0, -0.15, 0.0) # a flake settles at its own pace; the engine default (0, -9.8, 0) would drop it like a stone
+			pm.spread = 35.0
+			pm.initial_velocity_min = 0.35
+			pm.initial_velocity_max = 0.7
+			life = 8.0
+		"embers":
+			# sparks lifting off the forge's fires
+			quad.size = Vector2(0.05, 0.05)
+			pm.direction = Vector3(0.1, 1.0, 0.0)
+			pm.gravity = Vector3(0.0, 0.25, 0.0) # heat lifts a spark; the default would pull it straight down
+			pm.spread = 30.0
+			pm.initial_velocity_min = 0.4
+			pm.initial_velocity_max = 1.0
+			colour = Color(1.0, 0.55, 0.2, 0.9)
+			life = 5.0
+			additive = true
+		"dust":
+			# the mine: small warm-gold motes hanging in the lamplight (additive)
+			quad.size = Vector2(0.05, 0.05)
+			pm.direction = Vector3(0.2, -0.2, 0.1)
+			pm.gravity = Vector3(0.0, -0.02, 0.0) # hangs in the air
+			pm.spread = 80.0
+			pm.initial_velocity_min = 0.05
+			pm.initial_velocity_max = 0.2
+			colour = Color(1.0, 0.82, 0.45, 0.7)
+			life = 9.0
+			additive = true
+		"bubbles":
+			# the temple: pale bubbles rising slowly
+			quad.size = Vector2(0.09, 0.09)
+			pm.direction = Vector3(0.05, 1.0, 0.0)
+			pm.gravity = Vector3(0.0, 0.2, 0.0) # a bubble rises, faster as it goes
+			pm.spread = 20.0
+			pm.initial_velocity_min = 0.3
+			pm.initial_velocity_max = 0.7
+			colour = Color(0.7, 0.95, 1.0, 0.45)
+			life = 7.0
+			additive = true
+		"spores":
+			# the grove: violet spores lifting off the mushrooms
+			quad.size = Vector2(0.1, 0.1)
+			pm.direction = Vector3(0.1, 1.0, 0.2)
+			pm.gravity = Vector3(0.0, 0.08, 0.0) # a spore drifts up
+			pm.spread = 50.0
+			pm.initial_velocity_min = 0.1
+			pm.initial_velocity_max = 0.35
+			colour = Color(0.85, 0.6, 1.0, 0.6)
+			life = 8.0
+			additive = true
+			budget = budget / 2
+		"gale":
+			# Fenrisklyftan: a gale driving the snow hard and low sideways (it settles very slowly: gravity is small and explicit)
+			quad.size = Vector2(0.14, 0.04)
+			pm.direction = Vector3(1.0, -0.12, 0.25)
+			pm.gravity = Vector3(0.0, -0.2, 0.0)
+			pm.spread = 12.0
+			pm.initial_velocity_min = 2.4
+			pm.initial_velocity_max = 4.2
+			colour = Color(0.88, 0.94, 1.0, 0.7)
+			life = 4.0
+			additive = true
+		"stars":
+			# Bifrost: coloured stars drifting up and twinkling through the rainbow (a colour ramp over each star's life)
+			quad.size = Vector2(0.11, 0.11)
+			pm.direction = Vector3(0.1, 1.0, 0.1)
+			pm.gravity = Vector3(0.0, 0.05, 0.0) # a star drifts up
+			pm.spread = 60.0
+			pm.initial_velocity_min = 0.1
+			pm.initial_velocity_max = 0.4
+			colour = Color(1, 1, 1, 0.85)
+			life = 7.0
+			additive = true
+			budget = budget / 2
+			var ramp := Gradient.new()
+			ramp.offsets = PackedFloat32Array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+			ramp.colors = PackedColorArray([Color(1.0, 0.55, 0.65, 0.0), Color(1.0, 0.85, 0.5, 1.0), Color(0.6, 1.0, 0.7, 1.0), Color(0.5, 0.85, 1.0, 1.0), Color(0.8, 0.6, 1.0, 1.0), Color(1.0, 0.6, 0.9, 0.0)])
+			var tex := GradientTexture1D.new()
+			tex.gradient = ramp
+			pm.color_ramp = tex
+			stars_ramp = true
+		_:
+			# wisps: soft pale-green lights drifting sideways, slowly
+			quad.size = Vector2(0.16, 0.16)
+			pm.direction = Vector3(1.0, 0.1, 0.3)
+			pm.gravity = Vector3.ZERO # a wisp floats, nothing pulls it
+			pm.spread = 60.0
+			pm.initial_velocity_min = 0.15
+			pm.initial_velocity_max = 0.4
+			colour = Color(0.6, 1.0, 0.8, 0.5)
+			life = 7.0
+			additive = true
+			budget = budget / 2
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	if additive:
+		m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		m.albedo_texture = DungeonProps._glow_texture()
+	m.albedo_color = colour
+	if stars_ramp:
+		m.vertex_color_use_as_albedo = true
+	quad.material = m
+	var p := GPUParticles3D.new()
+	p.name = "Motes"
+	p.amount = maxi(8, budget)
+	p.lifetime = life
+	p.preprocess = life
+	p.local_coords = false
+	p.process_material = pm
+	p.draw_pass_1 = quad
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	p.visibility_aabb = AABB(Vector3(-14, -6, -12), Vector3(28, 12, 24))
+	add_child(p)
+	_motes_node = p

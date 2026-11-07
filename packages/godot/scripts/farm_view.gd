@@ -43,6 +43,8 @@ var map_w := 64
 var map_h := 64
 var assets := FarmAssets.new()
 var sky: DayNight
+var ambient: AmbientView ## fireflies, butterflies, falling leaves, chimney smoke and dawn mist (M7a)
+var objects_version := 0 ## counts every change to the objects (the ambient things find their anchors again)
 
 var _ground_root: Node3D
 var _objects_root: Node3D
@@ -52,10 +54,11 @@ var _ground: Dictionary = {} ## Vector2i -> Node3D
 var _lights: Array[OmniLight3D] = []
 var _flicker: Array = [] ## [light, base energy, phase, flicker amount, night kind]
 var _night_glows: Array = [] ## [MeshInstance3D glow, base energy]
+var _window_pools: Array = [] ## [MeshInstance3D pool of light on the ground (made when a preset wants it), base energy, phase, parent, place]
+var _pools_made := false
 var _flicker_in := 0.0
 var _t := 0.0
 var _dark := 0.0
-var _smoke: Array[GPUParticles3D] = [] ## chimney smoke (the farmhouse's)
 var _dirty_ground: Dictionary = {}
 var _crops: Dictionary = {} ## "x,y" -> crop dictionary
 var _drawn_counts := {"instances": 0, "multimeshes": 0}
@@ -72,6 +75,9 @@ func _ready() -> void:
 	sky = DayNight.new()
 	sky.name = "Sky"
 	add_child(sky)
+	ambient = AmbientView.new()
+	ambient.name = "Ambient"
+	add_child(ambient)
 
 
 func _exit_tree() -> void:
@@ -109,15 +115,18 @@ func _process(delta: float) -> void:
 
 func clear() -> void:
 	for child in get_children():
-		if child != sky:
+		if child != sky and child != ambient:
 			child.queue_free()
 	_chunks = {}
 	_nodes = {}
 	_ground = {}
 	_lights = []
-	_smoke.clear()
 	_flicker = []
 	_night_glows = []
+	_window_pools = []
+	_pools_made = false
+	if ambient != null:
+		ambient.setup(null) # (a dungeon is drawn next, or another map: nothing of this one may keep flying)
 	_crops = {}
 	_dirty_ground = {}
 	world = {}
@@ -151,6 +160,7 @@ func build(w: Dictionary, k: String) -> void:
 			_chunk_at(int(p[0]), int(p[1])).crop_keys[ck] = true
 	# the map's own light: the sky works from the biome and the key
 	sky.setup(self, str(w.get("biome", "")), k)
+	ambient.setup(self)
 	if k == "farm":
 		_light_the_house()
 
@@ -228,6 +238,7 @@ func _add_object(id: String, obj: Dictionary) -> void:
 	var x := int(obj.get("x", 0))
 	var y := int(obj.get("y", 0))
 	_last_objects[id] = obj
+	objects_version += 1
 	var spec := assets.spec(kind)
 	if bool(spec.get("node", false)) or kind.begins_with("lm_"):
 		var node := _make_node(kind, obj, spec)
@@ -247,6 +258,7 @@ func _add_object(id: String, obj: Dictionary) -> void:
 
 
 func _remove_object(id: String, obj: Dictionary) -> void:
+	objects_version += 1
 	var x := int(obj.get("x", 0))
 	var y := int(obj.get("y", 0))
 	var node: Variant = _nodes.get(id)
@@ -661,7 +673,7 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 	var mname := ""
 	var list: Array = spec.get("m", [])
 	if not list.is_empty():
-		mname = str(list[0])
+		mname = str(list[variant % list.size()]) if bool(spec.get("by_variant", false)) else str(list[0])
 	if kind.begins_with("lm_"):
 		return _landmark(kind, node)
 	var m := assets.mesh(mname) if mname != "" else null
@@ -680,17 +692,15 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 				var d := node.get_child(0) as Node3D
 				d.position = Vector3(0.0, 0.0, 0.2)
 			# the one real window is the round-topped one in the front gable; its light lies on the ground in front of
-			# the door (the browser's `beam`)
+			# the door (M7a's window pool: Quality "window_light")
 			var gw := assets.glow_quad(Color("#ffc977"), 0.7, 0.0)
 			gw.position = Vector3(-0.1, 2.0, 1.88)
 			node.add_child(gw)
 			_night_glows.append([gw, 1.8])
-			_add_beam(node, Vector3(0.0, 0.04, 1.95), Vector2(2.6, 3.4), 0.7)
+			_window_pool(node, Vector3(0.0, 0.0, 3.0))
 			_add_light(node, Vector3(0.0, 1.0, 2.8), FarmAssets.WARM, 7.0, 1.4, 0.12, true)
-			_add_smoke(node, Vector3(0.0, 4.0, -0.8))
 		"saga_portal":
-			var colours: Array = DungeonView.TORCH_COLOURS
-			var col: Color = colours[variant % colours.size()]
+			var col: Color = DungeonLook.portal_colour(variant)
 			var g2 := assets.glow_quad(col, 1.8, 1.4)
 			g2.position = Vector3(0.0, 1.05, 0.2)
 			node.add_child(g2)
@@ -699,6 +709,33 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 			node.position = Vector3.ZERO
 		"cave", "cave_mouth":
 			_add_light(node, Vector3(0.0, 0.8, 1.0), Color("#8aa0c8"), 3.5, 0.6, 0.0, false)
+		"fardport":
+			# the run arch: a teal-gold glow in the doorway (the saga portal's, in the Världsträd's colours) and its light
+			var fcol := Color("#7fe8c0")
+			var fg := assets.glow_quad(fcol, 1.8, 1.4)
+			fg.position = Vector3(0.0, 1.0, 0.1)
+			node.add_child(fg)
+			var fg2 := assets.glow_quad(Color("#f0e27a"), 0.7, 1.0)
+			fg2.position = Vector3(0.0, 2.55, 0.5)
+			node.add_child(fg2)
+			_add_light(node, Vector3(0.0, 1.4, 1.2), fcol, 5.5, 1.6, 0.25, true)
+		"yggdrasil":
+			# only the Världsträd itself (stage 4) shines
+			if variant >= 4:
+				var ycol := Color("#bff7d8")
+				var yg := assets.glow_quad(ycol, 4.5, 0.9)
+				yg.position = Vector3(0.0, 3.4, 0.0)
+				_billboard(yg)
+				node.add_child(yg)
+				_add_light(node, Vector3(0.0, 3.0, 0.8), ycol, 7.0, 1.4, 0.2, true)
+		"smithy":
+			var ex := assets.mesh("smithy_extras")
+			if ex != null:
+				var emi := MeshInstance3D.new()
+				emi.mesh = ex
+				emi.material_override = assets.prop_mat
+				emi.position = Vector3(1.0, 0.0, 1.2)
+				node.add_child(emi)
 	# windows that shine at night (the village's shop, pizzeria and station)
 	var glows: Variant = spec.get("glows")
 	if glows is Array:
@@ -707,7 +744,7 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 			gw.position = Vector3(float(gp[0]), float(gp[1]), float(gp[2]))
 			node.add_child(gw)
 			_night_glows.append([gw, 1.6])
-			_add_beam(node, Vector3(float(gp[0]), 0.04, float(gp[2]) + 0.05), Vector2(1.5, 2.4), 0.55)
+			_window_pool(node, Vector3(float(gp[0]), 0.0, float(gp[2]) + 0.9))
 	var lt: Variant = spec.get("light")
 	if lt is Array:
 		var night := bool(spec.get("night", false))
@@ -725,70 +762,6 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 			node.add_child(pool)
 			_night_glows.append([pool, 0.41])
 	return node
-
-
-## Chimney smoke: ~12 soft grey puffs that rise, grow, thin out and drift with the wind (`set_smoke`).
-func _add_smoke(parent: Node3D, at: Vector3) -> void:
-	var p := GPUParticles3D.new()
-	p.amount = 12
-	p.lifetime = 5.0
-	p.preprocess = 4.0
-	p.position = at
-	p.local_coords = false
-	p.visibility_aabb = AABB(Vector3(-4, -1, -4), Vector3(8, 8, 8))
-	var pm := ParticleProcessMaterial.new()
-	pm.direction = Vector3(0.0, 1.0, 0.0)
-	pm.spread = 8.0
-	pm.initial_velocity_min = 0.5
-	pm.initial_velocity_max = 0.8
-	pm.gravity = Vector3(0.3, 0.0, 0.0)
-	pm.scale_min = 0.9
-	pm.scale_max = 1.3
-	var curve := Curve.new()
-	curve.add_point(Vector2(0.0, 0.4))
-	curve.add_point(Vector2(1.0, 1.6))
-	var ct := CurveTexture.new()
-	ct.curve = curve
-	pm.scale_curve = ct
-	var grad := Gradient.new()
-	grad.set_color(0, Color(1, 1, 1, 0.0))
-	grad.add_point(0.15, Color(1, 1, 1, 0.9))
-	grad.set_color(grad.get_point_count() - 1, Color(1, 1, 1, 0.0))
-	var gt := GradientTexture1D.new()
-	gt.gradient = grad
-	pm.color_ramp = gt
-	p.process_material = pm
-	var q := QuadMesh.new()
-	q.size = Vector2(0.6, 0.6)
-	var sh := Shader.new()
-	sh.code = "shader_type spatial;\nrender_mode unshaded, depth_draw_never, cull_disabled, fog_disabled;\nuniform vec3 colour = vec3(0.7, 0.7, 0.72);\nvoid vertex() {\n\tMODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0] * length(MODEL_MATRIX[0].xyz), INV_VIEW_MATRIX[1] * length(MODEL_MATRIX[1].xyz), INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);\n}\nvoid fragment() {\n\tfloat k = clamp(1.0 - length(UV * 2.0 - 1.0), 0.0, 1.0);\n\tALBEDO = colour;\n\tALPHA = k * k * COLOR.a * 0.8;\n}\n"
-	var m := ShaderMaterial.new()
-	m.shader = sh
-	q.material = m
-	p.draw_pass_1 = q
-	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	parent.add_child(p)
-	_smoke.append(p)
-
-
-## The chimney smoke from the sky: thicker at night and in winter, thinner by day, leaning with the wind; colour follows the light.
-func set_smoke(thick: float, wind: float, light: Color) -> void:
-	for p in _smoke:
-		if not is_instance_valid(p):
-			continue
-		p.amount_ratio = clampf(thick, 0.15, 1.0)
-		var pm := p.process_material as ParticleProcessMaterial
-		pm.gravity = Vector3(0.2 + 0.9 * wind, 0.0, 0.0)
-		((p.draw_pass_1 as QuadMesh).material as ShaderMaterial).set_shader_parameter("colour", Vector3(light.r, light.g, light.b))
-
-
-## A warm beam of light on the ground in front of a lit window or door, fading away from the wall (it lies along +Z
-## from `at`, which is on the wall). It is lit by `set_dark` like the glows.
-func _add_beam(parent: Node3D, at: Vector3, size: Vector2, energy: float) -> void:
-	var b := assets.pool_quad(Color(1.0, 0.66, 0.35), size, energy, true)
-	b.position = at + Vector3(0.0, 0.0, size.y * 0.5)
-	parent.add_child(b)
-	_night_glows.append([b, energy])
 
 
 func _billboard(mi: MeshInstance3D) -> void:
@@ -848,9 +821,36 @@ func _add_light(parent: Node3D, at: Vector3, colour: Color, range_m: float, ener
 	_flicker.append([light, energy, randf() * TAU, flicker, night])
 
 
+## A pool of warm light on the ground in front of a lit window (Quality "window_light": 1 steady, 2 flickering like a
+## fire). The same switch as the windows' own glow; hidden on Låg.
+func _window_pool(parent: Node3D, at: Vector3) -> void:
+	# only a note: the pool itself is made the first time a preset wants it (Låg builds none and loops over none)
+	_window_pools.append([null, 0.55, randf() * TAU, parent, at])
+
+
 ## 0 bright day … 1 deep night: the lamps' strength and the windows' shine (day_night.gd calls this).
 func set_dark(dark: float) -> void:
 	_dark = dark
+	var pool_level := Quality.alive("window_light")
+	if pool_level > 0 or _pools_made:
+		var pool_k := smoothstep(0.35, 0.75, dark) if pool_level > 0 else 0.0
+		for p in _window_pools:
+			if p[0] == null:
+				if pool_level <= 0 or not is_instance_valid(p[3]):
+					continue
+				var made := assets.glow_quad(FarmAssets.WARM, 2.6, 0.0, true)
+				made.position = (p[4] as Vector3) + Vector3(0.0, 0.03, 0.0)
+				made.scale = Vector3(1.0, 1.0, 0.7)
+				made.visible = false
+				(p[3] as Node3D).add_child(made)
+				p[0] = made
+				_pools_made = true
+			var pm: MeshInstance3D = p[0]
+			if is_instance_valid(pm):
+				pm.visible = pool_k > 0.02
+				if pm.visible:
+					var flick := 1.0 + (0.12 * sin(_t * 7.0 + float(p[2])) + 0.06 * sin(_t * 17.0 + float(p[2]) * 2.3) if pool_level > 1 else 0.0)
+					(pm.material_override as ShaderMaterial).set_shader_parameter("energy", float(p[1]) * pool_k * flick)
 	for g in _night_glows:
 		var mi: MeshInstance3D = g[0]
 		if is_instance_valid(mi):
@@ -881,6 +881,42 @@ func shadow_light_count() -> int:
 
 func update_shadows(_at: Vector3, _n: int) -> void:
 	pass
+
+
+## The nearest deciduous trees (their foot on the ground) within `radius` of `at`, nearest first, at most 12: the
+## leaves of autumn fall from their crowns.
+func trees_near(at: Vector3, radius: float) -> Array[Vector3]:
+	var found: Array = []
+	for id in _last_objects.keys():
+		var o: Dictionary = _last_objects[id]
+		var kind := str(o.get("kind", ""))
+		if kind != "tree" and kind != "tree_apple":
+			continue
+		var p := Vector3(float(o.get("x", 0)) + 0.5, 0.0, float(o.get("y", 0)) + 0.5)
+		var d := p.distance_to(at)
+		if d < radius:
+			found.append([d, p])
+	found.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
+	var out: Array[Vector3] = []
+	for i in range(mini(12, found.size())):
+		out.append(found[i][1])
+	return out
+
+
+## Where the chimneys' smoke leaves the roofs: the objects whose SPECS entry has a "chimney" offset from the middle of
+## their footprint (at most 24).
+func chimneys() -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	for id in _last_objects.keys():
+		var o: Dictionary = _last_objects[id]
+		var spec := assets.spec(str(o.get("kind", "")))
+		var c: Variant = spec.get("chimney")
+		if c is Vector3:
+			var def := Data.object_def(str(o.get("kind", "")))
+			out.append(Vector3(float(o.get("x", 0)) + float(def.get("w", 1)) * 0.5, 0.0, float(o.get("y", 0)) + float(def.get("h", 1)) * 0.5) + c)
+			if out.size() >= 24:
+				break
+	return out
 
 
 func object_count() -> int:

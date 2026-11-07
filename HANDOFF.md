@@ -1,6 +1,6 @@
 # Handoff: Världsträdet, where the work stands
 
-Written 2026-11-06 18:00 UTC by the orchestrating session for a different agent that takes over. `PLAN.md` is the plan
+Written 2026-11-06 by the orchestrating session for a different agent that takes over; last updated 21:50 UTC. `PLAN.md` is the plan
 of record, `GAME.md` the run design (approved by the owner on 2026-11-06), `DESIGN.md` the record of the game as built.
 This file is only what the next agent needs: state, decisions, how the work is run, what is open. The work is
 **paused** at the owner's request; the next agent resumes from section 1.
@@ -27,43 +27,44 @@ This file is only what the next agent needs: state, decisions, how the work is r
 | 12 | backlog 3 | The character creator in the Godot client: "Ny karaktär" on the login screen, a creator window with the look composer, `POST /api/players` from the client, a headless creator check, `docs/creator.png`; merged 14:52 UTC as 70dac5a |
 | 15 | CI | By the owner's other session (`session_01KTh22pJ2K85r8267Nim4Fy`, Opus): the Godot workflow split into a fast `export` job (headless checks, bots, exports, about 6 minutes, on every PR) and a `pictures` job (Xvfb pictures, benches, the windowed farmer) that runs only on a manual `workflow_dispatch`; shared setup in `.github/actions/setup-godot`; job timeouts; superseded PR runs cancelled; merged 18:32 UTC as 3707985 |
 | 14 | backlog 2 | Röstprat in the Godot client: mu-law audio over a WebRTC data channel (`webrtc-native` 1.2.2-stable fetched by `tools/fetch-webrtc.sh`, not committed), `voice.gd`/`voice_peer.gd`/`voice_codec.gd`/`voice_window.gd`, push-to-talk default, a headless voice check and a two-bot signalling check, `docs/voice.png`; reviewed, seven findings fixed by a fix-up child; merged 19:28 UTC as 2873377. Not yet heard by the owner. |
+| 13 | M5c | Runs in the Godot client: the färdport arch, the Yggdrasil shoot in five stages, the smithy, herb garden and longhouse, the arch window, zones drawn with the biome looks, the run HUD with the soft clock, the three runor cards and the vote, the end summary, the sagaträd window, the hired companion drawn, a run bot with a headless CI check and an Xvfb picture run, docs and five pictures; six review findings fixed, a run-bot stall at 2–3 fps fixed, wipes retried; merged 21:49 UTC as c874511 |
 
-- **Open pull requests (the next agent's first job).** Both conflict with main since PR 15 (in the table above) in
-  `.github/workflows/godot.yml` only; each needs `origin/main` merged in and its workflow steps moved into the new
-  job structure before CI runs again.
-  - **PR 13, M5c: runs in the Godot client**, branch `m5c-runs-client`, draft. Everything is built and pushed: the
-    färdport arch, the Yggdrasil shoot in five stages, the smithy, herb garden and longhouse drawn; the arch window;
-    the zones drawn with the biome looks; the run HUD with the soft clock; the three runor cards and the vote; the end
-    summary; the sagaträd window; the hired companion drawn; a run bot and a two-bot CI check; docs (README, DESIGN.md
-    heading "Godot client: runs (2026-11-06)", ART.md, LICENSES.md, PLAN.md). An independent review found six issues
-    (the run bot quit after one pack, the vote check did not prove the protocol, the exit walk had no re-plan, the run
-    pair ran in the default bot mode, the cards rebuilt on every change, per-frame allocation and always-on lights);
-    all six were fixed in commits fce9c78, 4c29285 and 99cc09f, and main (PR 12) was merged in (b09cf97). CI then ran
-    the run-pair step for the first time and **both run bots stalled** after planning the path to the first pack
-    (no walking, no fight, no report for 900 s). The original child was told to stand down; a **fix-up child**
-    (`session_01KTh22s4VK2T6Mc1ipSsM5W`, Sonnet, same branch) is reproducing the stall headless in its sandbox
-    with Godot installed locally (at 17:45 UTC: "CI stall in fight phase; checking melee reach vs bot stop
-    distance"). **18:45 UTC:** the fix-up child reproduced the stall headless and pushed 45c12fc ("Run bot: it no
-    longer stalls at 2-3 fps or after a fall, and it closes the arch window after the run": `bot.gd` +20, `run_bot.gd`
-    +13, plus the missing `.uid` files of the new scripts). The Godot workflow on 45c12fc has been running since
-    18:13 UTC (the `build` job green; `export` in progress, the Xvfb steps next); the child is idle waiting for it.
-    Still to do by that child when CI is green: fetch the `m5c-*.png` pictures from the `farm-screenshots` artifact
-    into `packages/godot/docs/`, write the real PR body (per deliverable, commands, what to check on the MacBook,
-    pictures, unsure), mark the PR ready. **Since PR 15 (18:32 UTC) the branch conflicts with main in
-    `.github/workflows/godot.yml`** (the branch added two run-pair steps and reordered steps in the old single job;
-    main restructured the file). The child must merge `origin/main` into the branch and move its steps into the new
-    structure: the headless run pair (`BOT_ONLY=run BOT_RUN_SECONDS=480 pnpm godot:bot`) into the `export` job after
-    the two-bot step, and the Xvfb run pair with the pictures into the `pictures` job. GitHub runs no PR workflow
-    while the conflict stands, and the `m5c-*.png` pictures now only come from a manual run of the workflow on the
-    branch (Actions -> Godot client -> Run workflow, or `actions_run_trigger` run_workflow with `ref:
-    m5c-runs-client`), whose `farm-screenshots` artifact holds them. The child was told this at 18:55 UTC. Do not merge
-    until the conflict is resolved, the `export` job is green on the merged head, the manual `pictures` run has
-    produced the run pictures and they are committed, and the PR body and ready state are in. Local checks on the branch were green at every
-    head so far (297 shared, 47 server tests, `pnpm godot:gen` clean).
-  - **PR 14 is merged** (see the table). What the next agent should know: the MacBook test recipe is in the PR
-    body (two devices in different places, the microphone prompt, hold C to talk); the extension is fetched by
-    `packages/godot/tools/fetch-webrtc.sh` once per checkout; the voice bot check exercises the server with bare
-    sockets, not the Godot client; audio itself has never been heard.
+- **Resumed 2026-11-06 22:36 UTC by orchestrating session `session_01KTh22s6gWj5rerGqj3fNdr`.** Since then:
+  PR 16 (tidy-up of the PR 13/14 leftovers below, plus five review fixes) merged 23:46 UTC as ccaa03a; PR 17 (M6a:
+  a per-dungeon look table `dungeon_look.gd`, Frostjättens borg, Surts smedja and Helheim with sprites, every boss
+  move telegraphed, `demo_bosses.gd` boss shows that assert what they fed, dungeon bot pairs per chapter in CI, a fix of
+  a socket teardown race in `net.gd`, eight review fixes) merged 2026-11-07 01:16 UTC as f06f2f6. The export job is at
+  10m55s, over budget; M6b's brief makes cutting it the first step.
+- PR 18 (M6b: Svartalfheims gruvor, Havsormens tempel, Alvernas lund; export job cut to 7m58s by running the dungeon
+  pairs and boss shows in parallel; mote gravity per kind; hotbar labels shrink to fit; five review fixes) merged
+  2026-11-07 02:36 UTC as 9cb2d69.
+- PR 19 (M6c: Fenrisklyftan and Bifrost with Loke's illusions drawn ghostly, the saga's ending on screen with
+  `demo_ending.gd`, a toast queue in `hud.gd` that keeps bursts, the bots' gate request retried on no answer
+  (`Api.request_json_retrying`), all M6a/M6b pictures re-taken; review fixes) merged 2026-11-07 04:03 UTC as add8a48.
+  **M6 is done**: all nine dungeons and the ending are in the Godot client. Export job 8m16s.
+- PR 20 (M7a, the alive world's visuals: wind on foliage, water with waves, shore foam and screen-space reflections on
+  Mellan/Hög, fireflies, butterflies, leaves, chimney smoke, dawn mist, window light, each a preset toggle; a real
+  Forward+ shader compile under Xvfb/lavapipe in the export job; review fixes) merged 2026-11-07 06:03 UTC as b48ce70.
+  Export job 9m51s (M7b's first step cuts it). The screen-texture copy of Mellan/Hög water is the main GPU cost to
+  bench on the MacBook.
+- **Running now:** M7b (wildlife that flees and returns, footsteps, ambient sound) `session_01KTh22rF2Y4u6N5YDy7c9rJ`
+  on `claude/m7b-alive-world-life-sound`. Then M8. The owner tests PR 11–20 on the MacBook on 2026-11-07.
+- **Branch `claude/eloquent-rubin-0r5o0h` (sections 1b–1d: the art pass, the atmosphere pass, creatures in 3D) merged `main`
+  up to PR 20 and reconciled the overlap with M7a.** M7a's stay (the preset framework, wind, water, fireflies, butterflies,
+  leaves, chimney smoke, dawn mist, window light); dropped from the atmosphere pass as duplicates: its fireflies, chimney
+  smoke, autumn leaves in the trees, dawn mist, the window beams and the pond at night, plus its old wind sway and its
+  fog banks (fog weather now drives M7a's mist at a higher alpha). Kept: the day/night grade, screen grade, lamp pools,
+  the hero's lantern, rain/snow/hail/puddles/cloud shadows and dew. Details in `DESIGN.md` and `ART.md`.
+- **The leftovers below were fixed in PR 16** except the waypoint tolerance and the voice bot using bare sockets.
+- **Small things left over from PR 13 and PR 14, for one tidy-up PR** (none blocks anything): the pick screen shows
+  "Välj en runa!" twice, offset (the server's `reward` banner over the pick's own title; `run_pick.gd` / `hud.gd`);
+  README's M5c paragraph links `m5c-farm-run.png` and `m5c-smithy.png`, which do not exist (the `pictures` job takes
+  `farm-run`, `farm-run-night`, `farm-smithy` and `farm-longhall` into `shots/`; copy two of them in or fix the links);
+  the arch window's empty färdkost slot shows a missing-glyph box; the run bots retry a wipe twice (`MAX_WIPES` in
+  `run_bot.gd`, set 0 to make a wipe fail the check); the waypoint tolerance is about 1.25 frames of travel and a
+  client at a few fps still plays the dungeon by guesswork against telegraphs; the voice bot check exercises the
+  server with bare sockets, not the Godot client; the creator's "Inga karaktärer än" hint on a guest device that may
+  not create characters, and the creator check not pressing the arrow buttons.
 - Not yet done: M6 (the other eight dungeons and chapters as zone sets in the client), M7 (alive world), M8 (polish,
   release tag, homelab deploy of the v2 server, `DESIGN.md` rewrite).
 
@@ -117,9 +118,9 @@ owner's approval of the pictures (`packages/godot/docs/atm-*.png`) and a time-la
 | --- | --- |
 | 17049df | The browser's ambient curve carried by ambient, sun, moon and fog; soft sun shadows (angular distance, blur); the moon; the ground and prop shaders undo the Compatibility renderer's second sRGB conversion of vertex colours |
 | ea11466 | `screen_grade.gd` + `screen_grade.gdshader`: one full-screen pass under the HUD on every preset (warm grade, saturation, night blue by desaturation, dusk mauve, vignette, lightning double flash); glow threshold and strength from the dark |
-| 0aeaf5e | Lamps with bigger OmniLights and a ground pool quad each (`light_pool.gdshader`), a light beam on the ground from the farmhouse window and the village windows, the hero's lantern outdoors at night |
-| 0d41e51 | Rain streaks (slanted, 2x in storm) and splash rings, puddles that dry over ~40 s, fog banks that double as dawn mist, two flake sizes, hail, cloud shadows in cloudy weather and on props |
-| 6a71e02 | Fireflies (warm months or midsommar, dark > 0.5), dew sparkles in the morning sun, chimney smoke, the pond at night (sky colour and star glints), autumn leaves |
+| 0aeaf5e | Lamps with bigger OmniLights and a ground pool quad each (`light_pool.gdshader`), ~~a light beam on the ground from the farmhouse window and the village windows~~ (dropped for M7a's window light pools), the hero's lantern outdoors at night |
+| 0d41e51 | Rain streaks (slanted, 2x in storm) and splash rings, puddles that dry over ~40 s, ~~fog banks that double as dawn mist~~ (now M7a's mist), two flake sizes, hail, cloud shadows in cloudy weather and on props |
+| 6a71e02 | ~~Fireflies, chimney smoke, the pond at night, autumn leaves~~ (dropped for M7a's), dew sparkles in the morning sun |
 | 6150bc7 | Demo-only `--daylapse=<s>`, `--weathers=a,b,c`, `--weather-every=<s>` for videos |
 | 7f21c3c | ART.md, DESIGN.md, the docs pictures |
 | e5ee223 | The owner found the first result washed out: re-tuned rich and warm to measured targets (`scratchpad` script `meas2.py`: mean HSV saturation at or above the pre-pass pictures: noon S 0.75, golden 0.93, night Forward+ S 0.57 V 0.29); no desaturation anywhere, no black lift, contrast 1.06 by day, vignette 0.18/0.32, night as a navy multiply (0.5, 0.66, 1.25) with warm lamps masked, lamps and pools more orange, ambient cooler than the sun, no depth fog in clear weather, ambient 0.2 / sun 0.34 at noon (the higher energies clipped the grass to yellow-white) |
@@ -216,10 +217,14 @@ been tested on the MacBook yet; PR 11, 12, 13 and 14 each carry a "what to check
 - **GitHub does not run the `pull_request` workflow on a PR that conflicts with its base.** After every merge to main,
   check `mergeable_state` of the open PRs and have the child merge `origin/main` into its branch (plain merge, no
   force). Two PRs touching `bot-check.mts`, `sv.ts`, README, DESIGN.md or PLAN.md will conflict with each other.
-- **Known CI flake:** the farmer bot's bus step under Xvfb ("the bus: the stop did not open the window" or "could
-  not walk to bus_stop") failed twice out of about eight runs today on a slow runner and passed on re-run; nothing in
-  the diffs touched it (checked twice). Re-run the failed job once (`actions_run_trigger` rerun_failed_jobs); a third
-  failure in a row on the same head is real.
+- **Known CI flake:** the farmer bot's walks in the village under Xvfb (twice "the bus: the stop did not open the
+  window" / "could not walk to bus_stop", once "could not walk to saga_stone" after 304 s) failed three times out of
+  about ten runs today on slow runners and passed on other runs; nothing in the diffs touched it (checked twice).
+  Since PR 15 the windowed farmer only runs in the manual `pictures` job, so it no longer blocks PR checks; re-run
+  the job once. Steps that come after it in the `pictures` job are skipped when it fails (the M5c run-pair pictures
+  were, 18:59 UTC): keep such steps before it or on `if: always()`. The headless run-pair check in the `export` job
+  is also intermittent on contended runners (passed and failed on the same head 7a3884f at the same time); the M5c
+  fix-up child is making the bot tolerate slow frames rather than loosening the check.
 - Pushes to `main` of `HANDOFF.md` from the orchestrating session work; a force push, a branch deletion and pushes
   from the lilla-garden clone were refused by the permission classifier.
 - The owner tests on the MacBook and reports in chat; questions for the owner go in the chat report, one at a time.
@@ -233,6 +238,7 @@ been tested on the MacBook yet; PR 11, 12, 13 and 14 each carry a "what to check
   packs work (`KayKit-Game-Assets`, `Evolis-Work/kenney-castle-kit`). Headless Godot runs and Xvfb + Mesa screenshots
   work (Compatibility or lavapipe Vulkan only, so frame times there mean nothing). Docker Hub pulls are rate-limited;
   CI builds the image.
+- The sandbox's Xvfb has no Vulkan driver by default (Godot silently falls back to Compatibility/OpenGL): `apt-get update && apt-get install -y mesa-vulkan-drivers` adds lavapipe and Forward+ renders there (found in M7a).
 - A fresh checkout needs one import before the game runs: `godot --headless --path packages/godot --import`, and
   since PR 14 also `packages/godot/tools/fetch-webrtc.sh` for voice (the client runs without it, without voice).
 - The server needs `PARENT_PASSWORD` (12+ chars) or `ACCESS=open`, and dies if `DATABASE_URL` points at a Postgres
@@ -257,13 +263,10 @@ been tested on the MacBook yet; PR 11, 12, 13 and 14 each carry a "what to check
 
 ## 5. Open items and backlog, in rough order
 
-1. Finish and merge PR 13 (M5c) and PR 14 (voice): section 1. Then M6 (the other eight dungeons as zone sets and all
-   bosses in the Godot client, in chapter order; PLAN.md M6; the dungeons' plans and bosses exist as data, the client
-   draws Draugkryptan's look and the biome looks of the run zones). Then M7, M8.
-2. Nits from the reviews, for a small PR: the creator's "Inga karaktärer än" hint says to press Ny karaktär even on a
-   guest device that may not create characters (`login.gd`, `noCharactersYet`); the creator check sets the look
-   indexes directly, so the arrow buttons and the server's 400/403/409 answers are untested; the voice findings (b)–(g)
-   in section 1 if not fixed before the merge.
+1. **M6 done (PR 17–19); M7a done (PR 20); M7b running, then M8** (the other eight dungeons as zone sets and all bosses in the Godot client, in chapter order; PLAN.md
+   M6; the dungeons' plans and bosses exist as data, the client draws Draugkryptan's look and the seven biome looks of
+   the run zones). Then M7, M8. Before M6, ask the owner for the MacBook results of PR 11–14 if any have come in.
+2. The tidy-up PR of section 1's leftovers.
 3. Farm leftovers: the weapon in the hero's hand, Smedjan (forge), the journal, the bath house, caves, the paint
    screen, the rocket; sprites and icons only exist for Draugkryptan's creatures and loot.
 4. The threat indicator is a client heuristic; `SagaSnap.m` could carry the target id (additive).
@@ -282,16 +285,14 @@ been tested on the MacBook yet; PR 11, 12, 13 and 14 each carry a "what to check
 
 ## 6. Identifiers
 
-- Art pass session: `session_01KTh22oagteA1US6DqRwXHt` (section 1b).
-
-- Orchestrating sessions: `session_01KTh22pPGKmMmYJxTLXzyqs` (2026-11-06 09:55–18:00 UTC, paused), before that
-  `session_01KTh22nak5ip5cq8vST7H9Q`.
-- Children, all Sonnet: M5b `session_01KTh22qkzZkRx6UToLHSTLk`, M5b review fixes `session_01KTh22ovyHfUYGF3frNYrnr`,
-  M5b soft clock `session_01KTh22qjEejiGHLyJoPWc7W`, creator `session_01KTh22pn3nY1PwSd9U6Gv3B`, M5c
-  `session_01KTh22riKcXRQssJpT6nmes` (stood down), **M5c fix-up `session_01KTh22s4VK2T6Mc1ipSsM5W` (running at
-  18:00 UTC)**, voice `session_01KTh22ouaSJXMfDZvpaPHMt` (done).
-- One pause-mode check-in pending in the old orchestrating session (19:29 UTC, `trig_016hPae4dtYsGZNgBnbuQWNR`):
-  it only records the fix-up child's result here and merges nothing. The owner's other session
-  (`session_01KTh22pJ2K85r8267Nim4Fy`, Opus) made PR 15 and also edited section 3 of this file.
+- Art pass session: `session_01KTh22oagteA1US6DqRwXHt` (section 1b); the atmosphere pass and creatures in 3D (1c, 1d) and the merge of main into that branch: `session_01KTh22rMH5UutKMoSA5XCUG`.
+- Orchestrating sessions: `session_01KTh22pPGKmMmYJxTLXzyqs` (2026-11-06 09:55–21:50 UTC, paused), before that
+  `session_01KTh22nak5ip5cq8vST7H9Q`. The owner's other session `session_01KTh22pJ2K85r8267Nim4Fy` (Opus) made PR 15.
+- Children, all Sonnet, all done: M5b `session_01KTh22qkzZkRx6UToLHSTLk`, M5b review fixes
+  `session_01KTh22ovyHfUYGF3frNYrnr`, M5b soft clock `session_01KTh22qjEejiGHLyJoPWc7W`, creator
+  `session_01KTh22pn3nY1PwSd9U6Gv3B`, M5c `session_01KTh22riKcXRQssJpT6nmes` (stood down), M5c fix-up
+  `session_01KTh22s4VK2T6Mc1ipSsM5W`, voice `session_01KTh22ouaSJXMfDZvpaPHMt`, voice fix-up
+  `session_01KTh22qka2AJW7nyefZu2x5`.
+- Orchestrator since 2026-11-06 22:36 UTC: `session_01KTh22s6gWj5rerGqj3fNdr`; children (Sonnet): M6a `session_01KTh22qPPYJFNEk4wVjmv5b` (done), tidy-up `session_01KTh22qpJkd4hoGWrPg64yA` (done), M6b `session_01KTh22rTdZexhwmCtMLZuRP` (done), M6c `session_01KTh22s7Dm75532mFbJzr47` (done), M7a `session_01KTh22qWWBKXeP4TboJqexR` (done), M7b `session_01KTh22rF2Y4u6N5YDy7c9rJ` (running); a check-in is pending.
 - Homelab repo `tobiasbernting/homelab`: `cloud/` (Hetzner + Cloudflare + Tailscale, running), `server/roles/lilla-garden`
   and `lilla-garden-cloud`.

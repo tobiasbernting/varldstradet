@@ -30,7 +30,11 @@ var not_drawn: PanelContainer
 var not_drawn_label: Label
 var _banner_t := 0.0
 var _toast_t := 0.0
+var _toast_born := 0 ## when the toast that opened the current burst was shown (ms)
+var _toast_queue: Array = [] ## toasts that arrived in the same burst as the one on screen (a chapter's end sends three at once)
 var _banner_queue: Array = []
+const TOAST_SECONDS := 3.5
+const TOAST_BURST_SECONDS := 2.4 ## each toast of a burst is shown this long
 
 # the fight
 var spell_bar: HBoxContainer
@@ -122,7 +126,7 @@ func _ready() -> void:
 	fps_label.anchor_right = 1.0
 	fps_label.offset_left = -300
 	fps_label.offset_right = -16
-	fps_label.offset_top = 84
+	fps_label.offset_top = 150
 	fps_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	fps_label.visible = false
 	add_child(fps_label)
@@ -436,6 +440,7 @@ func reset() -> void:
 	_boss_for = -1
 	_was_down = false
 	_banner_queue = []
+	_toast_queue = []
 	set_party([])
 	build_spell_bar("")
 
@@ -452,7 +457,11 @@ func _process(delta: float) -> void:
 	if _toast_t > 0.0:
 		_toast_t -= delta
 		if _toast_t <= 0.0:
-			toast_label.text = ""
+			if _toast_queue.is_empty():
+				toast_label.text = ""
+			else:
+				toast_label.text = str(_toast_queue.pop_front())
+				_toast_t = TOAST_BURST_SECONDS if not _toast_queue.is_empty() else TOAST_SECONDS
 	if _yell_t > 0.0:
 		_yell_t -= delta
 		yell_label.modulate.a = clampf(_yell_t / 0.6, 0.0, 1.0)
@@ -623,6 +632,10 @@ func set_connection(status: String) -> void:
 
 ## Big words across the screen; a second banner waits for the first (the browser's queue). `kind` picks the sound.
 func show_banner(text: String, sub: String, kind := "") -> void:
+	# The run pick window draws its own "Välj en runa!"; the server's banner with the same words would sit under it.
+	if kind == "reward" and text == Data.run_text("pickTitle"):
+		Sfx.play("fanfare") # (the zone-cleared sound stays; only the doubled words go)
+		return
 	if _banner_t > 0.0:
 		_banner_queue.append([text, sub, kind])
 		return
@@ -642,9 +655,28 @@ func show_banner(text: String, sub: String, kind := "") -> void:
 			Sfx.play("banner")
 
 
+## One toast line. Toasts that come in a burst (within a moment of the one on screen: the end of a chapter sends an
+## achievement, a title and another achievement together) are shown one after the other instead of each wiping the last,
+## and so is any toast that comes while such a queue is still playing (another player's broadcast must not drop the
+## rest of it); a toast that comes when nothing waits replaces what is there, as before. The queue holds at most 8.
 func show_toast(text: String) -> void:
+	# the same words again: nothing to add (the timer is renewed when nothing waits behind it, and a burst's queue is kept)
+	if _toast_t > 0.0 and toast_label.text == text:
+		if _toast_queue.is_empty():
+			_toast_t = TOAST_SECONDS
+		return
+	if _toast_queue.has(text):
+		return
+	if _toast_t > 0.0 and (not _toast_queue.is_empty() or Time.get_ticks_msec() - _toast_born < 400):
+		if _toast_queue.size() >= 8:
+			return # (a queue this long is a flood: the newest words are dropped rather than the ones waiting)
+		_toast_queue.append(text)
+		_toast_t = minf(_toast_t, TOAST_BURST_SECONDS)
+		return
+	_toast_queue.clear()
+	_toast_born = Time.get_ticks_msec()
 	toast_label.text = text
-	_toast_t = 3.5
+	_toast_t = TOAST_SECONDS
 
 
 ## A boss shouts (and the chat gets it too, through the view).
@@ -687,6 +719,16 @@ func build_spell_bar(cls: String) -> void:
 		var sp := Data.spell(id)
 		_add_slot(id, Data.icon("spell_" + id), str(i + 1), str(sp.get("name", id)))
 	_add_slot("potion", Data.icon("ui_potion"), "5", Strings.t("sagaPotionKey").split(" (")[0])
+
+
+## Shrinks a label's font from `size` towards `min_size` until its text is at most `width` px wide; a text that already fits keeps `size`.
+func _fit_text(label: Label, size: int, min_size: int, width: float) -> void:
+	var font := label.get_theme_font("font")
+	var fs := size
+	while fs > min_size and font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > width:
+		fs -= 1
+	if fs != size:
+		label.add_theme_font_size_override("font_size", fs)
 
 
 func _add_slot(id: String, icon: Texture2D, key: String, slot_name: String) -> void:
@@ -739,6 +781,7 @@ func _add_slot(id: String, icon: Texture2D, key: String, slot_name: String) -> v
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.custom_minimum_size = Vector2(72, 0)
 	name_label.clip_text = true
+	_fit_text(name_label, 12, 8, 66.0) # (a long name like "Bärsärkaraseri" shrinks to fit the slot instead of losing its ends)
 	root.add_child(name_label)
 	spell_bar.add_child(root)
 	_slots.append({"id": id, "root": root, "panel": panel, "style": sb, "icon": tex, "sweep": sweep, "num": num, "key": key_label, "name": name_label, "was_cooling": false, "last": ""})

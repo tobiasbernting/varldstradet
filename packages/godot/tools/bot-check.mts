@@ -24,6 +24,10 @@
 // door and bakes bread, changes its hat, talks to villagers, walks to Köpingen, picks a class at the stone, hears Völvan,
 // eats a pizza, equips the starter weapon (the dev message `starter`), switches to hero and back and rides the bus.
 //
+// A fifth pair (M5c, only with BOT_ONLY=run: three servers and six Godot processes would starve the farmer's timed waits) plays a run through the client on a server of its own: two bots (scripts/run_bot.gd) walk to
+// the färdport, the lead presses "Starta färden", the other is taken along (or presses "Följ med"), both fight zone 1, use the
+// exit, vote on a runa card and enter zone 2. With `--full` (local use) they play on to the boss and home. The checks: no errors,
+// both reached zone 2, both voted, a runa was taken, the sagafrön counted.
 // A voice check (Röstprat, no Godot needed): two bots join voice on the in-memory server, one in a room of its own (two
 // devices on this machine share an address, so they would be one room that hears nothing), and the check is that the
 // server names each as the other's peer, sends the ice servers to the speakers, relays a `signal` from the one that
@@ -33,6 +37,10 @@
 // BOT_ONLY=voice runs only this.
 //
 //   GODOT=~/godot/godot pnpm godot:bot            (GODOT defaults to `godot` on the PATH)
+//   BOT_RUN_MAX_WIPES=0 sets how many wipes the run pair retries (default 2; 0 = a wipe fails the check)
+//   BOT_ONLY=run BOT_RUN_SECONDS=480 pnpm godot:bot [-- --full]   (the run pair alone; --full plays to the boss: BOT_RUN_SECONDS=2400)
+//   BOT_RUN_SHOTS=dir                             (the run pair saves pictures there; needs a window: run it under xvfb-run)
+//   BOT_ONLY=dungeon BOT_DUNGEON=frost BOT_SECONDS=240 pnpm godot:bot   (the fighter pair alone, in Frostjättens borg: draug, frost, surt, hel, dvarg, orm, alv, fenrir or loke; M6a–M6c)
 //   BOT_SECONDS=120 BOT_PORT=8097 BOT_PACKS=1     (optional; BOT_FARM_SECONDS=600 for the farmer, BOT_ONLY=farm or walker)
 //   BOT_FARM_SHOTS=dir                            (the farmer saves pictures there; needs a window: run under xvfb-run)
 import { spawn, type ChildProcess } from 'node:child_process';
@@ -49,12 +57,23 @@ const godot = process.env.GODOT ?? 'godot';
 const port = Number(process.env.BOT_PORT ?? 8097);
 const seconds = Number(process.env.BOT_SECONDS ?? 120);
 const packs = Number(process.env.BOT_PACKS ?? 1);
+/** Which dungeon the fighter pair asks the dev way into (M6a–M6c: draug, frost, surt, hel, dvarg, orm, alv, fenrir or loke; BOT_ONLY=dungeon runs just that pair). */
+const dungeon = process.env.BOT_DUNGEON ?? 'draug';
 const names = ['Bot-Ask', 'Bot-Embla'];
 const walkerName = 'Bot-Vandrare';
 const farmerName = 'Bot-Bonde';
 const creatorName = 'Bot-Skapare';
 const farmSeconds = Number(process.env.BOT_FARM_SECONDS ?? 600);
 const farmShots = process.env.BOT_FARM_SHOTS ?? '';
+const fullRun = process.argv.includes('--full');
+const runSeconds = Number(process.env.BOT_RUN_SECONDS ?? (fullRun ? 2400 : 480));
+const runMaxWipes = process.env.BOT_RUN_MAX_WIPES ?? ''; // (unset: the bot's own default of 2; 0 makes a wipe fail the check)
+if (runMaxWipes !== '' && !/^\d+$/.test(runMaxWipes)) {
+  console.error(`BOT_RUN_MAX_WIPES must be a whole number, 0 or more (got '${runMaxWipes}')`);
+  process.exit(2);
+}
+const runShots = process.env.BOT_RUN_SHOTS ?? '';
+const runNames = ['Run-Ask', 'Run-Embla'];
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'varldstradet-bot-'));
 
 interface Report {
@@ -79,6 +98,9 @@ interface Report {
   hearts: [number, number, number][];
   mob_hp: [number, number, number, number][];
   bar_samples: number;
+  /** Bifrost only: samples of monsters drawn as Loke's ghostly illusions, and of ones drawn solid (there must be none). */
+  ghosts: number;
+  solid: number;
   rises: [number, number, number, number, string][];
   errors: string[];
   packs_beaten: number;
@@ -87,6 +109,7 @@ interface Report {
   arrived_via_arch: boolean;
   dev_sent: boolean;
   summary?: string;
+  run?: { role: string; zones: number[]; exits: number; presses: number; picks: number; runor: string[]; started: boolean; joined: boolean; ended: { outcome: string } | null; boss_down: boolean; seeds: number };
 }
 
 interface FarmReport {
@@ -215,6 +238,7 @@ function run(cmd: string, args: string[], opts: { cwd: string; env?: Record<stri
   return child;
 }
 
+// (150 s: it only waits as long as the server needs, but eight pairs boot together on a small runner)
 async function waitFor(url: string, ms: number): Promise<void> {
   const until = Date.now() + ms;
   while (Date.now() < until) {
@@ -287,6 +311,28 @@ async function checkFarmer(r: FarmReport, farmPort: number, botLog?: string): Pr
   check(rec.stars >= 3, `${r.name}: the errands and the chapter paid in stars (${rec.coins} kr left, ${rec.stars} stars)`);
 }
 
+/** One bot of the run pair: it played through the client and its report says how far. */
+function checkRunner(r: Report, botLog?: string): void {
+  const run = r.run;
+  check(r.errors.length === 0, `${r.name}: no errors (${r.errors.join('; ') || 'none'})`);
+  const exitErrors = (botLog && fs.existsSync(botLog) ? fs.readFileSync(botLog, 'utf8') : '').split('\n').filter((l) => /leaked at exit|still in use at exit|Pages in use exist at exit|SCRIPT ERROR/.test(l));
+  check(exitErrors.length === 0, `${r.name}: no script errors, nothing leaked at exit (${exitErrors[0] ?? 'none'})`);
+  check(!!run, `${r.name}: the run report is there`);
+  if (!run) return;
+  console.log(`     ${r.name} (${run.role}): zones ${JSON.stringify(run.zones)}, exits taken ${run.exits} (${run.presses} presses), votes the server showed ${run.picks}, runor ${JSON.stringify(run.runor)}, sagafrön ${run.seeds}, started ${run.started}, joined ${run.joined}, ended ${JSON.stringify(run.ended)}`);
+  if (run.role === 'lead') check(run.started, `${r.name}: pressed "Starta färden" at the arch window`);
+  check(run.zones.includes(0), `${r.name}: entered zone 1 (${JSON.stringify(run.zones)})`);
+  check(run.zones.includes(1), `${r.name}: cleared zone 1, used the exit, voted and entered zone 2 (${JSON.stringify(run.zones)}) after ${r.seconds.toFixed(0)} s`);
+  check(run.exits >= 1, `${r.name}: the server let it through the way on (${run.exits} exits, ${run.presses} presses)`);
+  check(run.picks >= 1, `${r.name}: voted on a runa card and the server's offer showed the vote (${run.picks})`);
+  check(run.runor.length >= 1, `${r.name}: the pick gave the party a runa (${run.runor.join(', ') || 'none'})`);
+  check(run.seeds >= 1, `${r.name}: earned sagafrön in the run (${run.seeds})`);
+  if (fullRun) {
+    check(run.zones.includes(3), `${r.name}: reached the boss's map (${JSON.stringify(run.zones)})`);
+    check(run.boss_down, `${r.name}: the boss fell`);
+  }
+}
+
 /** The creator check's steps, and the character as the server keeps it against what the creator window sent. */
 async function checkCreator(r: CreatorReport, botLog?: string): Promise<void> {
   console.log(`\n--- ${r.name} steps ---`);
@@ -316,7 +362,7 @@ async function main(): Promise<void> {
     log: serverLog,
   });
   try {
-    await waitFor(`http://localhost:${port}/api/gate`, 60_000);
+    await waitFor(`http://localhost:${port}/api/gate`, 150_000);
     console.log('server: up');
     if ((process.env.BOT_ONLY ?? '') === 'voice' || (process.env.BOT_ONLY ?? '') === '') await checkVoice(`http://127.0.0.1:${port}`);
     if ((process.env.BOT_ONLY ?? '') === 'voice') {
@@ -335,8 +381,8 @@ async function main(): Promise<void> {
       console.log(`${name}: ${godot} ${args.join(' ')}`);
       return { name, report, log, child: run(godot, args, { cwd: godotDir, log }) };
     };
-    const bots = mode === '' ? names.map((name) => spawnBot(name, [`--packs=${packs}`])) : [];
-    const walker = mode === 'farm' || mode === 'creator' ? [] : [spawnBot(walkerName, ['--route=arch'])];
+    const bots = mode === '' || mode === 'dungeon' ? names.map((name) => spawnBot(name, [`--packs=${packs}`, `--dungeon=${dungeon}`])) : [];
+    const walker = mode === '' || mode === 'walker' ? [spawnBot(walkerName, ['--route=arch', `--dungeon=${dungeon}`])] : [];
     // the creator check: the login screen's way to a new character (its own empty HOME: it saves settings there, not in yours)
     const creators: { name: string; report: string; log: string; child: ChildProcess }[] = [];
     if (mode === '' || mode === 'creator') {
@@ -357,7 +403,7 @@ async function main(): Promise<void> {
         log: path.join(tmp, 'server-farm.log'),
       });
       farmServers.push(farmServer);
-      await waitFor(`http://localhost:${farmPort}/api/gate`, 60_000);
+      await waitFor(`http://localhost:${farmPort}/api/gate`, 150_000);
       console.log(`server 2 (the farmer's): port ${farmPort}`);
       // a second player builds three fences first: the farmer has to be refused when it tries to take one down
       const friendReport = path.join(tmp, 'friend.json');
@@ -375,8 +421,34 @@ async function main(): Promise<void> {
       console.log(`${farmerName}: ${godot} ${args.join(' ')}`);
       farmers.push({ name: farmerName, report, log, child: run(godot, args, { cwd: godotDir, log }) });
     }
-    const all = [...bots, ...walker, ...farmers, ...creators];
-    const codes = await Promise.all(all.map((b) => exited(b.child, ((b.name === farmerName ? farmSeconds : seconds) + 40) * 1000)));
+    // the run pair gets a server of its own, too (a run takes the party off the farm for minutes)
+    const runBots: { name: string; report: string; log: string; child: ChildProcess }[] = [];
+    if (mode === 'run') {
+      const runPort = port + 2;
+      const runServer = run(tsx, ['src/main.ts'], {
+        cwd: path.join(root, 'packages/server'),
+        env: { PORT: String(runPort), ACCESS: 'open', DEV_TELEPORT: '1', DATABASE_URL: '', SEASON_OVERRIDE: 'summer' },
+        log: path.join(tmp, 'server-run.log'),
+      });
+      farmServers.push(runServer);
+      await waitFor(`http://localhost:${runPort}/api/gate`, 150_000);
+      console.log(`server 3 (the run pair's): port ${runPort}`);
+      runNames.forEach((name, i) => {
+        const report = path.join(tmp, `${name}.json`);
+        const log = path.join(tmp, `${name}.log`);
+        const args = ['--headless', '--path', godotDir, '--', '--runbot', '--route=run', `--server=http://127.0.0.1:${runPort}`, `--name=${name}`, `--report=${report}`, `--seconds=${runSeconds}`, `--role=${i === 0 ? 'lead' : 'follow'}`];
+        if (fullRun) args.push('--full');
+        if (runMaxWipes !== '') args.push(`--max-wipes=${runMaxWipes}`);
+        if (runShots) {
+          args.splice(0, 1); // (pictures need a window: no --headless)
+          args.push(`--shots=${runShots}`);
+        }
+        console.log(`${name}: ${godot} ${args.join(' ')}`);
+        runBots.push({ name, report, log, child: run(godot, args, { cwd: godotDir, log }) });
+      });
+    }
+    const all = [...bots, ...walker, ...farmers, ...creators, ...runBots];
+    const codes = await Promise.all(all.map((b) => exited(b.child, ((b.name === farmerName ? farmSeconds : runNames.includes(b.name) ? runSeconds : seconds) + 40) * 1000)));
     const reports: (Report | FarmReport | null)[] = all.map((b, i) => {
       console.log(`\n--- ${b.name} (exit ${codes[i] === null ? 'killed' : codes[i]}) ---`);
       const log = fs.existsSync(b.log) ? fs.readFileSync(b.log, 'utf8') : '';
@@ -398,17 +470,25 @@ async function main(): Promise<void> {
         await checkFarmer(rr as FarmReport, farmPort, all.find((b) => b.name === farmerName)?.log);
         continue;
       }
+      if (runNames.includes(rr.name)) {
+        checkRunner(rr as Report, all.find((b) => b.name === rr.name)?.log);
+        continue;
+      }
       const r = rr as Report;
       check(r.errors.length === 0, `${r.name}: no errors (${r.errors.join('; ') || 'none'})`);
       const botLog = all.find((b) => b.name === r.name)?.log;
       const exitErrors = (botLog && fs.existsSync(botLog) ? fs.readFileSync(botLog, 'utf8') : '').split('\n').filter((l) => /leaked at exit|still in use at exit|Pages in use exist at exit/.test(l));
       check(exitErrors.length === 0, `${r.name}: exits clean, nothing leaked at exit (${exitErrors[0] ?? 'none'})`);
-      check(r.area.startsWith('saga:'), `${r.name}: entered the dungeon (${r.area || 'never'})`);
+      check(r.area === `saga:${dungeon}`, `${r.name}: entered the dungeon saga:${dungeon} (${r.area || 'never'})`);
       if (r.name === walkerName) {
         // the real way in: across the farm, through two forests, through the arch; the dev message never sent
-        const want = ['farm', 'a:0,-1', 'a:-1,-1', 'saga:draug'];
-        check(JSON.stringify(r.route) === JSON.stringify(want), `${r.name}: walked ${r.route.join(' → ')}`);
-        check(r.area === 'saga:draug', `${r.name}: arrived in saga:draug through the arch (${r.area || 'never'}) after ${r.seconds.toFixed(0)} s`);
+        // (Draugkryptan's arch is two forests away; another dungeon's route is whatever the walker found, ending in it)
+        if (dungeon === 'draug') {
+          const want = ['farm', 'a:0,-1', 'a:-1,-1', 'saga:draug'];
+          // (a walker that faints in a forest wakes at home and walks again: the route ends in the way in, it may begin twice)
+          check(r.route.length >= want.length && JSON.stringify(r.route.slice(-want.length)) === JSON.stringify(want), `${r.name}: walked ${r.route.join(' → ')}`);
+        } else check(r.route.at(-1) === `saga:${dungeon}`, `${r.name}: walked ${r.route.join(' → ')}`);
+        check(r.area === `saga:${dungeon}`, `${r.name}: arrived in saga:${dungeon} through the arch (${r.area || 'never'}) after ${r.seconds.toFixed(0)} s`);
         check(r.arrived_via_arch && !r.dev_sent, `${r.name}: the dev way was never used (dev_sent ${r.dev_sent})`);
         continue;
       }
@@ -420,11 +500,13 @@ async function main(): Promise<void> {
       check(r.hits_dealt > 0 && r.damage_dealt > 0, `${r.name}: hit numbers came back (${r.hits_dealt} hits, ${r.damage_dealt} damage dealt; took ${r.hits_taken} hits, ${r.damage_taken} damage)`);
       // a monster's health, as its bar shows it, only falls (the server's `mend` heal excepted)
       check(r.bar_samples > 0, `${r.name}: sampled the monsters' health bars (${r.bar_samples} samples)`);
+      // Loke's illusions (the server sends `variant: 1`): each monster but the bosses is drawn as the ghostly sheet
+      if (dungeon === 'loke') check(r.ghosts > 0 && r.solid === 0, `${r.name}: the illusions are drawn ghostly (${r.ghosts} samples ghostly, ${r.solid} solid)`);
       check(r.rises.length === 0, `${r.name}: no monster's health rose without a server heal (${r.rises.length}${r.rises.length ? ': ' + r.rises.slice(0, 3).map((x) => `${x[4]} monster ${x[1]} ${x[2]}->${x[3]} at ${x[0]}`).join('; ') : ''})`);
       check(r.hearts.length > 0, `${r.name}: saw its own hearts (${r.hearts.length} samples, last ${JSON.stringify(r.hearts.at(-1))})`);
       console.log(`     ${r.name}: zones seen ${r.zones_seen}, stepped out ${r.stepped_out}, fell ${r.fell}`);
     }
-    const [a, b] = (only ? [undefined, undefined] : reports.slice(0, 2)) as (Report | undefined)[];
+    const [a, b] = (bots.length === 2 ? reports.slice(0, 2) : [undefined, undefined]) as (Report | undefined)[];
     if (a && b) {
       check(a.others_casts > 0, `${a.name} saw ${b.name}'s casts (${a.others_casts}: ${JSON.stringify(a.others)})`);
       check(b.others_casts > 0, `${b.name} saw ${a.name}'s casts (${b.others_casts}: ${JSON.stringify(b.others)})`);

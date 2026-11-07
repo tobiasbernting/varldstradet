@@ -36,11 +36,11 @@ function heroSheet(cls: ClassId, skinIndex: number): Sheet {
 }
 
 /** Two walk frames facing right, the creature's own size, outlined like the browser draws it. */
-function mobSheet(species: string): Sheet {
+function mobSheet(species: string, variant = 0): Sheet {
   const size = ANIMAL_SIZE[species] ?? { w: 16, h: 16 };
   const sheet = new Px(size.w * 2, size.h);
-  sheet.blit(drawAnimal(species, 0, false, false, 0), 0, 0).blit(drawAnimal(species, 1, false, false, 0), size.w, 0);
-  return { file: `mob_${species}.png`, frame_w: size.w, frame_h: size.h, columns: 2, frames: ['right0', 'right1'], headroom: 0, png: sheet.dataUrl() };
+  sheet.blit(drawAnimal(species, 0, false, false, variant), 0, 0).blit(drawAnimal(species, 1, false, false, variant), size.w, 0);
+  return { file: `mob_${species}${variant ? `_v${variant}` : ''}.png`, frame_w: size.w, frame_h: size.h, columns: 2, frames: ['right0', 'right1'], headroom: 0, png: sheet.dataUrl() };
 }
 
 /** Every creature a dungeon can show: its packs, the mid-boss and boss, and the helpers they call. */
@@ -52,7 +52,8 @@ export function speciesOf(dungeonId: keyof typeof DUNGEONS): string[] {
     set.add(b);
     const adds = SAGA_BOSSES[b]?.phaseAdds;
     if (adds) set.add(adds.species);
-    for (const mv of SAGA_BOSSES[b]?.moves ?? []) if (mv.block) set.add(mv.block);
+    // (a freeze holds its friend in an ice block unless the move names a web, as sagasim's freeze() does)
+    for (const mv of SAGA_BOSSES[b]?.moves ?? []) if (mv.move === 'freeze') set.add(mv.block ?? 'isblock');
   }
   return [...set].sort();
 }
@@ -522,6 +523,8 @@ export async function render(dungeons: (keyof typeof DUNGEONS)[]): Promise<Rende
   // every mob and boss gets a sheet, also those no dungeon room lists (the voxel bodies need them all)
   const species = [...new Set([...dungeons.flatMap(speciesOf), ...Object.keys(SAGA_MOBS), ...Object.keys(SAGA_BOSSES)])].sort();
   for (const s of species) sheets.push(mobSheet(s));
+  // M6c: Loke's illusions are drawn ghostly (variant 1, sagamap.ts): every monster of a dungeon with `illusions` that is not a boss
+  for (const id of dungeons) if (DUNGEONS[id as keyof typeof DUNGEONS]?.illusions) for (const s of speciesOf(id as keyof typeof DUNGEONS)) if (!SAGA_BOSSES[s]) sheets.push(mobSheet(s, 1));
   const { sheet, icons } = iconSheet(dungeons);
   sheets.push(sheet);
   const { meta: farm, files: farmFiles } = farmLayers();

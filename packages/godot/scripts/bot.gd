@@ -43,10 +43,11 @@ var _bar_prev: Dictionary = {} ## monster id -> the health its bar showed the la
 var _hp_prev: Dictionary = {} ## monster id -> [hp, max] of the last snapshot
 var _healed_until: Dictionary = {} ## monster id -> local ms until which a rise is explained (the server healed it)
 const HEAL_GRACE_MS := 2000.0
+const FAR_TILES := 7.0 ## farther from the pack than this, the bot walks a path instead of straight at it
 var _report := {
 	"name": "", "ok": false, "phase": "", "seconds": 0.0, "casts_sent": 0, "casts_acked": 0, "spells_sent": {}, "spells_acked": {},
 	"others_casts": 0, "others": {}, "monsters_beaten": [], "hits_taken": 0, "damage_taken": 0, "hits_dealt": 0, "damage_dealt": 0,
-	"route": [], "arrived_via_arch": false, "dev_sent": false, "zones_seen": 0, "stepped_out": 0, "fell": 0, "hearts": [], "mob_hp": [], "bar_samples": 0, "rises": [], "errors": [], "packs_beaten": 0, "area": "",
+	"route": [], "arrived_via_arch": false, "dev_sent": false, "zones_seen": 0, "stepped_out": 0, "fell": 0, "hearts": [], "mob_hp": [], "bar_samples": 0, "ghosts": 0, "solid": 0, "rises": [], "errors": [], "packs_beaten": 0, "area": "",
 }
 
 
@@ -112,12 +113,12 @@ func _error(text: String) -> void:
 
 func _login() -> void:
 	_phase = "login"
-	var gate: Dictionary = await _api.gate()
+	var gate: Dictionary = await _api.request_json_retrying(HTTPClient.METHOD_GET, "/api/gate")
 	if not bool(gate.get("ok", false)) or str(gate.get("body", {}).get("gate", "")) != "ok":
 		_error("gate: %s" % str(gate))
 		_finish()
 		return
-	var list: Dictionary = await _api.players()
+	var list: Dictionary = await _api.request_json_retrying(HTTPClient.METHOD_GET, "/api/players")
 	var id := ""
 	if list.get("body") is Array:
 		for p in list["body"]:
@@ -177,6 +178,14 @@ func _sample_bars() -> void:
 			continue
 		seen[id] = true
 		_report["bar_samples"] += 1
+		# Loke's illusions (Bifrost): every monster but the bosses must be drawn as its ghostly sheet, and nothing else may be
+		var rec: Dictionary = world.model.areas.get(world.model.my_area_key(), {}).get("animals", {}).get(id, {})
+		var sp := str(rec.get("species", ""))
+		if bool(Data.dungeon(dungeon_id).get("illusions", false)) and not Data.mob(sp).is_empty() and Data.boss(sp).is_empty():
+			if str((world._actors[key] as Actor).sheet_name).ends_with("_v1"):
+				_report["ghosts"] = int(_report["ghosts"]) + 1
+			else:
+				_report["solid"] = int(_report["solid"]) + 1
 		if _bar_prev.has(id) and k > float(_bar_prev[id]) + 0.0005 and not _healed(id):
 			_rose("bar", id, float(_bar_prev[id]), k)
 		_bar_prev[id] = k
@@ -282,7 +291,7 @@ func _plan() -> void:
 				best_pack = i
 	if best_pack < 0:
 		_log("no pack left to fight")
-		_finish()
+		_no_pack_left()
 		return
 	_pack_ids = []
 	for mid in packs[best_pack].get("members", []):
@@ -300,6 +309,11 @@ func _plan() -> void:
 	_stuck_t = 0.0
 
 
+## Nothing left to fight here: the combat bot is done. (RunBot goes on to the exit instead.)
+func _no_pack_left() -> void:
+	_finish()
+
+
 ## A new map while walking the route: note it, finish in the dungeon, plan again in an outdoor map.
 func _on_route_area(key: String) -> void:
 	if not _report["route"].is_empty() and _report["route"][-1] == key:
@@ -309,6 +323,9 @@ func _on_route_area(key: String) -> void:
 	if Data.dungeon_of_key(key) == dungeon_id:
 		_report["area"] = key
 		_report["arrived_via_arch"] = not bool(_report["dev_sent"])
+		# M7a: nothing of the outdoor map's ambient life (fireflies, leaves, smoke, mist, butterflies) may stay behind in the dungeon
+		if world.farm.ambient != null and world.farm.ambient.get_child_count() > 0:
+			_error("the farm's ambient things are still there in %s: %s" % [key, str(world.farm.ambient.counts())])
 		_report["ok"] = _report["errors"].is_empty() and bool(_report["arrived_via_arch"])
 		_finish()
 	elif _phase != "done":
@@ -369,7 +386,7 @@ func _route_walk(delta: float) -> void:
 	if not _path.is_empty():
 		var next: Vector2i = _path[0]
 		var target := Vector2((next.x + 0.5) * tile, (next.y + 0.5) * tile)
-		if me.distance_to(target) < 3.0:
+		if me.distance_to(target) < _reach(delta):
 			_path.pop_front()
 			return
 		_drive_towards(target)
@@ -479,7 +496,9 @@ func _walk(delta: float) -> void:
 	if _step_out_of_zones():
 		return
 	if _path.is_empty():
-		if near != null:
+		if near != null and (near as Vector2).distance_to(Vector2(world.hero.px, world.hero.py)) > FAR_TILES * Data.tile():
+			_phase = "plan" # (the path ran out away from the pack: plan it again)
+		elif near != null:
 			_drive_towards(near)
 		else:
 			_start_fight()
@@ -488,7 +507,7 @@ func _walk(delta: float) -> void:
 	var next: Vector2i = _path[0]
 	var target := Vector2((next.x + 0.5) * tile, (next.y + 0.5) * tile)
 	var me := Vector2(world.hero.px, world.hero.py)
-	if me.distance_to(target) < 3.0:
+	if me.distance_to(target) < _reach(delta):
 		_path.pop_front()
 		return
 	_drive_towards(target)
@@ -502,6 +521,14 @@ func _walk(delta: float) -> void:
 	else:
 		_stuck_t = 0.0
 	_last_pos = me
+
+
+## How close to a waypoint counts as being there: 3 px, or the way a frame takes the hero when frames are slow (a software-GL
+## window on a CI runner draws 2-3 frames a second and the hero steps up to 8 physics steps per frame, about 8 px: with a
+## 3 px disc it overshoots the waypoint, turns back, overshoots again and wiggles on the spot, which the stuck check, that
+## wants the hero to stand still, never sees).
+func _reach(delta: float) -> float:
+	return maxf(3.0, Data.constant("PLAYER_SPEED", 64.0) * minf(delta, 8.0 / 60.0) * 1.25)
 
 
 func _drive_towards(target: Vector2) -> void:
@@ -564,6 +591,12 @@ func _fight(delta: float) -> void:
 	# keep within reach of the nearest monster of the pack
 	var near: Variant = _nearest_monster_px()
 	var me := Vector2(world.hero.px, world.hero.py)
+	if near != null and (near as Vector2).distance_to(me) > FAR_TILES * Data.tile():
+		# far from the pack (I fell and came back at the rest stone, or was pushed): a straight line runs into a wall; walk the path
+		_log("the pack is %d tiles away, planning the way again" % int((near as Vector2).distance_to(me) / Data.tile()))
+		world.hero.drive = Vector2.ZERO
+		_phase = "plan"
+		return
 	if near != null and (near as Vector2).distance_to(me) > 1.4 * Data.tile():
 		_drive_towards(near)
 	else:

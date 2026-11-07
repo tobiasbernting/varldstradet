@@ -96,6 +96,37 @@ jobs:
             grep -q "drawn (outdoor)" "demo-$demo.log" || { echo "::error::the $demo demo drew nothing"; exit 1; }
           done
 
+      # M7a: the alive world (wind, water, fireflies, butterflies, falling leaves, chimney smoke, dawn mist, window light) with every
+      # toggle on, on each quality preset, headless: the scripts, the MultiMeshes and the uniforms run (the shaders themselves are
+      # compiled and looked at in the `pictures` job under Xvfb; the headless renderer draws nothing)
+      - name: The alive world on every preset headless (--alive=all)
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          for run in "farm lag summer" "village mellan summer" "farm hog autumn"; do
+            set -- $run
+            timeout 120 ~/godot/godot --headless --path . --quit-after 300 -- --demo=$1 --quality=$2 --alive=all --year=$3 --time=0.9 2>&1 | tee "alive-$1-$2.log"
+            if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate|leaked at exit|still in use at exit|Pages in use exist at exit|SHADER ERROR" "alive-$1-$2.log"; then
+              echo "::error::the alive world on $1 / $2 reported errors or leaked at exit (see above)"; exit 1
+            fi
+            grep -q "drawn (outdoor)" "alive-$1-$2.log" || { echo "::error::the $1 demo drew nothing"; exit 1; }
+          done
+
+      # Shaders are not compiled by the headless renderer, so this is the one real compile check: a few seconds of a real
+      # (software Vulkan under Xvfb, i.e. Forward+) render of the farm with the alive world on; any SHADER ERROR fails.
+      - name: The new shaders compile (Forward+ on lavapipe under Xvfb, a few frames)
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y -q xvfb libgl1-mesa-dri mesa-vulkan-drivers
+          for q in mellan; do # (Låg's flat water is the old shader without its noise; the pictures job compiles it)
+            xvfb-run -a -s "-screen 0 1280x720x24" timeout 120 ~/godot/godot --path . --resolution 640x360 --quit-after 30 -- --demo=farm --quality=$q --alive=all --year=summer --time=0.9 2>&1 | tee "compile-$q.log"
+            if grep -E "SHADER ERROR|Shader compilation failed|SCRIPT ERROR|Parse Error" "compile-$q.log"; then
+              echo "::error::a shader or script failed on $q (see above)"; exit 1
+            fi
+            grep -q "Forward+" "compile-$q.log" || { echo "::error::the compile check did not run on Forward+"; exit 1; }
+          done
+
       - name: Run the bench headless for a moment (the bench's scripts run and the process exits clean; headless frame times mean nothing)
         working-directory: packages/godot
         run: |
@@ -107,11 +138,89 @@ jobs:
           fi
 
       # Two headless bots fight the first pack of Draugkryptan together against a server running in memory
-      # (no Postgres: the server's MemoryStore). tools/bot-check.mts compares their reports.
-      - name: Two bots clear the first pack together (the server in memory, ACCESS=open, DEV_TELEPORT=1)
+      # (no Postgres: the server's MemoryStore). tools/bot-check.mts compares their reports; the same run also has the
+      # arch walker, the creator check and the farmer.
+      #
+      # M5c: two headless bots play a run through the client against a server in memory: they walk to the färdport, the lead
+      # starts, both clear zone 1, use the exit, vote on a runa and enter zone 2 (`--full` plays to the boss, locally).
+      #
+      # M6b: these two used to run one after the other (4 + 4 minutes) and the job was over its ~10 minute budget; they
+      # are independent (each has servers of its own: 8097 and 8098, and 8200 with its run pair on 8202), so they run side
+      # by side. Nothing they assert changed. (If one starves the other on a small runner, a timed wait fails: that is a
+      # real signal to look at, not a reason to lengthen a limit.)
+      - name: The Draugkryptan bots (fighters, walker, creator, farmer) and the run pair play side by side
         run: |
-          set -euo pipefail
-          GODOT=~/godot/godot BOT_SECONDS=150 pnpm godot:bot 2>&1 | tee bot.log
+          set -uo pipefail
+          (GODOT=~/godot/godot BOT_SECONDS=150 pnpm godot:bot > bot.log 2>&1; echo $? > bot.code) &
+          (GODOT=~/godot/godot BOT_ONLY=run BOT_PORT=8200 BOT_RUN_SECONDS=480 pnpm godot:bot > runbots.log 2>&1; echo $? > runbots.code) &
+          wait
+          bad=0
+          echo "== the Draugkryptan bots"; cat bot.log
+          test "$(cat bot.code)" = 0 || { echo "::error::the Draugkryptan bots failed"; bad=1; }
+          echo "== the run pair"; cat runbots.log
+          test "$(cat runbots.code)" = 0 || { echo "::error::the run pair failed"; bad=1; }
+          exit $bad
+
+      # M6a–M6c: the same fighter pair in Frostjättens borg, Surts smedja, Helheim, Svartalfheims gruvor, Havsormens tempel,
+      # Alvernas lund, Fenrisklyftan and Bifrost (the dev way in: DEV_TELEPORT=1, `dev saga`): each clears its first two packs
+      # against a server in memory. The eight run side by side, each on ports of its own (a run uses its port and the next
+      # two; gaps left). On Bifrost the pair also checks that Loke's illusions are drawn ghostly.
+      - name: Two bots clear the first packs of each of the eight dungeons after Draugkryptan (the dev way in)
+        run: |
+          set -uo pipefail
+          port=8100
+          for d in frost surt hel dvarg orm alv fenrir loke; do
+            (GODOT=~/godot/godot BOT_ONLY=dungeon BOT_DUNGEON=$d BOT_PORT=$port BOT_PACKS=2 BOT_SECONDS=240 pnpm godot:bot > "bot-$d.log" 2>&1; echo $? > "bot-$d.code") &
+            port=$((port + 4))
+          done
+          wait
+          bad=0
+          for d in frost surt hel dvarg orm alv fenrir loke; do
+            echo "== $d"; cat "bot-$d.log"
+            test "$(cat "bot-$d.code")" = 0 || { echo "::error::the $d bot pair failed"; bad=1; }
+          done
+          exit $bad
+
+      # M6a–M6c: every move of the mid-boss and the boss of each of the eight plays on the recorded dungeon, from the data
+      # (scripts/demo_bosses.gd): the cast bar, the marks on the floor, the landing, the ice block or web, the burning ground,
+      # the helpers, the pull, a mend's glow and the heal. The eight run side by side (about 25 s).
+      - name: Play the bosses' moves of the eight dungeons and the saga's ending headless (telegraphs, cast bars, what they leave; the last banners and toasts)
+        working-directory: packages/godot
+        run: |
+          set -uo pipefail
+          for d in frost surt hel dvarg orm alv fenrir loke; do
+            (timeout 150 ~/godot/godot --headless --path . -- --demo=$d --fight --once > "bosses-$d.log" 2>&1; echo $? > "bosses-$d.code") &
+          done
+          # M6c: the saga's ending, beside them: what the server sends when Loke falls (a "cleared" banner, a toast) and when
+          # Völvan is handed the last chapter (banners, three toasts, the record past the last chapter, her window: "the saga is over")
+          (timeout 150 ~/godot/godot --headless --path . -- --demo=loke --ending --once > ending-dungeon.log 2>&1; echo $? > ending-dungeon.code) &
+          (timeout 150 ~/godot/godot --headless --path . -- --demo=ending --once > ending-village.log 2>&1; echo $? > ending-village.code) &
+          wait
+          # every dungeon's log is printed and every failure reported (one failing show must not hide the others)
+          bad=0
+          fail() { echo "::error::$1"; bad=1; }
+          # every move of each boss cast once: the mid-boss's and the boss's: frost 1 + 4, surt 2 + 3, hel 2 + 3, dvarg 2 + 3, orm 2 + 4, alv 2 + 4, fenrir 2 + 4, loke 2 + 7
+          declare -A casts=([frost]=5 [surt]=5 [hel]=5 [dvarg]=5 [orm]=6 [alv]=6 [fenrir]=6 [loke]=9)
+          for d in frost surt hel dvarg orm alv fenrir loke; do
+            echo "== $d"; cat "bosses-$d.log"
+            if grep -E "^ERROR:|SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|Failed to instantiate|bosses: FAIL|leaked at exit|still in use at exit|Pages in use exist at exit" "bosses-$d.log"; then
+              fail "the $d boss show reported errors or leaked at exit (see above)"
+            fi
+            test "$(cat "bosses-$d.code")" = 0 || fail "the $d boss show did not end cleanly"
+            grep -q "bosses: show finished" "bosses-$d.log" || fail "the $d boss show did not play to its end"
+            # (the show checks what it fed: each mark is in the fx view after the cast, gone after the landing, a helper, an ice block or a web is an actor, a mend glows and its glow ends and the heal floats, a pull puts the hero next to the boss, the air's motes drift, Loke's helpers are drawn as ghostly illusions)
+            grep -q "^bosses: ok" "bosses-$d.log" || fail "the $d boss show's own checks did not pass"
+            test "$(grep -c 'casts,' "bosses-$d.log")" = "${casts[$d]}" || fail "the $d boss show did not cast every move"
+          done
+          for e in dungeon village; do
+            echo "== the ending ($e)"; cat "ending-$e.log"
+            if grep -E "^ERROR:|SCRIPT ERROR|Parse Error|Failed to load script|ending: FAIL|leaked at exit|still in use at exit|Pages in use exist at exit" "ending-$e.log"; then
+              fail "the saga's ending ($e) reported errors or failed a check (see above)"
+            fi
+            test "$(cat "ending-$e.code")" = 0 || fail "the saga's ending ($e) did not end cleanly"
+            grep -q "^ending: ok" "ending-$e.log" || fail "the saga's ending ($e) did not pass its own checks"
+          done
+          exit $bad
 
       - name: Export all four targets
         working-directory: packages/godot
@@ -199,6 +308,147 @@ jobs:
             fi
           done
 
+      # M6a: a picture of each of the three new dungeons (the start room and the boss's hall) and of each boss move's marks,
+      # under Xvfb (software GL). The ones worth keeping are copied into packages/godot/docs/ by hand.
+      - name: Pictures of Frostjättens borg, Surts smedja and Helheim and of their bosses' moves under Xvfb
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/shots/dungeons"
+          shot() { # name, demo args...
+            local name="$1"; shift
+            xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- "$@" --screenshot="$GITHUB_WORKSPACE/shots/dungeons/$name.png" 2>&1 | tee "shot-$name.log"
+            if grep -E "^ERROR:|SCRIPT ERROR|Parse Error|leaked at exit|still in use at exit|Pages in use exist at exit" "shot-$name.log"; then
+              echo "::error::$name: errors or leaks (see above)"; exit 1
+            fi
+            test "$(stat -c %s "$GITHUB_WORKSPACE/shots/dungeons/$name.png")" -gt 20000
+          }
+          shot m6a-frost --demo=frost
+          shot m6a-frost-hall --demo=frost --at=17,15
+          shot m6a-surt --demo=surt
+          shot m6a-surt-hall --demo=surt --at=31,34
+          shot m6a-hel --demo=hel
+          shot m6a-hel-hall --demo=hel --at=14,51
+          shot m6a-isbjorn-charge --demo=frost --boss-move=isbjorn:charge
+          shot m6a-rimturs-cleave --demo=frost --boss-move=rimturs:cleave
+          shot m6a-rimturs-rain --demo=frost --boss-move=rimturs:rain
+          shot m6a-rimturs-freeze --demo=frost --boss-move=rimturs:freeze:after
+          shot m6a-rimturs-nova --demo=frost --boss-move=rimturs:nova
+          shot m6a-smeden-slam --demo=surt --boss-move=smeden:slam
+          shot m6a-smeden-pools --demo=surt --boss-move=smeden:pools:after
+          shot m6a-surt-cleave --demo=surt --boss-move=surt:cleave
+          shot m6a-surt-nova --demo=surt --boss-move=surt:nova
+          shot m6a-garm-charge --demo=hel --boss-move=garm:charge
+          shot m6a-garm-summon --demo=hel --boss-move=garm:summon:after
+          shot m6a-hel-pull --demo=hel --boss-move=hel:pull
+          shot m6a-hel-nova --demo=hel --boss-move=hel:nova
+          shot m6a-hel-rain --demo=hel --boss-move=hel:rain
+
+      # M6b: the same for Svartalfheims gruvor, Havsormens tempel and Alvernas lund: the start room, the boss's hall (the
+      # hero off to one side, so the boss shows) and the marks of each move of the mid-boss and the boss.
+      - name: Pictures of Svartalfheims gruvor, Havsormens tempel and Alvernas lund and of their bosses' moves under Xvfb
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/shots/dungeons"
+          shot() { # name, demo args...
+            local name="$1"; shift
+            xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- "$@" --screenshot="$GITHUB_WORKSPACE/shots/dungeons/$name.png" 2>&1 | tee "shot-$name.log"
+            if grep -E "^ERROR:|SCRIPT ERROR|Parse Error|leaked at exit|still in use at exit|Pages in use exist at exit" "shot-$name.log"; then
+              echo "::error::$name: errors or leaks (see above)"; exit 1
+            fi
+            test "$(stat -c %s "$GITHUB_WORKSPACE/shots/dungeons/$name.png")" -gt 20000
+          }
+          shot m6b-dvarg --demo=dvarg
+          shot m6b-dvarg-hall --demo=dvarg --at=48,11
+          shot m6b-jarnvakten-line --demo=dvarg --boss-move=jarnvakten:line
+          shot m6b-jarnvakten-slam --demo=dvarg --boss-move=jarnvakten:slam
+          shot m6b-fafner-cleave --demo=dvarg --boss-move=fafner:cleave
+          shot m6b-fafner-pools-mark --demo=dvarg --boss-move=fafner:pools
+          shot m6b-fafner-pools --demo=dvarg --boss-move=fafner:pools:after
+          shot m6b-fafner-mend --demo=dvarg --boss-move=fafner:mend
+          shot m6b-orm --demo=orm
+          shot m6b-orm-hall --demo=orm --at=47,50
+          shot m6b-blackis-pools --demo=orm --boss-move=blackis:pools:after
+          shot m6b-blackis-line --demo=orm --boss-move=blackis:line
+          shot m6b-jormungand-line --demo=orm --boss-move=jormungand:line
+          shot m6b-jormungand-pull --demo=orm --boss-move=jormungand:pull
+          shot m6b-jormungand-nova --demo=orm --boss-move=jormungand:nova
+          shot m6b-jormungand-rain --demo=orm --boss-move=jormungand:rain
+          shot m6b-alv --demo=alv
+          shot m6b-alv-hall --demo=alv --at=27,48
+          shot m6b-spindeldrottning-web --demo=alv --boss-move=spindeldrottning:freeze:after
+          shot m6b-spindeldrottning-rain --demo=alv --boss-move=spindeldrottning:rain
+          shot m6b-nattmara-nova --demo=alv --boss-move=nattmara:nova
+          shot m6b-nattmara-pools --demo=alv --boss-move=nattmara:pools:after
+          shot m6b-nattmara-mend --demo=alv --boss-move=nattmara:mend
+          shot m6b-nattmara-summon --demo=alv --boss-move=nattmara:summon:after
+
+      # M6c: the same for Fenrisklyftan and Bifrost: the start room, the boss's hall (the hero off to one side) and the marks
+      # of each move of the mid-boss and the boss (Loke's two novas are `nova` and `nova#1`).
+      - name: Pictures of Fenrisklyftan and Bifrost and of their bosses' moves under Xvfb
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/shots/dungeons"
+          shot() { # name, demo args...
+            local name="$1"; shift
+            xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- "$@" --screenshot="$GITHUB_WORKSPACE/shots/dungeons/$name.png" 2>&1 | tee "shot-$name.log"
+            if grep -E "^ERROR:|SCRIPT ERROR|Parse Error|leaked at exit|still in use at exit|Pages in use exist at exit" "shot-$name.log"; then
+              echo "::error::$name: errors or leaks (see above)"; exit 1
+            fi
+            test "$(stat -c %s "$GITHUB_WORKSPACE/shots/dungeons/$name.png")" -gt 20000
+          }
+          shot m6c-fenrir --demo=fenrir
+          shot m6c-fenrir-hall --demo=fenrir --at=45,48
+          shot m6c-skoll-charge --demo=fenrir --boss-move=skoll:charge
+          shot m6c-skoll-nova --demo=fenrir --boss-move=skoll:nova
+          shot m6c-fenrisulven-charge --demo=fenrir --boss-move=fenrisulven:charge
+          shot m6c-fenrisulven-cleave --demo=fenrir --boss-move=fenrisulven:cleave
+          shot m6c-fenrisulven-summon --demo=fenrir --boss-move=fenrisulven:summon:after
+          shot m6c-fenrisulven-nova --demo=fenrir --boss-move=fenrisulven:nova
+          shot m6c-loke --demo=loke
+          shot m6c-loke-hall --demo=loke --at=34,51
+          shot m6c-lokesskugga-rain --demo=loke --boss-move=lokesskugga:rain
+          shot m6c-lokesskugga-nova --demo=loke --boss-move=lokesskugga:nova
+          shot m6c-loke-cleave --demo=loke --boss-move=loke:cleave
+          shot m6c-loke-snow --demo=loke --boss-move=loke:nova
+          shot m6c-loke-pools --demo=loke --boss-move=loke:pools:after
+          shot m6c-loke-mend --demo=loke --boss-move=loke:mend
+          shot m6c-loke-pull --demo=loke --boss-move=loke:pull
+          shot m6c-loke-hel --demo=loke --boss-move=loke:nova#1
+          shot m6c-loke-line --demo=loke --boss-move=loke:line
+
+      # M7a: the alive world under Xvfb (software GL): the pictures (all on Mellan, the pond also on Låg and Hög for the comparison)
+      # and the farm and the village benches with everything on at once (`--alive=all`, night, summer). The ones worth keeping are
+      # copied into packages/godot/docs/ by hand (m7a-lag-vs-hog is the two pond pictures side by side).
+      - name: Pictures and benches of the alive world (wind, water, fireflies, leaves, smoke, mist) under Xvfb
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/shots/m7a"
+          shot() { # name, demo args...
+            local name="$1"; shift
+            xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- "$@" --screenshot="$GITHUB_WORKSPACE/shots/m7a/$name.png" 2>&1 | tee "shot-$name.log"
+            if grep -v "status < 0" "shot-$name.log" | grep -E "SCRIPT ERROR|SHADER ERROR|Parse Error|leaked at exit|still in use at exit|Pages in use exist at exit"; then
+              echo "::error::$name: errors or leaks (see above)"; exit 1
+            fi
+            test "$(stat -c %s "$GITHUB_WORKSPACE/shots/m7a/$name.png")" -gt 20000
+          }
+          shot m7a-farm-windy --demo=farm --at=22,10 --time=0.4 --weather=wind --year=summer --quality=mellan
+          shot m7a-pond-dusk --demo=farm --at=44,39 --time=0.74 --year=summer --quality=mellan
+          shot m7a-summer-night --demo=farm --at=11,9 --time=0.92 --year=summer --quality=mellan
+          shot m7a-autumn-leaves --demo=farm --at=12,5 --time=0.4 --year=autumn --quality=mellan
+          shot m7a-pond-lag --demo=farm --at=44,39 --time=0.45 --year=summer --quality=lag
+          shot m7a-pond-hog --demo=farm --at=44,39 --time=0.45 --year=summer --quality=hog
+          for scene in farm village; do
+            xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- --bench --scene=$scene --alive=all --time=0.9 --year=summer 2>&1 | tee "bench-alive-$scene.log"
+            grep -q "bench: done" "bench-alive-$scene.log"
+            if grep -E "SCRIPT ERROR|SHADER ERROR|leaked at exit|still in use at exit|Pages in use exist at exit" "bench-alive-$scene.log"; then
+              echo "::error::the $scene alive-world bench reported errors or leaked at exit"; exit 1
+            fi
+          done
+
       # The farmer works a farm of its own (a second in-memory server) in a window under Xvfb and takes pictures at the
       # moments the owner asked for: watering, the bag and a chest open, a fish biting, a wild animal petted (M4b); and
       # the shop, the workbench, a refused fence, the farmhouse, the stove, the wardrobe, a talk, Köpingen, the class
@@ -212,13 +462,28 @@ jobs:
             xvfb-run -a -s "-screen 0 1280x720x24" pnpm godot:bot 2>&1 | tee farmer.log
           for f in watering bag-open fishing-bite pet shop workbench not-yours house cook wardrobe talk village class volva gear bus; do test "$(stat -c %s "$GITHUB_WORKSPACE/shots/farmer/$f.png")" -gt 20000; done
 
+      # M5c: the run pair under Xvfb takes the pictures of the arch window, a zone, the three cards, the end summary and the
+      # tree window (software GL, so slowly: the same run is checked headless by the export job)
+      - name: The run pair in a window under Xvfb (pictures of the arch window, a zone, the cards, the end of a run and the tree)
+        if: always() # (the farmer's village walk is a slow-runner flake: it must not skip these pictures)
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/shots/run"
+          GODOT=~/godot/godot BOT_ONLY=run BOT_RUN_SECONDS=900 BOT_RUN_SHOTS="$GITHUB_WORKSPACE/shots/run" \
+            xvfb-run -a -s "-screen 0 1280x720x24" pnpm godot:bot 2>&1 | tee runpair.log
+          for f in m5c-arch m5c-zone m5c-cards m5c-end m5c-tree; do test "$(stat -c %s "$GITHUB_WORKSPACE/shots/run/$f.png")" -gt 20000; done
+
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: farm-screenshots
           path: |
             shots/*.png
+            shots/dungeons/*.png
+            shots/m7a/*.png
             shots/farmer/*.png
-          if-no-files-found: error
+            shots/run/*.png
+          if-no-files-found: warn
 
 
   release:

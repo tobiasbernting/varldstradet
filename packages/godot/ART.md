@@ -22,7 +22,7 @@ the owner decides otherwise); `assets/LICENSES.md` has every file's origin.
 - **Light.** A dungeon is dark in its own colour: `WorldEnvironment.ambient_light_color` is
   `DUNGEONS[id].ambient × 0.6` (the browser's `dungeonAmbient`), the background the same colour darker. Every
   `saga_torch` is an `OmniLight3D` with the dungeon's torch colour (Draugkryptan's is the green `#9cff8a`, the frost
-  castle's pale blue, Surt's fire; see `TORCH_COLOURS` in `dungeon_view.gd`, copied from the browser's `SAGA_TORCH`),
+  castle's pale blue, Surt's fire; see `LOOKS[id]["torch"]` in `dungeon_look.gd`, from the browser's `SAGA_TORCH`),
   range 4 m, a slow flicker. Candles, a lit rest stone and the exit carry smaller lights. Shadows are a quality-preset
   matter (below), never baked.
 - **Names and numbers.** `Label3D` billboards over heads, white with a dark outline, 2 px of outline per 16 px of text.
@@ -122,8 +122,8 @@ them; new 2D art uses them directly. The sprites themselves keep their own full 
 The KayKit models share one gradient atlas (`dungeon_texture.png`), so they come out in a neutral grey and brown.
 When a dungeon is built, `dungeon_view.gd` duplicates each model's material once and multiplies its albedo with the
 dungeon's **stone tint**: Kryptsten `#5a6257` lifted to `(0.78, 0.84, 0.76)` for Draugkryptan, so the pack's grey turns
-the crypt's grey-green while the atlas's shading survives. The tint per dungeon look (the `wall` index 0–8) is the
-`STONE_TINT` table in `dungeon_view.gd`, and the rule for a new pack is the same: never edit the texture, tint the
+the crypt's grey-green while the atlas's shading survives. The tint per dungeon look is one row of the `LOOKS` table in
+`dungeon_look.gd` (M6a; keyed by the dungeon id, with the `wall` index 0–8 kept for the zones of a run), and the rule for a new pack is the same: never edit the texture, tint the
 material, one tint per dungeon look. Emissive parts (flames, runes, glow) take their colour from the palette directly.
 
 ## What is generated and why
@@ -154,7 +154,25 @@ the sheets are committed under `assets/sprites/` with `atlas.json` (frame size, 
   pictures at ×2, and a few HUD glyphs, in 32 px squares; `atlas.json`'s `icons` says where each sits. The HUD, the
   loot window and the wheels read them; an item without a picture of its own gets its kind's emoji, like the browser.
 - `mob_<species>.png`: the dungeon's monsters and bosses as `SAGA_MOBS`/`SAGA_BOSSES` name them, two walk frames
-  facing right, at the size `SAGA_ANIMAL_SIZE` gives them, outlined as `drawAnimal` outlines them.
+  facing right, at the size `SAGA_ANIMAL_SIZE` gives them, outlined as `drawAnimal` outlines them. M6a: the creatures of
+  Draugkryptan, Frostjättens borg, Surts smedja and Helheim (21, with the ice block a freeze leaves); `pnpm godot:sprites`
+  takes the dungeon ids as its argument (`draug,frost,surt,hel,dvarg,orm,alv,fenrir,loke` by default) and `speciesOf` in `tools/sprites-page.ts` lists
+  what each one needs, so a later dungeon is one more id. No new pixel art was drawn: all of it is in `packages/art/src/sagaanimals.ts`.
+  M6b added the 15 creatures (and the web: 16 sheets) of Svartalfheims gruvor (gruvtroll, guldbagge, stengolem, jarnvakten, fafner), Havsormens tempel
+  (sjodraug, jattekrabba, manet, blackis, jormungand) and Alvernas lund (skuggalv, jattespindel, svampvakt, spindeldrottning,
+  nattmara; plus the web a spider's freeze leaves, `spindelnat`): 37 sheets in all. Again nothing was drawn, and the sheets
+  already exported are byte for byte the same (the icon sheet too: the new dungeons' loot has pictures already). The new
+  looks (`dungeon_look.gd`) tint KayKit stone as before: amber for the mine, sea-teal for the temple, violet for the grove;
+  the three new drifting airs (dust, bubbles, spores) are particles drawn in code with the engine's glow texture.
+  M6c added the last two dungeons' creatures: Fenrisklyftan (ulv, rimtroll, bergsjatte, skoll, fenrisulven) and Bifrost
+  (lokesskugga and loke; its packs are the skeleton, ice wolf, fire hound and ghost of the earlier chapters), plus four
+  `mob_<species>_v1.png` sheets (skelett, isvarg, eldhund, gengangare): Loke's illusions, which the server sends as
+  `variant: 1` and which the art draws ghostly and see-through (`ghostify` in `sagaanimals.ts`; `export-sprites` adds a
+  `_v1` sheet for every non-boss creature of a dungeon with `illusions: true`, and `Data.mob_sheet(species, variant)`
+  picks it). 7 + 4 = 11 new sheets (44 creature sheets in all, the web and the ice block included, and 4 ghost ones). Again
+  nothing was drawn and the earlier sheets are byte for byte the same. Looks: steel-blue rock under pale storm lanterns
+  for the chasm, pearly violet glass under rose-gold ones for the bridge; the two new airs (`gale`, `stars`) are particles
+  like the others.
 - The farm's people (M4a): `farm_<kind>.png`, one PNG per layer kind with one row of 12 frames (`down0..2 up0..2 left0..2
   right0..2`, 16×32, left = right mirrored) per layer; `atlas.json`'s `farm.layers` maps a layer key (`shirt_shirt_red`,
   `hair_ponytail_3`, `hat_hat_viking`) to `{file, x, y}`, the cell of its frame 0 (frame i is at `x + i*16`). Any
@@ -331,6 +349,44 @@ on every preset. The windows are rows of `Button`s built when a window opens or 
 frame; the camera's move into the room is one `Transform3D` a frame while it eases. (owner: paste the M4 Air's three lines for
 `--scene=house` and `--scene=village` here: `(owner: paste here)`.)
 
+## The alive world (M7a)
+
+No assets were added (nothing bought, nothing downloaded): the wind, the water and the ambient things are shaders
+(`assets/shaders/farm_prop`, `farm_water`, `farm_water_fx`, `ambient_*.gdshader`) and one script (`ambient_view.gd`);
+the chimney spots were read from the highest vertices of the KayKit meshes already here. Presets (`quality.gd`):
+
+| | Låg | Mellan | Hög |
+| --- | --- | --- | --- |
+| Wind | level 1: the old crown sway | 2: gusts, grass, crops, bushes, pines | 3: + leaf flutter |
+| Water | flat, no screen read | waves, foam, reflection (16 steps) | + crest foam, reflection (28 steps) |
+| Fireflies · butterflies · leaves | 0 · 0 · 0 | 28 · 9 · 36 | 56 · 16 · 80 |
+| Smoke (per chimney) · mist · window light | 0 · 0 · 0 | 7 · 9 · pools | 12 · 18 · flickering pools |
+
+### Measured (M7a)
+
+Sandbox only (Mesa llvmpipe under Xvfb, 1280×720; frame times are software and mean little, so read them as before/after
+ratios). `apt-get update && apt-get install mesa-vulkan-drivers` gives the sandbox a Vulkan driver (lavapipe), so Forward+
+runs there; without it Godot falls back to Compatibility (OpenGL), which is what every earlier sandbox bench used. Both are
+below. "Before" is main at the start of this work, run interleaved with "after". Average frame ms (1 % low in brackets):
+
+| Compatibility (OpenGL, llvmpipe) | before | after |
+| --- | --- | --- |
+| Farm Låg (3 runs each) | 19.7 | 20.1 (+1.7 %) |
+| Village Låg (2 runs each) | 18.8 | 18.7 |
+| Farm Mellan, as a player sees it today (autumn day: leaves, smoke) | 44.8 | 46.0 (+2.7 %) |
+| Village Mellan, natural | 41.0 | 41.4 |
+| Farm Hög, natural | 55.6 | 57.7 |
+| Village Hög, natural | 53.5 | 50.9 (noise) |
+| Farm Mellan, everything on (`--alive=all`, night, summer) | 44.7 | 49.5 (+11 %) |
+| Village Mellan, everything on | 43.7 | 45.9 (+5 %) |
+| Farm Hög, everything on | 53.9 | 63.5 (+18 %) |
+| Village Hög, everything on | 54.7 | 60.4 (+10 %) |
+
+Forward+ (lavapipe), where the swapchain quantises Hög to 133 ms so only Låg and Mellan say anything: Farm Låg 52.7 → 51.4,
+Village Låg 48.4 → 48.3, Farm Mellan natural 104.8 → 109.1, Village Mellan natural 97.8 → 96.9, Farm Mellan everything on
+104.9 → 109.4, Village Mellan everything on 97.5 → 102.8. Draw calls rise by 2–7 (the ambient MultiMeshes, one each), primitives
+by under 1 % (an unrelated rise on Hög in the village is the same ±1 %), Låg's draw calls and primitives are unchanged.
+
 ## The fight on screen (M3b)
 
 - **Telegraphs** are flat shapes 4.5 cm over the floor: a dim red base in the zone's full size, a brighter fill that
@@ -348,8 +404,24 @@ frame; the camera's move into the room is one `Transform3D` a frame while it eas
 
 
 ## Atmosphere (2026-11-06)
-The look of the day is the browser's, made in three layers. **The light** (`day_night.gd`): the `DAY` table's colour is the ambient light, the sun, the moon and the fog colour at once, so grass goes dark blue-teal at night and the dusk is a dusty violet; sun shadows are soft (`light_angular_distance`, `shadow_blur`) and about a quarter darker than lit ground. **The grade** (`screen_grade.gd` / `screen_grade.gdshader`, one full-screen pass on every preset, under the HUD): the browser's warm grade, a little more colour than the render (never less, even in fog), a multiply toward saturated navy at night that keeps lamps warm, a vignette that closes in with the dark, and the double flash of lightning. Indoors and in dungeons: warm and vignette, no night tint. **Light you can see**: lamps are 6-9 m OmniLights from the browser's colours with a ground pool (`light_pool.gdshader`, an additive flat quad: this is what shows on Låg), switched on from `dark` 0.35 to 0.75; the farmhouse's gable window has a beam of light on the ground in front of the door, the shops and the station the same; the hero carries a lantern (OmniLight, 5.5 m, no shadow) outdoors after dark. Glow (Mellan, Hög) opens up with the dark; Låg's haze quads stand in.
-- **Weather.** Rain: slanted streaks (twice as many in a storm), splash rings on the ground, puddles in the ground shader (`puddle`, filled in rain, drying over ~40 s, mirror the sky colour), cooler grade. Fog: depth fog plus eight drifting banks (flat, soft, over the ground); the same banks are the dawn mist. Snow: big soft flakes and small sharp ones that drift sideways. Hail: short, bright, fast. Cloud shadows (`cloud`): faint in sun, big and slow when cloudy, on props as well as the ground.
-- **Extras.** Fireflies (14 blinking glows, warm nights May-September or midsommar, calm weather), dew sparkles on the morning grass, chimney smoke on the farmhouse, the pond taking the night sky with star glints, autumn leaves drifting.
-- **Presets.** Låg: the grade, lamps' ground pools, banks and the extras that are quads; no OmniLight shadows, no glow, no cloud shadows, weather particles at 150. Mellan: glow, SSAO, sun shadows (1024), weather 600. Hög: adds torch shadows, SDFGI, volumetric fog, 2048 sun shadows, weather 1500.
+**Merged with M7a ("The alive world", below).** Where both built the same thing M7a's stays and ours is struck through: ~~fireflies~~, ~~chimney smoke~~, ~~autumn leaves~~, ~~dawn mist and the eight fog banks~~ (fog weather drives M7a's mist with a higher alpha), ~~the pond at night~~, ~~the window beams~~ (M7a's window-light pools, in our warmer colour and on our lamp ramp), our old wind sway (M7a's wind). Kept: the light, the grade, the lamp pools, the lantern, rain/splash/puddles/snow/hail/cloud shadows, dew. The screen grade is on for every preset and is the one full-screen pass; Mellan and Hög pay it on top of M7a's budgets.
+The look of the day is the browser's, made in three layers. **The light** (`day_night.gd`): the `DAY` table's colour is the ambient light, the sun, the moon and the fog colour at once, so grass goes dark blue-teal at night and the dusk is a dusty violet; sun shadows are soft (`light_angular_distance`, `shadow_blur`) and about a quarter darker than lit ground. **The grade** (`screen_grade.gd` / `screen_grade.gdshader`, one full-screen pass on every preset, under the HUD): the browser's warm grade, a little more colour than the render (never less, even in fog), a multiply toward saturated navy at night that keeps lamps warm, a vignette that closes in with the dark, and the double flash of lightning. Indoors and in dungeons: warm and vignette, no night tint. **Light you can see**: lamps are 6-9 m OmniLights from the browser's colours with a ground pool (`light_pool.gdshader`, an additive flat quad: this is what shows on Låg), switched on from `dark` 0.35 to 0.75; the farmhouse's gable window, the shops and the station put a pool of warm light on the ground in front of them (M7a's window light, `window_light` in the presets); the hero carries a lantern (OmniLight, 5.5 m, no shadow) outdoors after dark. Glow (Mellan, Hög) opens up with the dark; Låg's haze quads stand in.
+- **Weather.** Rain: slanted streaks (twice as many in a storm), splash rings on the ground, puddles in the ground shader (`puddle`, filled in rain, drying over ~40 s, mirror the sky colour), cooler grade. Fog: depth fog plus M7a's mist at a higher alpha (the fog banks are gone). Snow: big soft flakes and small sharp ones that drift sideways. Hail: short, bright, fast. Cloud shadows (`cloud`): faint in sun, big and slow when cloudy, on props as well as the ground.
+- **Extras.** ~~Fireflies, chimney smoke, the pond taking the night sky, autumn leaves~~ (M7a's), dew sparkles on the morning grass (ours).
+- **Presets.** Låg: the grade, lamps' ground pools, the extras that are quads; no OmniLight shadows, no glow, no cloud shadows, weather particles at 150. Mellan: glow, SSAO, sun shadows (1024), weather 900. Hög: adds torch shadows, SDFGI, volumetric fog, 2048 sun shadows, weather 2000.
 - **Pictures.** `--daylapse=<s>` runs a whole day in that many seconds (demo only); `--weathers=sun,rain,fog` with `--weather-every=<s>` steps the weather. `tools/sky-sweep.sh` renders a series of `--time` values.
+
+## Runs (M5c)
+All generated in code with the farm's mesh builder (`run_meshes.gd`, `zone_props.gd`), in the palette above; nothing new is imported except one more use of the
+KayKit Hexagon blacksmith.
+- **Färdport** (3 × 2): two carved pillars with rune bands, a curved lintel of ten blocks, a gold keystone with a leaf, roots, steps, a dark doorway; a teal glow
+  quad in the doorway and one light that is on at night only (the farm's lamp rule); the zone's exit rune has its glow on every preset and its light on Mellan and Hög.
+- **Yggdrasil shoot**, stage 0-4 by `variant`: mound and stones with two leaves; sapling; young tree; big tree with blossoms; the Världsträd with a gold trunk, cyan runes,
+  teal-gold crowns and gold motes, one glow billboard and one night-only light (stage 4 only).
+- **Smithy** (KayKit blacksmith, fitted to 3 × 2, an anvil and coals in front, a night-only ember light), **herb garden** (2 × 2: four raised beds, drying rack), **longhouse**
+  (4 × 3: timber walls, turf roof, dragon heads, shields, door; windows glow at night).
+- **Zone decor** (22 kinds: gravestone, skull pile, ghost light, dead tree, mine cart, gold pile, dwarf statue, mine lamp, coral, anchor, seaweed, pearl, glow mushroom,
+  elf statue, ice crystal, frozen pillar, snow drift, anvil, brazier, lava crack, fairy light, cobweb): primitive meshes, one shared vertex-colour material. Lights:
+  `ZoneProps.LIGHTS`, none on Låg (the glow billboards stay). The zone floor is flat coloured quads (grass `#5f9a44`, mud, gravel, sand, moss, snow, ash).
+- **Zone weather**: fog density by kind in every preset; particles (rain 0.02 × 0.55 m streaks, snow flakes, hail, dust) only on Mellan and Hög, `weather` budget / 3, none on Låg.
+- Everything in a window (cards, summary, HUD clock) is Control nodes: no frame cost beyond the HUD's.

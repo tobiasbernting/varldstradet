@@ -145,6 +145,10 @@ func _text_for(tx: int, ty: int, me: Dictionary, id: String, tool: String) -> St
 			return Strings.t("actFillCan")
 		if inter == "sleep":
 			return Strings.t("actSleep")
+		if inter == "fardport":
+			return Strings.t("actFardport")
+		if inter == "yggdrasil":
+			return Strings.t("actYggdrasil")
 		if inter != "":
 			return Strings.t("actUse", {"name": Strings.object_name(kind)})
 		if not (bool(def.get("flat", false)) and (tool == "can" or id == "")):

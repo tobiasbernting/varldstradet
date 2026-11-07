@@ -189,15 +189,15 @@ building with ownership, the wardrobe, day and night, seasons. This is the bigge
 game. 12–16 evenings. Done when the family can play a farm evening in the new client without missing the old one, and
 the web client is retired. *(Retired in M5a, 2026-11-02; see `DESIGN.md`.)*
 
-**M5. Runs.** *(M5b done 2026-11-06: `GAME.md`, the generator, the run rules, the hired companion and the server, played end to end by bots; the Godot side is M5c.)* Server-side run generator on top of `sagamap.ts` (zone chain, room pick, packs, modifiers), boons,
+**M5. Runs.** *(M5b done 2026-11-06: `GAME.md`, the generator, the run rules, the hired companion and the server, played end to end by bots; the Godot side, M5c, is done 2026-11-06: the arch, the shoot and the buildings on the farm, the arch window, the zones, the run HUD, the runor cards, the end summary, the sagaträd and the run bots.)* Server-side run generator on top of `sagamap.ts` (zone chain, room pick, packs, modifiers), boons,
 sagafrön and the Yggdrasil upgrades, färdkost and companions, the arch and the join-at-rest-stone rule, the hired
 companion for solo play. All four classes. 10–14 evenings. Done when a chapter can be run three times and feels
 different each time, and a solo run is winnable.
 
-**M6. The saga, chapter by chapter.** Port the remaining eight dungeons as zone sets and all bosses, in chapter order,
+**M6. The saga, chapter by chapter.** *(M6a done 2026-11-06: the generic dungeon look table and chapters 2-4, Frostjättens borg, Surts smedja and Helheim, with their creatures, bosses and every boss move on screen, bot-checked in CI; M6b done 2026-11-07: Svartalfheims gruvor, Havsormens tempel and Alvernas lund the same way, and the export job's two long bot runs now play side by side; M6c done 2026-11-07: Fenrisklyftan and Bifrost the same way, with Loke's ghostly illusions, models for their decor and the saga's ending checked on screen. **M6 is done:** all nine dungeons and all their bosses are in the client.)* Port the remaining eight dungeons as zone sets and all bosses, in chapter order,
 one per one or two evenings, with the existing bot balance pass rerun on each. 12–18 evenings.
 
-**M7. The alive world.** Wind on foliage, weather with the existing `weather.ts` states, day and night lighting,
+**M7. The alive world.** *(M7a done 2026-11-07: the visual half on the farm, the wild maps and the village: wind with gusts on trees, pines, bushes, grass and crops; water with waves, foam and screen-space reflections on Mellan and Hög; fireflies, butterflies, falling leaves, chimney smoke, dawn mist and pools of window light; each a toggle in `PRESETS`, all in the bench and with pictures. M7b, wildlife that flees and returns, footsteps and ambient sound, is next.)* Wind on foliage, weather with the existing `weather.ts` states, day and night lighting,
 wildlife that flees and returns, water with reflections on Mellan and up, particles, footsteps and ambience. Each is a
 toggle in the presets. 6–10 evenings.
 
