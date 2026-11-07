@@ -777,16 +777,58 @@ func _path_to(from: Vector2i, goal: Vector2i, dist: Dictionary) -> Array:
 	return path
 
 
+## The tile farthest from `home` (at most `max_steps` tiles of walking) that can be walked to.
+func _far_tile(home: Vector2i, dist: Dictionary, max_steps: int) -> Vector2i:
+	var goal := home
+	for t in dist.keys():
+		if int(dist[t]) <= max_steps and int(dist[t]) > int(dist[goal]) and _path_to(home, t, dist).size() > 0:
+			goal = t
+	return goal
+
+
+## What the server says about a walk: the length of the polyline through my positions in its snapshots, counted while the
+## hero was moving, and the time those segments took. (`begin_server_walk`, then walk, then `end_server_walk`.)
+var _sw_on := false
+var _sw_last := Vector2.ZERO
+var _sw_at := 0
+var _sw_px := 0.0
+var _sw_ms := 0
+
+
+func begin_server_walk() -> void:
+	_sw_px = 0.0
+	_sw_ms = 0
+	_sw_at = 0
+	if not _sw_on:
+		_sw_on = true
+		world.model.snapshot.connect(_on_walk_snapshot)
+
+
+func _on_walk_snapshot() -> void:
+	var me: Dictionary = world.model.player_snaps.get(world.model.me, {})
+	if me.is_empty():
+		return
+	var at := Vector2(float(me.get("x", 0.0)), float(me.get("y", 0.0)))
+	var now := Time.get_ticks_msec()
+	if _sw_at != 0 and world.hero.moving:
+		_sw_px += _sw_last.distance_to(at)
+		_sw_ms += now - _sw_at
+	_sw_last = at
+	_sw_at = now
+
+
+## [pixels, seconds] of the walk since `begin_server_walk`.
+func end_server_walk() -> Array:
+	return [_sw_px, _sw_ms / 1000.0]
+
+
 ## Sprinting (Shift): a stretch of the farm walked and then run back. The run covers ground RUN_SPEED_MUL times as fast,
 ## the server follows it (the `move` messages carry the positions) and never puts the hero back (`reconciled` stays 0).
 func _sprint() -> void:
 	var hero := world.hero
 	var home := _my_tile()
 	var dist := _distance_field(home)
-	var goal := home
-	for t in dist.keys():
-		if int(dist[t]) <= 16 and int(dist[t]) > int(dist[goal]) and _path_to(home, t, dist).size() > 0:
-			goal = t
+	var goal := _far_tile(home, dist, 16)
 	if int(dist[goal]) < 8:
 		_step("sprint", false, "no stretch of floor of 8 tiles near %s" % str(home))
 		return
