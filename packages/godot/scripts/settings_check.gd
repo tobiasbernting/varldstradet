@@ -101,6 +101,7 @@ func _run() -> void:
 	_colours()
 	_motion()
 	_controls()
+	await _small_things()
 	_run_only()
 	_roundtrip()
 	if shot_dir != "":
@@ -347,6 +348,66 @@ func _centred_panel(node: Node) -> Control:
 		if deeper != null:
 			return deeper
 	return null
+
+
+## The small things the review found: the marks' stripes on every shape and still under reduced motion, the hearts repainted at once
+## on a change of palette, F3 shown in the open window, and the "no sound" note when the master volume is 0.
+func _small_things() -> void:
+	# marks: every shape (and the whirlpool) has stripes with a colour-blind palette, which stand still when motion is reduced
+	Settings.colour_mode = "rg"
+	var fx := FxView.new()
+	fx.model = WorldModel.new()
+	add_child(fx)
+	await _frames()
+	var shapes := {"circle": "slam", "cone": "cleave", "line": "line", "pull": "pull"}
+	for shape in shapes.keys():
+		var move: String = shapes[shape]
+		var z := {"id": "z-" + shape, "shape": "circle" if shape == "pull" else shape, "x": 100.0, "y": 100.0, "r": 3.0, "w": 1.6, "arc": 90.0, "dir": 0.0, "at": 5000.0, "by": -1}
+		var zn: FxView.ZoneNode = fx._make_zone(z, move)
+		_step("a %s mark has stripes with a colour-blind palette" % shape, zn.hatch != null and zn.edge != null)
+		Settings.reduce_motion = false
+		fx._update_zone(zn, z, 1000.0)
+		var drift_on: float = (zn.hatch.material_override as ShaderMaterial).get_shader_parameter("drift")
+		Settings.reduce_motion = true
+		fx._update_zone(zn, z, 1000.0)
+		var drift_off: float = (zn.hatch.material_override as ShaderMaterial).get_shader_parameter("drift")
+		Settings.reduce_motion = false
+		_step("the stripes of a %s mark crawl, and stand still with reduced motion" % shape, drift_on > 0.0 and drift_off == 0.0, "%s %s" % [drift_on, drift_off])
+		zn.root.queue_free()
+	fx.queue_free()
+	Settings.colour_mode = "normal"
+	# the hearts repaint at once when the palette changes
+	var hud := HudLayer.new()
+	add_child(hud)
+	await _frames()
+	hud._set_unit(hud.me_frame, null, "Jag", [150.0, 150.0, 0], Color.WHITE)
+	var fill := func() -> Color: return (hud.me_frame["meter"].get_theme_stylebox("fill") as StyleBoxFlat).bg_color
+	var before: Color = fill.call()
+	Settings.set_colour_mode("rg")
+	var during: Color = fill.call()
+	Settings.set_colour_mode("normal")
+	_step("the health bars repaint at once when the palette changes", before == HudLayer.HP_GREEN and during == Palette.colour("hp_high", "rg") and fill.call() == HudLayer.HP_GREEN)
+	hud.queue_free()
+	# F3 with the window open: the checkbox follows
+	Settings.show_fps = true
+	win.refresh()
+	var fps_follows: bool = win._fps_check.button_pressed
+	Settings.show_fps = false
+	win.refresh()
+	_step("F3 with the settings window open: the checkbox follows", fps_follows and not win._fps_check.button_pressed)
+	# a master volume of 0 is kept from one start to the next, so the menu and the sound page say so
+	win._show_page("sound")
+	win._master.value = 0.0
+	win.close()
+	menu.open()
+	_step("master volume 0: the pause menu says the sound is off", menu._sound_off.visible and menu._sound_off.text == Strings.t("soundOffHint"))
+	menu.open_settings()
+	win._show_page("sound")
+	_step("master volume 0: the sound page says so too", win._off_note.visible)
+	win._master.value = 1.0
+	_step("and not when it is back up", not win._off_note.visible)
+	menu.open()
+	_step("the pause menu is quiet again", not menu._sound_off.visible)
 
 
 func _controls() -> void:

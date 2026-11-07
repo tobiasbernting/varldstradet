@@ -831,6 +831,10 @@ server and `shared` are untouched (the strings are in `sv.ts`, exported by `pnpm
   attack gets diagonal stripes (`danger_hatch.gdshader`: laid out in world metres, so a small mark and a big one have the same stripes, drifting slowly)
   and a thicker, brighter edge (a line mark, which has no edge by default, gets one); the marks are rebuilt when the switch changes. The warning sign
   over the monster that chases you is a shape, the bars carry numbers, and the length of a bar is the health.
+- **Smaller things from the review.** The whirlpool (`pull`) mark has the stripes too; under "less shaking and flashing" the stripes stand still
+  (`drift` 0) and the marks' edge stops blinking (steady, it blinked up to 24 times a second); the hearts and the boss's bar repaint at once on a change of
+  palette (`HudLayer._repaint`); F3 with the settings window open updates its checkbox; a master volume of 0 is kept from start to start, so the pause menu and
+  the sound page say "Allt ljud är avstängt" while it is 0.
 - **Less shaking and flashing.** `Settings.calm(v)` is 0 with the switch on: the camera's shake (`world.gd`), the lightning's light spike and white
   screen flash (`day_night.gd`) and a third of the glow when a boss's attack lands (`fx_view.gd`). Hit flashes on bodies are gameplay feedback and stay.
 - **Check.** `--settingscheck` (`settings_check.gd`, run by `tools/bot-check.mts` beside the other clients, `BOT_ONLY=settings` alone, about four

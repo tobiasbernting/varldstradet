@@ -1571,7 +1571,7 @@ func _make_zone(z: Dictionary, move: String) -> ZoneNode:
 			if pulling:
 				for i in range(3):
 					zn.rings.append(_flat(band_points(ring_line(1.0), 0.05, true), Color(1, 1, 1, 0.5), zn.root))
-	if pat and not pulling:
+	if pat:
 		zn.hatch = _flat(hatch_points, Color.WHITE, zn.root)
 		var hm := ShaderMaterial.new()
 		hm.shader = _hatch_shader
@@ -1598,7 +1598,9 @@ func _update_zone(zn: ZoneNode, z: Dictionary, now: float) -> void:
 	if zn.hatch != null:
 		zn.hatch.scale = dir_scale.call(maxf(0.01, r))
 		var sc := Palette.colour("stripe")
-		(zn.hatch.material_override as ShaderMaterial).set_shader_parameter("colour", Color(sc.r, sc.g, sc.b, 0.55 + 0.25 * k))
+		var hm := zn.hatch.material_override as ShaderMaterial
+		hm.set_shader_parameter("colour", Color(sc.r, sc.g, sc.b, 0.55 + 0.25 * k))
+		hm.set_shader_parameter("drift", Settings.calm(0.35)) # (the stripes stand still with "less shaking and flashing")
 	if zn.move == "pull" and now < at:
 		# a whirlpool: a dark violet disc turning, darker as it gets ready, rings sliding in towards the boss
 		var pc := move_colour("pull", int(z.get("by", -1)))
@@ -1626,7 +1628,7 @@ func _update_zone(zn: ZoneNode, z: Dictionary, now: float) -> void:
 			var le := Color(1.0, 0.75, 0.3) if Palette.mode() == "normal" else Palette.colour("danger_edge")
 			_set_colour(zn.edge, Color(le.r, le.g, le.b, 0.8 * left))
 		return
-	var blink := 0.5 + 0.5 * sin(_t * (6.0 + k * 18.0))
+	var blink := 0.5 + 0.5 * sin(_t * (6.0 + k * 18.0)) if not Settings.reduce_motion else 0.5 # (steady, not a flicker, with "less shaking and flashing")
 	var db := Palette.colour("danger_base")
 	var df := Palette.colour("danger_fill")
 	var de := Palette.colour("danger_edge")

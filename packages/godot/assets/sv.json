@@ -600,6 +600,8 @@
     "settingsResolution": "Hur skarp bilden är",
     "resolutionHint": "Lägre är snällare mot en trött dator. Texten och knapparna blir lika skarpa.",
     "settingsVolumeMaster": "Allt ljud",
+    "soundOffNote": "Allt ljud är avstängt.",
+    "soundOffHint": "Allt ljud är avstängt. Öppna Inställningar → Ljud och dra reglaget för att höra spelet igen.",
     "settingsVolumeEffects": "Strid, knappar och fanfarer",
     "settingsVolumeVoice": "Röstprat: hur högt de andra låter",
     "settingsTextSize": "Hur stor texten är",

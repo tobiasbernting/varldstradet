@@ -509,6 +509,7 @@ jobs:
           for palette in normal rg tritan; do
             shot m8b-telegraph-$palette --demo=frost --boss-move=rimturs:cleave --colours=$palette
           done
+          shot m8b-telegraph-pull-rg --demo=loke --boss-move=loke:pull --colours=rg
           shot m8b-telegraph-rg-175 --demo=frost --boss-move=rimturs:cleave --colours=rg --ui-scale=1.75
 
       # The farmer works a farm of its own (a second in-memory server) in a window under Xvfb and takes pictures at the

@@ -13,12 +13,21 @@ static func attach(panel: Control) -> void:
 			fit(panel)
 	# (the screen's size changes a frame after the content scale does, and a window's panel is measured when it is shown: so
 	# every trigger also looks again on the next frame)
-	var later := func() -> void: refit.call_deferred()
+	var later := func() -> void:
+		if is_instance_valid(panel):
+			refit.call_deferred()
 	panel.minimum_size_changed.connect(later)
 	panel.resized.connect(later)
 	panel.visibility_changed.connect(later)
-	(Engine.get_main_loop() as SceneTree).root.size_changed.connect(later)
+	var root := (Engine.get_main_loop() as SceneTree).root
+	root.size_changed.connect(later)
 	Settings.ui_scale_changed.connect(later)
+	# a panel that is freed lets go of the two signals that outlive it
+	panel.tree_exited.connect(func() -> void:
+		if root.size_changed.is_connected(later):
+			root.size_changed.disconnect(later)
+		if Settings.ui_scale_changed.is_connected(later):
+			Settings.ui_scale_changed.disconnect(later))
 
 
 static func fit(panel: Control) -> void:

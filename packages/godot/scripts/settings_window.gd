@@ -40,6 +40,7 @@ var _spell_buttons: Dictionary = {}
 var _spell_hint: Label
 var _ptt_button: Button
 var _capturing_key := false
+var _off_note: Label
 var _ptt_note: Label
 
 
@@ -264,6 +265,11 @@ func _build_picture(box: VBoxContainer) -> void:
 
 func _build_sound(box: VBoxContainer) -> void:
 	_master = _slider(box, Strings.t("settingsVolumeMaster"), func() -> float: return Settings.master_volume, func(v: float) -> void: Settings.set_master_volume(v))
+	_off_note = _note(box, Strings.t("soundOffHint"))
+	_off_note.add_theme_color_override("font_color", GOLD)
+	_off_note.modulate = Color.WHITE
+	_syncs.append(func() -> void: _off_note.visible = Settings.master_volume <= 0.001)
+	_master.value_changed.connect(func(_v: float) -> void: _off_note.visible = Settings.master_volume <= 0.001)
 	_effects = _slider(box, Strings.t("settingsVolumeEffects"), func() -> float: return Settings.effects_volume, func(v: float) -> void: Settings.set_effects_volume(v))
 	_heading(box, Strings.t("settingsWorldSound"))
 	_steps_check = _check(box, Strings.t("settingsSteps"), func() -> bool: return Settings.steps_on, func(on: bool) -> void:

@@ -326,6 +326,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		Settings.show_fps = not Settings.show_fps
 		Settings.save()
 		hud.set_fps_shown(Settings.show_fps)
+		menu.settings_window().refresh() # (the checkbox in the settings window, if it is open)
 		get_viewport().set_input_as_handled()
 		return
 	if menu.is_open() or chat.is_open() or loot.is_open() or wheel.is_open() or run_pick.is_open() or _area == "" or play.is_busy():

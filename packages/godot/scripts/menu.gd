@@ -13,6 +13,8 @@ signal window_asked(which: String) ## "gear" or "quests": the windows the keys G
 var _root: Control
 var _main: VBoxContainer
 var _settings_window: SettingsWindow
+var _continue_button: Button
+var _sound_off: Label ## "Allt ljud är avstängt" when the master volume is 0 (it is kept from one start to the next)
 
 
 func _ready() -> void:
@@ -46,7 +48,15 @@ func _ready() -> void:
 	_main.add_theme_constant_override("separation", 10)
 	stack.add_child(_main)
 	_main.add_child(_title(Strings.t("menuTitle")))
-	_main.add_child(_button(Strings.t("menuContinue"), func() -> void: close()))
+	_sound_off = Label.new()
+	_sound_off.text = Strings.t("soundOffHint")
+	_sound_off.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_sound_off.custom_minimum_size = Vector2(380, 0)
+	_sound_off.add_theme_color_override("font_color", Color("e8b830"))
+	_sound_off.visible = false
+	_main.add_child(_sound_off)
+	_continue_button = _button(Strings.t("menuContinue"), func() -> void: close())
+	_main.add_child(_continue_button)
 	_main.add_child(_button(Strings.t("menuSettings"), func() -> void: open_settings()))
 	_main.add_child(_button("%s (%s)" % [Strings.t("gearTitle"), Strings.t("gearKey")], func() -> void:
 		close()
@@ -121,7 +131,8 @@ func toggle() -> void:
 
 func open() -> void:
 	visible = true
-	_main.get_child(1).grab_focus()
+	_sound_off.visible = Settings.master_volume <= 0.001
+	_continue_button.grab_focus()
 
 
 func close() -> void:

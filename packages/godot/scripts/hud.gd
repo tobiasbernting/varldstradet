@@ -304,7 +304,16 @@ func _ready() -> void:
 	reset()
 	get_viewport().size_changed.connect(_layout)
 	Settings.ui_scale_changed.connect(_layout)
+	Settings.access_changed.connect(_repaint)
 	_layout()
+
+
+## The colours of the health bars after the player chose another palette: at once, not at the next snapshot.
+func _repaint() -> void:
+	for u in [me_frame, target_frame]:
+		if u.has("k"):
+			_set_meter_colour(u["meter"], hp_colour(float(u["k"])))
+	_set_meter_colour(boss_meter, Color("c23a2c") if Palette.mode() == "normal" else Palette.colour("foe"))
 
 
 ## M8b: at 175 % text a 1280 px window is only 731 logical points wide, and the boss's bar in the middle would lie over the hearts
@@ -480,6 +489,7 @@ func _set_unit(u: Dictionary, icon: Texture2D, unit_name: String, f: Array, colo
 	u["name"].add_theme_color_override("font_color", colour)
 	u["flags"].text = flag_glyphs(int(f[2]) if f.size() >= 3 else 0)
 	u["meter"].value = k
+	u["k"] = k # (kept so a change of palette can repaint it at once, see `_repaint`)
 	_set_meter_colour(u["meter"], hp_colour(k))
 	u["text"].text = text
 	var downed := f.size() >= 3 and (int(f[2]) & Data.flag("down")) != 0
