@@ -37,6 +37,7 @@ var _have_totals := false
 var _ride_mul := 1.0
 var _riding := false
 var _boost_until := 0.0 ## the pizza's speed boost (boostUntil, the server's clock in ms)
+var _ride_lift := 0.0 ## how high the rider sits on this mount (metres)
 var _lifted := false
 var _act_at := 0.0
 var _last_text := "\u0001"
@@ -310,6 +311,7 @@ func _on_player_changed(id: String, rec: Variant) -> void:
 		var a: Variant = hero.world.get("animals", {}).get(str(int(riding)))
 		var def: Dictionary = Data.animals.get(str(a.get("species", "")), {}) if a is Dictionary else {}
 		_ride_mul = float(def.get("mount", Data.constant("RIDE_SPEED_MUL", 1.8)))
+		_ride_lift = Data.ride_lift(str(a.get("species", ""))) if a is Dictionary else Data.ride_lift("")
 	# what came into the bag
 	var totals := _totals_of(rec)
 	if _have_totals:
@@ -350,7 +352,7 @@ func tick(delta: float) -> void:
 	hero.fight = false
 	if _riding != _lifted:
 		_lifted = _riding
-		hero.actor.position.y = 0.32 if _riding else 0.0
+		hero.actor.position.y = _ride_lift if _riding else 0.0
 	drops.tick(delta)
 	target.tick(delta)
 	fishing.tick(delta)

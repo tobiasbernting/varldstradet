@@ -463,7 +463,8 @@ export interface FarmAnimal {
 }
 
 /**
- * The pets, farm animals, mounts, wild animals and roaming monsters (not the vehicles): side view facing right, the
+ * The pets, farm animals, mounts, wild animals and roaming monsters and the town's traffic (the cart, the riding horse,
+ * Diligensen and the mine train: never with a tomteluva): side view facing right, the
  * browser's two walk frames as `right0 right1`, for every variant, as a baby where the browser has one, and with the
  * winter tomteluva. Each with the name the browser's `animalKey` would give it.
  */
@@ -471,18 +472,17 @@ function animalSheets(): { sheets: Sheet[]; animals: Record<string, FarmAnimal> 
   const sheets: Sheet[] = [];
   const animals: Record<string, FarmAnimal> = {};
   for (const def of Object.values(ANIMALS).sort((a, b) => (a.species < b.species ? -1 : 1))) {
-    if (def.vehicle) continue;
-    const kinds = [def.house && 'farm', def.pet && 'pet', def.mount && 'mount', def.wild && 'wild', def.predator && 'predator', def.mob && 'mob'].filter((k): k is string => !!k);
+    const kinds = [def.vehicle && 'vehicle', def.house && 'farm', def.pet && 'pet', def.mount && 'mount', def.wild && 'wild', def.predator && 'predator', def.mob && 'mob'].filter((k): k is string => !!k);
     if (!kinds.length) continue; // dungeon-only monsters have their mob_ sheets
     const s = def.species;
     const size = ANIMAL_SIZE[s];
     if (!size) throw new Error(`no size for ${s}`);
     const variants = ANIMAL_VARIANTS[s] ?? 1;
     const babies = def.growDays > 0 ? [false, true] : [false];
-    const entry: FarmAnimal = { kinds, frame_w: size.w, frame_h: size.h, frames: ['right0', 'right1'], variants, baby: babies.length > 1, jul: true, sheets: [] };
+    const entry: FarmAnimal = { kinds, frame_w: size.w, frame_h: size.h, frames: ['right0', 'right1'], variants, baby: babies.length > 1, jul: !def.vehicle, sheets: [] };
     if (def.mount) entry.ride_lift = RIDE_LIFT[s] ?? 7;
     for (const baby of babies)
-      for (const jul of [false, true])
+      for (const jul of def.vehicle ? [false] : [false, true])
         for (let v = 0; v < variants; v++) {
           const sheet = new Px(size.w * 2, size.h);
           sheet.blit(drawAnimal(s, 0, baby, jul, v), 0, 0).blit(drawAnimal(s, 1, baby, jul, v), size.w, 0);

@@ -298,6 +298,7 @@ static func make(kind: String, v: int, mat: Material) -> Node3D:
 				b.box(Vector3(0.0, y + 0.1, 0.215), Vector3(0.05, 0.14, 0.02), Color("#9ef0ff"), 0.0)
 			node.add_child(glow(Color(0.6, 0.9, 1.0), 0.8, 0.85, 0.7))
 		_:
+			node.free() # (nobody owns it: a kind with no model here must not leak the empty node)
 			return null
 	node.add_child(_node(b.build(), mat))
 	return node
