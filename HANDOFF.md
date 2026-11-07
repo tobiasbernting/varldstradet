@@ -83,7 +83,12 @@ This file is only what the next agent needs: state, decisions, how the work is r
   inspiration Tape to Tape for the roguelite elements and World of Warcraft for the dungeons. The owner played a run
   solo and failed (too hard). A design child writes `GAME2.md` (`claude/runs-v2-design`,
   `session_01KTh22o7egxigrP5xq1KVPh`); a quick-win child makes solo runs winnable now (`claude/solo-runs-easier`,
-  `session_01KTh22qKozqSCYbgTeSRKZ1`). The open world becomes the hub between runs. MacBook: 67–75 fps on Hög in Köpingen and the forest (1 % low 14–17 ms).
+  `session_01KTh22qKozqSCYbgTeSRKZ1`). The open world becomes the hub between runs.
+  **Approved 2026-11-07 ~15:50 UTC, with each document's recommended answers to its open questions:** `GAME2.md`
+  (PR 30, runs v2: one dungeon per run as a branching route of ~10 stops, personal runor, Hacksilver and the Köpman,
+  events, Hirdfolk followers, Lätt and a Nivå ladder with keys/särdrag/medals, Äventyrsboken) and `OPEN_WORLD.md` (PR 33,
+  Midgård 288×288, option A′, fresh start). Order: **runs first** (GAME2 R1–R10), the open world after R3 or slowly
+  in parallel. MacBook: 67–75 fps on Hög in Köpingen and the forest (1 % low 14–17 ms).
 - **Running (2026-11-07 15:10 UTC):** minimap + world map with fast travel + all dungeon arches
   `session_01KTh22qnjz33EpArLqwZk7o` (`claude/m9a-map-travel-arches`); Köpingen's Viking look
   `session_01KTh22pxQszsTzr6LppqA3f` (`claude/koepingen-viking-look`); sprint `session_01KTh22rMG5kApQsuopLjLzE`

@@ -2655,17 +2655,35 @@ function tickStartle(world: WorldState, a: AnimalState, ctx: SimCtx, players: Pl
     let nearest = CURIOUS_TILES * TILE;
     for (const p of players) {
       if (p.moving) continue;
+      // beside a quiet hero (in the tile they face, or any of the three others next to theirs, not a diagonal one) it stays put:
+      // that is where it can be petted, and it must not wander off again while they stand there
+      if (Math.abs(tileOf(a.x) - tileOf(p.x)) + Math.abs(tileOf(a.y) - tileOf(p.y)) === 1) {
+        a.waitMs = Math.max(a.waitMs, 500);
+        delete a.tx;
+        delete a.ty;
+        return;
+      }
       const dist = Math.hypot(p.x - a.x, p.y - a.y);
-      if (dist < nearest && dist > 1.6 * TILE) {
+      if (dist < nearest) {
         nearest = dist;
         quiet = p;
       }
     }
     if (!quiet) return;
-    const dx = (a.x - quiet.x) / nearest;
-    const dy = (a.y - quiet.y) / nearest;
-    a.tx = quiet.x + dx * 1.1 * TILE;
-    a.ty = quiet.y + dy * 1.1 * TILE;
+    // it creeps to the middle of the tile next to the hero's on its own side (the one along the longer of the two distances, or
+    // the other axis if that tile is blocked): a point 1.1 tiles along the line to it, as this once was, is often in a *diagonal* tile,
+    // where the hero cannot face it and so cannot pet it
+    const dx = a.x - quiet.x;
+    const dy = a.y - quiet.y;
+    const ptx = tileOf(quiet.x);
+    const pty = tileOf(quiet.y);
+    const horizontal = { x: ptx + Math.sign(dx || 1), y: pty };
+    const vertical = { x: ptx, y: pty + Math.sign(dy || 1) };
+    const [first, second] = Math.abs(dx) >= Math.abs(dy) ? [horizontal, vertical] : [vertical, horizontal];
+    const spot = [first, second].find((c) => inBounds(world, c.x, c.y) && !isSolidForAnimal(world, c.x, c.y));
+    if (!spot) return;
+    a.tx = (spot.x + 0.5) * TILE;
+    a.ty = (spot.y + 0.5) * TILE;
     return;
   }
   a.haunt ??= { x: a.x, y: a.y };
