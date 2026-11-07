@@ -292,6 +292,23 @@ func family() -> void:
 	for m in members:
 		if txt.contains(str(m.get("name", ""))):
 			rows += 1
+	# when "Hoppa till" is on: the same table as shared/src/saga.test.ts's jumpTo cases (each there is a refusal of the server or a jump that works)
+	var cases := [
+		["offline", "farm", "farm", false, false, true, false], ["asleep", "farm", "farm", true, true, true, false],
+		["they are in the old cave", "farm", "dungeon", true, false, true, false], ["I am in the old cave", "dungeon", "farm", true, false, true, false],
+		["they are in a run", "farm", "saga:run1z0", true, false, true, false], ["I am in a run", "saga:run1z0", "farm", true, false, true, false],
+		["a dungeon and no class", "farm", "saga:draug", true, false, false, false], ["a dungeon with a class", "farm", "saga:draug", true, false, true, true],
+		["both on the farm", "farm", "farm", true, false, false, true],
+	]
+	var jump_ok := true
+	for c in cases:
+		var me_rec := {"id": "me", "area": c[1], "sleeping": c[3], "saga": {"cls": "helare"} if c[5] else {}}
+		var them := {"id": "them", "area": c[2], "online": c[0] != "offline"}
+		var got := FamilyWindow.can_jump_to("me", me_rec, them)
+		if got != bool(c[6]):
+			jump_ok = false
+			bot._error("can_jump_to(%s) = %s, jumpTo says %s" % [c[0], str(got), str(c[6])])
+	bot._step("Hoppa till is on exactly where jumpTo accepts", jump_ok, "%d cases (offline, asleep, the old cave, a run, a dungeon with and without a class, the farm)" % cases.size())
 	# where everyone can be, named (not "Äng" for what the table does not know)
 	var places := {"farm": Strings.place("farm"), "dungeon": Strings.place("dungeon"), "bath:1": Strings.t("bathhouseName"), "saga:draug": str(Data.dungeon("draug").get("name", "")), "saga:run2z1": Strings.t("familyOnRun"), "a:1,0": ""}
 	var places_ok := true

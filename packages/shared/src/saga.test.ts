@@ -516,6 +516,34 @@ describe('the saga', () => {
     expect(devSagaBest(world, p.id, 'nope', 1)).toEqual([]);
   });
 
+  // The native client's family window greys "Hoppa till" out before the server would refuse (godot/scripts/family_window.gd, can_jump_to,
+  // which carries this same table in farm_bot_books.gd): each case here is a refusal of jumpTo or a jump that works.
+  it.each([
+    { name: 'offline', me: 'farm', them: 'farm', online: false, sleeping: false, cls: true, ok: false },
+    { name: 'asleep', me: 'farm', them: 'farm', online: true, sleeping: true, cls: true, ok: false },
+    { name: 'they are in the old cave', me: 'farm', them: 'dungeon', online: true, sleeping: false, cls: true, ok: false },
+    { name: 'I am in the old cave', me: 'dungeon', them: 'farm', online: true, sleeping: false, cls: true, ok: false },
+    { name: 'they are in a run', me: 'farm', them: 'saga:run1z0', online: true, sleeping: false, cls: true, ok: false },
+    { name: 'I am in a run', me: 'saga:run1z0', them: 'farm', online: true, sleeping: false, cls: true, ok: false },
+    { name: 'a dungeon and no class', me: 'farm', them: 'saga:draug', online: true, sleeping: false, cls: false, ok: false },
+    { name: 'a dungeon with a class', me: 'farm', them: 'saga:draug', online: true, sleeping: false, cls: true, ok: true },
+    { name: 'both on the farm', me: 'farm', them: 'farm', online: true, sleeping: false, cls: false, ok: true },
+  ])('jumpTo: $name -> ok $ok', ({ me, them, online, sleeping, cls, ok }) => {
+    const { world, players } = family(2);
+    const [a, b] = players as [PlayerState, PlayerState];
+    if (them === 'saga:draug') inside(world, a, 'vaktare');
+    else a.area = them;
+    b.area = me === 'dungeon' ? 'dungeon' : me.startsWith('saga:run') ? me : b.area;
+    if (them === 'dungeon' || them.startsWith('saga:run')) a.area = them;
+    a.online = online;
+    b.sleeping = sleeping;
+    b.saga = cls ? { cls: 'helare', chapter: 0, heard: false, cleared: [], titles: [], quests: {}, done: [], found: [] } : undefined;
+    const before = b.area;
+    const out = jumpTo(world, b.id, a.id);
+    const moved = b.area !== before || out.some((c) => c.t === 'toast' && c.text.includes('hoppade'));
+    expect(moved).toBe(ok);
+  });
+
   it('an empty dungeon starts over after a while', () => {
     const { world, players } = family(2);
     const p = players[0]!;
