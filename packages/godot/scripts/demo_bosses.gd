@@ -53,6 +53,7 @@ func _ready() -> void:
 		t = _boss_show(sp, t)
 	_at(maxf(t, _late + 0.2), func() -> void:
 		_pending.append([5, func() -> void:
+			_check_motes()
 			print("bosses: %s (%d checks, %d failed)" % ["ok" if _fails == 0 and _checks > 0 else "FAIL", _checks, _fails])
 			print("bosses: show finished (%s)" % ", ".join(order))
 			if quit_when_done:
@@ -296,6 +297,25 @@ func _warp(id: int, x: float, y: float) -> void:
 		a["x"] = x
 		a["y"] = y
 		_changes([{"t": "animal", "id": id, "animal": a, "area": _area}])
+
+
+## What drifts through the dungeon's air must drift: a particle material left at the engine's default gravity (0, -9.8, 0)
+## drops every mote like a stone (embers, bubbles and spores must rise). Only when the preset draws motes at all.
+func _check_motes() -> void:
+	var node: Variant = world.dungeon._motes_node
+	if node == null:
+		return
+	var kind := str(world.dungeon.look.get("motes", ""))
+	var g: Vector3 = (node.process_material as ParticleProcessMaterial).gravity
+	_checks += 1
+	if g.length() > 1.0:
+		_fails += 1
+		print("bosses: FAIL the %s motes are pulled by gravity %s" % [kind, str(g)])
+	if kind in ["embers", "bubbles", "spores"]:
+		_checks += 1
+		if g.y <= 0.0:
+			_fails += 1
+			print("bosses: FAIL the %s motes should rise, gravity %s" % [kind, str(g)])
 
 
 ## Checks, a few frames from now, that the fx view holds (or no longer holds) each of these zones.
