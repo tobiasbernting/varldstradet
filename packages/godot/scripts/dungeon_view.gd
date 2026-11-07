@@ -752,6 +752,37 @@ func _make_motes() -> void:
 			colour = Color(1.0, 0.55, 0.2, 0.9)
 			life = 5.0
 			additive = true
+		"dust":
+			# the mine: grey dust hanging in the lamplight, now and then a gold glint (a warm tint, additive)
+			quad.size = Vector2(0.05, 0.05)
+			pm.direction = Vector3(0.2, -0.2, 0.1)
+			pm.spread = 80.0
+			pm.initial_velocity_min = 0.05
+			pm.initial_velocity_max = 0.2
+			colour = Color(1.0, 0.82, 0.45, 0.7)
+			life = 9.0
+			additive = true
+		"bubbles":
+			# the temple: pale bubbles rising slowly
+			quad.size = Vector2(0.09, 0.09)
+			pm.direction = Vector3(0.05, 1.0, 0.0)
+			pm.spread = 20.0
+			pm.initial_velocity_min = 0.3
+			pm.initial_velocity_max = 0.7
+			colour = Color(0.7, 0.95, 1.0, 0.45)
+			life = 7.0
+			additive = true
+		"spores":
+			# the grove: violet spores lifting off the mushrooms
+			quad.size = Vector2(0.1, 0.1)
+			pm.direction = Vector3(0.1, 1.0, 0.2)
+			pm.spread = 50.0
+			pm.initial_velocity_min = 0.1
+			pm.initial_velocity_max = 0.35
+			colour = Color(0.85, 0.6, 1.0, 0.6)
+			life = 8.0
+			additive = true
+			budget = budget / 2
 		_:
 			# wisps: soft pale-green lights drifting sideways, slowly
 			quad.size = Vector2(0.16, 0.16)
