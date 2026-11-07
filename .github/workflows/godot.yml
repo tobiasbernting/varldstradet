@@ -353,6 +353,41 @@ jobs:
           shot m6b-nattmara-mend --demo=alv --boss-move=nattmara:mend
           shot m6b-nattmara-summon --demo=alv --boss-move=nattmara:summon:after
 
+      # M6c: the same for Fenrisklyftan and Bifrost: the start room, the boss's hall (the hero off to one side) and the marks
+      # of each move of the mid-boss and the boss (Loke's two novas are `nova` and `nova#1`).
+      - name: Pictures of Fenrisklyftan and Bifrost and of their bosses' moves under Xvfb
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/shots/dungeons"
+          shot() { # name, demo args...
+            local name="$1"; shift
+            xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- "$@" --screenshot="$GITHUB_WORKSPACE/shots/dungeons/$name.png" 2>&1 | tee "shot-$name.log"
+            if grep -E "^ERROR:|SCRIPT ERROR|Parse Error|leaked at exit|still in use at exit|Pages in use exist at exit" "shot-$name.log"; then
+              echo "::error::$name: errors or leaks (see above)"; exit 1
+            fi
+            test "$(stat -c %s "$GITHUB_WORKSPACE/shots/dungeons/$name.png")" -gt 20000
+          }
+          shot m6c-fenrir --demo=fenrir
+          shot m6c-fenrir-hall --demo=fenrir --at=45,48
+          shot m6c-skoll-charge --demo=fenrir --boss-move=skoll:charge
+          shot m6c-skoll-nova --demo=fenrir --boss-move=skoll:nova
+          shot m6c-fenrisulven-charge --demo=fenrir --boss-move=fenrisulven:charge
+          shot m6c-fenrisulven-cleave --demo=fenrir --boss-move=fenrisulven:cleave
+          shot m6c-fenrisulven-summon --demo=fenrir --boss-move=fenrisulven:summon:after
+          shot m6c-fenrisulven-nova --demo=fenrir --boss-move=fenrisulven:nova
+          shot m6c-loke --demo=loke
+          shot m6c-loke-hall --demo=loke --at=34,51
+          shot m6c-lokesskugga-rain --demo=loke --boss-move=lokesskugga:rain
+          shot m6c-lokesskugga-nova --demo=loke --boss-move=lokesskugga:nova
+          shot m6c-loke-cleave --demo=loke --boss-move=loke:cleave
+          shot m6c-loke-snow --demo=loke --boss-move=loke:nova
+          shot m6c-loke-pools --demo=loke --boss-move=loke:pools:after
+          shot m6c-loke-mend --demo=loke --boss-move=loke:mend
+          shot m6c-loke-pull --demo=loke --boss-move=loke:pull
+          shot m6c-loke-hel --demo=loke --boss-move=loke:nova#1
+          shot m6c-loke-line --demo=loke --boss-move=loke:line
+
       # The farmer works a farm of its own (a second in-memory server) in a window under Xvfb and takes pictures at the
       # moments the owner asked for: watering, the bag and a chest open, a fish biting, a wild animal petted (M4b); and
       # the shop, the workbench, a refused fence, the farmhouse, the stove, the wardrobe, a talk, Köpingen, the class
