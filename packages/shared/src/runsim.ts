@@ -1,7 +1,8 @@
-// The rules of a run (färd), GAME.md. A run is started at the färdport on the farm; the party fights through three
-// zones and a boss, each a saga map built by runmap.ts and fought by sagasim.ts (every fight rule is the saga's, a run
-// only hands each fighter its buffs and watches what happens). This file is the run state, the vote on runor, the
-// sagafrön, the timer, the wipe and the end, the Yggdrasil shoot, the farm objects and the hired companion.
+// The rules of a run (färd), GAME.md and GAME2.md. A run is started at the färdport on the farm; the party walks a route of
+// ten rows of stops through one dungeon, each stop a saga map built by runmap.ts and fought by sagasim.ts (every fight rule is the
+// saga's, a run only hands each fighter its buffs and watches what happens). This file is the run state, the vote on runor and the
+// vote on the way on (walking onto a väg-runa), the sagafrön, the timer, the wipe and the end, the Yggdrasil shoot, the farm
+// objects and the hired companion.
 // The run lives in memory only (like a dungeon): it is never saved, what players earn is paid out at once.
 import { ANIMALS, objectDef } from './data.ts';
 import { addItem, countItem, removeItem } from './inventory.ts';
@@ -16,6 +17,7 @@ import {
   isRunKey,
   newSagaProgress,
   type ClassId,
+  type DungeonId,
 } from './saga.ts';
 import { sagaCheckpoint } from './sagamap.ts';
 import { CLEARED_STAT } from './sagasim.ts';
@@ -44,7 +46,13 @@ import {
   SMITHY_EFFECT,
   SOLO_MERCY,
   SAGOANDAN,
-  ZONES_PER_RUN,
+  SAGOANDAN_LATT_MAX,
+  ROUTE_DISC_RADIUS,
+  ROUTE_DWELL_MS,
+  ROUTE_VOTE_MS,
+  VILOSTEN_HEAL,
+  tally,
+  type RouteChoiceSnap,
   RUN_LEVEL_LATT,
   RUN_LEVEL_VANLIG,
   LATT,
@@ -66,7 +74,7 @@ import {
   type RunSave,
   type RunSnap,
 } from './run.ts';
-import { buildZone, chapterBoss, generateRun, type RunPlan } from './runmap.ts';
+import { buildStop, chapterBoss, generateRun, placeRunes, routeSnap, type RunPlan } from './runmap.ts';
 import { COMPANION_NAME, RUNA_NAMES, RUN_T, T, TREE_NAMES, fmt, fmtDuration, itemName } from './sv.ts';
 import {
   farmOf,
@@ -104,9 +112,14 @@ export interface RunState {
   spirit: number;
   spiritUsed: number;
   phase: RunPhase;
-  /** The map now (0..2 zones, 3 the boss) and its area key. */
-  zone: number;
+  /** The stop now (its id in the route), the stops walked through so far (the last is now) and the map's area key. */
+  node: number;
+  path: number[];
   key: string;
+  /** How many times the way on has been chosen: the Stigfinnare is the party member whose turn it is, rotating. */
+  turn: number;
+  /** The vote on the way on (phase `route`). */
+  vote?: RouteVote;
   /** Players in the run (online or not) and the hired companions (fighters the server runs). */
   party: string[];
   companions: string[];
@@ -137,12 +150,21 @@ export interface RunState {
   statePing: number;
 }
 
+/** The väg-runor on the floor and who stands on them: a player counts after `ROUTE_DWELL_MS` on the same rune, or at once by using it. */
+export interface RouteVote {
+  runes: { node: number; kind: RouteChoiceSnap['kind']; x: number; y: number; id: number }[];
+  on: Record<string, { c: number; since: number; done: boolean }>;
+  /** Run time (ms) when the first player stepped onto a rune; the vote ends `ROUTE_VOTE_MS` later. */
+  first?: number;
+  sig: string;
+}
+
 const RUNS = new WeakMap<WorldState, RunState>();
 let counter = 0;
 
 /** The run going on in this world's farm, if any. */
 export const runOf = (world: WorldState): RunState | undefined => RUNS.get(farmOf(world));
-const zoneKey = (id: string, i: number): string => `saga:${id}z${i}`;
+const stopKey = (id: string, node: number): string => `saga:${id}z${node}`;
 const humans = (farm: WorldState, run: RunState): PlayerState[] => run.party.map((id) => farm.players[id]).filter((p): p is PlayerState => !!p);
 const members = (farm: WorldState, run: RunState): PlayerState[] => [...humans(farm, run), ...run.companions.map((id) => farm.players[id]).filter((p): p is PlayerState => !!p)];
 
@@ -360,19 +382,40 @@ function pay(farm: WorldState, run: RunState, base: number | ((p: PlayerState) =
 // Messages for the clients
 // ---------------------------------------------------------------------------
 
+/** Who has the turn to break a tie on the way on (a human of the party, rotating each row; null with nobody in it). */
+export function finderOf(farm: WorldState, run: RunState): string | null {
+  const people = humans(farm, run);
+  return people.length ? people[run.turn % people.length]!.id : null;
+}
+
+/** The humans who vote on the way on: online and standing in the stop (a friend who joined during the cards waits on the farm). */
+const voters = (farm: WorldState, run: RunState): PlayerState[] => humans(farm, run).filter((q) => q.online && q.area === run.key);
+
 function snap(farm: WorldState, run: RunState): RunSnap {
+  const z = run.plan.stops[run.node]!;
+  const vote = run.phase === 'route' ? run.vote : undefined;
   return {
     id: run.id,
     phase: run.phase,
-    zone: run.zone,
+    node: run.node,
+    row: z.row,
+    kind: z.kind,
+    path: [...run.path],
+    route: routeSnap(run.plan.route),
     area: run.key,
-    biomes: run.plan.zones.slice(0, ZONES_PER_RUN).map((z) => z.biome),
     boss: run.plan.boss,
-    weather: run.plan.zones[run.zone]?.weather ?? 'sun',
+    weather: z.weather,
     modifiers: run.plan.modifiers,
     elapsed: Math.round(run.elapsed),
     max: RUN_MAX_MS,
     party: members(farm, run).map((p) => ({ id: p.id, name: p.name, ...(p.bot ? { bot: true as const } : {}) })),
+    finder: finderOf(farm, run),
+    ...(vote
+      ? {
+          choices: vote.runes.map((r, c) => ({ node: r.node, kind: r.kind, x: r.x, y: r.y, on: Object.entries(vote.on).filter(([, v]) => v.c === c).map(([id]) => id) })),
+          routeLeft: vote.first === undefined ? -1 : Math.max(0, Math.round(vote.first + ROUTE_VOTE_MS - run.elapsed)),
+        }
+      : {}),
     level: run.level,
     spirit: run.spirit,
     spiritUsed: run.spiritUsed,
@@ -386,7 +429,7 @@ function offerSnap(farm: WorldState, run: RunState): RunOfferSnap | null {
   if (!run.offer) return null;
   const votes: Record<string, number> = {};
   for (const [id, c] of Object.entries(run.offer.votes)) votes[id] = c;
-  return { zone: run.offer.from, cards: run.offer.cards, votes, left: Math.max(0, Math.round(run.offer.until - run.elapsed)), rerolls: rerollsLeft(farm, run) };
+  return { node: run.offer.from, cards: run.offer.cards, votes, left: Math.max(0, Math.round(run.offer.until - run.elapsed)), rerolls: rerollsLeft(farm, run) };
 }
 const offerChange = (farm: WorldState, run: RunState): Change => ({ t: 'run', ev: 'offer', to: null, offer: offerSnap(farm, run) });
 const rerollsLeft = (farm: WorldState, run: RunState): number => (!run.rerolled && (partyTree(farm, run).reroll ?? 0) >= 1 ? 1 : 0);
@@ -417,7 +460,12 @@ export interface StartOptions {
   fardkost?: string[];
   /** 0 Lätt or 1 Vanlig (the default). */
   level?: RunLevel;
+  /** The dungeon (chapter) to run: the one the starter has cleared or the next one; left out, the next one (GAME2.md section 2). */
+  dungeon?: DungeonId;
 }
+
+/** Which dungeons a player may run: the ones they have cleared and the next one in the saga's order. */
+export const runnableDungeons = (cleared: readonly DungeonId[]): DungeonId[] => DUNGEON_IDS.filter((id) => cleared.includes(id) || id === chapterBoss(cleared));
 
 const distTo = (p: PlayerState, tx: number, ty: number): number => Math.hypot(p.x - tx, p.y - ty) / TILE;
 
@@ -487,19 +535,23 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
     .filter((q) => q.id !== p.id && !q.bot && q.online && q.area === 'farm' && !!q.saga?.cls && distTo(q, (arch.x + 1.5) * TILE, (arch.y + 1) * TILE) <= RUN_JOIN_RADIUS)
     .slice(0, max - 1);
   const party = [p, ...near];
-  // the chapter's boss, or a cleared one at random on a replay (or when all are cleared)
+  // the dungeon asked for (one cleared, or the next), else the chapter's, or a cleared one at random on a replay (or when all are cleared)
   const cleared = p.saga.cleared;
   const seed = opts.seed ?? Math.floor(ctx.rnd() * 0x7fffffff);
   let boss = chapterBoss(cleared);
   let replay = false;
-  if ((opts.replay && cleared.length) || !boss) {
+  if (opts.dungeon !== undefined) {
+    if (!runnableDungeons(cleared).includes(opts.dungeon)) return [toast(p.id, RUN_T.badDungeon)];
+    boss = opts.dungeon;
+    replay = cleared.includes(boss);
+  } else if ((opts.replay && cleared.length) || !boss) {
     const pool = DUNGEON_IDS.filter((id) => cleared.includes(id));
     if (!pool.length) return [];
     boss = pool[(seed >>> 3) % pool.length]!;
     replay = true;
   }
   const clears = readRun(p).clears[boss] ?? 1;
-  const plan = generateRun(seed, { boss, replay, clears });
+  const plan = generateRun(seed, { boss, replay, clears, level: opts.level ?? RUN_LEVEL_VANLIG });
   const run: RunState = {
     id: `run${++counter}`,
     seed,
@@ -508,8 +560,10 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
     level: opts.level ?? RUN_LEVEL_VANLIG,
     spirit: SAGOANDAN[opts.level ?? RUN_LEVEL_VANLIG],
     spiritUsed: 0,
-    phase: 'zone',
-    zone: 0,
+    phase: 'stop',
+    node: 0,
+    path: [],
+    turn: 0,
     key: '',
     party: party.map((q) => q.id),
     companions: [],
@@ -536,7 +590,7 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
   }
   if (opts.companion !== false) hireCompanion(farm, run, party, out);
   RUNS.set(farm, run);
-  out.push(...enterZone(farm, run, 0, ctx));
+  out.push(...enterStop(farm, run, 0, ctx));
   for (const q of party) out.push(toast(q.id, RUN_T.started));
   return out;
 }
@@ -573,25 +627,27 @@ function dismissCompanions(farm: WorldState, run: RunState, out: Change[]): void
   run.companions = [];
 }
 
-/** Builds map `i`, moves everyone in, and hands out the buffs. */
-function enterZone(farm: WorldState, run: RunState, i: number, ctx: SimCtx): Change[] {
+/** Builds the map of stop `node`, moves everyone in, and hands out the buffs (the vote on the way on calls this; the tests use it to go straight to a stop). */
+export function enterStop(farm: WorldState, run: RunState, node: number, ctx: SimCtx): Change[] {
   const out: Change[] = [];
   const old = run.key;
-  const key = zoneKey(run.id, i);
-  const z = run.plan.zones[i]!;
-  const world = buildZone(run.plan, i, key);
+  const key = stopKey(run.id, node);
+  const z = run.plan.stops[node]!;
+  const world = buildStop(run.plan, node, key);
   const inst = world.saga!;
   // the mercy is for one human with the hired companion (two fighters), not for a lone player without one
   const solo = run.party.length === 1 && run.companions.length > 0;
   const lvl = levelMuls(run.level);
   const latt = run.level === RUN_LEVEL_LATT;
-  // Lätt: one more Sagoandan after each stop (a zone cleared)
-  if (latt && i > 0) run.spirit++;
-  // Lätt: the boss (and the zones' guards) use only their first two attacks
-  const moves = latt ? lattMoves() : i === ZONES_PER_RUN ? run.plan.moves : undefined;
+  // Lätt: one more Sagoandan after each stop (up to a few: the star on the HUD must stay readable)
+  if (latt && run.path.length > 0) run.spirit = Math.min(SAGOANDAN_LATT_MAX, run.spirit + 1);
+  // Lätt: the boss (and the mid-boss, and the guard) use only their first two attacks
+  const moves = latt ? lattMoves() : z.kind === 'boss' ? run.plan.moves : undefined;
   inst.run = {
     run: run.id,
-    zone: i,
+    node,
+    row: z.row,
+    kind: z.kind,
     name: z.name,
     intro: z.intro,
     hpMul: z.hpMul * (solo ? SOLO_MERCY : 1) * lvl.hp,
@@ -610,13 +666,15 @@ function enterZone(farm: WorldState, run: RunState, i: number, ctx: SimCtx): Cha
   (farm.areas ??= {})[key] = world;
   getArea(farm, key);
   run.key = key;
-  run.zone = i;
-  run.phase = 'zone';
+  run.node = node;
+  run.path.push(node);
+  run.phase = 'stop';
   delete run.offer;
+  delete run.vote;
   run.paid = new Set([...run.paid].filter((k) => k.startsWith('x:')));
   run.waiting = [];
   refresh(farm, run);
-  if (latt && i > 0) for (const q of humans(farm, run)) out.push(toast(q.id, RUN_T.spiritGained));
+  if (latt && run.path.length > 1) for (const q of humans(farm, run)) out.push(toast(q.id, RUN_T.spiritGained));
   for (const p of members(farm, run)) {
     if (p.online) {
       placeIn(farm, p, key, inst.start.x, inst.start.y, 'up', out);
@@ -657,11 +715,11 @@ export function joinRun(world: WorldState, playerId: string, ctx: SimCtx): Chang
   if (run.phase === 'pick') {
     run.waiting.push(p.id);
     out.push(toast(p.id, RUN_T.pickSub));
-  } else if (run.phase === 'zone' || run.phase === 'victory') {
+  } else if (run.phase === 'stop' || run.phase === 'route' || run.phase === 'victory') {
     const area = farm.areas![run.key]!;
     const at = openTileNear(area, sagaCheckpoint(area.saga!).x, sagaCheckpoint(area.saga!).y);
     placeIn(farm, p, run.key, at.x, at.y, 'up', out);
-    out.push(banner(p.id, run.key, run.plan.zones[run.zone]!.name, run.plan.zones[run.zone]!.intro, 'enter'));
+    out.push(banner(p.id, run.key, run.plan.stops[run.node]!.name, run.plan.stops[run.node]!.intro, 'enter'));
   }
   out.push(stateChange(farm, run), offerChange(farm, run));
   void ctx;
@@ -699,6 +757,7 @@ export function leaveRun(world: WorldState, playerId: string, ctx: SimCtx): Chan
   refresh(farm, run);
   out.push(stateChange(farm, run));
   if (run.phase === 'pick') out.push(...settleVote(farm, run, ctx, false));
+  if (run.phase === 'route') out.push(...tickRoute(farm, run, ctx));
   return out;
 }
 
@@ -724,29 +783,108 @@ export function rejoinRun(world: WorldState, playerId: string): Change[] {
 }
 
 // ---------------------------------------------------------------------------
-// The way on: the exit, the vote
+// The way on: the runa cards, then the väg-runor
 // ---------------------------------------------------------------------------
 
-/** Using the exit at the end of a zone: when its gate is open, the party votes on a runa. */
-function useRunExit(world: WorldState, p: PlayerState, _obj: WorldObject, ctx: SimCtx): Change[] {
+/**
+ * Using a väg-runa (the action key while standing on it) counts as stepping onto it and staying: for those who play with a
+ * key or a pad and would rather press than wait. Walking onto one is the way (the vote is spatial, tickRoute).
+ */
+function useRunExit(world: WorldState, p: PlayerState, obj: WorldObject, ctx: SimCtx): Change[] {
   const farm = farmOf(world);
   const run = RUNS.get(farm);
-  if (!run || run.phase !== 'zone' || !run.party.includes(p.id) || p.area !== run.key) return [];
-  const inst = farm.areas?.[run.key]?.saga;
-  if (!inst?.gateOpen) return [toast(p.id, RUN_T.exitShut)];
-  run.phase = 'pick';
-  run.offer = makeOffer(farm, run, ctx, []);
-  const out: Change[] = [];
-  for (const q of humans(farm, run)) out.push(banner(q.id, run.key, RUN_T.pickTitle, RUN_T.pickSub, 'reward'));
-  out.push(stateChange(farm, run), offerChange(farm, run));
-  return out;
+  if (!run || !run.party.includes(p.id) || p.area !== run.key) return [];
+  if (run.phase !== 'route' || !run.vote) return [toast(p.id, RUN_T.exitShut)];
+  const c = run.vote.runes.findIndex((r) => r.id === obj.id);
+  const on = run.vote.on[p.id];
+  if (c >= 0 && on && on.c === c) on.done = true;
+  return tickRoute(farm, run, ctx);
 }
 runHooks.exit = useRunExit;
+
+/** The stop is cleared: the cards of a runa after a fight (a Flock, the Mellanboss), and then the way on. */
+function stopCleared(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
+  const z = run.plan.stops[run.node]!;
+  const out: Change[] = [];
+  if (z.kind === 'flock' || z.kind === 'mini') {
+    run.phase = 'pick';
+    run.offer = makeOffer(farm, run, ctx, []);
+    for (const q of humans(farm, run)) out.push(banner(q.id, run.key, RUN_T.pickTitle, RUN_T.pickSub, 'reward'));
+    out.push(stateChange(farm, run), offerChange(farm, run));
+    return out;
+  }
+  return startRoute(farm, run);
+}
+
+/** The väg-runor appear on the floor of the exit room, one for each stop the next row leads to. */
+function startRoute(farm: WorldState, run: RunState): Change[] {
+  const area = farm.areas?.[run.key];
+  const z = run.plan.stops[run.node]!;
+  const out: Change[] = [];
+  if (!area?.saga || z.kind === 'boss') return out;
+  const next = run.plan.route.nodes[run.node]!.next;
+  const runes = placeRunes(area, z, run.plan.route, next);
+  for (const r of runes) {
+    const o = area.objects[r.id];
+    if (o) out.push({ t: 'object', id: o.id, obj: o, area: run.key });
+  }
+  area.saga.run!.exits = runes.map((r) => ({ x: r.x, y: r.y, node: r.node, kind: r.kind }));
+  run.phase = 'route';
+  run.vote = { runes, on: {}, sig: '' };
+  for (const q of humans(farm, run)) out.push(banner(q.id, run.key, RUN_T.routeTitle, RUN_T.routeSub, 'reward'));
+  out.push(stateChange(farm, run), { t: 'run', ev: 'offer', to: null, offer: null });
+  return out;
+}
+
+/** Who stands on which rune now (the nearest within reach), and the vote's end: everyone on a rune, or the clock. */
+function tickRoute(farm: WorldState, run: RunState, ctx: SimCtx, late = false): Change[] {
+  const vote = run.vote;
+  if (run.phase !== 'route' || !vote) return [];
+  const who = voters(farm, run);
+  const on: RouteVote['on'] = {};
+  for (const q of who) {
+    let best = -1;
+    let bestD = ROUTE_DISC_RADIUS;
+    vote.runes.forEach((r, c) => {
+      const d = Math.hypot(q.x - (r.x + 0.5) * TILE, q.y - (r.y + 0.5) * TILE) / TILE;
+      if (d <= bestD) {
+        best = c;
+        bestD = d;
+      }
+    });
+    if (best < 0) continue;
+    const before = vote.on[q.id];
+    on[q.id] = before && before.c === best ? before : { c: best, since: run.elapsed, done: false };
+    if (!on[q.id]!.done && run.elapsed - on[q.id]!.since >= ROUTE_DWELL_MS) on[q.id]!.done = true;
+  }
+  vote.on = on;
+  const ids = Object.keys(on);
+  if (!ids.length) delete vote.first;
+  else vote.first ??= run.elapsed;
+  const clock = vote.first !== undefined && run.elapsed - vote.first >= ROUTE_VOTE_MS;
+  const counts = vote.runes.map(() => 0);
+  for (const id of ids) if (on[id]!.done || clock || late) counts[on[id]!.c]!++;
+  const done = tally(counts, who.length, { late: clock || late, majority: false });
+  if (!done || !done.length) {
+    const sig = ids.map((id) => `${id}:${on[id]!.c}${on[id]!.done ? '!' : ''}`).join(',');
+    if (sig === vote.sig) return [];
+    vote.sig = sig;
+    return [stateChange(farm, run)];
+  }
+  // a tie goes to the Stigfinnare's rune if it is one of them, else to the rune someone stood on first
+  const finder = finderOf(farm, run);
+  const mine = finder !== null ? on[finder]?.c : undefined;
+  const firstOn = [...ids].sort((a, b) => on[a]!.since - on[b]!.since).find((id) => done.includes(on[id]!.c));
+  const winner = done.length === 1 ? done[0]! : mine !== undefined && done.includes(mine) ? mine : (firstOn !== undefined ? on[firstOn]!.c : done[0]!);
+  const chosen = vote.runes[winner]!;
+  run.turn++;
+  return enterStop(farm, run, chosen.node, ctx);
+}
 
 function makeOffer(farm: WorldState, run: RunState, ctx: SimCtx, avoid: string[]): NonNullable<RunState['offer']> {
   // the hired companion's class is not offered: a solo player sees their own class and the party-wide runor
   const classes = humans(farm, run).map((m) => m.saga!.cls!).filter(Boolean);
-  return { cards: offerRunor(ctx.rnd, classes, [...run.runor, ...avoid]), votes: {}, order: [], until: run.elapsed + RUN_PICK_MS, from: run.zone };
+  return { cards: offerRunor(ctx.rnd, classes, [...run.runor, ...avoid]), votes: {}, order: [], until: run.elapsed + RUN_PICK_MS, from: run.node };
 }
 
 /** A vote for a card. */
@@ -779,33 +917,31 @@ export function rerollOffer(world: WorldState, playerId: string, ctx: SimCtx): C
 }
 
 /**
- * Ends the vote when it can end: a card with a strict majority of the online players at once; everyone having voted; or
- * the time being up (`late`): the most votes, a tie to the card voted first, no votes at all to the first card.
+ * Ends the vote on a runa when it can end (`tally`): a card with a strict majority of the online players at once; everyone
+ * having voted; or the time being up (`late`): the most votes, a tie to the card voted first, no votes at all to the first card.
+ * The runa taken, the party goes on to choose the way (the väg-runor).
  */
 function settleVote(farm: WorldState, run: RunState, ctx: SimCtx, late: boolean): Change[] {
   const offer = run.offer;
   if (!offer) return [];
-  const voters = humans(farm, run).filter((q) => q.online);
+  const online = humans(farm, run).filter((q) => q.online);
   const counts = offer.cards.map(() => 0);
-  for (const [id, c] of Object.entries(offer.votes)) if (voters.some((v) => v.id === id)) counts[c]!++;
-  const total = counts.reduce((a, b) => a + b, 0);
-  const majority = counts.findIndex((n) => n > voters.length / 2);
-  let winner = -1;
-  if (majority >= 0) winner = majority;
-  else if (late || (voters.length > 0 && total >= voters.length)) {
-    const top = Math.max(...counts);
-    const firstVoted = offer.order.map((id) => offer.votes[id]!).find((c) => counts[c] === top);
-    winner = top > 0 ? (firstVoted ?? counts.indexOf(top)) : 0;
-  }
-  if (winner < 0) return [];
+  for (const [id, c] of Object.entries(offer.votes)) if (online.some((v) => v.id === id)) counts[c]!++;
+  const done = tally(counts, online.length, { late, majority: true });
+  if (!done) return [];
+  const firstVoted = offer.order.map((id) => offer.votes[id]!).find((c) => done.includes(c));
+  const winner = done.length === 0 ? 0 : (firstVoted ?? done[0]!);
   const id = offer.cards[winner]!;
   run.runor.push(id);
   const out: Change[] = [];
   const r = runa(id);
   for (const q of humans(farm, run)) out.push(banner(q.id, run.key, fmt(RUN_T.picked, { runa: RUNA_NAMES[id] ?? id }), undefined, 'reward'));
-  out.push(...enterZone(farm, run, run.zone + 1, ctx));
-  // the potions of p_flaska go into the zone the player now stands in (the old one is gone)
+  refresh(farm, run);
+  // the potions of p_flaska go into the stop the player stands in
   for (const q of humans(farm, run)) if (r?.effect.potions && (!r.cls || r.cls === q.saga?.cls)) giveHere(farm, q, 'healing_potion', r.effect.potions, out);
+  delete run.offer;
+  out.push(...startRoute(farm, run), offerChange(farm, run));
+  void ctx;
   return out;
 }
 
@@ -857,7 +993,8 @@ export function tickRuns(world: WorldState, dtMs: number, ctx: SimCtx): Change[]
   if (run.phase === 'pick') {
     if (run.offer && run.elapsed >= run.offer.until) out.push(...settleVote(farm, run, ctx, true));
   } else {
-    out.push(...watchZone(farm, run, ctx));
+    out.push(...watchStop(farm, run, ctx));
+    if (RUNS.get(farm) === run && run.phase === 'route') out.push(...tickRoute(farm, run, ctx));
   }
   if (RUNS.get(farm) === run && (run.statePing += dtMs) >= 10_000) {
     run.statePing = 0;
@@ -866,40 +1003,58 @@ export function tickRuns(world: WorldState, dtMs: number, ctx: SimCtx): Change[]
   return out;
 }
 
-/** Pays and opens what the zone's fight has earned: packs, the gate, chests, the guard, the boss, the wipe. */
-function watchZone(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
+/** A Vilosten: 40 % of everyone's health back and everyone who had fallen up again (once the fighters are there). */
+function restHeal(farm: WorldState, run: RunState, inst: NonNullable<WorldState['saga']>, out: Change[]): void {
+  const k = `${run.node}:heal`;
+  if (run.paid.has(k)) return;
+  const who = humans(farm, run).filter((q) => q.online && q.area === run.key);
+  const fighters = members(farm, run).filter((q) => q.online && q.area === run.key);
+  if (!fighters.length || fighters.some((q) => !inst.fighters[q.id])) return;
+  run.paid.add(k);
+  for (const q of fighters) {
+    const f = inst.fighters[q.id]!;
+    delete f.down;
+    delete f.frozen;
+    f.hp = Math.min(f.max, Math.max(1, f.hp + Math.round(f.max * VILOSTEN_HEAL)));
+  }
+  for (const q of who) out.push(toast(q.id, RUN_T.restHeal));
+}
+
+/** Pays and opens what the stop's fight has earned: packs, the gate, the mid-boss, the boss, the wipe; and tells when the stop is cleared. */
+function watchStop(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
   const area = farm.areas?.[run.key];
   const inst = area?.saga;
   if (!area || !inst) return [];
   const out: Change[] = [];
-  const z = run.plan.zones[run.zone]!;
-  // the Sagoandans the fight has used (sagasim.ts counts them in the zone's link; the run keeps the totals)
+  const z = run.plan.stops[run.node]!;
+  // the Sagoandans the fight has used (sagasim.ts counts them in the stop's link; the run keeps the totals)
   const link = inst.run;
   if (link && ((link.spirit ?? run.spirit) !== run.spirit || (link.used ?? run.spiritUsed) !== run.spiritUsed)) {
     run.spirit = link.spirit ?? run.spirit;
     run.spiritUsed = link.used ?? run.spiritUsed;
     out.push(stateChange(farm, run));
   }
+  if (z.kind === 'rest') restHeal(farm, run, inst, out);
   inst.packs.forEach((pk, i) => {
-    const k = `${run.zone}:pack:${i}`;
+    const k = `${run.node}:pack:${i}`;
     if (pk.dead && !run.paid.has(k)) {
       run.paid.add(k);
       pay(farm, run, RUN_SEEDS.pack, out);
     }
   });
   for (const [id, who] of Object.entries(inst.looted)) {
-    const k = `${run.zone}:chest:${id}`;
+    const k = `${run.node}:chest:${id}`;
     const chest = area.objects[Number(id)];
     if (who.length && chest && (chest.variant ?? 0) === 0 && !run.paid.has(k)) {
       run.paid.add(k);
       pay(farm, run, RUN_SEEDS.chest, out);
     }
   }
-  if (inst.miniDown && !run.paid.has(`${run.zone}:guard`)) {
-    run.paid.add(`${run.zone}:guard`);
+  if (inst.miniDown && !run.paid.has(`${run.node}:guard`)) {
+    run.paid.add(`${run.node}:guard`);
     pay(farm, run, RUN_SEEDS.guard, out);
   }
-  // the gate opens when the packs that were in the way are down
+  // the gate opens when the packs that were in the way are down (a mid-boss opens its own, in sagasim.ts)
   if (!inst.gateOpen && z.gate === 'packs' && z.required.every((i) => inst.packs[i]?.dead)) {
     inst.gateOpen = true;
     for (const g of inst.gate) {
@@ -909,15 +1064,23 @@ function watchZone(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
         out.push({ t: 'object', id: o.id, obj: null, area: run.key });
       }
     }
-    if (z.kind === 'zone') {
+  }
+  // the stop is cleared: a Flock when its gate opens, the Mellanboss when it falls, a Vilosten at once; the boss's is the victory
+  const clearedAt = `${run.node}:cleared`;
+  const cleared = z.kind === 'flock' ? inst.gateOpen : z.kind === 'mini' ? inst.miniDown : z.kind === 'rest' ? inst.gateOpen : false;
+  if (cleared && run.phase === 'stop' && !run.paid.has(clearedAt)) {
+    run.paid.add(clearedAt);
+    if (z.kind === 'flock' || z.kind === 'mini') {
       for (const p of humans(farm, run)) {
         runSaveOf(p).zones++;
         out.push(banner(p.id, run.key, RUN_T.zoneClear, RUN_T.zoneClearSub, 'cleared'));
       }
       pay(farm, run, RUN_SEEDS.zone, out);
     }
+    out.push(...stopCleared(farm, run, ctx));
+    return out;
   }
-  if (inst.bossDown && run.phase === 'zone') out.push(...victory(farm, run, ctx));
+  if (inst.bossDown && run.phase === 'stop') out.push(...victory(farm, run, ctx));
   if (run.phase === 'victory' && run.victoryAt !== undefined && run.elapsed - run.victoryAt >= RUN_VICTORY_MS) return [...out, ...endRun(farm, run, 'win', ctx)];
   if (inst.wipeAt !== undefined && ctx.now >= inst.wipeAt && !inst.run?.revive) return [...out, ...endRun(farm, run, 'wipe', ctx)];
   return out;
@@ -964,7 +1127,7 @@ export function endRun(farm: WorldState, run: RunState, outcome: RunOutcome, ctx
     sendHome(farm, p, out);
     if (p.id !== except)
       out.push(
-        { t: 'run', ev: 'ended', to: p.id, outcome: run.outcome, ms: Math.round(run.elapsed), seeds: run.earned[p.id] ?? 0, zones: s.zones, runor: [...run.runor], level: run.level, spiritUsed: run.spiritUsed },
+        { t: 'run', ev: 'ended', to: p.id, outcome: run.outcome, ms: Math.round(run.elapsed), seeds: run.earned[p.id] ?? 0, zones: s.zones, runor: [...run.runor], level: run.level, spiritUsed: run.spiritUsed, path: run.path.map((n) => run.plan.route.nodes[n]!.kind) },
         toast(p.id, fmt(RUN_T.summary, { time: fmtDuration(run.elapsed), seeds: run.earned[p.id] ?? 0 })),
         playerChange(p),
       );
@@ -1019,7 +1182,9 @@ export function runMessage(world: WorldState, playerId: string, msg: { t: 'run' 
     case 'start': {
       const level = parseRunLevel(msg.level);
       if (level === null) return [toast(playerId, RUN_T.badLevel)];
-      return startRun(farm, playerId, { level, replay: msg.replay === true, ...(msg.companion === false ? { companion: false } : {}), ...(Array.isArray(msg.fardkost) ? { fardkost: msg.fardkost.filter((x): x is string => typeof x === 'string') } : {}) }, ctx);
+      // a dungeon: left out is the chapter's own; anything that is not a dungeon's id is refused (startRun refuses one not yet reached)
+      if (msg.dungeon !== undefined && !(typeof msg.dungeon === 'string' && (DUNGEON_IDS as readonly string[]).includes(msg.dungeon))) return [toast(playerId, RUN_T.badDungeon)];
+      return startRun(farm, playerId, { level, ...(msg.dungeon !== undefined ? { dungeon: msg.dungeon as DungeonId } : {}), replay: msg.replay === true, ...(msg.companion === false ? { companion: false } : {}), ...(Array.isArray(msg.fardkost) ? { fardkost: msg.fardkost.filter((x): x is string => typeof x === 'string') } : {}) }, ctx);
     }
     case 'join':
       return joinRun(farm, playerId, ctx);

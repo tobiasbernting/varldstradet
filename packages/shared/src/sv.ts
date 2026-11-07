@@ -1141,8 +1141,27 @@ export const T = {
   runFoodTake: 'Ta med',
   runFoodTaken: 'Med på färden',
   runLive: 'Det pågår en färd',
-  runZone: 'Zon {n} av 3',
-  runBossZone: 'Bossen',
+  runStep: 'Steg {n} av 10',
+  runStepBoss: 'Bossen',
+  runWing0: 'Första vingen',
+  runWing1: 'Andra vingen',
+  runWing2: 'Hallen',
+  runMapTitle: 'Färdkartan',
+  runMapHint: 'Tryck på {key} för att stänga',
+  runMapHere: 'Ni är här',
+  runFinder: 'Stigfinnaren',
+  runFinderText: 'Vid lika röster väljer {name} vägen.',
+  runRoutePick: 'Gå ut på en vägruna!',
+  runRouteWait: 'Väntar på de andra… {n} s',
+  runStopFlock: 'Flock',
+  runStopMini: 'Mellanboss',
+  runStopRest: 'Vilosten',
+  runStopBoss: 'Boss',
+  runDungeon: 'Färd',
+  runDungeonNext: 'Nästa',
+  runDungeonLocked: 'Ännu inte öppen',
+  runEndedRoute: 'Vägen ni gick',
+  runEndedStops: 'Stopp',
   runClock: 'Tid',
   runReroll: 'Omval',
   runRerollLeft: '{n} kvar',
@@ -1150,7 +1169,6 @@ export const T = {
   runPicked: 'Tagna runor',
   runEndedTime: 'Tid',
   runEndedSeeds: 'Sagafrön',
-  runEndedZones: 'Zoner',
   runEndedRunor: 'Runor',
   runEndedSpirit: 'Sagoandar använda',
   runLevelLatt: 'Lätt',
@@ -1780,17 +1798,15 @@ export const MODIFIER_TEXT: Record<string, string> = {
   fler: 'En till i varje flock', segare: 'Monstren tål 25 % mer', harda: 'Monstren slår 20 % hårdare', vakten: 'En mellanboss vaktar vägen', snabba: 'Monstren ser dig på längre håll', dimma: 'Dimma, och monstren ger inte upp',
 };
 
-export const ZONE_NAMES: Record<string, string> = { skog: 'Skogsstigen', trask: 'Kärret', berg: 'Bergspasset', strand: 'Stranden', svamp: 'Svampskogen', is: 'Isfjället', vulkan: 'Lavastigen' };
-export const ZONE_INTROS: Record<string, string> = {
-  skog: 'Träden står tätt och något prasslar bakom stammarna.',
-  trask: 'Det bubblar i kärret, och dimman ligger tung.',
-  berg: 'Stigen slingrar sig uppåt och stenarna ekar.',
-  strand: 'Vågorna slår mot stranden. Något rör sig i vattnet.',
-  svamp: 'Svamparna lyser svagt i det gröna mörkret.',
-  is: 'Isvinden viner. Snön knarrar under fötterna.',
-  vulkan: 'Marken är varm och lavan lyser i sprickorna.',
+/** The kinds of stop on a route (GAME2.md section 2.1): the name on the banner and the line under it, and the short word on the map. */
+export const STOP_NAMES: Record<string, string> = { flock: 'Ett flock', mini: 'Mellanbossen', rest: 'Vilosten', boss: 'Bossen' };
+export const STOP_WORDS: Record<string, string> = { flock: 'Flock', mini: 'Mellanboss', rest: 'Vilosten', boss: 'Boss' };
+export const STOP_INTROS: Record<string, string> = {
+  flock: 'Ett flock står i vägen. Slå ner dem alla!',
+  mini: 'Här väntar vakten som håller halva vägen.',
+  rest: 'En vilosten. Hämta andan innan ni går vidare.',
 };
-export const BOSS_ZONE_NAME = 'Bossens sal';
+export const WING_NAMES: readonly string[] = ['Första vingen', 'Andra vingen', 'Hallen'];
 /** What a dish does, in a line (the arch window). */
 export const FOOD_TEXT: Record<string, string> = {
   bread: 'Hälsa +6 %', pancakes: 'Trollformler laddar 5 % snabbare', carrot_cake: 'Trollformler +5 %', pumpkin_pie: 'Skydd +4 %', strawberry_jam: 'Hälsan kommer 40 % fortare',
@@ -1799,7 +1815,7 @@ export const FOOD_TEXT: Record<string, string> = {
 export const COMPANION_NAME = 'Hirdmannen';
 
 export const RUN_T = {
-  started: 'Färden börjar! Tre zoner och en boss.',
+  started: 'Färden börjar! Tio steg till bossen.',
   needPort: 'Gå fram till färdporten först.',
   already: 'Det pågår redan en färd. Hänga på?',
   joined: '{name} hänger på!',
@@ -1811,8 +1827,12 @@ export const RUN_T = {
   picked: 'Ni fick {runa}!',
   voted: '{name} röstade.',
   zoneClear: 'Vägen vidare är öppen!',
-  zoneClearSub: 'Gå till porten där borta.',
-  exitShut: 'Besegra alla flockar först.',
+  zoneClearSub: 'Välj en runa, sen en väg.',
+  exitShut: 'Vägrunorna lyser upp när stoppet är klart.',
+  routeTitle: 'Välj väg!',
+  routeSub: 'Gå ut på en vägruna. Fler på samma vinner; lika går Stigfinnaren efter.',
+  restHeal: 'Vilostenen läker er.',
+  badDungeon: 'Den färden kan ni inte ge er ut på än.',
   warn: 'Snart dags att gå hem',
   warnSub: 'Ta det lugnt. Ni får behålla allt ni hittat.',
   late: 'Dags att gå hem?',

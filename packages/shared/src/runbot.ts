@@ -1,7 +1,8 @@
 // A fighter that plays a run by itself: walks to the next monsters, uses its class's spells the way a person would
 // (the tank taunts and shields, the healer heals and wakes friends, the warrior whirls, the mage fires from afar),
-// steps out of the boss's marks and stops its big attacks. It is the brain of the tests' bot parties (a careful one and a
-// clumsy one that does neither) and of the hired companion (Hirdmannen) the server runs for a lone player. It only does
+// steps out of the boss's marks and stops its big attacks, and chooses the way on by walking onto a väg-runa (the careful
+// bot takes the safe lane, a Vilosten when there is one; the clumsy bot a random lane). It is the brain of the tests' bot
+// parties (a careful one and a clumsy one that does neither) and of the hired companion (Hirdmannen) the server runs for a lone player. It only does
 // what a person at a keyboard can: it walks with `applyMove`, casts with `castSpell`, presses the use key with
 // `performAction`; it never touches the rules.
 import { applyMove, farmOf, isSolidForPlayer, lineOfSight, performAction, type SimCtx } from './sim.ts';
@@ -24,9 +25,13 @@ export interface BotMind {
   chase?: number;
   /** The clumsy bot thinks about its next move this long (ms). */
   pause: number;
+  /** How it chooses the way on: the safe lane (a Vilosten if there is one) or any lane at random. */
+  lane: 'safe' | 'random';
+  /** The väg-runa it chose in this stop (area key and the index into the link's exits), kept so it does not dither. */
+  rune?: { key: string; at: number };
 }
 
-export const newMind = (style: BotStyle, rnd: () => number): BotMind => ({ style, rnd, pause: 0 });
+export const newMind = (style: BotStyle, rnd: () => number, lane?: 'safe' | 'random'): BotMind => ({ style, rnd, pause: 0, lane: lane ?? (style === 'careful' ? 'safe' : 'random') });
 
 const tileOf = (v: number): number => Math.floor(v / TILE);
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }): number => Math.hypot(a.x - b.x, a.y - b.y) / TILE;
@@ -252,8 +257,8 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     return out;
   }
 
-  // nothing fighting: rest if hurt
-  const hurtMe = f.hp < f.max * 0.55;
+  // nothing fighting: rest if hurt (at a Vilosten until nearly full)
+  const hurtMe = f.hp < f.max * (inst.run?.kind === 'rest' ? 0.9 : 0.55);
   if (rests.length && (hurtMe || mind.resting)) {
     mind.resting = f.hp < f.max * 0.95;
     if (mind.resting) {
@@ -285,7 +290,7 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
   const required = new Set(inst.packs.flatMap((pk, i) => (inst.run?.required.includes(i) ? pk.members : [])));
   const todo = mobs.filter((m) => (m.kind === 'mob' && required.has(m.id)) || m.kind === 'mini' || (m.kind === 'boss' && inst.gateOpen));
   const owed = inst.run?.required.some((i) => !inst.packs[i]?.dead) ?? false;
-  if (todo.length && (owed || inst.run?.zone === 3)) {
+  if (todo.length && (owed || inst.run?.kind === 'boss' || inst.run?.kind === 'mini')) {
     // the closest of them by the way there (not through the wall), and the same one until it is down
     const spell = SPELLS[CLASSES[cls].spells[0]!];
     const pull = isRanged(cls) ? Math.min(6, (spell?.range ?? 8) - 2) : 1.5;
@@ -308,18 +313,30 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     }
     return out;
   }
-  // the way on
-  if (inst.run && inst.run.zone < 3) {
-    const ex = inst.exit;
+  // the way on: wait for the gate, then walk onto a väg-runa (the humans' vote; the hired companion follows and does not vote)
+  if (inst.run && inst.run.kind !== 'boss') {
     if (!inst.gateOpen) {
       p.moving = false;
       return out;
     }
-    if (dist({ x: ex.x * TILE + TILE / 2, y: ex.y * TILE + TILE / 2 }, p) > 1.4) walkTo(area, p, mind, ex, dtMs, now, slowed, 1);
-    else {
-      p.moving = false;
-      out.push(...performAction(area, p.id, ex.x, ex.y, ctx));
+    const exits = inst.run.exits ?? [];
+    if (p.bot || !exits.length) {
+      // (the cards are being voted on, or the runes are not out yet: wait in the exit room)
+      if (dist({ x: inst.exit.x * TILE + TILE / 2, y: inst.exit.y * TILE + TILE / 2 }, p) > 3) walkTo(area, p, mind, inst.exit, dtMs, now, slowed, 2.5);
+      else p.moving = false;
+      return out;
     }
+    if (mind.rune?.key !== inst.run.run + ':' + inst.run.node) {
+      // the safe lane: a Vilosten when someone is hurt (else a fight, on to the boss); the clumsy bot just picks one
+      const rest = exits.findIndex((e) => e.kind === 'rest');
+      const hurtParty = f.hp < f.max * 0.7 || friends.some((x) => x.ff.hp < x.ff.max * 0.6);
+      const fight = exits.findIndex((e) => e.kind !== 'rest');
+      const at = mind.lane === 'safe' ? (rest >= 0 && (hurtParty || fight < 0) ? rest : Math.max(0, fight)) : Math.floor(mind.rnd() * exits.length);
+      mind.rune = { key: inst.run.run + ':' + inst.run.node, at };
+    }
+    const e = exits[mind.rune.at]!;
+    if (dist({ x: e.x * TILE + TILE / 2, y: e.y * TILE + TILE / 2 }, p) > 0.4) walkTo(area, p, mind, e, dtMs, now, slowed, 0);
+    else p.moving = false;
     return out;
   }
   p.moving = false;
