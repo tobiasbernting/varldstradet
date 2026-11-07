@@ -23,6 +23,7 @@ import {
   castSpell,
   chooseClass,
   createPlayer,
+  applyMove,
   arrivalTile,
   areaKey,
   enterSaga,
@@ -239,7 +240,17 @@ describe('the world map\'s jump', () => {
     p.visited = ['farm', 'a:0,-1'];
     expect(teleport(world, p.id, 'a:0,-1').length).toBeGreaterThan(0);
     expect(p.area).toBe('a:0,-1');
+    // the jump is the server's doing: the walking allowance of applyMove starts over at the new place (no snap back to the old one)
+    applyMove(world, p.id, p.x + 2, p.y, 'right', true, 1000);
+    teleport(world, p.id, 'farm');
+    const landed = { x: p.x, y: p.y };
+    applyMove(world, p.id, landed.x + 3, landed.y, 'right', true, 1050);
+    expect(Math.hypot(p.x - landed.x - 3, p.y - landed.y)).toBeLessThan(0.01);
+    teleport(world, p.id, 'a:0,-1');
     inside(world, p, 'krigare');
+    expect(p.area).toBe(sagaKey('draug'));
+    const start = { x: p.x, y: p.y };
+    applyMove(world, p.id, start.x + 3, start.y, 'right', true, 2000);
     expect(p.area).toBe(sagaKey('draug'));
     expect(teleport(world, p.id, 'farm')).toEqual([]);
     expect(teleport(world, p.id, 'a:0,-1')).toEqual([]);

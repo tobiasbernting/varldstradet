@@ -57,6 +57,8 @@ const VEHICLES: Array[String] = ["bus", "car", "train", "motorcycle"]
 ## Where each one's lantern hangs (metres from its middle, +x forward): the cart's, the saddle bow's, the coach's and the engine's nose.
 const VEHICLE_LANTERN := {"car": Vector3(0.25, 0.8, 0.0), "motorcycle": Vector3(0.1, 0.65, 0.0), "bus": Vector3(0.25, 0.85, 0.0), "train": Vector3(1.4, 0.55, 0.0)}
 var _people3d := OS.get_cmdline_user_args().has("--people3d")
+## --boost (with --demo): the speed boost's chip is up, for a picture of where it sits.
+var _demo_boost := OS.get_cmdline_user_args().has("--boost")
 var _mode := "" ## "dungeon", "outdoor" (the farm and the wild maps) or "" (nothing drawn)
 var _demo_time := -1.0 ## --time=<0..1>: a fixed time of day for pictures
 var _demo_rain := false
@@ -378,7 +380,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		minimap.toggle()
 		get_viewport().set_input_as_handled()
 		return
-	if MapWindow.key_pressed(event):
+	if event.is_action_pressed("worldmap"):
 		_open_world_map()
 		get_viewport().set_input_as_handled()
 		return
@@ -482,7 +484,7 @@ func _arch_name(obj: Dictionary) -> String:
 	return str(Data.dungeon(str(ids[v])).get("name", "")) if v >= 0 and v < ids.size() else ""
 
 
-## K, the left trigger or the pause menu's button: the world map (from any map that is drawn; the buttons that would be refused are greyed).
+## K, the controller's extra button or the pause menu's button: the world map (from any map that is drawn; the buttons that would be refused are greyed).
 func _open_world_map() -> void:
 	if _area == "" or model.my_player().is_empty():
 		return
@@ -834,6 +836,7 @@ func _dress(actor: Actor, rec: Dictionary) -> void:
 
 func _update_hud() -> void:
 	var me := model.my_player()
+	hud.set_boost(_boosted(me), _mode != "outdoor")
 	if _mode == "outdoor":
 		hud.set_farm_status(model, me)
 		return
@@ -856,7 +859,9 @@ func _update_hud() -> void:
 			return a["me"]
 		return str(a["name"]) < str(b["name"]))
 	hud.set_party(rows)
-	hero.speed_mul = _my_speed_mul(f)
+	hero.speed_mul = _my_speed_mul(f) * (Data.constant("BOOST_SPEED_MUL", 1.3) if _boosted(me) else 1.0)
+	hero.fight = true
+	hero.boosted = _boosted(me)
 	# me and my target
 	var b: Variant = snap.get("b")
 	var boss_id := int(b.get("id", -1)) if b is Dictionary else -1
@@ -888,6 +893,11 @@ func _update_hud() -> void:
 		if pf.size() < 3 or (int(pf[2]) & Data.flag("down")) == 0:
 			all_down = false
 	hud.set_down(flags, all_down, _webbed(model.me), model.server_now())
+
+
+## The pizza's power, or a berserker's rage in a dungeon: `boostUntil` is ahead of the server's clock.
+func _boosted(rec: Dictionary) -> bool:
+	return _demo_boost or float(rec.get("boostUntil", 0.0)) > model.server_now()
 
 
 ## sagaSpeed in the browser: fallen or frozen is 0, slowed is SLOW_MUL.
@@ -974,7 +984,7 @@ func _process(delta: float) -> void:
 	combat.tick()
 	fx.tick(delta)
 	play.tick(delta)
-	hero.actor.animate(hero.facing, hero.moving, delta)
+	hero.actor.animate(hero.facing, hero.moving, delta, hero.walk_rate())
 	hero.actor.set_pose(_pose_of(model.me))
 	_bubble_of(model.me, hero.actor)
 	var k := 1.0 - pow(0.001, delta)

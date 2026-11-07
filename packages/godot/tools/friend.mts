@@ -59,6 +59,48 @@ try {
   const W = world!.w ?? 64;
   const free = (x: number, y: number): boolean => world!.terrain[y * W + x] === 'grass' && !Object.values(world!.objects).some((o) => o.x === x && o.y === y);
   const start = { x: Math.floor(me().x / TILE), y: Math.floor(me().y / TILE) };
+  // Walks to a tile like a client: a path over free grass, a position every 50 ms at the walking speed (the server cuts a
+  // move to what the legs allow, so a jump would not get there).
+  // (where I stand by my own count: the server's moves do not come back as changes)
+  const at = { x: me().x, y: me().y };
+  const walkTo = async (tx: number, ty: number, facing: string): Promise<void> => {
+    const H = Math.floor(world!.terrain.length / W);
+    const from = { x: Math.floor(at.x / TILE), y: Math.floor(at.y / TILE) };
+    const prev = new Map<number, number>([[from.y * W + from.x, -1]]);
+    const queue = [from.y * W + from.x];
+    for (let h = 0; h < queue.length && !prev.has(ty * W + tx); h++) {
+      const cur = queue[h]!;
+      const cx = cur % W;
+      const cy = Math.floor(cur / W);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+        const nx = cx + dx;
+        const ny = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= W || ny >= H || prev.has(ny * W + nx) || !free(nx, ny)) continue;
+        prev.set(ny * W + nx, cur);
+        queue.push(ny * W + nx);
+      }
+    }
+    const path: { x: number; y: number }[] = [];
+    for (let c = ty * W + tx; prev.has(c) && c !== -1; c = prev.get(c)!) path.unshift({ x: c % W, y: Math.floor(c / W) });
+    let px = at.x;
+    let py = at.y;
+    for (const t of path) {
+      const gx = t.x * TILE + 8;
+      const gy = t.y * TILE + 8;
+      while (Math.hypot(gx - px, gy - py) > 0.01) {
+        const d = Math.hypot(gx - px, gy - py);
+        const step = Math.min(d, 3);
+        px += ((gx - px) / d) * step;
+        py += ((gy - py) / d) * step;
+        send({ t: 'move', x: px, y: py, facing, moving: true });
+        await sleep(50);
+      }
+    }
+    send({ t: 'move', x: px, y: py, facing, moving: false });
+    at.x = px;
+    at.y = py;
+    await sleep(150);
+  };
   // a tree to chop (any of the three kinds), nearest to where we start
   const trees = Object.values(world!.objects)
     .filter((o) => o.kind === 'tree' || o.kind === 'tree_pine' || o.kind === 'tree_apple')
@@ -68,8 +110,7 @@ try {
     if (count('wood') >= 2) break;
     const stand = [[-1, 0], [1, 0], [0, 1], [0, -1]].map(([dx, dy]) => ({ x: tree.x + dx!, y: tree.y + dy! })).find((s) => free(s.x, s.y));
     if (!stand) continue;
-    send({ t: 'move', x: stand.x * TILE + 8, y: stand.y * TILE + 8, facing: 'down', moving: false });
-    await sleep(250);
+    await walkTo(stand.x, stand.y, 'down');
     for (let i = 0; i < 8 && world!.objects[tree.id]; i++) {
       send({ t: 'act', tx: tree.x, ty: tree.y });
       await sleep(300);
@@ -83,8 +124,7 @@ try {
   const row = [];
   for (let dx = 4; dx < 14 && row.length < 3; dx++) if (free(start.x + dx, start.y + 2) && free(start.x + dx, start.y + 3)) row.push({ x: start.x + dx, y: start.y + 2 });
   for (const f of row) {
-    send({ t: 'move', x: f.x * TILE + 8, y: (f.y + 1) * TILE + 8, facing: 'up', moving: false });
-    await sleep(250);
+    await walkTo(f.x, f.y + 1, 'up');
     send({ t: 'act', tx: f.x, ty: f.y });
     await sleep(300);
   }

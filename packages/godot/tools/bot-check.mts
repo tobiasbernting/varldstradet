@@ -374,7 +374,7 @@ function checkMapWalker(r: Report, log?: string): void {
   const exitErrors = (log && fs.existsSync(log) ? fs.readFileSync(log, 'utf8') : '').split('\n').filter((l) => /leaked at exit|still in use at exit|Pages in use exist at exit/.test(l));
   check(exitErrors.length === 0, `${r.name}: exits clean, nothing leaked at exit (${exitErrors[0] ?? 'none'})`);
   const m = r.map ?? {};
-  for (const name of ['minimap_visible', 'opened_by_key', 'here_cell_greyed', 'farm_cell_enabled', 'unvisited_greyed', 'home_enabled', 'closed_by_key', 'trigger_opens_once', 'trigger_closes_once', 'fast_travel_home', 'visited_cell_enabled', 'fast_travel_visited', 'minimap_toggles', 'minimap_in_dungeon', 'map_greyed_in_dungeon'])
+  for (const name of ['minimap_visible', 'opened_by_key', 'here_cell_greyed', 'farm_cell_enabled', 'unvisited_greyed', 'home_enabled', 'closed_by_key', 'fast_travel_home', 'visited_cell_enabled', 'fast_travel_visited', 'minimap_toggles', 'minimap_in_dungeon', 'map_greyed_in_dungeon'])
     check(m[name] === true, `${r.name}: world map / minimap: ${name}`);
   // the server moved me: home and back (the route lists every map the client was shown), then on to the arch of chapter 2
   const route = r.route.join(' → ');
