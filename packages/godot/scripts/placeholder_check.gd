@@ -67,6 +67,9 @@ func _run() -> void:
 	var assets := FarmAssets.new()
 	var names := 0
 	for kind in FarmAssets.SPECS.keys():
+		var lo: Variant = FarmAssets.SPECS[kind].get("lo")
+		if lo != null and assets.mesh(str(lo)) == null:
+			_fail("the cheap look of '%s' names the mesh '%s', which cannot be made" % [kind, lo])
 		for m in FarmAssets.SPECS[kind].get("m", []):
 			names += 1
 			if assets.mesh(str(m)) == null:

@@ -617,6 +617,8 @@ func _instance_object(id: String, obj: Dictionary, groups: Dictionary) -> void:
 			mname = str(list[int(obj.get("variant", 0)) % list.size()])
 		else:
 			mname = str(list[int(_h2(x, y, 1) * list.size()) % list.size()])
+		if Quality.preset == "lag" and spec.has("lo"):
+			mname = str(spec["lo"]) # (a cheaper mesh for a wood of a thousand)
 		if bool(spec.get("fence", false)):
 			var mask := 0
 			if _is_fence(x, y - 1):

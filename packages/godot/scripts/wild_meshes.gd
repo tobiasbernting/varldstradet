@@ -186,6 +186,8 @@ static func _make(name: String) -> ArrayMesh:
 			"ghost_flag": _ghost_flag(b)
 			"giant_glowshroom": _giant_mushroom(b, Color("#2a6ad0"), Color("#7ae8ff"), Color("#d8ffff"), true)
 			"giant_mushroom": _giant_mushroom(b, Color("#b02a2a"), Color("#e8483a"), WHITE, false)
+			"giant_glowshroom_lo": _giant_mushroom(b, Color("#2a6ad0"), Color("#7ae8ff"), Color("#d8ffff"), true, true)
+			"giant_mushroom_lo": _giant_mushroom(b, Color("#b02a2a"), Color("#e8483a"), WHITE, false, true)
 			"gingerbread_house": _gingerbread_house(b)
 			"hels_lykta": _hels_lykta(b)
 			"lights": _lights(b)
@@ -814,9 +816,19 @@ static func _star_crystal(b: FarmMesh) -> void:
 	b.box(Vector3(0.0, 1.12, 0.0), Vector3(0.12, 0.12, 0.07), Color("#fff6d8"))
 
 
-static func _giant_mushroom(b: FarmMesh, cap_d: Color, cap: Color, spot: Color, glow: bool) -> void:
+## `lo`: the Låg variant (a wood of a thousand): a plain cap on a stalk, no spots, no small one beside it, fewer sides.
+static func stalk_lo(glow: bool) -> Color:
+	return Color("#c8d8f0") if glow else Color("#d8d0c0")
+
+
+static func _giant_mushroom(b: FarmMesh, cap_d: Color, cap: Color, spot: Color, glow: bool, lo := false) -> void:
 	# a toadstool as tall as a child: a thick pale stalk, a wide domed cap with spots, a little one beside it
 	var stalk := Color("#d8d0c0") if not glow else Color("#c8d8f0")
+	if lo:
+		b.cylinder(Vector3.ZERO, 0.17, 0.12, 0.9, 5, stalk_lo(glow).darkened(0.15), stalk_lo(glow).lightened(0.1))
+		b.blob(Vector3(0.0, 1.0, 0.0), Vector3(0.58, 0.32, 0.58), 7, 3, cap_d, cap.lightened(0.1), 0.0, 0.03, 2.0)
+		b.box(Vector3(0.0, 1.31, 0.0), Vector3(0.2, 0.02, 0.2), spot, 0.0, 0.5)
+		return
 	b.cylinder(Vector3.ZERO, 0.17, 0.12, 0.9, 7, stalk.darkened(0.15), stalk.lightened(0.1))
 	b.cylinder(Vector3(0.0, 0.55, 0.0), 0.2, 0.2, 0.03, 7, stalk.darkened(0.25), stalk.darkened(0.1), 0.0, false)
 	b.blob(Vector3(0.0, 1.0, 0.0), Vector3(0.58, 0.32, 0.58), 10, 4, cap_d, cap.lightened(0.1), 0.0, 0.03, 2.0)
