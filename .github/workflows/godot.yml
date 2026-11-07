@@ -7,12 +7,25 @@ name: Godot client
 # minutes. The pictures and benches under Xvfb render with Mesa's software GL and take 20+ minutes, so they are in the
 # `pictures` job, which runs only when started by hand: Actions -> Godot client -> Run workflow (pick the branch), or
 #   gh workflow run godot.yml --ref <branch>
+#
+# Release dry run (what a v* tag would build, without a tag and without a Release): run the workflow by hand with
+# "pictures" turned off,
+#   gh workflow run godot.yml --ref <branch> -f pictures=false
+# The `export` job exports the four targets, zips them under the names the download page links to and uploads them
+# as the artifact `varldstradet-builds` (Actions -> the run -> Artifacts). Only the `release` job, which runs on a
+# v* tag alone, makes a GitHub Release; a manual run never does. packages/server/src/release.test.ts keeps this
+# file's zip names and the download page's links in step.
 
 on:
   pull_request:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      pictures:
+        description: 'Also run the slow pictures and benches job (turn off for a release dry run: only the zips)'
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -276,7 +289,7 @@ jobs:
 
   # Pictures and benches under Xvfb (software GL, slow): only on a manual run.
   pictures:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && inputs.pictures
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:

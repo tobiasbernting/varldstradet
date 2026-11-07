@@ -13,5 +13,5 @@
     "sourceMap": false
   },
   "include": ["src", "../shared/src"],
-  "exclude": ["src/**/*.test.ts", "../shared/src/**/*.test.ts"]
+  "exclude": ["src/**/*.test.ts", "src/**/*.fixture.ts", "../shared/src/**/*.test.ts"]
 }
