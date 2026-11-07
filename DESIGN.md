@@ -944,3 +944,54 @@ were already here (`packages/shared`), so this is drawing and sending, not new g
   `bot-check.mts` works them out again from the server's record; `{t:'dev', a:'sagaBest'}` (DEV_TELEPORT) records a best time through the real path for the journal check; a table of
   `jumpTo`'s refusals sits in `saga.test.ts` and against `FamilyWindow.can_jump_to`; at 175 % the scale is a run-only override; "down" on a page without buttons scrolls and then goes on to
   the footer. `pnpm godot:bot` runs with `--experimental-transform-types` (the check imports the shared saga code).
+
+
+## Godot client: minimap, world map and the nine arches (2026-11-07)
+
+The owner found three things the browser game had and the native client lacked. All of it is client work (`packages/godot`) on rules the server already
+had, with one server fix and one dev switch (below).
+
+- **The minimap** (`minimap.gd`, a `Control` in the HUD, top right under the connection dot and the farm chips; below the boss's bar on a narrow
+  screen in a dungeon). It is a picture of the model, not of the 3D scene: the map's terrain one pixel a tile (the browser's colour table, rock and
+  basalt left dark in a dungeon, like its cave) and the objects the browser painted (trees, rocks, houses, fences, chests), rebuilt only when the map,
+  its terrain or its object count change, and on top of that, redrawn four times a second, the markers and the dots. A marker is a fixed few points
+  wide whatever the object's size, with a dark rim: the arches in their dungeon's colour (`DungeonLook.portal_colour`), the färdport, doors and
+  caves, the bus stop and station, Kämpastenen, the rocket, a dungeon's rest stones and ways out, the landmarks (`lm_*`, gold). Dots: me yellow with
+  a rim, other players white, villagers pink, animals cream, monsters red (`Data.animals[species].mob/saga`). The browser drew it in dungeons too,
+  so it does here (the dungeon is a whole map). `M` toggles it (action `minimap`), `Settings.minimap_on` keeps the choice in `[hud] minimap` of
+  `settings.cfg`, and being a HUD node it follows the text size with no code of its own. **The pad:** the browser used d-pad down, but down is also
+  `move_down`, so every step down would flip the map; the pad's way is the world map's "Minikarta av/på" button, and the pause menu's "Karta" (or the controller's `Share`/`Capture` button; the left trigger is the sprint's) opens that
+  window.
+- **The world map** (`map_window.gd`, a `GameWindow` owned by `FarmWindows`; `N`, the pause menu's "Karta" or the controller's extra button): a 7 × 7 grid of
+  buttons round the map I am on (north up, `R = 3`), from my `visited` and `model.biomes`: a visited map shows its emoji (`BIOME_EMOJI`, now in
+  `sv.json`) and name, an unvisited one "❔", the space base's square "🚀" before anyone has found it (`SPACEPORT_AX/AY` in `game.json`), a "?" where
+  I have seen a landmark I have not touched and a "🧭" where I found them all (`landmark_marks`, the browser's `landmarkMarks` on `saga.seen` and
+  `saga.discovered`), "här" on mine. Inside a dungeon, a cave, a building or the moon the grid is centred on where I came from (a dungeon's
+  `portal.area`, now in `game.json`). A visited map sends `{t:'teleport', to}` and closes the window; "Åk hem" goes to `farm`, "Månen" shows when
+  `moon` is visited. Every button is a `Button`, so the d-pad moves between the visited maps (the greyed ones are skipped) and `A` presses.
+- **The rules are the server's; the client greys what the server would refuse.** `teleport()` refused only a player in the old `dungeon` area, so a
+  player inside a saga dungeon or a run could jump out from the map and leave their fighter behind. That was a server hole, not a rule: `teleport()`
+  now also returns nothing for `isSagaKey(p.area)` (test in `saga.test.ts`), and the client greys every button there. The server still checks
+  `visited`, never a cave or a building as the target, and a map I am on only re-places me, so the client greys my own map too.
+- **The nine arches** (`arch_meshes.gd`, `farm_assets.gd`'s `saga_portal` by variant). The server puts a `saga_portal` for every dungeon on its map
+  (`ensureSagaPlaces`), and the client already drew them all, but as the same stone arch with a coloured glow, so a player could not tell
+  Frostjättens arch from Draugkryptan's. The browser drew nine gateways (`art/saga.ts`: `barrow`, `iceGate`, `forgeDoor`, `helGate`, `mineDoor`,
+  `seaTemple`, `alvTree`, `fenrisCleft`, `bifrostArch`); each is now a 3 × 2 building in the farm's low-poly style, built from `FarmMesh` boxes,
+  cones and blobs on the same footprint and facing (variant 0 keeps `_arch()`), with the node's glow and light in the dungeon's torch colour. All
+  nine are reachable on foot from the farm (checked for the default world: every map on the way has all four edge gaps connected, and the arch's front
+  is reachable) and enter the way the server does (`enterSaga`: a class, then the chapter before it cleared). **Nothing about going in changed**:
+  the use key on an arch sends `act`, the server answers with the dungeon or the "förseglad" toast. The pause menu's "Gå in i …" entries are
+  still the dev shortcut (the client does not know the server's `DEV_TELEPORT`; the server answers an error without it).
+- **Dev switch for the check.** A later chapter's arch cannot be used by a new hero, so the bot needs the earlier chapters cleared to test going in by
+  its arch. `{t:'dev', a:'unlock'}` (`DEV_TELEPORT=1` only, a hero with a class only; `devUnlockChapters` in `sagasim.ts`; tests in `game.test.ts`) marks every dungeon
+  but the last cleared. The class and the lock are the server's own: the check first walks into the lock and asserts the toast.
+- **Check.** `pnpm godot:bot` (and `BOT_ONLY=walker`) has a second walker, `Bot-Kartvandrare` (`bot.gd --mapcheck`, with its own empty `HOME`, since the minimap's
+  choice is saved): to the first wild map, the minimap is up; `N` (an `InputEventAction`, through the real input path) opens the world map, the
+  "here" and the unvisited cells and the "Åk hem" button are in the state they should be, `N` closes it; "Åk hem" puts the bot on the farm (the
+  server's record, not just the client's), the map there has the wild map enabled and a click goes back; `M` hides and shows the minimap and
+  the setting follows; on to Frostjättens arch two maps north, the lock's toast, `dev unlock`, in by the arch (never the dev saga message), and inside
+  the minimap is up and all 49 cells and "Åk hem" are greyed. About a minute, beside the other bots in the `bots` job. Five of the other seven arches have walkers too (`Bot-Valv-<id>`, `--unlock`, in two lanes of one at a time on a server of their own since a server takes eight characters; a walker's time is 120 s plus 70 s a map, which only matters when a runner is slow). Surts smedja and Bifrost (five maps out, through the volcano and the space base) are `BOT_ARCHES=surt,loke` only: they passed in several runs (100 s alone, 199 s loaded) but failed in CI once on time and once when monsters knocked the unarmed walker back to the farm again and again; a shared test covers all nine arches without walking (place, walkability, entry rules); the route goes along y first and, to a target in the south, along x first (the farm's own way to its south opening is not a walk the bot's path search finds, its east opening is), the lock is met, `dev unlock` sent, the arch used. `Net.sent` lets the bot record every `dev` message its client sends: the arch routes must have sent no `saga`, only `unlock`. The minimap picture is rebuilt at most four times a second. A `pnpm godot:bot` run is 5m46s here (was 4m49s). Pictures (the manual
+  `pictures` job): the minimap on the farm, the world map, and one arch each of the nine (`--demo=forest --arch=N`).
+- **Unsure.** The nine meshes are made from primitives and judged from a lavapipe picture; the hanging icicles, the bone gate's ribs and the tree
+  arch's canopy are the likeliest to want an art pass. The minimap is not drawn under reduced motion differently (it has no motion); the colours of its
+  dots do not follow the colour-blind palettes (me, others and monsters differ in size and place as well as colour).

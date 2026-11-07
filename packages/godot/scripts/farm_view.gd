@@ -689,6 +689,12 @@ func _is_fence(x: int, y: int) -> bool:
 # Objects that are nodes: houses, lamps, arches, the cave
 
 
+const ARCH_GLOW := [
+	[1.0, 0.2, 2.0], [1.15, 0.2, 2.4], [1.2, 0.2, 2.5], [1.1, 0.2, 2.3], [1.05, 0.3, 2.1],
+	[1.15, 0.2, 2.4], [1.1, 0.2, 2.3], [1.15, 0.2, 2.3], [1.15, 0.2, 2.4],
+]
+
+
 ## What a paint bucket colours (the server's PAINTABLE: the farmhouse and the pieces of a wall, which it paints together).
 const PAINTABLE := ["house", "wall_wood", "wall_stone", "door", "window"]
 
@@ -734,8 +740,11 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 			_picture(node, obj)
 		"saga_portal":
 			var col: Color = DungeonLook.portal_colour(variant)
-			var g2 := assets.glow_quad(col, 1.8, 1.4)
-			g2.position = Vector3(0.0, 1.05, 0.2)
+			# the glow fills this arch's own doorway: [middle height, depth, size] (arch_meshes.gd: each doorway is 2.0 to 2.4 m high; the
+			# mine's gallery front is at z 0.25 and its posts at 0.3, so its glow sits just in front of the dark and between the posts)
+			var gl: Array = ARCH_GLOW[clampi(variant, 0, ARCH_GLOW.size() - 1)]
+			var g2 := assets.glow_quad(col, float(gl[2]), 1.4)
+			g2.position = Vector3(0.0, float(gl[0]), float(gl[1]))
 			node.add_child(g2)
 			_add_light(node, Vector3(0.0, 1.4, 1.2), col, 5.5, 1.8, 0.25, false)
 			# the arch is 3 tiles wide and 2 deep: its middle

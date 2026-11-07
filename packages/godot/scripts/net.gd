@@ -7,6 +7,7 @@ extends Node
 signal connection_changed(status: String, close_code: int)
 ## Every message from the server, parsed (the shapes in packages/shared/src/protocol.ts)
 signal message(msg: Dictionary)
+signal sent(msg: Dictionary) ## every message this client sends (the bots record the dev ones)
 
 const CLOSE_NO_ACCESS := 4003
 const PING_SECONDS := 15.0
@@ -43,6 +44,7 @@ func is_open() -> bool:
 
 func send(msg: Dictionary) -> void:
 	if is_open():
+		sent.emit(msg)
 		_ws.send_text(JSON.stringify(msg))
 
 

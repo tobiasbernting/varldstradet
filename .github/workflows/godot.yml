@@ -495,6 +495,28 @@ jobs:
           shot m6c-loke-hel --demo=loke --boss-move=loke:nova#1
           shot m6c-loke-line --demo=loke --boss-move=loke:line
 
+      # M9a: the minimap and the world map, and each dungeon's arch (--demo=forest --arch=0..8), under Xvfb (software GL). The ones worth
+      # keeping are copied into packages/godot/docs/ by hand (m9a-*.png).
+      - name: Pictures of the minimap, the world map and the nine arches under Xvfb
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/shots/m9a"
+          shot() { # name, demo args...
+            local name="$1"; shift
+            xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- "$@" --screenshot="$GITHUB_WORKSPACE/shots/m9a/$name.png" 2>&1 | tee "shot-$name.log"
+            if grep -v "status < 0" "shot-$name.log" | grep -E "SCRIPT ERROR|SHADER ERROR|Parse Error|leaked at exit|still in use at exit|Pages in use exist at exit"; then
+              echo "::error::$name: errors or leaks (see above)"; exit 1
+            fi
+            test "$(stat -c %s "$GITHUB_WORKSPACE/shots/m9a/$name.png")" -gt 20000
+          }
+          shot m9a-minimap --demo=farm --at=18,14 --time=0.4
+          shot m9a-worldmap --demo=farm --at=18,14 --time=0.4 --open-map "--visited=a:0,-1=skog|a:-1,-1=skog|a:1,0=by|a:0,1=ang|a:-1,0=berg|a:0,-2=is|a:2,0=oken|moon=mane"
+          shot m9a-worldmap-175 --demo=farm --at=18,14 --time=0.4 --open-map --ui-scale=1.75 "--visited=a:0,-1=skog|a:-1,-1=skog|a:1,0=by|a:0,1=ang|a:-1,0=berg|a:0,-2=is|a:2,0=oken|moon=mane"
+          for v in 0 1 2 3 4 5 6 7 8; do
+            shot m9a-arch-$v --demo=forest --arch=$v --time=0.5
+          done
+
       # M7a: the alive world under Xvfb (software GL): the pictures (all on Mellan, the pond also on Låg and Hög for the comparison)
       # and the farm and the village benches with everything on at once (`--alive=all`, night, summer). The ones worth keeping are
       # copied into packages/godot/docs/ by hand (m7a-lag-vs-hog is the two pond pictures side by side).

@@ -27,6 +27,7 @@ var forge: ForgeWindow
 var paint: PaintWindow
 var run_arch: RunWindow
 var seed_tree: SeedWindow
+var world_map: MapWindow
 var _all: Array = []
 
 
@@ -58,6 +59,7 @@ func setup(v: WorldView) -> void:
 	family.looks = v.looks
 	run_arch = _add(RunWindow.new())
 	seed_tree = _add(SeedWindow.new())
+	world_map = _add(MapWindow.new())
 	model.quests_changed.connect(refresh)
 	model.fardkost_changed.connect(refresh)
 	model.tree_changed.connect(refresh)
@@ -149,6 +151,14 @@ func toggle_quests() -> void:
 		quests.open_window()
 
 
+## N: the world map (anywhere a map is drawn; inside a dungeon it only shows where I am, the buttons are greyed).
+func toggle_map() -> void:
+	if world_map.is_open():
+		world_map.close()
+	elif not is_busy():
+		world_map.open_window()
+
+
 ## B, K: the books on a page ("book", "journal" or "finds"); the same key again closes the window.
 func toggle_book(page: String) -> void:
 	if book.is_open():
@@ -192,6 +202,10 @@ func handle_key(event: InputEvent) -> bool:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if world_map.is_open() and event.is_action_pressed("worldmap"):
+		world_map.close()
+		get_viewport().set_input_as_handled()
+		return
 	# the key that opened a book, the help or the family closes it again
 	if (book.is_open() or help.is_open() or family.is_open()) and Time.get_ticks_msec() - 250 > maxi(book._opened_at, maxi(help._opened_at, family._opened_at)) and handle_key(event):
 		get_viewport().set_input_as_handled()

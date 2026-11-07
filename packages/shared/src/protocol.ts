@@ -151,6 +151,8 @@ export type ClientMsg =
   | { t: 'dev'; a: 'nextDay' }
   /** Development only (same switch): the starter set Smed-Stina makes (a weapon, a shield, an amulet) for my class, for free. */
   | { t: 'dev'; a: 'starter' }
+  /** Development only (same switch): every dungeon before the last counts as cleared, so a check can use a later chapter's arch. */
+  | { t: 'dev'; a: 'unlock' }
   /** Development only (same switch): materials and 400 kr for two forge levels and a starter piece, two papers, two buckets of red paint and a run of wall pieces, for a check of the smithy and the paint screen. */
   | { t: 'dev'; a: 'kit' }
   /** Development only (same switch): record this time (ms) as the family's best through dungeon `id`, by me alone, for a check of the journal. */

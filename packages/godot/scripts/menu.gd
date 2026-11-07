@@ -1,14 +1,14 @@
 class_name PauseMenu
 extends CanvasLayer
 ## The pause menu (the `menu` action: Escape or the gamepad's start button): continue, the settings window (settings_window.gd),
-## the gear and quest windows, Röstprat, the development way into the dungeons that have no arch drawn yet (the server's `dev`
-## message, DEV_TELEPORT=1), and back to the login screen. Built in code; the texts come from assets/sv.json.
+## the gear and quest windows, the world map, Röstprat, the development shortcut into the dungeons (the server's `dev`
+## message, DEV_TELEPORT=1: every dungeon has its own arch out in the world), and back to the login screen. Built in code; the texts come from assets/sv.json.
 
 signal resumed
 signal switch_player
 signal dev_enter(dungeon: String)
 signal fps_toggled(on: bool)
-signal window_asked(which: String) ## "gear", "quests", "book", "journal", "help" or "family": the windows the keys open, for a pad
+signal window_asked(which: String) ## "gear", "quests", "map", "book", "journal", "help" or "family": the windows the keys open, for a pad
 
 var _root: Control
 var _main: VBoxContainer
@@ -58,6 +58,9 @@ func _ready() -> void:
 	_continue_button = _button(Strings.t("menuContinue"), func() -> void: close())
 	_main.add_child(_continue_button)
 	_main.add_child(_button(Strings.t("menuSettings"), func() -> void: open_settings()))
+	_main.add_child(_button("🗺️ %s (%s)" % [Strings.t("worldMap"), Strings.t("mapKey")], func() -> void:
+		close()
+		window_asked.emit("map")))
 	_main.add_child(_button("%s (%s)" % [Strings.t("gearTitle"), Strings.t("gearKey")], func() -> void:
 		close()
 		window_asked.emit("gear")))
@@ -84,7 +87,7 @@ func _ready() -> void:
 	dev_title.add_theme_font_size_override("font_size", 16)
 	dev_title.modulate = Color(1, 1, 1, 0.7)
 	_main.add_child(dev_title)
-	# Draugkryptan has its real way in (the arch in the forest); the other eight have none drawn yet
+	# Every dungeon has its own arch out in the world (M9a); these are the server's dev shortcut (DEV_TELEPORT=1 only: it answers with an error otherwise)
 	for id in Data.dungeons.keys():
 		if str(id) == "draug":
 			continue
