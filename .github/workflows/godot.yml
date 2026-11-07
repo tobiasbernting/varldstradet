@@ -301,6 +301,46 @@ jobs:
           shot m6a-hel-nova --demo=hel --boss-move=hel:nova
           shot m6a-hel-rain --demo=hel --boss-move=hel:rain
 
+      # M6b: the same for Svartalfheims gruvor, Havsormens tempel and Alvernas lund: the start room, the boss's hall (the
+      # hero off to one side, so the boss shows) and the marks of each move of the mid-boss and the boss.
+      - name: Pictures of Svartalfheims gruvor, Havsormens tempel and Alvernas lund and of their bosses' moves under Xvfb
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/shots/dungeons"
+          shot() { # name, demo args...
+            local name="$1"; shift
+            xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- "$@" --screenshot="$GITHUB_WORKSPACE/shots/dungeons/$name.png" 2>&1 | tee "shot-$name.log"
+            if grep -E "^ERROR:|SCRIPT ERROR|Parse Error|leaked at exit|still in use at exit|Pages in use exist at exit" "shot-$name.log"; then
+              echo "::error::$name: errors or leaks (see above)"; exit 1
+            fi
+            test "$(stat -c %s "$GITHUB_WORKSPACE/shots/dungeons/$name.png")" -gt 20000
+          }
+          shot m6b-dvarg --demo=dvarg
+          shot m6b-dvarg-hall --demo=dvarg --at=48,11
+          shot m6b-jarnvakten-line --demo=dvarg --boss-move=jarnvakten:line
+          shot m6b-jarnvakten-slam --demo=dvarg --boss-move=jarnvakten:slam
+          shot m6b-fafner-cleave --demo=dvarg --boss-move=fafner:cleave
+          shot m6b-fafner-pools-mark --demo=dvarg --boss-move=fafner:pools
+          shot m6b-fafner-pools --demo=dvarg --boss-move=fafner:pools:after
+          shot m6b-fafner-mend --demo=dvarg --boss-move=fafner:mend
+          shot m6b-orm --demo=orm
+          shot m6b-orm-hall --demo=orm --at=47,50
+          shot m6b-blackis-pools --demo=orm --boss-move=blackis:pools:after
+          shot m6b-blackis-line --demo=orm --boss-move=blackis:line
+          shot m6b-jormungand-line --demo=orm --boss-move=jormungand:line
+          shot m6b-jormungand-pull --demo=orm --boss-move=jormungand:pull
+          shot m6b-jormungand-nova --demo=orm --boss-move=jormungand:nova
+          shot m6b-jormungand-rain --demo=orm --boss-move=jormungand:rain
+          shot m6b-alv --demo=alv
+          shot m6b-alv-hall --demo=alv --at=27,48
+          shot m6b-spindeldrottning-web --demo=alv --boss-move=spindeldrottning:freeze:after
+          shot m6b-spindeldrottning-rain --demo=alv --boss-move=spindeldrottning:rain
+          shot m6b-nattmara-nova --demo=alv --boss-move=nattmara:nova
+          shot m6b-nattmara-pools --demo=alv --boss-move=nattmara:pools:after
+          shot m6b-nattmara-mend --demo=alv --boss-move=nattmara:mend
+          shot m6b-nattmara-summon --demo=alv --boss-move=nattmara:summon:after
+
       # The farmer works a farm of its own (a second in-memory server) in a window under Xvfb and takes pictures at the
       # moments the owner asked for: watering, the bag and a chest open, a fish biting, a wild animal petted (M4b); and
       # the shop, the workbench, a refused fence, the farmhouse, the stove, the wardrobe, a talk, Köpingen, the class
