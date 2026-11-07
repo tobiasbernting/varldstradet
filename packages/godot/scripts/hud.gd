@@ -65,6 +65,7 @@ var hint_label: Label
 var _hint_t := 0.0
 var fps_label: Label
 var voice_button: Button
+var _top: VBoxContainer ## the boss at the top, in the middle (to the right when the screen is narrow, see `_layout`)
 var _frame_times: Array = []
 var _fps_in := 0.0
 
@@ -133,6 +134,7 @@ func _ready() -> void:
 
 	# the boss at the top, in the middle
 	var top := VBoxContainer.new()
+	_top = top
 	top.anchor_left = 0.5
 	top.anchor_right = 0.5
 	top.offset_left = -260
@@ -297,6 +299,51 @@ func _ready() -> void:
 	box.add_child(button)
 	fps_label.visible = Settings.show_fps
 	reset()
+	get_viewport().size_changed.connect(_layout)
+	Settings.ui_scale_changed.connect(_layout)
+	_layout()
+
+
+## M8b: at 175 % text a 1280 px window is only 731 logical points wide, and the boss's bar in the middle would lie over the hearts
+## and the frames on the left: on a narrow screen it moves to the right (under the connection dot), and the "fallen" box a little
+## down from the banner.
+func _layout() -> void:
+	if _top == null:
+		return
+	var vw := get_viewport().get_visible_rect().size.x
+	var narrow := vw < 1050.0
+	if narrow:
+		var w := minf(520.0, vw - 350.0)
+		_top.anchor_left = 1.0
+		_top.anchor_right = 1.0
+		_top.offset_right = -16.0
+		_top.offset_left = -16.0 - w
+		_top.offset_top = 44.0
+	else:
+		_top.anchor_left = 0.5
+		_top.anchor_right = 0.5
+		_top.offset_left = -260.0
+		_top.offset_right = 260.0
+		_top.offset_top = 10.0
+	# the lines that stand across the middle and along the bottom are no wider than the screen
+	var half := minf(400.0, (vw - 40.0) / 2.0)
+	for l in [hint_label, toast_label]:
+		l.offset_left = -half
+		l.offset_right = half
+	hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint_label.offset_top = -44.0 if half < 400.0 else -24.0
+	(banner_label.get_parent() as Control).offset_left = -half
+	(banner_label.get_parent() as Control).offset_right = half
+	# the hint under the bar wraps to two lines on a narrow screen: the bar and what stands over it go up to make room
+	var up := -24.0 if half < 400.0 else 0.0
+	spell_bar.offset_top = -130.0 + up
+	spell_bar.offset_bottom = -30.0 + up
+	prompt_label.offset_top = -170.0 + up
+	prompt_label.offset_bottom = -140.0 + up
+	toast_label.offset_top = -210.0 + up
+	toast_label.offset_bottom = -170.0 + up
+	down_box.offset_top = -10.0 if narrow else -60.0
+	down_box.offset_bottom = 110.0 if narrow else 60.0
 
 
 ## Röstprat's button (voice.gd): opens its window; its colour says whether you are on the phone and whether you are heard.

@@ -193,6 +193,29 @@ func _sound() -> void:
 func _reading() -> void:
 	win._show_page("reading")
 	await _frames()
+	# the text size: each button; the content scale of the window, the labels over heads, the saved value
+	var window_was := get_window().size
+	get_window().size = Vector2i(1280, 720) # (the default 1280 x 720 of the real game; a headless window starts square)
+	await _frames()
+	var tag := Label3D.new()
+	add_child(tag)
+	Settings.scaled_label(tag, 0.005)
+	var hud := HudLayer.new()
+	add_child(hud)
+	for pct in [125, 150, 175, 100]:
+		var v: float = pct / 100.0
+		_click(win._size_buttons[str(v)])
+		await _frames()
+		_step("text size %d %%: kept, saved and applied to the window" % pct, is_equal_approx(Settings.ui_scale, v) and is_equal_approx(get_window().content_scale_factor, v) and is_equal_approx(float(_on_disk("access", "ui_scale", 0.0)), v))
+		_step("text size %d %%: the labels over heads follow" % pct, is_equal_approx(tag.pixel_size, 0.005 * v))
+		var view := get_viewport().get_visible_rect().size
+		_step("text size %d %%: the window's body fits the screen (%s)" % [pct, str(view)], win._scroll.custom_minimum_size.y + 240.0 <= view.y or is_equal_approx(win._scroll.custom_minimum_size.y, 110.0))
+		var narrow := view.x < 1050.0
+		var boss_left: float = view.x * hud._top.anchor_left + hud._top.offset_left
+		_step("text size %d %%: the boss bar keeps clear of the left column" % pct, (not narrow and hud._top.anchor_left == 0.5) or boss_left >= 327.0)
+	hud.queue_free()
+	tag.queue_free()
+	get_window().size = window_was
 
 
 func _controls() -> void:

@@ -118,7 +118,7 @@ func _init() -> void:
 	label = Label3D.new()
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.font_size = 48
-	label.pixel_size = 0.005
+	Settings.scaled_label(label, 0.005)
 	label.outline_size = 12
 	label.outline_modulate = Color("2b2419")
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -679,7 +679,7 @@ func set_health(k: float, shown: bool, colour: Color, name_text := "") -> void:
 		_bar_name = Label3D.new()
 		_bar_name.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		_bar_name.font_size = 40
-		_bar_name.pixel_size = 0.005
+		Settings.scaled_label(_bar_name, 0.005)
 		_bar_name.outline_size = 10
 		_bar_name.outline_modulate = Color("2b2419")
 		_bar_name.no_depth_test = true
@@ -740,7 +740,7 @@ func set_bubble(text: String, icon: Texture2D, seconds: float) -> void:
 		_bubble = Label3D.new()
 		_bubble.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		_bubble.font_size = 40
-		_bubble.pixel_size = 0.005
+		Settings.scaled_label(_bubble, 0.005)
 		_bubble.outline_size = 10
 		_bubble.outline_modulate = Color("2b2419")
 		_bubble.modulate = Color(1.0, 0.98, 0.9)

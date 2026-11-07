@@ -302,7 +302,7 @@ func _label(text: String, colour: Color, size := 56) -> Label3D:
 	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	l.text = text
 	l.font_size = size
-	l.pixel_size = 0.006
+	Settings.scaled_label(l, 0.006)
 	l.outline_size = 14
 	l.outline_modulate = Color("2b2419")
 	l.modulate = colour
