@@ -1,6 +1,6 @@
 class_name FarmBotBooks
 extends RefCounted
-## The farmer's M9b steps (farm_bot.gd runs them): the Gårdsbok on B, the journal on K and Völvan's journal tab, the level chip
+## The farmer's M9b steps (farm_bot.gd runs them): the Gårdsbok on B, the journal on K and Völvan's journal tab, the finds, the level chip
 ## and the saga tracker on the HUD, the pause menu's way to the books. Every step goes through the keys, the
 ## clicks and the buttons a person uses; what the windows show is put in the report (`books`), and tools/bot-check.mts compares it with
 ## the server's own record of the player (the achievements it has and how far each is) and with the shared data.
@@ -57,7 +57,7 @@ func _close_all() -> void:
 	await bot._wait(0.15)
 
 
-## B, K: the Gårdsbok and the journal through their keys.
+## B, K: the Gårdsbok and the journal (and the finds) through their keys.
 func books() -> void:
 	await _close_all()
 	# the Gårdsbok on B
@@ -111,6 +111,18 @@ func books() -> void:
 				card_text += (e as RichTextLabel).get_parsed_text() + "\n"
 	bot._step("the family's best time", card_text.contains("12:34") and card_text.contains("Bot-Syskon"), "Draugkryptan's card shows the time of a sagaBest change (12:34, both names)")
 	(model.farm["sagaBest"] as Dictionary).erase("draug")
+	# the finds on a tab
+	var tab_ok := home._press(windows.book, "tab:" + Strings.t("sagaFindsTab"))
+	await bot._wait(0.3)
+	var total := 0
+	for g in Data.book["landmarks"]:
+		total += (g["items"] as Array).size()
+	var groups := _nodes_named(windows.book, "finds_").size()
+	var found := (Gear.progress(model.my_player()).get("discovered", []) as Array).size()
+	var finds_text := _texts(windows.book)
+	_books()["finds"] = {"total": total, "found": found, "groups": groups, "unknown": finds_text.count("???"), "all_line": finds_text.contains(Strings.t("sagaFindsAll", {"n": found, "total": total}))}
+	bot._step("the Upptäcktsbok", tab_ok and groups == Data.book["landmarks"].size() and finds_text.count("???") == total - found and finds_text.contains(Strings.t("sagaFindsAll", {"n": found, "total": total})), "%d places in %d biomes, %d found: the rest are ???" % [total, groups, found])
+	await bot._shot("finds", 0.1)
 	windows.book.close()
 	await bot._wait(0.2)
 
@@ -203,7 +215,7 @@ func large_text() -> void:
 	var view: Rect2 = world.get_viewport().get_visible_rect()
 	var inside := true
 	var report: Array = []
-	var wins: Array = [["book", windows.book, "book"], ["journal", windows.book, "journal"]]
+	var wins: Array = [["book", windows.book, "book"], ["journal", windows.book, "journal"], ["finds", windows.book, "finds"]]
 	for w in wins:
 		var win: GameWindow = w[1]
 		(win as BookWindow).open_at(w[2])

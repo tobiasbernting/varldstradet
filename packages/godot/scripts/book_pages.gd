@@ -1,8 +1,9 @@
 class_name BookPages
 extends RefCounted
 ## The pages of the books, drawn into a GameWindow's body: the journal (the hero's level and what each level gives, the chapters,
-## the nine dungeons with how to beat their bosses, the family's best times, the titles) and the Gårdsbok (the achievements with progress bars and stars). The browser's renderJournal, renderLevels
-## and renderBook (client/src/ui/saga.ts, menus.ts). All of it is read from my player record, the day, and the farm's
+## the nine dungeons with how to beat their bosses, the family's best times, the titles), the Upptäcktsboken (the landmarks found,
+## with their lore) and the Gårdsbok (the achievements with progress bars and stars). The browser's renderJournal, renderLevels,
+## renderFinds and renderBook (client/src/ui/saga.ts, menus.ts). All of it is read from my player record, the day, and the farm's
 ## `sagaBest`; the server owns every number. A page is rebuilt whenever the window refreshes (a new record), never per frame.
 
 const GOLD := Color("e8b830")
@@ -139,6 +140,55 @@ static func achievements(w: GameWindow) -> void:
 		meter(box, float(got) / float(maxi(1, goal)), "", 8)
 	if list.is_empty():
 		w.add_label(Strings.t("achievementsDone", {"done": 0, "total": 0}), 16)
+
+
+# ---------------------------------------------------------------------------
+# Upptäcktsboken
+
+static func finds(w: GameWindow) -> void:
+	var me := w.model.my_player()
+	var found: Array = Gear.progress(me).get("discovered", [])
+	var groups: Array = Data.book.get("landmarks", [])
+	var total := 0
+	var have := 0
+	for g in groups:
+		for l in g.get("items", []):
+			total += 1
+			if found.has(str(l.get("id", ""))):
+				have += 1
+	w.add_label(Strings.t("sagaFindsIntro"), 15, DIM)
+	var all_box := _panel(w._body)
+	meter(all_box, float(have) / float(maxi(1, total)), "🧭 " + Strings.t("sagaFindsAll", {"n": have, "total": total}), 22)
+	for g in groups:
+		var items: Array = g.get("items", [])
+		var n := 0
+		for l in items:
+			if found.has(str(l.get("id", ""))):
+				n += 1
+		var biome := str(g.get("biome", ""))
+		var box := _panel(w._body)
+		box.name = "finds_" + biome
+		_text(box, "[b]%s %s[/b]  [color=#%s]%s%s[/color]" % [Strings.biome_emoji(biome), Strings.place(biome), "8fe08a" if n == items.size() else "aaaaaa", "✓ " if n == items.size() else "", Strings.t("sagaFindsCount", {"n": n, "total": items.size()})], 17)
+		for l in items:
+			var known := found.has(str(l.get("id", "")))
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 8)
+			box.add_child(row)
+			var q := Label.new()
+			q.text = "🧭" if known else "?"
+			q.add_theme_font_size_override("font_size", 22)
+			q.custom_minimum_size = Vector2(32, 0)
+			q.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			row.add_child(q)
+			var col := VBoxContainer.new()
+			col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			col.add_theme_constant_override("separation", 0)
+			row.add_child(col)
+			var nm := Label.new()
+			nm.text = str(l.get("name", "")) if known else "???"
+			nm.add_theme_font_size_override("font_size", 16)
+			col.add_child(nm)
+			_text(col, str(l.get("lore", "")) if known else Strings.t("sagaFindsUnknown", {"biome": Strings.place(biome)}), 14, DIM if known else Color(1, 1, 1, 0.45))
 
 
 # ---------------------------------------------------------------------------

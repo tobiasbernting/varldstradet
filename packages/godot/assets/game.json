@@ -9958,6 +9958,208 @@
         ]
       }
     },
+    "landmarks": [
+      {
+        "biome": "skog",
+        "items": [
+          {
+            "id": "stencirkel",
+            "name": "Stencirkeln",
+            "lore": "Uråldriga stenar i en ring kring ett platt altare. Förr möttes folket här på midsommarnatten."
+          },
+          {
+            "id": "jatteek",
+            "name": "Jätteeken",
+            "lore": "En ek så gammal att den har blivit ihålig. Någon har hängt lyktor därinne."
+          }
+        ]
+      },
+      {
+        "biome": "ang",
+        "items": [
+          {
+            "id": "vardkase",
+            "name": "Vårdkasen",
+            "lore": "Ett stentorn med en eldskål i toppen. Förr tändes den när fiender var på väg."
+          },
+          {
+            "id": "blomsterlabyrint",
+            "name": "Blomsterlabyrinten",
+            "lore": "En låg häck av blommor som slingrar sig i en irrgång. Hittar du vägen in till mitten?"
+          }
+        ]
+      },
+      {
+        "biome": "is",
+        "items": [
+          {
+            "id": "frusetskepp",
+            "name": "Det frusna skeppet",
+            "lore": "Ett vikingaskepp som frös fast i isen för länge sedan. Drakhuvudet pekar fortfarande mot himlen."
+          },
+          {
+            "id": "jatteskelett",
+            "name": "Frostjättens ben",
+            "lore": "Revben och en skalle stor som ett hus sticker upp ur snön. Vem var han?"
+          }
+        ]
+      },
+      {
+        "biome": "berg",
+        "items": [
+          {
+            "id": "dvargport",
+            "name": "Dvärgporten",
+            "lore": "En stendörr full av dvärgarnas runor. Den är låst, men lyktorna bredvid lyser än."
+          },
+          {
+            "id": "ornnaste",
+            "name": "Örnboet",
+            "lore": "Högst upp på klippan har en jättelik örn byggt sitt bo. Den håller ett öga på dig."
+          }
+        ]
+      },
+      {
+        "biome": "strand",
+        "items": [
+          {
+            "id": "klocktorn",
+            "name": "Det sjunkna klocktornet",
+            "lore": "Bara toppen sticker upp ur sanden. När det blåser klingar den gröna klockan."
+          },
+          {
+            "id": "valskelett",
+            "name": "Valskelettet",
+            "lore": "Skelettet av en val, så stort att du kan gå under revbenen."
+          }
+        ]
+      },
+      {
+        "biome": "oken",
+        "items": [
+          {
+            "id": "oas",
+            "name": "Oasen",
+            "lore": "Ett vattenhål med två palmer och ett tält. En trött vandrare vilar här ibland."
+          },
+          {
+            "id": "sandjatte",
+            "name": "Sandjätten",
+            "lore": "Ett jättelikt stenhuvud som vinden har slipat i tusen år."
+          }
+        ]
+      },
+      {
+        "biome": "trask",
+        "items": [
+          {
+            "id": "mossaltare",
+            "name": "Mossaltaret",
+            "lore": "Ett gammalt altare mitt i mossen. Tre irrbloss dansar runt det varje natt."
+          },
+          {
+            "id": "gamlabron",
+            "name": "Den gamla bron",
+            "lore": "En bro av gamla plankor som tar slut mitt i mossen. Vart ledde den en gång?"
+          }
+        ]
+      },
+      {
+        "biome": "djungel",
+        "items": [
+          {
+            "id": "apkungenstron",
+            "name": "Apkungens tron",
+            "lore": "En tron av sten, full av lianer. En apa sitter på den som om den vore kung."
+          },
+          {
+            "id": "vattenfall",
+            "name": "Vattenfallet",
+            "lore": "Ett litet vattenfall som porlar ner i en klar damm. Vattnet är alldeles kallt."
+          }
+        ]
+      },
+      {
+        "biome": "vulkan",
+        "items": [
+          {
+            "id": "eldbrunn",
+            "name": "Eldbrunnen",
+            "lore": "En krater som puffar eld ur jorden. Varm och skön att stå bredvid!"
+          },
+          {
+            "id": "forstenadjatte",
+            "name": "Den förstenade jätten",
+            "lore": "En jätte som blev till sten när solen gick upp. Han sitter kvar på knä."
+          }
+        ]
+      },
+      {
+        "biome": "svamp",
+        "items": [
+          {
+            "id": "svampring",
+            "name": "Svampringen",
+            "lore": "En ring av jättesvampar som lyser svagt i mörkret. Här dansar älvorna."
+          },
+          {
+            "id": "lykttrad",
+            "name": "Lyktträdet",
+            "lore": "Ett träd fullt av lysande lyktor. Ingen vet vem som tänder dem varje kväll."
+          }
+        ]
+      },
+      {
+        "biome": "dino",
+        "items": [
+          {
+            "id": "dinobo",
+            "name": "Dinoboet",
+            "lore": "Ett bo med jättelika ägg. Ett av dem har spruckit, men ungen syns inte till!"
+          },
+          {
+            "id": "tjargrop",
+            "name": "Tjärgropen",
+            "lore": "En bubblande grop av svart tjära. Gamla ben sticker upp ur den."
+          }
+        ]
+      },
+      {
+        "biome": "godis",
+        "items": [
+          {
+            "id": "glasstorn",
+            "name": "Glasstornet",
+            "lore": "Ett torn byggt av en jättelik glasstrut. Det smälter aldrig, hur varmt det än blir."
+          },
+          {
+            "id": "chokladfontan",
+            "name": "Chokladfontänen",
+            "lore": "En fontän där varm choklad porlar dag och natt."
+          }
+        ]
+      },
+      {
+        "biome": "rymdbas",
+        "items": [
+          {
+            "id": "satellit",
+            "name": "Satelliten",
+            "lore": "En satellit som har störtat från rymden. Lampan på den blinkar fortfarande."
+          }
+        ]
+      },
+      {
+        "biome": "mane",
+        "items": [
+          {
+            "id": "manporten",
+            "name": "Månporten",
+            "lore": "En uråldrig båge av månsten med ett svagt stjärnsken. Vem byggde den?"
+          }
+        ]
+      }
+    ],
     "actTwo": 4
   },
   "dialogue": {

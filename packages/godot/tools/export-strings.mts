@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { BIOME_NAMES } from '../../shared/src/biomes.ts';
+import { BIOME_EMOJI, BIOME_NAMES } from '../../shared/src/biomes.ts';
 import { OBJECT_NAMES, SEASON_NAMES, SPECIES_NAMES, T, WEATHER_EMOJI, WEATHER_NAMES } from '../../shared/src/sv.ts';
 
 const out = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../assets/sv.json');
@@ -15,6 +15,7 @@ const data = {
   WEATHER_NAMES,
   WEATHER_EMOJI,
   BIOME_NAMES,
+  BIOME_EMOJI,
   OBJECT_NAMES,
   SPECIES_NAMES,
 };

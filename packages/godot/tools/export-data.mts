@@ -119,6 +119,8 @@ import {
   ACHIEVEMENTS,
   ACHIEVEMENT_TEXT,
   NPC_LINES,
+  LANDMARKS,
+  DISCOVERABLE,
 } from '../../shared/src/index.ts';
 
 const out = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../assets/game.json');
@@ -259,6 +261,8 @@ const run = {
 const book = {
   achievements: ACHIEVEMENTS.map((a) => ({ id: a.id, stat: a.stat, goal: a.goal, stars: a.stars, icon: a.icon, title: ACHIEVEMENT_TEXT[a.id]?.title ?? a.id, text: ACHIEVEMENT_TEXT[a.id]?.text ?? '' })),
   npcLines: NPC_LINES,
+  /** The biomes with landmarks, in the browser's order, each with its landmarks (the Upptäcktsboken). */
+  landmarks: DISCOVERABLE.map((biome) => ({ biome, items: Object.values(LANDMARKS).filter((l) => l.biome === biome).map((l) => ({ id: l.id, name: l.name, lore: l.lore })) })).filter((g) => g.items.length > 0),
   /** Lokes list begins here (a heading over it in the journal). */
   actTwo: 4,
 };

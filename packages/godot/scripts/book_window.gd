@@ -1,10 +1,11 @@
 class_name BookWindow
 extends GameWindow
-## The books, as the tabs of one window (the browser's journal and Gårdsbok are two windows; a pad is easier with one):
-## "📖 Sagan" (the journal: hero level and rewards, chapters, dungeons with best times, titles) and "📕 Gårdsbok" (the
-## achievements). B opens it on the Gårdsbok, K on the journal, the HUD's level chip and the pause menu on either. The pages are in book_pages.gd.
+## The books, as the tabs of one window (the browser's journal, finds and Gårdsbok are three windows; a pad is easier with one):
+## "📖 Sagan" (the journal: hero level and rewards, chapters, dungeons with best times, titles), "🧭 Upptäckter" (the
+## Upptäcktsboken) and "📕 Gårdsbok" (the achievements). B opens it on the Gårdsbok, K on the journal (or the finds when the saga has
+## not begun, as the browser does), the HUD's level chip and the pause menu on either. The pages are in book_pages.gd.
 
-var tab := "journal" ## "journal" or "book"
+var tab := "journal" ## "journal", "finds" or "book"
 
 
 func _init() -> void:
@@ -16,7 +17,7 @@ func _purse_text(_me: Dictionary) -> String:
 	return ""
 
 
-## Open on a page ("journal" or "book").
+## Open on a page ("journal", "finds" or "book").
 func open_at(page: String) -> void:
 	tab = page
 	_set_tabs()
@@ -32,6 +33,7 @@ func _on_open() -> void:
 func _set_tabs() -> void:
 	clear_tabs()
 	add_tab(Strings.t("sagaJournalTab"), tab == "journal", _show.bind("journal"))
+	add_tab(Strings.t("sagaFindsTab"), tab == "finds", _show.bind("finds"))
 	add_tab("📕 " + Strings.t("book"), tab == "book", _show.bind("book"))
 
 
@@ -49,12 +51,18 @@ func _show(page: String) -> void:
 
 func _fill() -> void:
 	match tab:
+		"finds":
+			BookPages.finds(self)
 		"book":
 			BookPages.achievements(self)
 		_:
 			BookPages.journal(self)
 
 
-## K: the journal.
-static func page_for_key(_me: Dictionary) -> String:
+## K: the journal (the browser opens the finds instead before the saga has begun, when there is a find and no saga).
+static func page_for_key(me: Dictionary) -> String:
+	if SagaState.started(me) or SagaState.shows_level(me):
+		return "journal"
+	if not (Gear.progress(me).get("discovered", []) as Array).is_empty():
+		return "finds"
 	return "journal"
