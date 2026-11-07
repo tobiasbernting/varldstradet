@@ -90,7 +90,7 @@ var voxel: MeshInstance3D = null
 ## placeholder_check.gd fails on any actor like that.
 var is_placeholder := false
 ## A vehicle (the cart, the riding horse, Diligensen, the mine train): turns right round to face up or down a street, and
-## carries a lantern that shines at night (the browser's headlights were lanterns; `set_lantern`).
+## carries a lantern that shines at night (the browser's headlights were lanterns; `set_lantern`; none on the Låg preset).
 var full_turn := false
 var _lantern: OmniLight3D = null
 var _lantern_at := Vector3.ZERO
@@ -254,7 +254,7 @@ func set_voxel(frames: Array[ArrayMesh], key: String) -> bool:
 ## +x forward). It only shines at night (night_lift).
 func set_lantern(at: Vector3) -> void:
 	_lantern_at = at
-	if _lantern == null:
+	if _lantern == null and Quality.preset != "lag": # (Låg has no lights of its own, the lamps' glow billboards stay)
 		_lantern = OmniLight3D.new()
 		_lantern.light_color = Color(1.0, 0.8, 0.45)
 		_lantern.omni_range = 3.2
