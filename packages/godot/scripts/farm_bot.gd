@@ -478,7 +478,7 @@ func _pet_wild() -> void:
 		var until := Time.get_ticks_msec() + 40000
 		while Time.get_ticks_msec() < until and not petted and not _done and model.my_area_key() == "a:0,-1":
 			var hearts := int(_report["hearts_seen"])
-			var danger := _hostile_near(Vector2(world.hero.px, world.hero.py), 6.0)
+			var danger := _hostile_near(Vector2(world.hero.px, world.hero.py), 7.0)
 			if danger != Vector2.INF:
 				var away := Vector2(world.hero.px, world.hero.py) - danger
 				world.hero.driven = true
@@ -502,7 +502,15 @@ func _pet_wild() -> void:
 			# Walk right up to it: a hero who walks at a wild animal startles it when within 4 tiles (the server's tickStartle). The
 			# forest is 95 tiles across and the animals can start anywhere in it, so this needs time (25 s, not the 4 s it once had:
 			# a bot that gave up 10 tiles short stood still out of range for the whole wait below, and never startled anything).
-			await _goto(spot["stand"], 25.0)
+			# (in bursts of 3 s, looking for a bear or a wolf between them: a predator within 4 tiles bites, and the hero that fainted
+			# in the forest on a starved runner made the pet step fail for a reason that has nothing to do with animals running)
+			var walk_until := Time.get_ticks_msec() + 25000
+			while Time.get_ticks_msec() < walk_until and not _done and _hostile_near(Vector2(world.hero.px, world.hero.py), 7.0) == Vector2.INF:
+				var burst_at := Time.get_ticks_msec()
+				if await _goto(spot["stand"], 3.0) or Time.get_ticks_msec() - burst_at < 500:
+					break # there, or no way there (it returns at once): either way no more bursts
+			if _hostile_near(Vector2(world.hero.px, world.hero.py), 7.0) != Vector2.INF:
+				continue # the top of the loop walks away from it
 			var left := _animal_by_id(wild_id)
 			rec["far"] = far_at # (kept in the step's detail below: a failing run then shows how far the animals were, and how close the walk got)
 			rec["near"] = Vector2(world.hero.px, world.hero.py).distance_to(_animal_px(left)) / Data.tile() if not left.is_empty() else -1.0
@@ -513,12 +521,14 @@ func _pet_wild() -> void:
 			# stop as soon as it is next to me. Watch it all (`_startles`).
 			await _until(func() -> bool:
 				var b := _animal_by_id(wild_id)
-				if b.is_empty():
-					return true
+				if b.is_empty() or _hostile_near(Vector2(world.hero.px, world.hero.py), 7.0) != Vector2.INF:
+					return true # (a predator coming: stop standing here, the top of the loop walks away from it)
 				_watch_startle(rec, b)
 				var tile := _animal_tile(b)
 				var here := _my_tile()
 				return absi(tile.y - here.y) + absi(tile.x - here.x) == 1, 120.0)
+			if _hostile_near(Vector2(world.hero.px, world.hero.py), 7.0) != Vector2.INF:
+				continue
 			a = _animal_by_id(wild_id)
 			if a.is_empty():
 				continue
