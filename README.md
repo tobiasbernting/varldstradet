@@ -179,8 +179,9 @@ ssh <hetzner-host> 'docker exec <old-postgres-container> pg_dump --no-owner -U <
 #    new world, and the import refuses a database that already has one).
 createdb varldstradet            # or `CREATE DATABASE varldstradet;` in psql
 
-# 3. See what would happen. Prints the players, the pets, the saga progress and what the minigame scrub drops.
-pnpm --filter @lilla-garden/server import-save lilla-garden.sql --dry-run
+# 3. See what would happen. Prints the players, the pets, the saga progress and what the minigame scrub drops, and
+#    checks that the target is a different database from the source and holds no world. Writes nothing.
+pnpm --filter @lilla-garden/server import-save lilla-garden.sql --target postgres://user:pass@host:5432/varldstradet --dry-run
 
 # 4. Do it. Everything is written in one transaction: all of it or nothing.
 pnpm --filter @lilla-garden/server import-save lilla-garden.sql --target postgres://user:pass@host:5432/varldstradet
@@ -189,9 +190,11 @@ pnpm --filter @lilla-garden/server import-save lilla-garden.sql --target postgre
 ```
 
 `import-save <source>` takes a plain-format dump file (the default of `pg_dump`; not `-Fc`, not `--inserts`) or the old
-database's own `postgres://` URL. The target is `--target`, else `TARGET_DATABASE_URL`, else `DATABASE_URL`. It runs the
-migrations on the target, then refuses to write unless the world tables are all empty, so a second run does nothing
-(drop and recreate the database to run it again). The first start of the new server tidies what a save from the browser
+database's own `postgres://` URL. `--target` is always given explicitly (there is no fallback to `DATABASE_URL`, which may be the running farm's). The
+tool compares source and target by host, port and database name and refuses if they are the same, looks at the target
+read only and refuses before it migrates anything if a world table already has rows, then runs the migrations and
+checks again inside the one transaction that writes (with the tables locked), so a second run does nothing (drop and
+recreate the database to run it again). The first start of the new server tidies what a save from the browser
 game needs in this version (the färdport and Yggdrasil's shoot on the farm, hero rewards for the level, and so on) and
 saves it. Run it from a checkout (`pnpm install` first): it is a development script and is not in the container image.
 

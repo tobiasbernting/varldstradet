@@ -7,6 +7,8 @@
 // The access tables (devices, join codes) and the parent's gate settings are not carried over: a browser's device
 // token is a cookie the native client cannot read, so the parent makes new join codes (README, "Moving the family's
 // save").
+import { realpathSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import {
   REMOVED_ACHIEVEMENTS,
   REMOVED_ITEMS,
@@ -61,7 +63,7 @@ export function parseDump(text: string): SourceTables {
   if (text.startsWith('PGDMP')) throw new Error('This is a custom-format dump (pg_dump -Fc). Make a plain one: pg_dump --no-owner lilla_garden > dump.sql, or restore it into a scratch database and give the tool that database\'s URL.');
   const out = emptySource();
   const wanted = new Set<string>([...Object.keys(WORLD_TABLES), ...ACCESS_TABLES]);
-  const lines = text.split('\n');
+  const lines = text.split(/\r?\n/); // (a dump saved with CRLF line ends: a \r would stay in the last field; a real \r in data is written as \\r)
   let seenCopy = false;
   for (let i = 0; i < lines.length; i++) {
     const m = /^COPY (?:"?public"?\.)?"?(\w+)"? \(([^)]*)\) FROM stdin;\r?$/.exec(lines[i]!);
@@ -70,7 +72,7 @@ export function parseDump(text: string): SourceTables {
     const table = m[1]!;
     const cols = m[2]!.split(',').map((c) => c.trim().replace(/^"|"$/g, ''));
     const keep = wanted.has(table);
-    for (i++; i < lines.length && lines[i] !== '\\.' && lines[i] !== '\\.\r'; i++) {
+    for (i++; i < lines.length && lines[i] !== '\\.'; i++) {
       if (!keep) continue;
       const fields = lines[i]!.split('\t');
       if (fields.length !== cols.length) throw new Error(`${table}: a row has ${fields.length} fields, the COPY header names ${cols.length} (line ${i + 1})`);
@@ -186,7 +188,7 @@ export function transform(src: SourceTables): { rows: TargetRows; report: Report
       name: String(p.name),
       coins: data.coins ?? 0,
       stars: data.stars ?? 0,
-      saga: saga ? `${saga.cls ?? 'no class'}, chapter ${saga.chapter + 1}, ${saga.cleared?.length ?? 0} dungeons cleared` : 'not started',
+      saga: saga ? `${saga.cls ?? 'no class'}, chapter ${(saga.chapter ?? 0) + 1}, ${saga.cleared?.length ?? 0} dungeons cleared` : 'not started',
       pets: src.animals.filter((a) => (a.data as { owner?: string }).owner === p.id).length,
       removed: bagBefore,
     });
@@ -246,23 +248,101 @@ export function formatReport(r: Report, mode: 'dry-run' | 'imported'): string {
 }
 
 // ---------------------------------------------------------------------------
-// Writing the target
+// The command line, the guards, and writing the target
 // ---------------------------------------------------------------------------
 
-/** What the importer needs of a target database; the Postgres one is in importSaveCli.ts, tests use a plain object. */
-export interface Sink {
-  /** Rows already in a table of the target (the import refuses to run unless the world tables are all empty). */
-  count(table: TableName | 'devices' | 'invites'): Promise<number>;
-  /** Writes everything in one transaction: all of it or none. */
-  writeAll(rows: TargetRows): Promise<void>;
+export interface Args {
+  source: string;
+  /** The new database. Always explicit: there is no fallback to DATABASE_URL, which may be the running farm's. */
+  target: string | null;
+  dry: boolean;
+  help: boolean;
 }
 
-/** Refuses a target that already has a world, players or objects; otherwise writes the rows. Idempotent in effect: a second run is refused. */
-export async function importInto(sink: Sink, rows: TargetRows): Promise<void> {
-  const tables: TableName[] = ['world', 'objects', 'crops', 'animals', 'players', 'areas'];
-  for (const t of tables) {
-    const n = await sink.count(t);
-    if (n > 0) throw new Error(`The target database is not empty: table "${t}" has ${n} row(s). The import only writes into a fresh database (use a fresh database, and do not start the new server on it before the import: a first start creates a new world).`);
+export const isPgUrl = (s: string): boolean => /^postgres(ql)?:\/\//i.test(s);
+
+/** `<source> [--target URL | --target=URL] [--dry-run] [--help]`; a real run needs --target, a dry run may leave it out. */
+export function parseArgs(argv: string[]): Args {
+  const out: Args = { source: '', target: null, dry: false, help: false };
+  const positional: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i]!;
+    if (a === '--dry-run') out.dry = true;
+    else if (a === '--help' || a === '-h') out.help = true;
+    else if (a === '--target') {
+      const v = argv[++i];
+      if (!v || v.startsWith('--')) throw new Error('--target needs a database URL.');
+      out.target = v;
+    } else if (a.startsWith('--target=')) out.target = a.slice('--target='.length) || null;
+    else if (a.startsWith('--')) throw new Error(`Unknown option ${a}.`);
+    else positional.push(a);
   }
-  await sink.writeAll(rows);
+  if (out.help) return out;
+  if (positional.length !== 1) throw new Error(positional.length ? 'Give one source only.' : 'Give a source: a pg_dump file or the old database\'s URL.');
+  out.source = positional[0]!;
+  if (out.target !== null && !isPgUrl(out.target)) throw new Error('--target must be a postgres:// URL.');
+  if (!out.dry && !out.target) throw new Error('A real run needs --target <url> of the new, empty database (no fallback to DATABASE_URL: that may be the running farm). Use --dry-run to look first.');
+  return out;
+}
+
+const LOCAL = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
+/** host, port and database name of a postgres URL, compared the way a person would: localhost spellings alike, default port 5432. */
+export function dbIdentity(url: string): string {
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    throw new Error('Not a valid postgres:// URL.');
+  }
+  const host = u.hostname.toLowerCase();
+  const name = decodeURIComponent(u.pathname.replace(/^\//, ''));
+  if (!host || !name) throw new Error('Not a valid postgres:// URL: it needs a host and a database name (postgres://user:pass@host:5432/dbname).');
+  return `${LOCAL.has(host) ? 'localhost' : host}:${u.port || '5432'}/${name}`;
+}
+export const sameDatabase = (a: string, b: string): boolean => dbIdentity(a) === dbIdentity(b);
+
+/** True when this module is the script node was started with (also with spaces in the path, or on Windows). */
+export function isMain(metaUrl: string, argv1: string | undefined): boolean {
+  if (!argv1) return false;
+  try {
+    return metaUrl === pathToFileURL(realpathSync(argv1)).href; // (node's own URL for a script is its real path)
+  } catch {
+    return false;
+  }
+}
+
+/** Rows per world table in a target; null where the table does not exist yet (a database nothing has migrated). */
+export type TableCounts = Record<TableName, number | null>;
+const WORLD_TABLE_NAMES = Object.keys(WORLD_TABLES) as TableName[];
+
+/** Refuses a target that already holds a world: every world table must be absent or empty. */
+export function assertEmpty(counts: Partial<Record<TableName, number | null>>): void {
+  for (const t of WORLD_TABLE_NAMES) {
+    const n = counts[t];
+    if (n) throw new Error(`The target database is not empty: table "${t}" has ${n} row(s). The import only writes into a fresh database (use a new one, and do not start the new server on it before the import: a first start creates a new world).`);
+  }
+}
+
+/** Inside the write transaction. */
+export interface Tx {
+  count(table: TableName): Promise<number>;
+  insertAll(rows: TargetRows): Promise<void>;
+}
+
+/** What the importer needs of a target database; the Postgres one is in importSaveCli.ts, tests use others. */
+export interface Sink {
+  /** Read only, before anything is migrated or written. */
+  preflight(): Promise<TableCounts>;
+  /** Runs `fn` in one transaction holding a lock on the world tables; if `fn` throws, nothing stays written. */
+  transaction<T>(fn: (tx: Tx) => Promise<T>): Promise<T>;
+}
+
+/** Checks emptiness and writes in the same transaction, so nothing can slip in between. A second run is refused. */
+export async function importInto(sink: Sink, rows: TargetRows): Promise<void> {
+  await sink.transaction(async (tx) => {
+    const counts: Partial<Record<TableName, number>> = {};
+    for (const t of WORLD_TABLE_NAMES) counts[t] = await tx.count(t);
+    assertEmpty(counts);
+    await tx.insertAll(rows);
+  });
 }

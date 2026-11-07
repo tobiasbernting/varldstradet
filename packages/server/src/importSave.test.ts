@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { REMOVED_ITEMS, REMOVED_KINDS, SPAWN, TILE, scrubPlayer, type PlayerState } from '../../shared/src/index.ts';
-import { formatReport, importInto, parseDump, transform, type Sink, type SourceTables, type TableName, type TargetRows } from './importSave.ts';
+import { assertEmpty, formatReport, importInto, isMain, parseArgs, parseDump, sameDatabase, transform, type Sink, type SourceTables, type TableCounts, type TableName, type TargetRows, type Tx } from './importSave.ts';
+import { mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { lillaGardenSave } from './importSave.fixture.ts';
 
 const esc = (v: unknown): string => {
@@ -23,14 +27,26 @@ function toDump(src: SourceTables, tables: (keyof SourceTables)[]): string {
   return out.join('\n');
 }
 
-const memSink = (existing: Partial<Record<TableName | 'devices' | 'invites', number>> = {}): Sink & { written: TargetRows | null } => {
+/** An in-memory target with the real sink's contract: the check and the write are one transaction, a throw rolls back. */
+const memSink = (existing: Partial<Record<TableName, number>> = {}, failAfter = Infinity): Sink & { written: TargetRows | null } => {
   const s = {
     written: null as TargetRows | null,
-    async count(t: TableName | 'devices' | 'invites') {
-      return existing[t] ?? 0;
+    async preflight() {
+      return Object.fromEntries((['world', 'objects', 'crops', 'animals', 'players', 'areas'] as const).map((t) => [t, existing[t] ?? null])) as TableCounts;
     },
-    async writeAll(r: TargetRows) {
-      s.written = r;
+    async transaction<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
+      let staged: TargetRows | null = null;
+      const out = await fn({
+        async count(t) {
+          return existing[t] ?? 0;
+        },
+        async insertAll(r) {
+          staged = r;
+          if (failAfter < Infinity) throw new Error('forced failure mid-write');
+        },
+      });
+      s.written = staged; // (only reached when fn did not throw: otherwise nothing is kept)
+      return out;
     },
   };
   return s;
@@ -139,5 +155,67 @@ describe('import of a lilla-garden save', () => {
       await expect(importInto(full, rows)).rejects.toThrow(new RegExp(`table "${t}" has 1 row`));
       expect(full.written).toBeNull();
     }
+  });
+
+  it('keeps nothing when the write fails midway', async () => {
+    const { rows } = transform(lillaGardenSave().src);
+    const sink = memSink({}, 1);
+    await expect(importInto(sink, rows)).rejects.toThrow(/forced failure/);
+    expect(sink.written).toBeNull();
+  });
+
+  it('lets a table that does not exist yet count as empty, and a filled one not', () => {
+    expect(() => assertEmpty({ world: null, objects: null, players: 0 })).not.toThrow();
+    expect(() => assertEmpty({ world: null, players: 3 })).toThrow(/"players" has 3/);
+  });
+
+  it('needs --target for a real run, takes none for a dry run, and rejects what it does not know', () => {
+    expect(() => parseArgs(['dump.sql'])).toThrow(/needs --target/);
+    expect(() => parseArgs(['dump.sql', '--target'])).toThrow(/needs a database URL/);
+    expect(() => parseArgs(['dump.sql', '--target', 'dump2.sql'])).toThrow(/postgres:\/\/ URL/);
+    expect(() => parseArgs(['dump.sql', '--bogus', '--target', 'postgres://h/db'])).toThrow(/Unknown option/);
+    expect(() => parseArgs(['a.sql', 'b.sql', '--dry-run'])).toThrow(/one source/);
+    expect(() => parseArgs(['--dry-run'])).toThrow(/Give a source/);
+    expect(parseArgs(['dump.sql', '--dry-run'])).toMatchObject({ source: 'dump.sql', target: null, dry: true });
+    expect(parseArgs(['--target=postgres://h/new', 'dump.sql'])).toMatchObject({ source: 'dump.sql', target: 'postgres://h/new', dry: false });
+    expect(parseArgs(['--help']).help).toBe(true);
+  });
+
+  it('knows the same database by host, port and name, not by the spelling of the URL', () => {
+    expect(sameDatabase('postgres://a:b@localhost/garden', 'postgresql://x:y@127.0.0.1:5432/garden?sslmode=disable')).toBe(true);
+    expect(sameDatabase('postgres://u@DB.example.se:5432/garden', 'postgres://other@db.example.se/garden')).toBe(true);
+    expect(sameDatabase('postgres://u@db/garden', 'postgres://u@db/varldstradet')).toBe(false);
+    expect(sameDatabase('postgres://u@db:5432/garden', 'postgres://u@db:5433/garden')).toBe(false);
+    expect(sameDatabase('postgres://u@db1/garden', 'postgres://u@db2/garden')).toBe(false);
+    expect(() => sameDatabase('postgres://', 'postgres://u@db/x')).toThrow(/valid postgres/);
+  });
+
+  it('starts as a script also from a path with spaces or through a symlink, and not when imported', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'my games '));
+    try {
+      const real = join(dir, 'importSaveCli.ts');
+      writeFileSync(real, '');
+      const link = join(dir, 'link to cli.ts');
+      symlinkSync(real, link);
+      const url = pathToFileURL(realpathSync(real)).href;
+      expect(url).toContain('my%20games');
+      expect(isMain(url, real)).toBe(true);
+      expect(isMain(url, link)).toBe(true);
+      expect(isMain(`file://${real}`, real)).toBe(false); // what the old `file://${argv[1]}` comparison got wrong
+      expect(isMain(url, join(dir, 'other.ts'))).toBe(false); // (does not exist)
+      expect(isMain(url, undefined)).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('reads a dump saved with Windows line ends and does not print NaN for a saga without a chapter', () => {
+    const { src } = lillaGardenSave();
+    const crlf = toDump(src, [...ALL]).replace(/\n/g, '\r\n');
+    const parsed = parseDump(crlf);
+    expect(parsed.players.map((p) => p.created_at)).toEqual(src.players.map((p) => p.created_at));
+    expect(parsed.settings[0]!.value).toBe(src.settings[0]!.value);
+    (src.players[1]!.data as { saga?: unknown }).saga = { cls: 'seare', cleared: [] };
+    expect(formatReport(transform(src).report, 'dry-run')).toContain('Bo: 85 coins, 6 stars, 1 pets/horses, saga: seare, chapter 1, 0 dungeons cleared');
   });
 });
