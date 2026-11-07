@@ -247,6 +247,9 @@ func start_demo(fixture := "draug") -> void:
 				var tile := Data.tile()
 				hero.place((float(parts[0]) + 0.5) * tile, (float(parts[1]) + 0.5) * tile)
 				rig.position = hero.position
+	# --stage=street (Köpingen only, for pictures): the cart, the riding horse with a rider, Diligensen at its stop
+	if "--stage=street" in OS.get_cmdline_user_args() and _area == "a:1,0":
+		_stage_street()
 	# --walk (with --demo): the hero walks east, for the footsteps' check (no server needed)
 	_walk_demo = "--walk" in OS.get_cmdline_user_args()
 	if _walk_demo:
@@ -1046,6 +1049,46 @@ func _tick_sounds(delta: float) -> void:
 	if _walk_demo and not _walk_said and int(steps.stats["steps"]) >= 5:
 		_walk_said = true
 		print("walk: %d footsteps (%s), ambience %s" % [int(steps.stats["steps"]), str(steps.stats["kinds"]), str(soundscape.report()["layers"])])
+
+
+## Köpingen's main street laid out for a picture: Diligensen at its stop, a cart behind it, a riding horse coming the other way
+## with a rider on its back (a villager's body lent for the day). Only the demo does this (`--stage=street`).
+func _stage_street() -> void:
+	var animals: Dictionary = model.areas.get(_area, {}).get("animals", {})
+	var tile := float(Data.tile())
+	var horse_id := -1
+	var put := func(species: String, variant: int, tx: float, ty: float, facing: String) -> int:
+		for id in animals.keys():
+			var a: Dictionary = animals[id]
+			if str(a.get("species", "")) == species and int(a.get("variant", 0)) == variant:
+				a["x"] = tx * tile
+				a["y"] = ty * tile
+				a["facing"] = facing
+				a["moving"] = false
+				return int(id)
+		return -1
+	put.call("bus", 0, 37.4, 34.5, "right")
+	put.call("car", 1, 33.2, 34.5, "right")
+	put.call("car", 0, 43.5, 33.5, "left")
+	horse_id = put.call("motorcycle", 1, 40.2, 33.5, "left")
+	var rider: Dictionary = model.players().get("greta", {})
+	if horse_id >= 0 and not rider.is_empty():
+		rider["area"] = _area
+		rider["riding"] = horse_id
+		rider["x"] = 40.2 * tile
+		rider["y"] = 33.5 * tile
+		rider["facing"] = "left"
+		var snap: Variant = model.player_snaps.get("greta")
+		if snap is Dictionary:
+			snap["x"] = rider["x"]
+			snap["y"] = rider["y"]
+			snap["facing"] = "left"
+	# the actors were made where the fixture had things: make them again
+	for k in _actors.keys():
+		_actors[k].queue_free()
+	_actors.clear()
+	_prev_pos.clear()
+	_sync_actors()
 
 
 ## Everything on screen that is a stand-in and not a look of its own: objects drawn as a placeholder box or that could not be
