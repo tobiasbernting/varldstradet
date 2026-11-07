@@ -120,6 +120,54 @@ Environment:
 | `TURN_URLS`       | Röstprat: a TURN relay for the connections STUN can't manage (mobile data, strict NATs), with either `TURN_USERNAME` + `TURN_CREDENTIAL` (fixed login) or `TURN_SECRET` (coturn `use-auth-secret`: short-lived logins made by the server). |
 | `CLOUDFLARE_TURN_KEY_ID` | Röstprat: Cloudflare's TURN service instead of a relay of your own (`CLOUDFLARE_TURN_API_TOKEN` alongside). Short-lived logins are fetched from its API and cached. The public farm has no open ports, so this is the one that fits it. |
 
+## Moving the family's save from lilla-garden
+
+The browser game (`tobiasbernting/lilla-garden`) and this one keep the world in the same Postgres tables, so the family's
+farm can move over: players with their coins, stars, bags, clothes, achievements and saga progress; the farm's
+buildings, crops, animals and pets; the explored maps and the day count. `import-save` reads the old database (or a
+`pg_dump` of it, which is the safe way) and writes a **new, empty** database with the migrations of this repository
+applied in order, migration 0004 (the minigames' leftovers: scores, tickets, garage, prize decor, the TV, Spelhallen's
+maps) included. The old database is never written: a dump is just a file, and a live source is read inside a
+`READ ONLY` transaction.
+
+What does **not** come over, and what the owner does about it:
+
+- **Devices and join codes.** A browser's device token is a cookie the native client cannot read, and the old
+  `lg_device` cookies mean nothing to the new server. After the import, open the parent page (`/admin`), make a join code
+  for each person or device, and everybody types it once in the new game ("Ny karaktär" is not needed: the old
+  characters are in the list under "Vem är du?"). The gate settings (family only, play hours, the authenticator
+  app) are not copied either; set them again on the parent page.
+- **Saved dungeons.** They are made fresh on every visit and were never worth keeping.
+- **Spelhallen.** Anybody who was inside it when the old game stopped starts on the farm.
+
+The steps (all of them on your own computer or the Hetzner box over Tailscale; nothing here touches the old farm
+except reading it):
+
+```bash
+# 1. Take a dump of the old farm's database. On the Hetzner box (ssh over Tailscale), wherever its Postgres runs;
+#    the old farm already dumps it every night, so a recent file from that backup works too.
+ssh <hetzner-host> 'docker exec <old-postgres-container> pg_dump --no-owner -U <user> <old-db>' > lilla-garden.sql
+
+# 2. Create an empty database for the new server (do NOT start the new server on it first: a first start makes a
+#    new world, and the import refuses a database that already has one).
+createdb varldstradet            # or `CREATE DATABASE varldstradet;` in psql
+
+# 3. See what would happen. Prints the players, the pets, the saga progress and what the minigame scrub drops.
+pnpm --filter @lilla-garden/server import-save lilla-garden.sql --dry-run
+
+# 4. Do it. Everything is written in one transaction: all of it or nothing.
+pnpm --filter @lilla-garden/server import-save lilla-garden.sql --target postgres://user:pass@host:5432/varldstradet
+
+# 5. Start the new server on that database (DATABASE_URL, PARENT_PASSWORD, see "Production") and make join codes.
+```
+
+`import-save <source>` takes a plain-format dump file (the default of `pg_dump`; not `-Fc`, not `--inserts`) or the old
+database's own `postgres://` URL. The target is `--target`, else `TARGET_DATABASE_URL`, else `DATABASE_URL`. It runs the
+migrations on the target, then refuses to write unless the world tables are all empty, so a second run does nothing
+(drop and recreate the database to run it again). The first start of the new server tidies what a save from the browser
+game needs in this version (the färdport and Yggdrasil's shoot on the farm, hero rewards for the level, and so on) and
+saves it. Run it from a checkout (`pnpm install` first): it is a development script and is not in the container image.
+
 ## The download page
 
 The web page of the server, `GET /`, is the download page (since M5a, 2026-11-02; the browser game is gone from this
