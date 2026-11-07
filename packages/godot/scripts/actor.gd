@@ -295,6 +295,7 @@ func _glow_copy(src: StandardMaterial3D) -> StandardMaterial3D:
 	if not d.emission_enabled and d.albedo_texture != null:
 		d.emission_enabled = true
 		d.emission = Color.WHITE
+		d.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY # the texture's own colour, not the texture plus white
 		d.emission_texture = d.albedo_texture
 		d.emission_energy_multiplier = 0.0
 		_model_mats.append(d)
