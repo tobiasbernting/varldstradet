@@ -57,7 +57,7 @@ func setup(v: FarmView) -> void:
 
 ## Every frame on an outdoor map: `walkers` are {key, at (scene position, one unit a tile), me}; `hero_at` the hero. A walker
 ## that is not in the list any more is forgotten.
-func tick(delta: float, walkers: Array, hero_at: Vector3) -> void:
+func tick(delta: float, walkers: Array, hero_at: Vector3, hero_indoors := false) -> void:
 	if delta <= 0.0:
 		return
 	var seen := {}
@@ -91,7 +91,9 @@ func tick(delta: float, walkers: Array, hero_at: Vector3) -> void:
 		rec["dist"] = float(rec["dist"]) + moved
 		if float(rec["dist"]) >= STRIDE:
 			rec["dist"] = float(rec["dist"]) - STRIDE
-			_step(at, bool(w.get("me", false)), float(rec.get("speed", 4.0)), hero_at)
+			# (nobody hears steps through the farmhouse's walls: someone on the other side of the door makes none)
+			if bool(w.get("me", false)) or bool(w.get("indoors", false)) == hero_indoors:
+				_step(at, bool(w.get("me", false)), float(rec.get("speed", 4.0)), hero_at)
 	for key in _walk.keys():
 		if not seen.has(key):
 			_walk.erase(key)
@@ -104,6 +106,8 @@ func _step(at: Vector3, mine: bool, speed: float, hero_at: Vector3) -> void:
 	var d := Vector2(at.x - hero_at.x, at.z - hero_at.z).length()
 	if d > HEARD:
 		return
+	if Settings.world_volume <= 0.001:
+		return # (volume 0 is off: not a very quiet step)
 	var kind := kind_of(view.ground_under(at), view.sky.snow_cover() if view.sky != null else 0.0)
 	if kind == "":
 		return
@@ -116,7 +120,7 @@ func _step(at: Vector3, mine: bool, speed: float, hero_at: Vector3) -> void:
 	_variant = (_variant + 1 + randi() % 2) % 3
 	p.stream = _stream(kind, _variant)
 	var fall := 0.0 if mine else clampf((d - 2.0) * 1.6, 0.0, 40.0) + 3.0
-	p.volume_db = float(LEVEL[kind]) + linear_to_db(maxf(0.01, Settings.world_volume)) - fall + clampf((speed - 4.0) * 0.5, -2.0, 2.0)
+	p.volume_db = float(LEVEL[kind]) + linear_to_db(Settings.world_volume) - fall + clampf((speed - 4.0) * 0.5, -2.0, 2.0)
 	p.pitch_scale = clampf(0.92 + 0.04 * speed, 0.85, 1.15) * randf_range(0.96, 1.04)
 	p.global_position = at
 	p.play()

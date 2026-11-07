@@ -895,14 +895,12 @@ func _tick_sounds(delta: float) -> void:
 	soundscape.update(delta, farm.sky.sound_state(), hero.position, indoors, farm)
 	var walkers: Array = []
 	if not _is_riding(model.my_player()):
-		walkers.append({"key": "me", "at": hero.position, "me": true})
+		walkers.append({"key": "me", "at": hero.position, "me": true, "indoors": indoors})
 	for key in _actors.keys():
 		if key.begins_with("p:") and not _is_riding(model.players().get(key.substr(2), {})):
-			walkers.append({"key": key, "at": (_actors[key] as Actor).position, "me": false})
-	steps.tick(delta, walkers, hero.position)
-	if _walk_demo and not _walk_said and int(steps.stats["steps"]) >= 5:
-		_walk_said = true
-		print("walk: %d footsteps (%s), ambience %s" % [int(steps.stats["steps"]), str(steps.stats["kinds"]), str(soundscape.report()["layers"])])
+			var at: Vector3 = (_actors[key] as Actor).position
+			walkers.append({"key": key, "at": at, "me": false, "indoors": _area == "farm" and Data.in_interior(floori(at.x), floori(at.z))})
+	steps.tick(delta, walkers, hero.position, indoors)
 
 
 func _is_riding(p: Variant) -> bool:
