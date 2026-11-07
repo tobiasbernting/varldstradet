@@ -545,6 +545,428 @@ func hero_switch() -> void:
 	windows.gear.close()
 
 
+## The paint screen and the paint buckets, through the client's real input: a paper used on empty ground opens the screen; the
+## drawing is made with a mouse press and drag, then with the pad's keys (InputEventActions through the viewport, so the focus
+## navigation runs: the cursor leaves the canvas for the colours, the tools and "Klar"); the wheel and slot_next step the colour and
+## leave the hotbar alone; "Klar" sends the drawing and the server turns the paper into a painted tavla whose `data` is exactly the
+## cells drawn; hung up, the frame's texture equals the server's `data` cell by cell; a run of wall pieces (wood, stone, a door, a window)
+## painted with one bucket shares the server's `variant` (it flood-paints them) and each is drawn with the mesh in that colour; the
+## farmhouse's recoloured plaster vertices are sampled, not only its mesh name.
+func paint() -> void:
+	if model.my_area_key() != "farm":
+		bot._step("paint", false, "not on the farm")
+		return
+	Net.send({"t": "dev", "a": "kit"})
+	if not await bot._until(func() -> bool: return model.count_item("paper") >= 2 and model.count_item("paint_red") >= 2 and model.count_item("wall_wood") >= 2 and model.count_item("wall_stone") >= 1 and model.count_item("door") >= 1 and model.count_item("window") >= 1, 4.0):
+		bot._step("paint", false, "the kit never came")
+		return
+	var spot := bot._find_patch()
+	if spot.is_empty() or not await bot._goto(spot["stand"]):
+		bot._step("paint", false, "no free grass")
+		return
+	bot._face("down")
+	await bot._use_item_slot("paper")
+	await bot._act()
+	var opened := await bot._until(func() -> bool: return windows.paint.is_open(), 3.0)
+	await bot._wait(0.3)
+	if not opened:
+		bot._step("paper opens the paint screen", false, "the use key with a paper in hand did not open the window")
+		return
+	var win := windows.paint
+	var canvas := win.canvas
+	# an empty drawing is refused, here and by the server (the paper stays)
+	var papers := model.count_item("paper")
+	_press(win, "ok")
+	await bot._wait(0.4)
+	bot._step("an empty drawing is refused", win.is_open() and model.count_item("paper") == papers, "the window stays open with %d papers" % papers)
+	# the mouse: a press, a drag along a row, and the wheel over the canvas steps the colour (the hotbar keeps its square)
+	var cell := canvas.cell
+	_press(win, "c:2")
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	click.position = Vector2(cell * 3.5, cell * 3.5)
+	canvas._gui_input(click)
+	var move := InputEventMouseMotion.new()
+	move.position = Vector2(cell * 9.5, cell * 3.5)
+	move.button_mask = MOUSE_BUTTON_MASK_LEFT
+	canvas._gui_input(move)
+	click.pressed = false
+	canvas._gui_input(click)
+	var mouse_ok: bool = canvas.cells[3 * 16 + 3] == "2" and canvas.cells[3 * 16 + 6] == "2" and canvas.cells[3 * 16 + 9] == "2"
+	var held_before := int(model.my_player().get("selected", 0))
+	var wheel := InputEventMouseButton.new()
+	wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
+	wheel.pressed = true
+	canvas._gui_input(wheel)
+	var wheel_ok: bool = canvas.colour == "3"
+	await _pad("slot_next")
+	var slot_ok: bool = canvas.colour == "4" and int(model.my_player().get("selected", 0)) == held_before
+	await _pad("slot_prev")
+	wheel_ok = wheel_ok and canvas.colour == "3"
+	bot._step("the mouse and the wheel", mouse_ok and wheel_ok, "a dragged row of cells is painted; the wheel and slot_prev step the colour (now %s)" % canvas.colour)
+	bot._step("slot_next steps the colour, not the hotbar", slot_ok and int(model.my_player().get("selected", 0)) == held_before, "the held square stays %d while the paint screen is open" % held_before)
+	# the pad: the canvas has the focus; the cursor moves with ui_* and accept paints; at the edge the focus moves to the colours
+	canvas.grab_focus()
+	await bot._wait(0.1)
+	canvas.cursor = Vector2i(2, 8)
+	await _pad("ui_accept")
+	await _pad("ui_right")
+	await _pad("ui_down")
+	await _pad("ui_accept")
+	var pad_ok: bool = canvas.cursor == Vector2i(3, 9) and canvas.cells[8 * 16 + 2] == "3" and canvas.cells[9 * 16 + 3] == "3"
+	var steps := 0
+	while is_instance_valid(win.get_viewport().gui_get_focus_owner()) and win.get_viewport().gui_get_focus_owner() == canvas and steps < 30:
+		await _pad("ui_right")
+		steps += 1
+	var owner := win.get_viewport().gui_get_focus_owner()
+	var on_swatch: bool = owner != null and owner.has_meta("k") and str(owner.get_meta("k")).begins_with("c:")
+	# on the colours: right twice and accept picks the colour two along (the red at 2 was before it: "0" black, "1" white, "2" red)
+	var first_key: String = str(owner.get_meta("k")) if owner != null and owner.has_meta("k") else ""
+	await _pad("ui_right")
+	await _pad("ui_right")
+	await _pad("ui_accept")
+	var picked_by_pad: bool = canvas.colour == "2" and on_swatch and first_key == "c:0"
+	# then down off the colours onto the tools, along the row to "fill" and accept, and left along it and off its edge back to the canvas
+	var reached_tool := false
+	for i in range(6):
+		await _pad("ui_down")
+		var f := win.get_viewport().gui_get_focus_owner()
+		if f != null and f.has_meta("k") and str(f.get_meta("k")).begins_with("tool:"):
+			reached_tool = true
+			break
+	for i in range(3):
+		var f2 := win.get_viewport().gui_get_focus_owner()
+		if f2 != null and str(f2.get_meta("k", "")) == "tool:fill":
+			break
+		await _pad("ui_right" if str(f2.get_meta("k", "")) == "tool:brush" else "ui_left")
+	await _pad("ui_accept")
+	var fill_by_pad: bool = canvas.mode == "fill"
+	for i in range(4):
+		if win.get_viewport().gui_get_focus_owner() == canvas:
+			break
+		await _pad("ui_left")
+	var back_on_canvas := win.get_viewport().gui_get_focus_owner() == canvas
+	bot._step("the pad reaches the colours and the tools by focus", pad_ok and on_swatch and picked_by_pad and reached_tool and fill_by_pad and back_on_canvas, "painted by accept: %s; right off the canvas's edge landed on '%s' after %d steps; colour picked: %s; down to the tools: %s, fill chosen: %s; left is the canvas again: %s" % [str(pad_ok), first_key, steps, canvas.colour, str(reached_tool), str(fill_by_pad), str(back_on_canvas)])
+	# the fill tool is on: fill the cell at (12, 12) with the pad on the canvas, then the eraser with the mouse-free tool button
+	canvas.cursor = Vector2i(12, 12)
+	canvas.grab_focus()
+	await bot._wait(0.1)
+	await _pad("ui_accept")
+	var filled: bool = canvas.cells[15 * 16 + 15] == "2" and canvas.cells[3 * 16 + 3] == "2"
+	_press(win, "tool:eraser")
+	canvas.cursor = Vector2i(0, 0)
+	await _pad("ui_accept")
+	var erased: bool = canvas.cells[0] == "."
+	_press(win, "tool:brush")
+	await bot._wait(0.3)
+	await bot._shot("paint", 0.1)
+	bot._step("fill and eraser", filled and erased, "fill reached the far corner: %s; the eraser cleared a cell: %s" % [str(filled), str(erased)])
+	# "Klar" by focus: down off the canvas to "Rensa", right to "Klar", accept
+	canvas.grab_focus()
+	await bot._wait(0.1)
+	canvas.cursor = Vector2i(5, 15)
+	await _pad("ui_down")
+	var on_clear := win.get_viewport().gui_get_focus_owner() != null and str(win.get_viewport().gui_get_focus_owner().get_meta("k", "")) == "clear"
+	await _pad("ui_right")
+	var on_ok := win.get_viewport().gui_get_focus_owner() != null and str(win.get_viewport().gui_get_focus_owner().get_meta("k", "")) == "ok"
+	var drawing: String = canvas.pixels()
+	await _pad("ui_accept")
+	var done := await bot._until(func() -> bool: return model.count_item("paper") == papers - 1 and model.count_item("painting") == 1, 4.0)
+	var stack_data := ""
+	for st in model.my_player().get("inventory", []):
+		if st is Dictionary and str(st.get("item", "")) == "painting":
+			stack_data = str(st.get("data", ""))
+	bot._step("the painting reaches the bag", on_clear and on_ok and done and stack_data == drawing and not win.is_open(), "down to 'Rensa': %s, right to 'Klar': %s, accept: one paper became a tavla; the server kept my %d cells exactly (%s)" % [str(on_clear), str(on_ok), drawing.length(), str(stack_data == drawing)])
+	# hang it on a free tile: the frame's picture is the server's painting
+	var spot2 := bot._find_patch()
+	if spot2.is_empty() or not await bot._goto(spot2["stand"]):
+		bot._step("hang the painting", false, "no free grass")
+		return
+	bot._face("down")
+	await bot._use_item_slot("painting")
+	await bot._act()
+	var tile: Vector2i = spot2["tile"]
+	var hung := await bot._until(func() -> bool: return str(_object_at(tile).get("kind", "")) == "painting", 4.0)
+	await bot._wait(0.6)
+	var obj := _object_at(tile)
+	var oid := str(int(obj.get("id", -1)))
+	var tex := world.farm.picture_texture(oid)
+	var server_data := str(obj.get("data", ""))
+	bot._step("the frame shows the painting", hung and server_data == drawing and PaintArt.matches(tex, server_data), "hung on %s; the picture's texture matches the server's %d cells cell by cell: %s" % [str(tile), server_data.length(), str(PaintArt.matches(tex, server_data))])
+	await bot._shot("painting", 0.3)
+	# a run of wall pieces: wood, stone, a door and a window side by side; one bucket on the first colours the lot
+	var run := _find_row(4)
+	if run.is_empty():
+		bot._step("paint a run of walls", false, "no free grass for four pieces in a row")
+		return
+	var kinds := ["wall_wood", "wall_stone", "door", "window"]
+	var tiles: Array = []
+	var placed_all := true
+	for i in range(kinds.size()):
+		var at: Vector2i = run["tile"] + Vector2i(i, 0)
+		if not await bot._goto(at + Vector2i(0, -1)):
+			placed_all = false
+			break
+		bot._face("down")
+		await bot._use_item_slot(kinds[i])
+		await bot._act()
+		var up := await bot._until(func() -> bool: return str(_object_at(at).get("kind", "")) == kinds[i], 4.0)
+		placed_all = placed_all and up
+		tiles.append(at)
+	await bot._wait(0.4)
+	var ids: Array = []
+	var plain: Array = []
+	for at in tiles:
+		var wid := str(int(_object_at(at).get("id", -1)))
+		ids.append(wid)
+		plain.append(world.farm.mesh_name_of(wid))
+	await bot._use_item_slot("paint_red")
+	bot._face("down")
+	await bot._goto((tiles[0] as Vector2i) + Vector2i(0, -1))
+	bot._face("down")
+	await bot._act()
+	var shared_variant := await bot._until(func() -> bool: return int(_object_at(tiles[0]).get("variant", 0)) == 1 and int(_object_at(tiles[3]).get("variant", 0)) == 1, 4.0)
+	await bot._wait(0.8)
+	var variants: Array = []
+	var meshes: Array = []
+	var all_red := true
+	for i in range(tiles.size()):
+		variants.append(int(_object_at(tiles[i]).get("variant", 0)))
+		var mn := world.farm.mesh_name_of(ids[i])
+		meshes.append(mn)
+		var base: String = ["wall_wood", "wall_stone", "door", "window"][i]
+		var m: ArrayMesh = world.farm.assets.mesh(mn) if mn != "" else null
+		var col: Color = Color.BLACK
+		if m != null:
+			var cols: PackedColorArray = m.surface_get_arrays(0)[Mesh.ARRAY_COLOR]
+			# the largest part of a door or a window is the frame/leaf: some vertex in the bucket's red
+			for c in cols:
+				if c.r > c.g * 1.5 and c.r > c.b * 1.5:
+					col = c
+					break
+		all_red = all_red and mn == "paint:%s:1" % base and plain[i] == base and col.r > col.g * 1.5
+	bot._step("one bucket paints the whole run of walls", placed_all and shared_variant and variants == [1, 1, 1, 1] and all_red, "variants %s, meshes went from %s to %s" % [str(variants), str(plain), str(meshes)])
+	await bot._shot("wall-painted", 0.3)
+	# the farmhouse, and its recoloured plaster sampled vertex by vertex
+	var house := bot._nearest_object(["house"])
+	if house.is_empty():
+		bot._step("paint the house", false, "no house in reach")
+		return
+	var hs := bot._stand_next_to(house)
+	if hs.is_empty() or not await bot._goto(hs["stand"]):
+		bot._step("paint the house", false, "could not walk to the house")
+		return
+	bot._face(hs["dir"])
+	var hid := str(int(house.get("id", -1)))
+	var house_before := world.farm.mesh_name_of(hid)
+	await bot._use_item_slot("paint_red")
+	await bot._act()
+	var house_painted := await bot._until(func() -> bool: return int((world.hero.world.get("objects", {}).get(hid, {}) as Dictionary).get("variant", 0)) == 1, 4.0)
+	await bot._wait(0.8)
+	var house_after := world.farm.mesh_name_of(hid)
+	var plain_arr: Array = world.farm.assets.mesh("house").surface_get_arrays(0)
+	var red_arr: Array = world.farm.assets.mesh(house_after).surface_get_arrays(0) if house_after != "" else []
+	var changed := 0
+	var wrong := 0
+	var roof_kept := true
+	if not red_arr.is_empty():
+		var c0: PackedColorArray = plain_arr[Mesh.ARRAY_COLOR]
+		var c1: PackedColorArray = red_arr[Mesh.ARRAY_COLOR]
+		for i in range(c0.size()):
+			if c0[i] == c1[i]:
+				continue
+			changed += 1
+			# only cool plaster changed, and what it became is red with its shade
+			if not (c0[i].b >= c0[i].r * 1.02) or not (c1[i].r > c1[i].g * 1.5 and c1[i].r > c1[i].b * 1.5):
+				wrong += 1
+		# the roof (the warm red-brown that is not plaster) stayed as it was
+		for i in range(c0.size()):
+			if c0[i].r > c0[i].b * 1.3 and c0[i] != c1[i]:
+				roof_kept = false
+				break
+	bot._step("the painted house's plaster is recoloured", house_painted and house_before == "house" and house_after == "paint:house:1" and changed >= 100 and wrong == 0 and roof_kept, "the mesh went from '%s' to '%s'; %d plaster vertices turned red, %d wrong, the roof and timber kept: %s" % [house_before, house_after, changed, wrong, str(roof_kept)])
+	await bot._shot("house-painted", 0.3)
+	# the textures made from paintings are kept in a capped cache (the hung frame holds its own)
+	for i in range(PaintArt.CACHE_MAX + 20):
+		var cells := ".".repeat(PaintArt.size() * PaintArt.size())
+		PaintArt.texture_of(cells.substr(0, i) + "0" + cells.substr(i + 1))
+	bot._step("the picture cache is capped", PaintArt.cache_size() <= PaintArt.CACHE_MAX and PaintArt.matches(world.farm.picture_texture(oid), server_data), "%d textures kept after %d made; the hung frame still shows its painting" % [PaintArt.cache_size(), PaintArt.CACHE_MAX + 20])
+
+
+## The text size at 175 % (the 1280 × 720 window is then 731 × 411 points): the forge window and the paint screen both fit on the
+## screen, their close buttons ("Avbryt", "OK") and, on the paint screen, "Klar" and the whole canvas are inside it, and the canvas is
+## still big enough to draw on (cells of at least 10 points). The text size is put back as it was.
+func ui_175() -> void:
+	var was := Settings.ui_scale
+	var win_size := world.get_window().size
+	world.get_window().size = Vector2i(1280, 720) # (the window the 175 % is meant for: 731 × 411 points)
+	Settings.set_ui_scale(1.75)
+	await bot._wait(0.6)
+	var view := world.get_viewport().get_visible_rect()
+	var report: Array = []
+	var all_ok := true
+	for pair in [["forge", windows.forge], ["paint", windows.paint]]:
+		var win: GameWindow = pair[1]
+		if pair[0] == "forge":
+			windows.forge.open_forge()
+		else:
+			windows.paint.open_paint()
+		await bot._wait(0.6)
+		var inside := func(c: Control) -> bool:
+			var r: Rect2 = c.get_global_transform() * Rect2(Vector2.ZERO, c.size)
+			return view.grow(1.0).encloses(r)
+		var panel: Control = win._stack.get_parent()
+		var ok: bool = inside.call(panel) and inside.call(win._foot.get_node("Close"))
+		var detail := "panel %s of %s" % [str((panel.get_global_transform() * Rect2(Vector2.ZERO, panel.size)).size.round()), str(view.size)]
+		if pair[0] == "paint":
+			var canvas: Control = windows.paint.canvas
+			var cr: Rect2 = canvas.get_global_transform() * Rect2(Vector2.ZERO, canvas.size)
+			var klar: Control = null
+			for b in win._find_buttons(win._body):
+				if b.has_meta("k") and str(b.get_meta("k")) == "ok":
+					klar = b
+			ok = ok and inside.call(canvas) and klar != null and inside.call(klar) and cr.size.x >= 160.0 and windows.paint.canvas.cell >= 10
+			detail += ", canvas %s at %s (cells of %d), Klar at %s, view %s" % [str(cr.size.round()), str(cr.position.round()), windows.paint.canvas.cell, str(klar.get_global_transform() * Rect2(Vector2.ZERO, klar.size)) if klar != null else "-", str(view)]
+		await bot._shot(str(pair[0]) + "-175", 0.1)
+		report.append("%s: %s (%s)" % [pair[0], "fits" if ok else "DOES NOT FIT", detail])
+		all_ok = all_ok and ok
+		win.close()
+		await bot._wait(0.2)
+	Settings.set_ui_scale(was)
+	world.get_window().size = win_size
+	await bot._wait(0.3)
+	bot._step("the forge and the paint windows fit at 175 % text", all_ok and is_equal_approx(Settings.ui_scale, was) and absf(view.size.y - 411.4) < 2.0, "; ".join(report))
+
+
+## A pad's or a key's action through the viewport (the focus navigation and the controls' own handlers see it as a press and a release).
+func _pad(action: String) -> void:
+	var ev := InputEventAction.new()
+	ev.action = action
+	ev.pressed = true
+	Input.parse_input_event(ev)
+	await bot.get_tree().process_frame
+	var up := InputEventAction.new()
+	up.action = action
+	up.pressed = false
+	Input.parse_input_event(up)
+	await bot.get_tree().process_frame
+
+
+## The top-left tile of a run of `n` free grass tiles in a row with free grass above them to stand on (as _find_patch, for a wall).
+func _find_row(n: int) -> Dictionary:
+	var dist: Dictionary = bot._distance_field(_my_tile())
+	var best: Dictionary = {}
+	var best_d := 1000
+	for t in dist.keys():
+		var d: int = dist[t]
+		if d > 25 or d >= best_d:
+			continue
+		var ok := true
+		for i in range(n):
+			var g: Vector2i = t + Vector2i(i, 1)
+			var up: Vector2i = t + Vector2i(i, 0)
+			if bot._terrain_at(g) != "grass" or world.hero._is_solid(g.x, g.y) or world.hero.world.get("occupancy", {}).has("%d,%d" % [g.x, g.y]) or bot._near_npc(g) or not dist.has(up):
+				ok = false
+				break
+		if ok:
+			best = {"tile": t + Vector2i(0, 1)}
+			best_d = d
+	return best
+
+
+## Smedjan: Stina's window has the forge button, the forge window says what the worn weapon gives now and after one more
+## level, forging sends `saga forge` and the server's forge level, the bag and the purse change by FORGE_COSTS, the window
+## says the new numbers, a third level is out of reach (the rare things are missing: the button is off), a piece I do not
+## own is refused with the server's own words, and the starter set Stina smiths for `saga craft` shows up in the bag.
+func smedjan() -> void:
+	if not await to_village():
+		bot._step("Smedjan", false, "not in the village")
+		return
+	var smith := str(Data.gear.get("smith", "stina"))
+	Net.send({"t": "dev", "a": "kit"})
+	if not await bot._until(func() -> bool: return model.count_item("stone") >= 20 and _coins() >= 400, 4.0):
+		bot._step("Smedjan", false, "the kit never came")
+		return
+	var weapon := str(Gear.gear_of(model.my_player()).get("weapon", ""))
+	if weapon == "":
+		bot._step("Smedjan", false, "no weapon worn")
+		return
+	if not await _talk_to(smith):
+		bot._step("Smedjan", false, "could not get Stina's window open")
+		return
+	await bot._wait(0.3)
+	var button := _press(windows.talk, "forge") and await bot._until(func() -> bool: return windows.forge.is_open(), 3.0)
+	await bot._wait(0.4)
+	await bot._shot("forge", 0.1)
+	var forge := windows.forge
+	var row: Dictionary = forge.shown.get(weapon, {})
+	# the numbers to hold the client to come from the TS forgeStats / gearStats (exported into game.json by export-data.mts), not from the client's own formula
+	var samples: Dictionary = Data.gear.get("forgeSamples", {})
+	var sample: Array = samples.get(weapon, [])
+	var bad_pieces: Array = []
+	for id in samples.keys():
+		for n in range((samples[id] as Array).size()):
+			var want: Dictionary = samples[id][n]
+			var got := Gear.forge_stats(str(id), n)
+			if absf(float(got["power"]) - float(want["power"])) > 1e-9 or absf(float(got["hp"]) - float(want["hp"])) > 1e-9 or absf(float(got["armor"]) - float(want["armor"])) > 1e-9:
+				bad_pieces.append("%s +%d" % [id, n])
+	bot._step("the client's forge sums are the TS forgeStats", bad_pieces.is_empty() and not samples.is_empty(), "%d pieces at +0..+5 compared; differing: %s" % [samples.size(), str(bad_pieces)])
+	var want_now := "💪 +%d %%" % roundi(float(sample[0]["shown"]) * 100.0) if not sample.is_empty() else "?"
+	var want_next := "💪 +%d %%" % roundi(float(sample[1]["shown"]) * 100.0) if not sample.is_empty() else "?"
+	bot._step("Stina's forge window", button and not row.is_empty() and int(row.get("level", -1)) == 0 and str(row.get("now", "")) == want_now and str(row.get("next", "")) == want_next and bool(row.get("can", false)), "%s: now '%s', next '%s' (wanted '%s' and '%s'), cost %s" % [weapon, row.get("now", ""), row.get("next", ""), want_now, want_next, row.get("cost", "")])
+	var stone := model.count_item("stone")
+	var gold := model.count_item("gold")
+	var coins := _coins()
+	var level1 := _press(forge, "up:" + weapon) and await bot._until(func() -> bool: return Gear.forge_level(model.my_player(), weapon) == 1, 4.0)
+	await bot._wait(0.5)
+	var paid := model.count_item("stone") == stone - 6 and model.count_item("gold") == gold - 3 and _coins() == coins - 40
+	row = forge.shown.get(weapon, {})
+	var rows1: Array = (Data.gear.get("heroSamples", {}) as Dictionary).get(str(Gear.level_of(model.my_player())), [])
+	var sums1 := not rows1.is_empty() and absf(float(Gear.stats(model.my_player())["power"]) - float(rows1[1]["power"])) < 1e-6
+	bot._step("forge +1", level1 and paid and sums1 and int(row.get("level", -1)) == 1 and str(row.get("now", "")) == want_next, "server forge level %d, stone %d -> %d, gold %d -> %d, coins %d -> %d; the window says level %s '%s'" % [Gear.forge_level(model.my_player(), weapon), stone, model.count_item("stone"), gold, model.count_item("gold"), coins, _coins(), row.get("level", "?"), row.get("now", "")])
+	var level2 := _press(forge, "up:" + weapon) and await bot._until(func() -> bool: return Gear.forge_level(model.my_player(), weapon) == 2, 4.0)
+	await bot._wait(0.5)
+	row = forge.shown.get(weapon, {})
+	var want_two := "💪 +%d %%" % roundi(float(sample[2]["shown"]) * 100.0) if not sample.is_empty() else "?"
+	# what a fight would use: gearStats and the full health of the TS maths for a krigare of my hero level in this gear at forge +2
+	var hero_rows: Array = (Data.gear.get("heroSamples", {}) as Dictionary).get(str(Gear.level_of(model.my_player())), [])
+	var mine := Gear.stats(model.my_player())
+	var sums_ok := not hero_rows.is_empty() and absf(float(mine["power"]) - float(hero_rows[2]["power"])) < 1e-6 and absf(float(mine["hp"]) - float(hero_rows[2]["hp"])) < 1e-6 and absf(float(mine["armor"]) - float(hero_rows[2]["armor"])) < 1e-6 and Gear.max_hp(model.my_player()) == int(hero_rows[2]["max"])
+	bot._step("forge +2", level2 and int(row.get("level", -1)) == 2 and str(row.get("now", "")) == want_two and sums_ok, "server forge level 2; the window says '%s' (the TS maths: '%s'); my gear adds up to power %.5f, health %d (the TS gearStats: %s)" % [row.get("now", ""), want_two, float(mine["power"]), Gear.max_hp(model.my_player()), str(hero_rows[2]) if not hero_rows.is_empty() else "none"])
+	var off := not bool(row.get("can", true)) and not _press(forge, "up:" + weapon)
+	bot._step("level 3 is out of reach", off, "two of the rare things are missing: the button is off (cost %s)" % row.get("cost", ""))
+	await bot._shot("forge2", 0.1)
+	# the server's own words for a piece I do not own
+	var toasts_before: int = bot._report["toasts"].size()
+	Net.send({"t": "saga", "a": "forge", "item": "frostbett"})
+	var refused := await bot._until(func() -> bool: return bot._report["toasts"].slice(toasts_before).any(func(t: String) -> bool: return t.contains(Data.item_name("frostbett")) and t.contains("inte")), 3.0)
+	bot._step("a piece I do not own", refused and Gear.forge_level(model.my_player(), "frostbett") == 0, "refused: %s" % str(bot._report["toasts"].slice(toasts_before)))
+	# smithing: a starter piece I do not have
+	forge._set_tab("craft")
+	await bot._wait(0.3)
+	var piece := "jarnsvard"
+	var crow: Dictionary = forge.shown.get(piece, {})
+	await bot._shot("forge3", 0.1)
+	var made := bool(crow.get("can", false)) and _press(forge, "craft:" + piece) and await bot._until(func() -> bool: return model.count_item(piece) > 0, 4.0)
+	await bot._wait(0.4)
+	crow = forge.shown.get(piece, {})
+	bot._step("smith a sword", made and bool(crow.get("owned", false)) and not _press(forge, "craft:" + piece), "%s is in the bag; the window says it is owned and the button is off" % Data.item_name(piece))
+	# the gear window shows the forge: the name carries +2 and the stars
+	forge.close()
+	windows.talk.close()
+	bot._press_action("gear")
+	await bot._wait(0.4)
+	var texts := ""
+	for lbl in windows.gear._body.find_children("*", "RichTextLabel", true, false):
+		texts += (lbl as RichTextLabel).text + "\n"
+	for lbl in windows.gear._body.find_children("*", "Label", true, false):
+		texts += (lbl as Label).text + "\n"
+	await bot._shot("gear-forged", 0.1)
+	bot._step("the gear window shows the forge", texts.contains(Gear.forged_name(weapon, 2)) and texts.contains("★★☆☆☆"), "the name '%s' and the stars are on the gear window" % Gear.forged_name(weapon, 2))
+	windows.gear.close()
+
+
 func bus() -> void:
 	if model.my_area_key() != "a:1,0":
 		if not await to_village():
