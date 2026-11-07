@@ -120,10 +120,11 @@ func _run() -> void:
 	await _wait(0.5)
 	_log("on the farm at %s as %s" % [str(_my_tile()), world.model.me])
 	_home = FarmBotHome.new(self)
+	var _books := FarmBotBooks.new(self, _home)
 	var stages := {
 		"shop": _home.shop_buy, "patch": _farm_patch, "keys": _keys_and_pets, "sprint": _sprint, "drop": _drop_and_pick_up, "sell": _home.sell_crop, "gather": _gather, "quests": _quests, "pond": _pond_and_fishing, "bag": _bag_and_chest,
 		"build": _home.build, "house": _home.house_and_cook, "paint": _home.paint, "wardrobe": _home.wardrobe, "talk": _home.talk, "pet": _pet_wild,
-		"village": _home.class_and_chapter, "pizza": _home.pizza, "hero": _home.hero_switch, "smed": _home.smedjan, "ui175": _home.ui_175, "bus": _home.bus,
+		"village": _home.class_and_chapter, "pizza": _home.pizza, "hero": _home.hero_switch, "smed": _home.smedjan, "ui175": _home.ui_175, "bus": _home.bus, "marks": _home.marks_up_close, "books": _books.books, "hud": _books.hud, "menu": _books.pause_menu, "help": _books.help, "volva": _books.volva_journal, "family": _books.family, "text": _books.large_text,
 	}
 	for key in stages.keys():
 		if _done:
@@ -367,7 +368,26 @@ func _gather() -> void:
 func _quests() -> void:
 	var model := world.model
 	if model.count_item("stone") >= 5:
+		await _home.expect_mark("mark: Elsa has a wish I can fill", "elsa", "❗", "give")
 		await _home.hand_over("elsa", "elsa_flowerbox", "stone")
+		await _home.expect_mark("mark: Elsa's wish is done", "elsa", "<rules>")
+		(_report["books"] as Dictionary)["elsa_after"] = _home.mark_of("elsa")
+		var farm_marks := {}
+		for id in Data.npcs.keys():
+			var shown := _home.mark_of(str(id))
+			if shown != "<not drawn>":
+				farm_marks[str(id)] = shown
+		(_report["books"] as Dictionary)["marks_farm"] = farm_marks
+		# the negative case: the server says nobody wants anything today (a `quests` change with no wishes): every wish mark goes
+		var wishes: Array = world.model.quests().duplicate(true)
+		world.model.apply({"t": "changes", "changes": [{"t": "quests", "quests": []}]})
+		await _wait(0.6)
+		var cleared := {}
+		for id in farm_marks.keys():
+			cleared[id] = _home.mark_of(str(id))
+		(_report["books"] as Dictionary)["marks_farm_cleared"] = cleared
+		world.model.apply({"t": "changes", "changes": [{"t": "quests", "quests": wishes}]})
+		await _wait(0.3)
 	else:
 		_step("Elsas önskning", false, "no stone")
 	if model.count_item("wood") >= 5:

@@ -9,7 +9,9 @@ import {
   craftGear,
   devEnterSaga,
   devKit,
+  devSagaBest,
   devStarterKit,
+  devUnlockChapters,
   equipGear,
   forgeGear,
   noticeLandmarks,
@@ -498,7 +500,9 @@ export class Game {
         if (msg.a === 'saga') changes = devEnterSaga(this.world, pid, String(msg.id ?? ''));
         else if (msg.a === 'nextDay') this.skipDay();
         else if (msg.a === 'starter') changes = devStarterKit(this.world, pid);
+        else if (msg.a === 'unlock') changes = devUnlockChapters(this.world, pid);
         else if (msg.a === 'kit') changes = devKit(this.world, pid);
+        else if (msg.a === 'sagaBest') changes = devSagaBest(this.world, pid, String(msg.id ?? ''), Number(msg.ms));
         break;
       case 'voice':
         this.voice.handle(pid, msg);

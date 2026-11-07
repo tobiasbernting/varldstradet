@@ -40,6 +40,7 @@ var saga_quests: Array = [] ## the villagers' saga quests
 var gear: Dictionary = {}
 var level_rewards: Dictionary = {}
 var dialogue: Dictionary = {}
+var book: Dictionary = {} ## M9b: the Gårdsbok's achievements, the villagers' idle lines, the landmarks, the help topics and the animal houses
 var run: Dictionary = {} ## M5c: the runor, the sagaträd, the dishes, the zones' looks and the run's texts and numbers
 var atlas: Dictionary = {}
 var _icon_sheet: Texture2D = null
@@ -85,6 +86,7 @@ func _ready() -> void:
 		level_rewards = g.get("levelRewards", {})
 		dialogue = g.get("dialogue", {})
 		run = g.get("run", {})
+		book = g.get("book", {})
 		if g.get("flags") is Dictionary:
 			flags = g.get("flags")
 		if g.get("interruptKinds") is Array:

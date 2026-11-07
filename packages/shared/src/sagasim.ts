@@ -334,6 +334,18 @@ export function devEnterSaga(world: WorldState, playerId: string, id: string): C
 }
 
 /**
+ * Development only (DEV_TELEPORT=1, `dev unlock`): every dungeon but the last counts as cleared, so a check can walk to the
+ * arch of a later chapter and go in by the arch's own rules (the class and the chapter lock stay; only the clearing is skipped).
+ * Nothing for a player without a class.
+ */
+export function devUnlockChapters(world: WorldState, playerId: string): Change[] {
+  const p = farmOf(world).players[playerId];
+  if (!p?.saga?.cls) return [];
+  for (const id of DUNGEON_IDS.slice(0, -1)) if (!p.saga.cleared.includes(id)) p.saga.cleared.push(id);
+  return [playerChange(p)];
+}
+
+/**
  * Development only (DEV_TELEPORT=1, `dev starter`): the starter set Smed-Stina makes, without gold or her forge, for the
  * class the player has (a weapon, the wooden shield and the stone amulet), so a check of the native client, which has no
  * smithy yet, has something to put on in the gear window. Nothing for a player without a class.
@@ -1172,14 +1184,32 @@ function mobDown(h: Here, m: SagaMob, by: string, ctx: SimCtx, out: Change[]): v
 /** The family's best time through a dungeon: from the first one in to the boss's fall. A new best is told to everyone. */
 function bestTime(h: Here, names: string[], now: number, out: Change[]): void {
   if (h.inst.startedAt === undefined || !names.length) return;
-  const ms = Math.max(0, now - h.inst.startedAt);
-  const all = (h.farm.sagaBest ??= {});
-  const old = all[h.inst.id];
+  recordBestTime(h.farm, h.inst.id, names, Math.max(0, now - h.inst.startedAt), out);
+}
+
+/** Keeps a time as the dungeon's best when it beats the old one (and tells everyone). */
+function recordBestTime(farm: WorldState, id: DungeonId, names: string[], ms: number, out: Change[]): void {
+  const all = (farm.sagaBest ??= {});
+  const old = all[id];
   if (old && old.ms <= ms) return;
-  const best: SagaBest = { ms, names: [...names], day: h.farm.day };
-  all[h.inst.id] = best;
-  out.push({ t: 'sagaBest', dungeon: h.inst.id, best });
-  if (old) out.push(toast(null, fmt(T.sagaBestBeaten, { names: names.join(' och '), dungeon: DUNGEONS[h.inst.id].name, time: fmtDuration(ms) })));
+  const best: SagaBest = { ms, names: [...names], day: farm.day };
+  all[id] = best;
+  out.push({ t: 'sagaBest', dungeon: id, best });
+  if (old) out.push(toast(null, fmt(T.sagaBestBeaten, { names: names.join(' och '), dungeon: DUNGEONS[id].name, time: fmtDuration(ms) })));
+}
+
+/**
+ * Development only (DEV_TELEPORT=1): records `ms` as the family's time through dungeon `id`, by the player alone, through the same
+ * path as a real clear (a faster time replaces the old one and is told, a slower one changes nothing), so a client check can show the
+ * server's own `sagaBest` instead of a made-up one.
+ */
+export function devSagaBest(world: WorldState, playerId: string, id: string, ms: number): Change[] {
+  const farm = farmOf(world);
+  const p = farm.players[playerId];
+  if (!p || !isDungeonId(id) || !Number.isFinite(ms) || ms < 0) return [];
+  const out: Change[] = [];
+  recordBestTime(farm, id, [p.name], Math.round(ms), out);
+  return out;
 }
 
 /** The achievement stat for clearing each dungeon. */

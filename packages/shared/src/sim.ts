@@ -1975,7 +1975,8 @@ export function travel(world: WorldState, playerId: string, dir: 'n' | 's' | 'e'
 export function teleport(world: WorldState, playerId: string, keyStr: string): Change[] {
   const farm = farmOf(world);
   const p = farm.players[playerId];
-  if (!p || p.area === 'dungeon' || keyStr === 'dungeon' || isCaveKey(keyStr) || isIndoorKey(keyStr)) return [];
+  // (inside a saga dungeon or a run you leave by its way out: a jump from there would leave your fighter behind)
+  if (!p || p.area === 'dungeon' || isSagaKey(p.area) || keyStr === 'dungeon' || isCaveKey(keyStr) || isIndoorKey(keyStr)) return [];
   if (keyStr !== 'farm' && !(p.visited ?? []).includes(keyStr)) return [];
   const out: Change[] = [];
   if (keyStr === 'farm') placeIn(farm, p, 'farm', SPAWN.x, SPAWN.y, 'down', out);

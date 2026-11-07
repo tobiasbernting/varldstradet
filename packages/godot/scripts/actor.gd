@@ -69,6 +69,8 @@ var _bubble_icon: Sprite3D = null
 var _bubble_until := 0.0
 var _marker: Sprite3D = null
 var _marker_t := 0.0
+var _mark: Label3D = null ## M9b: a villager's quest mark (! or ?), see set_mark
+var _mark_t := 0.0
 var _tool: Sprite3D = null
 var _swing_t := 0.0
 var _swing_side := 1.0
@@ -526,6 +528,9 @@ func _tick_looks(delta: float) -> void:
 	if _marker != null and _marker.visible:
 		_marker_t += delta
 		_marker.position.y = head_marker_y() + 0.08 * sin(_marker_t * 6.0)
+	if _mark != null and _mark.visible:
+		_mark_t += delta
+		_mark.position.y = head_marker_y() + 0.5 + Settings.calm(0.06 * sin(_mark_t * 4.0))
 
 
 # ---------------------------------------------------------------------------
@@ -814,6 +819,43 @@ func set_bubble(text: String, icon: Texture2D, seconds: float) -> void:
 	_bubble_icon.visible = icon != null
 	_bubble_icon.position.y = head_marker_y() + 0.55
 	_bubble_until = Time.get_ticks_msec() + seconds * 1000.0
+
+
+## A villager's quest mark over the head (the browser's yellow ! to take, yellow ? to hand in, ❗ for a wish I can fill, a
+## dim ? while a quest goes on): `text` "" hides it. A mark never shares the place with a speech bubble (npc_talk.gd hides it
+## while the villager speaks). Shapes tell them apart as well as the colour: `kind` "give" (red-orange, hand in a wish),
+## "new" (yellow), "busy" (dim and smaller).
+func set_mark(text: String, kind := "new") -> void:
+	if _mark != null and _mark.visible and text != "" and _mark.text == text and str(_mark.get_meta("kind", "")) == kind:
+		return # (nothing changed: it is called every frame)
+	if text == "":
+		if _mark != null:
+			_mark.visible = false
+		return
+	if _mark == null:
+		_mark = Label3D.new()
+		_mark.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_mark.font_size = 96
+		Settings.scaled_label(_mark, 0.0045)
+		_mark.outline_size = 22
+		_mark.no_depth_test = true
+		_mark.fixed_size = false
+		add_child(_mark)
+	_mark.visible = true
+	_mark.text = text
+	_mark.set_meta("kind", kind)
+	_mark.modulate = Color("ffd23a") if kind == "new" else (Color("ff7a2a") if kind == "give" else Color(0.75, 0.75, 0.75, 0.75))
+	_mark.outline_modulate = Color("2b2419")
+	_mark.scale = Vector3.ONE * (0.8 if kind == "busy" else 1.0)
+	_mark.position.y = head_marker_y() + 0.5
+
+
+func mark_kind() -> String:
+	return str(_mark.get_meta("kind", "")) if _mark != null and _mark.visible else ""
+
+
+func mark_text() -> String:
+	return _mark.text if _mark != null and _mark.visible else ""
 
 
 ## The mark on the monster that is after you (a bobbing warning sign over its head).

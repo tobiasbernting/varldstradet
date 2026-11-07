@@ -7,6 +7,7 @@ var _seasons: Dictionary = {}
 var _weather_names: Dictionary = {}
 var _weather_emoji: Dictionary = {}
 var _places: Dictionary = {}
+var _biome_emoji: Dictionary = {}
 var _objects: Dictionary = {}
 var _species: Dictionary = {}
 
@@ -20,6 +21,7 @@ func _ready() -> void:
 		_weather_names = parsed.get("WEATHER_NAMES", {})
 		_weather_emoji = parsed.get("WEATHER_EMOJI", {})
 		_places = parsed.get("BIOME_NAMES", {})
+		_biome_emoji = parsed.get("BIOME_EMOJI", {})
 		_objects = parsed.get("OBJECT_NAMES", {})
 		_species = parsed.get("SPECIES_NAMES", {})
 	else:
@@ -55,6 +57,11 @@ func weather_emoji(id: String) -> String:
 ## The name of a map: "farm", or a wild map's biome ("skog"); "ang" is the fallback place.
 func place(biome: String) -> String:
 	return str(_places.get(biome, _places.get("ang", biome)))
+
+
+## The emoji of a place (a biome's, "farm"'s).
+func biome_emoji(biome: String) -> String:
+	return str(_biome_emoji.get(biome, _biome_emoji.get("ang", "")))
 
 
 func object_name(kind: String) -> String:

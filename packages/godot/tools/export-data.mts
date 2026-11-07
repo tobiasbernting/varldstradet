@@ -58,6 +58,7 @@ import {
   WIPE_MS,
   INVENTORY_FILTERS,
   FILTER_NAMES,
+  SPACEPORT,
   itemName,
   CATEGORY_ORDER,
   RECIPES,
@@ -133,6 +134,16 @@ import {
   MODIFIER_SEEDS,
   RUN_T,
   COMPANION_NAME,
+  ACHIEVEMENTS,
+  ACHIEVEMENT_TEXT,
+  NPC_LINES,
+  LANDMARKS,
+  DISCOVERABLE,
+  HELP,
+  HELP_NATIVE_CONTROLS,
+  HELP_NATIVE_GAMEPAD,
+  HELP_NATIVE_SAGA_PAD,
+  SPECIES_NAMES,
 } from '../../shared/src/index.ts';
 
 const out = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../assets/game.json');
@@ -148,8 +159,8 @@ for (const [id, c] of Object.entries(CROPS)) crops[id] = { stages: c.stages.leng
 
 /** How long a baby animal stays a baby (isBaby: age < growDays), by species; M4b adds what the farm tells apart: pets
  * (they follow their owner), what it gives, wild ones, and the speed of a mount (a horse has none of its own: RIDE_SPEED_MUL). */
-const animals: Record<string, { growDays: number; pet?: true; wild?: true; predator?: true; mob?: true; product?: string; mount?: number }> = {};
-for (const [id, a] of Object.entries(ANIMALS)) animals[id] = { growDays: a.growDays, ...(a.pet ? { pet: true as const } : {}), ...(a.wild ? { wild: true as const } : {}), ...(a.predator ? { predator: true as const } : {}), ...(a.mob ? { mob: true as const } : {}), ...(a.product ? { product: a.product } : {}), ...(a.mount ? { mount: a.mount.speed } : {}) };
+const animals: Record<string, { growDays: number; vehicle?: true; pet?: true; wild?: true; predator?: true; mob?: true; product?: string; mount?: number }> = {};
+for (const [id, a] of Object.entries(ANIMALS)) animals[id] = { growDays: a.growDays, ...(a.vehicle ? { vehicle: true as const } : {}), ...(a.pet ? { pet: true as const } : {}), ...(a.wild ? { wild: true as const } : {}), ...(a.predator ? { predator: true as const } : {}), ...(a.mob ? { mob: true as const } : {}), ...(a.product ? { product: a.product } : {}), ...(a.mount ? { mount: a.mount.speed } : {}) };
 
 /** The villagers: who they are and which map they live on (the sprite is npc_<id> in the atlas). */
 const npcs: Record<string, { name: string; area: string; greeting: string[]; appearance?: unknown; outfit?: unknown }> = {};
@@ -161,7 +172,7 @@ for (const n of Object.values(NPCS)) {
 const dungeons: Record<string, unknown> = {};
 for (const id of DUNGEON_IDS) {
   const d = DUNGEONS[id];
-  dungeons[id] = { name: d.name, chapter: d.chapter, intro: d.intro, floor: d.floor, bossFloor: d.bossFloor, wall: d.wall, ambient: d.ambient, decor: d.decor, mini: d.mini, boss: d.boss, ...(d.illusions ? { illusions: true } : {}) };
+  dungeons[id] = { name: d.name, chapter: d.chapter, intro: d.intro, floor: d.floor, bossFloor: d.bossFloor, wall: d.wall, ambient: d.ambient, decor: d.decor, mini: d.mini, boss: d.boss, portal: d.portal, ...(d.illusions ? { illusions: true } : {}) };
 }
 
 /** Every creature: its name, and for a fight its reach, speed and whether it shoots (reach above 2.5). */
@@ -175,6 +186,7 @@ for (const [species, b] of Object.entries(SAGA_BOSSES)) {
   bosses[species] = {
     name: b.name,
     title: b.title,
+    lore: b.lore,
     phases: b.phases,
     ...(b.phaseAdds ? { phaseAdds: b.phaseAdds } : {}),
     ...(b.mini ? { mini: true } : {}),
@@ -290,9 +302,40 @@ for (let lv = 1; lv <= XP_LEVELS.length; lv++) {
   }
 }
 
+/**
+ * The books (M9b, parity with the browser): the Gårdsbok's achievements with their texts, the villagers' idle lines, the
+ * Upptäcktsboken's landmarks by biome with their lore, the help topics with {recipe:}/{price:}/{name:} filled in (the native
+ * client's own lines where the browser's talk about touch or a pad layout it has not), and the animal houses.
+ */
+const helpFill = (text: string): string =>
+  text
+    .replace(/\{recipe:(\w+)\}/g, (_, id: string) => {
+      const r = RECIPES.find((x) => x.id === id);
+      return r ? r.in.map((i) => `${i.count} ${itemName(i.item).toLowerCase()}`).join(' + ') : id;
+    })
+    .replace(/\{price:(\w+)\}/g, (_, id: string) => `${ITEMS[id]?.buy ?? '?'} ${T.coins}`)
+    .replace(/\{name:(\w+)\}/g, (_, id: string) => itemName(id));
+const helpTopics = HELP.map((t) => {
+  let steps = t.steps.filter((s) => s.only !== 'touch');
+  if (t.id === 'controls') steps = [...HELP_NATIVE_CONTROLS];
+  if (t.id === 'gamepad') steps = [...steps.filter((s) => !/Webbläsaren|surfplattan|konsolen/.test(s.text) && !s.text.startsWith('Android-surfplatta')), ...HELP_NATIVE_GAMEPAD];
+  if (t.id === 'saga') steps = steps.map((s) => (s.text.startsWith('Med handkontroll') ? { ...s, text: HELP_NATIVE_SAGA_PAD } : s));
+  return { id: t.id, emoji: t.emoji, title: t.title, ...(t.intro ? { intro: helpFill(t.intro.replace(' på surfplattan och datorn', '')) } : {}), steps: steps.map((s) => ({ icon: s.icon ?? '', text: helpFill(s.text) })), ...(t.houses ? { houses: true } : {}) };
+});
+const book = {
+  achievements: ACHIEVEMENTS.map((a) => ({ id: a.id, stat: a.stat, goal: a.goal, stars: a.stars, icon: a.icon, title: ACHIEVEMENT_TEXT[a.id]?.title ?? a.id, text: ACHIEVEMENT_TEXT[a.id]?.text ?? '' })),
+  npcLines: NPC_LINES,
+  /** The biomes with landmarks, in the browser's order, each with its landmarks (the Upptäcktsboken). */
+  landmarks: DISCOVERABLE.map((biome) => ({ biome, items: Object.values(LANDMARKS).filter((l) => l.biome === biome).map((l) => ({ id: l.id, name: l.name, lore: l.lore })) })).filter((g) => g.items.length > 0),
+  help: helpTopics,
+  houses: Object.values(ANIMALS).filter((a) => a.house).map((a) => ({ house: a.house, species: a.species, name: SPECIES_NAMES[a.species] ?? a.species, recipe: RECIPES.find((x) => x.id === a.house)?.in.map((i) => ({ item: i.item, count: i.count })) ?? [], price: ITEMS[`animal_${a.species}`]?.buy ?? 0 })),
+  /** Lokes list begins here (a heading over it in the journal). */
+  actTwo: 4,
+};
+
 const data = {
   _comment: 'Generated from packages/shared by `pnpm godot:data`. Do not edit; edit the shared data and run the script.',
-  constants: { TILE, MAP_W, MAP_H, MAX_HEARTS, DAY_LENGTH_MS, EDGE_GAP, REACH, PICKUP_RADIUS, RIDE_SPEED_MUL, RUN_SPEED_MUL, BOOST_SPEED_MUL, WATERING_CAN_CHARGES, HOTBAR_SIZE, INVENTORY_SIZE, CHEST_SIZE, MAX_STACK, PLAYER_SPEED, PLAYER_HALF_W, PLAYER_HALF_H, SLOW_MUL, GCD_MS, DOWN_MS, WIPE_MS, POTION_CD, CHAT_MAX_LEN, CHAT_BUBBLE_MS, EMOTE_MS },
+  constants: { TILE, MAP_W, MAP_H, MAX_HEARTS, DAY_LENGTH_MS, EDGE_GAP, REACH, PICKUP_RADIUS, RIDE_SPEED_MUL, RUN_SPEED_MUL, BOOST_SPEED_MUL, WATERING_CAN_CHARGES, HOTBAR_SIZE, INVENTORY_SIZE, CHEST_SIZE, MAX_STACK, SPACEPORT_AX: SPACEPORT.ax, SPACEPORT_AY: SPACEPORT.ay, PLAYER_SPEED, PLAYER_HALF_W, PLAYER_HALF_H, SLOW_MUL, GCD_MS, DOWN_MS, WIPE_MS, POTION_CD, CHAT_MAX_LEN, CHAT_BUBBLE_MS, EMOTE_MS },
   /** The fighter flags in a saga snapshot (sagasim.ts, SagaSnap.f). */
   flags: { down: 1, wall: 2, rage: 4, hot: 8, slow: 16, frozen: 32 },
   /** Spells that stop a boss's big attack (the browser's INTERRUPTS). */
@@ -333,6 +376,7 @@ const data = {
   sagaQuests,
   gear: { rarityPower: RARITY_POWER, levelBonus: LEVEL_BONUS, powerCap: POWER_CAP, armorCap: ARMOR_CAP, classFit: CLASS_FIT, xpLevels: XP_LEVELS, forgeMax: FORGE_MAX, forgeCosts: FORGE_COSTS, forgeCrafts: FORGE_CRAFTS, smith: SMITH_ID, forgeSamples, heroSamples, slots: ['weapon', 'offhand', 'amulet'] },
   levelRewards: LEVEL_REWARDS,
+  book,
   dialogue,
   run,
 };

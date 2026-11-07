@@ -17,6 +17,8 @@
     "INVENTORY_SIZE": 32,
     "CHEST_SIZE": 32,
     "MAX_STACK": 99,
+    "SPACEPORT_AX": 1,
+    "SPACEPORT_AY": 3,
     "PLAYER_SPEED": 64,
     "PLAYER_HALF_W": 5,
     "PLAYER_HALF_H": 3,
@@ -1619,16 +1621,20 @@
       "predator": true
     },
     "car": {
-      "growDays": 0
+      "growDays": 0,
+      "vehicle": true
     },
     "motorcycle": {
-      "growDays": 0
+      "growDays": 0,
+      "vehicle": true
     },
     "bus": {
-      "growDays": 0
+      "growDays": 0,
+      "vehicle": true
     },
     "train": {
-      "growDays": 0
+      "growDays": 0,
+      "vehicle": true
     },
     "slime": {
       "growDays": 0,
@@ -2085,7 +2091,12 @@
         "saga_urn"
       ],
       "mini": "gravvaktare",
-      "boss": "draugkung"
+      "boss": "draugkung",
+      "portal": {
+        "area": "a:-1,-1",
+        "x": 30,
+        "y": 26
+      }
     },
     "frost": {
       "name": "Frostjättens borg",
@@ -2106,7 +2117,12 @@
         "saga_snowdrift"
       ],
       "mini": "isbjorn",
-      "boss": "rimturs"
+      "boss": "rimturs",
+      "portal": {
+        "area": "a:0,-2",
+        "x": 30,
+        "y": 30
+      }
     },
     "surt": {
       "name": "Surts smedja",
@@ -2127,7 +2143,12 @@
         "saga_brazier"
       ],
       "mini": "smeden",
-      "boss": "surt"
+      "boss": "surt",
+      "portal": {
+        "area": "a:2,2",
+        "x": 30,
+        "y": 33
+      }
     },
     "hel": {
       "name": "Helheim",
@@ -2148,7 +2169,12 @@
         "saga_deadtree"
       ],
       "mini": "garm",
-      "boss": "hel"
+      "boss": "hel",
+      "portal": {
+        "area": "a:-1,0",
+        "x": 30,
+        "y": 34
+      }
     },
     "dvarg": {
       "name": "Svartalfheims gruvor",
@@ -2169,7 +2195,12 @@
         "saga_minelamp"
       ],
       "mini": "jarnvakten",
-      "boss": "fafner"
+      "boss": "fafner",
+      "portal": {
+        "area": "a:2,0",
+        "x": 30,
+        "y": 30
+      }
     },
     "orm": {
       "name": "Havsormens tempel",
@@ -2190,7 +2221,12 @@
         "saga_pearl"
       ],
       "mini": "blackis",
-      "boss": "jormungand"
+      "boss": "jormungand",
+      "portal": {
+        "area": "a:-2,0",
+        "x": 30,
+        "y": 30
+      }
     },
     "alv": {
       "name": "Alvernas lund",
@@ -2211,7 +2247,12 @@
         "saga_elfstatue"
       ],
       "mini": "spindeldrottning",
-      "boss": "nattmara"
+      "boss": "nattmara",
+      "portal": {
+        "area": "a:1,-1",
+        "x": 30,
+        "y": 30
+      }
     },
     "fenrir": {
       "name": "Fenrisklyftan",
@@ -2232,7 +2273,12 @@
         "saga_bonepile"
       ],
       "mini": "skoll",
-      "boss": "fenrisulven"
+      "boss": "fenrisulven",
+      "portal": {
+        "area": "a:0,-2",
+        "x": 12,
+        "y": 44
+      }
     },
     "loke": {
       "name": "Bifrost",
@@ -2254,6 +2300,11 @@
       ],
       "mini": "lokesskugga",
       "boss": "loke",
+      "portal": {
+        "area": "a:1,3",
+        "x": 30,
+        "y": 24
+      },
       "illusions": true
     }
   },
@@ -2591,6 +2642,7 @@
     "gravvaktare": {
       "name": "Gravväktaren",
       "title": "Kryptans vakt",
+      "lore": "En jättelik skelettkrigare som har vaktat kryptans port i tusen år.",
       "phases": [
         0.5
       ],
@@ -2622,6 +2674,7 @@
     "draugkung": {
       "name": "Draugkungen Hrolf",
       "title": "Kryptans herre",
+      "lore": "Hrolf var en girig hövding för länge sedan. Nu har han vaknat som en draug och stulit Solrunan, som håller vintern borta från Midgård.",
       "phases": [
         0.66,
         0.33
@@ -2674,6 +2727,7 @@
     "isbjorn": {
       "name": "Isbjörnen Kall",
       "title": "Borgens vaktbjörn",
+      "lore": "Rimturs egen björn, stor som en lada och med päls av rimfrost.",
       "phases": [
         0.5
       ],
@@ -2705,6 +2759,7 @@
     "rimturs": {
       "name": "Rimtursen",
       "title": "Frostjätten",
+      "lore": "Rimtursen är en frostjätte från Jötunheim. Han vill att det ska vara vinter för alltid, och har frusit alla källor i norr.",
       "phases": [
         0.5
       ],
@@ -2763,6 +2818,7 @@
     "smeden": {
       "name": "Smeden Glöd",
       "title": "Surts smed",
+      "lore": "Surts smed, som har hamrat på det flammande svärdet i hundra år.",
       "phases": [
         0.5
       ],
@@ -2803,6 +2859,7 @@
     "surt": {
       "name": "Surt",
       "title": "Eldjätten från Muspelheim",
+      "lore": "Surt är eldjätten från Muspelheim. I sin smedja under vulkanen smider han ett svärd av eld för att bränna Yggdrasil, Världsträdet som håller ihop alla världar.",
       "phases": [
         0.7,
         0.4
@@ -2855,6 +2912,7 @@
     "garm": {
       "name": "Garm",
       "title": "Hels hund",
+      "lore": "Garm är hunden som vaktar porten till Helheim. Han skäller på alla, men mest för att ingen vill leka med honom.",
       "phases": [
         0.5
       ],
@@ -2896,6 +2954,7 @@
     "hel": {
       "name": "Hel",
       "title": "Dödsrikets drottning",
+      "lore": "Hel är Lokes dotter och drottning över dödsriket. Ena halvan av henne är blek som snö och den andra mörk som natten, och Loke har lovat henne Midgård.",
       "phases": [
         0.66,
         0.33
@@ -2947,6 +3006,7 @@
     "jarnvakten": {
       "name": "Järnväktaren",
       "title": "Dvärgarnas vakt",
+      "lore": "En väktare av järn och ånga som dvärgarna smidde för länge sedan. Han har glömt att dvärgarna flyttade härifrån för hundra år sedan.",
       "phases": [
         0.5
       ],
@@ -2987,6 +3047,7 @@
     "fafner": {
       "name": "Fafner",
       "title": "Guldets drake",
+      "lore": "Fafner var en dvärg som tyckte så mycket om guld att han blev en drake. Nu ligger han på sin skatt och vill aldrig någonsin dela med sig.",
       "phases": [
         0.6,
         0.3
@@ -3040,6 +3101,7 @@
     "blackis": {
       "name": "Bläckis",
       "title": "Tempelbläckfisken",
+      "lore": "En jättelik bläckfisk som håller rent i Havsormens tempel. Han blir väldigt arg när någon smutsar ner.",
       "phases": [
         0.5
       ],
@@ -3081,6 +3143,7 @@
     "jormungand": {
       "name": "Jörmungandr",
       "title": "Midgårdsormen",
+      "lore": "Jörmungandr är Midgårdsormen, Lokes son. Han är så lång att han ligger i havet runt hela världen och biter sig själv i svansen.",
       "phases": [
         0.66,
         0.33
@@ -3141,6 +3204,7 @@
     "spindeldrottning": {
       "name": "Spindeldrottningen",
       "title": "Lundens väverska",
+      "lore": "En jättelik spindel som har spunnit nät över hela Alvernas lund. Näten är starka som rep och glittrar i månljuset.",
       "phases": [
         0.5
       ],
@@ -3182,6 +3246,7 @@
     "nattmara": {
       "name": "Nattmaran",
       "title": "Drömmarnas skugga",
+      "lore": "Nattmaran smyger in i drömmar och gör dem otäcka. Loke har gett henne makten över Alvernas lund, och nu har ljusalverna slutat lysa.",
       "phases": [
         0.6,
         0.3
@@ -3246,6 +3311,7 @@
     "skoll": {
       "name": "Sköll",
       "title": "Solens jägare",
+      "lore": "Sköll är vargen som jagar solen över himlen. Han är snabb som vinden, men han har aldrig hunnit ikapp henne.",
       "phases": [
         0.5
       ],
@@ -3286,6 +3352,7 @@
     "fenrisulven": {
       "name": "Fenrisulven",
       "title": "Den bundne",
+      "lore": "Fenrisulven är Lokes jättelika varg. Gudarna band honom med Gleipner, ett band mjukt som silke, men Loke har släppt honom fri.",
       "phases": [
         0.7,
         0.4
@@ -3348,6 +3415,7 @@
     "lokesskugga": {
       "name": "Lokes skugga",
       "title": "En lögn i mörkret",
+      "lore": "En skugga som Loke har trollat fram av en lögn. Den härmar allt han gör, fast lite sämre.",
       "phases": [
         0.5
       ],
@@ -3389,6 +3457,7 @@
     "loke": {
       "name": "Loke",
       "title": "Lögnernas fader",
+      "lore": "Loke är en gud som älskar spratt och lögner. Han släppte loss Draugkungen, Rimtursen och Surt, och nu vill han starta Ragnarök. Men han tycker lite för mycket om att visa upp sig.",
       "phases": [
         0.8,
         0.6,
@@ -10430,6 +10499,2050 @@
       "aura": 2,
       "title": "Midgårds väktare"
     }
+  },
+  "book": {
+    "achievements": [
+      {
+        "id": "harvest_1",
+        "stat": "harvest",
+        "goal": 1,
+        "stars": 1,
+        "icon": "carrot",
+        "title": "Första skörden",
+        "text": "Skörda en gröda"
+      },
+      {
+        "id": "harvest_25",
+        "stat": "harvest",
+        "goal": 25,
+        "stars": 2,
+        "icon": "strawberry",
+        "title": "Grönsaksland",
+        "text": "Skörda 25 grödor"
+      },
+      {
+        "id": "harvest_100",
+        "stat": "harvest",
+        "goal": 100,
+        "stars": 3,
+        "icon": "pumpkin",
+        "title": "Storbonde",
+        "text": "Skörda 100 grödor"
+      },
+      {
+        "id": "chop_10",
+        "stat": "chop",
+        "goal": 10,
+        "stars": 1,
+        "icon": "axe",
+        "title": "Vedhuggare",
+        "text": "Hugg 10 träd"
+      },
+      {
+        "id": "chop_50",
+        "stat": "chop",
+        "goal": 50,
+        "stars": 2,
+        "icon": "wood",
+        "title": "Skogsmästare",
+        "text": "Hugg 50 träd"
+      },
+      {
+        "id": "mine_10",
+        "stat": "mine",
+        "goal": 10,
+        "stars": 1,
+        "icon": "pick",
+        "title": "Stenknackare",
+        "text": "Knacka 10 stenar"
+      },
+      {
+        "id": "mine_50",
+        "stat": "mine",
+        "goal": 50,
+        "stars": 2,
+        "icon": "stone",
+        "title": "Bergsprängare",
+        "text": "Knacka 50 stenar"
+      },
+      {
+        "id": "build_10",
+        "stat": "build",
+        "goal": 10,
+        "stars": 1,
+        "icon": "fence",
+        "title": "Snickarlärling",
+        "text": "Bygg 10 saker"
+      },
+      {
+        "id": "build_50",
+        "stat": "build",
+        "goal": 50,
+        "stars": 3,
+        "icon": "coop",
+        "title": "Byggmästare",
+        "text": "Bygg 50 saker"
+      },
+      {
+        "id": "walls_20",
+        "stat": "walls",
+        "goal": 20,
+        "stars": 2,
+        "icon": "wall_wood",
+        "title": "Hemmabyggare",
+        "text": "Bygg 20 väggar, fönster eller dörrar"
+      },
+      {
+        "id": "painted_1",
+        "stat": "painted",
+        "goal": 1,
+        "stars": 1,
+        "icon": "paint_red",
+        "title": "Målare",
+        "text": "Måla huset eller en vägg"
+      },
+      {
+        "id": "rooms_1",
+        "stat": "rooms",
+        "goal": 1,
+        "stars": 2,
+        "icon": "floor_wood",
+        "title": "Taklagsfest",
+        "text": "Bygg väggar runt om så att huset får tak"
+      },
+      {
+        "id": "fed_5",
+        "stat": "fed",
+        "goal": 5,
+        "stars": 1,
+        "icon": "hay",
+        "title": "Djurvän",
+        "text": "Mata djur 5 gånger"
+      },
+      {
+        "id": "fed_30",
+        "stat": "fed",
+        "goal": 30,
+        "stars": 2,
+        "icon": "animal_cow",
+        "title": "Djurskötare",
+        "text": "Mata djur 30 gånger"
+      },
+      {
+        "id": "product_10",
+        "stat": "product",
+        "goal": 10,
+        "stars": 2,
+        "icon": "egg",
+        "title": "Äggplockare",
+        "text": "Hämta 10 ägg, ull eller mjölk"
+      },
+      {
+        "id": "fish_1",
+        "stat": "fish",
+        "goal": 1,
+        "stars": 1,
+        "icon": "rod",
+        "title": "Första nappet",
+        "text": "Fånga en fisk"
+      },
+      {
+        "id": "fish_20",
+        "stat": "fish",
+        "goal": 20,
+        "stars": 2,
+        "icon": "fish_pike",
+        "title": "Fiskare",
+        "text": "Fånga 20 fiskar"
+      },
+      {
+        "id": "fish_gold",
+        "stat": "fish_gold",
+        "goal": 1,
+        "stars": 3,
+        "icon": "fish_gold",
+        "title": "Guldfisken!",
+        "text": "Fånga den sällsynta guldfisken"
+      },
+      {
+        "id": "cook_5",
+        "stat": "cook",
+        "goal": 5,
+        "stars": 2,
+        "icon": "pancakes",
+        "title": "Kock",
+        "text": "Laga 5 rätter"
+      },
+      {
+        "id": "pizza_5",
+        "stat": "pizza",
+        "goal": 5,
+        "stars": 2,
+        "icon": "pizza",
+        "title": "Pizzaälskare",
+        "text": "Ät 5 pizzor"
+      },
+      {
+        "id": "quests_3",
+        "stat": "quests",
+        "goal": 3,
+        "stars": 1,
+        "icon": "egg_basket",
+        "title": "Hjälpsam",
+        "text": "Hjälp byborna 3 gånger"
+      },
+      {
+        "id": "quests_15",
+        "stat": "quests",
+        "goal": 15,
+        "stars": 3,
+        "icon": "maypole",
+        "title": "Byns hjälte",
+        "text": "Hjälp byborna 15 gånger"
+      },
+      {
+        "id": "coins_500",
+        "stat": "earned",
+        "goal": 500,
+        "stars": 1,
+        "icon": "animal_hen",
+        "title": "Sparbössa",
+        "text": "Tjäna 500 kr"
+      },
+      {
+        "id": "coins_3000",
+        "stat": "earned",
+        "goal": 3000,
+        "stars": 3,
+        "icon": "animal_cow",
+        "title": "Rik bonde",
+        "text": "Tjäna 3000 kr"
+      },
+      {
+        "id": "areas_5",
+        "stat": "areas",
+        "goal": 5,
+        "stars": 2,
+        "icon": "signpost",
+        "title": "Upptäckare",
+        "text": "Besök 5 områden"
+      },
+      {
+        "id": "areas_15",
+        "stat": "areas",
+        "goal": 15,
+        "stars": 4,
+        "icon": "signpost",
+        "title": "Världsresenär",
+        "text": "Besök 15 områden"
+      },
+      {
+        "id": "wild_5",
+        "stat": "wildpet",
+        "goal": 5,
+        "stars": 2,
+        "icon": "animal_rabbit",
+        "title": "Djurvän i det vilda",
+        "text": "Klappa 5 vilda djur"
+      },
+      {
+        "id": "wild_20",
+        "stat": "wildpet",
+        "goal": 20,
+        "stars": 3,
+        "icon": "animal_sheep",
+        "title": "Zoolog",
+        "text": "Klappa 20 vilda djur"
+      },
+      {
+        "id": "mobs_10",
+        "stat": "mobs",
+        "goal": 10,
+        "stars": 1,
+        "icon": "sword",
+        "title": "Grottkämpe",
+        "text": "Besegra 10 troll och slemklumpar"
+      },
+      {
+        "id": "mobs_50",
+        "stat": "mobs",
+        "goal": 50,
+        "stars": 2,
+        "icon": "bow",
+        "title": "Grottmästare",
+        "text": "Besegra 50 monster"
+      },
+      {
+        "id": "boss_1",
+        "stat": "boss",
+        "goal": 1,
+        "stars": 3,
+        "icon": "gem",
+        "title": "Trollbesegrare",
+        "text": "Besegra Stora Trollet"
+      },
+      {
+        "id": "boss_5",
+        "stat": "boss",
+        "goal": 5,
+        "stars": 5,
+        "icon": "hat_viking",
+        "title": "Trollkung",
+        "text": "Besegra Stora Trollet 5 gånger"
+      },
+      {
+        "id": "boom_1",
+        "stat": "boom",
+        "goal": 1,
+        "stars": 1,
+        "icon": "bazooka",
+        "title": "Boom!",
+        "text": "Skjut med bazookan"
+      },
+      {
+        "id": "boom_25",
+        "stat": "boom",
+        "goal": 25,
+        "stars": 2,
+        "icon": "rocket",
+        "title": "Raketmästare",
+        "text": "Skjut 25 raketer"
+      },
+      {
+        "id": "paint_1",
+        "stat": "paint",
+        "goal": 1,
+        "stars": 2,
+        "icon": "painting",
+        "title": "Konstnär",
+        "text": "Rita en tavla på ett papper"
+      },
+      {
+        "id": "paint_10",
+        "stat": "paint",
+        "goal": 10,
+        "stars": 3,
+        "icon": "paper",
+        "title": "Galleri",
+        "text": "Rita 10 tavlor"
+      },
+      {
+        "id": "ride_1",
+        "stat": "ride",
+        "goal": 1,
+        "stars": 1,
+        "icon": "animal_horse",
+        "title": "Första ridturen",
+        "text": "Rid på en häst"
+      },
+      {
+        "id": "ride_25",
+        "stat": "ride",
+        "goal": 25,
+        "stars": 2,
+        "icon": "stall",
+        "title": "Hästkompis",
+        "text": "Hoppa upp på din häst 25 gånger"
+      },
+      {
+        "id": "drive_1",
+        "stat": "drive",
+        "goal": 1,
+        "stars": 1,
+        "icon": "vehicle_car_red",
+        "title": "Kusk",
+        "text": "Kör en hästkärra eller rid en ridhäst"
+      },
+      {
+        "id": "drive_1000",
+        "stat": "drive_tiles",
+        "goal": 1000,
+        "stars": 2,
+        "icon": "vehicle_motorcycle",
+        "title": "Långfärd",
+        "text": "Kör 1000 rutor"
+      },
+      {
+        "id": "truffle_1",
+        "stat": "truffle",
+        "goal": 1,
+        "stars": 1,
+        "icon": "truffle",
+        "title": "Grisbonde",
+        "text": "Hämta din första tryffel från en gris"
+      },
+      {
+        "id": "truffle_20",
+        "stat": "truffle",
+        "goal": 20,
+        "stars": 2,
+        "icon": "animal_pig",
+        "title": "Tryffeljägare",
+        "text": "Hämta 20 tryfflar"
+      },
+      {
+        "id": "swim_1",
+        "stat": "swim",
+        "goal": 1,
+        "stars": 1,
+        "icon": "shell",
+        "title": "Simmare",
+        "text": "Simma i badstugans pool"
+      },
+      {
+        "id": "swim_25",
+        "stat": "swim",
+        "goal": 25,
+        "stars": 2,
+        "icon": "shell",
+        "title": "Badkruka",
+        "text": "Hoppa i poolen 25 gånger"
+      },
+      {
+        "id": "trip_1",
+        "stat": "rides",
+        "goal": 1,
+        "stars": 1,
+        "icon": "lemonade",
+        "title": "Resenär",
+        "text": "Åk Diligensen eller Gruvtåget för första gången"
+      },
+      {
+        "id": "train_10",
+        "stat": "train_rides",
+        "goal": 10,
+        "stars": 2,
+        "icon": "gem",
+        "title": "Gruvtågsluffare",
+        "text": "Åk Gruvtåget 10 gånger"
+      },
+      {
+        "id": "tame_1",
+        "stat": "tame",
+        "goal": 1,
+        "stars": 1,
+        "icon": "lasso",
+        "title": "Lassokung",
+        "text": "Fånga ett vilt djur med lasso"
+      },
+      {
+        "id": "tame_bear",
+        "stat": "tame_bear",
+        "goal": 1,
+        "stars": 2,
+        "icon": "fur",
+        "title": "Björntämjare",
+        "text": "Tämj en björn"
+      },
+      {
+        "id": "tame_5",
+        "stat": "tame_species",
+        "goal": 5,
+        "stars": 3,
+        "icon": "animal_dog",
+        "title": "Zoolog",
+        "text": "Tämj fem olika sorters djur"
+      },
+      {
+        "id": "biomes_5",
+        "stat": "biomes",
+        "goal": 5,
+        "stars": 2,
+        "icon": "signpost",
+        "title": "Äventyrare",
+        "text": "Upptäck 5 olika sorters platser"
+      },
+      {
+        "id": "biomes_all",
+        "stat": "biomes",
+        "goal": 15,
+        "stars": 6,
+        "icon": "star_crystal",
+        "title": "Hela världen",
+        "text": "Upptäck alla 15 sorters platser, månen också"
+      },
+      {
+        "id": "caves_1",
+        "stat": "caves",
+        "goal": 1,
+        "stars": 1,
+        "icon": "crystal",
+        "title": "Grottforskare",
+        "text": "Utforska en grotta ute i världen"
+      },
+      {
+        "id": "caves_10",
+        "stat": "caves",
+        "goal": 10,
+        "stars": 3,
+        "icon": "gem",
+        "title": "Grottkung",
+        "text": "Utforska 10 olika grottor"
+      },
+      {
+        "id": "loot_5",
+        "stat": "loot",
+        "goal": 5,
+        "stars": 2,
+        "icon": "old_coin",
+        "title": "Skattletare",
+        "text": "Öppna 5 skattkistor ute i världen"
+      },
+      {
+        "id": "loot_25",
+        "stat": "loot",
+        "goal": 25,
+        "stars": 4,
+        "icon": "idol",
+        "title": "Skattjägare",
+        "text": "Öppna 25 skattkistor"
+      },
+      {
+        "id": "dig_5",
+        "stat": "dig",
+        "goal": 5,
+        "stars": 2,
+        "icon": "pearl",
+        "title": "Sjörövare",
+        "text": "Gräv upp 5 skatter där det är ett kryss"
+      },
+      {
+        "id": "fossil_5",
+        "stat": "fossil",
+        "goal": 5,
+        "stars": 2,
+        "icon": "fossil",
+        "title": "Fossiljägare",
+        "text": "Hitta 5 fossil"
+      },
+      {
+        "id": "moon_1",
+        "stat": "moon",
+        "goal": 1,
+        "stars": 3,
+        "icon": "moon_rock",
+        "title": "Astronaut",
+        "text": "Åk raket till månen"
+      },
+      {
+        "id": "dragon_1",
+        "stat": "dragon",
+        "goal": 1,
+        "stars": 5,
+        "icon": "dragon_egg",
+        "title": "Drakmamma",
+        "text": "Kläck ett drakägg"
+      },
+      {
+        "id": "saga_class",
+        "stat": "sagaClass",
+        "goal": 1,
+        "stars": 1,
+        "icon": "hat_vaktarhjalm",
+        "title": "Hjältens väg",
+        "text": "Välj en klass vid Kämpastenen"
+      },
+      {
+        "id": "saga_draug",
+        "stat": "sagaDraug",
+        "goal": 1,
+        "stars": 3,
+        "icon": "runsvard",
+        "title": "Draugdödare",
+        "text": "Besegra Draugkungen Hrolf"
+      },
+      {
+        "id": "saga_frost",
+        "stat": "sagaFrost",
+        "goal": 1,
+        "stars": 4,
+        "icon": "frostbett",
+        "title": "Frostbrytare",
+        "text": "Besegra Rimtursen"
+      },
+      {
+        "id": "saga_surt",
+        "stat": "sagaSurt",
+        "goal": 1,
+        "stars": 5,
+        "icon": "surtsvard",
+        "title": "Världsträdets väktare",
+        "text": "Besegra Surt"
+      },
+      {
+        "id": "saga_mobs_50",
+        "stat": "sagaMobs",
+        "goal": 50,
+        "stars": 2,
+        "icon": "draugyxa",
+        "title": "Monsterjägare",
+        "text": "Besegra 50 monster i fängelsehålorna"
+      },
+      {
+        "id": "saga_quests_6",
+        "stat": "sagaQuests",
+        "goal": 6,
+        "stars": 3,
+        "icon": "healing_potion",
+        "title": "Byns hjälte",
+        "text": "Gör alla sex uppdrag åt byborna"
+      },
+      {
+        "id": "saga_hel",
+        "stat": "sagaHel",
+        "goal": 1,
+        "stars": 4,
+        "icon": "helsvard",
+        "title": "Helfarare",
+        "text": "Besegra Hel i Helheim"
+      },
+      {
+        "id": "saga_dvarg",
+        "stat": "sagaDvarg",
+        "goal": 1,
+        "stars": 4,
+        "icon": "fafnerstand",
+        "title": "Dvärgavän",
+        "text": "Besegra Fafner i Svartalfheims gruvor"
+      },
+      {
+        "id": "saga_orm",
+        "stat": "sagaOrm",
+        "goal": 1,
+        "stars": 5,
+        "icon": "korallspjut",
+        "title": "Ormtämjare",
+        "text": "Besegra Jörmungandr i Havsormens tempel"
+      },
+      {
+        "id": "saga_alv",
+        "stat": "sagaAlv",
+        "goal": 1,
+        "stars": 5,
+        "icon": "alvklinga",
+        "title": "Ljusbärare",
+        "text": "Besegra Nattmaran i Alvernas lund"
+      },
+      {
+        "id": "saga_fenrir",
+        "stat": "sagaFenrir",
+        "goal": 1,
+        "stars": 6,
+        "icon": "fenristand",
+        "title": "Ulvbindare",
+        "text": "Besegra Fenrisulven i Fenrisklyftan"
+      },
+      {
+        "id": "saga_loke",
+        "stat": "sagaLoke",
+        "goal": 1,
+        "stars": 8,
+        "icon": "heimdallshorn",
+        "title": "Lokes besegrare",
+        "text": "Besegra Loke på Bifrost"
+      },
+      {
+        "id": "saga_act2",
+        "stat": "sagaAct2",
+        "goal": 1,
+        "stars": 10,
+        "icon": "bifrostbit",
+        "title": "Ragnaröks hjälte",
+        "text": "Gör klart hela Lokes list, sagans andra del"
+      },
+      {
+        "id": "saga_level_5",
+        "stat": "sagaLevel",
+        "goal": 5,
+        "stars": 3,
+        "icon": "amulet_vegvisir",
+        "title": "Erfaren hjälte",
+        "text": "Nå hjältenivå 5"
+      },
+      {
+        "id": "saga_level_10",
+        "stat": "sagaLevel",
+        "goal": 10,
+        "stars": 6,
+        "icon": "amulet_brisingamen",
+        "title": "Sagans hjälte",
+        "text": "Nå hjältenivå 10"
+      },
+      {
+        "id": "saga_gear_legendary",
+        "stat": "sagaLegendary",
+        "goal": 1,
+        "stars": 4,
+        "icon": "offhand_tyrshandske",
+        "title": "Legendarisk",
+        "text": "Bär något legendariskt"
+      },
+      {
+        "id": "landmarks_5",
+        "stat": "landmarks",
+        "goal": 5,
+        "stars": 2,
+        "icon": "signpost",
+        "title": "Upptäcktsresande",
+        "text": "Hitta 5 märkliga platser ute i världen"
+      },
+      {
+        "id": "landmarks_15",
+        "stat": "landmarks",
+        "goal": 15,
+        "stars": 4,
+        "icon": "gem",
+        "title": "Kartritare",
+        "text": "Hitta 15 märkliga platser ute i världen"
+      },
+      {
+        "id": "landmarks_26",
+        "stat": "landmarks",
+        "goal": 26,
+        "stars": 6,
+        "icon": "star_crystal",
+        "title": "Världens kännare",
+        "text": "Hitta alla 26 märkliga platser"
+      }
+    ],
+    "npcLines": {
+      "sigrun": {
+        "morning": [
+          "Morgonsolen lyser på runorna.",
+          "God morgon, {name}. Jag drömde om dig."
+        ],
+        "day": [
+          "Yggdrasil darrar…",
+          "Hej {name}! Har du valt din väg?",
+          "Ingen hjälte går ensam."
+        ],
+        "evening": [
+          "Nu vaknar draugarna…",
+          "God kväll, {name}. Var försiktig i mörkret."
+        ],
+        "meet": [
+          "Hej Bo. Ditt bröd doftar ända hit.",
+          "Stina! Smid ett svärd åt hjältarna.",
+          "Fru Lind, rosorna viskar i natt."
+        ]
+      },
+      "greta": {
+        "morning": [
+          "God morgon, {name}!",
+          "Vilken fin morgon!"
+        ],
+        "day": [
+          "Hej {name}!",
+          "Så flitigt du jobbar!",
+          "Har du sett mina blomlådor?"
+        ],
+        "evening": [
+          "God kväll, {name}.",
+          "Nu blir det snart mörkt."
+        ],
+        "meet": [
+          "Hej Sven! Nappar det?",
+          "Hej Elsa, var är dina föräldrar?",
+          "Vilket väder!"
+        ]
+      },
+      "sven": {
+        "morning": [
+          "Morrn! Fiskarna är pigga nu.",
+          "God morgon, {name}!"
+        ],
+        "day": [
+          "Hallå {name}!",
+          "Stå still så nappar det.",
+          "Gäddan är lurig."
+        ],
+        "evening": [
+          "Kvällen är bäst för fiske.",
+          "God kväll, {name}!"
+        ],
+        "meet": [
+          "Hej Greta! Vill du ha fisk?",
+          "Hej Elsa! Inte för nära vattnet.",
+          "Fint väder för fiske!"
+        ]
+      },
+      "bo": {
+        "morning": [
+          "God morgon! Brödet är nybakat.",
+          "Morgonstund har guld i mund!"
+        ],
+        "day": [
+          "Hej {name}! Vill du ha en bulle?",
+          "Vete, vete, vete…"
+        ],
+        "evening": [
+          "Nu stänger bageriet.",
+          "God kväll, {name}!"
+        ],
+        "meet": [
+          "Hej Stina! Hammaren går varm?",
+          "Fru Lind, vilka blommor!"
+        ]
+      },
+      "stina": {
+        "morning": [
+          "Smedjan är varm redan!",
+          "God morgon, {name}!"
+        ],
+        "day": [
+          "Hej {name}! Har du sten med dig?",
+          "Klang, klang!"
+        ],
+        "evening": [
+          "Jag släcker ässjan nu.",
+          "God kväll!"
+        ],
+        "meet": [
+          "Hej Bo! Bröd till lunch?",
+          "Fru Lind, honung till kaffet?"
+        ]
+      },
+      "pino": {
+        "morning": [
+          "Buongiorno! Ugnen är varm.",
+          "God morgon, {name}! Pizza till frukost?"
+        ],
+        "day": [
+          "Hej {name}! En pizza med extra ost?",
+          "Mamma mia, vilken dag!",
+          "Pizzapower gör dig snabb som vinden!"
+        ],
+        "evening": [
+          "Sista pizzan för idag!",
+          "Buonanotte, {name}!"
+        ],
+        "meet": [
+          "Bo! Har du vete till min deg?",
+          "Stina, ugnen behöver ses över!",
+          "Fru Lind, basilika till pizzan?"
+        ]
+      },
+      "lind": {
+        "morning": [
+          "God morgon! Blommorna har vaknat.",
+          "Vilken fin dag!"
+        ],
+        "day": [
+          "Hej {name}! Luktar du på rosorna?",
+          "Bina surrar så fint idag."
+        ],
+        "evening": [
+          "Blommorna somnar nu.",
+          "God kväll, {name}."
+        ],
+        "meet": [
+          "Hej Bo! Fint väder!",
+          "Stina, du är alltid så flitig."
+        ]
+      },
+      "elsa": {
+        "morning": [
+          "God morgon! Jag är redan vaken!",
+          "Titta, en fjäril!"
+        ],
+        "day": [
+          "Hej {name}! Kom och lek!",
+          "Ska vi plocka blommor?",
+          "Jag har hittat en fin sten."
+        ],
+        "evening": [
+          "Jag måste hem snart…",
+          "Natti natti, {name}!"
+        ],
+        "meet": [
+          "Hej tant Greta!",
+          "Hej Sven! Får jag se fisken?",
+          "Jag vann!"
+        ]
+      }
+    },
+    "landmarks": [
+      {
+        "biome": "skog",
+        "items": [
+          {
+            "id": "stencirkel",
+            "name": "Stencirkeln",
+            "lore": "Uråldriga stenar i en ring kring ett platt altare. Förr möttes folket här på midsommarnatten."
+          },
+          {
+            "id": "jatteek",
+            "name": "Jätteeken",
+            "lore": "En ek så gammal att den har blivit ihålig. Någon har hängt lyktor därinne."
+          }
+        ]
+      },
+      {
+        "biome": "ang",
+        "items": [
+          {
+            "id": "vardkase",
+            "name": "Vårdkasen",
+            "lore": "Ett stentorn med en eldskål i toppen. Förr tändes den när fiender var på väg."
+          },
+          {
+            "id": "blomsterlabyrint",
+            "name": "Blomsterlabyrinten",
+            "lore": "En låg häck av blommor som slingrar sig i en irrgång. Hittar du vägen in till mitten?"
+          }
+        ]
+      },
+      {
+        "biome": "is",
+        "items": [
+          {
+            "id": "frusetskepp",
+            "name": "Det frusna skeppet",
+            "lore": "Ett vikingaskepp som frös fast i isen för länge sedan. Drakhuvudet pekar fortfarande mot himlen."
+          },
+          {
+            "id": "jatteskelett",
+            "name": "Frostjättens ben",
+            "lore": "Revben och en skalle stor som ett hus sticker upp ur snön. Vem var han?"
+          }
+        ]
+      },
+      {
+        "biome": "berg",
+        "items": [
+          {
+            "id": "dvargport",
+            "name": "Dvärgporten",
+            "lore": "En stendörr full av dvärgarnas runor. Den är låst, men lyktorna bredvid lyser än."
+          },
+          {
+            "id": "ornnaste",
+            "name": "Örnboet",
+            "lore": "Högst upp på klippan har en jättelik örn byggt sitt bo. Den håller ett öga på dig."
+          }
+        ]
+      },
+      {
+        "biome": "strand",
+        "items": [
+          {
+            "id": "klocktorn",
+            "name": "Det sjunkna klocktornet",
+            "lore": "Bara toppen sticker upp ur sanden. När det blåser klingar den gröna klockan."
+          },
+          {
+            "id": "valskelett",
+            "name": "Valskelettet",
+            "lore": "Skelettet av en val, så stort att du kan gå under revbenen."
+          }
+        ]
+      },
+      {
+        "biome": "oken",
+        "items": [
+          {
+            "id": "oas",
+            "name": "Oasen",
+            "lore": "Ett vattenhål med två palmer och ett tält. En trött vandrare vilar här ibland."
+          },
+          {
+            "id": "sandjatte",
+            "name": "Sandjätten",
+            "lore": "Ett jättelikt stenhuvud som vinden har slipat i tusen år."
+          }
+        ]
+      },
+      {
+        "biome": "trask",
+        "items": [
+          {
+            "id": "mossaltare",
+            "name": "Mossaltaret",
+            "lore": "Ett gammalt altare mitt i mossen. Tre irrbloss dansar runt det varje natt."
+          },
+          {
+            "id": "gamlabron",
+            "name": "Den gamla bron",
+            "lore": "En bro av gamla plankor som tar slut mitt i mossen. Vart ledde den en gång?"
+          }
+        ]
+      },
+      {
+        "biome": "djungel",
+        "items": [
+          {
+            "id": "apkungenstron",
+            "name": "Apkungens tron",
+            "lore": "En tron av sten, full av lianer. En apa sitter på den som om den vore kung."
+          },
+          {
+            "id": "vattenfall",
+            "name": "Vattenfallet",
+            "lore": "Ett litet vattenfall som porlar ner i en klar damm. Vattnet är alldeles kallt."
+          }
+        ]
+      },
+      {
+        "biome": "vulkan",
+        "items": [
+          {
+            "id": "eldbrunn",
+            "name": "Eldbrunnen",
+            "lore": "En krater som puffar eld ur jorden. Varm och skön att stå bredvid!"
+          },
+          {
+            "id": "forstenadjatte",
+            "name": "Den förstenade jätten",
+            "lore": "En jätte som blev till sten när solen gick upp. Han sitter kvar på knä."
+          }
+        ]
+      },
+      {
+        "biome": "svamp",
+        "items": [
+          {
+            "id": "svampring",
+            "name": "Svampringen",
+            "lore": "En ring av jättesvampar som lyser svagt i mörkret. Här dansar älvorna."
+          },
+          {
+            "id": "lykttrad",
+            "name": "Lyktträdet",
+            "lore": "Ett träd fullt av lysande lyktor. Ingen vet vem som tänder dem varje kväll."
+          }
+        ]
+      },
+      {
+        "biome": "dino",
+        "items": [
+          {
+            "id": "dinobo",
+            "name": "Dinoboet",
+            "lore": "Ett bo med jättelika ägg. Ett av dem har spruckit, men ungen syns inte till!"
+          },
+          {
+            "id": "tjargrop",
+            "name": "Tjärgropen",
+            "lore": "En bubblande grop av svart tjära. Gamla ben sticker upp ur den."
+          }
+        ]
+      },
+      {
+        "biome": "godis",
+        "items": [
+          {
+            "id": "glasstorn",
+            "name": "Glasstornet",
+            "lore": "Ett torn byggt av en jättelik glasstrut. Det smälter aldrig, hur varmt det än blir."
+          },
+          {
+            "id": "chokladfontan",
+            "name": "Chokladfontänen",
+            "lore": "En fontän där varm choklad porlar dag och natt."
+          }
+        ]
+      },
+      {
+        "biome": "rymdbas",
+        "items": [
+          {
+            "id": "satellit",
+            "name": "Satelliten",
+            "lore": "En satellit som har störtat från rymden. Lampan på den blinkar fortfarande."
+          }
+        ]
+      },
+      {
+        "biome": "mane",
+        "items": [
+          {
+            "id": "manporten",
+            "name": "Månporten",
+            "lore": "En uråldrig båge av månsten med ett svagt stjärnsken. Vem byggde den?"
+          }
+        ]
+      }
+    ],
+    "help": [
+      {
+        "id": "controls",
+        "emoji": "🎮",
+        "title": "Så styr du",
+        "steps": [
+          {
+            "icon": "emoji:⌨️",
+            "text": "Gå med piltangenterna eller W A S D."
+          },
+          {
+            "icon": "emoji:⎵",
+            "text": "Tryck E eller mellanslag för att använda det du håller. Du kan också klicka på en ruta bredvid dig."
+          },
+          {
+            "icon": "emoji:🔢",
+            "text": "Siffrorna 1–8 väljer sak i raden längst ner. Q eller I öppnar ryggsäcken, F visar känslor, T är chatt, X och V säger åt djuren att stanna och komma."
+          },
+          {
+            "icon": "emoji:🏃",
+            "text": "Håll in Skift för att springa. Med handkontroll: vänster avtryckare, eller B utanför strider."
+          },
+          {
+            "icon": "emoji:📖",
+            "text": "B öppnar gårdsboken, K sagans dagbok med upptäckterna, J dagens önskningar, G utrustningen, P familjen och H eller ? den här hjälpen. Esc öppnar pausmenyn."
+          },
+          {
+            "icon": "emoji:🎮",
+            "text": "Med handkontroll: vänster spak går, A använder, LB/RB byter sak, Y öppnar ryggsäcken. Start öppnar pausmenyn, och där finns gårdsboken, dagboken, familjen och hjälpen. I menyerna flyttar du med spaken, A väljer och B stänger."
+          },
+          {
+            "icon": "hoe",
+            "text": "Raden längst ner visar vad du kan hålla. Tryck på en sak för att hålla den."
+          },
+          {
+            "icon": "emoji:🎒",
+            "text": "Ryggsäcken har fler platser. Tryck på en sak och sedan på en ruta för att flytta den."
+          }
+        ]
+      },
+      {
+        "id": "gamepad",
+        "emoji": "🕹️",
+        "title": "Handkontroll",
+        "intro": "Xbox-, PS5- och Switch-kontroller fungerar. Be en vuxen koppla ihop den första gången.",
+        "steps": [
+          {
+            "icon": "emoji:🟢",
+            "text": "Xbox: håll in Xbox-knappen så den tänds. Håll sedan in den lilla parkopplingsknappen ovanpå (bredvid sladdhålet) tills Xbox-knappen blinkar snabbt."
+          },
+          {
+            "icon": "emoji:🔵",
+            "text": "PS5: håll in Create-knappen (till vänster om touchplattan) och PS-knappen samtidigt tills ljuset blinkar blått snabbt."
+          },
+          {
+            "icon": "emoji:🔴",
+            "text": "Switch Pro Controller: håll in den lilla synkknappen ovanpå (bredvid sladdhålet) tills lamporna springer fram och tillbaka. Joy-Con fungerar en och en, så Pro Controller är bäst."
+          },
+          {
+            "icon": "emoji:💻",
+            "text": "Mac: öppna Systeminställningar → Bluetooth och klicka på Anslut bredvid kontrollen. En PS5-kontroll går också att koppla in med sladd, men Xbox-kontroller fungerar bara med Bluetooth på Mac."
+          },
+          {
+            "icon": "emoji:🖥️",
+            "text": "PC: öppna Inställningar → Bluetooth och enheter → Lägg till enhet → Bluetooth och välj kontrollen. Det enklaste är ofta att bara koppla in den med en USB-sladd."
+          },
+          {
+            "icon": "emoji:👆",
+            "text": "Starta spelet och tryck på en knapp på kontrollen. Då märker spelet den."
+          },
+          {
+            "icon": "emoji:⚙️",
+            "text": "Start öppnar pausmenyn. Där väljer du Inställningar, gårdsboken, dagboken, familjen och hjälpen med spaken och A."
+          }
+        ]
+      },
+      {
+        "id": "farming",
+        "emoji": "🥕",
+        "title": "Odla",
+        "intro": "Allt växer på en natt om det har fått vatten.",
+        "steps": [
+          {
+            "icon": "hoe",
+            "text": "Håll hackan och använd den på gräs. Då blir det jord."
+          },
+          {
+            "icon": "carrot_seed",
+            "text": "Håll frön och använd dem på jorden."
+          },
+          {
+            "icon": "can",
+            "text": "Håll vattenkannan och vattna. Jorden blir mörk när den är blöt."
+          },
+          {
+            "icon": "emoji:🌙",
+            "text": "Vänta till nästa dag. Vattna igen varje dag tills plantan är stor."
+          },
+          {
+            "icon": "carrot",
+            "text": "När du ser grönsaken: använd vad som helst på plantan för att skörda. Du får nya frön på köpet!"
+          },
+          {
+            "icon": "emoji:💧",
+            "text": "Tom kanna? Använd den på dammen eller en brunn så fylls den."
+          },
+          {
+            "icon": "scythe",
+            "text": "Lien gör jord till gräs igen om du ångrar dig."
+          },
+          {
+            "icon": "mailbox",
+            "text": "Fler frön finns i gårdsbutiken under Frön."
+          }
+        ]
+      },
+      {
+        "id": "gather",
+        "emoji": "🪓",
+        "title": "Samla trä, sten och fiber",
+        "intro": "Allt växer tillbaka efter några dagar, så hugg på!",
+        "steps": [
+          {
+            "icon": "axe",
+            "text": "Yxan på ett träd ger trä. Stubben som blir kvar kan också huggas."
+          },
+          {
+            "icon": "pick",
+            "text": "Spettet på en sten ger sten."
+          },
+          {
+            "icon": "scythe",
+            "text": "Lien på gräs och blommor ger fiber och ibland hö."
+          },
+          {
+            "icon": "hammer",
+            "text": "Hammaren tar bort saker du har byggt, och du får tillbaka dem."
+          },
+          {
+            "icon": "emoji:✨",
+            "text": "Allt du plockar hamnar i ryggsäcken. Är den full ligger det kvar på marken."
+          }
+        ]
+      },
+      {
+        "id": "craft",
+        "emoji": "🔨",
+        "title": "Snickra och bygga",
+        "steps": [
+          {
+            "icon": "workbench",
+            "text": "Gå till arbetsbänken vid huset och använd den."
+          },
+          {
+            "icon": "fence",
+            "text": "Välj vad du vill snickra. Gröna knappar betyder att du har det som behövs. Till exempel: staket kostar 2 trä."
+          },
+          {
+            "icon": "gate",
+            "text": "Staket sätts en ruta i taget på rutan framför dig och hänger ihop av sig själva, även runt hörn. Glöm inte en grind!"
+          },
+          {
+            "icon": "emoji:🎒",
+            "text": "Det färdiga hamnar i ryggsäcken. Håll det och använd det på en ledig ruta för att bygga."
+          },
+          {
+            "icon": "path_stone",
+            "text": "Stigar och golv läggs direkt på marken. Väggar, dörrar och staket står i vägen tills du tar bort dem med hammaren."
+          },
+          {
+            "icon": "torch",
+            "text": "Facklor lyser upp på kvällen."
+          },
+          {
+            "icon": "chest",
+            "text": "Kistor kan du lägga saker i. Alla på gården kan använda dem."
+          }
+        ]
+      },
+      {
+        "id": "coop",
+        "emoji": "🐔",
+        "title": "Bygga hönshus och skaffa höns",
+        "intro": "Varje djur behöver sitt eget hus först.",
+        "steps": [
+          {
+            "icon": "axe",
+            "text": "Hugg träd och knacka sten tills du har 20 trä + 4 sten."
+          },
+          {
+            "icon": "workbench",
+            "text": "Gå till arbetsbänken och snickra ett Hönshus."
+          },
+          {
+            "icon": "coop",
+            "text": "Håll hönshuset och använd det på en ledig gräsplätt. Det behöver 2×2 rutor."
+          },
+          {
+            "icon": "fence",
+            "text": "Bygg gärna staket runt så hönan stannar hemma. En grind kan du gå igenom, men inte hönan."
+          },
+          {
+            "icon": "mailbox",
+            "text": "Gå till gårdsbutiken. Under Djur köper du en höna för 150 kr. Du börjar med 150 kr – sälj grönsaker i säljlådan om det inte räcker."
+          },
+          {
+            "icon": "emoji:🌅",
+            "text": "Nästa morgon har hönan flyttat in!"
+          },
+          {
+            "icon": "emoji:🐣",
+            "text": "Klappa hönan första gången så får du ge den ett namn."
+          }
+        ],
+        "houses": true
+      },
+      {
+        "id": "animals",
+        "emoji": "❤️",
+        "title": "Sköta om djuren",
+        "intro": "Glada djur med hjärtan ger ägg, ull och mjölk.",
+        "steps": [
+          {
+            "icon": "hay",
+            "text": "Håll hö och använd det på djuret för att mata det. Hö köper du under Foder, eller snickrar av fiber."
+          },
+          {
+            "icon": "emoji:🤚",
+            "text": "Använd djuret med tom hand för att klappa det."
+          },
+          {
+            "icon": "brush",
+            "text": "Borsta djuret med borsten."
+          },
+          {
+            "icon": "emoji:❤️",
+            "text": "Mat, klapp och borstning varje dag ger hjärtan. Du ser hjärtan ovanför djuret."
+          },
+          {
+            "icon": "egg",
+            "text": "När det glittrar ✨ över djuret: använd det för att hämta ägg, ull eller mjölk."
+          },
+          {
+            "icon": "trough",
+            "text": "Snickra en matho och lägg hö i den, så äter djuren själva på natten."
+          },
+          {
+            "icon": "emoji:🐣",
+            "text": "Ungar växer upp på tre dagar."
+          },
+          {
+            "icon": "animal_dog",
+            "text": "En hund eller katt från gårdsbutiken behöver inget hus. Den följer med dig överallt!"
+          },
+          {
+            "icon": "stall",
+            "text": "Snickra ett stall vid arbetsbänken, så kan du köpa en häst i gårdsbutiken under Djur."
+          },
+          {
+            "icon": "pigsty",
+            "text": "Snickra en svinstia (24 trä + 8 sten) och köp en gris under Djur. Glada grisar bökar fram tryffel om morgnarna – sälj den dyrt eller koka tryffelpasta på spisen!"
+          },
+          {
+            "icon": "animal_horse",
+            "text": "När hästen vuxit upp: klappa den och ge den ett namn, använd den sedan igen för att hoppa upp. På hästryggen springer du nästan dubbelt så fort! Använd igen för att hoppa av."
+          },
+          {
+            "icon": "vehicle_car_red",
+            "text": "Under Kärror & hästar i gårdsbutiken finns hästkärror och ridhästar. Den nya kärran står parkerad bredvid dig direkt. Använd kärran för att åka – på väg går det extra fort, på åker och sand långsammare. Använd igen för att stiga av. Bara du kan åka med din kärra."
+          },
+          {
+            "icon": "lasso",
+            "text": "Snickra en lasso av fiber och trä. Håll lasson, ställ dig vänd mot ett vilt djur (högst tre rutor bort) och använd – om du lyckas blir djuret ditt husdjur och följer med dig hem! Missar du springer det iväg en stund."
+          }
+        ]
+      },
+      {
+        "id": "house",
+        "emoji": "🏠",
+        "title": "Huset",
+        "intro": "Gå in genom dörren på huset.",
+        "steps": [
+          {
+            "icon": "emoji:🚪",
+            "text": "Gå rakt in i dörren på huset så kommer du in. Gå ut genom dörren längst ner."
+          },
+          {
+            "icon": "chair",
+            "text": "Möbler snickrar du vid arbetsbänken eller köper under Möbler i gårdsbutiken."
+          },
+          {
+            "icon": "bed",
+            "text": "Håll möbeln och använd den på golvet där du vill ha den. Hammaren tar bort den igen."
+          },
+          {
+            "icon": "bed",
+            "text": "Sov: tryck på en säng så kryper du ner. När alla som spelar sover blir det morgon direkt. Tryck på vad som helst för att vakna."
+          },
+          {
+            "icon": "lamp",
+            "text": "Lampor och spisen lyser mysigt på kvällen."
+          },
+          {
+            "icon": "pancakes",
+            "text": "Använd spisen för att laga mat av det du odlat. Mat säljer för mycket mer än råvarorna!"
+          },
+          {
+            "icon": "emoji:🖼️",
+            "text": "Tavlor, mattor och klockor kan du gå på. Du kan även möblera ute på gården."
+          },
+          {
+            "icon": "paper",
+            "text": "Rita en tavla: snickra papper av trä (eller köp i gårdsbutiken), håll pappret och tryck på marken. Rita, tryck Klar – och häng upp tavlan på väggen! Tryck på tavlan för att ta ner den igen."
+          },
+          {
+            "icon": "wall_wood",
+            "text": "Bygg eget hus: snickra trävägg (2 trä), fönster och dörr vid arbetsbänken. Sätt väggarna en ruta i taget – de hänger ihop av sig själva, även runt hörn."
+          },
+          {
+            "icon": "door",
+            "text": "Dörren kan du gå igenom, men inte djuren. Den öppnar sig när du kommer nära."
+          },
+          {
+            "icon": "floor_wood",
+            "text": "När väggarna går hela vägen runt (med en dörr) får huset golv och tak av sig självt. Gräs och blommor inuti blir till fiber åt dig. Taket försvinner när du går in."
+          },
+          {
+            "icon": "bed",
+            "text": "Ställ in säng, bord och lampa. Hammaren tar bort väggar och golv igen."
+          },
+          {
+            "icon": "paint_red",
+            "text": "Måla: snickra färg (röd, gul, blå, grön, vit eller rosa) vid arbetsbänken, eller köp under Möbler. Använd den på huset eller en vägg – hela huset byter färg på en gång!"
+          }
+        ]
+      },
+      {
+        "id": "villagers",
+        "emoji": "🧓",
+        "title": "Byborna",
+        "intro": "Tant Greta, Fiskar-Sven och Lilla Elsa har nya önskningar varje dag.",
+        "steps": [
+          {
+            "icon": "emoji:💬",
+            "text": "Greta står vid stigen öster om huset, Sven vid dammen och Elsa leker vid skogskanten. Använd dem för att prata."
+          },
+          {
+            "icon": "emoji:❗",
+            "text": "Ett ❗ över en bybo betyder att du har något de vill ha. Ett ? betyder att de har en önskning."
+          },
+          {
+            "icon": "carrot",
+            "text": "De berättar vad de vill ha. Samla sakerna och tryck Lämna."
+          },
+          {
+            "icon": "emoji:⭐",
+            "text": "Du får kr och stjärnor. Stjärnorna syns uppe i hörnet."
+          },
+          {
+            "icon": "emoji:🚶",
+            "text": "Byborna går runt på gården under dagen. Greta hälsar på Sven vid dammen mitt på dagen."
+          },
+          {
+            "icon": "emoji:📖",
+            "text": "I Gårdsboken (knappen 📖) ser du dina bragder: skörda, hugga, fiska, laga mat… Varje bragd ger stjärnor."
+          },
+          {
+            "icon": "hat_crown",
+            "text": "Stjärnorna handlar du för i gårdsbutiken under Stjärnor: partyhatt, guldtröja och en krona!"
+          },
+          {
+            "icon": "rod",
+            "text": "Hjälp Sven med 5 trä så får du ett fiskespö!"
+          }
+        ]
+      },
+      {
+        "id": "fishing",
+        "emoji": "🎣",
+        "title": "Fiska",
+        "steps": [
+          {
+            "icon": "rod",
+            "text": "Håll fiskespöet och använd det på vattnet i dammen."
+          },
+          {
+            "icon": "emoji:🎣",
+            "text": "Stå stilla och vänta. Om du går iväg försvinner fisken."
+          },
+          {
+            "icon": "emoji:❗",
+            "text": "När det står ❗ över dig: tryck snabbt igen för att dra upp fisken!"
+          },
+          {
+            "icon": "fish_perch",
+            "text": "Sälj fisken i säljlådan eller ge den till Sven. Guldfisken är sällsynt."
+          }
+        ]
+      },
+      {
+        "id": "world",
+        "emoji": "🗺️",
+        "title": "Världen utanför",
+        "intro": "Gården är bara början. Gå ut genom öppningarna i skogskanten!",
+        "steps": [
+          {
+            "icon": "emoji:🧭",
+            "text": "Mitt på varje kant av gården finns en stig ut. Gå på den så kommer du till nästa område."
+          },
+          {
+            "icon": "emoji:❄️",
+            "text": "Norrut blir det kallare (isvidder och isgrottor), söderut varmare (öken, djungel, vulkaner och Dinodalen). I öster finns höga berg med kristallgrottor, i väster stranden och havet."
+          },
+          {
+            "icon": "emoji:🐸",
+            "text": "Runt gården finns Träsket med spänger och irrbloss, Svampskogen med jättesvampar, Dinodalen med fossil och mycket mer. Långt, långt borta ligger Godislandet…"
+          },
+          {
+            "icon": "mushroom",
+            "text": "Varje område har egna saker: blåbär i skogen, hjortron i träsket, bananer i djungeln, obsidian vid vulkanen, snäckor på stranden, ädelstenar i bergen."
+          },
+          {
+            "icon": "emoji:🦊",
+            "text": "Varje område har sina egna djur: rävar, vildsvin och älgar i skogen, rådjur och harar på ängen, pingviner på isen, krabbor på stranden, getter i bergen och ödlor i öknen. Klappa dem!"
+          },
+          {
+            "icon": "emoji:🐻",
+            "text": "Akta dig för björnar i skogen och vargar och lodjur i bergen! De jagar dig en liten bit och bits (ett hjärta). Hjärtan växer tillbaka med tiden. Svärd, båge och sköld fungerar – eller fånga dem med lasso så blir de snälla kompisar."
+          },
+          {
+            "icon": "emoji:🗺️",
+            "text": "Kartknappen visar alla områden du har upptäckt. Tryck på ett område för att åka dit direkt, eller på Hem."
+          },
+          {
+            "icon": "house_small",
+            "text": "Öster om gården ligger Köpingen med Bagar-Bo, Smed-Stina och Fru Lind. På marknaden vid torget kan du köpa och sälja precis som hemma."
+          },
+          {
+            "icon": "vehicle_car_red",
+            "text": "Köpingen har kullerstensgator med hästkärror, ridhästar och Diligensen, och Gruvtåget går längs spåret i norr. Gå över gatan vid övergångsstället – alla hästar och kärror stannar alltid för dig (och gnäggar snällt om du står i vägen)."
+          },
+          {
+            "icon": "pizza",
+            "text": "Pizzeria Pino ligger vid torget i Köpingen. Köp en pizza eller saft, håll den i handen och tryck på marken för att äta: hjärtana fylls och du får pizzapower – du springer snabbare en stund!"
+          },
+          {
+            "icon": "emoji:🏊",
+            "text": "Söder om torget ligger Badstugan. Gå in genom dörren och hoppa i poolen – i vattnet simmar du lite långsammare. Dörren längst ner tar dig ut igen."
+          },
+          {
+            "icon": "vehicle_motorcycle",
+            "text": "Köp en ridhäst eller hästkärra under Kärror & hästar och åk mellan områdena – hästen eller kärran följer med när du åker över kanten. Gnägg med 🐴 i känslomenyn!"
+          },
+          {
+            "icon": "vehicle_motorcycle",
+            "text": "Åk med Diligensen eller Gruvtåget: vid den östra utgången hemma står en hållplats, och varje köping har hållplats och Gruvtågsstation. Diligensen (5 kr) kör till ställen du redan besökt. Gruvtåget (15 kr), dvärgarnas tåg, går dessutom till en okänd köping långt borta!"
+          },
+          {
+            "icon": "emoji:🏃",
+            "text": "Världen är oändlig. Hur långt vågar du gå?"
+          }
+        ]
+      },
+      {
+        "id": "adventure",
+        "emoji": "💎",
+        "title": "Äventyr: grottor, skatter och rymden",
+        "intro": "Ute i världen finns grottor, gömda skatter och en raket till månen. Ju längre du går, desto mer hittar du!",
+        "steps": [
+          {
+            "icon": "emoji:🕳️",
+            "text": "Leta efter grottöppningar i bergväggar och kullar (och tempel, pyramider och ett pepparkakshus!). Gå fram och tryck för att gå in. Grottorna är mörka men ofarliga."
+          },
+          {
+            "icon": "loot_chest",
+            "text": "Längst in i varje grotta står en skattkista. Alla får öppna den en gång i veckan – kistan lyser när det finns något i den för dig."
+          },
+          {
+            "icon": "pick",
+            "text": "Ta med hackan! Med den bryter du kristaller, guld och ädelstenar, och ibland rasade stenar som döljer ett hemligt rum."
+          },
+          {
+            "icon": "hoe",
+            "text": "Ser du ett rött kryss i sanden? Gräv där med hackan – där ligger en skatt!"
+          },
+          {
+            "icon": "emoji:🧚",
+            "text": "I Svampskogen finns älvringar. Dansa i dem (tryck) så får du älvdamm, en gång om dagen."
+          },
+          {
+            "icon": "emoji:🚀",
+            "text": "Söder om gården ligger Rymdbasen med en raket. Gå fram till raketen och tryck – den flyger till månen! På månen finns månost, stjärnkristaller, rymdvarelser och ett kraschat ufo."
+          },
+          {
+            "icon": "dragon_egg",
+            "text": "I Lavagrottorna kan du ha tur och hitta ett drakägg. Lägg ut det, och nästa morgon har du en liten drake som följer dig!"
+          },
+          {
+            "icon": "crystal_lamp",
+            "text": "Det du hittar kan bli fina saker på arbetsbänken: kristallampa, svamplampa och ett dinosaurieskelett av fem fossil."
+          },
+          {
+            "icon": "emoji:⭐",
+            "text": "Varje ny sorts plats du upptäcker ger en stjärna. Kan du hitta alla 15?"
+          }
+        ]
+      },
+      {
+        "id": "cave",
+        "emoji": "⚔️",
+        "title": "Grottan (frivilligt!)",
+        "intro": "Bland stenarna i öster finns en grotta med troll och en skatt. Ingen tvingar dig in.",
+        "steps": [
+          {
+            "icon": "sword",
+            "text": "Snickra ett svärd, en sköld och en pilbåge vid arbetsbänken."
+          },
+          {
+            "icon": "cave",
+            "text": "Gå in genom grottöppningen. Grottan ser olika ut varje gång."
+          },
+          {
+            "icon": "emoji:❤️",
+            "text": "Du har fem hjärtan. Blir de slut bärs du ut till öppningen och mår bra igen. Du tappar aldrig något."
+          },
+          {
+            "icon": "sword",
+            "text": "Håll svärdet och använd det på ett troll bredvid dig. Pilbågen skjuter rakt fram, flera rutor."
+          },
+          {
+            "icon": "shield",
+            "text": "Håll skölden så kan trollen inte skada dig, men då kan du inte slå."
+          },
+          {
+            "icon": "bazooka",
+            "text": "Bazookan skjuter raketer som smäller stort och skadar alla troll runt omkring. Snickra bazookan och raketer vid arbetsbänken. Hemma på gården spränger den stenar och stubbar, men aldrig hus, djur eller växter."
+          },
+          {
+            "icon": "heartberry",
+            "text": "Hjärtbär från slemklumparna ger ett hjärta tillbaka."
+          },
+          {
+            "icon": "treasure",
+            "text": "Längst in väntar Stora Trollet. Besegra det så dyker skattkistan upp: guld, stjärnor och ibland något sällsynt!"
+          },
+          {
+            "icon": "emoji:👫",
+            "text": "Gå in tillsammans så hjälps ni åt."
+          }
+        ]
+      },
+      {
+        "id": "saga",
+        "emoji": "⚔️",
+        "title": "Sagan om Världsträdet",
+        "intro": "Tre onda väsen har vaknat och Världsträdet är i fara. Völvan Sigrun på torget i Köpingen berättar sagan.",
+        "steps": [
+          {
+            "icon": "saga_stone",
+            "text": "Välj din väg vid Kämpastenen bredvid Völvan: Väktare (tank), Helare, Krigare eller Magiker. Du får klassens kläder, och kan byta när du vill."
+          },
+          {
+            "icon": "emoji:⚔️",
+            "text": "De tre första fängelsehålorna klaras i ordning: Draugkryptan i skogen nordväst om gården, Frostjättens borg två kartor norr om gården och Surts smedja i vulkanen sydost om gården. Sedan fortsätter sagan under Sagan II: Lokes list."
+          },
+          {
+            "icon": "emoji:🔢",
+            "text": "Inne i en fängelsehåla är knapparna 1–4 dina besvärjelser och 5 en läkedryck. Klicka på ett monster för att sikta på det."
+          },
+          {
+            "icon": "emoji:🎮",
+            "text": "Med handkontroll i en fängelsehåla: X, Y, B och RB är besvär 1–4, LB är dryck och d-pad höger byter mål. Start öppnar pausmenyn."
+          },
+          {
+            "icon": "emoji:🛡️",
+            "text": "Väktaren håller monstren borta från de andra, helaren läker, och krigaren och magikern gör skada. Det går att spela ensam, men det är roligare tillsammans!"
+          },
+          {
+            "icon": "emoji:🔴",
+            "text": "Bossarnas stora attacker syns på marken innan de träffar. Spring ut ur det röda! Vissa kan avbrytas med Sköldslag, Stormsteg eller Isspjut."
+          },
+          {
+            "icon": "emoji:🪨",
+            "text": "Vilostenar läker er, och där vaknar ni om ni faller. En helare kan också väcka den som har fallit."
+          },
+          {
+            "icon": "emoji:✨",
+            "text": "Hoppa till någon i familjen från familjelistan, så hamnar du bredvid dem, även inne i en fängelsehåla."
+          },
+          {
+            "icon": "runsvard",
+            "text": "Varje boss lämnar en kista med egen skatt åt alla: lysande vapen, nordiska kläder, och med lite tur Odens korpar, Fenrisvalpen, Sleipner eller Gullinbursti."
+          }
+        ]
+      },
+      {
+        "id": "saga2",
+        "emoji": "🌈",
+        "title": "Sagan II: Lokes list",
+        "intro": "Loke den listige släppte loss de tre onda väsendena, och nu vandrar hans tjänare runt i hela Midgård. Völvan Sigrun berättar vidare, kapitel för kapitel.",
+        "steps": [
+          {
+            "icon": "emoji:🧑‍🌾",
+            "text": "Hjälteknappen byter dig mellan bonde och hjälte. Tryck på den (den visar 🧑‍🌾), så bär du din klass kläder och vapen och kan slåss ute i världen. Tryck på den igen (nu visar den din klass) så är du bonde igen. Du måste ha valt klass vid Kämpastenen först."
+          },
+          {
+            "icon": "emoji:🔢",
+            "text": "Som hjälte ute i världen är 1–4 dina besvärjelser och 5 en läkedryck. Tab eller 🎯 byter monster. Besvärjelserna fungerar på Lokes tjänare, och de hjälper dina vänner. På gården och inomhus används de inte, och som hjälte slår du inte med bondens verktyg."
+          },
+          {
+            "icon": "emoji:👻",
+            "text": "Lokes tjänare går omkring ute i världen, olika för varje sorts plats: vandrardraugar i skogen, mosspökar i träsket, gruvtroll i bergen, sjödraugar på stranden, skuggalver i svampskogen, isvargar på isen och eldimpar vid vulkanen. De jagar dig som vilda djur, men bara hjärtan går åt, inget annat. När de blir besegrade blir de till rök."
+          },
+          {
+            "icon": "emoji:📖",
+            "text": "Varje kapitel av sagan har en liten uppgift ute i världen, till exempel \"jaga bort sex gruvtroll\". Sedan väntar en fängelsehåla. Följ med i dagboken (J) så ser du vad som ska göras."
+          },
+          {
+            "icon": "emoji:⚔️",
+            "text": "Tryck på ⚔️ eller G för utrustningsfönstret. Dina vapen, skölden och amuletten ligger i ryggsäcken: tryck på en sak för att ta på den. Det finns tre platser: vapen, sköld och amulett. Står det \"Passar\" på en sak är den extra bra för just din klass. Det gör ingenting om du tar på något som inte passar."
+          },
+          {
+            "icon": "amulet_vegvisir",
+            "text": "Sakerna har färger efter hur sällsynta de är: vitt är vanligt, grönt är ovanligt, blått är sällsynt, lila är episkt och orange är legendariskt. Ju finare sak, desto mer kraft, hälsa eller skydd ger den."
+          },
+          {
+            "icon": "offhand_runbok",
+            "text": "Du får också erfarenhet av monster, uppdrag och kapitel. Varje ny nivå ger lite mer kraft och hälsa, och ett litet jubel på skärmen. Läs mer under ⭐ Hjältenivåer."
+          },
+          {
+            "icon": "emoji:💀",
+            "text": "Helheim i träsket väster om gården: spöken och helhundar, och Hel själv. Hon drar er in mot sig, så spring ut igen!"
+          },
+          {
+            "icon": "emoji:⛏️",
+            "text": "Svartalfheims gruvor i bergen öster om byn: gruvtroll och guldbaggar. Tryck på alla tre guldplattorna så öppnas dörren till draken Fafner. Han kan somna på sin guldhög och läka sig, så avbryt honom!"
+          },
+          {
+            "icon": "emoji:🌊",
+            "text": "Havsormens tempel på stranden två kartor väster om gården: kraken Bläckis och till sist Jörmungandr, den stora Midgårdsormen."
+          },
+          {
+            "icon": "emoji:🍄",
+            "text": "Alvernas lund i svampskogen nordost om gården: spindlar och skuggalver. Ett spindelnät kan fånga en kompis, så slå sönder det! Tänd alla tre runplattorna bland svamparna, så kommer ni vidare till Nattmaran."
+          },
+          {
+            "icon": "emoji:🐺",
+            "text": "Fenrisklyftan på isen två kartor norr om gården: vargar och troll, och sist Fenrisulven själv."
+          },
+          {
+            "icon": "emoji:🌈",
+            "text": "Bifrost vid rymdbasen söder om gården: Loke låtsas vara alla ni har besegrat. Det är bara lögner, och ni är riktiga hjältar!"
+          },
+          {
+            "icon": "emoji:🔴",
+            "text": "När en boss sveper en röd rand över marken: gå åt sidan. När en boss drar in er mot sig: spring ut efter att ha dragits in. När en boss somnar eller blir glödande för att läka sig: avbryt med Sköldslag, Stormsteg eller Isspjut, annars blir den frisk igen."
+          },
+          {
+            "icon": "emoji:🏔️",
+            "text": "Ute i världen finns också två jättestora monster: Bergatrollet i bergen och Kustjätten på stranden. Tar ni dem tillsammans lämnar de en skattkista åt alla som var med."
+          },
+          {
+            "icon": "emoji:💤",
+            "text": "Inget går förlorat om du faller. Du vaknar vid vilostenen i fängelsehålan, eller hemma ute i världen, och allt du har fått behåller du."
+          },
+          {
+            "icon": "emoji:🐾",
+            "text": "Bland skatterna finns husdjur och riddjur: Garmvalpen, Guldbaggen, Lysmaneten, Alvljuset, Ulvvalpen, och riktigt sällsynta, havshästen, jätteälgen, Fenrisulven och Lokes åttabenta häst."
+          },
+          {
+            "icon": "monsteressens",
+            "text": "Går det att spela en fängelsehåla igen? Ja! Bossens stora skattkista är full en gång per speldygn för var och en. Tar du kistan igen samma dag får du en mindre kista med material, och drakfjäll från de sista bossarna. Monstren i fängelsehålorna kan ibland tappa monsteressens. Familjens bästa tid genom varje fängelsehåla står i dagboken, så ni kan försöka slå den!"
+          }
+        ]
+      },
+      {
+        "id": "levels",
+        "emoji": "⭐",
+        "title": "Hjältenivåer",
+        "intro": "Varje monster du besegrar ute i världen ger erfarenhet, och med erfarenheten stiger du i nivå. Du behöver ingen klass för att vara med.",
+        "steps": [
+          {
+            "icon": "emoji:⭐",
+            "text": "Alla monster ger erfarenhet: slå dem med svärd, båge, bazooka eller besvärjelser, det spelar ingen roll. Vänner som står några rutor bort får lika mycket som du. Du behöver inte ha valt någon klass."
+          },
+          {
+            "icon": "offhand_runbok",
+            "text": "Det finns 20 nivåer. Varje nivå ger 1,5 % mer kraft och hälsa, men det finns ett tak: en vuxen i en legendarisk rustning blir aldrig mycket starkare än barnen. Alla kan spela fängelsehålorna tillsammans."
+          },
+          {
+            "icon": "shirt_vandrarmantel",
+            "text": "Nivåerna ger saker att se ut som en hjälte i, ingen extra kraft. Nivå 2: Vandrarmanteln. Nivå 3: titeln Vandrare. Nivå 4: Glödkransen. Nivå 5: husdjuret Lyktfén."
+          },
+          {
+            "icon": "shirt_glodmantel",
+            "text": "Nivå 6: Glödmanteln. Nivå 7: titeln Hjälte. Nivå 8: Stjärnkronan. Nivå 9: amuletten Hjältemärket."
+          },
+          {
+            "icon": "shirt_stjarnmantel",
+            "text": "Nivå 10: Stjärnmanteln, och du börjar lysa med ett mjukt sken omkring dig. Nivå 12: Norrskenshjälmen. Nivå 13: titeln Stor hjälte."
+          },
+          {
+            "icon": "mount_ljushjort",
+            "text": "Nivå 15: riddjuret Ljushjorten. Nivå 16: Eldmanteln. Nivå 17: titeln Legend. Nivå 18: Solkronan. Nivå 19: amuletten Yggdrasils löv."
+          },
+          {
+            "icon": "shirt_bifrostmantel",
+            "text": "Nivå 20: Bifrostmanteln, ett sken i regnbågens alla färger och titeln Midgårds väktare."
+          },
+          {
+            "icon": "hat_glodkrans",
+            "text": "Kläder som glöder lyser mest när det är mörkt. Ta på dem i garderoben (nya hjältekläder hamnar där) och gå ut en kväll!"
+          },
+          {
+            "icon": "emoji:👾",
+            "text": "Lätta monster finns överallt: Ängsvätten på ängen, Trollungar i skogen och bergen, Snötroll på isen, Sandande i öknen, Djungelimpar i djungeln, Benödlor i Dinodalen, Sockerspöken i Godislandet och Rymdkryp på månen. De går ner med några svärdsslag och släpper ibland något bra."
+          },
+          {
+            "icon": "emoji:👻",
+            "text": "Lokes tjänare från Sagan II, och björnar, vargar och lodjur, ger också erfarenhet, och mest av allt de stora jättemonstren. Och ingen förlorar något när man faller!"
+          }
+        ]
+      },
+      {
+        "id": "explore",
+        "emoji": "🧭",
+        "title": "Upptäckter och landmärken",
+        "intro": "Kartorna ute i världen är större nu, och på varje karta gömmer sig två märkliga platser. Kan ni hitta dem alla?",
+        "steps": [
+          {
+            "icon": "emoji:🗺️",
+            "text": "Kartorna i vildmarken är mycket större än förut. Det finns mer att gå på upptäcktsfärd i, och mer att hitta. Gården, Köpingen, rymdbasen, grottorna och fängelsehålorna är precis som förut."
+          },
+          {
+            "icon": "emoji:🧭",
+            "text": "På varje karta ute i världen finns två landmärken, märkliga platser som ser annorlunda ut än allt annat. Det finns 26 olika: Stencirkeln och Jätteeken i skogen, Vårdkasen och Blomsterlabyrinten på ängen, Det frusna skeppet på isen, Dvärgporten i bergen, Valskelettet på stranden, Oasen i öknen, Apkungens tron i djungeln, Eldbrunnen vid vulkanen och Glasstornet i Godislandet. Och en på rymdbasen och en på månen."
+          },
+          {
+            "icon": "emoji:👆",
+            "text": "Gå fram till ett landmärke och tryck på det. Första gången hittar du det: du får en stjärna, lite kr och material till Smedjan som ligger gömt där. En banner berättar vad platsen är. Tryck på det igen så får du läsa om det."
+          },
+          {
+            "icon": "emoji:📖",
+            "text": "Dagboken (J) har fliken 🧭 Upptäckter. Där står alla landmärken per sorts plats. De du har hittat lyser med namn och berättelse, och de du inte har hittat är ett frågetecken med platsen de finns på."
+          },
+          {
+            "icon": "emoji:🗺️",
+            "text": "Världskartan visar ett litet frågetecken på en karta där du har sett ett landmärke men inte rört vid det. Har du hittat det visas 🧭. Så vet du vart du ska gå tillbaka!"
+          },
+          {
+            "icon": "emoji:🏅",
+            "text": "Hittar du 5 landmärken blir du Upptäcktsresande, vid 15 blir du Kartritare, och hittar du alla 26 är du Världens kännare. Varje märke ger en stjärna."
+          }
+        ]
+      },
+      {
+        "id": "forge",
+        "emoji": "🔨",
+        "title": "Smedjan hos Smed-Stina",
+        "intro": "Smed-Stina i Köpingen kan göra dina vapen, sköldar och amuletter bättre. Det kallas att smida, och varje sak kan bli upp till +5.",
+        "steps": [
+          {
+            "icon": "jarnsvard",
+            "text": "Gå fram till Smed-Stina i Köpingen och tryck på 🔨 Smedjan. Där ser du dina vapen, din sköld och din amulett, och vad nästa steg kostar. Det du saknar är rött och det du har är grönt."
+          },
+          {
+            "icon": "emoji:🪨",
+            "text": "Första steget, +1, kostar sten och guld. Andra steget, +2, kostar kristaller och guld. Båda går att hitta nära gården, och i landmärkenas gömmor."
+          },
+          {
+            "icon": "emoji:💎",
+            "text": "Tredje steget, +3, kostar två sällsynta fynd från långt bort: eldkristaller, älvdamm, frostrosor, alvdagg, obsidian eller stjärnkristaller. Du får blanda hur du vill."
+          },
+          {
+            "icon": "monsteressens",
+            "text": "Fjärde steget, +4, kostar monsteressens. Det lämnar monstren i fängelsehålorna efter sig ibland, och i bossarnas extra kistor när ni spelar en fängelsehåla igen."
+          },
+          {
+            "icon": "drakfjall",
+            "text": "Femte steget, +5, kostar drakfjäll och monsteressens. Drakfjäll får du bara från de sista bossarna. Varje steg kostar också lite kr."
+          },
+          {
+            "icon": "emoji:💪",
+            "text": "Ett vapen får mer kraft för varje steg. En sköld ger mer skydd, och mer kraft om den har det. En amulett ger mer hälsa. Smedjan visar hur det blir innan du smider."
+          },
+          {
+            "icon": "traskold",
+            "text": "Har du inga bra saker än? Stina gör en startuppsättning åt dig för 60 kr och lite material: Järnsvärd, Järnyxa, Ekstav, Jaktbåge, Träsköld och Stenamulett. Du kan göra var och en av dem en gång."
+          },
+          {
+            "icon": "stenamulett",
+            "text": "Det finns ett tak för hur stark man kan bli, även med smidda saker och hög nivå. Det är för att alla ska kunna spela tillsammans, både stora och små."
+          }
+        ]
+      },
+      {
+        "id": "friends",
+        "emoji": "💬",
+        "title": "Prata, djur och väder",
+        "steps": [
+          {
+            "icon": "emoji:💬",
+            "text": "Pratbubblan skriver till alla som spelar. Tryck Enter eller T på datorn. Färdiga ord finns att trycka på om du inte vill skriva."
+          },
+          {
+            "icon": "emoji:🗨️",
+            "text": "Det du skriver syns i en bubbla över ditt huvud och i listan längst ner."
+          },
+          {
+            "icon": "emoji:👵",
+            "text": "Gå fram till en bybo och använd hen, precis som när du hämtar uppdrag. Tryck sedan på Prata! så kan ni prata om allt möjligt – de berättar skämt, gåtor och hemligheter."
+          },
+          {
+            "icon": "emoji:✋",
+            "text": "Stanna!-knappen gör att din hund, katt eller häst stannar där den är. Bra när du ska in i grottan eller jobba ifred. Tangent X."
+          },
+          {
+            "icon": "emoji:🎵",
+            "text": "Vissla så kommer de springande och följer med dig igen, även från en annan karta. Hästen följer dig på gården när du visslat på den. Tangent V."
+          },
+          {
+            "icon": "emoji:🌧️",
+            "text": "Vädret ändrar sig hela tiden: sol, moln, regn, åska, snö, hagel, blåst och dimma. Uppe i hörnet ser du vilket väder det är."
+          },
+          {
+            "icon": "emoji:💧",
+            "text": "När det regnar vattnar regnet alla åkrar åt dig!"
+          },
+          {
+            "icon": "emoji:🌈",
+            "text": "Kommer solen fram efter regnet blir det kanske en regnbåge."
+          }
+        ]
+      },
+      {
+        "id": "money",
+        "emoji": "💰",
+        "title": "Sälja och köpa",
+        "steps": [
+          {
+            "icon": "sellbox",
+            "text": "Säljlådan vid huset köper grönsaker, ägg, ull och mjölk direkt."
+          },
+          {
+            "icon": "mailbox",
+            "text": "Gårdsbutiken är den lilla butiken vid huset: frön, djur, foder, material och kläder."
+          },
+          {
+            "icon": "pumpkin",
+            "text": "Pumpor och solrosor ger mest pengar. Jordgubbar och tomater ger skörd flera gånger."
+          },
+          {
+            "icon": "emoji:🪙",
+            "text": "Alla har sina egna pengar. Lägg saker i en kista om du vill dela med en kompis."
+          }
+        ]
+      },
+      {
+        "id": "clothes",
+        "emoji": "👕",
+        "title": "Kläder och säsonger",
+        "steps": [
+          {
+            "icon": "wardrobe",
+            "text": "Garderoben står vid huset. Där byter du tröja, byxor, skor och hatt."
+          },
+          {
+            "icon": "hat_straw",
+            "text": "Nya kläder köper du i gårdsbutiken under Kläder. De hamnar i garderoben."
+          },
+          {
+            "icon": "emoji:🎃",
+            "text": "Vid Halloween, jul, påsk och midsommar finns en extra flik i gårdsbutiken med pynt och kläder."
+          },
+          {
+            "icon": "emoji:❄️",
+            "text": "På julen snöar det och djuren har tomteluvor. Vid Halloween växer vilda pumpor i skogen."
+          }
+        ]
+      }
+    ],
+    "houses": [
+      {
+        "house": "coop",
+        "species": "hen",
+        "name": "Höna",
+        "recipe": [
+          {
+            "item": "wood",
+            "count": 20
+          },
+          {
+            "item": "stone",
+            "count": 4
+          }
+        ],
+        "price": 150
+      },
+      {
+        "house": "hutch",
+        "species": "rabbit",
+        "name": "Kanin",
+        "recipe": [
+          {
+            "item": "wood",
+            "count": 10
+          },
+          {
+            "item": "fiber",
+            "count": 4
+          }
+        ],
+        "price": 200
+      },
+      {
+        "house": "sheepfold",
+        "species": "sheep",
+        "name": "Får",
+        "recipe": [
+          {
+            "item": "wood",
+            "count": 25
+          },
+          {
+            "item": "stone",
+            "count": 6
+          }
+        ],
+        "price": 400
+      },
+      {
+        "house": "barn",
+        "species": "cow",
+        "name": "Ko",
+        "recipe": [
+          {
+            "item": "wood",
+            "count": 40
+          },
+          {
+            "item": "stone",
+            "count": 15
+          }
+        ],
+        "price": 600
+      },
+      {
+        "house": "pigsty",
+        "species": "pig",
+        "name": "Gris",
+        "recipe": [
+          {
+            "item": "wood",
+            "count": 24
+          },
+          {
+            "item": "stone",
+            "count": 8
+          }
+        ],
+        "price": 350
+      },
+      {
+        "house": "stall",
+        "species": "horse",
+        "name": "Häst",
+        "recipe": [
+          {
+            "item": "wood",
+            "count": 45
+          },
+          {
+            "item": "stone",
+            "count": 10
+          }
+        ],
+        "price": 500
+      }
+    ],
+    "actTwo": 4
   },
   "dialogue": {
     "npcs": {

@@ -58,6 +58,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { ACHIEVEMENTS } from '../../shared/src/data.ts';
+import { DUNGEON_IDS, LEVEL_REWARDS, SAGA_CHAPTERS, SAGA_QUESTS, VOLVA_ID } from '../../shared/src/saga.ts';
+import { chapterDone, questState, readProgress } from '../../shared/src/sagasim.ts';
+import { countItem } from '../../shared/src/inventory.ts';
+import { LANDMARK_IDS } from '../../shared/src/landmarks.ts';
+import { HELP } from '../../shared/src/sv.ts';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../../..');
@@ -70,6 +76,25 @@ const packs = Number(process.env.BOT_PACKS ?? 1);
 const dungeon = process.env.BOT_DUNGEON ?? 'draug';
 const names = ['Bot-Ask', 'Bot-Embla'];
 const walkerName = 'Bot-Vandrare';
+/** M9a: walks to Frostjättens arch (chapter 2), using the world map and the minimap on the way (see Bot `--mapcheck`). */
+/** Seconds a walker may take per map on its route, beyond a base of two minutes (a lone walker needs about 25 s a map; a runner sharing four cores with the farmer, the pairs and the run pair needs up to three times that). */
+const archSecondsPerMap = Number(process.env.BOT_ARCH_SECONDS_PER_MAP ?? 70);
+const archSecondsOf = (id: string): number => 120 + archSecondsPerMap * (archMaps[id] ?? 3);
+const mapWalkerName = 'Bot-Kartvandrare';
+/**
+ * M9a: every other dungeon's arch is walked to and used by the arch's own rules (the lock met, `dev unlock`, in by the arch), two lanes of one walker
+ * at a time (each is a minute or two, mostly waiting on the server and the walk; the lanes finish inside the farmer's five minutes). Frostjättens
+ * arch is the map walker's and Fenrisklyftan's is in the same map (a:0,-2, at the other end). BOT_ARCHES=none skips them, or a list: `hel,orm`.
+ */
+const archLanes: string[][] = [
+  ['surt', 'fenrir', 'hel', 'orm'],
+  ['loke', 'dvarg', 'alv'],
+];
+/** How many maps a walker crosses to reach each arch (the farm is one): the far ones go first in a lane and get a time budget from the route, which only matters when a runner is slow (a walker is done as soon as it is in). */
+const archMaps: Record<string, number> = { fenrir: 3, hel: 2, orm: 3, dvarg: 3, alv: 3, surt: 5, loke: 5 };
+/** Surts and Bifrost's arches are five maps out, through the volcano and the space base, where wandering monsters knock an unarmed walker back to the farm again and again (it failed once that way with 470 s): they are walked with `BOT_ARCHES=surt,loke` (they passed in earlier runs), and the shared package's arch test covers all nine without walking. */
+const archLong = ['surt', 'loke'];
+const archWanted = (process.env.BOT_ARCHES ?? '') === 'none' ? [] : (process.env.BOT_ARCHES ?? '').split(',').filter(Boolean);
 const farmerName = 'Bot-Bonde';
 const creatorName = 'Bot-Skapare';
 const farmSeconds = Number(process.env.BOT_FARM_SECONDS ?? 600);
@@ -128,6 +153,11 @@ interface Report {
   route: string[];
   arrived_via_arch: boolean;
   dev_sent: boolean;
+  map?: Record<string, boolean>;
+  /** Every `dev` message the client sent (its `a`): the arch routes must not have sent `saga`. */
+  dev_messages?: string[];
+  locked_seen?: boolean;
+  unlock_sent?: boolean;
   summary?: string;
   run?: { level?: number; spirit?: number; hud_spirit?: string; hud_rail?: string; map?: { nodes: number; ways: number; open: boolean }; role: string; rows: number[]; kinds: string[]; runes?: number; exits: number; presses: number; picks: number; runor: string[]; started: boolean; joined: boolean; ended: { outcome: string } | null; boss_down: boolean; seeds: number };
 }
@@ -148,10 +178,25 @@ interface FarmReport {
   day: number;
   route: string[];
   hearts_seen: number;
+  /** M9b: what the books, the HUD, the help and the family window showed (farm_bot_books.gd). */
+  books?: {
+    achievements?: Record<string, { unlocked: boolean; k: number }>;
+    elsa_after?: string;
+    marks_village?: Record<string, string>;
+    marks_farm?: Record<string, string>;
+    marks_farm_cleared?: Record<string, string>;
+    journal?: { chapters: number; dungeons: number; levels: number; level: number; chapter: number; has_level_line: boolean; cleared: number };
+    finds?: { total: number; found: number; groups: number; unknown: number; all_line: boolean };
+    tracker?: { visible: boolean; lines: string[] };
+    help?: { topics: number; rows: number; placeholder: boolean; houses: number };
+    family?: { members: number; rows: number; mate_online: boolean; place: string };
+    jump?: { from: string; to: string; tiles: number };
+  };
 }
 
 /** What the server itself keeps of a player: asks over the game socket, as a client does (`hello`, then `welcome`). */
-async function serverRecord(url: string, playerId: string): Promise<{ inventory: ({ item: string; count: number } | null)[]; coins: number; stars: number } | null> {
+type ServerRecord = { inventory: ({ item: string; count: number } | null)[]; coins: number; stars: number; id?: string; name?: string; achievements?: string[]; questsDone?: string[]; wishes?: { id: string; npc: string; want: { item: string; count: number } }[]; saga?: unknown; stats?: Record<string, number>; saga?: { chapter?: number; cleared?: string[]; discovered?: string[]; cls?: string; xp?: number }; players: Record<string, { name: string; online: boolean; area: string }> };
+async function serverRecord(url: string, playerId: string): Promise<ServerRecord | null> {
   const WebSocket = createRequire(path.join(root, 'packages/server/package.json'))('ws') as typeof import('ws').WebSocket;
   return await new Promise((resolve) => {
     const ws = new WebSocket(url);
@@ -166,7 +211,7 @@ async function serverRecord(url: string, playerId: string): Promise<{ inventory:
       clearTimeout(timer);
       const p = msg.world.players[playerId];
       ws.close();
-      resolve(p ? { inventory: p.inventory, coins: p.coins, stars: p.stars } : null);
+      resolve(p ? { inventory: p.inventory, coins: p.coins, stars: p.stars, achievements: p.achievements, questsDone: p.questsDone, wishes: msg.world.quests, saga: p.saga, id: playerId, name: p.name, stats: p.stats, saga: p.saga, players: msg.world.players } : null);
     });
     ws.on('error', () => {
       clearTimeout(timer);
@@ -325,7 +370,16 @@ async function checkFarmer(r: FarmReport, farmPort: number, botLog?: string): Pr
     'the shop opens', 'buy seeds', 'buy a hat', 'plant wheat', 'harvest wheat', 'sell a crop', 'Lilla Elsas önskning', 'Fiskar-Svens önskning',
     'the workbench opens', 'craft fences', 'preview: no fence on water', 'place a fence', 'take my fence down', "someone else's fence is refused",
     // the house, the stove, the wardrobe, the villagers
-    'into the farmhouse', 'the stove opens', 'sound: by the stove indoors', 'cook bread', 'out of the farmhouse', 'change the hat', "a villager's window", 'start a conversation', 'a joke', 'a riddle', 'sten, sax, påse',
+    'into the farmhouse', 'the stove opens', 'sound: by the stove indoors', 'cook bread', 'out of the farmhouse', 'change the hat', "a villager's window", 'start a conversation', 'a joke', 'a riddle', 'sten, sax, påse', 'villagers speak',
+    // quest marks over the villagers (M9b)
+    'mark: Elsa has a wish I can fill', "mark: Elsa's wish is done", 'mark: Völvan has a story', "mark: Völvan's chapter is done", "mark: Völvan's next chapter", 'marks up close',
+    // the books, the HUD, the help and the family window (M9b)
+    'the Gårdsbok', 'the Gårdsbok closes on B', 'every achievement has a picture', 'a pad reaches the tabs, the page and the OK button', 'the pause menu opens the books',
+    'the journal', "the family's best time", 'the level chip', 'the level chip opens the journal', 'the saga tracker', 'the tracker folds', "Völvan's journal tab",
+    'the Upptäcktsbok',
+    'the help', 'the help on ?',
+    'the family window', 'the family list follows the family', 'the family window names every place', 'Hoppa till is on exactly where jumpTo accepts', 'jump to the family', 'the family and pet buttons', 'which animals the pet buttons answer for',
+    'large text fits',
     // the village: the class, Völvan, the pizzeria, the gear and the hero switch, the bus
     'walk to Köpingen', 'sound: the village', 'pick a class', "Völvan's chapter", 'buy a pizza', 'eat the pizza', 'equip the weapon', 'the hero switch', 'back to the farm outfit', 'the bus home', 'the bus to the village', 'sound: footsteps', 'sound: ambience',
   ];
@@ -347,9 +401,114 @@ async function checkFarmer(r: FarmReport, farmPort: number, botLog?: string): Pr
   check(r.hud_coins.startsWith(String(rec.coins)), `${r.name}: the HUD shows the coins ("${r.hud_coins}" for ${rec.coins})`);
   check(rec.stars === 0 || r.hud_stars.includes(String(rec.stars)), `${r.name}: the HUD shows the stars ("${r.hud_stars}" for ${rec.stars})`);
   check(rec.stars >= 3, `${r.name}: the errands and the chapter paid in stars (${rec.coins} kr left, ${rec.stars} stars)`);
+  checkBooks(r, rec);
+}
+
+/** The books the client drew (B, K, H, P) against the server's own record of the player and the shared data. */
+/** The mark a villager should show, worked out from the server's own record of the player (the browser's sagaMarker and updateNpcTalk,
+ * written again here): "?" or "!" yellow for the saga, "❗" a wish I can fill, "?" one I cannot, "" nothing. */
+function expectedMark(rec: ServerRecord, npc: string): string {
+  const p = { inventory: rec.inventory, saga: rec.saga, questsDone: rec.questsDone } as never as Parameters<typeof questState>[0] & { inventory: { item: string; count: number }[]; questsDone: string[] };
+  const prog = readProgress(p);
+  let offer = false;
+  let hand = false;
+  let busy = false;
+  if (npc === VOLVA_ID && SAGA_CHAPTERS[prog.chapter]) {
+    if (!prog.heard) offer = true;
+    else if (chapterDone(prog)) hand = true;
+    else busy = true;
+  }
+  for (const q of SAGA_QUESTS) {
+    if (q.npc !== npc) continue;
+    const st = questState(p, q);
+    if (st === 'ready') hand = true;
+    else if (st === 'offer') offer = true;
+    else if (st === 'active') busy = true;
+  }
+  const wishes = (rec.wishes ?? []).filter((w) => w.npc === npc && !(rec.questsDone ?? []).includes(w.id));
+  const canHand = wishes.some((w) => countItem(rec.inventory as never, w.want.item) >= w.want.count);
+  if (hand) return '?';
+  if (offer) return '!';
+  if (canHand) return '❗';
+  if (wishes.length) return '?';
+  if (busy) return '?';
+  return '';
+}
+
+function checkBooks(r: FarmReport, rec: ServerRecord): void {
+  // the quest marks over the villagers against the server's record of me (not against the client's own rule)
+  const village = r.books?.marks_village ?? {};
+  const mismatched = Object.entries(village).filter(([npc, shown]) => shown !== expectedMark(rec, npc));
+  const quiet = Object.entries(village).filter(([, shown]) => shown === '').length;
+  const marked = Object.entries(village).filter(([, shown]) => shown !== '').length;
+  check(Object.keys(village).length >= 5 && mismatched.length === 0, `${r.name}: every villager in Köpingen shows the mark the server's record gives (${Object.entries(village).map(([n, s]) => `${n} ${s || '-'}`).join(', ')}${mismatched.length ? '; WRONG: ' + mismatched.map(([n, s]) => `${n} shows ${s || '-'} not ${expectedMark(rec, n) || '-'}`).join(', ') : ''})`);
+  // on the farm, with Elsa's wish done: a mark exactly where the server's record has something for me, and none where it has nothing
+  const farmMarks = Object.entries(r.books?.marks_farm ?? {});
+  const farmWrong = farmMarks.filter(([npc, shown]) => (shown === '') !== (expectedMark(rec, npc) === ''));
+  check(farmMarks.length >= 3 && farmWrong.length === 0, `${r.name}: on the farm a villager shows a mark exactly when the server's record has something for me (${farmMarks.map(([n, s]) => `${n} ${s || '-'}`).join(', ')})`);
+  // and when the day's wishes are gone (a `quests` change with none) the marks go, except a saga quest's: here none, so all of them
+  const gone = Object.entries(r.books?.marks_farm_cleared ?? {});
+  const goneWrong = gone.filter(([npc, shown]) => shown !== expectedMark({ ...rec, wishes: [] }, npc));
+  check(gone.length >= 3 && goneWrong.length === 0 && gone.every(([, s]) => s === ''), `${r.name}: with no wishes left every villager's wish mark went (${gone.map(([n, s]) => `${n} ${s || '-'}`).join(', ')})`);
+  check(marked >= 1, `${r.name}: marks were drawn over the villagers in Köpingen (${marked} with a mark, ${quiet} without)`);
+  const elsaOpen = (rec.wishes ?? []).filter((w) => w.npc === 'elsa' && !(rec.questsDone ?? []).includes(w.id)).length;
+  check(r.books?.elsa_after !== undefined && (elsaOpen > 0 || r.books.elsa_after === ''), `${r.name}: after the hand-in Elsa showed "${r.books?.elsa_after}" and the server says she has ${elsaOpen} wishes left (none: no mark)`);
+  const b = r.books ?? {};
+  // the Gårdsbok: all of ACHIEVEMENTS, and each one done exactly when the server says so, its bar as far as the server's counter
+  const ach = b.achievements ?? {};
+  check(Object.keys(ach).length === ACHIEVEMENTS.length, `${r.name}: the Gårdsbok drew all ${ACHIEVEMENTS.length} achievements (${Object.keys(ach).length})`);
+  const wrong = ACHIEVEMENTS.filter((a) => {
+    const shown = ach[a.id];
+    const have = Math.min(a.goal, rec.stats?.[a.stat] ?? 0);
+    return !shown || shown.unlocked !== !!rec.achievements?.includes(a.id) || Math.abs(shown.k - have / a.goal) > 0.001;
+  });
+  check(wrong.length === 0, `${r.name}: each achievement's medal and bar agree with the server's record (${wrong.map((a) => a.id).slice(0, 5).join(', ') || 'all ' + ACHIEVEMENTS.length}); ${rec.achievements?.length ?? 0} unlocked`);
+  check(!!ach['harvest_1']?.unlocked && !!rec.achievements?.includes('harvest_1'), `${r.name}: the first harvest earned a medal, and the book shows it`);
+  // the journal: the chapters up to mine, the nine dungeons, the hero level
+  const j = b.journal;
+  check(!!j && j.chapters === (rec.saga?.chapter ?? 0) + 1 && j.dungeons === DUNGEON_IDS.length && j.levels === Object.keys(LEVEL_REWARDS).length, `${r.name}: the journal lists ${j?.levels} of ${Object.keys(LEVEL_REWARDS).length} level rewards, ${j?.chapters} chapters (the server says chapter ${rec.saga?.chapter}) and ${j?.dungeons} of ${DUNGEON_IDS.length} dungeons`);
+  check(!!j && j.has_level_line && j.chapter === (rec.saga?.chapter ?? 0), `${r.name}: the journal's hero level line and chapter are the server's (level ${j?.level}, chapter ${j?.chapter})`);
+  const f = b.finds;
+  check(!!f && f.total === LANDMARK_IDS.length && f.found === (rec.saga?.discovered?.length ?? 0) && f.unknown === f.total - f.found && f.all_line, `${r.name}: the Upptäcktsbok has all ${LANDMARK_IDS.length} places, ${f?.found} found as the server says, the rest ???`);
+  check(!!b.tracker?.visible && b.tracker.lines.length >= 1, `${r.name}: the saga tracker was on the HUD (${b.tracker?.lines.join(' | ')})`);
+  const h = b.help;
+  check(!!h && h.topics === HELP.length && !h.placeholder, `${r.name}: the help has all ${HELP.length} topics of the shared file (${h?.topics}), ${h?.rows} steps, no {placeholders} left`);
+  // the family window: everyone in the family listed, the second player online on the farm, the jump landed next to them
+  const fam = b.family;
+  const everyone = Object.values(rec.players).length;
+  check(!!fam && fam.members === everyone && fam.rows === everyone && fam.mate_online, `${r.name}: the family window lists all ${everyone} players of the farm (${fam?.rows}) and Bot-Syskon online at "${fam?.place}"`);
+  const mate = Object.values(rec.players).find((p) => p.name === 'Bot-Syskon');
+  check(!!b.jump && b.jump.to === mate?.area && b.jump.tiles < 3.5, `${r.name}: the jump from ${b.jump?.from} put it in the mate's map (${mate?.area}) ${b.jump?.tiles} tiles away`);
 }
 
 /** One bot of the run pair: it played through the client and its report says how far. */
+/** M9a: a later chapter's arch, walked to over the real maps: sealed until the chapters before it count as cleared, then in by the arch to the right saga key. */
+function checkArchWalker(id: string, r: Report, log?: string): void {
+  const name = r.name;
+  check(r.errors.length === 0, `${name}: no errors (${r.errors.join('; ') || 'none'})`);
+  const exitErrors = (log && fs.existsSync(log) ? fs.readFileSync(log, 'utf8') : '').split('\n').filter((l) => /leaked at exit|still in use at exit|Pages in use exist at exit/.test(l));
+  check(exitErrors.length === 0, `${name}: exits clean, nothing leaked at exit (${exitErrors[0] ?? 'none'})`);
+  check(r.locked_seen === true, `${name}: the arch was sealed first (the server's chapter lock)`);
+  check(JSON.stringify(r.dev_messages ?? []) === JSON.stringify(['unlock']), `${name}: the only dev message was unlock (${(r.dev_messages ?? []).join(', ') || 'none'})`);
+  check(r.area === `saga:${id}` && r.route.at(-1) === `saga:${id}`, `${name}: went in by the arch into saga:${id} (${r.route.join(' → ')}) after ${r.seconds.toFixed(0)} s`);
+}
+
+/** M9a: the world map and the minimap through the keys and buttons, and a later chapter's arch used by its own rules. */
+function checkMapWalker(r: Report, log?: string): void {
+  check(r.errors.length === 0, `${r.name}: no errors (${r.errors.join('; ') || 'none'})`);
+  const exitErrors = (log && fs.existsSync(log) ? fs.readFileSync(log, 'utf8') : '').split('\n').filter((l) => /leaked at exit|still in use at exit|Pages in use exist at exit/.test(l));
+  check(exitErrors.length === 0, `${r.name}: exits clean, nothing leaked at exit (${exitErrors[0] ?? 'none'})`);
+  const m = r.map ?? {};
+  for (const name of ['minimap_visible', 'opened_by_key', 'here_cell_greyed', 'farm_cell_enabled', 'unvisited_greyed', 'home_enabled', 'closed_by_key', 'fast_travel_home', 'visited_cell_enabled', 'fast_travel_visited', 'minimap_toggles', 'minimap_in_dungeon', 'map_greyed_in_dungeon'])
+    check(m[name] === true, `${r.name}: world map / minimap: ${name}`);
+  // the server moved me: home and back (the route lists every map the client was shown), then on to the arch of chapter 2
+  const route = r.route.join(' → ');
+  check(r.route.includes('farm') && r.route.filter((k) => k === 'a:0,-1').length >= 2, `${r.name}: fast travel took it home and back (${route})`);
+  check(r.locked_seen === true && r.unlock_sent === true, `${r.name}: the arch of chapter 2 stayed sealed until the chapters before it counted as cleared (the server's rule; dev unlock sent after)`);
+  check(r.area === 'saga:frost' && r.route.at(-1) === 'saga:frost', `${r.name}: went into Frostjättens borg by its arch (${route})`);
+  check(JSON.stringify(r.dev_messages ?? []) === JSON.stringify(['unlock']) && r.arrived_via_arch, `${r.name}: the only dev message was unlock, never saga (${(r.dev_messages ?? []).join(', ') || 'none'})`);
+}
+
 function checkRunner(r: Report, botLog?: string): void {
   const run = r.run;
   check(r.errors.length === 0, `${r.name}: no errors (${r.errors.join('; ') || 'none'})`);
@@ -466,6 +625,8 @@ async function main(): Promise<void> {
       const friendCode = await exited(friend, 90_000);
       const fr = fs.existsSync(friendReport) ? (JSON.parse(fs.readFileSync(friendReport, 'utf8')) as { ok: boolean; note: string }) : { ok: false, note: 'no report' };
       check(friendCode === 0 && fr.ok, `the neighbour (a second player) put fences on the farm: ${fr.note}`);
+      // and a third stays online on the farm for the family window: the farmer finds it in the list and jumps to it from the village
+      farmServers.push(run(process.execPath, [path.join(here, 'mate.mts'), `http://127.0.0.1:${farmPort}`, String(farmSeconds + 30)], { cwd: here, log: path.join(tmp, 'mate.log') }));
       const report = path.join(tmp, `${farmerName}.json`);
       const log = path.join(tmp, `${farmerName}.log`);
       const args = ['--headless', '--path', godotDir, '--', '--farmbot', `--server=http://127.0.0.1:${farmPort}`, `--name=${farmerName}`, `--report=${report}`, `--seconds=${farmSeconds}`];
@@ -502,7 +663,45 @@ async function main(): Promise<void> {
         runBots.push({ name, report, log, child: run(godot, args, { cwd: godotDir, log }) });
       });
     }
-    const all = [...bots, ...walker, ...farmers, ...creators, ...runBots];
+    // the map walker: a player of its own (and its own empty HOME, since the minimap's toggle is saved in the settings file)
+    const mapWalkers: { name: string; report: string; log: string; child: ChildProcess }[] = [];
+    if (mode === '' || mode === 'walker') {
+      const report = path.join(tmp, `${mapWalkerName}.json`);
+      const log = path.join(tmp, `${mapWalkerName}.log`);
+      const home = fs.mkdtempSync(path.join(tmp, 'home-map-'));
+      const args = ['--headless', '--path', godotDir, '--', '--bot', `--server=http://127.0.0.1:${port}`, `--name=${mapWalkerName}`, `--report=${report}`, `--seconds=${seconds}`, '--route=arch', '--dungeon=frost', '--mapcheck'];
+      console.log(`${mapWalkerName}: ${godot} ${args.join(' ')}`);
+      mapWalkers.push({ name: mapWalkerName, report, log, child: run(godot, args, { cwd: godotDir, log, env: { HOME: home, XDG_DATA_HOME: path.join(home, 'data') } }) });
+    }
+    // the other arches: lanes of walkers, one after another in a lane (a lane's results are checked at the end)
+    const archResults: { id: string; report: string; log: string; code: number | null }[] = [];
+    const lanes = mode === '' || mode === 'walker' ? archLanes.map((lane) => lane.filter((id) => (archWanted.length === 0 ? !archLong.includes(id) : archWanted.includes(id)))).filter((lane) => lane.length) : [];
+    // (a server of its own: a server takes eight characters, and every walker is one)
+    const archPort = port + 3;
+    if (lanes.length) {
+      const archServer = run(tsx, ['src/main.ts'], {
+        cwd: path.join(root, 'packages/server'),
+        env: { PORT: String(archPort), ACCESS: 'open', DEV_TELEPORT: '1', DATABASE_URL: '', SEASON_OVERRIDE: 'summer' },
+        log: path.join(tmp, 'server-arch.log'),
+      });
+      farmServers.push(archServer);
+      await waitFor(`http://localhost:${archPort}/api/gate`, 150_000);
+      console.log(`server 3 (the arch walkers'): port ${archPort}`);
+    }
+    const lanesDone = Promise.all(
+      lanes.map(async (lane) => {
+        for (const id of lane) {
+          const name = `Bot-Valv-${id}`;
+          const report = path.join(tmp, `${name}.json`);
+          const log = path.join(tmp, `${name}.log`);
+          const args = ['--headless', '--path', godotDir, '--', '--bot', `--server=http://127.0.0.1:${archPort}`, `--name=${name}`, `--report=${report}`, `--seconds=${archSecondsOf(id)}`, '--route=arch', `--dungeon=${id}`, '--unlock'];
+          console.log(`${name}: ${godot} ${args.join(' ')}`);
+          const child = run(godot, args, { cwd: godotDir, log });
+          archResults.push({ id, report, log, code: await exited(child, (archSecondsOf(id) + 40) * 1000) });
+        }
+      }),
+    );
+    const all = [...bots, ...walker, ...mapWalkers, ...farmers, ...creators, ...runBots];
     const codes = await Promise.all(all.map((b) => exited(b.child, ((b.name === farmerName ? farmSeconds : runNames.includes(b.name) ? runSeconds : seconds) + 40) * 1000)));
     if (settingsRun) await checkSettings(settingsRun);
     const reports: (Report | FarmReport | null)[] = all.map((b, i) => {
@@ -530,6 +729,10 @@ async function main(): Promise<void> {
         checkRunner(rr as Report, all.find((b) => b.name === rr.name)?.log);
         continue;
       }
+      if (rr.name === mapWalkerName) {
+        checkMapWalker(rr as Report, all.find((b) => b.name === mapWalkerName)?.log);
+        continue;
+      }
       const r = rr as Report;
       check(r.errors.length === 0, `${r.name}: no errors (${r.errors.join('; ') || 'none'})`);
       const botLog = all.find((b) => b.name === r.name)?.log;
@@ -545,7 +748,7 @@ async function main(): Promise<void> {
           check(r.route.length >= want.length && JSON.stringify(r.route.slice(-want.length)) === JSON.stringify(want), `${r.name}: walked ${r.route.join(' → ')}`);
         } else check(r.route.at(-1) === `saga:${dungeon}`, `${r.name}: walked ${r.route.join(' → ')}`);
         check(r.area === `saga:${dungeon}`, `${r.name}: arrived in saga:${dungeon} through the arch (${r.area || 'never'}) after ${r.seconds.toFixed(0)} s`);
-        check(r.arrived_via_arch && !r.dev_sent, `${r.name}: the dev way was never used (dev_sent ${r.dev_sent})`);
+        check(!(r.dev_messages ?? ['?']).includes('saga') && r.arrived_via_arch, `${r.name}: no dev saga message went out on the way (dev messages: ${(r.dev_messages ?? []).join(', ') || 'none'})`);
         continue;
       }
       check(r.casts_sent > 0, `${r.name}: sent casts (${r.casts_sent})`);
@@ -586,6 +789,15 @@ async function main(): Promise<void> {
       check(differ === 0, `monster health agrees between the bots (${differ} differ${examples.length ? ': ' + examples.join('; ') : ''})`);
       const same = a.monsters_beaten.filter((id) => b.monsters_beaten.includes(id));
       check(same.length > 0, `both saw the same monsters beaten (${same.length} in common)`);
+    }
+    await lanesDone;
+    for (const a of archResults.sort((x, y) => x.id.localeCompare(y.id))) {
+      console.log(`\n--- Bot-Valv-${a.id} (exit ${a.code === null ? 'killed' : a.code}) ---`);
+      if (!fs.existsSync(a.report)) {
+        check(false, `Bot-Valv-${a.id}: no report written (see ${a.log})`);
+        continue;
+      }
+      checkArchWalker(a.id, JSON.parse(fs.readFileSync(a.report, 'utf8')) as Report, a.log);
     }
   } finally {
     for (const f of farmServers) f.kill('SIGTERM');
