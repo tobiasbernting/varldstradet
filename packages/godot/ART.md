@@ -83,7 +83,7 @@ the sheets are committed under `assets/sprites/` with `atlas.json` (frame size, 
 - `mob_<species>.png`: the dungeon's monsters and bosses as `SAGA_MOBS`/`SAGA_BOSSES` name them, two walk frames
   facing right, at the size `SAGA_ANIMAL_SIZE` gives them, outlined as `drawAnimal` outlines them. M6a: the creatures of
   Draugkryptan, Frostjättens borg, Surts smedja and Helheim (21, with the ice block a freeze leaves); `pnpm godot:sprites`
-  takes the dungeon ids as its argument (`draug,frost,surt,hel,dvarg,orm,alv` by default) and `speciesOf` in `tools/sprites-page.ts` lists
+  takes the dungeon ids as its argument (`draug,frost,surt,hel,dvarg,orm,alv,fenrir,loke` by default) and `speciesOf` in `tools/sprites-page.ts` lists
   what each one needs, so a later dungeon is one more id. No new pixel art was drawn: all of it is in `packages/art/src/sagaanimals.ts`.
   M6b added the 15 creatures (and the web: 16 sheets) of Svartalfheims gruvor (gruvtroll, guldbagge, stengolem, jarnvakten, fafner), Havsormens tempel
   (sjodraug, jattekrabba, manet, blackis, jormungand) and Alvernas lund (skuggalv, jattespindel, svampvakt, spindeldrottning,
@@ -91,6 +91,15 @@ the sheets are committed under `assets/sprites/` with `atlas.json` (frame size, 
   already exported are byte for byte the same (the icon sheet too: the new dungeons' loot has pictures already). The new
   looks (`dungeon_look.gd`) tint KayKit stone as before: amber for the mine, sea-teal for the temple, violet for the grove;
   the three new drifting airs (dust, bubbles, spores) are particles drawn in code with the engine's glow texture.
+  M6c added the last two dungeons' creatures: Fenrisklyftan (ulv, rimtroll, bergsjatte, skoll, fenrisulven) and Bifrost
+  (lokesskugga and loke; its packs are the skeleton, ice wolf, fire hound and ghost of the earlier chapters), plus four
+  `mob_<species>_v1.png` sheets (skelett, isvarg, eldhund, gengangare): Loke's illusions, which the server sends as
+  `variant: 1` and which the art draws ghostly and see-through (`ghostify` in `sagaanimals.ts`; `export-sprites` adds a
+  `_v1` sheet for every non-boss creature of a dungeon with `illusions: true`, and `Data.mob_sheet(species, variant)`
+  picks it). 7 + 4 = 11 new sheets (44 creature sheets in all, the web and the ice block included, and 4 ghost ones). Again
+  nothing was drawn and the earlier sheets are byte for byte the same. Looks: steel-blue rock under pale storm lanterns
+  for the chasm, pearly violet glass under rose-gold ones for the bridge; the two new airs (`gale`, `stars`) are particles
+  like the others.
 - The farm's people (M4a): `farm_<kind>.png`, one PNG per layer kind with one row of 12 frames (`down0..2 up0..2 left0..2
   right0..2`, 16×32, left = right mirrored) per layer; `atlas.json`'s `farm.layers` maps a layer key (`shirt_shirt_red`,
   `hair_ponytail_3`, `hat_hat_viking`) to `{file, x, y}`, the cell of its frame 0 (frame i is at `x + i*16`). Any
