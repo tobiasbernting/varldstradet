@@ -119,7 +119,7 @@ func _run() -> void:
 	var stages := {
 		"shop": _home.shop_buy, "patch": _farm_patch, "keys": _keys_and_pets, "drop": _drop_and_pick_up, "sell": _home.sell_crop, "gather": _gather, "quests": _quests, "pond": _pond_and_fishing, "bag": _bag_and_chest,
 		"build": _home.build, "house": _home.house_and_cook, "wardrobe": _home.wardrobe, "talk": _home.talk, "pet": _pet_wild,
-		"village": _home.class_and_chapter, "pizza": _home.pizza, "hero": _home.hero_switch, "bus": _home.bus,
+		"village": _home.class_and_chapter, "pizza": _home.pizza, "hero": _home.hero_switch, "bus": _home.bus, "marks": _home.marks_up_close,
 	}
 	for key in stages.keys():
 		if _done:
@@ -363,7 +363,9 @@ func _gather() -> void:
 func _quests() -> void:
 	var model := world.model
 	if model.count_item("stone") >= 5:
+		await _home.expect_mark("mark: Elsa has a wish I can fill", "elsa", "❗", "give")
 		await _home.hand_over("elsa", "elsa_flowerbox", "stone")
+		await _home.expect_mark("mark: Elsa's wish is done", "elsa", "<rules>")
 	else:
 		_step("Elsas önskning", false, "no stone")
 	if model.count_item("wood") >= 5:

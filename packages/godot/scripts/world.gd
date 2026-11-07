@@ -72,6 +72,7 @@ var _emote_shown: Dictionary = {} ## player id -> until
 var _shadow_in := 0.0
 var _screenshot := ""
 var _open_chat := false ## --open-chat (with --demo): the chat box is open (pictures)
+var npc_talk := NpcTalk.new() ## M9b: the villagers' speech bubbles and quest marks
 var _open_npc := "" ## --open-npc=<id> (or "volva"): a villager's talk window opens on the farm demo (pictures)
 var _settings_page := "" ## --settings-page=picture|sound|reading|controls: the settings window opens on it (pictures)
 var _frames := 0
@@ -921,6 +922,7 @@ func _process(delta: float) -> void:
 	var boss_id := int(snap.get("b", {}).get("id", -1)) if snap.get("b") is Dictionary else -1
 	var t: Variant = combat.live_target()
 	var me_pos := hero.position
+	var npcs_here: Dictionary = {}
 	for key in _actors.keys():
 		var actor: Actor = _actors[key]
 		var id: String = key.substr(2)
@@ -963,7 +965,7 @@ func _process(delta: float) -> void:
 			moving = false
 		actor.animate(facing, moving, delta)
 		if key.begins_with("n:"):
-			pass
+			npcs_here[id] = actor
 		elif key.begins_with("p:"):
 			actor.set_pose(_pose_of(id))
 			_bubble_of(id, actor)
@@ -989,6 +991,8 @@ func _process(delta: float) -> void:
 			else:
 				actor.set_health(0.0, false, Color.WHITE)
 			actor.set_marker(_chasing_me(actor, vel, moving, species, m, me_pos))
+	if _mode == "outdoor":
+		npc_talk.tick(model, npcs_here, me_pos)
 	_update_prompt()
 	_rest_glow(delta, snap)
 	_frame_camera(delta)

@@ -90,3 +90,32 @@ static func quests_of(me: Dictionary, npc: String) -> Array:
 			if st == "offer" or st == "active" or st == "ready":
 				out.append([q, st])
 	return out
+
+
+## The mark over a villager (sagaMarker in the browser's client/src/saga.ts): "hand" (a quest of the saga to hand in, or Völvan's
+## chapter done), "offer" (something new to take, or Völvan has a chapter to tell), "busy" (it goes on), or "".
+static func marker(me: Dictionary, npc: String) -> String:
+	var prog := Gear.progress(me)
+	var offer := false
+	var hand := false
+	var busy := false
+	if npc == Data.volva and chapter_index(me) >= 0 and chapter_index(me) < Data.chapters.size():
+		if not bool(prog.get("heard", false)):
+			offer = true
+		elif chapter_done(me):
+			hand = true
+		else:
+			busy = true
+	for q in Data.saga_quests:
+		if str(q.get("npc", "")) != npc:
+			continue
+		match quest_state(me, q):
+			"ready":
+				hand = true
+			"offer":
+				offer = true
+			"active":
+				busy = true
+	return "hand" if hand else ("offer" if offer else ("busy" if busy else ""))
+
+

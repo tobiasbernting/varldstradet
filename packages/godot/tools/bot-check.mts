@@ -310,7 +310,9 @@ async function checkFarmer(r: FarmReport, farmPort: number, botLog?: string): Pr
     'the shop opens', 'buy seeds', 'buy a hat', 'plant wheat', 'harvest wheat', 'sell a crop', 'Lilla Elsas önskning', 'Fiskar-Svens önskning',
     'the workbench opens', 'craft fences', 'preview: no fence on water', 'place a fence', 'take my fence down', "someone else's fence is refused",
     // the house, the stove, the wardrobe, the villagers
-    'into the farmhouse', 'the stove opens', 'sound: by the stove indoors', 'cook bread', 'out of the farmhouse', 'change the hat', "a villager's window", 'start a conversation', 'a joke', 'a riddle', 'sten, sax, påse',
+    'into the farmhouse', 'the stove opens', 'sound: by the stove indoors', 'cook bread', 'out of the farmhouse', 'change the hat', "a villager's window", 'start a conversation', 'a joke', 'a riddle', 'sten, sax, påse', 'villagers speak',
+    // quest marks over the villagers (M9b)
+    'mark: Elsa has a wish I can fill', "mark: Elsa's wish is done", 'mark: Völvan has a story', "mark: Völvan's chapter is done", "mark: Völvan's next chapter", 'marks up close',
     // the village: the class, Völvan, the pizzeria, the gear and the hero switch, the bus
     'walk to Köpingen', 'sound: the village', 'pick a class', "Völvan's chapter", 'buy a pizza', 'eat the pizza', 'equip the weapon', 'the hero switch', 'back to the farm outfit', 'the bus home', 'the bus to the village', 'sound: footsteps', 'sound: ambience',
   ];

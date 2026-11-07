@@ -116,6 +116,7 @@ import {
   MODIFIER_SEEDS,
   RUN_T,
   COMPANION_NAME,
+  NPC_LINES,
 } from '../../shared/src/index.ts';
 
 const out = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../assets/game.json');
@@ -248,6 +249,11 @@ const run = {
   texts: { ...RUN_T },
 };
 
+/** The villagers' idle lines (M9b, parity with the browser: NPC_LINES in data.ts, which they say to a player or to each other). */
+const book = {
+  npcLines: NPC_LINES,
+};
+
 const data = {
   _comment: 'Generated from packages/shared by `pnpm godot:data`. Do not edit; edit the shared data and run the script.',
   constants: { TILE, MAP_W, MAP_H, MAX_HEARTS, DAY_LENGTH_MS, EDGE_GAP, REACH, PICKUP_RADIUS, RIDE_SPEED_MUL, WATERING_CAN_CHARGES, HOTBAR_SIZE, INVENTORY_SIZE, CHEST_SIZE, MAX_STACK, PLAYER_SPEED, PLAYER_HALF_W, PLAYER_HALF_H, SLOW_MUL, GCD_MS, DOWN_MS, WIPE_MS, POTION_CD, CHAT_MAX_LEN, CHAT_BUBBLE_MS, EMOTE_MS },
@@ -290,6 +296,7 @@ const data = {
   sagaQuests,
   gear: { rarityPower: RARITY_POWER, levelBonus: LEVEL_BONUS, powerCap: POWER_CAP, armorCap: ARMOR_CAP, classFit: CLASS_FIT, xpLevels: XP_LEVELS, forgeMax: FORGE_MAX, slots: ['weapon', 'offhand', 'amulet'] },
   levelRewards: LEVEL_REWARDS,
+  book,
   dialogue,
   run,
 };

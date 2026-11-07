@@ -9079,6 +9079,164 @@
       "title": "Midgårds väktare"
     }
   },
+  "book": {
+    "npcLines": {
+      "sigrun": {
+        "morning": [
+          "Morgonsolen lyser på runorna.",
+          "God morgon, {name}. Jag drömde om dig."
+        ],
+        "day": [
+          "Yggdrasil darrar…",
+          "Hej {name}! Har du valt din väg?",
+          "Ingen hjälte går ensam."
+        ],
+        "evening": [
+          "Nu vaknar draugarna…",
+          "God kväll, {name}. Var försiktig i mörkret."
+        ],
+        "meet": [
+          "Hej Bo. Ditt bröd doftar ända hit.",
+          "Stina! Smid ett svärd åt hjältarna.",
+          "Fru Lind, rosorna viskar i natt."
+        ]
+      },
+      "greta": {
+        "morning": [
+          "God morgon, {name}!",
+          "Vilken fin morgon!"
+        ],
+        "day": [
+          "Hej {name}!",
+          "Så flitigt du jobbar!",
+          "Har du sett mina blomlådor?"
+        ],
+        "evening": [
+          "God kväll, {name}.",
+          "Nu blir det snart mörkt."
+        ],
+        "meet": [
+          "Hej Sven! Nappar det?",
+          "Hej Elsa, var är dina föräldrar?",
+          "Vilket väder!"
+        ]
+      },
+      "sven": {
+        "morning": [
+          "Morrn! Fiskarna är pigga nu.",
+          "God morgon, {name}!"
+        ],
+        "day": [
+          "Hallå {name}!",
+          "Stå still så nappar det.",
+          "Gäddan är lurig."
+        ],
+        "evening": [
+          "Kvällen är bäst för fiske.",
+          "God kväll, {name}!"
+        ],
+        "meet": [
+          "Hej Greta! Vill du ha fisk?",
+          "Hej Elsa! Inte för nära vattnet.",
+          "Fint väder för fiske!"
+        ]
+      },
+      "bo": {
+        "morning": [
+          "God morgon! Brödet är nybakat.",
+          "Morgonstund har guld i mund!"
+        ],
+        "day": [
+          "Hej {name}! Vill du ha en bulle?",
+          "Vete, vete, vete…"
+        ],
+        "evening": [
+          "Nu stänger bageriet.",
+          "God kväll, {name}!"
+        ],
+        "meet": [
+          "Hej Stina! Hammaren går varm?",
+          "Fru Lind, vilka blommor!"
+        ]
+      },
+      "stina": {
+        "morning": [
+          "Smedjan är varm redan!",
+          "God morgon, {name}!"
+        ],
+        "day": [
+          "Hej {name}! Har du sten med dig?",
+          "Klang, klang!"
+        ],
+        "evening": [
+          "Jag släcker ässjan nu.",
+          "God kväll!"
+        ],
+        "meet": [
+          "Hej Bo! Bröd till lunch?",
+          "Fru Lind, honung till kaffet?"
+        ]
+      },
+      "pino": {
+        "morning": [
+          "Buongiorno! Ugnen är varm.",
+          "God morgon, {name}! Pizza till frukost?"
+        ],
+        "day": [
+          "Hej {name}! En pizza med extra ost?",
+          "Mamma mia, vilken dag!",
+          "Pizzapower gör dig snabb som vinden!"
+        ],
+        "evening": [
+          "Sista pizzan för idag!",
+          "Buonanotte, {name}!"
+        ],
+        "meet": [
+          "Bo! Har du vete till min deg?",
+          "Stina, ugnen behöver ses över!",
+          "Fru Lind, basilika till pizzan?"
+        ]
+      },
+      "lind": {
+        "morning": [
+          "God morgon! Blommorna har vaknat.",
+          "Vilken fin dag!"
+        ],
+        "day": [
+          "Hej {name}! Luktar du på rosorna?",
+          "Bina surrar så fint idag."
+        ],
+        "evening": [
+          "Blommorna somnar nu.",
+          "God kväll, {name}."
+        ],
+        "meet": [
+          "Hej Bo! Fint väder!",
+          "Stina, du är alltid så flitig."
+        ]
+      },
+      "elsa": {
+        "morning": [
+          "God morgon! Jag är redan vaken!",
+          "Titta, en fjäril!"
+        ],
+        "day": [
+          "Hej {name}! Kom och lek!",
+          "Ska vi plocka blommor?",
+          "Jag har hittat en fin sten."
+        ],
+        "evening": [
+          "Jag måste hem snart…",
+          "Natti natti, {name}!"
+        ],
+        "meet": [
+          "Hej tant Greta!",
+          "Hej Sven! Får jag se fisken?",
+          "Jag vann!"
+        ]
+      }
+    }
+  },
   "dialogue": {
     "npcs": {
       "greta": {
