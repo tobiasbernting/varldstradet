@@ -72,6 +72,15 @@ import {
   XP_LEVELS,
   FORGE_MAX,
   FORGE_COSTS,
+  FORGE_CRAFTS,
+  forgeStats,
+  gearStats,
+  fighterMax,
+  sagaItem,
+  SMITH_ID,
+  PAINT_PALETTE,
+  PAINT_CHARS,
+  PAINT_SIZE,
   LEVEL_REWARDS,
   VOLVA_ID,
   NPC_TALK,
@@ -259,6 +268,27 @@ const run = {
   texts: { ...RUN_T },
 };
 
+// What the TS forge maths gives, for the native client's check to compare its own numbers against: per piece and forge level the
+// forgeStats (and the weapon's power as the forge window shows it), and for a krigare wearing the jarnyxa (forged
+// to each level) the gearStats and full health at every hero level.
+const forgeSamples: Record<string, { power: number; hp: number; armor: number; shown: number }[]> = {};
+for (const id of [...Object.keys(FORGE_CRAFTS), 'runsvard', 'offhand_helskold', 'offhand_tyrshandske', 'amulet_helring', 'amulet_brisingamen']) {
+  forgeSamples[id] = [];
+  for (let n = 0; n <= FORGE_MAX; n++) {
+    const st = forgeStats(id, n);
+    const d = sagaItem(id);
+    forgeSamples[id]!.push({ ...st, shown: d?.kind === 'weapon' ? RARITY_POWER[d.rarity] * (1 + st.power) - 1 : st.power });
+  }
+}
+const heroSamples: Record<string, { power: number; hp: number; armor: number; max: number }[]> = {};
+for (let lv = 1; lv <= XP_LEVELS.length; lv++) {
+  heroSamples[lv] = [];
+  for (let n = 0; n <= FORGE_MAX; n++) {
+    const p = { inventory: [], saga: { cls: 'krigare', chapter: 0, heard: false, cleared: [], titles: [], quests: {}, done: [], found: [], xp: XP_LEVELS[lv - 1], gear: { weapon: 'jarnyxa' }, forge: { jarnyxa: n } } } as any;
+    heroSamples[lv]!.push({ ...gearStats(p), max: fighterMax(p, 'krigare') });
+  }
+}
+
 /**
  * The books (M9b, parity with the browser): the Gårdsbok's achievements with their texts, the villagers' idle lines, the
  * Upptäcktsboken's landmarks by biome with their lore, the help topics with {recipe:}/{price:}/{name:} filled in (the native
@@ -323,6 +353,7 @@ const data = {
   /** What the shop lists, in the browser's order (the order items are defined in data.ts). */
   shopItems: Object.values(ITEMS).filter((d) => d.tab !== undefined).map((d) => d.id),
   paintedSell: PAINTED_SELL,
+  paint: { palette: PAINT_PALETTE, chars: PAINT_CHARS, size: PAINT_SIZE },
   transportPrice: TRANSPORT_PRICE,
   interior: INTERIOR,
   /** Placeables that change the ground instead of standing on it (FLOOR_ITEMS in sim.ts): the object kind they place. */
@@ -330,7 +361,7 @@ const data = {
   volva: VOLVA_ID,
   chapters,
   sagaQuests,
-  gear: { rarityPower: RARITY_POWER, levelBonus: LEVEL_BONUS, powerCap: POWER_CAP, armorCap: ARMOR_CAP, classFit: CLASS_FIT, xpLevels: XP_LEVELS, forgeMax: FORGE_MAX, slots: ['weapon', 'offhand', 'amulet'] },
+  gear: { rarityPower: RARITY_POWER, levelBonus: LEVEL_BONUS, powerCap: POWER_CAP, armorCap: ARMOR_CAP, classFit: CLASS_FIT, xpLevels: XP_LEVELS, forgeMax: FORGE_MAX, forgeCosts: FORGE_COSTS, forgeCrafts: FORGE_CRAFTS, smith: SMITH_ID, forgeSamples, heroSamples, slots: ['weapon', 'offhand', 'amulet'] },
   levelRewards: LEVEL_REWARDS,
   book,
   dialogue,

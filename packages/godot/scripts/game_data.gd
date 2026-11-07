@@ -30,6 +30,7 @@ var cooking: Array = [] ## the stove's recipes, the same shape
 var shop_tabs: Array = [] ## the shop's tabs [{id, name}]
 var shop_items: Array = [] ## the ids the shop lists, in the browser's order
 var painted_sell := 20
+var paint: Dictionary = {} ## the paint screen's palette, its characters and its size (shared/src/paint.ts)
 var transport_price: Dictionary = {"bus": 5, "train": 15}
 var interior: Dictionary = {"x": 52, "y": 55, "w": 10, "h": 6} ## the farmhouse's room on the farm map (INTERIOR in map.ts)
 var floors: Array = []
@@ -74,6 +75,7 @@ func _ready() -> void:
 		shop_tabs = g.get("shopTabs", [])
 		shop_items = g.get("shopItems", [])
 		painted_sell = int(g.get("paintedSell", 20))
+		paint = g.get("paint", {})
 		transport_price = g.get("transportPrice", transport_price)
 		interior = g.get("interior", interior)
 		floors = g.get("floors", [])
