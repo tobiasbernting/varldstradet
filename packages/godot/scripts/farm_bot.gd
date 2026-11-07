@@ -525,7 +525,24 @@ func _pet_wild() -> void:
 				continue
 			var tile := _animal_tile(a)
 			var me := _my_tile()
-			if absi(tile.x - me.x) + absi(tile.y - me.y) == 1:
+			var next_to_it := absi(tile.x - me.x) + absi(tile.y - me.y) == 1
+			if next_to_it and float(rec["away"]) < 2.5 and not rec.has("pushed"):
+				# It never bolted: it stood next to where I came in, so I was within its reach but barely moving. Walking away from
+				# it startles it from this close too (the server's rule is "a moving hero within 4 tiles"); then wait for it below.
+				rec["pushed"] = true
+				var from_it := Vector2(world.hero.px, world.hero.py) - _animal_px(a)
+				world.hero.driven = true
+				world.hero.drive = from_it.normalized() if from_it.length() > 0.5 else Vector2.RIGHT
+				await _wait(1.0)
+				world.hero.drive = Vector2.ZERO
+				await _until(func() -> bool:
+					var b := _animal_by_id(wild_id)
+					if b.is_empty():
+						return true
+					rec["away"] = maxf(float(rec["away"]), _animal_px(b).distance_to(rec["home"]) / Data.tile())
+					return float(rec["away"]) >= 2.5, 4.0)
+				continue
+			if next_to_it:
 				_face("right" if tile.x > me.x else ("left" if tile.x < me.x else ("down" if tile.y > me.y else "up")))
 				# the brush first (the animal is "fin"), then a pat with the hoe in hand (the rod would not touch it)
 				var toasts_before: int = _report["toasts"].size()
