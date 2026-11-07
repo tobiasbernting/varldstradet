@@ -198,6 +198,30 @@ func _find_old(id: String) -> Variant:
 	return _last_objects.get(id)
 
 
+var _mesh_of: Dictionary = {} ## id -> the name of the mesh a chunk drew the object with (a painted wall: "paint:wall_wood:1"), for the checks
+
+
+## The name of the mesh an object is drawn with: a chunk's instance (its recorded name) or a node's first mesh ("" when none).
+func mesh_name_of(id: String) -> String:
+	var node: Variant = _nodes.get(id)
+	if node is Node:
+		for c in (node as Node).get_children():
+			if c is MeshInstance3D and (c as MeshInstance3D).mesh is ArrayMesh:
+				return assets.name_of((c as MeshInstance3D).mesh)
+		return ""
+	return str(_mesh_of.get(id, ""))
+
+
+## The hung picture's drawing: the texture of the frame's quad (null when the object is not a picture with one).
+func picture_texture(id: String) -> Texture2D:
+	var node: Variant = _nodes.get(id)
+	if node is Node and (node as Node).has_node("Picture"):
+		var mat: Variant = ((node as Node).get_node("Picture") as MeshInstance3D).material_override
+		if mat is StandardMaterial3D:
+			return (mat as StandardMaterial3D).albedo_texture
+	return null
+
+
 var _last_objects: Dictionary = {} ## id -> the object as it was drawn (kind, x, y, variant)
 
 
@@ -279,6 +303,7 @@ func _remove_object(id: String, obj: Dictionary) -> void:
 	c.objs.erase(id)
 	c.dirty = true
 	_last_objects.erase(id)
+	_mesh_of.erase(id)
 	if bool(assets.spec(str(obj.get("kind", ""))).get("fence", false)):
 		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
 			_chunk_at(x + d.x, y + d.y).dirty = true
@@ -617,6 +642,9 @@ func _instance_object(id: String, obj: Dictionary, groups: Dictionary) -> void:
 			mname = str(list[int(obj.get("variant", 0)) % list.size()])
 		else:
 			mname = str(list[int(_h2(x, y, 1) * list.size()) % list.size()])
+		# a wall, door or window a paint bucket has coloured: the server's `variant` 1..6 (0 is unpainted)
+		if PAINTABLE.has(kind) and int(obj.get("variant", 0)) > 0:
+			mname = "paint:%s:%d" % [mname, int(obj.get("variant", 0))]
 		if bool(spec.get("fence", false)):
 			var mask := 0
 			if _is_fence(x, y - 1):
@@ -631,6 +659,7 @@ func _instance_object(id: String, obj: Dictionary, groups: Dictionary) -> void:
 				mask = 10
 			mname = ("gatef_%d" if kind == "gate" else "fence_%d") % mask
 	var casts := not SMALL.has(kind)
+	_mesh_of[id] = mname
 	var gk := [mname, casts]
 	if not groups.has(gk):
 		groups[gk] = []
@@ -658,6 +687,10 @@ func _is_fence(x: int, y: int) -> bool:
 # Objects that are nodes: houses, lamps, arches, the cave
 
 
+## What a paint bucket colours (the server's PAINTABLE: the farmhouse and the pieces of a wall, which it paints together).
+const PAINTABLE := ["house", "wall_wood", "wall_stone", "door", "window"]
+
+
 func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 	var node := Node3D.new()
 	node.name = kind
@@ -668,6 +701,8 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 	var list: Array = spec.get("m", [])
 	if not list.is_empty():
 		mname = str(list[variant % list.size()]) if bool(spec.get("by_variant", false)) else str(list[0])
+		if PAINTABLE.has(kind) and variant > 0:
+			mname = "paint:%s:%d" % [mname, variant]
 	if kind.begins_with("lm_"):
 		return _landmark(kind, node)
 	var m := assets.mesh(mname) if mname != "" else null
@@ -693,6 +728,8 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 			_night_glows.append([gw, 1.8])
 			_window_pool(node, Vector3(0.0, 0.0, 3.0))
 			_add_light(node, Vector3(0.0, 1.0, 2.8), FarmAssets.WARM, 7.0, 1.4, 0.12, true)
+		"painting":
+			_picture(node, obj)
 		"saga_portal":
 			var col: Color = DungeonLook.portal_colour(variant)
 			var g2 := assets.glow_quad(col, 1.8, 1.4)
@@ -756,6 +793,27 @@ func _make_node(kind: String, obj: Dictionary, spec: Dictionary) -> Node3D:
 			node.add_child(pool)
 			_night_glows.append([pool, 0.41])
 	return node
+
+
+## The drawing in a hung picture's frame: a quad on the frame's front with the painting's cells as its texture (`data` is the
+## string the server keeps; a frame without one stays empty). Named "Picture" so a check can look at its texture.
+func _picture(node: Node3D, obj: Dictionary) -> void:
+	var px := str(obj.get("data", ""))
+	if not PaintArt.valid(px):
+		return
+	var q := QuadMesh.new()
+	q.size = Vector2(0.5, 0.5)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_texture = PaintArt.texture_of(px)
+	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	mat.roughness = 1.0
+	var mi := MeshInstance3D.new()
+	mi.name = "Picture"
+	mi.mesh = q
+	mi.material_override = mat
+	mi.position = Vector3(0.0, 1.3, 0.112)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	node.add_child(mi)
 
 
 func _billboard(mi: MeshInstance3D) -> void:
