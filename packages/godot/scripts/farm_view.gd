@@ -836,5 +836,54 @@ func chimneys() -> Array[Vector3]:
 	return out
 
 
+## The ground at a tile ("" outside the map), for the footsteps and the soundscape (M7b).
+func ground_at(x: int, y: int) -> String:
+	return _terrain_at(x, y)
+
+
+## The ground under a scene position (one scene unit is one tile).
+func ground_under(at: Vector3) -> String:
+	return _terrain_at(floori(at.x), floori(at.z))
+
+
+## Open grass a bird could stand on: grass (or moss) with nothing built or grown on it.
+func free_grass_at(x: int, y: int) -> bool:
+	var t := _terrain_at(x, y)
+	if t != "grass" and t != "moss":
+		return false
+	return not world.get("occupancy", {}).has("%d,%d" % [x, y])
+
+
+## How near open water is, 0 (none within `radius` tiles) to 1 (at the bank): the sound of water and of the sea.
+func water_near(at: Vector3, radius: float) -> float:
+	var best := radius + 1.0
+	var cx := floori(at.x)
+	var cy := floori(at.z)
+	var r := ceili(radius)
+	for dy in range(-r, r + 1):
+		for dx in range(-r, r + 1):
+			var t := _terrain_at(cx + dx, cy + dy)
+			if t == "water" or t == "pool":
+				best = minf(best, Vector2(float(dx) + 0.5 - fposmod(at.x, 1.0), float(dy) + 0.5 - fposmod(at.z, 1.0)).length())
+	return 0.0 if best > radius else 1.0 - best / radius
+
+
+## The things that burn (a torch, a stove, the smithy's forge, the longhall's hearth): where the fire crackle is loudest.
+const FIRE_KINDS := ["torch", "cave_torch", "stove", "smithy", "longhall", "pizzeria", "saga_brazier"]
+
+
+## How near a fire is, 0 (none within `radius` tiles) to 1 (next to it).
+func fire_near(at: Vector3, radius: float) -> float:
+	var best := radius + 1.0
+	for id in _last_objects.keys():
+		var o: Dictionary = _last_objects[id]
+		if not (str(o.get("kind", "")) in FIRE_KINDS):
+			continue
+		var def := Data.object_def(str(o.get("kind", "")))
+		var p := Vector3(float(o.get("x", 0)) + float(def.get("w", 1)) * 0.5, 0.0, float(o.get("y", 0)) + float(def.get("h", 1)) * 0.5)
+		best = minf(best, Vector2(p.x - at.x, p.z - at.z).length())
+	return 0.0 if best > radius else 1.0 - best / radius
+
+
 func object_count() -> int:
 	return _nodes.size() + _last_objects.size()

@@ -15,11 +15,14 @@ signal changed(preset: String)
 const ORDER := ["lag", "mellan", "hog"]
 const PRESETS := {
 	"lag": {"scale": 0.8, "mpix": 1.3, "shadows": 0, "ssao": false, "gi": false, "fog": false, "glow": false, "particles": 0, "sun_shadow": 0, "weather": 150,
-		"wind": 1, "water": 0, "fireflies": 0, "butterflies": 0, "leaves": 0, "smoke": 0, "mist": 0, "window_light": 0},
+		"wind": 1, "water": 0, "fireflies": 0, "butterflies": 0, "leaves": 0, "smoke": 0, "mist": 0, "window_light": 0,
+		"steps": 3, "ambience": 1, "sparrows": 0},
 	"mellan": {"scale": 1.0, "mpix": 2.1, "shadows": 0, "ssao": true, "gi": false, "fog": false, "glow": true, "particles": 8, "sun_shadow": 1, "weather": 600,
-		"wind": 2, "water": 1, "fireflies": 28, "butterflies": 9, "leaves": 36, "smoke": 7, "mist": 9, "window_light": 1},
+		"wind": 2, "water": 1, "fireflies": 28, "butterflies": 9, "leaves": 36, "smoke": 7, "mist": 9, "window_light": 1,
+		"steps": 6, "ambience": 2, "sparrows": 6},
 	"hog": {"scale": 1.0, "mpix": 3.7, "shadows": 6, "ssao": true, "gi": true, "fog": true, "glow": true, "particles": 16, "sun_shadow": 2, "weather": 1500,
-		"wind": 3, "water": 2, "fireflies": 56, "butterflies": 16, "leaves": 80, "smoke": 12, "mist": 18, "window_light": 2},
+		"wind": 3, "water": 2, "fireflies": 56, "butterflies": 16, "leaves": 80, "smoke": 12, "mist": 18, "window_light": 2,
+		"steps": 10, "ambience": 2, "sparrows": 12},
 }
 ## The alive world's toggles on the outdoor maps (M7a), per preset. The counts are budgets (how many of each thing exist
 ## near the hero at most; 0 is off), the levels pick a shader's quality:
@@ -30,6 +33,12 @@ const PRESETS := {
 ##  fireflies     on summer nights;   butterflies by day in spring and summer;   leaves falling from the trees in autumn;
 ##  smoke         puffs from a chimney (per chimney);   mist  low drifting mist at dawn;
 ##  window_light  0 the windows' glow only, 1 + a pool of light on the ground in front of them, 2 + it flickers like a fire
+## The living world's sound and wildlife (M7b), per preset (the sound ones are also switched in Settings: steps_on, ambience_on):
+##  steps      how many footsteps can sound at once (the hero's and the others'; 0 is off). Låg: 3, so the hero and two others
+##  ambience   0 off, 1 (Låg) only the three loudest layers of the place's soundscape, chosen by place, hour and weather, 2 all
+##             the layers, with water and fire sounding louder as you near them, and the owl at night
+##  sparrows   small brown birds that hop about on the grass by day and fly off when you come near (0 builds nothing)
+## (The wild animals' startling is the server's, shared/sim.ts `tickStartle`: it is the same for everyone, so no toggle.)
 ## The torch shadows' map: Hög only (the others have no positional shadows at all, so no atlas to clear every frame).
 const SHADOW_ATLAS := 4096
 ## Torches farther than this from the camera are not lit at all, and farther than SHADOW_FADE throw no shadow
