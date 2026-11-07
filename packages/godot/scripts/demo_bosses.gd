@@ -221,10 +221,18 @@ func _land_move(sp: String, id: int, mv: Dictionary, zones: Array, ids: Array) -
 			_hit(world.model.me, int(mv.get("dmg", 20)), "dmg")
 		"pull":
 			# the party is pulled in next to the boss (a `warp`), and hurt a little
+			var before := Vector2(_hx, _hy).distance_to(Vector2(_bx, _by))
 			_changes([{"t": "warp", "id": world.model.me, "x": _bx - _tile * 1.5, "y": _by + _tile * 1.0, "area": _area}])
 			_hit(world.model.me, int(mv.get("dmg", 20)), "dmg")
 			_hx = _bx - _tile * 1.5
 			_hy = _by + _tile * 1.0
+			# ...and my hero really is next to the boss now, nearer than before
+			_pending.append([2, func() -> void:
+				_checks += 1
+				var d := Vector2(world.hero.px, world.hero.py).distance_to(Vector2(_bx, _by))
+				if d > 2.0 * _tile or d >= before:
+					_fails += 1
+					print("bosses: FAIL %s pull: the hero is %.1f tiles from the boss after it (%.1f before)" % [sp, d / _tile, before / _tile])])
 		"freeze":
 			_freeze(str(mv.get("block", "isblock")))
 		"mend":
@@ -234,6 +242,16 @@ func _land_move(sp: String, id: int, mv: Dictionary, zones: Array, ids: Array) -
 			_hp = minf(top, _hp + float(n))
 			_hit(id, n, "heal")
 			_state({str(id): [_hp, top]}, {}, null)
+			# the heal floats over the boss as "+n" (the fx view keeps a floater for a second or so)
+			_pending.append([2, func() -> void:
+				_checks += 1
+				var found := false
+				for fl in world.fx._floaters:
+					if str(fl["on"]) == str(id) and (fl["label"] as Label3D).text == "+%d" % n:
+						found = true
+				if not found:
+					_fails += 1
+					print("bosses: FAIL %s mend: no +%d floats over the boss" % [sp, n])])
 		"summon":
 			for k in range(int(mv.get("count", 2))):
 				_helper(str(mv.get("add", "")), _bx + (float(k) - 0.5) * 2.0 * _tile, _by + _tile)
