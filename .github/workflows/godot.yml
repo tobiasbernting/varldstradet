@@ -120,6 +120,21 @@ jobs:
             grep -q "drawn (outdoor)" "alive-$1-$2.log" || { echo "::error::the $1 demo drew nothing"; exit 1; }
           done
 
+      # M7b: the hero walks east on the recorded farm and village (`--walk`, no server): footsteps are made by the ground under them
+      # and the ambience mixes layers (nothing is played headless, but every step and layer is counted); the farmer bot checks the
+      # same against a server, with startling wild animals. Under 10 s.
+      - name: The hero walks the farm and the village headless (footsteps by ground, ambience layers)
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          for demo in farm village; do
+            timeout 120 ~/godot/godot --headless --path . --quit-after 700 -- --demo=$demo --walk --time=0.4 2>&1 | tee "walk-$demo.log"
+            if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Failed loading resource|leaked at exit|still in use at exit|Pages in use exist at exit" "walk-$demo.log"; then
+              echo "::error::the $demo walk reported errors or leaked at exit (see above)"; exit 1
+            fi
+            grep -q "^walk: .* footsteps" "walk-$demo.log" || { echo "::error::the $demo walk made no footsteps"; exit 1; }
+          done
+
       # Shaders are not compiled by the headless renderer, so this is the one real compile check: a few seconds of a real
       # (software Vulkan under Xvfb, i.e. Forward+) render of the farm with the alive world on; any SHADER ERROR fails.
       # M7b: the headless bench (its scripts run and the process exits clean; headless frame times mean nothing) runs beside
@@ -453,6 +468,7 @@ jobs:
           shot m7a-autumn-leaves --demo=farm --at=12,5 --time=0.4 --year=autumn --quality=mellan
           shot m7a-pond-lag --demo=farm --at=44,39 --time=0.45 --year=summer --quality=lag
           shot m7a-pond-hog --demo=farm --at=44,39 --time=0.45 --year=summer --quality=hog
+          shot m7b-sparrows --demo=farm --at=22,10 --time=0.4 --year=summer --quality=mellan --alive=all
           for scene in farm village; do
             xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . --resolution 1280x720 -- --bench --scene=$scene --alive=all --time=0.9 --year=summer 2>&1 | tee "bench-alive-$scene.log"
             grep -q "bench: done" "bench-alive-$scene.log"

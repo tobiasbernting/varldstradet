@@ -2619,12 +2619,15 @@ function tickHearts(world: WorldState, ctx: SimCtx, out: Change[]): void {
  * M7b: the wild animals (not predators, monsters, pets, mounts or traffic) startle when a hero who is MOVING comes within
  * STARTLE_TILES of them: they bolt away from the hero for BOLT_MS, then wait, then walk back to where they were first
  * startled (`haunt`). A hero who stands still never startles anything, so waiting quietly lets an animal come near again
- * (petting and the lasso work as before); an animal that has been petted today knows you. Deterministic: no random numbers.
+ * (petting and the lasso work as before), and an animal that has been startled before and has caught its breath creeps up
+ * to a hero who stands still within CURIOUS_TILES; an animal that has been petted today knows you. Deterministic: no random numbers.
  */
 export const STARTLE_TILES = 4;
 export const BOLT_MS = 2400;
 const BOLT_SPEED_MUL = 2.2;
 const CALM_MS = 3500;
+/** A startled animal that has calmed down comes to a hero who stands still within this many tiles. */
+export const CURIOUS_TILES = 7;
 function tickStartle(world: WorldState, a: AnimalState, ctx: SimCtx): void {
   const def = ANIMALS[a.species];
   if (!def?.wild || a.owner || a.petted || def.mob || def.predator || isVehicle(a) || isMount(a) || a.stay) return;
@@ -2640,7 +2643,26 @@ function tickStartle(world: WorldState, a: AnimalState, ctx: SimCtx): void {
       near = p;
     }
   }
-  if (!near) return;
+  if (!near) {
+    // an animal that has been startled before, and has caught its breath, sidles up to a hero who stands quietly near it
+    if (!a.haunt || a.waitMs > 0 || a.tx !== undefined) return;
+    let quiet: PlayerState | undefined;
+    let nearest = CURIOUS_TILES * TILE;
+    for (const p of Object.values(world.players)) {
+      if (!p.online || p.area !== here || p.moving) continue;
+      const dist = Math.hypot(p.x - a.x, p.y - a.y);
+      if (dist < nearest && dist > 1.6 * TILE) {
+        nearest = dist;
+        quiet = p;
+      }
+    }
+    if (!quiet) return;
+    const dx = (a.x - quiet.x) / nearest;
+    const dy = (a.y - quiet.y) / nearest;
+    a.tx = quiet.x + dx * 1.1 * TILE;
+    a.ty = quiet.y + dy * 1.1 * TILE;
+    return;
+  }
   a.haunt ??= { x: a.x, y: a.y };
   a.startled = true;
   a.fleeUntil = ctx.now + BOLT_MS;

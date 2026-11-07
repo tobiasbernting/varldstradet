@@ -1666,6 +1666,25 @@ describe('vilda djur skräms och kommer tillbaka (M7b)', () => {
     expect(a.fleeUntil).toBeUndefined();
   });
 
+  it('a startled animal that has calmed down creeps up to a hero who stands still, so it can be petted', () => {
+    const { world, p, a } = outdoors('hare', 2);
+    p.moving = true;
+    let now = 1_000_000;
+    for (let i = 0; i < 10; i++) tick(world, 100, at((now += 100)));
+    expect(a.fleeUntil).toBeDefined();
+    p.moving = false;
+    let closest = Infinity;
+    for (let i = 0; i < 300; i++) {
+      tick(world, 100, at((now += 100)));
+      if (i > 40) closest = Math.min(closest, Math.hypot(a.x - p.x, a.y - p.y));
+    }
+    expect(closest).toBeLessThan(2 * TILE); // it came within petting reach
+    // one that was never startled just goes about its business
+    const other = outdoors('hare', 5);
+    for (let i = 0; i < 20; i++) tick(other.world, 100, at(1_000_000 + i * 100));
+    expect(other.a.haunt).toBeUndefined();
+  });
+
   it('a hero who stands still, an animal out of reach, a petted one, predators, pets and farm animals are left alone', () => {
     // standing still, 3 tiles away
     let t = outdoors('hare');
