@@ -284,6 +284,17 @@ func family() -> void:
 	_books()["family"] = {"members": members.size(), "rows": rows, "mate_online": bool(model.players()[mate_id].get("online", false)), "place": where}
 	bot._step("the family window", open and rows == members.size() and txt.contains(where) and bool(model.players()[mate_id].get("online", false)), "P opened it: %d in the family, %s is online \"%s\"" % [members.size(), "Bot-Syskon", where])
 	await bot._shot("family", 0.1)
+	# the list follows the family while it is open: the mate goes offline (a player change from the server), the button goes; back, it returns
+	var rec: Dictionary = (model.players()[mate_id] as Dictionary).duplicate(true)
+	var gone := rec.duplicate(true)
+	gone["online"] = false
+	model.apply({"t": "changes", "changes": [{"t": "player", "id": mate_id, "player": gone}]})
+	await bot._wait(0.3)
+	var off_ok := not home._has_button(fam, "jump:" + mate_id)
+	model.apply({"t": "changes", "changes": [{"t": "player", "id": mate_id, "player": rec}]})
+	await bot._wait(0.3)
+	var on_ok := home._has_button(fam, "jump:" + mate_id)
+	bot._step("the family list follows the family", off_ok and on_ok, "Bot-Syskon offline: no \"Hoppa till\"; online again: it is back")
 	var from := model.my_area_key()
 	var jumped := home._press(fam, "jump:" + mate_id) and await bot._until(func() -> bool: return model.my_area_key() == str(model.players()[mate_id].get("area", "farm")), 6.0)
 	await bot._wait(0.8)

@@ -63,6 +63,10 @@ func setup(v: WorldView) -> void:
 	model.tree_changed.connect(refresh)
 	model.run_changed.connect(refresh)
 	model.saga_best_changed.connect(refresh)
+	# the family list shows everyone: any player's record changing (online, where, asleep) redraws it while it is open
+	model.player_changed.connect(func(_id: String, _p: Variant) -> void:
+		if family.is_open():
+			family.refresh())
 
 
 func _add(w: GameWindow) -> GameWindow:

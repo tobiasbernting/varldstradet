@@ -42,16 +42,20 @@ func members() -> Array:
 	return out
 
 
-## Can I jump to this player now? Not out of or into a dungeon (the server's rule; the button says so before I try).
-func can_jump(p: Dictionary) -> bool:
-	var me := model.my_player()
+## Can I jump to this player now? jumpTo's refusals (shared/src/sagasim.ts): myself, someone not online, I am asleep, the old cave
+## or a run's zone on either side; a dungeon takes only those who have picked a way. The button says no before I try.
+static func can_jump_to(my_id: String, me: Dictionary, p: Dictionary) -> bool:
 	var there := str(p.get("area", ""))
 	var here := str(me.get("area", ""))
-	if str(p.get("id", "")) == model.me or not bool(p.get("online", false)) or bool(me.get("sleeping", false)):
+	if str(p.get("id", "")) == my_id or not bool(p.get("online", false)) or bool(me.get("sleeping", false)):
 		return false
 	if there == "dungeon" or here == "dungeon" or Data.is_run_key(there) or Data.is_run_key(here):
-		return false # (the old cave and a run's zones are left only the way they were entered)
-	return not (Data.is_saga_key(there) and Gear.cls_of(me) == "") # (a dungeon takes those who have picked a way)
+		return false
+	return not (Data.is_saga_key(there) and Gear.cls_of(me) == "")
+
+
+func can_jump(p: Dictionary) -> bool:
+	return can_jump_to(model.me, model.my_player(), p)
 
 
 func _fill() -> void:
@@ -89,5 +93,9 @@ func _face(p: Dictionary) -> Texture2D:
 
 
 func _jump(id: String) -> void:
+	# the list may be a moment old: ask again with what I know now (the server answers a refused jump with a toast, not silence)
+	if not can_jump(model.players().get(id, {})):
+		refresh()
+		return
 	Net.send({"t": "jump", "to": id})
 	close()
