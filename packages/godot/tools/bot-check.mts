@@ -481,7 +481,8 @@ async function main(): Promise<void> {
         // (Draugkryptan's arch is two forests away; another dungeon's route is whatever the walker found, ending in it)
         if (dungeon === 'draug') {
           const want = ['farm', 'a:0,-1', 'a:-1,-1', 'saga:draug'];
-          check(JSON.stringify(r.route) === JSON.stringify(want), `${r.name}: walked ${r.route.join(' → ')}`);
+          // (a walker that faints in a forest wakes at home and walks again: the route ends in the way in, it may begin twice)
+          check(r.route.length >= want.length && JSON.stringify(r.route.slice(-want.length)) === JSON.stringify(want), `${r.name}: walked ${r.route.join(' → ')}`);
         } else check(r.route.at(-1) === `saga:${dungeon}`, `${r.name}: walked ${r.route.join(' → ')}`);
         check(r.area === `saga:${dungeon}`, `${r.name}: arrived in saga:${dungeon} through the arch (${r.area || 'never'}) after ${r.seconds.toFixed(0)} s`);
         check(r.arrived_via_arch && !r.dev_sent, `${r.name}: the dev way was never used (dev_sent ${r.dev_sent})`);
