@@ -140,6 +140,26 @@ func _picture() -> void:
 		for k in keys:
 			back = back and int(Quality.alive(k)) == int(Quality.PRESETS["mellan"].get(k, 0))
 		_step("effect %s: on again is the preset's own" % id, Settings.effect_on(id) and back and _on_disk("effects", id) == true)
+	# a switch announces itself lightly: `effects_updated`, never `changed` (which would rebuild the world and drop a fight)
+	var heavy: Array = []
+	var light: Array = []
+	var on_changed := func(_p: String) -> void: heavy.append(1)
+	var on_light := func() -> void: light.append(1)
+	Quality.changed.connect(on_changed)
+	Quality.effects_updated.connect(on_light)
+	win._toggle_checks["weather"].button_pressed = false
+	win._toggle_checks["weather"].button_pressed = true
+	_step("an effect switch is announced lightly and never as a preset change", light.size() == 2 and heavy.is_empty(), "light %d heavy %d" % [light.size(), heavy.size()])
+	Quality.changed.disconnect(on_changed)
+	Quality.effects_updated.disconnect(on_light)
+	# Låg: the weather switch says on (the maps have rain there), and un- and re-ticking it never gives the dungeons weather
+	_press(win._preset_buttons, "lag")
+	_step("Låg: the weather switch starts on, dungeon weather is none", Settings.effect_on("weather") and Quality.dungeon_budget(3) == 0)
+	win._toggle_checks["weather"].button_pressed = false
+	win._toggle_checks["weather"].button_pressed = true
+	_step("Låg: off and on again leaves dungeon weather at none", Quality.dungeon_budget(3) == 0 and Quality.dungeon_budget(4) == 0 and Quality.alive("sky_weather") == 150)
+	_press(win._preset_buttons, "mellan")
+	_step("Mellan: the weather switch governs the dungeons too", Quality.dungeon_budget(3) == 200 and (win._toggle_checks["weather"] as CheckButton).button_pressed)
 	# a Låg player can switch the wind's gusts on (Mellan's level), and picking a preset clears the hand-made choices
 	_press(win._preset_buttons, "lag")
 	win._toggle_checks["water"].button_pressed = true

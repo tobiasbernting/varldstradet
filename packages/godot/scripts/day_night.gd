@@ -116,6 +116,20 @@ func setup(v: FarmView, biome: String, key: String) -> void:
 	_make_rainbow()
 
 
+## The weather's particles made again after the player switched the weather on or off in the settings (nothing else is touched).
+func rebuild_particles() -> void:
+	for p in [_rain, _flakes, _flakes2, _leaves, _rings]:
+		if p != null:
+			p.queue_free()
+	_rain = null
+	_rain_size = Vector3.ZERO
+	_flakes = null
+	_flakes2 = null
+	_leaves = null
+	_rings = null
+	_make_particles()
+
+
 func _clear_children() -> void:
 	for c in get_children():
 		c.queue_free()

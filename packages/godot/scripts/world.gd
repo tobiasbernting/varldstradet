@@ -161,6 +161,11 @@ func _ready() -> void:
 	Net.message.connect(_on_message)
 	Net.connection_changed.connect(_on_connection)
 	Quality.changed.connect(func(_p: String) -> void: _rebuild())
+	# an effect switched by hand (settings): only the weather's particles are made again, a fight in progress is left alone
+	Quality.effects_updated.connect(func() -> void:
+		if farm.sky != null:
+			farm.sky.rebuild_particles()
+		dungeon.refresh_effects())
 	_rng.randomize()
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--screenshot="):

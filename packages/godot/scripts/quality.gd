@@ -11,6 +11,7 @@ extends Node
 ## passes over the room.
 
 signal changed(preset: String)
+signal effects_updated ## a hand-made effect switch changed (settings window): only what is built at the start is made again (world.gd)
 
 const ORDER := ["lag", "mellan", "hog"]
 const PRESETS := {
@@ -57,7 +58,7 @@ const SHADOW_FADE := 16.0
 const TOGGLES := {
 	"wind": ["wind"],
 	"water": ["water"],
-	"ambient": ["fireflies", "butterflies", "leaves", "smoke", "mist", "window_light", "particles"],
+	"ambient": ["fireflies", "butterflies", "leaves", "smoke", "mist", "window_light"],
 	"weather": ["sky_weather", "weather"],
 	"wildlife": ["sparrows"],
 }
@@ -133,17 +134,19 @@ func toggle_default(id: String) -> bool:
 	return false
 
 
-## The dungeons' falling weather and motes (dungeon_view.gd): `div` shares the budget between them. Låg has none unless switched on.
+## The dungeons' falling weather and motes (dungeon_view.gd): `div` shares the budget between them. Låg has none, whatever the
+## "weather" switch says (it is the sky's rain and snow on the maps that the switch governs there; on Mellan and Hög it governs both).
 func dungeon_budget(div: int) -> int:
-	if preset == "lag" and not bool(Settings.effect_overrides.get("weather", false)):
+	if preset == "lag":
 		return 0
 	return int(value("weather")) / div
 
 
-## An effect was switched in the settings window: what is built at the start (the weather's particles, the torches' sparks) is
-## built again, the rest reads `alive` every frame.
+## An effect was switched in the settings window. Everything reads `alive` every frame except the weather's particles (the sky's and
+## the dungeon's), which world.gd makes again on this signal; nothing else is rebuilt (a fight goes on, telegraphs and targets stay).
+## (The torches' sparks, `particles`, are the preset's alone: they are built with the room.)
 func effects_changed() -> void:
-	changed.emit(preset)
+	effects_updated.emit()
 
 
 ## Particles per torch flame (0: a flat flame only).

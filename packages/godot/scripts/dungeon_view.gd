@@ -745,6 +745,20 @@ func set_weather(kind: String) -> void:
 	_weather_node = p
 
 
+## The falling weather and the motes made again after the weather switch changed in the settings (the room itself is not touched).
+func refresh_effects() -> void:
+	if _motes_node != null:
+		_motes_node.queue_free()
+		_motes_node = null
+	if world.is_empty():
+		return
+	_make_motes()
+	var kind := _weather
+	_weather = "" # (set_weather returns early for the kind it already has)
+	if kind != "":
+		set_weather(kind)
+
+
 ## The falling weather and the look's motes go where the hero goes.
 func follow_weather(at: Vector3) -> void:
 	if _motes_node != null:
