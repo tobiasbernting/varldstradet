@@ -688,7 +688,7 @@ Wildlife that flees and returns, footsteps and ambient sound are M7b. The server
   Fireflies, butterflies and the mist live in a 30 × 24 m box that wraps round the hero. Each fades in and out over about
   two seconds when its moment comes (`day_night.gd` passes the darkness, the season of the *year*, the weather and the
   day's fraction):
-  fireflies on summer nights (dry or foggy, not in the biomes without seasons), butterflies by day in spring and summer in
+  fireflies on summer nights (not in rain, storm, snow or hail; windy nights too; not in the biomes without seasons), butterflies by day in spring and summer in
   sun or cloud, leaves in autumn whenever it is not wet or snowing (they fall from the crowns of the nearest twelve
   deciduous trees, found again when the hero has walked 4 m or the objects changed, and are carried along the wind),
   smoke from the chimneys of the farmhouse, the longhall, the smithy, the pizzeria, the bath house, the small houses and

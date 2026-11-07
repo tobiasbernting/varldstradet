@@ -112,6 +112,21 @@ jobs:
             grep -q "drawn (outdoor)" "alive-$1-$2.log" || { echo "::error::the $1 demo drew nothing"; exit 1; }
           done
 
+      # Shaders are not compiled by the headless renderer, so this is the one real compile check: a few seconds of a real
+      # (software Vulkan under Xvfb, i.e. Forward+) render of the farm with the alive world on; any SHADER ERROR fails.
+      - name: The new shaders compile (Forward+ on lavapipe under Xvfb, a few frames)
+        working-directory: packages/godot
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y -q xvfb libgl1-mesa-dri mesa-vulkan-drivers
+          for q in mellan; do # (Låg's flat water is the old shader without its noise; the pictures job compiles it)
+            xvfb-run -a -s "-screen 0 1280x720x24" timeout 120 ~/godot/godot --path . --resolution 640x360 --quit-after 30 -- --demo=farm --quality=$q --alive=all --year=summer --time=0.9 2>&1 | tee "compile-$q.log"
+            if grep -E "SHADER ERROR|Shader compilation failed|SCRIPT ERROR|Parse Error" "compile-$q.log"; then
+              echo "::error::a shader or script failed on $q (see above)"; exit 1
+            fi
+            grep -q "Forward+" "compile-$q.log" || { echo "::error::the compile check did not run on Forward+"; exit 1; }
+          done
+
       - name: Run the bench headless for a moment (the bench's scripts run and the process exits clean; headless frame times mean nothing)
         working-directory: packages/godot
         run: |
@@ -421,7 +436,7 @@ jobs:
             test "$(stat -c %s "$GITHUB_WORKSPACE/shots/m7a/$name.png")" -gt 20000
           }
           shot m7a-farm-windy --demo=farm --at=22,10 --time=0.4 --weather=wind --year=summer --quality=mellan
-          shot m7a-pond-dusk --demo=farm --at=44,39 --time=0.69 --year=summer --quality=mellan
+          shot m7a-pond-dusk --demo=farm --at=44,39 --time=0.74 --year=summer --quality=mellan
           shot m7a-summer-night --demo=farm --at=11,9 --time=0.92 --year=summer --quality=mellan
           shot m7a-autumn-leaves --demo=farm --at=12,5 --time=0.4 --year=autumn --quality=mellan
           shot m7a-pond-lag --demo=farm --at=44,39 --time=0.45 --year=summer --quality=lag
