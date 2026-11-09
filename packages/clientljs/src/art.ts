@@ -1,6 +1,6 @@
 // Every picture the view draws, packed into the atlas: the 2D game's generated art plus a few soft shapes of our own
 // for light, weather and effects.
-import type { Appearance, Outfit } from '@lilla-garden/shared';
+import type { Appearance, Outfit, PetWear } from '@lilla-garden/shared';
 import { animalSheet, ANIMAL_SIZE } from '@art/animals.ts';
 import { CHAR_H, CHAR_W, drawCharacterSheet, lookKey, lookOf } from '@art/characters.ts';
 import { paintingPx } from '@art/painting.ts';
@@ -264,12 +264,12 @@ export function characterSprites(appearance: Appearance, outfit: Outfit): Sprite
 
 const animals = new Map<string, Sprite[]>();
 /** The 2 walk frames of an animal (or vehicle), facing right. */
-export function animalSprites(species: string, baby: boolean, jul: boolean, variant: number): Sprite[] {
-  const key = `${species}-${baby}-${jul}-${variant}`;
+export function animalSprites(species: string, baby: boolean, jul: boolean, variant: number, wear?: PetWear): Sprite[] {
+  const key = `${species}-${baby}-${jul}-${variant}${wear ? `-${JSON.stringify(wear)}` : ''}`; // (a pet's gear is drawn into its frames: drawWorn)
   let s = animals.get(key);
   if (!s) {
     const size = ANIMAL_SIZE[species] ?? { w: 16, h: 16 };
-    const sheet = animalSheet(species, baby, jul, variant);
+    const sheet = animalSheet(species, baby, jul, variant, wear);
     s = atlas.addFrames(sheet, size.w, size.h, 2);
     animals.set(key, s);
     atlas.flush();

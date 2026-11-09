@@ -22,6 +22,7 @@ import {
 import { sagaCheckpoint } from './sagamap.ts';
 import { CLEARED_STAT } from './sagasim.ts';
 import { runHooks } from './runhooks.ts';
+import { giveClearPets, petSeedBonus } from './petsim.ts';
 import { botStep, newMind, type BotMind } from './runbot.ts';
 import {
   CARED_HEARTS,
@@ -322,7 +323,7 @@ export function farmEffect(farm: WorldState, p: PlayerState, dishes: string[]): 
   // animals of the player's own: the best pet, and a mount if there is a stall; those with 4 hearts count double
   const mine = Object.values(farm.animals).filter((a) => a.owner === p.id);
   const best = (xs: typeof mine): (typeof mine)[number] | undefined => [...xs].sort((a, b) => b.hearts - a.hearts)[0];
-  const pet = best(mine.filter((a) => isPetAnimal(a) && !isMount(a)));
+  const pet = best(mine.filter((a) => isPetAnimal(a) && !isMount(a) && !a.petKind)); // (a pets.ts pet helps for real in the fights instead)
   const mount = un.stall ? best(mine.filter((a) => isMount(a))) : undefined;
   const animalMul = 1 + (gard.animal ?? 0);
   if (pet) addEffect(e, PET_EFFECT, animalMul * (pet.hearts >= CARED_HEARTS ? 2 : 1));
@@ -364,7 +365,7 @@ function pay(farm: WorldState, run: RunState, base: number | ((p: PlayerState) =
   for (const p of humans(farm, run)) {
     const n = typeof base === 'function' ? base(p) : base;
     if (n <= 0) continue;
-    const bonus = (effectFor(farm, run, p).seeds ?? 0) + MODIFIER_SEEDS * run.plan.modifiers.filter((m) => !AFFIX_IDS.includes(m)).length;
+    const bonus = (effectFor(farm, run, p).seeds ?? 0) + petSeedBonus(farm, p, run.level) + MODIFIER_SEEDS * run.plan.modifiers.filter((m) => !AFFIX_IDS.includes(m)).length;
     // the bonuses are added exactly: whole seeds are paid and the remainder is carried to the next payment
     const exact = n * (1 + bonus) * levelMuls(run.level).seeds + (run.carry[p.id] ?? 0);
     const amount = Math.floor(exact + 1e-9);
@@ -674,6 +675,7 @@ export function enterStop(farm: WorldState, run: RunState, node: number, ctx: Si
     buffs: {},
     wipeSub: RUN_T.wipeSub,
     required: z.required,
+    level: run.level,
   };
   (farm.areas ??= {})[key] = world;
   getArea(farm, key);
@@ -1114,6 +1116,7 @@ function victory(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
     const prog = (p.saga ??= newSagaProgress());
     if (!prog.cleared.includes(boss)) {
       prog.cleared.push(boss);
+      giveClearPets(farm, p, boss, out);
       bump(p, CLEARED_STAT[boss], 1, out);
     }
     awardTrophy(farm, p, boss, run.level, out);

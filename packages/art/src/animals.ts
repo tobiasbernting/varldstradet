@@ -2,6 +2,8 @@
 import { Px, shade } from './px.js';
 import { SAGA_AFTER, SAGA_ANIMAL_SIZE, SAGA_DRAW, SAGA_HAT_POS, SAGA_OUTLINE, SAGA_RIDE_LIFT, SAGA_VARIANTS } from './sagaanimals.ts';
 import { OUTLINE } from './world.js';
+import { PET_ANIMAL_SIZE, PET_DRAW, PET_HAT_POS } from './petanimals.ts';
+import { petOfSpecies, type PetAnchor, type PetWear } from '@lilla-garden/shared';
 
 export const ANIMAL_SIZE: Record<string, { w: number; h: number }> = {
   hen: { w: 16, h: 16 },
@@ -44,6 +46,7 @@ export const ANIMAL_SIZE: Record<string, { w: number; h: number }> = {
   dragon: { w: 22, h: 18 },
   // Sagan om Världsträdet: the dungeons' monsters and bosses, their pets and mounts
   ...SAGA_ANIMAL_SIZE,
+  ...PET_ANIMAL_SIZE,
 };
 
 function hen(p: Px, f: number): void {
@@ -651,13 +654,34 @@ const DRAW: Record<string, (p: Px, f: number, v?: number) => void> = {
   motorcycle,
   bus,
   train, hen, rabbit, sheep, cow, pig, horse, dog, cat, fox, deer, penguin, crab, goat, lizard, hare, boar, moose, bear, wolf, lynx, slime, bat, troll, boss,
-  frog, parrot, monkey, salamander, hedgehog, dino, gummy, alien, dragon, ...SAGA_DRAW };
+  frog, parrot, monkey, salamander, hedgehog, dino, gummy, alien, dragon, ...SAGA_DRAW, ...PET_DRAW };
 
 /** Head position (x of head centre, top y) for the tomteluva per species. */
 const HAT_POS: Record<string, [number, number]> = { hen: [12, 1], rabbit: [12, -1], sheep: [14, 4], cow: [19, 0], pig: [14, -1], horse: [22, -1], dog: [12, 1], cat: [11, 0], fox: [14, 0], deer: [13, 0], penguin: [6, 0], goat: [13, 0], hare: [11, -1], boar: [14, 1], moose: [19, 0], bear: [18, 1], wolf: [16, 0], lynx: [14, 0],
-  frog: [7, 1], parrot: [12, 1], monkey: [10, 1], salamander: [14, 0], hedgehog: [6, 0], dino: [14, 1], gummy: [6, 0], alien: [7, 3], dragon: [16, 2], ...SAGA_HAT_POS };
+  frog: [7, 1], parrot: [12, 1], monkey: [10, 1], salamander: [14, 0], hedgehog: [6, 0], dino: [14, 1], gummy: [6, 0], alien: [7, 3], dragon: [16, 2], ...SAGA_HAT_POS, ...PET_HAT_POS };
 
-export function drawAnimal(species: string, frame: number, baby: boolean, jul: boolean, variant = 0): Px {
+// ---- pet gear: the one place a cosmetic is drawn on a pet, at an anchor of its walk frame (pets.ts has the anchors) ----
+
+type WornDraw = (p: Px, x: number, y: number, frame: number) => void;
+const WORN: Record<string, WornDraw> = {
+  // a red neckerchief: a band round the neck and a knot with two ends that flutter on the second frame
+  halsduk_rod: (p, x, y, f) => {
+    p.rect(x - 1, y - 1, 3, 4, '#d8363a').rect(x - 1, y - 1, 1, 4, '#ff7a6a').rect(x + 1, y, 1, 3, '#9a1a22');
+    p.px(x, y + 3, '#d8363a').px(x - 1, y + 4 + f, '#9a1a22').px(x + 1, y + 4, '#d8363a');
+  },
+};
+
+/** Draws a pet's gear: each item at its anchor (head, neck or back) of this walk frame. A pet without anchors wears nothing. */
+export function drawWorn(p: Px, species: string, frame: number, wear: PetWear | undefined): void {
+  const def = petOfSpecies(species);
+  if (!def || !wear) return;
+  for (const [anchor, item] of Object.entries(wear)) {
+    const at = def.anchors[anchor as PetAnchor]?.[frame];
+    if (at && item) WORN[item]?.(p, at[0], at[1], frame);
+  }
+}
+
+export function drawAnimal(species: string, frame: number, baby: boolean, jul: boolean, variant = 0, wear?: PetWear): Px {
   const size = ANIMAL_SIZE[species] ?? { w: 16, h: 16 };
   const full = new Px(size.w, size.h);
   DRAW[species]?.(full, frame, variant);
@@ -665,6 +689,7 @@ export function drawAnimal(species: string, frame: number, baby: boolean, jul: b
     const [hx, hy] = HAT_POS[species] ?? [8, 0];
     full.rect(hx - 3, hy + 1, 6, 1, '#ffffff').rect(hx - 2, hy - 1, 4, 2, '#d8363a').rect(hx - 1, hy - 3, 2, 2, '#d8363a').px(hx + 1, hy - 3, '#ffffff');
   }
+  drawWorn(full, species, frame, wear);
   full.outline(SAGA_OUTLINE[species] ?? OUTLINE);
   SAGA_AFTER[species]?.(full, frame, variant);
   if (!baby) return full;
@@ -676,10 +701,10 @@ export function drawAnimal(species: string, frame: number, baby: boolean, jul: b
   return p;
 }
 
-export function animalSheet(species: string, baby: boolean, jul: boolean, variant = 0): HTMLCanvasElement {
+export function animalSheet(species: string, baby: boolean, jul: boolean, variant = 0, wear?: PetWear): HTMLCanvasElement {
   const size = ANIMAL_SIZE[species] ?? { w: 16, h: 16 };
   const sheet = new Px(size.w * 2, size.h);
-  sheet.blit(drawAnimal(species, 0, baby, jul, variant), 0, 0).blit(drawAnimal(species, 1, baby, jul, variant), size.w, 0);
+  sheet.blit(drawAnimal(species, 0, baby, jul, variant, wear), 0, 0).blit(drawAnimal(species, 1, baby, jul, variant, wear), size.w, 0);
   return sheet.canvas;
 }
 

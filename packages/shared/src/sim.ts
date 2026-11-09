@@ -15,6 +15,7 @@ import { } from './explore.ts';
 import { openFardport, openYggdrasil, tickRuns } from './runsim.ts';
 import { HOUSE_FIXED, generateHome, houseAct, houseName, isGuestHere, placedExtra, standAct, tickHome, tickHouseDoor } from './house.ts';
 import { homeKey, isHomeKey, ownerOfHome } from './homekeys.ts';
+import { grantPet, petAnimalOf, syncPet, renamePet } from './petsim.ts';
 import { ensureSagaPlaces, idleSaga, killXp, roamingDown, sagaAct, sagaRooted, tickSaga } from './sagasim.ts';
 import { addItem, makeInventory, moveStack, quickStack, removeItem, sortInventory, takeFromSlot } from './inventory.ts';
 import { SPAWN, addObject, inBounds, isHouseDoor, mapH, mapW, objectAt, removeObject, tileIndex } from './map.ts';
@@ -130,7 +131,7 @@ export const isPetAnimal = (a: AnimalState): boolean => {
 };
 
 /** Animals that listen to their owner's "stay" and whistle: pets and the owner's horses. */
-export const isCallable = (a: AnimalState): boolean => !!a.owner && !isVehicle(a) && (isPetAnimal(a) || isMount(a));
+export const isCallable = (a: AnimalState): boolean => !!a.owner && !a.petKind && !isVehicle(a) && (isPetAnimal(a) || isMount(a));
 /** Horses, and Sleipner and Gullinbursti from the dungeons. */
 export const isMount = (a: AnimalState): boolean => a.species === 'horse' || !!ANIMALS[a.species]?.mount;
 
@@ -828,6 +829,7 @@ export function nameAnimal(world: WorldState, playerId: string, id: number, name
   const old = animalDisplayName(a);
   a.name = clean;
   a.named = true;
+  renamePet(p, a, clean);
   return [{ t: 'animal', id, animal: a }, toast(null, fmt(T.renamed, { name: old, newName: clean }))];
 }
 
@@ -836,7 +838,9 @@ export function setOnline(world: WorldState, playerId: string, online: boolean):
   if (!p) return [];
   p.online = online;
   p.moving = false;
-  return [playerChange(p)];
+  const out = [playerChange(p)];
+  syncPet(world, p, out); // the pet is with its owner while they are in the game, and nowhere else
+  return out;
 }
 
 /**
@@ -1101,6 +1105,7 @@ export function placeIn(world: WorldState, p: PlayerState, keyStr: string, tx: n
   p.moveLock = 30;
   if (current !== target) {
     movePetsAlong(current, target, keyStr, p, out);
+    syncPet(farm, p, out);
     if (drove && canRideIn(target, tx, ty)) {
       moveAnimalAlong(current, target, keyStr, drove, p, out);
       p.riding = drove.id;
@@ -1131,7 +1136,7 @@ function movePetsAlong(from: WorldState, to: WorldState, toKey: string, p: Playe
   for (const a of Object.values(from.animals)) {
     // pets follow, and the dungeons' mounts when whistled for (but they wait outside a dungeon)
     const mount = !!ANIMALS[a.species]?.mount && !!a.follow && !isSagaKey(toKey) && !isIndoorKey(toKey);
-    if (a.owner !== p.id || !(isPetAnimal(a) || mount) || a.stay) continue;
+    if (a.owner !== p.id || !(isPetAnimal(a) || mount) || a.stay || a.petKind) continue; // (a pets.ts pet is made anew on the new map: syncPet)
     moveAnimalAlong(from, to, toKey, a, p, out);
   }
 }
@@ -1690,6 +1695,7 @@ function tickAnimals(world: WorldState, dtMs: number, ctx: SimCtx, out: Change[]
   for (const a of Object.values(world.animals)) {
     if ((isMount(a) || isVehicle(a)) && riderOf(world, a)) continue;
     if (world.saga?.mobs[a.id]) continue; // dungeon monsters fight by their own rules (tickSaga)
+    if (a.petKind && world.saga) continue; // and so do the pets there (tickPets)
     if (isVehicle(a)) {
       // city traffic follows its route; a player's own vehicle stays parked
       if (a.route !== undefined) {
@@ -1810,7 +1816,7 @@ export function newDay(world: WorldState, _ctx: SimCtx, out: Change[] = []): Cha
   return out;
 }
 
-const dummyAnimal: AnimalState = {
+export const dummyAnimal: AnimalState = {
   id: 0,
   species: 'hen',
   name: '',
@@ -1841,21 +1847,13 @@ export function adoptPet(world: WorldState, playerId: string, species: string, c
   const kennel = Object.values(farm.objects).find((o) => o.kind === 'kennel');
   if (!kennel || Math.hypot((kennel.x + 1) * TILE - p.x, (kennel.y + 1) * TILE - p.y) > 5 * TILE) return [];
   if ((p.stats.petAdopted ?? 0) > 0) return [toast(p.id, T.kennelOnce)];
-  const a: AnimalState = {
-    ...dummyAnimal,
-    id: farm.nextId++,
-    species,
-    name: DEFAULT_ANIMAL_NAMES[randInt(ctx.rnd, 0, DEFAULT_ANIMAL_NAMES.length - 1)] ?? 'Ny vän',
-    x: p.x,
-    y: p.y + 3,
-    owner: p.id,
-    age: 10,
-    waitMs: 2000,
-  };
-  farm.animals[a.id] = a;
   const out: Change[] = [];
   bump(p, 'petAdopted', 1, out);
-  out.push({ t: 'animal', id: a.id, animal: a }, fx(tileOf(p.x), tileOf(p.y), 'heart'), toast(p.id, fmt(T.kennelGot, { name: a.name })), playerChange(p), { t: 'open', to: p.id, ui: 'nameAnimal', id: a.id });
+  // the pet is kept with the player (pets.ts) and shows as an animal next to them
+  grantPet(farm, p, species === 'dog' ? 'hund' : 'katt', out, { quiet: true, now: ctx.now });
+  const a = petAnimalOf(farm, p);
+  if (a) out.push(fx(tileOf(p.x), tileOf(p.y), 'heart'), toast(p.id, fmt(T.kennelGot, { name: a.name })), { t: 'open', to: p.id, ui: 'nameAnimal', id: a.id });
+  out.push(playerChange(p));
   return out;
 }
 

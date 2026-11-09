@@ -57,6 +57,8 @@ import {
   previousDungeon,
   questCount,
   questState,
+  PETS,
+  PET_T,
   readProgress,
   sagaItem,
   type Change,
@@ -459,6 +461,8 @@ export class SagaUi {
   private targetFrame = new UnitView('saga-unit target');
   private party = h('div', { class: 'saga-party' });
   private partyRows = new Map<string, UnitView>();
+  /** The pets of the party (pets.ts): a small frame each with a state icon, after the party's rows. */
+  private petRows = new Map<number, HTMLElement>();
   private boss = h('div', { class: 'saga-boss' });
   private bossFor = -1;
   private bossMeter = new Meter();
@@ -821,6 +825,39 @@ export class SagaUi {
       row.set(c?.emoji ?? '🙂', name(id), snap!.f[id]!, c?.color ?? '#cccccc', false);
       row.el.classList.toggle('sel', t === id);
     });
+    this.renderPets(ids);
+  }
+
+  /** A pet in the party area: its picture, its name and what it is doing (helping, scared, hidden). Tap or long press: what it does. */
+  private renderPets(ids: string[]): void {
+    const w = activeWorld();
+    const pets = Object.values(w?.animals ?? {}).filter((a) => !!a.petKind && !!a.owner && ids.includes(a.owner) && !!PETS[a.petKind]);
+    for (const [id, el] of this.petRows)
+      if (!pets.some((a) => a.id === id)) {
+        el.remove();
+        this.petRows.delete(id);
+      }
+    for (const a of pets) {
+      const def = PETS[a.petKind!]!;
+      const st = a.pf?.st ?? 'help';
+      const icon = st === 'scared' ? '😨' : st === 'hidden' ? '🌿' : '🐾';
+      const state = st === 'scared' ? PET_T.stateScared : st === 'hidden' ? PET_T.stateHidden : PET_T.stateHelp;
+      let el = this.petRows.get(a.id);
+      if (!el) {
+        el = h('div', { class: 'saga-pet', role: 'group' }, h('span', { class: 'em' }), h('span', { class: 'nm' }), h('span', { class: 'st' }));
+        this.petRows.set(a.id, el);
+      }
+      if (el.parentElement !== this.party || el !== this.party.lastElementChild) this.party.append(el);
+      const [em, nm, stEl] = [el.children[0]!, el.children[1]!, el.children[2]!];
+      if (em.textContent !== def.emoji) em.textContent = def.emoji;
+      if (nm.textContent !== a.name) nm.textContent = a.name;
+      if (stEl.textContent !== icon) stEl.textContent = icon;
+      el.className = `saga-pet ${st}`;
+      el.dataset.infoIcon = def.emoji;
+      el.dataset.infoName = `${a.name} · ${PET_T[`role${def.role[0]!.toUpperCase()}${def.role.slice(1)}` as 'roleAttack']}`;
+      el.dataset.infoText = `${state}. ${def.trickText}`;
+      el.setAttribute('aria-label', `${a.name}: ${state}`);
+    }
   }
 
   // ---- the boss ----

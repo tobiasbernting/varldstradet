@@ -41,6 +41,10 @@ import {
   NPCS,
   TICK_HZ,
   adoptPet,
+  devPet,
+  pickPet,
+  togglePet,
+  wearOnPet,
   applyMove,
   areaOf,
   createPlayer,
@@ -483,6 +487,8 @@ export class Game {
         break;
       case 'pet':
         if (msg.a === 'adopt') changes = tagArea(adoptPet(this.world, pid, String(msg.species ?? ''), this.ctx()), areaK);
+        else if (msg.a === 'toggle') changes = togglePet(this.world, pid);
+        else if (msg.a === 'pick') changes = pickPet(this.world, pid, String(msg.id ?? ''));
         break;
       case 'pets':
         changes = callPets(this.world, pid, msg.cmd, this.ctx());
@@ -526,6 +532,8 @@ export class Game {
         else if (msg.a === 'warp') changes = devWarp(this.world, pid, Number(msg.x), Number(msg.y));
         else if (msg.a === 'decor') changes = devDecor(this.world, pid);
         else if (msg.a === 'trophy') changes = devTrophy(this.world, pid, String(msg.id ?? ''), Number(msg.level));
+        else if (msg.a === 'pet') changes = devPet(this.world, pid, String(msg.id ?? ''));
+        else if (msg.a === 'petwear') changes = wearOnPet(this.world, pid, typeof msg.item === 'string' ? msg.item : null);
         else if (msg.a === 'sagaBest') changes = devSagaBest(this.world, pid, String(msg.id ?? ''), Number(msg.ms));
         break;
       case 'voice':

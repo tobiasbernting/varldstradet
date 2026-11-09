@@ -665,8 +665,8 @@ export class View implements HudTarget {
 
   private putAnimal(a: AnimalState): void {
     const variant = (a.variant ?? 0) % (ANIMAL_VARIANTS[a.species] ?? 1);
-    const frames = animalSprites(a.species, isBaby(a), client.season === 'jul', variant);
-    const key = `${a.species}-${isBaby(a)}-${client.season === 'jul'}-${variant}`;
+    const frames = animalSprites(a.species, isBaby(a), client.season === 'jul', variant, a.wear);
+    const key = `${a.species}-${isBaby(a)}-${client.season === 'jul'}-${variant}${a.wear ? `-${JSON.stringify(a.wear)}` : ''}`;
     let actor = this.animals.get(a.id);
     if (!actor) {
       actor = this.newActor('animal', frames, key, a.x, a.y, this.makeLabel(a.name, 'animal'), a.species);
@@ -1596,6 +1596,16 @@ export class View implements HudTarget {
       const hop = rider ? 0 : this.hopOf(a);
       const w = s.w * (1 + a.squash * 0.6) * turnScale(a.flip);
       const h = s.h * (1 - a.squash * 0.6);
+      // a pet in a fight: a little lunge when it acts, half see-through while the lodjur hides, shaking when it is scared
+      if (an.petKind && an.pf) {
+        const since = serverNow() - (an.pf.actAt ?? 0);
+        const act = since >= 0 && since < 380 ? Math.sin((since / 380) * Math.PI) : 0;
+        const side = a.flip < 0 ? -1 : 1;
+        const shake = an.pf.st === 'scared' ? Math.sin(this.t * 45) * 0.9 : 0;
+        const tint = an.pf.st === 'hidden' ? alpha(0.4) : an.pf.st === 'scared' ? rgba(0.72, 0.82, 1, 1) : undefined;
+        q.push(a.y + 4, s, a.x + shake + side * act * 3, a.y + 4 - hop - h / 2 - act * 4, w, h, side * act * 0.32, tint);
+        continue;
+      }
       q.push(a.y + 4, s, a.x, a.y + 4 - hop - h / 2, w, h);
     }
     for (const r of this.roofs) if (r.alpha > 0.01 && inView(r.x, r.y, r.sprite.w, r.sprite.h)) q.push(r.depth, r.sprite, r.x + r.sprite.w / 2, r.y + r.sprite.h / 2, r.sprite.w, r.sprite.h, 0, alpha(r.alpha));

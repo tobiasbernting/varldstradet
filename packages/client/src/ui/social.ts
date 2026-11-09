@@ -1,6 +1,6 @@
 // 2D game: chat with everyone in the world, buttons that tell your pets to stay or whistle for them,
 // and the weather chip.
-import { CHAT_MAX_LEN, CHAT_PHRASES, T, WEATHER_EMOJI, WEATHER_NAMES, isIndoorKey, isCallable, localWeather, noWeatherHere, type Change } from '@lilla-garden/shared';
+import { CHAT_MAX_LEN, CHAT_PHRASES, PET_T, PETS, T, activePet, ownedPetIds, WEATHER_EMOJI, WEATHER_NAMES, isIndoorKey, isCallable, localWeather, noWeatherHere, type Change } from '@lilla-garden/shared';
 import { net } from '../net.js';
 import { bus, client, myPlayer } from '../state.js';
 import { SFX } from '../sound.ts';
@@ -124,6 +124,10 @@ export class SocialButtons {
   readonly el: HTMLElement;
   private stay: HTMLElement;
   private come: HTMLElement;
+  /** The pet in or out (pets.ts): one clear button, with a label and an info card (ui/run.ts shows it on a long press, focus or the pad). */
+  private pet: HTMLElement;
+  private petIc = h('span', null, '🐾');
+  private petTx = h('i', null, PET_T.btnIn);
 
   constructor(root: HTMLElement, chat: Chat, voice?: VoiceUi) {
     const talk = h('div', { class: 'round small', title: 'Prata med alla (Enter eller T)' }, '💬');
@@ -132,12 +136,21 @@ export class SocialButtons {
     onTap(this.stay, () => petCommand('stay'));
     this.come = h('div', { class: 'round small pet-btn', title: `${T.petsComeBtn} (V)` }, h('span', null, '🎵'), h('i', null, T.petsComeBtn));
     onTap(this.come, () => petCommand('come'));
-    this.el = h('div', { class: 'social' }, talk, voice?.btn, this.stay, this.come);
+    this.pet = h('div', { class: 'round small pet-btn pet-toggle', role: 'button', tabindex: '0', 'aria-label': PET_T.btnIn, 'data-info-icon': '🐾', 'data-info-name': PET_T.btnIn, 'data-info-text': PET_T.hint }, this.petIc, this.petTx);
+    onTap(this.pet, () => petToggle());
+    this.pet.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        petToggle();
+      }
+    });
+    this.el = h('div', { class: 'social' }, talk, voice?.btn, this.pet, this.stay, this.come);
     root.append(this.el);
     const refresh = () => this.refresh();
     bus.on('change', (c) => {
       if (c.t === 'animal' || c.t === 'areaData') refresh();
     });
+    bus.on('me', refresh);
     bus.on('welcome', refresh);
     bus.on('area', refresh);
     refresh();
@@ -147,11 +160,31 @@ export class SocialButtons {
     const any = myCallables().length > 0;
     this.stay.style.display = any ? '' : 'none';
     this.come.style.display = any ? '' : 'none';
+    // the pet button: there once you have a pet; the icon is the pet, the label what a press does
+    const me = myPlayer();
+    const owns = !!me && ownedPetIds(me).length > 0;
+    this.pet.style.display = owns ? '' : 'none';
+    if (!me || !owns) return;
+    const def = activePet(me) ?? PETS[me.pets?.active ?? ''] ?? PETS[ownedPetIds(me)[0]!];
+    const out = !activePet(me);
+    const label = out ? PET_T.btnIn : PET_T.btnOut;
+    this.petIc.textContent = def?.emoji ?? '🐾';
+    this.petTx.textContent = label;
+    this.pet.setAttribute('aria-label', `${label}: ${def?.name ?? ''}`);
+    this.pet.dataset.infoIcon = def?.emoji ?? '🐾';
+    this.pet.dataset.infoName = `${def?.name ?? ''}: ${label}`;
+    this.pet.classList.toggle('out', out);
   }
 }
 
 export function petCommand(cmd: 'stay' | 'come'): void {
   net.send({ t: 'pets', cmd });
+}
+
+/** The pet in or out, wherever you are (the button, the key P and the pad's right stick). */
+export function petToggle(): void {
+  net.send({ t: 'pet', a: 'toggle' });
+  SFX.talk();
 }
 
 /** The weather where you are, for the chip at the top (null in caves, indoors and on the moon). */

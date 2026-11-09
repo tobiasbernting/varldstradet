@@ -31,6 +31,8 @@ export * from './run.ts';
 export * from './runmap.ts';
 export * from './runbot.ts';
 export * from './runsim.ts';
+export * from './pets.ts';
+export * from './petsim.ts';
 export * from './landmarks.ts';
 export * from './explore.ts';
 export { placeLandmarks } from './painters.ts';
