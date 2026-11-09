@@ -34,9 +34,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       manifest: {
-        name: 'Lilla Gården',
-        short_name: 'Lilla Gården',
-        description: 'Ett litet bondgårdsspel för hela familjen',
+        name: 'Sagan om Världsträdet',
+        short_name: 'Sagan om Världsträdet',
+        description: 'Ett familjespel: gård och saga',
         lang: 'sv',
         start_url: '/',
         display: 'fullscreen',
