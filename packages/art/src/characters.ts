@@ -1,5 +1,6 @@
 // Layered, tintable 16x24 characters: body, hair, shirt, pants, shoes, hat.
 // Directions: down, up, right (left is right flipped). Frames: 0 stand, 1/2 walk.
+import { petLookIcon } from './petlooks.ts';
 import { ITEMS, decodeLook, type Appearance, type DecodedLook, type Facing, type LookSlot, type Outfit } from '@lilla-garden/shared';
 import { SET_STYLES, drawWeapon, decorHat, decorShirt, drawAmulet, drawCloak, drawOffhand, drawShoulders } from './looks.js';
 import { Px, shade } from './px.js';
@@ -732,6 +733,7 @@ export function portrait(l: Look, scale = 4): string {
 const ICON_WINDOW: Record<LookSlot, number> = { hat: 3, shoulders: 9, shirt: 12, cloak: 12, weapon: 0, offhand: 11, amulet: 9 };
 /** A 16x16 picture of a look for the wardrobe, the loot window and the gear stand: a weapon's own drawing, the others on a plain mannequin. */
 export function lookIcon(l: DecodedLook): Px {
+  if (l.piece.petSlot) return petLookIcon(l);
   if (l.piece.slot === 'weapon') return drawWeapon(l);
   const code = `${l.piece.id}|${l.tier}|${l.way ?? ''}`;
   const look = lookOf({ skin: '#b8bcc8', hair: '#b8bcc8', hairStyle: 'bald' }, { shirt: undefined, looks: { [l.piece.slot]: code } });

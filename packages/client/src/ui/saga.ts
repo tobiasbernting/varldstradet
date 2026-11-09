@@ -413,6 +413,7 @@ export class SagaUi {
     // Smed-Stina's window (ui/menus.ts) opens the wardrobe on the sets tab with a line about collecting them
     document.addEventListener('lilla:sets', () => this.openLooks(null, { tab: 'set', note: LOOK_T.stinaLine }));
     document.addEventListener('lilla:looks-arch', () => this.openLooks());
+    document.addEventListener('lilla:pet-gear', () => this.openLooks(null, { tab: 'pet' })); // (the kennel's and the pet button's way in)
     bus.on('open', (c) => {
       if (c.ui === 'sagaClass') this.open('class');
       else if (c.ui === 'saga') this.open('volva');
@@ -977,7 +978,7 @@ export class SagaUi {
   // ---- windows ----
 
   /** Garderoben (the wardrobe of looks); `stand`: the gear stand in the house it is picking a look for. */
-  openLooks(stand: number | null = null, opts: { tab?: 'wear' | 'set'; note?: string } = {}): void {
+  openLooks(stand: number | null = null, opts: { tab?: 'wear' | 'set' | 'pet'; note?: string } = {}): void {
     this.close();
     this.standObj = stand;
     this.looksNote = opts.note ?? null;
@@ -1304,6 +1305,18 @@ export class SagaUi {
         const cls = prog.cls ?? prog.lookCls;
         const can = wearableBy(dr.piece, cls) && !!cls;
         rows.append(lootLookCard(encodeLook(dr.piece, dr.tier, way), dr.piece, lines, can ? () => net.send({ t: 'look', slot: piece.slot, piece: dr.piece, cls }) : null));
+      }
+      // pet gear from the same clear (a pet was along): each piece with its effect playing, and a button to put it on that pet
+      if (lk.pet) {
+        const pet = lk.pet;
+        for (const dr of pet.drops) {
+          const piece = lookPiece(dr.piece);
+          if (!piece?.petSlot) continue;
+          best = Math.max(best, 3);
+          const lines = [fmt(PET_T.lootPet, { pet: pet.name }), dr.isNew ? fmt(LOOK_T.lootNew, { name: piece.name }) : fmt(LOOK_T.lootMore, { name: piece.name }), fmt(LOOK_T.lootNow, { tier: LOOK_TIER_NAMES[dr.tier - 1]!, n: dr.tier })];
+          const anchor = piece.petSlot;
+          rows.append(lootLookCard(encodeLook(dr.piece, dr.tier), dr.piece, lines, () => net.send({ t: 'pet', a: 'wear', anchor, piece: dr.piece, kind: pet.kind })));
+        }
       }
       for (const w of lk.ways) {
         const dun = DUNGEONS[lk.dungeon as keyof typeof DUNGEONS];

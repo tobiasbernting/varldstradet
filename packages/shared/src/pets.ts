@@ -100,7 +100,7 @@ export const PETS: Record<string, PetDef> = {
     courage: 40,
     source: { kind: 'kennel' },
     trick: { kind: 'purr', heal: 10, cd: 4500, range: 6, below: 0.85 },
-    anchors: A([11, 3], [9, 5], [5, 3], 0),
+    anchors: A([10, 3], [8, 5], [5, 3], 0),
   },
   rav: {
     id: 'rav',
@@ -203,19 +203,13 @@ export const petOfSpecies = (species: string): PetDef | undefined => Object.valu
 export const PET_LEVEL_MUL: readonly number[] = [1, 1, 1, 0.35, 0.15];
 export const petLevelMul = (level: number | undefined): number => PET_LEVEL_MUL[Math.max(0, Math.min(4, level ?? 2))] ?? 1;
 
-// ---- cosmetic gear for pets (prepared: one test item, no collection or drops yet) ----
+// ---- gear for pets ----
+// Pet gear are looks (looks.ts: PET_LOOK_SETS) worn at an anchor of the animal: the table's `anchors` are all a kind needs for that.
 
-export interface PetCosmetic {
-  id: string;
-  name: string;
-  anchor: PetAnchor;
-}
-/** Pet gear: an item sits at one anchor of the pet. Only the test item exists (a dev message puts it on or off). */
-export const PET_COSMETICS: Record<string, PetCosmetic> = {
-  halsduk_rod: { id: 'halsduk_rod', name: 'Röd halsduk', anchor: 'neck' },
-};
-/** What a pet wears: the item at each anchor (anchors left out are bare). */
+/** What a pet wears as it is drawn and sent to everyone: a look code (`piece|tier|way`, see encodeLook) at each anchor. */
 export type PetWear = Partial<Record<PetAnchor, string>>;
+/** What a player has put on one of their pets: the piece (and colourway) at each anchor. */
+export type PetDress = Partial<Record<PetAnchor, { piece: string; way?: 'svar' | 'extrem' }>>;
 
 // ---- what a player's save holds ----
 
@@ -226,8 +220,12 @@ export interface PetsSave {
   active?: string;
   /** True when the pet is dismissed: it neither helps nor blocks, and is nowhere. */
   out: boolean;
-  /** Gear per pet kind. */
-  wear?: Record<string, PetWear>;
+  /** The pet gear this player owns (piece id: its shine tier 1..5), shared by all their pets. */
+  gear?: Record<string, { tier: number }>;
+  /** How many dungeon clears with a pet along have been counted, per dungeon (it seeds the dice and keeps them fair). */
+  gearClears?: Record<string, number>;
+  /** What each pet kind wears. */
+  dress?: Record<string, PetDress>;
 }
 
 export const newPetsSave = (): PetsSave => ({ owned: {}, out: false });

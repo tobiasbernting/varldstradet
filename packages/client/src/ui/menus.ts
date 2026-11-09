@@ -388,6 +388,12 @@ export class Menus {
       row.append(card);
     }
     body.append(row);
+    const gear = h('button', { class: 'gold', type: 'button', style: { minHeight: '48px', marginTop: '10px' } }, `🧣 ${PET_T.gearTitle}`);
+    onTap(gear, () => {
+      this.close();
+      document.dispatchEvent(new CustomEvent('lilla:pet-gear'));
+    });
+    body.append(gear);
   }
 
   // ---- inventory & chest (tap one slot, then another to move) ----

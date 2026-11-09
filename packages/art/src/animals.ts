@@ -3,7 +3,9 @@ import { Px, shade } from './px.js';
 import { SAGA_AFTER, SAGA_ANIMAL_SIZE, SAGA_DRAW, SAGA_HAT_POS, SAGA_OUTLINE, SAGA_RIDE_LIFT, SAGA_VARIANTS } from './sagaanimals.ts';
 import { OUTLINE } from './world.js';
 import { PET_ANIMAL_SIZE, PET_DRAW, PET_HAT_POS } from './petanimals.ts';
-import { petOfSpecies, type PetAnchor, type PetWear } from '@lilla-garden/shared';
+import { PET_ANCHORS, decodeLook, petOfSpecies, type PetWear } from '@lilla-garden/shared';
+import { drawPetLook } from './petlooks.ts';
+export { petLookIcon } from './petlooks.ts';
 
 export const ANIMAL_SIZE: Record<string, { w: number; h: number }> = {
   hen: { w: 16, h: 16 },
@@ -662,22 +664,14 @@ const HAT_POS: Record<string, [number, number]> = { hen: [12, 1], rabbit: [12, -
 
 // ---- pet gear: the one place a cosmetic is drawn on a pet, at an anchor of its walk frame (pets.ts has the anchors) ----
 
-type WornDraw = (p: Px, x: number, y: number, frame: number) => void;
-const WORN: Record<string, WornDraw> = {
-  // a red neckerchief: a band round the neck and a knot with two ends that flutter on the second frame
-  halsduk_rod: (p, x, y, f) => {
-    p.rect(x - 1, y - 1, 3, 4, '#d8363a').rect(x - 1, y - 1, 1, 4, '#ff7a6a').rect(x + 1, y, 1, 3, '#9a1a22');
-    p.px(x, y + 3, '#d8363a').px(x - 1, y + 4 + f, '#9a1a22').px(x + 1, y + 4, '#d8363a');
-  },
-};
-
-/** Draws a pet's gear: each item at its anchor (head, neck or back) of this walk frame. A pet without anchors wears nothing. */
+/** Draws a pet's gear: each look code (`piece|tier|way`) at its anchor (head, neck or back) of this walk frame. A pet without anchors wears nothing. */
 export function drawWorn(p: Px, species: string, frame: number, wear: PetWear | undefined): void {
   const def = petOfSpecies(species);
   if (!def || !wear) return;
-  for (const [anchor, item] of Object.entries(wear)) {
-    const at = def.anchors[anchor as PetAnchor]?.[frame];
-    if (at && item) WORN[item]?.(p, at[0], at[1], frame);
+  for (const anchor of PET_ANCHORS) {
+    const l = decodeLook(wear[anchor]);
+    const at = def.anchors[anchor]?.[frame];
+    if (l && at) drawPetLook(p, l, anchor, at[0], at[1], frame);
   }
 }
 

@@ -1831,6 +1831,27 @@ export const PET_T = {
   petsAllowed: 'Ett djur följer med på färden.',
   wearRed: 'Röd halsduk',
   digs: 'Räven grävde fram något!',
+  // pet gear
+  gearTab: 'Djur',
+  gearTitle: 'Djurets grejer',
+  gearIntro: 'Klä ditt djur! Varje färd med ett djur ger något nytt, och det du har lyser starkare.',
+  gearDress: 'Du klär',
+  gearSlot: { head: 'Huvud', neck: 'Hals', back: 'Rygg' } as Record<string, string>,
+  gearSlotEmoji: { head: '🪖', neck: '📿', back: '🧥' } as Record<string, string>,
+  gearNone: 'Inget',
+  gearNoPets: 'Du har inget djur att klä än. Hämta ett i Hundkojan!',
+  gearEmpty: 'Du har inga djurgrejer än. Klara en färd med ditt djur, så får du din första!',
+  gearOn: 'På',
+  gearTap: 'Tryck på en sak för att ta på den eller läsa om den.',
+  gearOf: 'Ur: {set}',
+  gearAny: 'Passar alla djur',
+  gearGet: 'Klara {dungeon} med ett djur, på vilken svårighet som helst, så får du den.',
+  gearGot: '{pet} fick: {name}',
+  lootHead: 'Nya grejer till {pet}!',
+  lootPet: 'Till {pet}',
+  put: 'Ta på {pet}',
+  takeOff: 'Ta av',
+  toastWorn: '{pet} har {item} på sig.',
 };
 
 // ---------------------------------------------------------------------------
@@ -1895,6 +1916,25 @@ export const LOOK_TEXT: Record<string, { name: string; text?: string; svar?: str
   sig_gungner: { name: "Gungner", text: "Odens spjut, som alltid träffar. Det lämnar ett gyllene streck." },
   sig_frostbett: { name: "Frostbett", text: "Ett svärd av evig is som aldrig smälter." },
   sig_surtsvard: { name: "Surts eldsvärd", text: "Eldjättens eget svärd. Det brinner, men aldrig i din hand." },
+  // pet gear (the small sets for pets: one head, neck or back piece each; the colourways are the hero sets' own)
+  pet_draug: { name: "Draugkungens djurgrejer", svar: "Gravnatt", extrem: "Benvit" },
+  pet_frost: { name: "Frostdjurets grejer", svar: "Skymningsis", extrem: "Gröna isen" },
+  pet_surt: { name: "Smedens djurgrejer", svar: "Rostglöd", extrem: "Blåglöd" },
+  pet_hel: { name: "Korpens djurgrejer", svar: "Brun korp", extrem: "Vit korp" },
+  pet_alv: { name: "Lundens djurgrejer", svar: "Rosenlund", extrem: "Höstlund" },
+  pet_fenrir: { name: "Vargklyftans djurgrejer", svar: "Gråulv", extrem: "Vitulv" },
+  pet_draug_head: { name: "Benhjälmen", text: "En liten hjälm av gammalt ben med en grön låga. Passar alla djur." },
+  pet_draug_neck: { name: "Draugkragen", text: "Ett halsband av ringar med en grön runbricka." },
+  pet_frost_head: { name: "Isdiademet", text: "Ett litet diadem av iskristaller. Det yr snö runt det." },
+  pet_frost_back: { name: "Frostmanteln", text: "En blå mantel med vit pälskant. Aldrig kall." },
+  pet_surt_neck: { name: "Glödbrickan", text: "En svart kedja med en bricka som glöder." },
+  pet_surt_back: { name: "Glödfilten", text: "En svart sadelfilt med glödande kant." },
+  pet_hel_head: { name: "Korpfjädern", text: "En svart fjäder på en liten pannlugg. Några fjädrar faller av." },
+  pet_hel_back: { name: "Korpmanteln", text: "En mantel av svarta fjädrar som fladdrar." },
+  pet_alv_head: { name: "Lövkransen", text: "En krans av levande löv. Det lyser lite." },
+  pet_alv_neck: { name: "Ljusbandet", text: "Ett grönt band med en ljusdroppe." },
+  pet_fenrir_neck: { name: "Tyrs halsduk", text: "En röd halsduk med en runbricka." },
+  pet_fenrir_head: { name: "Hornhjälmen", text: "En liten hjälm med två horn." },
 };
 
 /** The titles that Svår and Extrem give for each dungeon: [Svår, Extrem]. */

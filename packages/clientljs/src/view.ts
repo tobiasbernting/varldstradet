@@ -18,6 +18,8 @@ import {
   STOP_WORDS,
   DUNGEON_H,
   DUNGEON_W,
+  PETS,
+  type LookSlot,
   facingTile,
   heldItem,
   HOUSE_ROOM,
@@ -1722,6 +1724,26 @@ export class View implements HudTarget {
       if (!p || p.sleeping || !p.outfit.looks || this.sagaFx.pose(id) === 'down') continue;
       if (a.x < vx - 40 || a.x > vx + vw + 40 || a.y < vy - 50 || a.y > vy + vh + 40) continue;
       out.push({ id, x: a.x, y: a.y + 4 - this.rideInfo(p).lift, facing: p.facing, moving: p.moving, seed: a.seed, looks: p.outfit.looks });
+    }
+    // the pets' gear: each animal with something on is its own small actor (looksfx.ts gives it a smaller budget)
+    for (const [id, a] of this.animals) {
+      const an = world.animals[id];
+      if (!an?.petKind || !an.wear || a.x < vx - 40 || a.x > vx + vw + 40 || a.y < vy - 50 || a.y > vy + vh + 40) continue;
+      const def = PETS[an.petKind];
+      if (!def) continue;
+      const size = ANIMAL_SIZE[an.species] ?? { w: 16, h: 16 };
+      const f = a.wasMoving ? Math.floor(a.walk * 5) % 2 : 0;
+      const side = a.flip < 0 ? -1 : 1;
+      const hop = this.hopOf(a);
+      const at = (k: 'head' | 'neck' | 'back', dy: number): [number, number] => {
+        const [ax, ay] = def.anchors[k][f] ?? def.anchors[k][0]!;
+        return [a.x + side * (ax - size.w / 2), a.y + 4 - hop - size.h + ay + dy];
+      };
+      const looks: Partial<Record<LookSlot, string>> = {};
+      if (an.wear.head) looks.hat = an.wear.head;
+      if (an.wear.neck) looks.amulet = an.wear.neck;
+      if (an.wear.back) looks.cloak = an.wear.back;
+      out.push({ id: `pet${id}`, x: a.x, y: a.y + 4 - hop, facing: side < 0 ? 'left' : 'right', moving: a.wasMoving, seed: a.seed, looks, pet: { head: at('head', -2), chest: at('neck', 1), back: at('back', 0) } });
     }
     return out;
   }

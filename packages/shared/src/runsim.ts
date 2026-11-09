@@ -23,7 +23,7 @@ import {
 import { sagaCheckpoint } from './sagamap.ts';
 import { CLEARED_STAT } from './sagasim.ts';
 import { runHooks } from './runhooks.ts';
-import { giveClearPets, petSeedBonus } from './petsim.ts';
+import { awardPetLooks, giveClearPets, petSeedBonus } from './petsim.ts';
 import { botStep, newMind, type BotMind } from './runbot.ts';
 import {
   CARED_HEARTS,
@@ -1122,6 +1122,7 @@ function victory(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
     }
     awardTrophy(farm, p, boss, run.level, out);
     awardLooks(p, boss, run.level, lookRng(p, boss), out);
+    awardPetLooks(farm, p, boss, run.level, out);
     const s = runSaveOf(p);
     s.wins++;
     s.clears[boss] = (s.clears[boss] ?? 0) + 1;

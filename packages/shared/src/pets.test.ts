@@ -7,7 +7,6 @@ import {
   DUNGEON_IDS,
   PETS,
   PET_ANCHORS,
-  PET_COSMETICS,
   PET_IDS,
   PET_LEVEL_MUL,
   PET_TRICK_KINDS,
@@ -36,7 +35,6 @@ import {
   endRun,
   tick,
   togglePet,
-  wearOnPet,
   type AnimalState,
   type Change,
   type PlayerState,
@@ -105,10 +103,9 @@ describe('the pets table', () => {
     for (const k of PET_TRICK_KINDS) expect(used.has(k), k).toBe(true);
   });
 
-  it('every role has a pet, the kennel gives exactly hund and katt, and the gear item has an anchor', () => {
+  it('every role has a pet, and the kennel gives exactly hund and katt', () => {
     for (const r of ['attack', 'heal', 'guard', 'utility']) expect(Object.values(PETS).some((d) => d.role === r)).toBe(true);
     expect(Object.values(PETS).filter((d) => d.source.kind === 'kennel').map((d) => d.id).sort()).toEqual(['hund', 'katt']);
-    for (const c of Object.values(PET_COSMETICS)) expect(PET_ANCHORS).toContain(c.anchor);
   });
 
   it('the hard levels get a smaller helper', () => {
@@ -557,31 +554,6 @@ describe('pets in a fight', () => {
   it('fighterMax is untouched by a pet (it only helps in the fight)', () => {
     const l = lab('bjorn');
     expect(l.f.max).toBe(fighterMax(l.p, 'krigare'));
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Pet gear (prepared)
-// ---------------------------------------------------------------------------
-
-describe('pet gear', () => {
-  it('a test item can be put on the pet and taken off; the animal carries it for the renderer', () => {
-    const { world, p } = farmWith(['hund']);
-    expect(petAnimalOf(world, p)!.wear).toBeUndefined();
-    wearOnPet(world, p.id, 'halsduk_rod');
-    expect(petAnimalOf(world, p)!.wear).toEqual({ neck: 'halsduk_rod' });
-    // it stays on through a trip away and back
-    togglePet(world, p.id);
-    togglePet(world, p.id);
-    expect(petAnimalOf(world, p)!.wear).toEqual({ neck: 'halsduk_rod' });
-    wearOnPet(world, p.id, null);
-    expect(petAnimalOf(world, p)!.wear).toBeUndefined();
-    // only known items
-    expect(wearOnPet(world, p.id, 'kronan')).toEqual([]);
-  });
-
-  it('any pet can wear it: every pet has anchors for the neck', () => {
-    for (const d of Object.values(PETS)) expect(d.anchors[PET_COSMETICS.halsduk_rod!.anchor]).toHaveLength(2);
   });
 });
 

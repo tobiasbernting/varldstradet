@@ -9,7 +9,10 @@
 // scared, runs to its owner, and is out for a few seconds before it comes back.
 import { ANIMALS } from './data.ts';
 import type { Change } from './protocol.ts';
-import { PETS, PET_COSMETICS, activePet, ownsPet, petDef, petLevelMul, petsOf, type PetDef, type PetTrick, type PetWear } from './pets.ts';
+import { PETS, PET_ANCHORS, activePet, ownsPet, petDef, petLevelMul, petsOf, type PetAnchor, type PetDef, type PetDress, type PetTrick, type PetWear } from './pets.ts';
+import { PET_LOOK_PIECES, LOOK_TIER_MAX, encodeLook, hasWay, isPetPiece, lookPiece, dungeonOfPiece, petSetsOf, type LookDrop } from './looks.ts';
+import { mulberry32 } from './rng.ts';
+import { readProgress } from './sagasim.ts';
 import { DUNGEONS, isRunKey, type DungeonId, type SagaMob } from './saga.ts';
 import { heal, hit, inZone, partyOf, spellFx, stun, hurtMob, type Here } from './sagasim.ts';
 import { ANIMAL_HALF_H, ANIMAL_HALF_W, areaOf, dummyAnimal, farmOf, fx, isSolidForPlayer, playerChange, resolveMove, toast, type SimCtx } from './sim.ts';
@@ -66,12 +69,12 @@ export function syncPet(world: WorldState, p: PlayerState, out: Change[]): void 
   }
   if (!def || !here) return;
   const name = petNameOf(p, def.id);
-  const wear = p.pets?.wear?.[def.id];
+  const wear = petWearOf(p, def.id);
   if (kept) {
     const wornNow = JSON.stringify(wear ?? {});
     if (kept.name !== name || JSON.stringify(kept.wear ?? {}) !== wornNow) {
       kept.name = name;
-      if (wear && Object.keys(wear).length) kept.wear = { ...wear };
+      if (Object.keys(wear).length) kept.wear = { ...wear };
       else delete kept.wear;
       out.push(tag({ t: 'animal', id: kept.id, animal: kept }, keyOf(here)));
     }
@@ -90,7 +93,7 @@ export function syncPet(world: WorldState, p: PlayerState, out: Change[]): void 
     age: 10,
     waitMs: 0,
     pf: { st: 'help', courage: def.courage, cd: 0 },
-    ...(wear && Object.keys(wear).length ? { wear: { ...wear } } : {}),
+    ...(Object.keys(wear).length ? { wear: { ...wear } } : {}),
   };
   here.animals[a.id] = a;
   out.push(tag({ t: 'animal', id: a.id, animal: a }, keyOf(here)), tag(fx(Math.floor(a.x / TILE), Math.floor(a.y / TILE), 'sparkle'), keyOf(here)));
@@ -140,22 +143,122 @@ export function renamePet(p: PlayerState, a: AnimalState, name: string): void {
   p.pets.owned[a.petKind]!.name = name;
 }
 
-/** Puts a piece of pet gear on the active pet (or takes it off with `item` empty). Only the dev message and the tests use this so far. */
-export function wearOnPet(world: WorldState, playerId: string, item: string | null, petId?: string): Change[] {
+// ---------------------------------------------------------------------------
+// Pet gear (looks.ts: PET_LOOK_SETS): earned by clearing dungeons with a pet along, worn by any pet kind at its anchors
+// ---------------------------------------------------------------------------
+
+/** The shine tier of a piece of pet gear a player has (0: none). */
+export const petGearTier = (p: { pets?: { gear?: Record<string, { tier: number }> } }, piece: string): number => p.pets?.gear?.[piece]?.tier ?? 0;
+
+/** What a pet kind of this player wears, as look codes by anchor (only what they own, at the anchor it belongs to). This is what is drawn. */
+export function petWearOf(p: PlayerState, kind: string): PetWear {
+  const dress = p.pets?.dress?.[kind];
+  const out: PetWear = {};
+  if (!dress) return out;
+  const prog = readProgress(p);
+  for (const anchor of PET_ANCHORS) {
+    const w = dress[anchor];
+    const piece = w ? lookPiece(w.piece) : undefined;
+    const tier = w ? petGearTier(p, w.piece) : 0;
+    if (!w || !piece || piece.petSlot !== anchor || tier < 1) continue;
+    const dungeon = dungeonOfPiece(w.piece);
+    out[anchor] = encodeLook(w.piece, tier, w.way && dungeon && hasWay(prog, dungeon, w.way) ? w.way : undefined);
+  }
+  return out;
+}
+
+/** Puts a piece of gear on a pet kind (default: the active one) at its anchor, or takes the anchor's piece off (`piece` null). Free and instant. */
+export function equipPetLook(world: WorldState, playerId: string, piece: string | null, anchor: unknown, way?: unknown, kind?: string): Change[] {
+  const p = farmOf(world).players[playerId];
+  if (!p || !(PET_ANCHORS as readonly string[]).includes(anchor as string)) return [];
+  const ps = petsOf(p);
+  const id = kind ?? ps.active;
+  if (!id || !ps.owned[id]) return [];
+  const a = anchor as PetAnchor;
+  const dress: PetDress = { ...(ps.dress?.[id] ?? {}) };
+  if (piece === null) delete dress[a];
+  else {
+    const def = lookPiece(piece);
+    if (!def || !isPetPiece(piece) || def.petSlot !== a || petGearTier(p, piece) < 1) return [];
+    const w = way === 'svar' || way === 'extrem' ? way : undefined;
+    dress[a] = { piece, ...(w ? { way: w } : {}) };
+  }
+  (ps.dress ??= {})[id] = dress;
+  const out: Change[] = [];
+  syncPet(world, p, out);
+  out.push(playerChange(p));
+  return out;
+}
+
+/** Takes everything off a pet kind. */
+export function stripPet(world: WorldState, playerId: string, kind?: string): Change[] {
+  const p = farmOf(world).players[playerId];
+  const id = kind ?? p?.pets?.active;
+  if (!p || !id || !p.pets?.dress?.[id]) return [];
+  delete p.pets.dress[id];
+  const out: Change[] = [];
+  syncPet(world, p, out);
+  out.push(playerChange(p));
+  return out;
+}
+
+const gearRng = (p: PlayerState, dungeon: string): (() => number) => {
+  let h = 2166136261;
+  for (const ch of `pet|${p.id}|${dungeon}|${p.pets?.gearClears?.[dungeon] ?? 0}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return mulberry32(h >>> 0);
+};
+
+/**
+ * A dungeon cleared (any difficulty) with a pet along: one piece of that dungeon's small pet set the player does not have yet, and +1
+ * shine on the pieces of it they already had (at most 5). Nothing else depends on the difficulty (Svår and Extrem only count the
+ * same as Vanlig; their colourways are the heroes' own). Like the hero looks the dice are seeded by player, dungeon and count, and
+ * the result is added to the clear's loot change so the loot window and the summary show it.
+ */
+export function awardPetLooks(world: WorldState, p: PlayerState, dungeon: DungeonId, level: number, out: Change[]): LookDrop[] {
+  const def = activePet(p);
+  if (p.bot || !def) return [];
+  const sets = petSetsOf(dungeon);
+  if (!sets.length) return [];
+  const ps = petsOf(p);
+  const owned = (ps.gear ??= {});
+  const clears = (ps.gearClears ??= {});
+  const rnd = gearRng(p, dungeon);
+  clears[dungeon] = (clears[dungeon] ?? 0) + 1;
+  const had = new Set(Object.keys(owned));
+  const drops: LookDrop[] = [];
+  const missing = sets.flatMap((s) => s.pieces).filter((x) => !owned[x.id]);
+  if (missing.length) {
+    const x = missing[Math.min(missing.length - 1, Math.floor(rnd() * missing.length))]!;
+    owned[x.id] = { tier: 1 };
+    drops.push({ piece: x.id, tier: 1, isNew: true });
+  }
+  for (const x of sets.flatMap((s) => s.pieces)) {
+    const o = owned[x.id];
+    if (!o || !had.has(x.id) || o.tier >= LOOK_TIER_MAX) continue;
+    o.tier += 1;
+    drops.push({ piece: x.id, tier: o.tier, isNew: false });
+  }
+  void level;
+  if (!drops.length) return [];
+  const name = petNameOf(p, def.id);
+  const prev = [...out].reverse().find((c) => c.t === 'loot' && c.to === p.id && c.looks && c.looks.dungeon === DUNGEONS[dungeon].id);
+  const info = { kind: def.id, name, drops };
+  if (prev && prev.t === 'loot' && prev.looks) prev.looks.pet = info;
+  else out.push({ t: 'loot', to: p.id, from: DUNGEONS[dungeon].name, items: [], coins: 0, stars: 0, looks: { drops: [], ways: [], titles: [], dungeon, level, pet: info } });
+  syncPet(world, p, out);
+  out.push(playerChange(p));
+  return drops;
+}
+
+/** Dev (DEV_TELEPORT=1, `dev petgear`): every piece of pet gear (or one set's) at a tier, and the active pet puts the first of each anchor on. */
+export function devPetGear(world: WorldState, playerId: string, tier: number, setId?: string): Change[] {
   const p = farmOf(world).players[playerId];
   if (!p) return [];
   const ps = petsOf(p);
-  const id = petId ?? ps.active;
-  if (!id || !ps.owned[id]) return [];
+  const t = Math.max(1, Math.min(LOOK_TIER_MAX, Math.floor(tier) || LOOK_TIER_MAX));
+  const owned = (ps.gear ??= {});
+  for (const x of PET_LOOK_PIECES) if (!setId || x.set === setId) owned[x.id] = { tier: t };
   const out: Change[] = [];
-  const wear: PetWear = { ...(ps.wear?.[id] ?? {}) };
-  if (item === null) for (const k of Object.keys(wear)) delete wear[k as keyof PetWear];
-  else {
-    const c = PET_COSMETICS[item];
-    if (!c) return [];
-    wear[c.anchor] = item;
-  }
-  (ps.wear ??= {})[id] = wear;
   syncPet(world, p, out);
   out.push(playerChange(p));
   return out;

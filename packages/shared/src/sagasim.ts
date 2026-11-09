@@ -79,7 +79,7 @@ import {
   ENRAGE,
 } from './saga.ts';
 import { runHooks } from './runhooks.ts';
-import { giveClearPets, petSoak, rollPetDrops, tickPets } from './petsim.ts';
+import { awardPetLooks, giveClearPets, petSoak, rollPetDrops, tickPets } from './petsim.ts';
 import { sagaCheckpoint, spawnSagaMob } from './sagamap.ts';
 import {
   ATTACK_GAP,
@@ -1167,6 +1167,7 @@ function mobDown(h: Here, m: SagaMob, by: string, ctx: SimCtx, out: Change[]): v
         // (a run's trophies and looks come with its win, at its level)
         awardTrophy(h.farm, p, d.boss, RUN_LEVEL_MEDEL, out);
         awardLooks(p, h.inst.id, RUN_LEVEL_MEDEL, lookRng(p, h.inst.id), out);
+        awardPetLooks(h.farm, p, h.inst.id, RUN_LEVEL_MEDEL, out);
       }
       out.push({ t: 'banner', to: p.id, area: h.key, text: fmt(T.sagaBossDown, { boss: boss.name }), sub: fmt(T.sagaCleared, { dungeon: d.name }), kind: 'cleared' });
     }

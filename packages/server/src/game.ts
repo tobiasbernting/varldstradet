@@ -44,7 +44,9 @@ import {
   devPet,
   pickPet,
   togglePet,
-  wearOnPet,
+  devPetGear,
+  equipPetLook,
+  stripPet,
   applyMove,
   areaOf,
   createPlayer,
@@ -489,6 +491,7 @@ export class Game {
         if (msg.a === 'adopt') changes = tagArea(adoptPet(this.world, pid, String(msg.species ?? ''), this.ctx()), areaK);
         else if (msg.a === 'toggle') changes = togglePet(this.world, pid);
         else if (msg.a === 'pick') changes = pickPet(this.world, pid, String(msg.id ?? ''));
+        else if (msg.a === 'wear') changes = msg.all ? stripPet(this.world, pid, typeof msg.kind === 'string' ? msg.kind : undefined) : equipPetLook(this.world, pid, typeof msg.piece === 'string' ? msg.piece : null, msg.anchor, msg.way, typeof msg.kind === 'string' ? msg.kind : undefined);
         break;
       case 'pets':
         changes = callPets(this.world, pid, msg.cmd, this.ctx());
@@ -537,7 +540,7 @@ export class Game {
         else if (msg.a === 'decor') changes = devDecor(this.world, pid);
         else if (msg.a === 'trophy') changes = devTrophy(this.world, pid, String(msg.id ?? ''), Number(msg.level));
         else if (msg.a === 'pet') changes = devPet(this.world, pid, String(msg.id ?? ''));
-        else if (msg.a === 'petwear') changes = wearOnPet(this.world, pid, typeof msg.item === 'string' ? msg.item : null);
+        else if (msg.a === 'petgear') changes = devPetGear(this.world, pid, Number(msg.tier ?? 5), typeof msg.set === 'string' ? msg.set : undefined);
         else if (msg.a === 'looks') changes = devGrantLooks(me, typeof msg.set === 'string' ? msg.set : undefined, Number(msg.tier ?? 5), msg.ways !== false, true, typeof msg.cls === 'string' ? msg.cls : undefined);
         else if (msg.a === 'sagaBest') changes = devSagaBest(this.world, pid, String(msg.id ?? ''), Number(msg.ms));
         break;
