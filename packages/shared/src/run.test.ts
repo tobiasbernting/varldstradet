@@ -2675,6 +2675,28 @@ describe('pets and runs', () => {
   });
 });
 
+describe('a closed tab keeps its pet through the run’s next stops', () => {
+  it('an offline owner’s pet moves along to the next stop and comes home at the end', () => {
+    const party = makeParty(['krigare'], { seed: 3 });
+    const p = party.players[0]!;
+    const k = Object.values(party.world.objects).find((o) => o.kind === 'kennel')!;
+    p.x = (k.x + 1) * TILE;
+    p.y = (k.y + 3) * TILE;
+    adoptPet(party.world, p.id, 'dog', party.ctx());
+    const front = archFrontOf(party.world);
+    p.x = (front.x + 0.5) * TILE;
+    p.y = (front.y + 0.5) * TILE;
+    startRun(party.world, p.id, { seed: 3 }, party.ctx());
+    const run = runOf(party.world)!;
+    setOnline(party.world, p.id, false);
+    enterStop(party.world, run, run.plan.route.nodes[1]!.id ?? 1, party.ctx());
+    const inMap = Object.values(party.world.areas![p.area]!.animals).filter((a) => a.owner === p.id && a.species === 'dog');
+    expect(inMap).toHaveLength(1);
+    endRun(party.world, run, 'leave', party.ctx());
+    expect(Object.values(party.world.animals).filter((a) => a.owner === p.id && a.species === 'dog')).toHaveLength(1);
+  });
+});
+
 describe('the boss trophy of a win is shown', () => {
   it('a win sends the trophy to the loot window (icon and name via the item) and names it in the summary', { timeout: 120_000 }, () => {
     const party = makeParty(['krigare', 'vaktare'], { seed: 5, level: 4 });

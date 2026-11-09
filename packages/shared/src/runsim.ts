@@ -84,6 +84,7 @@ import {
   openTileNear,
   placeIn,
   petsHome,
+  petsMove,
   playerChange,
   toast,
   bump,
@@ -695,6 +696,9 @@ export function enterStop(farm: WorldState, run: RunState, node: number, ctx: Si
       placeIn(farm, p, key, inst.start.x, inst.start.y, 'up', out);
       out.push(banner(p.id, key, z.name, z.intro, 'enter'));
     } else {
+      const from = farm.areas?.[p.area];
+      const to = farm.areas?.[key];
+      if (from && to) petsMove(from, to, key, p, out); // (their pet comes along: the map they leave is thrown away)
       p.area = key;
       p.x = inst.start.x * TILE + TILE / 2;
       p.y = inst.start.y * TILE + TILE / 2;

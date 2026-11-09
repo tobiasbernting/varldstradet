@@ -1141,6 +1141,11 @@ function movePetsAlong(from: WorldState, to: WorldState, toKey: string, p: Playe
   if (!isSagaKey(toKey)) delete p.petsAway;
 }
 
+/** The pets of a player who is not online go along to the next map of a run (the one they leave is thrown away). */
+export function petsMove(from: WorldState, to: WorldState, toKey: string, p: PlayerState, out: Change[]): void {
+  if (from !== to) movePetsAlong(from, to, toKey, p, out);
+}
+
 /** A player who left a dungeon or run while not there (a closed tab): their pets come out of the map that is about to go, to the player's place on the farm. */
 export function petsHome(farm: WorldState, from: WorldState, p: PlayerState, out: Change[]): void {
   if (from === farm) return;

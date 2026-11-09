@@ -725,7 +725,7 @@ body:has(.saga-panel.loot) .saga-banners {
 }
 body.touch .saga-hint {
   bottom: auto;
-  top: calc(33 * var(--u));
+  top: calc(52 * var(--u)); /* (under the run bar, not printed behind it) */
 }
 /* small screens: bigger words in the tracker */
 body.touch .saga-tracker {
