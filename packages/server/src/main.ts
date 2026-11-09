@@ -50,7 +50,7 @@ async function main(): Promise<void> {
   // DEV_TELEPORT=1: a client may ask to be put straight into a dungeon (the native client has no world map yet)
   const devTeleport = process.env.DEV_TELEPORT === '1';
   if (devTeleport) console.warn('DEV_TELEPORT=1 – any player may jump straight into a dungeon with the dev message. Not for the real farm.');
-  const game = new Game(store, { seasonOverride: seasonEnv, devTeleport, voice: { policy: () => (access ? access.voicePolicy() : 'open'), ice: ice.servers } });
+  const game = new Game(store, { seasonOverride: seasonEnv, devTeleport, voice: { policy: () => (access ? access.voicePolicy() : 'open'), ice: ice.servers }, maxPlayers: access ? () => access!.maxPlayers() : undefined });
   await game.start();
   const clientDist = findClientDist();
   // ADMIN_PORT: the parent page gets its own listener (publish it only where the internet can't reach, e.g. a

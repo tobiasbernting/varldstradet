@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
-import { T, WEATHER_NAMES, isSeason, isWeatherKind, type ClientMsg, type ServerMsg } from '../../shared/src/index.ts';
+import { MAX_PLAYERS_LIMIT, T, WEATHER_NAMES, isSeason, isWeatherKind, type ClientMsg, type ServerMsg } from '../../shared/src/index.ts';
 import type { Game, Link } from './game.ts';
 import { adminPage } from './admin.ts';
 import { DEVICE_COOKIE, PARENT_COOKIE, bearerToken, type Access, type AccessMode, type Device } from './access.ts';
@@ -242,7 +242,7 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
           const gate = access.gate(device);
           return json(res, gate === 'ok' ? 200 : 403, {
             gate,
-            ...(device ? { name: device.name, kind: device.kind, canCreate: access.mayCreate(device) } : {}),
+            ...(device ? { name: device.name, kind: device.kind, canCreate: access.mayCreate(device) && !game.full() } : {}),
             // a native client has no gate page: it shows the play hours itself
             ...(gate === 'hours' ? { hours: { from: access.settings.from, to: access.settings.to } } : {}),
           });
@@ -324,6 +324,9 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
                 }
                 break;
               }
+              case 'max-players':
+                m = (await access.setMaxPlayers(Number(form.get('max') ?? ''), ip)) ? 'Sparat' : `Skriv ett heltal från 1 till ${MAX_PLAYERS_LIMIT}`;
+                break;
               case 'hours':
                 m = (await access.setHours(form.get('from') || null, form.get('to') || null, ip)) ? 'Speltiden sparad' : 'Fyll i både från och till (eller inget av dem)';
                 break;
@@ -412,7 +415,7 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
       }
 
       // no access control (ACCESS=open): every device is in, a native client needs no token
-      if (p === '/api/me' || p === '/api/gate') return json(res, 200, { gate: 'ok', canCreate: true });
+      if (p === '/api/me' || p === '/api/gate') return json(res, 200, { gate: 'ok', canCreate: !game.full() });
       if (p === '/api/join' && req.method === 'POST') return json(res, 200, { gate: 'ok' });
       if (p === '/api/players' && req.method === 'GET') {
         const all = game.playerSummaries();
