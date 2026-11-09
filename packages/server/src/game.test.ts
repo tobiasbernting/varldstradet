@@ -1,17 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DUNGEONS, DUNGEON_IDS, RUN_MAX_MS, RUN_NUDGE_MS, RUN_T, TICK_HZ, TILE, VILLAGE_KEY, addItem, archFrontOf, areaKey, enterCave, fardportOf, getArea, landmarkOfKind, npcState, objectDef, placeIn, runOf, sagaKey, shootOf, type Change, type ServerMsg } from '../../shared/src/index.ts';
+import { DEFAULT_MAX_PLAYERS, DUNGEONS, DUNGEON_IDS, RUN_MAX_MS, RUN_NUDGE_MS, RUN_T, TICK_HZ, TILE, VILLAGE_KEY, addItem, archFrontOf, areaKey, fardportOf, getArea, landmarkOfKind, npcState, objectDef, placeIn, runOf, sagaKey, shootOf, type Change, type ServerMsg } from '../../shared/src/index.ts';
 import { Game, type Link } from './game.ts';
 import { MemoryStore } from './db/store.ts';
 
-const fakeLink = (): Link & { msgs: ServerMsg[]; closed: boolean } => {
+const fakeLink = (): Link & { msgs: ServerMsg[]; closed: boolean; closeCode?: number } => {
   const l = {
     msgs: [] as ServerMsg[],
     closed: false,
     send(m: ServerMsg) {
       l.msgs.push(m);
     },
-    close() {
+    closeCode: undefined as number | undefined,
+    close(code?: number) {
       l.closed = true;
+      l.closeCode = code;
     },
   };
   return l;
@@ -43,20 +45,22 @@ describe('Game', () => {
     // Both see Bo coming online
     expect(la.msgs.some((m) => m.t === 'changes' && m.changes.some((c) => c.t === 'player' && c.id === b.id))).toBe(true);
 
-    // Astrid hoes the tile in front of her
+    // Astrid takes a first pet at the kennel; everyone sees the animal
     const pa = game.world.players[a.id]!;
-    ha({ t: 'select', slot: 0 });
-    const tx = Math.floor(pa.x / 16) + 1;
-    const ty = Math.floor(pa.y / 16);
-    game.world.terrain[ty * 64 + tx] = 'grass';
-    ha({ t: 'act', tx, ty });
-    expect(game.world.terrain[ty * 64 + tx]).toBe('soil');
-    expect(lb.msgs.some((m) => m.t === 'changes' && m.changes.some((c) => c.t === 'terrain' && c.x === tx))).toBe(true);
+    const kennel = Object.values(game.world.objects).find((o) => o.kind === 'kennel')!;
+    pa.x = (kennel.x + 1) * 16;
+    pa.y = (kennel.y + 3) * 16;
+    ha({ t: 'pet', a: 'adopt', species: 'dog' });
+    expect(Object.values(game.world.animals).map((x) => [x.species, x.owner])).toEqual([['dog', a.id]]);
+    expect(lb.msgs.some((m) => m.t === 'changes' && m.changes.some((c) => c.t === 'animal'))).toBe(true);
+    // the farm's old messages do nothing any more: nothing is bought
+    ha({ t: 'buy' as never, item: 'animal_cow', qty: 1 } as never);
+    expect(pa.coins).toBe(150);
 
     // A private toast only reaches its recipient
     lb.msgs.length = 0;
     la.msgs.length = 0;
-    ha({ t: 'buy', item: 'animal_cow', qty: 1 });
+    ha({ t: 'pet', a: 'adopt', species: 'cat' });
     expect(la.msgs.some((m) => m.t === 'changes' && m.changes.some((c) => c.t === 'toast'))).toBe(true);
     expect(lb.msgs.some((m) => m.t === 'changes' && m.changes.some((c) => c.t === 'toast'))).toBe(false);
 
@@ -87,51 +91,33 @@ describe('Game', () => {
     await game.stop();
   });
 
-  it('caps the number of characters', async () => {
+  it('caps the number of characters at 20 by default', async () => {
     const game = new Game(new MemoryStore(), { autoStart: false });
     await game.start();
-    for (let i = 0; i < 8; i++) expect(game.createPlayer(`P${i}`, { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' })).not.toBeNull();
-    expect(game.createPlayer('P9', { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' })).toBeNull();
+    expect(game.maxPlayers()).toBe(DEFAULT_MAX_PLAYERS);
+    for (let i = 0; i < DEFAULT_MAX_PLAYERS; i++) expect(game.createPlayer(`P${i}`, { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' })).not.toBeNull();
+    expect(game.full()).toBe(true);
+    expect(game.createPlayer('One more', { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' })).toBeNull();
+  });
+
+  it("follows the parent page's limit, read each time a character is made", async () => {
+    let max = 2;
+    const game = new Game(new MemoryStore(), { autoStart: false, maxPlayers: () => max });
+    await game.start();
+    const look = { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' };
+    expect(game.createPlayer('A', look)).not.toBeNull();
+    expect(game.createPlayer('B', look)).not.toBeNull();
+    expect(game.createPlayer('C', look)).toBeNull();
+    max = 3;
+    expect(game.createPlayer('C', look)).not.toBeNull();
+    // lowering it below the number of characters removes nobody, it only stops new ones
+    max = 1;
+    expect(Object.keys(game.world.players)).toHaveLength(3);
+    expect(game.full()).toBe(true);
   });
 });
 
-describe('cave and dropped connections', () => {
-  it('keeps you in the cave through a short disconnect and carries you out after the grace period', async () => {
-    vi.useFakeTimers();
-    try {
-      const game = new Game(new MemoryStore(), { autoStart: false });
-      await game.start();
-      const a = game.createPlayer('Astrid', { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' })!;
-      const la = fakeLink();
-      const ha = game.connect(la);
-      ha({ t: 'hello', playerId: a.id });
-      const pa = game.world.players[a.id]!;
-      addItem(pa.inventory, 'sword', 1);
-      enterCave(game.world, a.id);
-      expect(pa.area).toBe('dungeon');
-      // the tablet drops the socket for a moment
-      game.disconnect(la);
-      expect(pa.online).toBe(false);
-      expect(pa.area).toBe('dungeon');
-      // ...and comes back: welcome plus the cave map, still inside
-      const lb = fakeLink();
-      const hb = game.connect(lb);
-      hb({ t: 'hello', playerId: a.id });
-      expect(pa.area).toBe('dungeon');
-      expect(lb.msgs.some((m) => m.t === 'changes' && m.changes.some((c) => c.t === 'areaData' && c.key === 'dungeon'))).toBe(true);
-      vi.advanceTimersByTime(120_000);
-      expect(pa.area).toBe('dungeon');
-      // gone for good: carried out after the grace period
-      game.disconnect(lb);
-      vi.advanceTimersByTime(60_000);
-      expect(pa.area).toBe('dungeon');
-      vi.advanceTimersByTime(60_000);
-      expect(pa.area).toBe('farm');
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
+describe('the lobby and dropped connections', () => {
   it('Smedjan: forge and craft messages reach Stina, with a toast for a refusal', async () => {
     const game = new Game(new MemoryStore(), { autoStart: false });
     await game.start();
@@ -146,9 +132,7 @@ describe('cave and dropped connections', () => {
     ha({ t: 'saga', a: 'forge', item: 'runsvard' });
     expect(toasts().some((t) => t.includes('Smed-Stina'))).toBe(true);
     // by her side, with what it costs
-    const town = getArea(game.world, VILLAGE_KEY)!;
-    const st = npcState(town, 'stina');
-    placeIn(game.world, p, VILLAGE_KEY, Math.floor(st.x / TILE), Math.floor(st.y / TILE) + 1, 'up', []);
+    const st = npcState(game.world, 'stina');
     p.x = st.x;
     p.y = st.y + TILE;
     addItem(p.inventory, 'stone', 14);
@@ -226,7 +210,7 @@ describe('cave and dropped connections', () => {
     expect(on.world.players[b.id]!.area).toBe(key);
   });
 
-  it('rolls the day over with the dev message only when DEV_TELEPORT is on, and a watered crop grows', async () => {
+  it('rolls the day over with the dev message only when DEV_TELEPORT is on', async () => {
     const appearance = { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' };
     const off = new Game(new MemoryStore(), { autoStart: false });
     await off.start();
@@ -246,16 +230,12 @@ describe('cave and dropped connections', () => {
     const lb = fakeLink();
     const hb = on.connect(lb);
     hb({ t: 'hello', playerId: b.id });
-    on.world.crops['3,3'] = { crop: 'carrot', stage: 0, progress: 0, watered: true };
     lb.msgs.length = 0;
     const day1 = on.world.day;
     hb({ t: 'dev', a: 'nextDay' });
     expect(on.world.day).toBe(day1 + 1);
     const changes = lb.msgs.flatMap((m) => (m.t === 'changes' ? m.changes : []));
     expect(changes.some((c) => c.t === 'day' && c.day === day1 + 1)).toBe(true);
-    expect(changes.some((c) => c.t === 'crop' && c.k === '3,3')).toBe(true);
-    expect(on.world.crops['3,3']!.watered).toBe(false);
-    expect(on.world.crops['3,3']!.stage + on.world.crops['3,3']!.progress).toBeGreaterThan(0);
   });
 
   it('gives the starter set with the dev message only when DEV_TELEPORT is on, and only to someone with a class', async () => {
@@ -442,7 +422,7 @@ describe('runs over the socket', () => {
     await game.stop();
   });
 
-  it('a run start carries the level: 0 is Lätt, nothing is Vanlig, and a level that is not 0 or 1 starts nothing', async () => {
+  it('a run start carries the level: 1 is Lätt, nothing is Medel, and a level that is not 0 to 4 starts nothing', async () => {
     const game = new Game(new MemoryStore(), { autoStart: false });
     await game.start();
     const a = game.createPlayer('Astrid', look)!;
@@ -458,11 +438,11 @@ describe('runs over the socket', () => {
     h({ t: 'run', a: 'start', level: '0' as unknown as 0 });
     expect(runOf(game.world)).toBeUndefined();
     expect(changesOf(l).some((c) => c.t === 'toast' && c.text === RUN_T.badLevel)).toBe(true);
-    h({ t: 'run', a: 'start', level: 0 });
+    h({ t: 'run', a: 'start', level: 1 });
     const run = runOf(game.world)!;
-    expect(run.level).toBe(0);
+    expect(run.level).toBe(1);
     expect(run.spirit).toBe(3);
-    expect(changesOf(l).some((c) => c.t === 'run' && c.ev === 'state' && c.run?.level === 0 && c.run.spirit === 3)).toBe(true);
+    expect(changesOf(l).some((c) => c.t === 'run' && c.ev === 'state' && c.run?.level === 1 && c.run.spirit === 3)).toBe(true);
   });
 
   it('a run with one player (no longhouse needed) has a companion that is no character: not listed, not counted, gone afterwards', async () => {
@@ -492,5 +472,92 @@ describe('runs over the socket', () => {
     expect(Object.values(game.world.players).some((p) => p.bot)).toBe(false);
     expect(pa.area).toBe('farm');
     await game.stop();
+  });
+});
+
+describe('the parent page: difficulty caps and characters', () => {
+  const look = { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' as const };
+  const changesOf = (l: ReturnType<typeof fakeLink>): Change[] => l.msgs.flatMap((m) => (m.t === 'changes' ? m.changes : []));
+  const toasts = (l: ReturnType<typeof fakeLink>): string[] => changesOf(l).flatMap((c) => (c.t === 'toast' ? [c.text] : []));
+
+  const setup = async (caps: Record<string, number>) => {
+    const game = new Game(new MemoryStore(), { autoStart: false, levelCap: (id) => caps[id] ?? 4 });
+    await game.start();
+    const a = game.createPlayer('Astrid', look)!;
+    const b = game.createPlayer('Bo', look)!;
+    const la = fakeLink();
+    const lb = fakeLink();
+    const ha = game.connect(la);
+    const hb = game.connect(lb);
+    ha({ t: 'hello', playerId: a.id });
+    hb({ t: 'hello', playerId: b.id });
+    const pa = game.world.players[a.id]!;
+    const pb = game.world.players[b.id]!;
+    for (const [p, cls] of [[pa, 'vaktare'], [pb, 'helare']] as const) p.saga = { cls, chapter: 1, heard: true, cleared: [], titles: [], quests: {}, done: [], found: [] };
+    const front = archFrontOf(game.world);
+    for (const p of [pa, pb]) {
+      p.x = TILE * front.x + TILE / 2;
+      p.y = TILE * front.y + TILE / 2;
+    }
+    return { game, a, b, la, lb, ha, hb };
+  };
+
+  it('refuses to start a run above the cap of the starter, and allows a lower level', async () => {
+    const caps: Record<string, number> = {};
+    const s = await setup(caps);
+    caps[s.a.id] = 1;
+    s.ha({ t: 'run', a: 'start', level: 3 });
+    expect(runOf(s.game.world)).toBeUndefined();
+    expect(toasts(s.la).some((x) => x.includes('Astrid') && x.includes('Svår'))).toBe(true);
+    s.la.msgs.length = 0;
+    s.ha({ t: 'run', a: 'start', level: 1, companion: false });
+    expect(runOf(s.game.world)?.level).toBe(1);
+  });
+
+  it('names everyone who is capped in the party, and refuses a capped joiner', async () => {
+    const caps: Record<string, number> = {};
+    const s = await setup(caps);
+    caps[s.a.id] = 2;
+    caps[s.b.id] = 0;
+    s.ha({ t: 'run', a: 'start', level: 3 });
+    expect(runOf(s.game.world)).toBeUndefined();
+    const text = toasts(s.la).join(' ');
+    expect(text).toContain('Astrid');
+    expect(text).toContain('Bo');
+    // Astrid starts Medel; Bo (cap 0) may not join it, then the cap is lifted and he may
+    s.game.world.players[s.b.id]!.x = 0;
+    s.ha({ t: 'run', a: 'start', level: 2, companion: false });
+    const run = runOf(s.game.world)!;
+    expect(run.party).toEqual([s.a.id]);
+    const front = archFrontOf(s.game.world);
+    const pb = s.game.world.players[s.b.id]!;
+    pb.x = TILE * front.x + TILE / 2;
+    pb.y = TILE * front.y + TILE / 2;
+    s.hb({ t: 'run', a: 'join' });
+    expect(run.party).toEqual([s.a.id]);
+    expect(toasts(s.lb).some((x) => x.includes('Lätt') || x.includes('Mycket lätt'))).toBe(true);
+    caps[s.b.id] = 2;
+    s.hb({ t: 'run', a: 'join' });
+    expect(run.party).toEqual([s.a.id, s.b.id]);
+  });
+
+  it('lists, renames and deletes characters, and shows the runs', async () => {
+    const s = await setup({});
+    const info = s.game.characters().find((c) => c.id === s.a.id)!;
+    expect(info).toMatchObject({ name: 'Astrid', cls: 'vaktare', level: 1, online: true });
+    expect(info.lastPlayed).toBeGreaterThan(0);
+    expect(s.game.renamePlayer(s.a.id, '  Astrid   Ek ')).toBe(true);
+    expect(s.game.world.players[s.a.id]!.name).toBe('Astrid Ek');
+    expect(s.game.renamePlayer(s.a.id, '   ')).toBe(false);
+    s.ha({ t: 'run', a: 'start', level: 1, companion: false });
+    expect(s.game.runStatus()).toMatchObject([{ level: 1, party: ['Astrid Ek', 'Bo'] }]);
+    expect(s.game.deletePlayer(s.a.id)).toBe(true);
+    expect(s.la.closed).toBe(true);
+    expect(s.la.closeCode).toBe(4003);
+    expect(s.game.world.players[s.a.id]).toBeUndefined();
+    expect(s.game.characters().map((c) => c.name)).toEqual(['Bo']);
+    expect(runOf(s.game.world)?.party).toEqual([s.b.id]);
+    expect(s.game.deletePlayer(s.a.id)).toBe(false);
+    s.game.tick(50);
   });
 });

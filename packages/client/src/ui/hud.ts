@@ -1,13 +1,12 @@
 // HUD: top chips, hotbar, toasts, touch controls.
-import { CLASSES, HOTBAR_SIZE, MAX_HEARTS, SPELLS, T, WATERING_CAN_CHARGES, areaName, fmt, isBathKey, isSagaKey, itemName, placeEmoji, placeName, type ItemStack } from '@lilla-garden/shared';
+import { HOTBAR_SIZE, HOUSE_T, MAX_HEARTS, SPELLS, T, WATERING_CAN_CHARGES, areaName, fmt, houseTitle, isBathKey, isHomeKey, isSagaKey, itemName, ownerOfHome, placeEmoji, placeName, stackName, type ItemStack } from '@lilla-garden/shared';
 import { Minimap } from './minimap.ts';
 import { getArt } from '@art/textures.ts';
 import { stackIconUrl } from '@art/painting.ts';
 import { net } from '../net.js';
-import { bus, client, myPlayer, serverNow } from '../state.js';
+import { bus, client, furnish, inOwnHouse, myPlayer, serverNow } from '../state.js';
 import { clear, h, icon, onTap } from './dom.js';
 import { isMuted, setMuted } from '../sound.ts';
-import { SAGA_SFX } from '../sagasfx.ts';
 import { levelOf, showsLevel } from '../saga.ts';
 
 /** What the HUD drives on the game view (the 2D scene or the 3D view). */
@@ -24,8 +23,8 @@ export function slotEl(stack: ItemStack | null, opts: { selected?: boolean; pick
   const el = h('div', { class: `slot${opts.selected ? ' selected' : ''}${opts.picked ? ' picked' : ''}${opts.dim ? ' dim' : ''}` });
   if (opts.key) el.append(h('span', { class: 'key' }, opts.key));
   if (stack) {
-    el.append(icon(stackIconUrl(stack), itemName(stack.item)));
-    el.title = itemName(stack.item);
+    el.append(icon(stackIconUrl(stack), stackName(stack)));
+    el.title = stackName(stack);
     if (stack.charges !== undefined) {
       el.append(h('div', { class: 'charges' }, h('i', { style: { width: `${(stack.charges / WATERING_CAN_CHARGES) * 100}%` } })));
     } else if (stack.count > 1) el.append(h('span', { class: 'count' }, stack.count));
@@ -42,9 +41,10 @@ export class Hud {
   private toasts: HTMLElement;
   private joy: HTMLElement;
   private joyKnob: HTMLElement;
-  /** Sagan om Världsträdet: farmer or hero (with a class), and the gear window. */
-  private heroBtn: HTMLElement;
+  /** Sagan om Världsträdet: the gear window. */
   private gearBtn: HTMLElement;
+  /** In your own house: tap furniture to take it up (Möblera). */
+  private furnishBtn: HTMLElement;
   minimap!: Minimap;
   /** Extra chips after the built-in ones (the 2D game adds the weather). */
   topExtras: (() => HTMLElement | null)[] = [];
@@ -52,7 +52,7 @@ export class Hud {
   constructor(
     private ui: HTMLElement,
     private scene: () => HudTarget | null,
-    private openMenu: (ui: 'inventory' | 'emotes' | 'help' | 'book' | 'map') => void,
+    private openMenu: (ui: 'inventory' | 'emotes' | 'help') => void,
   ) {
     this.root = h('div', { class: 'hud' });
     this.top = h('div', { class: 'hud-top' });
@@ -77,13 +77,15 @@ export class Hud {
       setRun(true);
     });
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) run.addEventListener(ev, () => setRun(false));
-    this.heroBtn = this.roundBtn('🧑‍🌾', () => this.toggleHero());
-    this.heroBtn.classList.add('hero-btn');
     // the gear window lives with the saga's windows (ui/saga.ts)
     this.gearBtn = this.roundBtn('⚔️', () => document.dispatchEvent(new Event('lilla:gear')));
     this.gearBtn.classList.add('gear-btn');
     this.gearBtn.title = T.sagaGearBtn;
-    const right = h('div', { class: 'hud-right' }, this.heroBtn, this.gearBtn, this.roundBtn('🎒', () => this.openMenu('inventory')), this.roundBtn('😊', () => this.openMenu('emotes')), this.roundBtn('📖', () => this.openMenu('book')), this.roundBtn('🗺️', () => this.openMenu('map')), this.roundBtn('🧭', () => this.minimap.toggle()), this.roundBtn('❓', () => this.openMenu('help')), this.muteBtn(), ...(matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches ? [] : [this.fullscreenBtn()]));
+    this.furnishBtn = this.roundBtn('🪑', () => this.toggleFurnish());
+    this.furnishBtn.classList.add('furnish-btn');
+    this.furnishBtn.title = HOUSE_T.furnish;
+    this.furnishBtn.hidden = true;
+    const right = h('div', { class: 'hud-right' }, this.furnishBtn, this.gearBtn, this.roundBtn('🎒', () => this.openMenu('inventory')), this.roundBtn('😊', () => this.openMenu('emotes')), this.roundBtn('📖', () => document.dispatchEvent(new Event('lilla:journal'))), this.roundBtn('🧭', () => this.minimap.toggle()), this.roundBtn('❓', () => this.openMenu('help')), this.muteBtn(), ...(matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches ? [] : [this.fullscreenBtn()]));
     this.minimap = new Minimap();
     document.addEventListener('lilla:minimap', () => this.minimap.toggle());
     this.root.append(this.top, right, this.hotbar, this.heldName, this.toasts, zone, act, run, this.minimap.el);
@@ -95,7 +97,10 @@ export class Hud {
     });
 
     bus.on('me', () => this.render());
-    bus.on('area', () => this.renderHero());
+    bus.on('area', () => {
+      this.renderHero();
+      this.renderFurnish();
+    });
     bus.on('state', () => this.renderTop());
     bus.on('day', () => this.renderTop());
     // long ones (how to let the microphone in) stay long enough to be read
@@ -143,35 +148,38 @@ export class Hud {
     setTimeout(() => el.remove(), ms);
   }
 
-  /** Hero mode on or off: the server swaps the outfits and puts the weapon in your hand. */
-  private toggleHero(): void {
-    const on = !myPlayer()?.saga?.hero;
-    net.send({ t: 'saga', a: 'hero', on });
-    SAGA_SFX.hero(on);
-  }
-
-  /** The hero and gear buttons: only with a class, and not inside a saga dungeon (there you are always the class). */
+  /** The gear button: only with a class. */
   private renderHero(): void {
     const me = myPlayer();
-    const cls = me?.saga?.cls ? CLASSES[me.saga.cls] : null;
-    const hero = !!cls && !!me?.saga?.hero;
-    document.body.classList.toggle('hero-mode', hero);
-    this.heroBtn.hidden = !cls || isSagaKey(me?.area);
-    this.gearBtn.hidden = !cls;
-    const face = hero ? cls!.emoji : '🧑‍🌾';
-    if (this.heroBtn.textContent !== face) this.heroBtn.textContent = face;
-    this.heroBtn.classList.toggle('on', hero);
-    this.heroBtn.title = hero ? T.sagaHeroBtnHero : T.sagaHeroBtnFarmer;
-    if (cls) this.heroBtn.style.setProperty('--c', cls.color);
+    this.gearBtn.hidden = !me?.saga?.cls;
+  }
+
+  /** Möblera on or off (only in your own house). */
+  toggleFurnish(): void {
+    if (!inOwnHouse()) return;
+    furnish.on = !furnish.on;
+    this.toast(furnish.on ? HOUSE_T.furnishOn : HOUSE_T.furnishOff, furnish.on ? 4500 : 2000);
+    this.renderFurnish();
+  }
+
+  private renderFurnish(): void {
+    const own = inOwnHouse();
+    if (!own) furnish.on = false;
+    this.furnishBtn.hidden = !own;
+    this.furnishBtn.classList.toggle('on', furnish.on);
   }
 
   render(): void {
     this.renderTop();
     this.renderHero();
+    this.renderFurnish();
     const me = myPlayer();
     clear(this.hotbar);
     if (!me) return;
-    for (let i = 0; i < HOTBAR_SIZE; i++) {
+    // nothing to hold (no tools any more): no bar either
+    const hasStuff = me.inventory.slice(0, HOTBAR_SIZE).some(Boolean);
+    this.hotbar.hidden = !hasStuff;
+    for (let i = 0; hasStuff && i < HOTBAR_SIZE; i++) {
       const s = me.inventory[i] ?? null;
       this.hotbar.append(
         slotEl(s, {
@@ -185,7 +193,7 @@ export class Hud {
       );
     }
     const held = me.inventory[me.selected];
-    this.heldName.textContent = held ? itemName(held.item) : '';
+    this.heldName.textContent = held ? stackName(held) : '';
   }
 
   select(i: number): void {
@@ -201,7 +209,7 @@ export class Hud {
     clear(this.top);
     const f = client.timeMs / (10 * 60 * 1000);
     const clock = f < 0.3 ? '🌅' : f < 0.65 ? '☀️' : f < 0.8 ? '🌇' : '🌙';
-    this.top.append(h('div', { class: 'chip' }, `${clock} ${fmt(T.day, { day: client.day })}`));
+    this.top.append(h('div', { class: 'chip' }, clock));
     if (me) this.top.append(h('div', { class: 'chip' }, h('span', { class: 'coins' }, `${me.coins} ${T.coins}`)));
     if (me && me.stars > 0) this.top.append(h('div', { class: 'chip' }, `⭐ ${me.stars}`));
     // the hero level, for anyone past the first or with a class; a tap opens the journal's level page
@@ -213,7 +221,11 @@ export class Hud {
     // hearts: in the cave, when hurt, and always while walking the world as a hero
     if (me && (me.area === 'dungeon' || me.hearts < MAX_HEARTS || (!!me.saga?.hero && !isSagaKey(me.area)))) this.top.append(h('div', { class: 'chip hearts' }, '❤️'.repeat(Math.max(0, me.hearts)) + '🖤'.repeat(Math.max(0, MAX_HEARTS - me.hearts))));
     if (me && isBathKey(me.area)) this.top.append(h('div', { class: 'chip' }, `🏊 ${T.bathhouseName}`));
-    else if (me && isSagaKey(me.area)) this.top.append(h('div', { class: 'chip' }, `⚔️ ${areaName(me.area)}`));
+    else if (me && isHomeKey(me.area)) {
+      // whose house this is
+      const owner = client.world?.players[ownerOfHome(me.area)];
+      this.top.append(h('div', { class: 'chip house' }, `🏠 ${owner && owner.id !== me.id ? houseTitle(owner.name) : HOUSE_T.myHouse}`));
+    } else if (me && isSagaKey(me.area)) this.top.append(h('div', { class: 'chip' }, `⚔️ ${areaName(me.area)}`));
     else if (me && me.area !== 'farm' && me.area !== 'dungeon') {
       const b = client.areas[me.area]?.biome;
       this.top.append(h('div', { class: 'chip' }, `${placeEmoji(b)} ${placeName(b)}`));

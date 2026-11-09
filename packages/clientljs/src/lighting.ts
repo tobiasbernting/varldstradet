@@ -317,6 +317,9 @@ export function lampFor(kind: string, variant: number | undefined): LampSpec | n
       return SAGA_TORCH[(variant ?? 0) % LOOKS]!;
     case 'saga_exit':
       return { color: [1, 0.95, 0.82], radius: 3.6, strength: 0.75, glow: 0.7 };
+    // a run's väg-runor glow in the colour of the stop they lead to (a flock, a Vilosten, the Mellanboss, the boss)
+    case 'run_exit':
+      return { color: ([[1, 0.62, 0.24], [0.31, 0.89, 0.6], [0.75, 0.49, 1], [1, 0.82, 0.25]] as [number, number, number][])[(variant ?? 0) % 4]!, radius: 3.4, strength: 0.9, flicker: 0.12, glow: 1.4, always: true };
     case 'saga_rest':
       return variant === 1 ? { color: [0.35, 0.92, 1], radius: 4.2, strength: 0.9, flicker: 0.1, glow: 1.1 } : null;
     case 'saga_portal':
@@ -350,6 +353,15 @@ export function lampFor(kind: string, variant: number | undefined): LampSpec | n
       return { color: [0.95, 0.8, 1], radius: 2.6, strength: 0.65, glow: 1, twinkle: true };
     case 'saga_starlamp':
       return { color: [0.95, 0.85, 1], radius: 3.4, strength: 0.8, flicker: 0.1, glow: 1.2, sparkle: 0.3 };
+    // a player's house: the longhouse hearth, candles, a glowing sapling and a rune stone
+    case 'hearth':
+      return { color: FIRE, radius: 5.5, strength: 1, flicker: 0.9, glow: 1.8, always: true };
+    case 'candle_stick':
+      return { color: WARM, radius: 2.8, strength: 0.75, flicker: 0.6, glow: 1.2 };
+    case 'yggdrasil_sapling':
+      return { color: [0.6, 1, 0.55], radius: 2.8, strength: 0.65, flicker: 0.15, glow: 1.2, always: true };
+    case 'rune_stone':
+      return { color: [0.3, 0.7, 1], radius: 2.4, strength: 0.65, flicker: 0.15, glow: 1, always: true };
     // the keepsakes the saga gives for home
     case 'hels_lykta':
       return { color: [0.6, 1, 0.78], radius: 3, strength: 0.75, flicker: 0.3, glow: 1.4, always: true };

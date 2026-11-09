@@ -4,6 +4,7 @@ import { Px, hash2, shade } from './px.js';
 import { drawBiomeObjects } from './objects2.ts';
 import { caveWallThemed, drawLandmarks } from './landmarks.ts';
 import { drawSaga } from './saga.ts';
+import { drawHouse } from './house.ts';
 import { drawSagaPlaces } from './sagaplaces.ts';
 import { addBiomeTerrain, edgeGroup } from './terrain2.ts';
 
@@ -1339,6 +1340,8 @@ export function drawObjects(): Record<string, ObjectArt> {
   set('shell', [shell(0), shell(1)]);
   set('cactus', [cactus()], 0, -8);
   set('signpost', [signpost()], 0, -8);
+  set('lobby_sign', [0, 1, 2, 3, 4, 5, 6].map(lobbySign), 0, -8);
+  set('kennel', [kennel()], 0, 0);
   // Village
   set('house_small', [0, 1, 2, 3].map((v) => building(48, 52, ['#e8dcc0', '#f0d8a8', '#dce8c8', '#f4e0e0'][v]!, ['#b5413a', '#6f4a26', '#3b5fa6', '#2f7a3a'][v]!, true, { windows: 2, roofH: 20 })), 0, -4);
   set('market', [stall('#d9453b')], 0, -8);
@@ -1356,6 +1359,7 @@ export function drawObjects(): Record<string, ObjectArt> {
   drawBiomeObjects(set);
   drawLandmarks(set);
   drawSaga(set);
+  drawHouse(set);
   drawSagaPlaces(set);
   return art;
 }
@@ -1386,6 +1390,59 @@ const shell = (v: number): Px => {
   return p.outline(OUTLINE);
 };
 const cactus = (): Px => new Px(16, 24).rect(6, 2, 4, 22, '#4f9a3a').rect(6, 2, 1, 22, '#3f7a2e').rect(1, 8, 3, 2, '#4f9a3a').rect(1, 4, 2, 6, '#4f9a3a').rect(12, 10, 3, 2, '#4f9a3a').rect(13, 6, 2, 6, '#4f9a3a').rect(7, 0, 2, 2, '#e87ab8').outline(OUTLINE);
+
+/** A signboard on a post with a little picture (the lobby's signs): 0 arch, 1 tree, 2 house, 3 shirt, 4 anvil, 5 scroll, 6 paw. */
+const lobbySign = (v: number): Px => {
+  const p = new Px(16, 24);
+  p.rect(7, 12, 2, 12, WOOD_D).rect(7, 12, 1, 12, WOOD).rect(5, 22, 6, 2, STONE_D).rect(5, 22, 6, 1, STONE);
+  // the board
+  p.rect(1, 1, 14, 12, '#ecdcb0').box(1, 1, 14, 12, WOOD_D).rect(2, 2, 12, 1, '#f7ecca');
+  const ic = (rows: string[], pal: Record<string, string>) => p.tpl(4, 3, rows, pal);
+  const K = '#3a2a1c';
+  switch (v % 7) {
+    case 0: // the arch with its glow
+      ic(['..SSSSS..', '.SSSSSSS.', 'SSgggggSS', 'SSgGGGgSS', 'SSgGGGgSS', 'SSgGGGgSS', 'SSgGGGgSS', 'SSgGGGgSS'], { S: '#8a8a8e', g: '#4a3a7a', G: '#9ad6ff' });
+      break;
+    case 1: // the tree
+      ic(['..GGGGG..', '.GGlGGGG.', 'GGGGGlGGG', 'GGlGGGGGG', '.GGGGGGG.', '...bbb...', '...bbb...', '..bbbbb..'], { G: '#3f9a4a', l: '#74c86a', b: '#7a5230' });
+      break;
+    case 2: // a house
+      ic(['....R....', '...RRR...', '..RRRRR..', '.RRRRRRR.', '.WWWWWWW.', '.WWDDWWW.', '.WWDDWWW.', '.WWDDWWW.'], { R: '#b5413a', W: '#f0e2c0', D: '#7a5230' });
+      break;
+    case 3: // a shirt
+      ic(['.BB...BB.', 'BBBB.BBBB', 'BBBBBBBBB', '.BBBBBBB.', '..BBBBB..', '..BBBBB..', '..BBBBB..', '..BBBBB..'], { B: '#4a7fd0' });
+      break;
+    case 4: // an anvil and a spark
+      ic(['......y..', 'AAAAAAAA.', '.AAAAAAAA', '..AAAAA..', '...AAA...', '...AAA...', '..AAAAA..', '.AAAAAAA.'], { A: '#4a4a52', y: '#ffc83a' });
+      break;
+    case 5: // a scroll with a rune
+      ic(['.PPPPPPP.', 'PPPPPPPPP', 'PPPrPrPPP', 'PPPPrPPPP', 'PPPrPrPPP', 'PPPPPPPPP', 'PPPPPPPPP', '.PPPPPPP.'], { P: '#f3e2b3', r: '#a63a2a' });
+      break;
+    default: // a paw
+      ic(['.b..b.b..', 'bb.bb.bb.', 'bb.bb.bb.', '.b.bbb.b.', '..bbbbb..', '.bbbbbbb.', '.bbbbbbb.', '..bb.bb..'], { b: K });
+  }
+  return p.outline(OUTLINE);
+};
+
+/** The kennel: a doghouse with a hay roof and a bowl. */
+const kennel = (): Px => {
+  const p = new Px(32, 32);
+  p.rect(6, 12, 20, 16, '#c58f55').rect(6, 12, 20, 1, '#e0b47a').rect(6, 12, 1, 16, '#e0b47a').rect(25, 12, 1, 16, '#9a6a3a');
+  for (let y = 15; y < 28; y += 4) p.rect(7, y, 18, 1, '#9a6a3a');
+  p.tpl(3, 2, [
+    '......................',
+    '.........RRRRRRR......',
+    '.......RRRRRRRRRRR....',
+    '.....RRRRRrRRRRrRRRR..',
+    '...RRRRRRRRRRRRRRRRRR.',
+    '..RRRrRRRRRRrRRRRRRRRR',
+  ], { R: '#b5413a', r: '#8a2f2a' });
+  p.rect(12, 18, 8, 10, '#2a1c14').rect(13, 17, 6, 1, '#2a1c14').rect(11, 27, 10, 1, '#6f4a26');
+  p.rect(4, 28, 6, 2, '#6e6e78').rect(5, 27, 4, 1, '#d9453b').px(5, 27, '#f06a5a');
+  p.rect(22, 28, 5, 1, '#9a6a3a').px(24, 27, '#e0b47a');
+  return p.outline(OUTLINE);
+};
+
 const signpost = (): Px => new Px(16, 24).rect(7, 8, 2, 16, WOOD_D).rect(1, 3, 14, 6, WOOD_L).rect(1, 3, 14, 1, '#e0b47a').rect(3, 5, 8, 1, WOOD_D).rect(3, 7, 5, 1, WOOD_D).px(13, 5, OUTLINE).outline(OUTLINE);
 
 const stall = (awning: string): Px => {

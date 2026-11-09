@@ -16,7 +16,7 @@ import type {
 import type { DungeonId, SagaBest, SagaZone } from './saga.ts';
 import type { SagaSnap } from './sagasim.ts';
 import type { IceServer, VoiceState } from './voice.ts';
-import type { NodeKind, RunOfferSnap, RunOutcome, RunSnap } from './run.ts';
+import type { NodeKind, RunLevel, RunOfferSnap, RunOutcome, RunSnap } from './run.ts';
 
 /** A change to the world that the server broadcasts after applying. `area` marks dungeon changes. */
 export type Change =
@@ -29,9 +29,7 @@ export type Change =
   | { t: 'player'; id: string; player: PlayerState | null }
   | { t: 'day'; day: number }
   | { t: 'toast'; to: string | null; text: string }
-  | { t: 'open'; to: string; ui: 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'nameAnimal' | 'npc' | 'cook' | 'paint' | 'pizzeria' | 'travel' | 'saga' | 'sagaClass' | 'run' | 'seed'; id?: number; npc?: string }
-  /** Private: the rider boards a bus, a train or the rocket (the client plays the trip). */
-  | { t: 'ride'; to: string; via: 'bus' | 'train' | 'rocket'; place: string }
+  | { t: 'open'; to: string; ui: 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'nameAnimal' | 'npc' | 'cook' | 'paint' | 'pizzeria' | 'travel' | 'saga' | 'sagaClass' | 'run' | 'seed' | 'houses' | 'kennel'; id?: number; npc?: string }
   | { t: 'quests'; quests: Quest[] }
   | { t: 'fx'; x: number; y: number; kind: 'heart' | 'sparkle' | 'water' | 'chop' | 'poof' | 'coin' | 'hit' | 'arrow' | 'rocket' | 'boom' | 'splash' | 'lasso' | 'honk'; area?: string; from?: { x: number; y: number } }
   /** 2D game: someone said something. `old` marks history sent to a player who just came online. */
@@ -63,7 +61,7 @@ export type Change =
    */
   | { t: 'run'; ev: 'state'; to: string | null; run: RunSnap | null }
   | { t: 'run'; ev: 'offer'; to: string | null; offer: RunOfferSnap | null }
-  | { t: 'run'; ev: 'ended'; to: string; outcome: RunOutcome; ms: number; seeds: number; zones: number; runor: string[]; level?: 0 | 1; spiritUsed?: number; path?: NodeKind[] }
+  | { t: 'run'; ev: 'ended'; to: string; outcome: RunOutcome; ms: number; seeds: number; zones: number; runor: string[]; level?: RunLevel; spiritUsed?: number; path?: NodeKind[] }
   /** Runs: one player's sagafrön, the nodes they have planted, and how grown the family's tree is (0..4). */
   | { t: 'seed'; ev: 'tree'; to: string; seeds: number; earned: number; tree: string[]; stage: number }
   /** Runs: the dishes this player has chosen to bring and how many they may bring. */
@@ -93,12 +91,11 @@ export type ClientMsg =
   | { t: 'drop'; slot: number; qty: number }
   | { t: 'nameAnimal'; id: number; name: string }
   | { t: 'quest'; id: string }
-  | { t: 'travel'; dir: 'n' | 's' | 'e' | 'w' }
-  | { t: 'teleport'; to: string }
-  | { t: 'ride'; via: 'bus' | 'train'; to: string }
   | { t: 'paint'; pixels: string }
   /** 2D game: tell your pets and horses to stay, or whistle for them. */
   | { t: 'pets'; cmd: 'stay' | 'come' }
+  /** The lobby's kennel: take your first pet (free, once): a dog or a cat. */
+  | { t: 'pet'; a: 'adopt'; species: string }
   /** 2D game: a chat line to everyone. */
   | { t: 'chat'; text: string }
   /** Dungeons: cast a spell at a monster (animal id) or a friend (player id); left out, the server picks. */
@@ -111,13 +108,13 @@ export type ClientMsg =
   | { t: 'saga'; a: 'quest'; id: string }
   /** Gear: put a weapon, an offhand or an amulet from the bag on (null takes it off again, back into the bag). */
   | { t: 'saga'; a: 'equip'; slot: 'weapon' | 'offhand' | 'amulet'; item: string | null }
-  /** Hero mode: walk the world as your class (spells, weapon drawn, hero outfit), or as a farmer again. */
-  | { t: 'saga'; a: 'hero'; on: boolean }
   /** Smedjan at Smed-Stina: forge a piece one level up, or have her make a piece of the starter set. */
   | { t: 'saga'; a: 'forge'; item: string }
   | { t: 'saga'; a: 'craft'; item: string }
-  /** Jump to a family member, wherever they are. */
-  | { t: 'jump'; to: string }
+  /** Houses: at the lobby's house door, go into someone's house (`of` a character id, left out: your own); in your own house,
+   * pick a piece of furniture up into the bag (and select it, so a tap on the floor puts it down again). */
+  | { t: 'house'; a: 'enter'; of?: string }
+  | { t: 'house'; a: 'pick'; x: number; y: number }
   /** Röstprat: pick up (want voice) or hang up; make this device the room's speaker; move to a room of your own,
    * back to the automatic room, or into another player's room; a WebRTC signal to another speaker; speaking or not. */
   | { t: 'voice'; a: 'join' }
@@ -131,10 +128,10 @@ export type ClientMsg =
    * which has no world map yet. The server answers `error` when the switch is off. */
   /**
    * Runs (GAME.md): whoever stands at the färdport starts a run (`replay`: a cleared boss at random instead of the next
-   * chapter's; `companion: false` goes without the hired Hirdmannen; `fardkost`: the dishes to bring; `level`: 0 Lätt or 1 Vanlig, which is also what a message without one means), anyone joins or
+   * chapter's; `companion: false` goes without the hired Hirdmannen; `fardkost`: the dishes to bring; `level`: 0 Mycket lätt, 1 Lätt, 2 Medel (which is also what a message without one means), 3 Svår or 4 Extrem), anyone joins or
    * leaves, the party votes on a card of the offer (`card` is its index 0..2) and may ask for a new offer once.
    */
-  | { t: 'run'; a: 'start'; replay?: boolean; companion?: boolean; fardkost?: string[]; level?: 0 | 1; dungeon?: string }
+  | { t: 'run'; a: 'start'; replay?: boolean; companion?: boolean; fardkost?: string[]; level?: RunLevel; dungeon?: string }
   | { t: 'run'; a: 'join' }
   | { t: 'run'; a: 'pick'; card: number }
   | { t: 'run'; a: 'reroll' }
@@ -149,6 +146,12 @@ export type ClientMsg =
   /** Development only (same switch): the day rolls over now, as the parent page's "skip day" does, so a check can
    * wait for a crop to grow. The server answers `error` when the switch is off. */
   | { t: 'dev'; a: 'nextDay' }
+  /** Development only (same switch): win dungeon boss `id`'s trophy at difficulty `level` (0..4), as a run's win would. */
+  | { t: 'dev'; a: 'trophy'; id: string; level: number }
+  /** Development only (same switch): one of every Norse decor piece, a gear stand and some gear, into the bag. */
+  | { t: 'dev'; a: 'decor' }
+  /** Development only (same switch): stand on tile (x, y) of the map you are in. */
+  | { t: 'dev'; a: 'warp'; x: number; y: number }
   /** Development only (same switch): the starter set Smed-Stina makes (a weapon, a shield, an amulet) for my class, for free. */
   | { t: 'dev'; a: 'starter' }
   /** Development only (same switch): every dungeon before the last counts as cleared, so a check can use a later chapter's arch. */

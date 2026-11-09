@@ -1,4 +1,4 @@
-// Lilla Gården (LittleJS): the same server, HUD, menus, sounds and pixel art as the 2D game, with the world drawn by
+// Sagan om Världsträdet (LittleJS): the same server, HUD, menus, sounds and pixel art as the 2D game, with the world drawn by
 // LittleJS: light and shadow through the day, lamps at night, and things that sway, squash and pop.
 import './prefs.ts';
 import { T } from '@lilla-garden/shared';
@@ -37,8 +37,8 @@ import { initGamepad } from '@v1/ui/gamepad.ts';
 import { Hud } from '@v1/ui/hud.ts';
 import { Menus } from '@v1/ui/menus.ts';
 import { Picker } from '@v1/ui/picker.ts';
-import { initRide } from '@v1/ui/ride.ts';
 import { SagaUi } from '@v1/ui/saga.ts';
+import { RunUi } from '@v1/ui/run.ts';
 import { initSound, isMuted, setMuted } from '@v1/sound.ts';
 import { Chat, SocialButtons, petCommand, weatherChip } from '@v1/ui/social.ts';
 import { VoiceUi } from '@v1/ui/voice.ts';
@@ -73,7 +73,6 @@ window.addEventListener('resize', applyZoom);
 
 // ---- UI (the 2D game's) ----
 initSound();
-initRide(ui);
 const menus = new Menus(ui);
 const hud = new Hud(
   ui,
@@ -94,13 +93,16 @@ const voice = new VoiceUi(hud.root);
 const social = new SocialButtons(hud.root, chat, voice);
 // Sagan om Världsträdet: the dungeon HUD, Kämpastenen, Völvan, the journal, loot and the family list
 const saga = new SagaUi(ui, hud.root, menus, social.el);
+// färderna: the arch window, the run's HUD, the cards of a runa, the summary and the sagaträd
+const run = new RunUi(ui, hud.root);
 /** Any window open: the world stops reading taps and keys. */
 function syncUiOpen(): void {
-  view.uiOpen = menus.isOpen() || saga.isOpen();
+  view.uiOpen = menus.isOpen() || saga.isOpen() || run.isOpen();
 }
 menus.onChange = syncUiOpen;
 saga.onChange = syncUiOpen;
-initGamepad({ ui, target: () => (started ? view : null), menus, windows: [menus, saga], hud });
+run.onChange = syncUiOpen;
+initGamepad({ ui, target: () => (started ? view : null), menus, windows: [menus, saga, run], hud });
 
 const status = h('div', { class: 'status', style: { display: 'none' } }, T.disconnected);
 ui.append(status);
@@ -114,6 +116,7 @@ window.addEventListener('keydown', (e) => {
   if (!started) return;
   if (e.target instanceof HTMLInputElement) return;
   // in a dungeon 1–5 are spells and a potion and Tab picks a monster; the saga's windows take their keys
+  if (run.key(e)) return;
   if (saga.key(e)) return;
   if ((e.key === 'Enter' || e.key === 't' || e.key === 'T') && !menus.isOpen()) {
     e.preventDefault();
@@ -129,7 +132,8 @@ window.addEventListener('keydown', (e) => {
     menus.toggle('inventory');
   } else if (e.key === 'f' || e.key === 'F') menus.toggle('emotes');
   else if (e.key === 'h' || e.key === 'H' || e.key === '?') menus.toggle('help');
-  else if (e.key === 'b' || e.key === 'B') menus.toggle('book');
+  else if (e.key === 'b' || e.key === 'B') document.dispatchEvent(new Event('lilla:journal'));
+  else if (e.key === 'g' || e.key === 'G') hud.toggleFurnish();
   else if (e.key === 'm' || e.key === 'M') hud.minimap.toggle();
   else if (/^[1-8]$/.test(e.key)) hud.select(Number(e.key) - 1);
 });
@@ -187,7 +191,7 @@ void engineInit(
       speedChecked = true;
       if (averageFPS < 45 && !forceQuality) {
         postProcess.enabled = false;
-        console.info(`Lilla Gården: ${Math.round(averageFPS)} fps, glow and tilt-shift turned off`);
+        console.info(`Sagan om Världsträdet: ${Math.round(averageFPS)} fps, glow and tilt-shift turned off`);
       }
     }
     if (on('glow') && postProcess?.enabled) {

@@ -9,19 +9,25 @@ import {
   craftGear,
   devEnterSaga,
   devKit,
+  devTrophy,
+  devDecor,
+  devWarp,
+  enterHouse,
+  homeKey,
+  pickUpFurniture,
   devSagaBest,
   devStarterKit,
   devUnlockChapters,
   equipGear,
   forgeGear,
   noticeLandmarks,
-  setHero,
   shownHeld,
   drinkPotion,
   isSagaKey,
   isRunKey,
-  jumpTo,
   rejoinRun,
+  leaveRun,
+  runOf,
   rejoinSaga,
   runMessage,
   ensureRunPlaces,
@@ -31,41 +37,30 @@ import {
   cleanChat,
   setWeather,
   T,
-  MAX_PLAYERS,
+  DEFAULT_MAX_PLAYERS,
   NPCS,
   TICK_HZ,
+  adoptPet,
   applyMove,
   areaOf,
-  buy,
-  completeQuest,
-  cook,
-  craft,
   createPlayer,
-  dropItem,
   emote,
-  honk,
   equip,
   getArea,
   isSeason,
-  leaveCave,
   mulberry32,
   nameAnimal,
-  paint,
   newDay,
   npcState,
   performAction,
   seasonForDate,
   selectSlot,
-  sell,
   setOnline,
   swapSlots,
   sortSlots,
   quickStackToChest,
   tagArea,
-  teleport,
-  ride,
   tick,
-  travel,
   type AnimalSnap,
   type NpcSnap,
   type Appearance,
@@ -86,7 +81,20 @@ import { Voice } from './voice.ts';
 
 export interface Link {
   send(msg: ServerMsg): void;
-  close(): void;
+  close(code?: number): void;
+}
+
+/** The socket was closed because this device or character may not play (any more): the client goes to the gate. */
+export const CLOSE_NO_ACCESS = 4003;
+
+/** One character on the parent page. */
+export interface CharacterInfo {
+  id: string;
+  name: string;
+  cls: string | null;
+  level: number;
+  lastPlayed: number | null;
+  online: boolean;
 }
 
 /** What the server knows about a connection before the player says hello (for the voice rooms). */
@@ -110,10 +118,11 @@ export interface GameOptions {
   voice?: { policy?: () => VoicePolicy; ice?: () => Promise<IceServer[]> };
   /** DEV_TELEPORT=1: the `dev` message may put a player straight into a dungeon (for a client without a world map). */
   devTeleport?: boolean;
+  /** How many characters the server holds (the parent page's setting; default DEFAULT_MAX_PLAYERS). */
+  maxPlayers?: () => number;
+  /** The highest run level (0..4) a character may play (the parent page's setting; default: all levels). */
+  levelCap?: (playerId: string) => number;
 }
-
-/** How long an offline player may stay in the cave before being carried out. */
-const DUNGEON_GRACE_MS = 90_000;
 
 export class Game {
   world!: WorldState;
@@ -172,7 +181,7 @@ export class Game {
   }
 
   ctx(): SimCtx {
-    return { season: this.season(), rnd: this.rnd, now: Date.now() };
+    return { season: this.season(), rnd: this.rnd, now: Date.now(), ...(this.opts.levelCap ? { levelCap: this.opts.levelCap } : {}) };
   }
 
   // ---- loops ----
@@ -203,7 +212,6 @@ export class Game {
       players.push(snap);
     }
     const animals: AnimalSnap[] = Object.values(this.world.animals).map((a) => ({ id: a.id, x: a.x, y: a.y, facing: a.facing, moving: a.moving }));
-    if (this.world.dungeon) for (const a of Object.values(this.world.dungeon.animals)) animals.push({ id: a.id, x: a.x, y: a.y, facing: a.facing, moving: a.moving, area: 'dungeon' });
     for (const [k, area] of Object.entries(this.world.areas ?? {})) {
       if (!Object.values(area.players).some((p) => p.online)) continue;
       for (const a of Object.values(area.animals)) animals.push({ id: a.id, x: a.x, y: a.y, facing: a.facing, moving: a.moving, area: k });
@@ -267,12 +275,68 @@ export class Game {
       .map((p) => ({ id: p.id, name: p.name, appearance: p.appearance, outfit: p.outfit }));
   }
 
+  /** How many characters the server holds. */
+  maxPlayers(): number {
+    return this.opts.maxPlayers?.() ?? DEFAULT_MAX_PLAYERS;
+  }
+
+  /** No room for another character. */
+  full(): boolean {
+    return Object.values(this.world.players).filter((p) => !p.bot).length >= this.maxPlayers();
+  }
+
   createPlayer(name: string, appearance: Appearance, shirt?: string): PlayerSummary | null {
-    if (Object.values(this.world.players).filter((p) => !p.bot).length >= MAX_PLAYERS) return null;
+    if (this.full()) return null;
     const p = createPlayer(this.world, name, appearance, shirt);
     this.pending.push({ t: 'player', id: p.id, player: p });
     this.dispatchPending();
     return { id: p.id, name: p.name, appearance: p.appearance, outfit: p.outfit };
+  }
+
+  /** The parent page's list of characters. */
+  characters(): CharacterInfo[] {
+    return Object.values(this.world.players)
+      .filter((p) => !p.bot)
+      .map((p) => ({ id: p.id, name: p.name, cls: p.saga?.cls ?? null, level: p.saga?.level ?? 1, lastPlayed: p.lastPlayed ?? null, online: p.online }));
+  }
+
+  /** The parent page: a new name for a character (false: no such character or an empty name). */
+  renamePlayer(id: string, name: string): boolean {
+    const p = this.world.players[id];
+    const clean = name.replace(/\s+/g, ' ').trim().slice(0, 16);
+    if (!p || p.bot || !clean) return false;
+    p.name = clean;
+    this.pending.push({ t: 'player', id, player: p });
+    this.dispatchPending();
+    return true;
+  }
+
+  /** The parent page: removes a character for good. They leave a run they are in, and their connection is closed (4003). */
+  deletePlayer(id: string): boolean {
+    const p = this.world.players[id];
+    if (!p || p.bot) return false;
+    this.pending.push(...leaveRun(this.world, id, this.ctx()));
+    this.voice.offline(id);
+    for (const c of [...this.clients]) {
+      if (c.playerId !== id) continue;
+      c.playerId = null;
+      this.clients.delete(c);
+      c.link.close(CLOSE_NO_ACCESS);
+    }
+    for (const a of Object.values(this.world.areas ?? {})) delete a.players[id];
+    if (this.world.dungeon) delete this.world.dungeon.players[id];
+    delete this.world.players[id];
+    this.chatLog = this.chatLog.filter((c) => c.from !== id);
+    this.pending.push({ t: 'player', id, player: null });
+    this.dispatchPending();
+    return true;
+  }
+
+  /** The runs going on (one at a time, for now): which dungeon, which level, who is in it. */
+  runStatus(): { boss: string; level: number; phase: string; party: string[] }[] {
+    const run = runOf(this.world);
+    if (!run || run.phase === 'ended') return [];
+    return [{ boss: run.plan.boss, level: run.level, phase: run.phase, party: run.party.map((id) => this.world.players[id]?.name ?? '?') }];
   }
 
   onlinePlayers(): string[] {
@@ -324,18 +388,9 @@ export class Game {
       if (c.playerId && ![...this.clients].some((o) => o.playerId === c.playerId)) {
         const p = this.world.players[c.playerId];
         this.voice.offline(c.playerId);
+        if (p) p.lastPlayed = Date.now();
         this.pending.push(...setOnline(this.world, c.playerId, false));
         this.dispatchPending();
-        // A flaky tablet connection must not throw you out of the cave: wait a while before carrying you out
-        if (p?.area === 'dungeon') {
-          const id = c.playerId;
-          setTimeout(() => {
-            const q = this.world.players[id];
-            if (!q || q.online || q.area !== 'dungeon') return;
-            this.pending.push(...leaveCave(this.world, id, false));
-            this.dispatchPending();
-          }, DUNGEON_GRACE_MS);
-        }
       }
     }
   }
@@ -365,14 +420,7 @@ export class Game {
       client.link.send({ t: 'welcome', you: p.id, world: { ...this.world, areas: undefined, dungeon: undefined }, season: this.season(), now: Date.now(), tick: this.tickCount, biomes });
       // voice after the welcome: the client starts its voice window over on a welcome, so a state sent before it was lost
       this.voice.online(msg.playerId, client.ip ?? 'local', !!client.guest);
-      if (p.area === 'dungeon') {
-        // back in the cave after a dropped connection (the cave may have been cleared meanwhile)
-        const d = this.world.dungeon;
-        if (d) {
-          d.players[p.id] = p;
-          client.link.send({ t: 'changes', changes: [{ t: 'areaData', to: p.id, key: 'dungeon', world: d }] });
-        } else this.pending.push(...leaveCave(this.world, p.id, false));
-      } else if (isSagaKey(p.area)) {
+      if (isSagaKey(p.area)) {
         // back in a dungeon: up at its last rest stone (it may have started over meanwhile); in a run: the same, or home if it is over
         this.pending.push(...(isRunKey(p.area) ? rejoinRun(this.world, p.id) : rejoinSaga(this.world, p.id)));
       } else if (p.area !== 'farm') {
@@ -382,6 +430,7 @@ export class Game {
           client.link.send({ t: 'changes', changes: [{ t: 'areaData', to: p.id, key: p.area, world: area }] });
         } else p.area = 'farm';
       }
+      p.lastPlayed = Date.now();
       this.pending.push(...setOnline(this.world, p.id, true));
       this.dispatchPending();
       if (this.chatLog.length) client.link.send({ t: 'changes', changes: this.chatLog.map((c) => ({ ...c, old: true })) });
@@ -400,16 +449,6 @@ export class Game {
         return;
       case 'act':
         changes = tagArea(performAction(w, pid, Math.floor(msg.tx), Math.floor(msg.ty), this.ctx()), areaK);
-        break;
-      case 'travel':
-        changes = travel(this.world, pid, msg.dir);
-        if (changes.length) this.store.noteArea?.(me.area);
-        break;
-      case 'teleport':
-        changes = teleport(this.world, pid, String(msg.to ?? ''));
-        break;
-      case 'ride':
-        changes = ride(this.world, pid, msg.via, String(msg.to ?? ''), this.ctx());
         break;
       case 'select':
         changes = selectSlot(w, pid, msg.slot);
@@ -433,38 +472,17 @@ export class Game {
           changes = [];
         }
         break;
-      case 'craft':
-        changes = craft(w, pid, msg.recipe);
-        break;
-      case 'cook':
-        changes = cook(w, pid, msg.recipe);
-        break;
-      case 'buy':
-        changes = buy(w, pid, msg.item, msg.qty, this.ctx());
-        break;
-      case 'sell':
-        changes = sell(w, pid, msg.slot, msg.qty);
-        break;
       case 'equip':
         changes = equip(w, pid, msg.slot, msg.item);
         break;
       case 'emote':
         changes = emote(w, pid, msg.id, this.ctx());
         break;
-      case 'honk':
-        changes = tagArea(honk(w, pid), areaK);
-        break;
-      case 'drop':
-        changes = dropItem(w, pid, msg.slot, msg.qty);
-        break;
       case 'nameAnimal':
         changes = tagArea(nameAnimal(w, pid, msg.id, String(msg.name ?? '')), areaK);
         break;
-      case 'paint':
-        changes = paint(w, pid, String(msg.pixels ?? ''));
-        break;
-      case 'quest':
-        changes = completeQuest(w, pid, String(msg.id ?? ''));
+      case 'pet':
+        if (msg.a === 'adopt') changes = tagArea(adoptPet(this.world, pid, String(msg.species ?? ''), this.ctx()), areaK);
         break;
       case 'pets':
         changes = callPets(this.world, pid, msg.cmd, this.ctx());
@@ -480,12 +498,15 @@ export class Game {
         else if (msg.a === 'chapter') changes = sagaChapter(this.world, pid);
         else if (msg.a === 'quest') changes = sagaQuestAct(this.world, pid, String(msg.id ?? ''));
         else if (msg.a === 'equip') changes = equipGear(this.world, pid, String(msg.slot ?? ''), typeof msg.item === 'string' ? msg.item : null);
-        else if (msg.a === 'hero') changes = setHero(this.world, pid, msg.on === true);
         else if (msg.a === 'forge') changes = forgeGear(this.world, pid, String(msg.item ?? ''));
         else if (msg.a === 'craft') changes = craftGear(this.world, pid, String(msg.item ?? ''));
         break;
-      case 'jump':
-        changes = jumpTo(this.world, pid, String(msg.to ?? ''));
+      case 'house':
+        if (msg.a === 'enter') {
+          const of = typeof msg.of === 'string' ? msg.of : pid;
+          changes = enterHouse(this.world, pid, of);
+          if (changes.length) this.store.noteArea?.(homeKey(of));
+        } else if (msg.a === 'pick') changes = tagArea(pickUpFurniture(w, pid, Math.floor(msg.x), Math.floor(msg.y)), areaK);
         break;
       case 'run':
       case 'seed':
@@ -502,6 +523,9 @@ export class Game {
         else if (msg.a === 'starter') changes = devStarterKit(this.world, pid);
         else if (msg.a === 'unlock') changes = devUnlockChapters(this.world, pid);
         else if (msg.a === 'kit') changes = devKit(this.world, pid);
+        else if (msg.a === 'warp') changes = devWarp(this.world, pid, Number(msg.x), Number(msg.y));
+        else if (msg.a === 'decor') changes = devDecor(this.world, pid);
+        else if (msg.a === 'trophy') changes = devTrophy(this.world, pid, String(msg.id ?? ''), Number(msg.level));
         else if (msg.a === 'sagaBest') changes = devSagaBest(this.world, pid, String(msg.id ?? ''), Number(msg.ms));
         break;
       case 'voice':
