@@ -1270,9 +1270,7 @@ export const SAGA_ITEMS: SagaItemDef[] = [
   { id: 'hat_solkrona', name: 'Solkronan', rarity: 'legendary', kind: 'hat', style: 'crown', color: '#ffe27a', glow: '#ffe27a', levelReward: 18, text: 'En krona av guld som lyser som solen själv.' },
   { id: 'amulet_yggdrasil', name: 'Yggdrasils löv', rarity: 'legendary', kind: 'amulet', levelReward: 19, text: 'Ett löv från Världsträdet. Det är grönt året runt.' },
   { id: 'shirt_bifrostmantel', name: 'Bifrostmanteln', rarity: 'legendary', kind: 'shirt', style: 'cloak', color: '#f0f0ff', glow: 'rainbow', levelReward: 20, text: 'En mantel vävd av regnbågsbron. Den skimrar i alla färger.' },
-  // Round 4, Smedjan: what Smed-Stina forges with, and the starter set she makes (once each per hero, FORGE_CRAFTS)
-  { id: 'monsteressens', name: 'Monsteressens', rarity: 'uncommon', kind: 'material', glow: '#b06cff', text: 'En virvlande lila droppe som monstren i fängelsehålorna lämnar efter sig. Smed-Stina smider med den.' },
-  { id: 'drakfjall', name: 'Drakfjäll', rarity: 'rare', kind: 'material', glow: '#ff8a3a', text: 'Ett rödgyllene fjäll från en mäktig boss. Det hårdaste Smed-Stina vet.' },
+  // the starter set (plain gear: the bots and the hired companion wear it; it is not for sale any more)
   { id: 'jarnsvard', name: 'Järnsvärd', rarity: 'uncommon', kind: 'weapon', tool: 'sword', glow: '#d8dee6', text: 'Ett stadigt svärd av järn, smitt av Smed-Stina.' },
   { id: 'jarnyxa', name: 'Järnyxa', rarity: 'uncommon', kind: 'weapon', tool: 'axe', glow: '#d8dee6', text: 'En yxa av järn som biter lika bra i ved som i monster.' },
   { id: 'ekstav', name: 'Ekstav', rarity: 'uncommon', kind: 'weapon', tool: 'hammer', glow: '#b9e08a', text: 'En stav av ek med guldbeslag. Den känns varm i handen.' },
@@ -1572,29 +1570,6 @@ export function fightStats(p: PlayerState): FightStats {
   return { power: BASE_POWER * levelMul(p), hp: BASE_HP, armor: BASE_ARMOR };
 }
 
-// ---------------------------------------------------------------------------
-// Round 4: Smedjan. Smed-Stina in Köpingen makes a starter set once for each hero (plain gear, only for show; it does not
-// make anyone stronger, and there is no forging up any more). Materials come from the world, the landmarks and the dungeons' replays.
-// ---------------------------------------------------------------------------
-
-/** What a craft costs: materials and coins. */
-export interface CraftCost {
-  items: [item: string, count: number][];
-  kr: number;
-}
-/** The starter set Stina makes (each once per hero): coins and materials. */
-export const FORGE_CRAFTS: Record<string, CraftCost> = {
-  jarnsvard: { items: [['stone', 8], ['gold', 4]], kr: 60 },
-  jarnyxa: { items: [['stone', 8], ['gold', 4]], kr: 60 },
-  ekstav: { items: [['wood', 6], ['gold', 4]], kr: 60 },
-  jaktbage: { items: [['wood', 6], ['fiber', 4], ['gold', 2]], kr: 60 },
-  traskold: { items: [['wood', 8], ['gold', 2]], kr: 60 },
-  stenamulett: { items: [['stone', 6], ['crystal', 1]], kr: 60 },
-};
-/** The smith who forges. */
-export const SMITH_ID = 'stina';
-/** Dungeon monsters (not a boss's helpers) leave a Monsteressens with this chance, in the bag of whoever beat them. */
-export const ESSENS_CHANCE = 0.15;
 /** A fighter's full health: the class's and the flat base, and a little more for every level. */
 export const fighterMax = (p: PlayerState, cls: ClassId): number => Math.round((CLASSES[cls].hp + BASE_HP) * levelMul(p));
 

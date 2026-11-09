@@ -367,3 +367,38 @@
   outline-offset: 2px;
   box-shadow: 0 0 0 6px var(--ink, #2b2419);
 }
+
+.looks-note {
+  margin: 0;
+  padding: 8px 12px;
+  background: #fff6c8;
+  color: #2b2419;
+  border: 3px solid #f2c33a;
+  border-radius: 10px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.look-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 8px 0;
+  font-size: 16px;
+}
+.look-summary .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 2px solid #f2c33a;
+  border-radius: 10px;
+}
+.look-summary .chip img {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+}

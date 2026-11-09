@@ -17,10 +17,12 @@ export const SET_STYLES: Record<string, { hat: string; shirt?: string }> = {
   smedensglod: { hat: 'viking', shirt: 'chainmail' },
   askmagiker: { hat: 'runehat', shirt: 'robe' },
   skuggornas: { hat: 'witch', shirt: 'robe' },
-  lokeslek: { hat: 'horns' },
-  huginmunin: { hat: 'wanderer' },
+  lokeslek: { hat: 'horns', shirt: 'tabard' },
+  huginmunin: { hat: 'wanderer', shirt: 'tabard' },
 };
 
+/** Sets whose top tiers stay calm (a few clear marks, no sprinkle of glints). */
+const QUIET = new Set(['lokeslek', 'huginmunin']);
 const T2 = 2;
 const T3 = 3;
 const T4 = 4;
@@ -39,6 +41,12 @@ const glint = (p: Px, x: number, y: number, pal: LookPal): void => {
 export function decorHat(p: Px, set: string, l: DecodedLook, dir: Dir, hx: number, hy: number): void {
   const { tier, pal } = l;
   const side = dir === 'right';
+  // tier 1: a rim light on the dark sets, so the plain look still reads against the grass
+  if (tier === 1) {
+    if (set === 'skuggornas') p.rect(hx - 3, hy - 1, 14, 1, pal.light).px(hx + 1, hy - 5, pal.light).px(hx + 2, hy - 7, pal.light);
+    else if (set === 'huginmunin') p.rect(hx - 4, hy, 16, 1, pal.light).px(hx + 1, hy - 4, pal.light);
+    else if (set === 'smedensglod') p.rect(hx, hy - 4, 8, 1, pal.light).px(hx - 1, hy - 2, pal.light);
+  }
   // tier 2: a metal band at the brow and a bright edge on the top
   if (tier >= T2) {
     if (set === 'lokeslek' || set === 'smedensglod') p.rect(hx - 1, hy + 1, 10, 1, pal.trim);
@@ -54,9 +62,9 @@ export function decorHat(p: Px, set: string, l: DecodedLook, dir: Dir, hx: numbe
   }
   if (tier >= T3 && dir === 'up') p.px(hx + 3, hy, pal.glow).px(hx + 4, hy, pal.glow);
   // tier 4: glints on the crown
-  if (tier >= T4) {
+  if (tier >= T4 && !QUIET.has(set)) {
     glint(p, hx - 2, hy - 4, pal);
-    if (!side) glint(p, hx + 9, hy - 3, pal);
+    if (!side && tier >= T5) glint(p, hx + 9, hy - 3, pal);
   }
   // tier 5: a plume of the set's own sort standing off the head: it makes the head bigger from far away
   if (tier >= T5) plume(p, set, pal, dir, hx, hy);
@@ -149,6 +157,12 @@ export function decorShirt(p: Px, set: string, l: DecodedLook, dir: Dir, frame: 
       case 'skuggornas': // an eye
         p.px(x, y + 1, c).px(x + 1, y, c).px(x + 2, y + 1, c).px(x + 1, y + 1, c2).px(x + 1, y + 2, c);
         break;
+      case 'lokeslek': // a harlequin diamond
+        p.px(x + 1, y, c).px(x, y + 1, c).px(x + 2, y + 1, c).px(x + 1, y + 1, c2).px(x + 1, y + 2, c);
+        break;
+      case 'huginmunin': // a little raven
+        p.px(x, y, c).px(x + 1, y, c).px(x + 1, y + 1, c2).px(x + 2, y + 1, c).px(x + 3, y + 2, c).px(x + 1, y + 2, c);
+        break;
       default:
         p.rect(x, y, 2, 2, c).px(x + 1, y + 1, c2);
     }
@@ -172,15 +186,16 @@ export function decorShirt(p: Px, set: string, l: DecodedLook, dir: Dir, frame: 
     // the glow runs down the middle of a robe
     if (gown && dir === 'down') for (let y = 17; y < hem; y += 2) p.px(8 + (y % 4 === 1 ? -1 : 0), y, pal.glow);
   }
-  if (tier >= T4) {
+  if (tier >= T4 && !QUIET.has(set)) {
+    // one deliberate sparkle (two at the top tier), not a sprinkle
     glint(p, side ? 6 : 4, 13, pal);
-    if (!side) glint(p, 11, 12, pal);
+    if (!side && tier >= T5) glint(p, 11, 12, pal);
   }
   if (tier >= T5) {
     // glowing cuffs and hem, and a small lit shoulder on each side
     if (dir !== 'up') p.rect(2, 15, 2, 1, pal.glow).rect(12, 15, 2, 1, pal.glow);
-    if (gown) for (let x = side ? 3 : 1; x < (side ? 12 : 15); x += 2) p.px(x + (x > 8 ? sway : 0), hem, pal.glow);
-    else for (let x = 3; x < 13; x += 2) p.px(x, 17, pal.glow);
+    if (gown) for (let x = side ? 3 : 1; x < (side ? 12 : 15); x += 3) p.px(x + (x > 8 ? sway : 0), hem, pal.glow);
+    else for (let x = 3; x < 13; x += 3) p.px(x, 17, pal.glow);
     p.px(side ? 6 : 3, 10, pal.accent).px(side ? 8 : 12, 10, pal.accent);
   }
 }
@@ -211,6 +226,7 @@ export function drawShoulders(p: Px, set: string, l: DecodedLook, dir: Dir, fram
           p.rect(o(i), 9 - ((i + dx) % 2 ? 0 : 1) - big, 1, 4 + ((i + dx) % 2 ? 1 : 0) + big, i % 2 ? pal.main : pal.light);
         }
         p.rect(o(0), 12, 1, 2, pal.dark).px(o(3), 12, pal.dark);
+        for (let i = 0; i < 4; i += 2) p.px(o(i), 8 - big, pal.trim);
         if (tier >= T2) p.px(o(1), 13, pal.trim).px(o(3), 13, pal.trim);
         break;
       }
@@ -222,15 +238,22 @@ export function drawShoulders(p: Px, set: string, l: DecodedLook, dir: Dir, fram
         break;
       }
       default: {
-        // feathers (Hugin och Munin): black quills drooping, a lighter one over them
-        for (let i = 0; i < 4; i++) p.rect(o(i), 10 - (i === 1 ? 1 : 0) - big, 1, 3 + (i % 2) * 2 + big, i % 2 ? pal.main : pal.light);
-        p.px(o(0), 9 - big, pal.trim);
-        if (tier >= T2) p.px(o(1), 14, pal.trim).px(o(3), 16, pal.trim);
+        // Hugin och Munin: a tall raven perched on each shoulder, outside the head: beak outwards, a pale eye, a long tail
+        const r = (n: number, y: number, c: string): void => void p.px(o(n), y, c);
+        const y0 = 5 - big;
+        r(1, y0, pal.main);
+        r(2, y0, pal.main);
+        r(0, y0, tier >= T2 ? pal.trim : pal.light);
+        r(1, y0 - 1, pal.main);
+        r(1, y0, pal.accent);
+        for (let y = 1; y <= 4; y++) for (let n = 0; n <= 3; n++) if (!(n === 0 && y > 2)) r(n, y0 + y, n === 2 && y < 4 ? pal.light : pal.main);
+        for (let y = 5; y <= 7 + big; y++) for (let n = 0; n <= 2; n++) r(n, y0 + y, y > 6 ? pal.light : pal.main);
+        if (tier >= T2) p.px(o(0), y0 + 7 + big, pal.trim).px(o(2), y0 + 7 + big, pal.trim);
       }
     }
     if (tier >= T3) p.px(o(1), 11, pal.glow).px(o(1), 12, pal.accent);
-    if (tier >= T4) glint(p, o(0) + dx * -1, 8 - big, pal);
-    if (tier >= T5) p.px(o(3), 10, pal.glow).px(o(2), 13, pal.glow);
+    if (tier >= T4 && !QUIET.has(set)) glint(p, o(0) + dx * -1, 8 - big, pal);
+    if (tier >= T5 && !QUIET.has(set)) p.px(o(3), 10, pal.glow).px(o(2), 13, pal.glow);
     void frame;
   };
   if (side) pad(5, 1);
@@ -259,7 +282,8 @@ export function drawCloak(p: Px, set: string, l: DecodedLook, dir: Dir, frame: n
   // Lokes lek's cloak is green on one side and red on the other
   const left = set === 'lokeslek' ? pal.main : c;
   const right = set === 'lokeslek' ? pal.dark : c;
-  const ragged = (x: number, y: number): boolean => (set === 'skuggornas' || set === 'huginmunin') && (x + y + (x % 3)) % 3 === 0;
+  const ragged = (x: number, y: number): boolean => (set === 'huginmunin' ? (x % 2 === 0 && y > hem - 3) || (x % 4 === 1 && y > hem - 4) : set === 'skuggornas' && (x + y + (x % 3)) % 3 === 0);
+  const calm = QUIET.has(set);
   const trimAt = (x: number, y: number): void => {
     if (tier >= T2) p.px(x, y, pal.trim);
   };
@@ -276,12 +300,13 @@ export function drawCloak(p: Px, set: string, l: DecodedLook, dir: Dir, frame: n
     if (tier >= T3) {
       p.px(7, 12, pal.glow).px(8, 12, pal.glow).px(7, 11, pal.accent);
       if (set === 'volvaljus') for (let x = 3; x < 13; x += 3) p.px(x, hem - 1, pal.glow);
-      else for (let x = 3; x < 13; x += 3) p.px(x, 16 + (x % 2), pal.glow);
+      else if (!calm) for (let x = 3; x < 13; x += 3) p.px(x, 16 + (x % 2), pal.glow);
     }
-    if (tier >= T4) glint(p, 4, 14, pal);
-    if (tier >= T5) {
-      for (let y = 11; y <= hem; y += 2) p.px(2, y, pal.glow).px(13, y, pal.glow);
+    if (tier >= T4 && !calm) glint(p, 4, 14, pal);
+    if (tier >= T5 && !calm) {
+      for (let y = 11; y <= hem; y += 3) p.px(2, y, pal.glow).px(13, y, pal.glow);
     }
+    if (calm && tier >= T3) for (const [x, y] of [[4, 14], [11, 17]] as [number, number][]) p.px(x, y, pal.trim).px(x - 1, y + 1, pal.trim).px(x + 1, y + 1, pal.trim).px(x, y + 2, pal.trim);
     return;
   }
   const side = dir === 'right';
@@ -298,7 +323,7 @@ export function drawCloak(p: Px, set: string, l: DecodedLook, dir: Dir, frame: n
       if (y === hem) for (let i = 0; i < w; i++) if (!ragged(5 - i - back, y)) trimAt(5 - i - back, y);
     }
     if (tier >= T3) p.px(4, 11, pal.glow).px(4, 12, pal.accent);
-    if (tier >= T5) for (let y = 11; y <= hem; y += 2) p.px(1 - (y > 17 ? sway : 0), y, pal.glow);
+    if (tier >= T5 && !calm) for (let y = 11; y <= hem; y += 3) p.px(1 - (y > 17 ? sway : 0), y, pal.glow);
     return;
   }
   // from the front: a cloak hangs on both sides of the body
@@ -318,7 +343,8 @@ export function drawCloak(p: Px, set: string, l: DecodedLook, dir: Dir, frame: n
   // the clasp across the chest
   p.rect(2, 10, 12, 1, cl);
   if (tier >= T3) p.px(7, 10, pal.glow).px(8, 10, pal.glow);
-  if (tier >= T5) for (let y = 12; y <= hem; y += 2) p.px(1, y, pal.glow).px(14, y, pal.glow);
+  if (tier >= T5 && !calm) for (let y = 12; y <= hem; y += 3) p.px(1, y, pal.glow).px(14, y, pal.glow);
+  if (calm && tier >= T3) for (const [x, y] of [[2, 14], [13, 17]] as [number, number][]) p.px(x, y, pal.trim).px(x - 1, y + 1, pal.trim).px(x + 1, y + 1, pal.trim).px(x, y + 2, pal.trim);
   if (set === 'volvaljus') for (const [x, y] of [[2, 14], [13, 16], [2, 19], [13, 20]] as [number, number][]) p.px(x, y, pal.light).px(x + 1, y, pal.glow);
 }
 
@@ -403,7 +429,7 @@ export function drawWeapon(l: DecodedLook): Px {
     }
     case 'axe': {
       p.line(3, 14, 11, 6, WOOD).line(4, 14, 12, 6, WOOD_D);
-      p.rect(8, 2, 6, 6, pal.main).rect(11, 2, 3, 8, pal.main).rect(8, 2, 6, 1, pal.light).rect(12, 4, 2, 4, shade(pal.main, 0.75));
+      p.rect(8, 2, 6, 6, '#a8aeb8').rect(11, 2, 3, 8, '#a8aeb8').rect(8, 2, 6, 1, '#e8ecf2').rect(12, 4, 2, 4, '#7d828c');
       p.rect(8, 7, 2, 1, pal.dark);
       if (tier >= T2) p.rect(8, 2, 1, 6, pal.trim).rect(13, 3, 1, 6, pal.trim).px(7, 8, pal.trim).px(6, 9, pal.trim);
       if (tier >= T3) p.px(10, 4, pal.glow).px(10, 5, pal.accent).px(11, 4, pal.glow);

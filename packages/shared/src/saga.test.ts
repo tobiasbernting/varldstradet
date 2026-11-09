@@ -78,9 +78,7 @@ import {
   ensureLevelRewards,
   giveXp,
   killXpOf,
-  FORGE_CRAFTS,
   ITEMS,
-  craftGear,
   devKit,
   itemName,
   leaveSaga,
@@ -1162,15 +1160,6 @@ const count = (p: PlayerState, item: string): number => p.inventory.reduce((n, s
 const said = (ch: Change[], text: string): boolean => ch.some((c) => c.t === 'toast' && c.text.includes(text));
 
 describe('Smedjan', () => {
-  it('refuses a craft away from Stina', () => {
-    const { world, p } = atStina();
-    give(p, 'stone', 8);
-    give(p, 'gold', 4);
-    p.coins = 100;
-    p.x += 10 * TILE;
-    expect(said(craftGear(world, p.id, 'jarnsvard'), T.forgeNotNear)).toBe(true);
-  });
-
   it('the development kit gives paper, paint and a wall piece', () => {
     const { world, p } = atStina();
     expect(devKit(world, p.id).length).toBeGreaterThan(0);
@@ -1193,35 +1182,9 @@ describe('Smedjan', () => {
     expect(fightStats(p).power).toBeCloseTo(BASE_POWER * 1.285);
   });
 
-  it('makes each piece of the starter set once per hero', () => {
-    const { world, p } = atStina();
-    expect(Object.keys(FORGE_CRAFTS).sort()).toEqual(['ekstav', 'jaktbage', 'jarnsvard', 'jarnyxa', 'stenamulett', 'traskold']);
-    expect(said(craftGear(world, p.id, 'jarnsvard'), 'Du behöver mer')).toBe(true);
-    give(p, 'stone', 16);
-    give(p, 'gold', 8);
-    p.coins = 120;
-    expect(said(craftGear(world, p.id, 'jarnsvard'), 'Järnsvärd')).toBe(true);
-    expect(count(p, 'jarnsvard')).toBe(1);
-    expect([count(p, 'stone'), count(p, 'gold'), p.coins]).toEqual([8, 4, 60]);
-    expect(p.saga!.found).toContain('jarnsvard');
-    // once: not even after it is sold or lost
-    p.inventory[p.inventory.findIndex((s) => s?.item === 'jarnsvard')] = null;
-    expect(said(craftGear(world, p.id, 'jarnsvard'), 'Du har redan Järnsvärd')).toBe(true);
-    expect([count(p, 'stone'), p.coins]).toEqual([8, 60]);
-    // the shield can be put on
-    give(p, 'wood', 8);
-    give(p, 'gold', 2);
-    expect(said(craftGear(world, p.id, 'traskold'), 'Träsköld')).toBe(true);
-    equipGear(world, p.id, 'offhand', 'traskold');
-    expect(p.saga!.gear!.offhand).toBe('traskold');
-    expect(fightStats(p).armor).toBe(BASE_ARMOR);
-    expect(craftGear(world, p.id, 'runsvard')).toEqual([]);
-  });
-
-  it('the forge materials stack and sell for a little', () => {
-    expect(ITEMS.monsteressens).toMatchObject({ category: 'material', stack: 99 });
-    expect(ITEMS.drakfjall!.sell).toBeGreaterThan(ITEMS.monsteressens!.sell!);
-    expect(itemName('drakfjall')).toBe('Drakfjäll');
+  it('Stina no longer forges or crafts, and the forge materials are gone from the game', () => {
+    expect(ITEMS.monsteressens).toBeUndefined();
+    expect(ITEMS.drakfjall).toBeUndefined();
   });
 });
 
@@ -1261,14 +1224,14 @@ describe('the dungeons, again and again', () => {
     const stars = p.stars;
     const first = performAction(d, p.id, chest.x, chest.y, ctx(5)).find((c) => c.t === 'loot');
     expect(first && first.t === 'loot' && first.replay).toBeUndefined();
-    expect(first && first.t === 'loot' && first.items.some((it) => it.item === 'drakfjall' && it.count === 1)).toBe(true);
+    expect(first && first.t === 'loot' && first.items.some((it) => it.item === 'drakfjall')).toBe(false);
     expect(p.stars).toBe(stars + SAGA_LOOT.draugkung!.stars);
     expect(p.saga!.chestDay).toEqual({ draugkung: world.day });
     // the same day, another run: the replay chest (the chest badges are had already, so no stars from them either)
     p.achievements.push('loot_5', 'loot_25');
     for (let seed = 1; seed < 8; seed++) {
       delete inst.looted[chest.id];
-      const before = { coins: p.coins, stars: p.stars, ess: count(p, 'monsteressens'), fj: count(p, 'drakfjall') };
+      const before = { coins: p.coins, stars: p.stars };
       const again = performAction(d, p.id, chest.x, chest.y, ctx(seed));
       const loot = again.find((c) => c.t === 'loot');
       if (!loot || loot.t !== 'loot') throw new Error('no loot');
@@ -1276,11 +1239,8 @@ describe('the dungeons, again and again', () => {
       expect(loot.stars).toBe(0);
       expect(loot.coins).toBeLessThanOrEqual(Math.floor(SAGA_LOOT.draugkung!.coins[1] / 3));
       expect(loot.coins).toBeGreaterThanOrEqual(Math.floor(SAGA_LOOT.draugkung!.coins[0] / 3));
-      const ess = loot.items.find((it) => it.item === 'monsteressens')!.count;
-      expect(ess).toBeGreaterThanOrEqual(2);
-      expect(ess).toBeLessThanOrEqual(4);
-      expect(loot.items.map((it) => it.item)).toEqual(['monsteressens', 'drakfjall']);
-      expect([p.stars, p.coins - before.coins, count(p, 'monsteressens') - before.ess, count(p, 'drakfjall') - before.fj]).toEqual([before.stars, loot.coins, ess, 1]);
+      expect(loot.items.map((it) => it.item)).toEqual(['healing_potion']);
+      expect([p.stars, p.coins - before.coins]).toEqual([before.stars, loot.coins]);
     }
     // tomorrow: the full chest again
     world.day++;
@@ -1289,7 +1249,7 @@ describe('the dungeons, again and again', () => {
     expect(tomorrow && tomorrow.t === 'loot' && tomorrow.replay).toBeUndefined();
   });
 
-  it("the mid-boss's replay chest has essence but no dragon scale; the side room's treasure is not counted", () => {
+  it("the mid-boss's replay chest is a potion and coins; the side room's treasure is not counted", () => {
     const { world, players } = family();
     const p = players[0]!;
     const d = inside(world, p, 'krigare');
@@ -1301,31 +1261,8 @@ describe('the dungeons, again and again', () => {
     expect(full && full.t === 'loot' && full.items.some((it) => it.item === 'drakfjall')).toBe(false);
     delete inst.looted[chest.id];
     const replay = performAction(d, p.id, tx, ty, ctx(3)).find((c) => c.t === 'loot');
-    expect(replay && replay.t === 'loot' && [replay.replay, replay.items.map((it) => it.item)]).toEqual([true, ['monsteressens']]);
+    expect(replay && replay.t === 'loot' && [replay.replay, replay.items.map((it) => it.item)]).toEqual([true, ['healing_potion']]);
     expect(Object.keys(p.saga!.chestDay!)).toEqual([DUNGEONS.draug.mini]);
-  });
-
-  it('dungeon monsters leave a Monsteressens now and then in the bag of whoever beat them; helpers never do', () => {
-    const fight = (rnd: number, kind: 'mob' | 'add') => {
-      const { world, players } = family();
-      const p = players[0]!;
-      const d = inside(world, p, 'magiker');
-      const inst = d.saga!;
-      const m = Object.values(inst.mobs).find((x) => x.kind === 'mob')!;
-      m.kind = kind;
-      const a = d.animals[m.id]!;
-      p.x = a.x - 2 * TILE;
-      p.y = a.y;
-      m.hp = 1;
-      const ch = castSpell(world, p.id, 'eldboll', m.id, { season: 'none', now: clock, rnd: () => rnd });
-      expect(inst.mobs[m.id]).toBeUndefined();
-      return { p, ch };
-    };
-    const lucky = fight(0.05, 'mob');
-    expect(count(lucky.p, 'monsteressens')).toBe(1);
-    expect(said(lucky.ch, 'Monsteressens')).toBe(true);
-    expect(count(fight(0.5, 'mob').p, 'monsteressens')).toBe(0);
-    expect(count(fight(0.05, 'add').p, 'monsteressens')).toBe(0);
   });
 
   it("the family's best time is kept from the first one in to the boss's fall, and beaten only by a faster run", () => {

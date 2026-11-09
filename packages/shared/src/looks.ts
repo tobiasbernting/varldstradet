@@ -258,7 +258,7 @@ export const LOOK_SETS: LookSet[] = [
     name: LOOK_TEXT.skuggornas!.name,
     dungeon: 'hel',
     cls: 'magiker',
-    pal: { main: '#3a2a58', dark: '#1a1030', light: '#6a58a0', trim: '#d8d0c0', glow: '#b87aff', accent: '#e8d8ff' },
+    pal: { main: '#4a3878', dark: '#241840', light: '#9482d0', trim: '#d8d0c0', glow: '#b87aff', accent: '#e8d8ff' },
     aura: 'trail',
     ways: {
       svar: { name: LOOK_TEXT.skuggornas!.svar!, pal: { main: '#2a4a48', dark: '#142828', light: '#5a9a90', trim: '#d0f0e8', glow: '#6affd8' } },
@@ -276,7 +276,7 @@ export const LOOK_SETS: LookSet[] = [
     name: LOOK_TEXT.lokeslek!.name,
     dungeon: 'loke',
     cls: null,
-    pal: { main: '#2eaa5a', dark: '#9a2a3a', light: '#7affb0', trim: '#ffd84a', glow: '#ff7ad8', accent: '#ffffff' },
+    pal: { main: '#2eaa5a', dark: '#9a2a3a', light: '#7affb0', trim: '#ffd84a', glow: '#ffe27a', accent: '#ffffff' },
     aura: 'trail',
     ways: {
       svar: { name: LOOK_TEXT.lokeslek!.svar!, pal: { main: '#7a2ab8', dark: '#2a8a6a', light: '#c08af0', trim: '#fff0a0', glow: '#7affe0' } },
@@ -284,6 +284,7 @@ export const LOOK_SETS: LookSet[] = [
     },
     pieces: [
       piece('lokeslek', 'hat', [F('aurora', 'head'), F('glitter', 'head')]),
+      piece('lokeslek', 'shirt', [F('aurora', 'chest'), F('glitter', 'chest')]),
       piece('lokeslek', 'cloak', [F('aurora', 'back'), F('trail', 'back')]),
       piece('lokeslek', 'offhand', [F('aurora', 'hand'), F('glitter', 'hand')]),
       piece('lokeslek', 'amulet', [F('aurora', 'chest'), F('glitter', 'chest')]),
@@ -302,6 +303,7 @@ export const LOOK_SETS: LookSet[] = [
     },
     pieces: [
       piece('huginmunin', 'hat', [F('leaves', 'head'), F('glitter', 'head')]),
+      piece('huginmunin', 'shirt', [F('leaves', 'chest'), F('glitter', 'chest')]),
       piece('huginmunin', 'shoulders', [F('leaves', 'shoulders'), F('smoke', 'shoulders')]),
       piece('huginmunin', 'cloak', [F('leaves', 'back'), F('smoke', 'back')]),
       piece('huginmunin', 'amulet', [F('glitter', 'chest'), F('runepulse', 'chest')]),
@@ -486,8 +488,9 @@ export function lookRng(p: PlayerState, dungeon: DungeonId): () => number {
 const pick = <T>(list: T[], rnd: () => number): T => list[Math.min(list.length - 1, Math.floor(rnd() * list.length))]!;
 
 /**
- * A completed dungeon, at any difficulty (`level` 0..4 is only for the colourways): each member gets one thing from the
- * dungeon's sets, either a new piece or +1 shine on one they own, never a wasted one while a set still has something to give;
+ * A completed dungeon, at any difficulty (`level` 0..4 is only for the colourways): each member gets a new piece of the
+ * dungeon's set (if any is missing) and +1 shine on every piece of it they already own (at most 5), so a set of four is whole after
+ * four clears and fully shining after eight;
  * the dungeon's signature weapon with a small chance and for sure at the SIGNATURE_AFTER:th clear; and on Svår and Extrem
  * that level's colourway and title. The result is told with a `loot` change (the loot window shows the look and its effect).
  */
@@ -499,29 +502,35 @@ export function awardLooks(p: PlayerState, dungeon: DungeonId, level: number, rn
   const n = (clears[dungeon] = (clears[dungeon] ?? 0) + 1);
   const reward: LookReward = { drops: [], ways: [], titles: [], complete: false };
 
-  // the set's own piece: a new one or +1 shine
-  const open = setsOf(dungeon).filter((s) => !setComplete(prog, s));
-  if (open.length) {
-    const set = pick(open, rnd);
-    const missing = set.pieces.filter((x) => !owned[x.id]);
-    const upgradable = set.pieces.filter((x) => owned[x.id] && owned[x.id]!.tier < LOOK_TIER_MAX);
-    const fresh = missing.length && (!upgradable.length || rnd() < missing.length / (missing.length + upgradable.length));
-    if (fresh) {
-      const x = pick(missing, rnd);
-      owned[x.id] = { tier: 1 };
-      reward.drops.push({ piece: x.id, tier: 1, isNew: true });
-    } else {
-      // the least shiny first, so a set grows evenly
-      const low = Math.min(...upgradable.map((x) => owned[x.id]!.tier));
-      const x = pick(
-        upgradable.filter((u) => owned[u.id]!.tier === low),
-        rnd,
-      );
-      const t = (owned[x.id]!.tier = Math.min(LOOK_TIER_MAX, owned[x.id]!.tier + 1) as LookTier);
-      reward.drops.push({ piece: x.id, tier: t, isNew: false });
-    }
+  // one new piece of the dungeon's set if any is missing (a set for the hero's own class first, then an any-class one), and on top of
+  // that every piece already owned from the dungeon's sets gains +1 shine (at most 5): a set of four is whole after four clears and
+  // fully shining after eight
+  const sets = setsOf(dungeon);
+  const had = new Set(Object.keys(owned));
+  const incomplete = sets.filter((x) => x.pieces.some((y) => !owned[y.id]));
+  if (incomplete.length) {
+    const cls = prog.cls ?? prog.lookCls;
+    const rank = (x: LookSet): number => (x.cls === cls ? 0 : x.cls === null ? 1 : 2);
+    const best = Math.min(...incomplete.map(rank));
+    const set = pick(
+      incomplete.filter((x) => rank(x) === best),
+      rnd,
+    );
+    const x = pick(
+      set.pieces.filter((y) => !owned[y.id]),
+      rnd,
+    );
+    owned[x.id] = { tier: 1 };
+    reward.drops.push({ piece: x.id, tier: 1, isNew: true });
   }
-  reward.complete = open.length === 0;
+  for (const set of sets)
+    for (const x of set.pieces) {
+      const o = owned[x.id];
+      if (!o || !had.has(x.id) || o.tier >= LOOK_TIER_MAX) continue;
+      o.tier = (o.tier + 1) as LookTier;
+      reward.drops.push({ piece: x.id, tier: o.tier, isNew: false });
+    }
+  reward.complete = sets.every((x) => setComplete(prog, x));
 
   // the signature weapon
   const sg = signatureFor(dungeon);

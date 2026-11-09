@@ -117,6 +117,11 @@ export class Menus {
       else if (c.ui === 'saga' || c.ui === 'sagaClass' || c.ui === 'looks') return; // the saga's own windows (ui/saga.ts)
       else if (c.ui === 'seed' || c.ui === 'run') return; // the run's windows (ui/run.ts)
       else if (c.ui === 'npc') {
+        // Smed-Stina has lost her forge: she sends you to the wardrobe's sets (unless a saga quest of hers is waiting)
+        if (c.npc === 'stina' && !hasSagaQuests('stina')) {
+          document.dispatchEvent(new Event('lilla:sets'));
+          return;
+        }
         this.npcId = c.npc ?? null;
         this.open('npc');
       } else if (c.ui === 'wardrobe') this.open('wardrobe');

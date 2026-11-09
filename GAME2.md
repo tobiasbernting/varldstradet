@@ -773,7 +773,8 @@ chest's weapons/shields/amulets are gone. Instead (`shared/src/looks.ts`, art in
 - Ten Norse sets (two per class, two for any class; Helheim gives two), four pieces each over seven slots (hat, shoulders, shirt, cloak,
   weapon, offhand, amulet), plus the signature weapons Mjölner, Gungner, Frostbett and Surts eldsvärd (any class).
 - Shine tier 1-5 (plain, trimmed, glowing, one effect, full effect with an aura). Each completed dungeon, at ANY level, gives each
-  member a new piece or +1 shine (never a duplicate; 4 + 16 clears fill a set). The signature weapon: 10 % per clear, certain at the 8th.
+  member one new piece of its set (while one is missing) and +1 shine on every piece they already own: a set of four is whole after
+  four clears and fully shining after eight. The signature weapon: 10 % per clear, certain at the 8th.
 - Svår and Extrem add one exclusive colourway and a title per dungeon (palette swaps, not flashier).
 - Class sets are worn only by their class (wear is stored per class); Garderoben (key G, the HUD's shirt button) dresses any class.
 - Effects are a pooled vocabulary with a cap of 8 particles per player and 120 overall, drawn under the dungeon's telegraphs;

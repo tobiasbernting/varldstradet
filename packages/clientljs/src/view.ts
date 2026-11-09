@@ -1877,8 +1877,8 @@ export class View implements HudTarget {
     const bob = p.moving ? Math.round(Math.sin(this.t * 11)) : 0;
     const tool = !!weapon || looks || ITEMS[stack!.item]?.category === 'tool';
     const swing = a.swing > 0 ? Math.sin((1 - a.swing / 0.26) * Math.PI) : 0;
-    const w = icon.w * (looks ? 0.85 : 0.55);
-    const h = icon.h * (looks ? 0.85 : 0.55);
+    const w = icon.w * (looks ? 0.7 : 0.55);
+    const h = icon.h * (looks ? 0.7 : 0.55);
     if (f === 'right' || f === 'left') {
       const s = f === 'right' ? 1 : -1;
       const ang = (tool ? s * -25 * DEG : 0) + s * swing * 1.4;

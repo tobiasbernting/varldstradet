@@ -92,7 +92,7 @@ import {
   webbed,
 } from '../saga.ts';
 import { SAGA_SFX } from '../sagasfx.ts';
-import { lootLookCard, renderLooks, resetLooksWindow } from './looks.ts';
+import { lootLookCard, rememberLooks, renderLooks, resetLooksWindow } from './looks.ts';
 import { SFX } from '../sound.ts';
 import { activeWorld, bus, client, myPlayer, serverNow } from '../state.ts';
 import { clear, h, onTap } from './dom.ts';
@@ -348,6 +348,8 @@ export class SagaUi {
   private loots: LootChange[] = [];
   /** Garderoben opened from a gear stand in the house: the stand's object id (else null). */
   private standObj: number | null = null;
+  /** A line over the wardrobe (Smed-Stina's). */
+  private looksNote: string | null = null;
 
   private bar = h('div', { class: 'saga-bar' });
   private tip = h('div', { class: 'saga-tip' });
@@ -400,10 +402,13 @@ export class SagaUi {
 
     // the gear window: the HUD's ⚔️ button and the gamepad's Select ask for it
     document.addEventListener('lilla:gear', () => {
-      if (myClass() || hasLooks(readProgress(myPlayer()))) this.openLooks();
+      this.openLooks();
     });
     // the journal's level page: the HUD's level chip asks for it
     document.addEventListener('lilla:journal', () => this.open('journal'));
+    // Smed-Stina's window (ui/menus.ts) opens the wardrobe on the sets tab with a line about collecting them
+    document.addEventListener('lilla:sets', () => this.openLooks(null, { tab: 'set', note: LOOK_T.stinaLine }));
+    document.addEventListener('lilla:looks-arch', () => this.openLooks());
     bus.on('open', (c) => {
       if (c.ui === 'sagaClass') this.open('class');
       else if (c.ui === 'saga') this.open('volva');
@@ -462,7 +467,7 @@ export class SagaUi {
       this.open('journal');
       return true;
     }
-    if ((e.key === 'g' || e.key === 'G') && (myClass() || hasLooks(readProgress(myPlayer())))) {
+    if (e.key === 'g' || e.key === 'G') {
       this.openLooks();
       return true;
     }
@@ -479,6 +484,7 @@ export class SagaUi {
 
   private fromServer(c: Change): void {
     if (c.t === 'loot') {
+      if (c.looks) rememberLooks(c.looks);
       this.loots.push(c);
       if (this.win !== 'loot') this.nextLoot();
     } else if (c.t === 'banner') this.banner(c);
@@ -934,10 +940,11 @@ export class SagaUi {
   // ---- windows ----
 
   /** Garderoben (the wardrobe of looks); `stand`: the gear stand in the house it is picking a look for. */
-  openLooks(stand: number | null = null): void {
+  openLooks(stand: number | null = null, opts: { tab?: 'wear' | 'set'; note?: string } = {}): void {
     this.close();
     this.standObj = stand;
-    resetLooksWindow();
+    this.looksNote = opts.note ?? null;
+    resetLooksWindow(undefined, opts.tab);
     this.open('gear');
   }
 
@@ -963,6 +970,7 @@ export class SagaUi {
     this.modal = null;
     this.win = null;
     this.standObj = null;
+    this.looksNote = null;
     this.onChange(false);
     // treasure that came while another window was open
     if (this.loots.length) setTimeout(() => this.nextLoot(), 250);
@@ -1007,7 +1015,7 @@ export class SagaUi {
         }
         panel.insertBefore(tabs, body);
       }
-      if (this.win === 'gear') renderLooks({ rerender: () => this.render(), close: () => this.close(), stand: this.standObj }, body);
+      if (this.win === 'gear') renderLooks({ rerender: () => this.render(), close: () => this.close(), stand: this.standObj, note: this.looksNote, clothes: () => { this.close(); this.menus.open('wardrobe'); } }, body);
       else this.renderJournal(body);
     } else if (this.win === 'family') this.renderFamily(body);
     else this.renderLoot(panel, body);

@@ -49,6 +49,7 @@ import {
   type TreeNode,
 } from '@lilla-garden/shared';
 import { CLASS_IDS } from '@lilla-garden/shared';
+import { lookSummary } from './looks.ts';
 import { portraitUrl } from '@art/textures.ts';
 import { net } from '../net.ts';
 import { KIND_COLOR, KIND_ICON, myRun, offerLeft, routeLeft, runClient, runElapsed } from '../run.ts';
@@ -771,7 +772,10 @@ export class RunUi {
       if (!cls || !arch.near || !this.dungeon) return;
       net.send({ t: 'run', a: 'start', level: this.level as RunLevel, dungeon: this.dungeon, ...(help && !this.companion ? { companion: false } : {}) });
     });
-    body.append(h('div', { class: 'actions sticky' }, go));
+    // Garderoben (the looks of the class chosen above): a shortcut, since the looks are worn per class
+    const wardrobe = h('button', { class: 'alt wardrobe-btn', type: 'button' }, '👕 Garderoben');
+    this.tap(wardrobe, () => document.dispatchEvent(new Event('lilla:looks-arch')));
+    body.append(h('div', { class: 'actions sticky' }, wardrobe, go));
     if (!cls) body.append(h('div', { class: 'hint' }, RUN_UI.noClass));
     else if (!arch.near) body.append(h('div', { class: 'hint' }, RUN_UI.nearGate));
   }
@@ -966,6 +970,8 @@ export class RunUi {
     );
     if (e.path?.length) body.append(h('div', { class: 'trail' }, h('span', null, '👣'), path));
     if (e.runor.length) body.append(h('div', { class: 'trail' }, h('span', null, '🎴'), runor));
+    const lookRow = e.outcome === 'win' ? lookSummary() : null;
+    if (lookRow) body.append(lookRow);
     const home = h('button', { class: 'go' }, `🏠 ${RUN_UI.backHome}`);
     this.tap(home, () => this.close());
     const tree = h('button', { class: 'alt' }, `🌳 ${RUN_UI.treeBtn}`);

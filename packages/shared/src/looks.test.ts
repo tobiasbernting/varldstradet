@@ -73,22 +73,24 @@ describe('the looks data', () => {
 });
 
 describe('earning looks', () => {
-  it('each clear gives a new piece or +1 shine, never a wasted drop until the set is complete, and then every piece is at the top', () => {
+  it('each clear gives one new piece (while one is missing) and +1 shine on every piece already owned: whole after 4 clears, fully shining after 8', () => {
     const p = hero();
     const set = setsOf('draug')[0]!;
     const seen = new Set<string>();
-    for (let n = 1; n <= set.pieces.length * LOOK_TIER_MAX; n++) {
-      const before = set.pieces.reduce((s, x) => s + tierOf(p.saga, x.id), 0);
+    for (let n = 1; n <= 8; n++) {
+      const before = Object.fromEntries(set.pieces.map((x) => [x.id, tierOf(p.saga, x.id)]));
       const r = clear(p, 'draug', 2, mulberry32(n))!;
-      const main = r.drops.filter((d) => !d.signature);
-      expect(main, `clear ${n}`).toHaveLength(1);
-      const d = main[0]!;
-      // a drop is exactly one step up: a new piece at 1, or +1 on a piece owned
-      expect(set.pieces.reduce((s, x) => s + tierOf(p.saga, x.id), 0)).toBe(before + 1);
-      expect(d.isNew).toBe(!seen.has(d.piece));
-      seen.add(d.piece);
-      expect(tierOf(p.saga, d.piece)).toBe(d.tier);
-      expect(r.complete).toBe(false);
+      const fresh = r.drops.filter((d) => d.isNew && !d.signature);
+      // one new piece per clear until the set is whole, never a duplicate
+      expect(fresh, `clear ${n}`).toHaveLength(n <= 4 ? 1 : 0);
+      for (const d of fresh) {
+        expect(seen.has(d.piece)).toBe(false);
+        seen.add(d.piece);
+        expect(d.tier).toBe(1);
+      }
+      // every piece owned before this clear went up by exactly one (to at most 5)
+      for (const x of set.pieces) if (before[x.id]! > 0) expect(tierOf(p.saga, x.id), `${x.id} at clear ${n}`).toBe(Math.min(5, before[x.id]! + 1));
+      expect(set.pieces.filter((x) => tierOf(p.saga, x.id) > 0)).toHaveLength(Math.min(4, n));
     }
     expect(setComplete(p.saga, set)).toBe(true);
     for (const x of set.pieces) expect(tierOf(p.saga, x.id)).toBe(LOOK_TIER_MAX);
@@ -98,27 +100,29 @@ describe('earning looks', () => {
     expect(more.complete).toBe(true);
   });
 
-  it('the first clear is always a new piece, and a piece grows evenly (the least shiny first)', () => {
+  it('the first clear is always a new piece at the first shine', () => {
     const p = hero();
-    expect(clear(p, 'frost', 0, always)!.drops[0]!.isNew).toBe(true);
-    const q = hero();
-    // with a roll that always asks for an upgrade once there is something to upgrade, the tiers stay within one of each other
-    for (let n = 0; n < 12; n++) clear(q, 'frost', 2, always);
-    const tiers = setsOf('frost')[0]!.pieces.map((x) => tierOf(q.saga, x.id));
-    expect(Math.max(...tiers) - Math.min(...tiers)).toBeLessThanOrEqual(1);
+    const r = clear(p, 'frost', 0, always)!;
+    const main = r.drops.filter((d) => !d.signature);
+    expect(main).toHaveLength(1);
+    expect(main[0]).toMatchObject({ isNew: true, tier: 1 });
   });
 
-  it('Helheim gives two sets, and both are filled with no clear wasted', () => {
-    const p = hero();
-    const total = setsOf('hel').reduce((n, s) => n + s.pieces.length * LOOK_TIER_MAX, 0);
-    for (let n = 1; n <= total; n++) expect(clear(p, 'hel', 2, mulberry32(n * 7))!.drops.filter((d) => !d.signature), `clear ${n}`).toHaveLength(1);
+  it('Helheim gives two sets: the hero\'s own class set first, and both end up whole', () => {
+    const p = hero('magiker');
+    // a Magiker gets the Magiker set (Skuggornas hatt) first, then the any-class one
+    const first = clear(p, 'hel', 2, mulberry32(1))!.drops[0]!;
+    expect(first.piece).toMatch(/^skuggornas_/);
+    for (let n = 2; n <= 4; n++) expect(clear(p, 'hel', 2, mulberry32(n))!.drops.find((d) => d.isNew)!.piece, `clear ${n}`).toMatch(/^skuggornas_/);
+    expect(clear(p, 'hel', 2, mulberry32(5))!.drops.find((d) => d.isNew)!.piece).toMatch(/^huginmunin_/);
+    for (let n = 6; n <= 16; n++) clear(p, 'hel', 2, mulberry32(n));
     for (const s of setsOf('hel')) expect(setComplete(p.saga, s)).toBe(true);
   });
 
   it('the full effect is reachable on Mycket lätt: looks grow with completions, not with difficulty', () => {
     const easy = hero();
     const hard = hero();
-    for (let n = 0; n < 8; n++) {
+    for (let n = 0; n < 3; n++) {
       clear(easy, 'surt', 0, mulberry32(n));
       clear(hard, 'surt', 4, mulberry32(n));
     }
@@ -126,7 +130,7 @@ describe('earning looks', () => {
     const sum = (p: PlayerState): number => setsOf('surt')[0]!.pieces.reduce((s, x) => s + tierOf(p.saga, x.id), 0);
     expect(sum(easy)).toBe(sum(hard));
     const maxed = hero();
-    for (let n = 0; n < 20; n++) clear(maxed, 'surt', 0, mulberry32(n));
+    for (let n = 0; n < 8; n++) clear(maxed, 'surt', 0, mulberry32(n));
     for (const x of setsOf('surt')[0]!.pieces) expect(tierOf(maxed.saga, x.id)).toBe(LOOK_TIER_MAX);
     // Mycket lätt gives no colourway or title
     expect(maxed.saga!.lookWays).toBeUndefined();

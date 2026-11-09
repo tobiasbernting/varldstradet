@@ -92,6 +92,12 @@ export interface LooksHost {
   close(): void;
   /** A gear stand being filled (its object id), or null. */
   stand: number | null;
+  /** Opens the clothes window (hat, shirt, trousers, shoes): the base the looks are worn over. */
+  clothes?: () => void;
+  /** A line from someone (Stina) shown on top. */
+  note?: string | null;
+  /** The tab to show first. */
+  tab?: 'wear' | 'set';
 }
 
 /** The code of a piece as the player has it now (tier from the collection), in a way. */
@@ -262,6 +268,12 @@ export function renderLooks(host: LooksHost, body: HTMLElement): void {
     });
     pages.append(b);
   }
+  if (host.note) root.append(h('p', { class: 'looks-note', role: 'status' }, `🔨 ${host.note}`));
+  if (host.clothes) {
+    const cb = h('button', { class: 'pg', type: 'button' }, '👖 Kläder');
+    onTap(cb, () => host.clothes!());
+    pages.append(cb);
+  }
   root.append(h('div', { class: 'looks-head' }, tabs, pages));
 
   // left: the hero as dressed; right: the lists
@@ -359,8 +371,30 @@ export function lootLookCard(code: string, pieceId: string, lines: string[], onW
 }
 
 /** Sets the class the wardrobe dresses (the player's own, when it opens). */
-export function resetLooksWindow(selectPiece?: string): void {
+export function resetLooksWindow(selectPiece?: string, tab?: 'wear' | 'set'): void {
   st.cls = null;
+  if (tab) st.tab = tab;
   st.sel = selectPiece ?? null;
 }
 export { setsOf };
+
+/** The looks the last victory gave, kept for the run's summary (it opens after the loot window has come and gone). */
+let lastDrops: { looks: import('@lilla-garden/shared').LootLooks; at: number } | null = null;
+export function rememberLooks(looks: import('@lilla-garden/shared').LootLooks): void {
+  lastDrops = { looks, at: Date.now() };
+}
+/** A row for the run's end summary: each look that dropped (picture, name, shine), the colourway and the title. Null if none lately. */
+export function lookSummary(): HTMLElement | null {
+  if (!lastDrops || Date.now() - lastDrops.at > 30 * 60_000) return null;
+  const { looks } = lastDrops;
+  const row = h('div', { class: 'look-summary', role: 'group', 'aria-label': LOOK_T.lootHead });
+  row.append(h('b', { class: 'hd' }, `✨ ${LOOK_T.lootHead}`));
+  for (const d of looks.drops) {
+    const p = lookPiece(d.piece);
+    if (!p) continue;
+    row.append(h('span', { class: 'chip' }, h('img', { src: lookIconUrl(encodeLook(d.piece, d.tier)), alt: '', draggable: 'false' }), h('span', null, `${p.name} ${stars(d.tier)}${d.isNew ? ` (${LOOK_T.lootNew.replace(': {name}', '')})` : ''}`)));
+  }
+  for (const t of looks.titles) row.append(h('span', { class: 'chip' }, `👑 ${t}`));
+  if (looks.ways.length) row.append(h('span', { class: 'chip' }, `🎨 ${LOOK_T.ways}`));
+  return row.childElementCount > 1 ? row : null;
+}

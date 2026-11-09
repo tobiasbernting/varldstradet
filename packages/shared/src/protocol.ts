@@ -119,7 +119,6 @@ export type ClientMsg =
   | { t: 'saga'; a: 'equip'; slot: 'weapon' | 'offhand' | 'amulet'; item: string | null }
   /** Garderoben: put a look on (piece null: take the slot's off) for a class, in a colourway ('svar'/'extrem'), or show one on the gear stand `obj`. */
   | { t: 'look'; slot: string; piece: string | null; way?: string; cls?: string; obj?: number }
-  | { t: 'saga'; a: 'craft'; item: string }
   /** Houses: at the lobby's house door, go into someone's house (`of` a character id, left out: your own); in your own house,
    * pick a piece of furniture up into the bag (and select it, so a tap on the floor puts it down again). */
   | { t: 'house'; a: 'enter'; of?: string }
@@ -161,8 +160,6 @@ export type ClientMsg =
   | { t: 'dev'; a: 'decor' }
   /** Development only (same switch): stand on tile (x, y) of the map you are in. */
   | { t: 'dev'; a: 'warp'; x: number; y: number }
-  /** Development only (same switch): the starter set Smed-Stina makes (a weapon, a shield, an amulet) for my class, for free. */
-  | { t: 'dev'; a: 'starter' }
   /** Development only: every piece of a set (all sets when `set` is left out) at a shine tier, with the colourways, titles and signature weapons. */
   | { t: 'dev'; a: 'looks'; set?: string; tier?: number; ways?: boolean; cls?: string }
   /** Development only (same switch): every dungeon before the last counts as cleared, so a check can use a later chapter's arch. */

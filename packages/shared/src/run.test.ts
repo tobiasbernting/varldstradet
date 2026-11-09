@@ -2086,14 +2086,13 @@ describe('the clock, the wipe and the end', () => {
     placeIn(solo.world, c, lab.run.key, lab.inst.start.x, lab.inst.start.y, 'up', []);
     const coins = c.coins;
     const bag = JSON.stringify(c.inventory);
-    // an essence roll that always succeeds goes to the one who struck the blow, unless it is the companion
+    // a kill by the companion gives its bag nothing
     const sure = { ...solo.ctx(), rnd: () => 0 };
     const mob = spawnSagaMob(lab.world.areas![lab.run.key]!, lab.inst, 'skelett', c.x + TILE, c.y, 'mob', -1);
     lab.inst.mobs[mob.id]!.hp = 1;
     lab.inst.mobs[mob.id]!.state = 'fight';
     castSpell(solo.world, c.id, 'ljuspil', mob.id, sure);
     expect(lab.inst.mobs[mob.id]).toBeUndefined();
-    expect(c.inventory.some((s) => s?.item === 'monsteressens')).toBe(false);
     castSpell(solo.world, h.id, 'eldboll', lab.inst.boss, solo.ctx());
     expect(lab.inst.bossDown).toBe(true);
     const seeds = readRun(h).seeds;

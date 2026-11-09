@@ -118,31 +118,6 @@ describe('Game', () => {
 });
 
 describe('the lobby and dropped connections', () => {
-  it('Smedjan: forge and craft messages reach Stina, with a toast for a refusal', async () => {
-    const game = new Game(new MemoryStore(), { autoStart: false });
-    await game.start();
-    const a = game.createPlayer('Astrid', { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' })!;
-    const la = fakeLink();
-    const ha = game.connect(la);
-    ha({ t: 'hello', playerId: a.id });
-    const p = game.world.players[a.id]!;
-    p.saga = { cls: 'krigare', chapter: 1, heard: true, cleared: [], titles: [], quests: {}, done: [], found: [], gear: { weapon: 'runsvard' } };
-    const toasts = (): string[] => la.msgs.flatMap((m) => (m.t === 'changes' ? m.changes.filter((c): c is Extract<Change, { t: 'toast' }> => c.t === 'toast').map((c) => c.text) : []));
-    // at home, far from Stina
-    ha({ t: 'saga', a: 'craft', item: 'jarnsvard' });
-    expect(toasts().some((t) => t.includes('Smed-Stina'))).toBe(true);
-    // by her side, with what it costs
-    const st = npcState(game.world, 'stina');
-    p.x = st.x;
-    p.y = st.y + TILE;
-    addItem(p.inventory, 'stone', 8);
-    addItem(p.inventory, 'gold', 4);
-    p.coins = 60;
-    ha({ t: 'saga', a: 'craft', item: 'jarnsvard' });
-    expect(p.inventory.some((s) => s?.item === 'jarnsvard')).toBe(true);
-    expect(p.coins).toBe(0);
-  });
-
   it('notes the landmarks a player out in the world comes close to, once a second', async () => {
     const game = new Game(new MemoryStore(), { autoStart: false });
     await game.start();
@@ -236,7 +211,7 @@ describe('the lobby and dropped connections', () => {
     expect(changes.some((c) => c.t === 'day' && c.day === day1 + 1)).toBe(true);
   });
 
-  it('gives the starter set with the dev message only when DEV_TELEPORT is on, and only to someone with a class', async () => {
+  it('grants looks with the dev message only when DEV_TELEPORT is on, and wears them through the look message', async () => {
     const appearance = { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' };
     const mk = async (devTeleport: boolean) => {
       const g = new Game(new MemoryStore(), { autoStart: false, devTeleport });
@@ -250,21 +225,18 @@ describe('the lobby and dropped connections', () => {
     };
     const has = (g: Game, id: string, item: string) => g.world.players[id]!.inventory.some((s) => s?.item === item);
     const off = await mk(false);
-    off.h({ t: 'saga', a: 'class', cls: 'krigare' });
-    off.h({ t: 'dev', a: 'starter' });
-    expect(has(off.g, off.p.id, 'jarnyxa')).toBe(false);
+    off.h({ t: 'dev', a: 'looks' });
+    expect(off.g.world.players[off.p.id]!.saga?.looks).toBeUndefined();
     expect(off.link.msgs.some((m) => m.t === 'error')).toBe(true);
 
     const on = await mk(true);
-    // no class: nothing
-    on.h({ t: 'dev', a: 'starter' });
-    expect(has(on.g, on.p.id, 'jarnyxa')).toBe(false);
-    // a Krigare gets the axe, the shield and the amulet, once
-    on.g.world.players[on.p.id]!.saga = { chapter: 0, heard: false, cleared: [], titles: [], quests: {}, done: [], found: [], cls: 'krigare' };
-    on.h({ t: 'dev', a: 'starter' });
-    on.h({ t: 'dev', a: 'starter' });
-    const inv = on.g.world.players[on.p.id]!.inventory;
-    for (const item of ['jarnyxa', 'traskold', 'stenamulett']) expect(inv.filter((s) => s?.item === item).reduce((n, s) => n + s!.count, 0)).toBe(1);
+    on.h({ t: 'dev', a: 'looks', set: 'bjornbarsark', tier: 3 });
+    const prog = on.g.world.players[on.p.id]!.saga!;
+    expect(prog.looks?.bjornbarsark_axe ?? prog.looks?.bjornbarsark_weapon).toEqual({ tier: 3 });
+    // wearing it goes through the look message and reaches the outfit everyone sees
+    on.h({ t: 'saga', a: 'class', cls: 'krigare' });
+    on.h({ t: 'look', slot: 'hat', piece: 'bjornbarsark_hat', cls: 'krigare' });
+    expect(on.g.world.players[on.p.id]!.outfit.looks?.hat).toBe('bjornbarsark_hat|3|');
   });
 });
 

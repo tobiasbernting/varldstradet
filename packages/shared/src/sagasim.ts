@@ -75,9 +75,6 @@ import {
   type LevelReward,
   type SagaBest,
   type RunBuffs,
-  ESSENS_CHANCE,
-  FORGE_CRAFTS,
-  SMITH_ID,
   SAGOANDAN_HP,
   ENRAGE,
 } from './saga.ts';
@@ -343,23 +340,6 @@ export function devUnlockChapters(world: WorldState, playerId: string): Change[]
   if (!p?.saga?.cls) return [];
   for (const id of DUNGEON_IDS.slice(0, -1)) if (!p.saga.cleared.includes(id)) p.saga.cleared.push(id);
   return [playerChange(p)];
-}
-
-/**
- * Development only (DEV_TELEPORT=1, `dev starter`): the starter set Smed-Stina makes, without gold or her forge, for the
- * class the player has (a weapon, the wooden shield and the stone amulet), so a check of the native client, which has no
- * smithy yet, has something to put on in the gear window. Nothing for a player without a class.
- */
-export function devStarterKit(world: WorldState, playerId: string): Change[] {
-  const farm = farmOf(world);
-  const p = farm.players[playerId];
-  const cls = p?.saga?.cls;
-  if (!p || !cls) return [];
-  const weapon: Record<string, string> = { vaktare: 'jarnsvard', krigare: 'jarnyxa', helare: 'ekstav', magiker: 'ekstav' };
-  const out: Change[] = [];
-  for (const id of [weapon[cls]!, 'traskold', 'stenamulett']) if (!ownsGear(p, id)) giveItems(farm, p, id, 1, out);
-  out.push(playerChange(p));
-  return out;
 }
 
 /**
@@ -656,23 +636,18 @@ function openChest(h: Here, p: PlayerState, chest: WorldObject, ctx: SimCtx): Ch
   const prog = progressOf(p);
   const days = (prog.chestDay ??= {});
   const today = h.farm.day;
-  if (days[species] === today) replayChest(h, p, table, SAGA_BOSSES[species]!.name, kind === 2, ctx, out);
+  if (days[species] === today) replayChest(h, p, table, SAGA_BOSSES[species]!.name, ctx, out);
   else {
     days[species] = today;
-    rollLoot(h, p, table, SAGA_BOSSES[species]!.name, ctx, out, kind === 2 ? [{ item: DRAKFJALL, count: 1 }] : []);
+    rollLoot(h, p, table, SAGA_BOSSES[species]!.name, ctx, out);
   }
   return out;
 }
 
-/** Smedjan's dungeon materials. */
-const ESSENS = 'monsteressens';
-const DRAKFJALL = 'drakfjall';
-
-/** The smaller chest of a boss already looted today: a third of the coins, 2–4 Monsteressens (and a Drakfjäll from a final boss), no stars. */
-function replayChest(h: Here, p: PlayerState, table: SagaLoot, from: string, final: boolean, ctx: SimCtx, out: Change[]): void {
+/** The smaller chest of a boss already looted today: a third of the coins and a healing potion, no stars. */
+function replayChest(h: Here, p: PlayerState, table: SagaLoot, from: string, ctx: SimCtx, out: Change[]): void {
   const coins = Math.floor(randInt(ctx.rnd, table.coins[0], table.coins[1]) / 3);
-  const items = [{ item: ESSENS, count: randInt(ctx.rnd, 2, 4) }];
-  if (final) items.push({ item: DRAKFJALL, count: 1 });
+  const items = [{ item: 'healing_potion', count: 1 }];
   p.coins += coins;
   bump(p, 'earned', coins, out);
   for (const it of items) giveItems(h.area, p, it.item, it.count, out);
@@ -1128,13 +1103,6 @@ function mobDown(h: Here, m: SagaMob, by: string, ctx: SimCtx, out: Change[]): v
     questCredit(h.area, p, m.species, ctx, out, true);
     bump(p, 'sagaMobs', 1, out);
     giveXp(p, xp, out, h);
-  }
-  if (m.kind === 'mob') {
-    const killer = h.farm.players[by];
-    if (killer && !killer.bot && ctx.rnd() < ESSENS_CHANCE) {
-      giveItems(h.area, killer, ESSENS, 1, out);
-      out.push(toast(killer.id, T.sagaEssens));
-    }
   }
   if (m.pack >= 0) {
     const pack = h.inst.packs[m.pack]!;
@@ -2358,56 +2326,3 @@ export function roamingDown(area: WorldState, by: PlayerState, mob: AnimalState,
 /** The loot table of a world boss's chest (LOOT in data.ts). */
 const WORLD_BOSS_LOOT = 'worldboss';
 
-// ---------------------------------------------------------------------------
-// Round 4: Smedjan at Smed-Stina in Köpingen
-// ---------------------------------------------------------------------------
-
-/** Does the player wear this piece or have it in the bag? */
-const ownsGear = (p: PlayerState, itemId: string): boolean => Object.values(p.saga?.gear ?? {}).includes(itemId) || countItem(p.inventory, itemId) > 0;
-
-/** What is missing to pay for a craft (item names with how many more), empty when it can be paid. */
-function missingFor(p: PlayerState, cost: { items: [string, number][] }): string[] {
-  const lack: string[] = [];
-  for (const [item, n] of cost.items) {
-    const have = countItem(p.inventory, item);
-    if (have < n) lack.push(`${n - have} ${itemName(item)}`);
-  }
-  return lack;
-}
-
-/** Takes a cost's materials and coins (it must be payable). */
-function pay(p: PlayerState, cost: { items: [string, number][]; kr: number }): void {
-  for (const [item, n] of cost.items) removeItem(p.inventory, item, n);
-  p.coins -= cost.kr;
-}
-
-/** Why a player cannot pay (a toast), or null when they can. */
-function cannotPay(p: PlayerState, cost: { items: [string, number][]; kr: number }): Change | null {
-  const lack = missingFor(p, cost);
-  if (lack.length) return toast(p.id, fmt(T.forgeNeedItems, { items: lack.join(', ') }));
-  if (p.coins < cost.kr) return toast(p.id, fmt(T.forgeNeedKr, { kr: cost.kr, have: p.coins }));
-  return null;
-}
-
-/** Smed-Stina makes a piece of the starter set (FORGE_CRAFTS): once for each hero, for materials and coins. */
-export function craftGear(world: WorldState, playerId: string, itemId: string): Change[] {
-  const farm = farmOf(world);
-  const p = farm.players[playerId];
-  const recipe = FORGE_CRAFTS[itemId];
-  if (!p || !recipe) return [];
-  if (!nearNpc(farm, p, SMITH_ID)) return [toast(p.id, T.forgeNotNear)];
-  const prog = progressOf(p);
-  prog.found ??= [];
-  if (prog.found.includes(itemId) || ownsGear(p, itemId)) return [toast(p.id, fmt(T.forgeCraftedAlready, { item: itemName(itemId) }))];
-  const no = cannotPay(p, recipe);
-  if (no) return [no];
-  pay(p, recipe);
-  if (addItem(p.inventory, itemId, 1) > 0) {
-    // no room: everything back
-    for (const [item, n] of recipe.items) addItem(p.inventory, item, n);
-    p.coins += recipe.kr;
-    return [toast(p.id, T.sagaEquipBagFull)];
-  }
-  prog.found.push(itemId);
-  return [toast(p.id, fmt(T.forgeCrafted, { item: itemName(itemId) })), fxOn(p.area, tileOf(p.x), tileOf(p.y), 'sparkle'), playerChange(p)];
-}

@@ -210,7 +210,7 @@ export class Hud {
     const f = client.timeMs / (10 * 60 * 1000);
     const clock = f < 0.3 ? '🌅' : f < 0.65 ? '☀️' : f < 0.8 ? '🌇' : '🌙';
     this.top.append(h('div', { class: 'chip' }, clock));
-    if (me) this.top.append(h('div', { class: 'chip' }, h('span', { class: 'coins' }, `${me.coins} ${T.coins}`)));
+    // (no purse: nothing in the game spends kronor any more; the shop, the smithy and the crafts are gone)
     if (me && me.stars > 0) this.top.append(h('div', { class: 'chip' }, `⭐ ${me.stars}`));
     // the hero level, for anyone past the first or with a class; a tap opens the journal's level page
     if (me && showsLevel(me)) {
