@@ -7,8 +7,10 @@
 import { ANIMALS, ITEMS, NPCS, VILLAGE_KEY, objectDef } from './data.ts';
 import { MAX_HEARTS } from './dungeon.ts';
 import { isIndoorKey } from './bath.ts';
+import { awardTrophy } from './house.ts';
+import { RUN_LEVEL_MEDEL } from './run.ts';
 import { addItem, countItem, removeItem } from './inventory.ts';
-import { addObject, inBounds, inInterior, mapH, mapW, objectAt, removeObject, tileIndex } from './map.ts';
+import { addObject, inBounds, mapH, mapW, objectAt, removeObject, tileIndex } from './map.ts';
 import type { Change } from './protocol.ts';
 import { randInt } from './rng.ts';
 import {
@@ -1191,6 +1193,7 @@ function mobDown(h: Here, m: SagaMob, by: string, ctx: SimCtx, out: Change[]): v
         bump(p, CLEARED_STAT[h.inst.id], 1, out);
       }
       names.push(p.name);
+      if (!h.inst.run) awardTrophy(h.farm, p, d.boss, RUN_LEVEL_MEDEL, out); // (a run's trophies come with its win, at its level)
       out.push({ t: 'banner', to: p.id, area: h.key, text: fmt(T.sagaBossDown, { boss: boss.name }), sub: fmt(T.sagaCleared, { dungeon: d.name }), kind: 'cleared' });
     }
     out.push(toast(null, fmt(T.sagaFamilyWin, { names: names.join(' och '), boss: boss.name })));
@@ -2140,7 +2143,7 @@ function canFieldCast(world: WorldState, p: PlayerState): boolean {
   if (!p.saga?.cls || !p.saga.hero || p.sleeping || p.hearts <= 0) return false;
   if (isSagaKey(p.area) || p.area === 'dungeon' || isIndoorKey(p.area)) return false;
   const area = getArea(farmOf(world), p.area);
-  return !!area && !(isFarm(area) && inInterior(tileOf(p.x), tileOf(p.y)));
+  return !!area;
 }
 
 /** A monster out in the world is dazed: it stands still and does not bite for a while (sim's tickMob reads attackAt). */

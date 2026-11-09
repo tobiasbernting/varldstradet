@@ -163,7 +163,7 @@ export interface ObjectDef {
   /** Housing capacity for a species. */
   houses?: { species: string; capacity: number };
   /** Opens a UI when interacted with. */
-  interact?: 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'water' | 'feed' | 'cook' | 'cave' | 'exit' | 'treasure' | 'pizzeria' | 'bath' | 'sleep' | 'bus' | 'train' | 'grotto' | 'loot' | 'rocket' | 'fairy' | 'saga' | 'sagaclass' | 'rest' | 'sagachest' | 'landmark' | 'fardport' | 'runexit' | 'yggdrasil';
+  interact?: 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'water' | 'feed' | 'cook' | 'cave' | 'exit' | 'treasure' | 'pizzeria' | 'bath' | 'sleep' | 'bus' | 'train' | 'grotto' | 'loot' | 'rocket' | 'fairy' | 'saga' | 'sagaclass' | 'rest' | 'sagachest' | 'landmark' | 'fardport' | 'runexit' | 'yggdrasil' | 'stand';
   /** A loot table (LOOT in data.ts) rolled when it is broken, dug up or opened. */
   loot?: string;
   /** Gives light at night (client). */
@@ -295,6 +295,8 @@ export interface PlayerState {
   run?: RunSave;
   /** When this character was last in the game (server clock, ms): set on connect and disconnect, shown on the parent page. */
   lastPlayed?: number;
+  /** Boss trophies won: the highest difficulty level (0..4) each dungeon boss was beaten on. */
+  trophies?: Record<string, number>;
   /** A fighter the server runs (the hired companion of a run): not a character, never saved, never listed. */
   bot?: true;
 }

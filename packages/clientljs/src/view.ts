@@ -17,8 +17,8 @@ import {
   facingTile,
   heldItem,
   inEdgeGap,
-  INTERIOR,
-  inInterior,
+  HOUSE_ROOM,
+  isHomeKey,
   isMount,
   isSagaKey,
   inPool,
@@ -26,6 +26,7 @@ import {
   isIndoorKey,
   isUnderground,
   isVehicle,
+  objectAt,
   LOOT_REFILL_DAYS,
   MOON_KEY,
   ITEMS,
@@ -64,7 +65,7 @@ import { SAGA_LOOKS, SAGA_STEPPED } from '@art/saga.ts';
 import { EMOTE_GLYPH, PAINT_COLORS } from '@art/world.ts';
 import { net } from '@v1/net.ts';
 import { SFX } from '@v1/sound.ts';
-import { activeWorld, bus, client, myArea, myPlayer, serverNow } from '@v1/state.ts';
+import { activeWorld, bus, client, furnish, inOwnHouse, myArea, myPlayer, serverNow } from '@v1/state.ts';
 import { attackTarget, heroOn, levelOf, sagaMarker, sagaSpeed, titleOf } from '@v1/saga.ts';
 import type { HudTarget } from '@v1/ui/hud.ts';
 import { animalSprites, characterSprites, loadSprites, paintingSprite, type ObjectSprites, type Sprites } from './art.ts';
@@ -123,7 +124,7 @@ const FLAT_LOOKING = new Set(['grass_tuft', 'flower', 'wild_flower_mid', 'rock_s
 /** How far right of the middle of its footprint a thing's light sits (pixels): the crashed satellite's beacon. */
 const LAMP_SHIFT: Record<string, number> = { lm_satellit: 17 };
 /** How far above the middle of its footprint a thing's light sits (pixels): the glowing part is up high. */
-const LAMP_LIFT: Record<string, number> = { giant_glowshroom: 14, crystal: 4, fire_crystal: 4, star_crystal: 4, wisp: 6, wisp_jar: 4, volcano: 34, rocket: 18, crystal_lamp: 8, mushroom_lamp: 8, saga_torch: 22, saga_rest: 6, saga_portal: 6, saga_stone: 12, saga_candles: 4, saga_icecrystal: 6, saga_brazier: 12, solruna: 6, yggdrasil: 14, saga_ghostlight: 10, saga_goldpile: 4, saga_minelamp: 12, saga_pearl: 5, saga_glowshroom: 9, saga_fairylight: 12, saga_rainbowshard: 9, saga_starlamp: 14, lm_jatteek: 6, lm_lykttrad: 12, lm_dvargport: 5, lm_svampring: -6, lm_eldbrunn: 15, lm_vardkase: 32, lm_manporten: 4, lm_satellit: 20, lm_mossaltare: 19, hels_lykta: 8, dvargstaty: 8, ormtand: 8, alvlykta: 8, fenrislanka: 6, bifrostbit: 8 };
+const LAMP_LIFT: Record<string, number> = { hearth: 6, candle_stick: 12, yggdrasil_sapling: 10, rune_stone: 6, giant_glowshroom: 14, crystal: 4, fire_crystal: 4, star_crystal: 4, wisp: 6, wisp_jar: 4, volcano: 34, rocket: 18, crystal_lamp: 8, mushroom_lamp: 8, saga_torch: 22, saga_rest: 6, saga_portal: 6, saga_stone: 12, saga_candles: 4, saga_icecrystal: 6, saga_brazier: 12, solruna: 6, yggdrasil: 14, saga_ghostlight: 10, saga_goldpile: 4, saga_minelamp: 12, saga_pearl: 5, saga_glowshroom: 9, saga_fairylight: 12, saga_rainbowshard: 9, saga_starlamp: 14, lm_jatteek: 6, lm_lykttrad: 12, lm_dvargport: 5, lm_svampring: -6, lm_eldbrunn: 15, lm_vardkase: 32, lm_manporten: 4, lm_satellit: 20, lm_mossaltare: 19, hels_lykta: 8, dvargstaty: 8, ormtand: 8, alvlykta: 8, fenrislanka: 6, bifrostbit: 8 };
 /** Things hung on the wall above their tile: they sort with the wall, behind whoever stands in front of them. */
 const ON_WALL = new Set(['saga_torch']);
 /** The dungeon looks whose torches burn with a real flame (the crypt, the forge, the mines, Fenrir's cold fire). */
@@ -370,7 +371,8 @@ export class View implements HudTarget {
     this.moon = this.area === MOON_KEY;
     // an indoor room (the bath house): lit inside and dark around it
     this.bath = isIndoorKey(this.area);
-    this.inside = false;
+    // a player's house: the longhouse room, lit inside, a little closer than the rest
+    this.inside = isHomeKey(this.area);
     this.snowGround = this.wantSnowGround();
     // the real calendar's seasons turn the trees only where there are seasons
     this.year = TIMELESS.has(world.biome ?? '') ? 'summer' : yearSeason(client.season);
@@ -849,6 +851,11 @@ export class View implements HudTarget {
       const dy = ty - pty;
       me.facing = Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up';
     }
+    // furnishing your own house: a tap on a piece takes it up (and selects it, so the next tap on the floor puts it down)
+    if (furnish.on && inOwnHouse() && objectAt(this.world, tx, ty)) {
+      net.send({ t: 'house', a: 'pick', x: tx, y: ty });
+      return;
+    }
     net.send({ t: 'act', tx, ty });
     const a = this.players.get(me.id);
     if (a) {
@@ -982,21 +989,12 @@ export class View implements HudTarget {
     for (const ov of this.objects.values()) if (ov.rustle > 0) ov.rustle = Math.max(0, ov.rustle - dt * 1.6);
     for (const cv of this.crops.values()) if (cv.rustle > 0) cv.rustle = Math.max(0, cv.rustle - dt * 1.6);
 
-    // --- inside the farmhouse? ---
-    const insideNow = this.area === 'farm' && inInterior(tileOf(me.x), tileOf(me.y));
-    if (insideNow !== this.inside) {
-      this.inside = insideNow;
-      this.snapCamera = true;
-      if (on('indoors')) this.fade = 1;
-      if (insideNow) bus.emit('toast', T.enteredHouse);
-    }
-
     // --- roofs: the one over the room I'm in fades away ---
     const myTile = tileIndex(world, tileOf(me.x), tileOf(me.y));
     if (this.roofsDirty) {
       this.roofsDirty = false;
       releaseRoofs(this.roofs);
-      this.roofs = this.cave ? [] : buildRoofs(world, myTile);
+      this.roofs = this.cave || this.inside ? [] : buildRoofs(world, myTile);
     }
     for (const r of this.roofs) {
       const target = r.tiles.has(myTile) ? 0 : 1;
@@ -1045,6 +1043,7 @@ export class View implements HudTarget {
       vw,
       vh,
       where: this.cave ? 'cave' : this.inside ? 'inside' : this.bath ? 'bath' : this.moon ? 'space' : 'out',
+      room: this.inside ? HOUSE_ROOM : null,
       movers,
       water: this.ground?.water ?? [],
       nearLava: this.nearLava(),
@@ -1126,6 +1125,11 @@ export class View implements HudTarget {
     if (this.cave && !this.saga) {
       bw = (this.world?.cave?.w ?? DUNGEON_W) * TILE;
       bh = (this.world?.cave?.h ?? DUNGEON_H) * TILE;
+    } else if (this.inside) {
+      bx = (HOUSE_ROOM.x - 1) * TILE;
+      by = (HOUSE_ROOM.y - 1.5) * TILE;
+      bw = (HOUSE_ROOM.w + 2) * TILE;
+      bh = (HOUSE_ROOM.h + 2.5) * TILE;
     } else if (this.bath) {
       bx = (BATH_ROOM.x - 2) * TILE;
       by = (BATH_ROOM.y - 3) * TILE;
@@ -1135,8 +1139,8 @@ export class View implements HudTarget {
     let tx = me.x;
     let ty = me.y;
     if (this.inside) {
-      tx = (INTERIOR.x + INTERIOR.w / 2) * TILE;
-      ty = (INTERIOR.y + INTERIOR.h / 2) * TILE;
+      tx = (HOUSE_ROOM.x + HOUSE_ROOM.w / 2) * TILE;
+      ty = (HOUSE_ROOM.y + HOUSE_ROOM.h / 2) * TILE;
     } else if (me.moving) {
       // look a little ahead of where you are going
       tx += me.facing === 'left' ? -10 : me.facing === 'right' ? 10 : 0;
@@ -1144,9 +1148,10 @@ export class View implements HudTarget {
     }
     // inside the farmhouse the camera comes closer, so the little room fills the screen
     let z = this.zoom;
-    if (this.inside && on('indoors')) {
-      const fit = Math.min(mainCanvasSize.x / ((INTERIOR.w + 2) * TILE), mainCanvasSize.y / ((INTERIOR.h + 2.5) * TILE));
-      z = Math.max(z, Math.min(Math.floor(fit), this.zoom * 2));
+    if (this.inside) {
+      // the whole house on screen (to see what you are decorating), as big as it fits
+      const fit = Math.min(mainCanvasSize.x / ((HOUSE_ROOM.w + 1) * TILE), mainCanvasSize.y / ((HOUSE_ROOM.h + 3) * TILE));
+      z = Math.max(1, Math.min(fit < 3 ? Math.floor(fit * 4) / 4 : Math.floor(fit), this.zoom * 2));
     }
     this.z = z;
     const vw = mainCanvasSize.x / z;
@@ -1221,7 +1226,7 @@ export class View implements HudTarget {
     // lamps (a lantern only outdoors after dark, or in the cave; the one in bed glows softly; in a saga dungeon as
     // bright as its floor allows). Indoors, the haze of lamps outside the room would show over the dark around it.
     const lit = this.lampsOn * (this.saga ? dungeonLamps(this.saga) : 1);
-    const room = this.inside ? { x: INTERIOR.x - 1, y: INTERIOR.y - 1, w: INTERIOR.w + 2, h: INTERIOR.h + 2 } : this.bath ? { ...BATH_ROOM, y: BATH_ROOM.y - 1, h: BATH_ROOM.h + 1 } : null;
+    const room = this.inside ? HOUSE_ROOM : this.bath ? { ...BATH_ROOM, y: BATH_ROOM.y - 1, h: BATH_ROOM.h + 1 } : null;
     const inRoom = (l: Lamp) => !room || (l.x >= room.x * TILE && l.x < (room.x + room.w) * TILE && l.y >= room.y * TILE && l.y < (room.y + room.h) * TILE);
     for (const ov of this.objects.values()) ov.lamp?.update(lit, this.t, inRoom(ov.lamp));
     for (const [id, a] of this.players) {
@@ -1549,6 +1554,11 @@ export class View implements HudTarget {
       const cx = footX + Math.sin(angle) * (h / 2);
       const cy = footY - Math.cos(angle) * (h / 2);
       q.push(ov.depth, sprite, cx, cy, w, h, angle);
+      // a weapon, shield or amulet put on a gear stand hangs on its arms
+      if (ov.o.kind === 'gear_stand' && ov.o.data) {
+        const shown = this.art.icons[ov.o.data];
+        if (shown) q.push(ov.depth + 0.01, shown, ov.x + s.w / 2, ov.y + 17, 15, 15, 0);
+      }
     }
     for (const cv of this.crops.values()) {
       const s = cv.sprite;
@@ -1873,7 +1883,7 @@ export class View implements HudTarget {
       rect(L, y, x, y + h);
       rect(x + w, y, Rr, y + h);
     };
-    if (this.inside) hole((INTERIOR.x - 1) * TILE, (INTERIOR.y - 1) * TILE, (INTERIOR.w + 2) * TILE, (INTERIOR.h + 2) * TILE);
+    if (this.inside) hole(HOUSE_ROOM.x * TILE, (HOUSE_ROOM.y - 0.5) * TILE, HOUSE_ROOM.w * TILE, (HOUSE_ROOM.h + 0.5) * TILE);
     // the bath house's tall wall caps stand a tile above the room
     else if (this.bath) hole(BATH_ROOM.x * TILE, (BATH_ROOM.y - 1) * TILE, BATH_ROOM.w * TILE, (BATH_ROOM.h + 1) * TILE);
   }

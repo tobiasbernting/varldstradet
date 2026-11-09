@@ -9,6 +9,12 @@ import {
   craftGear,
   devEnterSaga,
   devKit,
+  devTrophy,
+  devDecor,
+  devWarp,
+  enterHouse,
+  homeKey,
+  pickUpFurniture,
   devSagaBest,
   devStarterKit,
   devUnlockChapters,
@@ -561,6 +567,13 @@ export class Game {
         else if (msg.a === 'forge') changes = forgeGear(this.world, pid, String(msg.item ?? ''));
         else if (msg.a === 'craft') changes = craftGear(this.world, pid, String(msg.item ?? ''));
         break;
+      case 'house':
+        if (msg.a === 'enter') {
+          const of = typeof msg.of === 'string' ? msg.of : pid;
+          changes = enterHouse(this.world, pid, of);
+          if (changes.length) this.store.noteArea?.(homeKey(of));
+        } else if (msg.a === 'pick') changes = tagArea(pickUpFurniture(w, pid, Math.floor(msg.x), Math.floor(msg.y)), areaK);
+        break;
       case 'jump':
         changes = jumpTo(this.world, pid, String(msg.to ?? ''));
         break;
@@ -579,6 +592,9 @@ export class Game {
         else if (msg.a === 'starter') changes = devStarterKit(this.world, pid);
         else if (msg.a === 'unlock') changes = devUnlockChapters(this.world, pid);
         else if (msg.a === 'kit') changes = devKit(this.world, pid);
+        else if (msg.a === 'warp') changes = devWarp(this.world, pid, Number(msg.x), Number(msg.y));
+        else if (msg.a === 'decor') changes = devDecor(this.world, pid);
+        else if (msg.a === 'trophy') changes = devTrophy(this.world, pid, String(msg.id ?? ''), Number(msg.level));
         else if (msg.a === 'sagaBest') changes = devSagaBest(this.world, pid, String(msg.id ?? ''), Number(msg.ms));
         break;
       case 'voice':

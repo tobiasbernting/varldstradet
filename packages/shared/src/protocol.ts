@@ -29,7 +29,7 @@ export type Change =
   | { t: 'player'; id: string; player: PlayerState | null }
   | { t: 'day'; day: number }
   | { t: 'toast'; to: string | null; text: string }
-  | { t: 'open'; to: string; ui: 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'nameAnimal' | 'npc' | 'cook' | 'paint' | 'pizzeria' | 'travel' | 'saga' | 'sagaClass' | 'run' | 'seed'; id?: number; npc?: string }
+  | { t: 'open'; to: string; ui: 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'nameAnimal' | 'npc' | 'cook' | 'paint' | 'pizzeria' | 'travel' | 'saga' | 'sagaClass' | 'run' | 'seed' | 'houses'; id?: number; npc?: string }
   /** Private: the rider boards a bus, a train or the rocket (the client plays the trip). */
   | { t: 'ride'; to: string; via: 'bus' | 'train' | 'rocket'; place: string }
   | { t: 'quests'; quests: Quest[] }
@@ -118,6 +118,10 @@ export type ClientMsg =
   | { t: 'saga'; a: 'craft'; item: string }
   /** Jump to a family member, wherever they are. */
   | { t: 'jump'; to: string }
+  /** Houses: at the lobby's house door, go into someone's house (`of` a character id, left out: your own); in your own house,
+   * pick a piece of furniture up into the bag (and select it, so a tap on the floor puts it down again). */
+  | { t: 'house'; a: 'enter'; of?: string }
+  | { t: 'house'; a: 'pick'; x: number; y: number }
   /** Röstprat: pick up (want voice) or hang up; make this device the room's speaker; move to a room of your own,
    * back to the automatic room, or into another player's room; a WebRTC signal to another speaker; speaking or not. */
   | { t: 'voice'; a: 'join' }
@@ -149,6 +153,12 @@ export type ClientMsg =
   /** Development only (same switch): the day rolls over now, as the parent page's "skip day" does, so a check can
    * wait for a crop to grow. The server answers `error` when the switch is off. */
   | { t: 'dev'; a: 'nextDay' }
+  /** Development only (same switch): win dungeon boss `id`'s trophy at difficulty `level` (0..4), as a run's win would. */
+  | { t: 'dev'; a: 'trophy'; id: string; level: number }
+  /** Development only (same switch): one of every Norse decor piece, a gear stand and some gear, into the bag. */
+  | { t: 'dev'; a: 'decor' }
+  /** Development only (same switch): stand on tile (x, y) of the map you are in. */
+  | { t: 'dev'; a: 'warp'; x: number; y: number }
   /** Development only (same switch): the starter set Smed-Stina makes (a weapon, a shield, an amulet) for my class, for free. */
   | { t: 'dev'; a: 'starter' }
   /** Development only (same switch): every dungeon before the last counts as cleared, so a check can use a later chapter's arch. */

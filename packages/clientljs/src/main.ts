@@ -130,6 +130,7 @@ window.addEventListener('keydown', (e) => {
   } else if (e.key === 'f' || e.key === 'F') menus.toggle('emotes');
   else if (e.key === 'h' || e.key === 'H' || e.key === '?') menus.toggle('help');
   else if (e.key === 'b' || e.key === 'B') menus.toggle('book');
+  else if (e.key === 'g' || e.key === 'G') hud.toggleFurnish();
   else if (e.key === 'm' || e.key === 'M') hud.minimap.toggle();
   else if (/^[1-8]$/.test(e.key)) hud.select(Number(e.key) - 1);
 });
