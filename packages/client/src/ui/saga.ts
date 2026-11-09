@@ -11,14 +11,9 @@ import {
   CLASSES,
   CLASS_IDS,
   DOWN_MS,
-  FORGE_COSTS,
-  FORGE_CRAFTS,
-  FORGE_MAX,
-  SMITH_ID,
   FRIEND_KINDS,
   DUNGEONS,
   DUNGEON_IDS,
-  GEAR_SLOTS,
   LANDMARKS,
   LEVEL_REWARDS,
   MAX_LEVEL,
@@ -26,7 +21,6 @@ import {
   NPCS,
   RARITY_COLORS,
   RARITY_NAMES,
-  RARITY_POWER,
   SAGA_BOSSES,
   SAGA_CHAPTERS,
   SAGA_QUESTS,
@@ -41,14 +35,18 @@ import {
   fieldCount,
   fighterMax,
   fmt,
-  forgeLevel,
-  forgeStats,
   gearOf,
   gearSlotOf,
-  gearStats,
   heroLevel,
   isBathKey,
   isSagaKey,
+  hasLooks,
+  LOOK_T,
+  LOOK_TIER_NAMES,
+  encodeLook,
+  lookPiece,
+  setsOf,
+  wearableBy,
   itemName,
   landmarkKind,
   levelSpan,
@@ -61,7 +59,6 @@ import {
   sagaItem,
   type Change,
   type ClassId,
-  type ForgeCost,
   type GearSlot,
   type PlayerState,
   type Rarity,
@@ -95,6 +92,7 @@ import {
   webbed,
 } from '../saga.ts';
 import { SAGA_SFX } from '../sagasfx.ts';
+import { lootLookCard, rememberLooks, renderLooks, resetLooksWindow } from './looks.ts';
 import { SFX } from '../sound.ts';
 import { activeWorld, bus, client, myPlayer, serverNow } from '../state.ts';
 import { clear, h, onTap } from './dom.ts';
@@ -117,7 +115,7 @@ const FLAG_ICONS: [number, string][] = [
   [FLAG.slow, '🐌'],
 ];
 
-type Win = 'class' | 'volva' | 'journal' | 'family' | 'loot' | 'gear' | 'forge';
+type Win = 'class' | 'volva' | 'journal' | 'family' | 'loot' | 'gear';
 /** The windows that are tabs of the saga's book. */
 const BOOK: readonly Win[] = ['journal', 'gear'];
 type LootChange = Extract<Change, { t: 'loot' }>;
@@ -229,99 +227,6 @@ function rewardParts(level: number): HTMLElement[] {
   return parts;
 }
 
-/** A fraction as "+12 %". */
-const pct = (k: number): string => `+${Math.round(k * 100)} %`;
-const SLOT_NAMES: Record<GearSlot, () => string> = { weapon: () => T.sagaSlotWeapon, offhand: () => T.sagaSlotOffhand, amulet: () => T.sagaSlotAmulet };
-const SLOT_HINTS: Record<GearSlot, () => string> = { weapon: () => T.sagaSlotWeaponHint, offhand: () => T.sagaSlotOffhandHint, amulet: () => T.sagaSlotAmuletHint };
-const SLOT_EMOJI: Record<GearSlot, string> = { weapon: '⚔️', offhand: '🛡️', amulet: '📿' };
-/** What a piece of gear gives: "Kraft +10 % · Hälsa +15 · Skydd 6 %" (a weapon's power comes from its rarity). */
-function statLine(d: SagaItemDef): string {
-  const power = (d.kind === 'weapon' ? RARITY_POWER[d.rarity] - 1 : 0) + (d.stats?.power ?? 0);
-  const parts: string[] = [];
-  if (power > 0) parts.push(fmt(T.sagaStatPower, { n: pct(power) }));
-  if (d.stats?.hp) parts.push(fmt(T.sagaStatHp, { n: d.stats.hp }));
-  if (d.stats?.armor) parts.push(fmt(T.sagaStatArmor, { n: Math.round(d.stats.armor * 100) }));
-  return parts.join(' · ');
-}
-
-// ---------------------------------------------------------------------------
-// Smedjan: Smed-Stina's forge levels and costs
-// ---------------------------------------------------------------------------
-
-/** The villager whose window has the forge's button (ui/menus.ts). */
-export const FORGE_NPC = SMITH_ID;
-/** A piece's forge level for a player (0 unforged). */
-const forgeOf = (p: PlayerState | undefined, item: string): number => forgeLevel(p?.saga, item);
-/** Five stars, the forged ones filled and golden, the rest dim: "★★☆☆☆". */
-const stars = (level: number): HTMLElement => h('span', { class: 'stars', title: fmt(T.forgeLevel, { n: level }) }, h('b', null, '★'.repeat(level)), h('i', null, '☆'.repeat(Math.max(0, FORGE_MAX - level))));
-/** An item's name with its forge level: "Järnsvärd +2". */
-const forgedName = (name: string, level: number): string => (level > 0 ? `${name} +${level}` : name);
-
-/** What a piece gives at a forge level, as one short line (its power, health and armor together). */
-function forgeLine(item: string, level: number): string {
-  const st = forgeStats(item, level);
-  const d = sagaItem(item);
-  // a weapon's power is its rarity's times what the forge and its own stats add (as gearStats counts it)
-  const power = d?.kind === 'weapon' ? RARITY_POWER[d.rarity] * (1 + st.power) - 1 : st.power;
-  const parts: string[] = [];
-  if (power > 0) parts.push(`💪 ${pct(power)}`);
-  if (st.hp) parts.push(`❤️ +${st.hp}`);
-  if (st.armor) parts.push(`🛡️ ${Math.round(st.armor * 100)} %`);
-  return parts.join(' ');
-}
-
-/** One thing a forge level or a craft costs, with how much of it you have. */
-interface CostPart {
-  /** The item(s) it may be paid in (several: any of them, mixed). Empty for the coins. */
-  items: string[];
-  need: number;
-  have: number;
-}
-/** A cost (materials, "any of" materials and coins) as parts, measured against a player's bag and purse. */
-function costParts(me: PlayerState, cost: ForgeCost): CostPart[] {
-  const parts: CostPart[] = cost.items.map(([item, need]) => ({ items: [item], need, have: countItem(me.inventory, item) }));
-  if (cost.anyOf) parts.push({ items: cost.anyOf.items, need: cost.anyOf.count, have: cost.anyOf.items.reduce((n, it) => n + countItem(me.inventory, it), 0) });
-  parts.push({ items: [], need: cost.kr, have: me.coins });
-  return parts;
-}
-const affordable = (parts: CostPart[]): boolean => parts.every((c) => c.have >= c.need);
-/** A cost as chips: each material's picture with "have / need" in green or red, then the kr. */
-function costChips(parts: CostPart[]): HTMLElement {
-  const row = h('div', { class: 'forge-cost' });
-  for (const c of parts) {
-    const ok = c.have >= c.need;
-    if (!c.items.length) {
-      row.append(h('span', { class: `chip-cost coins ${ok ? 'ok' : 'no'}`, title: T.coins }, h('span', { class: 'em' }, '🪙'), h('b', null, `${c.need} ${T.coins}`)));
-      continue;
-    }
-    const pics = h('span', { class: `pics${c.items.length > 1 ? ' any' : ''}` }, ...c.items.map((it) => itemIcon(it, '💠')));
-    const label = c.items.length > 1 ? fmt(T.forgeAnyOf, { items: c.items.map(itemName).join(', ') }) : itemName(c.items[0]!);
-    row.append(h('span', { class: `chip-cost ${ok ? 'ok' : 'no'}`, title: label }, pics, h('b', null, `${Math.min(c.have, 999)} / ${c.need}`)));
-  }
-  return row;
-}
-
-/** Every piece of gear a player owns: what they wear, then the bag's (each once). */
-function ownedGear(me: PlayerState): { item: string; slot: GearSlot; worn: boolean }[] {
-  const out: { item: string; slot: GearSlot; worn: boolean }[] = [];
-  const seen = new Set<string>();
-  const worn = gearOf(me);
-  for (const slot of GEAR_SLOTS) {
-    const id = worn[slot];
-    if (id && !seen.has(id)) {
-      seen.add(id);
-      out.push({ item: id, slot, worn: true });
-    }
-  }
-  for (const st of me.inventory) {
-    const slot = st ? gearSlotOf(st.item) : null;
-    if (!st || !slot || seen.has(st.item)) continue;
-    seen.add(st.item);
-    out.push({ item: st.item, slot, worn: false });
-  }
-  return out;
-}
-
 // ---------------------------------------------------------------------------
 // Upptäcktsboken: the landmarks of the wild maps
 // ---------------------------------------------------------------------------
@@ -336,11 +241,6 @@ function landmarkPic(id: string): HTMLElement {
   }
   return url ? h('img', { src: url, alt: '', draggable: 'false' }) : h('span', { class: 'em' }, '🧭');
 }
-/** What the forge has done for a player, as text that changes when a level is reached or a piece is smithed. */
-const forgeKey = (p: PlayerState | undefined): string => {
-  const prog = readProgress(p);
-  return `${JSON.stringify(prog.forge ?? {})}|${prog.found.filter((id) => id in FORGE_CRAFTS).join(',')}`;
-};
 /** "4:07" from milliseconds. */
 const clock = (ms: number): string => {
   const sec = Math.max(0, Math.round(ms / 1000));
@@ -446,9 +346,10 @@ export class SagaUi {
   /** Kämpastenen: the class looked at. */
   private pickCls: ClassId | null = null;
   private loots: LootChange[] = [];
-  /** Smedjan: the tab looked at, and the forge levels and crafted pieces last seen (to ring the anvil when one grows). */
-  private forgeTab: 'upgrade' | 'craft' = 'upgrade';
-  private forgeSeen = '';
+  /** Garderoben opened from a gear stand in the house: the stand's object id (else null). */
+  private standObj: number | null = null;
+  /** A line over the wardrobe (Smed-Stina's). */
+  private looksNote: string | null = null;
 
   private bar = h('div', { class: 'saga-bar' });
   private tip = h('div', { class: 'saga-tip' });
@@ -501,21 +402,22 @@ export class SagaUi {
 
     // the gear window: the HUD's ⚔️ button and the gamepad's Select ask for it
     document.addEventListener('lilla:gear', () => {
-      if (myClass()) this.open('gear');
+      this.openLooks();
     });
     // the journal's level page: the HUD's level chip asks for it
     document.addEventListener('lilla:journal', () => this.open('journal'));
-    // Smedjan: Smed-Stina's window asks for it (ui/menus.ts)
-    document.addEventListener('lilla:forge', () => this.open('forge'));
+    // Smed-Stina's window (ui/menus.ts) opens the wardrobe on the sets tab with a line about collecting them
+    document.addEventListener('lilla:sets', () => this.openLooks(null, { tab: 'set', note: LOOK_T.stinaLine }));
+    document.addEventListener('lilla:looks-arch', () => this.openLooks());
     bus.on('open', (c) => {
       if (c.ui === 'sagaClass') this.open('class');
       else if (c.ui === 'saga') this.open('volva');
+      else if (c.ui === 'looks') this.openLooks(c.id ?? null);
     });
     bus.on('change', (c) => this.fromServer(c));
     bus.on('me', () => {
       this.sync();
       this.renderTracker();
-      this.forgeRang();
       if (this.modal && this.win !== 'loot') this.render();
       this.renderUnits();
     });
@@ -565,8 +467,8 @@ export class SagaUi {
       this.open('journal');
       return true;
     }
-    if ((e.key === 'g' || e.key === 'G') && myClass()) {
-      this.open('gear');
+    if (e.key === 'g' || e.key === 'G') {
+      this.openLooks();
       return true;
     }
     if (!fightMode()) return false;
@@ -582,6 +484,7 @@ export class SagaUi {
 
   private fromServer(c: Change): void {
     if (c.t === 'loot') {
+      if (c.looks) rememberLooks(c.looks);
       this.loots.push(c);
       if (this.win !== 'loot') this.nextLoot();
     } else if (c.t === 'banner') this.banner(c);
@@ -1036,15 +939,21 @@ export class SagaUi {
 
   // ---- windows ----
 
+  /** Garderoben (the wardrobe of looks); `stand`: the gear stand in the house it is picking a look for. */
+  openLooks(stand: number | null = null, opts: { tab?: 'wear' | 'set'; note?: string } = {}): void {
+    this.close();
+    this.standObj = stand;
+    this.looksNote = opts.note ?? null;
+    resetLooksWindow(undefined, opts.tab);
+    this.open('gear');
+  }
+
   open(win: Win): void {
+    if (win === 'gear' && this.win !== 'gear' && this.standObj === null) resetLooksWindow();
     this.close();
     this.win = win;
     if (win === 'volva') this.volvaTab = 'story';
     if (win === 'class') this.pickCls = readProgress(myPlayer()).cls ?? null;
-    if (win === 'forge') {
-      this.forgeTab = 'upgrade';
-      this.forgeSeen = forgeKey(myPlayer());
-    }
     this.modal = h('div', { class: 'modal saga-modal' });
     this.modal.addEventListener('pointerdown', (e) => {
       if (e.target === this.modal && this.win !== 'loot') this.close();
@@ -1060,6 +969,8 @@ export class SagaUi {
     this.modal.remove();
     this.modal = null;
     this.win = null;
+    this.standObj = null;
+    this.looksNote = null;
     this.onChange(false);
     // treasure that came while another window was open
     if (this.loots.length) setTimeout(() => this.nextLoot(), 250);
@@ -1078,21 +989,19 @@ export class SagaUi {
       journal: `📖 ${T.sagaJournalTitle}`,
       family: `👪 ${T.familyTitle}`,
       loot: '',
-      gear: `⚔️ ${T.sagaGearTitle}`,
-      forge: `🔨 ${T.forgeTitle}`,
+      gear: `👕 ${LOOK_T.title}`,
     };
     const body = h('div', { class: 'body' });
     const panel = h('div', { class: `panel saga-panel ${this.win}` });
-    const purse = this.win === 'forge' ? h('span', { class: 'price' }, `🪙 ${me.coins} ${T.coins}`) : null;
-    if (this.win !== 'loot') panel.append(h('h2', null, titles[this.win], h('span', { class: 'spacer' }), purse, closeBtn));
+    if (this.win !== 'loot') panel.append(h('h2', null, titles[this.win], h('span', { class: 'spacer' }), closeBtn));
     panel.append(body);
     if (this.win === 'class') this.renderClass(body);
     else if (this.win === 'volva') this.renderVolva(panel, body);
     else if (BOOK.includes(this.win)) {
-      // the journal, the gear window and the discoveries are tabs of one book (the gear one only with a class)
+      // the journal, the wardrobe (Garderoben) and the discoveries are tabs of one book (the wardrobe with a class or a look)
       const pages: [Win, string][] = [['journal', T.sagaJournalTab]];
-      if (myClass()) pages.push(['gear', `⚔️ ${T.sagaGearTitle}`]);
-      {
+      pages.push(['gear', `👕 ${LOOK_T.title}`]);
+      if (this.standObj === null) {
         const tabs = h('div', { class: 'tabs' });
         for (const [w, label] of pages) {
           const b = h('button', { class: this.win === w ? 'on' : '' }, label);
@@ -1106,10 +1015,9 @@ export class SagaUi {
         }
         panel.insertBefore(tabs, body);
       }
-      if (this.win === 'gear') this.renderGear(body);
+      if (this.win === 'gear') renderLooks({ rerender: () => this.render(), close: () => this.close(), stand: this.standObj, note: this.looksNote, clothes: () => { this.close(); this.menus.open('wardrobe'); } }, body);
       else this.renderJournal(body);
-    } else if (this.win === 'forge') this.renderForge(panel, body);
-    else if (this.win === 'family') this.renderFamily(body);
+    } else if (this.win === 'family') this.renderFamily(body);
     else this.renderLoot(panel, body);
     this.modal.append(panel);
   }
@@ -1297,236 +1205,6 @@ export class SagaUi {
     body.append(list);
   }
 
-  // The gear window: the hero, their level and what they carry; tap a piece in the bag to put it on, tap a worn one to
-  // take it off again. Clothes are changed in the wardrobe.
-  private renderGear(body: HTMLElement): void {
-    const me = myPlayer()!;
-    const prog = readProgress(me);
-    const cls = myClass();
-    if (!cls) return;
-    const worn = gearOf(me);
-    const gs = gearStats(me);
-    const span = levelSpan(prog.xp ?? 0);
-    const xp = prog.xp ?? 0;
-    const title = titleOf(me);
-
-    // the hero: portrait, level, experience, what it all adds up to
-    const meter = xpMeter(xp);
-    const totals = h(
-      'div',
-      { class: 'totals' },
-      h('span', { class: 'pow' }, `💪 ${fmt(T.sagaStatPower, { n: pct(gs.power - 1) })}`),
-      h('span', { class: 'hp' }, `❤️ ${fmt(T.sagaHealth, { hp: fighterMax(me, cls.id) })}`),
-      h('span', { class: 'arm' }, `🛡️ ${fmt(T.sagaStatArmor, { n: Math.round(gs.armor * 100) })}`),
-    );
-    const card = vars(
-      h(
-        'div',
-        { class: 'hero' },
-        h('img', { class: 'portrait', src: portraitUrl(me.appearance, me.outfit, 4), alt: '' }),
-        h(
-          'div',
-          { class: 'who' },
-          h('b', { class: 'nm' }, me.name),
-          title ? h('span', { class: 'ttl' }, `👑 ${title}`) : null,
-          h('span', { class: 'cls' }, `${cls.emoji} ${cls.name} · ${cls.roleName}`),
-          h('span', { class: 'lvl' }, `⭐ ${fmt(T.sagaLevelOf, { n: span.level, max: MAX_LEVEL })}`),
-          meter,
-          totals,
-        ),
-      ),
-      { '--c': cls.color },
-    );
-
-    // the three slots
-    const slots = h('div', { class: 'slots' });
-    for (const slot of GEAR_SLOTS) {
-      const id = worn[slot];
-      const d = id ? sagaItem(id) : undefined;
-      const fl = id ? forgeOf(me, id) : 0;
-      const el = h('div', { class: `gslot${d ? ` rar-${d.rarity}` : ' empty'}${fl ? ' forged' : ''}` }, h('span', { class: 'slot-name' }, SLOT_NAMES[slot]()));
-      if (d && id) {
-        el.append(h('span', { class: 'pic' }, itemIcon(id)), h('b', { class: 'nm' }, forgedName(d.name, fl), fl ? stars(fl) : null), h('span', { class: 'st' }, fl ? forgeLine(id, fl) : statLine(d)), h('span', { class: 'off' }, `✋ ${T.sagaTapOff}`));
-        vars(el, { '--r': RARITY_COLORS[d.rarity], '--fl': String(fl) });
-        onTap(el, () => {
-          net.send({ t: 'saga', a: 'equip', slot, item: null });
-          SFX.talk();
-        });
-      } else el.append(h('span', { class: 'pic' }, h('span', { class: 'em' }, SLOT_EMOJI[slot])), h('span', { class: 'tx' }, SLOT_HINTS[slot]()));
-      slots.append(el);
-    }
-    // clothes: shown here, changed in the wardrobe
-    const clothes = h('div', { class: 'clothes' }, h('span', { class: 'slot-name' }, T.sagaClothes));
-    for (const part of ['hat', 'shirt'] as const) {
-      const id = me.outfit[part];
-      clothes.append(id ? h('span', { class: 'cl', title: itemName(id) }, itemIcon(id, part === 'hat' ? '🎩' : '👕')) : h('span', { class: 'cl none' }, part === 'hat' ? '🎩' : '👕'));
-    }
-    const wardrobe = h('button', null, `👕 ${T.wardrobe}`);
-    onTap(wardrobe, () => {
-      this.close();
-      this.menus.open('wardrobe');
-    });
-    clothes.append(wardrobe);
-    slots.append(clothes);
-    body.append(h('div', { class: 'saga-gear' }, card, slots));
-
-    // the gear in the bag
-    body.append(h('div', { class: 'saga-head' }, `🎒 ${T.sagaGearBag}`));
-    const grid = h('div', { class: 'saga-gearbag' });
-    // a save from before gear wears its best weapon from the bag: that one shows above, not here too
-    let skip = me.saga?.gear ? null : (worn.weapon ?? null);
-    for (const st of me.inventory) {
-      if (!st) continue;
-      const slot = gearSlotOf(st.item);
-      const d = sagaItem(st.item);
-      if (!slot || !d) continue;
-      if (st.item === skip) {
-        skip = null;
-        continue;
-      }
-      const fits = !!d.classes?.includes(cls.id);
-      const fl = forgeOf(me, st.item);
-      const el = vars(
-        h(
-          'div',
-          { class: `gitem rar-${d.rarity}${fits ? ' fits' : ''}${fl ? ' forged' : ''}` },
-          h('span', { class: 'pic' }, itemIcon(st.item)),
-          h(
-            'div',
-            { class: 'col' },
-            h('b', { class: 'nm' }, forgedName(d.name, fl), fl ? stars(fl) : null),
-            h('span', { class: 'rar' }, `${RARITY_NAMES[d.rarity]} · ${SLOT_NAMES[slot]()}`),
-            h('span', { class: 'st' }, fl ? forgeLine(st.item, fl) : statLine(d)),
-            d.classes?.length ? h('span', { class: 'fit' }, `${fits ? '✓ ' : ''}${fmt(T.sagaFits, { classes: d.classes.map((c) => CLASSES[c].name).join(', ') })}`) : null,
-            d.text ? h('span', { class: 'tx' }, d.text) : null,
-          ),
-          h('span', { class: 'put' }, worn[slot] ? '⇄' : '＋'),
-        ),
-        { '--r': RARITY_COLORS[d.rarity], '--fl': String(fl) },
-      );
-      el.title = T.sagaTapOn;
-      onTap(el, () => {
-        net.send({ t: 'saga', a: 'equip', slot, item: st.item });
-        SAGA_SFX.loot(RARITY_ORDER.indexOf(d.rarity) >= 3 ? 3 : 0);
-      });
-      grid.append(el);
-    }
-    body.append(grid.children.length ? grid : h('div', { class: 'hint' }, T.sagaGearBagEmpty));
-  }
-
-  // Smedjan: Smed-Stina makes the gear you own stronger (Förbättra), or smiths a simple piece of each kind (Smid)
-  private renderForge(panel: HTMLElement, body: HTMLElement): void {
-    const me = myPlayer()!;
-    const tabs = h('div', { class: 'tabs' });
-    for (const [t, label] of [
-      ['upgrade', `⚒️ ${T.forgeTabUpgrade}`],
-      ['craft', `🔥 ${T.forgeTabCraft}`],
-    ] as const) {
-      const b = h('button', { class: this.forgeTab === t ? 'on' : '' }, label);
-      onTap(b, () => {
-        if (this.forgeTab === t) return;
-        this.forgeTab = t;
-        SFX.talk();
-        this.render();
-      });
-      tabs.append(b);
-    }
-    panel.insertBefore(tabs, body);
-    const npc = NPCS[FORGE_NPC];
-    const intro = h('div', { class: 'forge-intro' }, npc ? h('img', { class: 'portrait', src: portraitUrl(npc.appearance, npc.outfit, 3), alt: '' }) : null, h('p', null, this.forgeTab === 'upgrade' ? T.forgeIntro : T.forgeCraftIntro));
-    body.append(intro);
-    const grid = h('div', { class: 'forge-grid' });
-    if (this.forgeTab === 'upgrade') {
-      const owned = ownedGear(me);
-      for (const g of owned) grid.append(this.forgeCard(me, g.item, g.slot, g.worn));
-      body.append(owned.length ? grid : h('div', { class: 'hint' }, T.forgeNone));
-      return;
-    }
-    const prog = readProgress(me);
-    const worn = Object.values(gearOf(me));
-    for (const [item, cost] of Object.entries(FORGE_CRAFTS)) {
-      const d = sagaItem(item);
-      const slot = gearSlotOf(item);
-      if (!d || !slot) continue;
-      const owned = prog.found.includes(item) || worn.includes(item) || countItem(me.inventory, item) > 0;
-      const parts = costParts(me, cost);
-      const ok = !owned && affordable(parts);
-      const btn = h('button', { class: 'gold', disabled: !ok }, owned ? `✓ ${T.forgeOwned}` : `🔨 ${T.forgeCraft}`);
-      onTap(btn, () => {
-        if (!ok) return;
-        net.send({ t: 'saga', a: 'craft', item });
-        SFX.talk();
-      });
-      grid.append(
-        vars(
-          h(
-            'div',
-            { class: `forge-card rar-${d.rarity}${owned ? ' owned' : ''}` },
-            h('div', { class: 'top' }, h('span', { class: 'pic' }, itemIcon(item)), h('div', { class: 'col' }, h('b', { class: 'nm' }, d.name), h('span', { class: 'rar' }, `${RARITY_NAMES[d.rarity]} · ${SLOT_NAMES[slot]()}`), h('span', { class: 'st' }, statLine(d)))),
-            owned ? null : costChips(parts),
-            h('div', { class: 'q-act' }, btn),
-          ),
-          { '--r': RARITY_COLORS[d.rarity] },
-        ),
-      );
-    }
-    body.append(grid);
-  }
-
-  /** One piece in the forge: its stars, what the next level costs and gives, and the button. */
-  private forgeCard(me: PlayerState, item: string, slot: GearSlot, worn: boolean): HTMLElement {
-    const d = sagaItem(item)!;
-    const level = forgeOf(me, item);
-    const max = level >= FORGE_MAX;
-    const cost = max ? undefined : FORGE_COSTS[level + 1];
-    const parts = cost ? costParts(me, cost) : [];
-    const ok = !!cost && affordable(parts);
-    const btn = h('button', { class: 'gold', disabled: !ok }, max ? `🏆 ${T.forgeMax}` : `⚒️ ${T.forgeUpgrade}`);
-    onTap(btn, () => {
-      if (!ok) return;
-      net.send({ t: 'saga', a: 'forge', item });
-      SFX.talk();
-    });
-    const now = forgeLine(item, level);
-    const next = max ? '' : forgeLine(item, level + 1);
-    return vars(
-      h(
-        'div',
-        { class: `forge-card rar-${d.rarity}${level ? ' forged' : ''}${max ? ' max' : ''}` },
-        h(
-          'div',
-          { class: 'top' },
-          h('span', { class: 'pic' }, itemIcon(item)),
-          h(
-            'div',
-            { class: 'col' },
-            h('b', { class: 'nm' }, forgedName(d.name, level)),
-            h('span', { class: 'rar' }, `${RARITY_NAMES[d.rarity]} · ${SLOT_NAMES[slot]()}${worn ? ` · ${T.forgeWorn}` : ''}`),
-            stars(level),
-          ),
-        ),
-        h('div', { class: 'stat' }, h('span', { class: 'now' }, now || '–'), max ? null : h('span', { class: 'arrow' }, '→'), max ? null : h('b', { class: 'next' }, next)),
-        cost ? costChips(parts) : null,
-        h('div', { class: 'q-act' }, btn),
-      ),
-      { '--r': RARITY_COLORS[d.rarity], '--fl': String(level) },
-    );
-  }
-
-  /** The anvil rings and sparks fly when a piece in the open forge gains a level or a new one is smithed. */
-  private forgeRang(): void {
-    if (this.win !== 'forge') return;
-    const now = forgeKey(myPlayer());
-    if (now === this.forgeSeen) return;
-    const before = this.forgeSeen;
-    this.forgeSeen = now;
-    const level = Math.max(1, ...Object.values(readProgress(myPlayer()).forge ?? {}));
-    if (before) {
-      SAGA_SFX.anvil(level);
-      this.sparkles(24);
-    }
-  }
-
   // Everyone in the family: where they are, and a jump to their side
   private renderFamily(body: HTMLElement): void {
     body.append(h('p', { class: 'saga-intro' }, T.familyHint));
@@ -1576,7 +1254,28 @@ export class SagaUi {
         ),
       );
     }
-    rows.append(h('div', { class: 'loot coins' }, h('span', { class: 'pic' }, h('span', { class: 'em' }, '🪙')), h('b', null, `+${c.coins} ${T.coins}`), c.stars ? h('b', { class: 'stars' }, `+${c.stars} ⭐`) : null));
+    // a completed dungeon's looks: each with its effect playing, and a button to put it on
+    const lk = c.looks;
+    if (lk) {
+      const prog = readProgress(myPlayer());
+      for (const dr of lk.drops) {
+        const piece = lookPiece(dr.piece);
+        if (!piece) continue;
+        best = Math.max(best, dr.signature ? 4 : 3);
+        const way = undefined;
+        const lines = [dr.signature ? LOOK_T.lootSig : dr.isNew ? fmt(LOOK_T.lootNew, { name: piece.name }) : fmt(LOOK_T.lootMore, { name: piece.name }), fmt(LOOK_T.lootNow, { tier: LOOK_TIER_NAMES[dr.tier - 1]!, n: dr.tier })];
+        const cls = prog.cls ?? prog.lookCls;
+        const can = wearableBy(dr.piece, cls) && !!cls;
+        rows.append(lootLookCard(encodeLook(dr.piece, dr.tier, way), dr.piece, lines, can ? () => net.send({ t: 'look', slot: piece.slot, piece: dr.piece, cls }) : null));
+      }
+      for (const w of lk.ways) {
+        const dun = DUNGEONS[lk.dungeon as keyof typeof DUNGEONS];
+        const set = dun ? setsOf(dun.id)[0] : undefined;
+        if (set) rows.append(h('div', { class: 'loot way' }, h('span', { class: 'pic' }, h('span', { class: 'em' }, '🎨')), h('div', { class: 'col' }, h('b', { class: 'nm' }, fmt(LOOK_T.lootWay, { name: set.ways[w].name })), h('span', { class: 'tx' }, `${DUNGEONS[dun!.id].name}: ${w === 'svar' ? LOOK_T.levelSvar : LOOK_T.levelExtrem}`))));
+      }
+      for (const t of lk.titles) rows.append(h('div', { class: 'loot title' }, h('span', { class: 'pic' }, h('span', { class: 'em' }, '👑')), h('div', { class: 'col' }, h('b', { class: 'nm' }, fmt(LOOK_T.lootTitle, { title: t })))));
+    }
+    if (!lk || c.coins || c.stars || c.items.length) rows.append(h('div', { class: 'loot coins' }, h('span', { class: 'pic' }, h('span', { class: 'em' }, '🪙')), h('b', null, `+${c.coins} ${T.coins}`), c.stars ? h('b', { class: 'stars' }, `+${c.stars} ⭐`) : null));
     const rar = RARITY_ORDER[best]!;
     // the day's second (and later) chest from a boss: a plainer one, no rays and no fireworks
     const replay = !!c.replay;
@@ -1585,7 +1284,7 @@ export class SagaUi {
     panel.style.setProperty('--r', RARITY_COLORS[rar]);
     const ok = h('button', { class: 'gold' }, T.sagaLootOk);
     onTap(ok, () => this.close());
-    panel.insertBefore(h('h2', null, h('span', { class: 'chest' }, replay ? '📦' : '🎁'), fmt(replay ? T.sagaReplayChest : T.sagaLootTitle, { from: c.from })), body);
+    panel.insertBefore(h('h2', null, h('span', { class: 'chest' }, replay ? '📦' : '🎁'), lk ? LOOK_T.lootHead : fmt(replay ? T.sagaReplayChest : T.sagaLootTitle, { from: c.from })), body);
     if (replay) body.prepend(h('p', { class: 'replay-note' }, T.sagaReplaySub));
     else if (rar === 'legendary') panel.prepend(h('div', { class: 'rays' }));
     body.append(rows, h('div', { class: 'q-act' }, ok));

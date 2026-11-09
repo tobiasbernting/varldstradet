@@ -9,6 +9,8 @@ import {
   BATH_ROOM,
   BOOST_SPEED_MUL,
   countItem,
+  decodeLook,
+  STAND_PREFIX,
   CROPS,
   DAY_LENGTH_MS,
   dungeonOfKey,
@@ -70,7 +72,8 @@ import { activeWorld, bus, client, furnish, inOwnHouse, myArea, myPlayer, server
 import { attackTarget, heroOn, levelOf, sagaMarker, sagaSpeed, titleOf } from '@v1/saga.ts';
 import { KIND_ICON, runClient } from '@v1/run.ts';
 import type { HudTarget } from '@v1/ui/hud.ts';
-import { animalSprites, characterSprites, loadSprites, paintingSprite, type ObjectSprites, type Sprites } from './art.ts';
+import { animalSprites, characterSprites, loadSprites, lookSprite, paintingSprite, type ObjectSprites, type Sprites } from './art.ts';
+import { LooksFx, type FxActor } from './looksfx.ts';
 import type { Sprite } from './atlas.ts';
 import { Effects } from './fx.ts';
 import { SagaView, type Spot } from './saga.ts';
@@ -272,6 +275,9 @@ export class View implements HudTarget {
   private fx!: Effects;
   /** Sagan om Världsträdet: telegraphs, spells, numbers and bars in the dungeons. */
   private sagaFx!: SagaView;
+  /** The looks' glows, sparks and trails (looksfx.ts), and the players it was told about this frame. */
+  private looksFx!: LooksFx;
+  private fxList: FxActor[] = [];
   private weather!: WeatherView;
   private flashLamps: { lamp: Lamp; fl: { t: number; dur: number } }[] = [];
   private sky: SkyLight = skyLight(0, null, 'none');
@@ -345,6 +351,8 @@ export class View implements HudTarget {
     new LightPainter(() => this.paintLight());
     this.fx = new Effects(this.art);
     this.sagaFx = new SagaView(this.art, this.labels, this.fx, (id) => this.spotOf(id));
+    this.looksFx = new LooksFx(this.art);
+    (window as unknown as { __looksFx?: LooksFx }).__looksFx = this.looksFx; // (for the frame cost check)
     this.weather = new WeatherView(this.art);
   }
 
@@ -995,6 +1003,7 @@ export class View implements HudTarget {
     this.updateLight(me, dt);
     this.fx.update(dt);
     this.sagaFx.update(dt);
+    this.looksFx.update(dt, (this.fxList = this.fxActors(world)));
 
     const sc = this.makeScene(world, dt);
     this.scene = sc;
@@ -1544,7 +1553,8 @@ export class View implements HudTarget {
       q.push(ov.depth, sprite, cx, cy, w, h, angle);
       // a weapon, shield or amulet put on a gear stand hangs on its arms
       if (ov.o.kind === 'gear_stand' && ov.o.data) {
-        const shown = this.art.icons[ov.o.data];
+        // (a look from the owner's collection stands there with its shine; an old stand holds an item)
+        const shown = ov.o.data.startsWith(STAND_PREFIX) ? lookSprite(ov.o.data.slice(STAND_PREFIX.length)) : this.art.icons[ov.o.data];
         if (shown) q.push(ov.depth + 0.01, shown, ov.x + s.w / 2, ov.y + 17, 15, 15, 0);
       }
     }
@@ -1660,11 +1670,22 @@ export class View implements HudTarget {
     const swimming = this.bath && inPool(this.world!, a);
     // on the moon everyone walks in slow, floaty bounces
     const lift = ride.lift + (this.moon && p.moving && p.riding === undefined ? Math.abs(Math.sin(a.walk * Math.PI * 1.4)) * 7 : 0);
+    this.queueGhosts(a, p, lift);
     this.queueCharacterAt(a, p.facing, p.moving, lift, ride.cropLegs, swimming);
     this.queueHeld(a, p, swimming, lift);
     if (swimming) {
       const rip = this.art.fx.ripple?.[Math.floor(this.t / 0.4) % 2];
       if (rip) this.queue.push(a.y + 3, rip, a.x, a.y + 3, rip.w, rip.h, 0, alpha(0.9));
+    }
+  }
+
+  /** The fading copies behind a hero whose set leaves a trail (tier 5 Björnbärsärken, Skuggornas hatt, Lokes lek). */
+  private queueGhosts(a: Actor, p: PlayerState, lift: number): void {
+    for (const g of this.looksFx.ghostsOf(p.id)) {
+      const s = this.characterFrame(a, g.facing, true);
+      if (!s) continue;
+      const [r, gg, b] = g.tint;
+      this.queue.push(g.y + 3.5, s, g.x, g.y + 4 - lift - s.h / 2, s.w * (g.facing === 'left' ? -1 : 1), s.h, 0, rgba(0.55 + r * 0.45, 0.55 + gg * 0.45, 0.55 + b * 0.45, g.alpha));
     }
   }
 
@@ -1682,6 +1703,19 @@ export class View implements HudTarget {
     this.queue.push(a.y + 4 + (lift > 0 ? 2 : 0), s, a.x, footY - h / 2, w, h, 0, WHITE, 0, part);
   }
 
+  /** The players in sight that wear looks, for the effects (the others cost nothing). */
+  private fxActors(world: WorldState): FxActor[] {
+    const out: FxActor[] = [];
+    const [vx, vy, vw, vh] = this.viewRect();
+    for (const [id, a] of this.players) {
+      const p = world.players[id];
+      if (!p || p.sleeping || !p.outfit.looks || this.sagaFx.pose(id) === 'down') continue;
+      if (a.x < vx - 40 || a.x > vx + vw + 40 || a.y < vy - 50 || a.y > vy + vh + 40) continue;
+      out.push({ id, x: a.x, y: a.y + 4 - this.rideInfo(p).lift, facing: p.facing, moving: p.moving, seed: a.seed, looks: p.outfit.looks });
+    }
+    return out;
+  }
+
   /**
    * A hero's weapon: the one they wear while hero mode is on (or in a dungeon, where everyone is their class).
    * Other players' snapshots carry it as `held` too, for a record that has not caught up yet.
@@ -1697,9 +1731,10 @@ export class View implements HudTarget {
   /** A hero's weapon glows in its own colour at night (a rainbow one shifts through them all). */
   private updateWeaponLamp(a: Actor, p: PlayerState, lit: number): void {
     const id = this.weaponOf(p);
-    // a weapon Smed-Stina has forged shines brighter with every level (a plain one gets a warm smithy shine)
-    const forged = id ? (p.saga?.forge?.[id] ?? 0) : 0;
-    const glow = id && !p.sleeping ? (sagaItem(id)?.glow ?? (forged > 0 ? '#ffd9a0' : null)) : null;
+    // a weapon look glows from tier 3 in its own colour, brighter as it shines more (tier 4 and 5 stand for the old "forge" level)
+    const wl = decodeLook(p.outfit.looks?.weapon);
+    const forged = wl && wl.tier >= 3 ? wl.tier - 2 : 0;
+    const glow = wl && !p.sleeping ? (wl.tier >= 3 ? wl.pal.glow : null) : id && !p.sleeping ? (sagaItem(id)?.glow ?? null) : null;
     const want = glow ? `${glow}|${forged}` : null;
     if (want !== (a.weaponGlow ?? null)) {
       a.weaponLamp?.destroy();
@@ -1829,17 +1864,21 @@ export class View implements HudTarget {
 
   /** The item in someone's hand (tools, weapons, food… everything), swung when used; a hero's weapon in hero mode. */
   private queueHeld(a: Actor, p: PlayerState, swimming: boolean, lift: number): void {
-    const weapon = this.weaponOf(p);
+    // a weapon look is always in hand (wherever they are); an old weapon only for a hero
+    const lookCode = p.outfit.looks?.weapon;
+    const weapon = lookCode ? null : this.weaponOf(p);
     const stack = weapon ? { item: weapon, count: 1 } : heldItem(p);
     const driving = p.riding !== undefined && !!this.world!.animals[p.riding] && isVehicle(this.world!.animals[p.riding]!);
-    const icon = stack && !swimming && !p.sleeping && !driving ? this.art.icons[stack.item] : undefined;
+    const free = !swimming && !p.sleeping && !driving;
+    const icon = !free ? undefined : lookCode ? lookSprite(lookCode) : stack ? this.art.icons[stack.item] : undefined;
     if (!icon) return;
+    const looks = !!lookCode;
     const f = p.facing;
     const bob = p.moving ? Math.round(Math.sin(this.t * 11)) : 0;
-    const tool = !!weapon || ITEMS[stack!.item]?.category === 'tool';
+    const tool = !!weapon || looks || ITEMS[stack!.item]?.category === 'tool';
     const swing = a.swing > 0 ? Math.sin((1 - a.swing / 0.26) * Math.PI) : 0;
-    const w = icon.w * 0.55;
-    const h = icon.h * 0.55;
+    const w = icon.w * (looks ? 0.7 : 0.55);
+    const h = icon.h * (looks ? 0.7 : 0.55);
     if (f === 'right' || f === 'left') {
       const s = f === 'right' ? 1 : -1;
       const ang = (tool ? s * -25 * DEG : 0) + s * swing * 1.4;
@@ -1920,6 +1959,12 @@ export class View implements HudTarget {
       this.water.drawBright(sc);
       this.homes.drawBright(sc);
       setAdditiveBlendMode(false);
+    }
+    // the looks' effects first, so a boss's marks lie over them
+    this.looksFx.draw(this.t, this.fxList);
+    for (const ov of this.objects.values()) {
+      const data = ov.o.kind === 'gear_stand' ? ov.o.data : undefined;
+      if (data?.startsWith(STAND_PREFIX) && ov.x > vx - 40 && ov.x < vx + vw + 40 && ov.y > vy - 40 && ov.y < vy + vh + 40) this.looksFx.drawStand(ov.x + ov.sprite.w / 2, ov.y + 17, data.slice(STAND_PREFIX.length), this.t);
     }
     this.sagaFx.drawBright();
     setAdditiveBlendMode(true);

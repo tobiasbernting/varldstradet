@@ -19,6 +19,15 @@ import type { IceServer, VoiceState } from './voice.ts';
 import type { NodeKind, RunLevel, RunOfferSnap, RunOutcome, RunSnap } from './run.ts';
 
 /** A change to the world that the server broadcasts after applying. `area` marks dungeon changes. */
+/** What a completed dungeon gave in looks (the loot window shows each with its effect): the drops, the colourways unlocked and the titles. */
+export interface LootLooks {
+  drops: { piece: string; tier: number; isNew: boolean; signature?: boolean }[];
+  ways: ('svar' | 'extrem')[];
+  titles: string[];
+  dungeon: string;
+  level: number;
+}
+
 export type Change =
   | { t: 'terrain'; x: number; y: number; terrain: Terrain; area?: string }
   | { t: 'crop'; k: string; crop: CropState | null; area?: string }
@@ -29,7 +38,7 @@ export type Change =
   | { t: 'player'; id: string; player: PlayerState | null }
   | { t: 'day'; day: number }
   | { t: 'toast'; to: string | null; text: string }
-  | { t: 'open'; to: string; ui: 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'nameAnimal' | 'npc' | 'cook' | 'paint' | 'pizzeria' | 'travel' | 'saga' | 'sagaClass' | 'run' | 'seed' | 'houses' | 'kennel'; id?: number; npc?: string }
+  | { t: 'open'; to: string; ui: 'looks' | 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'nameAnimal' | 'npc' | 'cook' | 'paint' | 'pizzeria' | 'travel' | 'saga' | 'sagaClass' | 'run' | 'seed' | 'houses' | 'kennel'; id?: number; npc?: string }
   | { t: 'quests'; quests: Quest[] }
   | { t: 'fx'; x: number; y: number; kind: 'heart' | 'sparkle' | 'water' | 'chop' | 'poof' | 'coin' | 'hit' | 'arrow' | 'rocket' | 'boom' | 'splash' | 'lasso' | 'honk'; area?: string; from?: { x: number; y: number } }
   /** 2D game: someone said something. `old` marks history sent to a player who just came online. */
@@ -50,7 +59,7 @@ export type Change =
   | { t: 'banner'; to: string | null; area?: string; text: string; sub?: string; kind?: 'enter' | 'boss' | 'cleared' | 'chapter' | 'reward' | 'rest' | 'wipe' | 'level' }
   /** What a dungeon chest gave you (a loot window in rarity colours). */
   /** A chest's loot for one player; `replay` when it was the smaller replay chest (the full one was taken today). */
-  | { t: 'loot'; to: string; from: string; items: { item: string; count: number }[]; coins: number; stars: number; replay?: true }
+  | { t: 'loot'; to: string; from: string; items: { item: string; count: number }[]; coins: number; stars: number; replay?: true; looks?: LootLooks }
   /** The family beat its best time through a dungeon (also on the farm WorldState's sagaBest). */
   | { t: 'sagaBest'; dungeon: DungeonId; best: SagaBest }
   /** Hero experience gained (anywhere): the client floats "+n xp" from where the player stood (pixels; area left out on the farm). */
@@ -108,9 +117,8 @@ export type ClientMsg =
   | { t: 'saga'; a: 'quest'; id: string }
   /** Gear: put a weapon, an offhand or an amulet from the bag on (null takes it off again, back into the bag). */
   | { t: 'saga'; a: 'equip'; slot: 'weapon' | 'offhand' | 'amulet'; item: string | null }
-  /** Smedjan at Smed-Stina: forge a piece one level up, or have her make a piece of the starter set. */
-  | { t: 'saga'; a: 'forge'; item: string }
-  | { t: 'saga'; a: 'craft'; item: string }
+  /** Garderoben: put a look on (piece null: take the slot's off) for a class, in a colourway ('svar'/'extrem'), or show one on the gear stand `obj`. */
+  | { t: 'look'; slot: string; piece: string | null; way?: string; cls?: string; obj?: number }
   /** Houses: at the lobby's house door, go into someone's house (`of` a character id, left out: your own); in your own house,
    * pick a piece of furniture up into the bag (and select it, so a tap on the floor puts it down again). */
   | { t: 'house'; a: 'enter'; of?: string }
@@ -152,8 +160,8 @@ export type ClientMsg =
   | { t: 'dev'; a: 'decor' }
   /** Development only (same switch): stand on tile (x, y) of the map you are in. */
   | { t: 'dev'; a: 'warp'; x: number; y: number }
-  /** Development only (same switch): the starter set Smed-Stina makes (a weapon, a shield, an amulet) for my class, for free. */
-  | { t: 'dev'; a: 'starter' }
+  /** Development only: every piece of a set (all sets when `set` is left out) at a shine tier, with the colourways, titles and signature weapons. */
+  | { t: 'dev'; a: 'looks'; set?: string; tier?: number; ways?: boolean; cls?: string }
   /** Development only (same switch): every dungeon before the last counts as cleared, so a check can use a later chapter's arch. */
   | { t: 'dev'; a: 'unlock' }
   /** Development only (same switch): materials and 400 kr for two forge levels and a starter piece, two papers, two buckets of red paint and a run of wall pieces, for a check of the smithy and the paint screen. */

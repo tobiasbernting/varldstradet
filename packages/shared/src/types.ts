@@ -237,6 +237,8 @@ export interface Outfit {
   shirt?: string;
   pants?: string;
   shoes?: string;
+  /** The looks (cool gear, only for show) a hero has on, as `piece|tier|way` codes per slot; made by syncLooks (looks.ts), drawn over the clothes. */
+  looks?: Partial<Record<'hat' | 'shoulders' | 'shirt' | 'cloak' | 'weapon' | 'offhand' | 'amulet', string>>;
 }
 
 export interface PlayerState {
