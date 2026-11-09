@@ -1621,7 +1621,7 @@ export class View implements HudTarget {
         let tint: ReturnType<typeof rgba> | undefined;
         if (an.pf) {
           const since = serverNow() - (an.pf.actAt ?? 0);
-          const act = since >= 0 && since < 380 ? Math.sin((since / 380) * Math.PI) : 0;
+          const act = since >= 0 && since < 650 ? Math.sin((since / 650) * Math.PI) : 0; // (a pose is held for about half a second so it can be seen)
           const side = a.flip < 0 ? -1 : 1;
           const cue = act > 0 ? this.petCue.get(id) : undefined;
           switch (cue) {

@@ -178,6 +178,7 @@ export type ClientMsg =
   /** Dev: give pets (`all` or a kind), and put the test gear (a red neckerchief) on the pet or take it off. */
   | { t: 'dev'; a: 'pet'; id: string }
   | { t: 'dev'; a: 'petgear'; tier?: number; set?: string }
+  | { t: 'dev'; a: 'petscare' }
   | { t: 'ping' };
 
 export interface PlayerSnap {

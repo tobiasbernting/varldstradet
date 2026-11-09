@@ -273,6 +273,17 @@ export function devPet(world: WorldState, playerId: string, id: string): Change[
   return out;
 }
 
+/** Dev (`dev petscare`): the player's pet gets scared right now, as if it had taken too much (to see the state and the way back). */
+export function devPetScare(world: WorldState, playerId: string, now: number): Change[] {
+  const p = farmOf(world).players[playerId];
+  const a = p ? petAnimalOf(world, p) : undefined;
+  if (!p || !a?.pf) return [];
+  a.pf.st = 'scared';
+  a.pf.scaredUntil = now + SCARED_MS;
+  a.pf.courage = 0;
+  return [tag({ t: 'animal', id: a.id, animal: a }, keyOf(areaOf(farmOf(world), p))), toast(p.id, fmt(PET_T.scared, { name: a.name }))];
+}
+
 /** The first clear of a dungeon gives the pets that wait for it. */
 export function giveClearPets(world: WorldState, p: PlayerState, dungeon: DungeonId, out: Change[]): void {
   for (const d of Object.values(PETS)) {
