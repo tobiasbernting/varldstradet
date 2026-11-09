@@ -1,6 +1,7 @@
 // Layered, tintable 16x24 characters: body, hair, shirt, pants, shoes, hat.
 // Directions: down, up, right (left is right flipped). Frames: 0 stand, 1/2 walk.
-import { ITEMS, type Appearance, type Facing, type Outfit } from '@lilla-garden/shared';
+import { ITEMS, decodeLook, type Appearance, type DecodedLook, type Facing, type LookSlot, type Outfit } from '@lilla-garden/shared';
+import { SET_STYLES, drawWeapon, decorHat, decorShirt, drawAmulet, drawCloak, drawOffhand, drawShoulders } from './looks.js';
 import { Px, shade } from './px.js';
 import { OUTLINE } from './world.js';
 
@@ -33,6 +34,8 @@ interface Look {
   pants: { style: string; color: string };
   shoes: { style: string; color: string };
   hat?: { style: string; color: string };
+  /** Looks (cool gear, only for show) worn over the clothes: a hat or shirt look replaces the clothes' style and colour, the others add to the figure. */
+  looks?: Partial<Record<LookSlot, DecodedLook>>;
 }
 
 export function lookOf(appearance: Appearance, outfit: Outfit): Look {
@@ -41,7 +44,7 @@ export function lookOf(appearance: Appearance, outfit: Outfit): Look {
     return d?.clothing ? { style: d.clothing.style, color: d.clothing.color } : fallback;
   };
   const hat = outfit.hat ? ITEMS[outfit.hat]?.clothing : undefined;
-  return {
+  const base: Look = {
     skin: appearance.skin,
     hair: appearance.hair,
     hairStyle: appearance.hairStyle,
@@ -50,10 +53,23 @@ export function lookOf(appearance: Appearance, outfit: Outfit): Look {
     shoes: cl(outfit.shoes, { style: 'boots', color: '#3a3a3a' }),
     hat: hat ? { style: hat.style, color: hat.color } : undefined,
   };
+  if (!outfit.looks) return base;
+  // looks: each decoded once; a hat or shirt look is drawn on the composer's own style for its set
+  const looks: NonNullable<Look['looks']> = {};
+  for (const [slot, code] of Object.entries(outfit.looks) as [LookSlot, string][]) {
+    const d = decodeLook(code);
+    if (d && d.piece.slot === slot && slot !== 'weapon') looks[slot] = d;
+  }
+  const lh = looks.hat;
+  const ls = looks.shirt;
+  if (lh) base.hat = { style: SET_STYLES[lh.piece.set]?.hat ?? 'cap', color: lh.pal.main };
+  if (ls) base.shirt = { style: SET_STYLES[ls.piece.set]?.shirt ?? 'chainmail', color: ls.pal.main };
+  if (Object.keys(looks).length) base.looks = looks;
+  return base;
 }
 
 export const lookKey = (l: Look): string =>
-  [l.skin, l.hair, l.hairStyle, l.shirt.style, l.shirt.color, l.pants.style, l.pants.color, l.shoes.style, l.shoes.color, l.hat?.style ?? '-', l.hat?.color ?? '-'].join('|');
+  [l.skin, l.hair, l.hairStyle, l.shirt.style, l.shirt.color, l.pants.style, l.pants.color, l.shoes.style, l.shoes.color, l.hat?.style ?? '-', l.hat?.color ?? '-', ...Object.values(l.looks ?? {}).map((d) => `${d.piece.id}.${d.tier}.${d.way ?? ''}`)].join('|');
 
 export const DRESS_STYLES = ['dress', 'dress_belt', 'dress_flowers', 'gown', 'robe'];
 export const isDress = (style: string): boolean => DRESS_STYLES.includes(style);
@@ -121,6 +137,13 @@ export function drawCharacter(l: Look, dir: Dir, frame: number, only?: CharLayer
   const skinD = shade(l.skin, 0.8);
   const legOff = frame === 0 ? [0, 0] : frame === 1 ? [-1, 1] : [1, -1]; // leg length deltas (walk)
   const bob = frame === 0 ? 0 : 0; // keep head steady for crisp pixels
+
+  // a cloak hangs behind the body (from behind it covers the back, drawn after the shirt)
+  const lk = l.looks;
+  if (lk?.cloak && dir !== 'up') {
+    at('shirt');
+    drawCloak(p, lk.cloak.piece.set, lk.cloak, dir, frame);
+  }
 
   // --- legs & shoes (rows 17..23) ---
   const pantsC = l.pants.color;
@@ -228,6 +251,15 @@ export function drawCharacter(l: Look, dir: Dir, frame: number, only?: CharLayer
 
   drawNorseShirt(p, l.shirt.style, shirtC, dir, frame);
   if (dress) drawDressPixel(p, l.shirt.style, shirtC, dir, frame);
+  // looks over the shirt: its trim and glow, the cloak from behind, pauldrons, a shield or mask, an amulet
+  if (lk) {
+    at('shirt_over');
+    if (lk.shirt) decorShirt(p, lk.shirt.piece.set, lk.shirt, dir, frame);
+    if (lk.cloak && dir === 'up') drawCloak(p, lk.cloak.piece.set, lk.cloak, dir, frame);
+    if (lk.amulet) drawAmulet(p, lk.amulet.piece.set, lk.amulet, dir);
+    if (lk.shoulders) drawShoulders(p, lk.shoulders.piece.set, lk.shoulders, dir, frame);
+    if (lk.offhand) drawOffhand(p, lk.offhand.piece.set, lk.offhand, dir, frame);
+  }
 
   // --- head (rows 2..10) ---
   at('head');
@@ -385,6 +417,7 @@ export function drawCharacter(l: Look, dir: Dir, frame: number, only?: CharLayer
       default:
         drawNorseHat(p, l.hat.style, C, dir, hx, hy);
     }
+    if (lk?.hat) decorHat(p, lk.hat.piece.set, lk.hat, dir, hx, hy);
   }
   p.ctx.setTransform(1, 0, 0, 1, 0, 0);
   p.mode = 'all';
@@ -693,4 +726,19 @@ export function portrait(l: Look, scale = 4): string {
   const f = drawCharacter(l, 'down', 0);
   const p = new Px(CHAR_W * scale, CHAR_H * scale).blitScaled(f, 0, 0, CHAR_W * scale, CHAR_H * scale);
   return p.dataUrl();
+}
+
+/** The window of the mannequin's picture a look is shown in (x, y of a 16x16 crop of the 16x32 frame). */
+const ICON_WINDOW: Record<LookSlot, number> = { hat: 3, shoulders: 9, shirt: 12, cloak: 12, weapon: 0, offhand: 11, amulet: 9 };
+/** A 16x16 picture of a look for the wardrobe, the loot window and the gear stand: a weapon's own drawing, the others on a plain mannequin. */
+export function lookIcon(l: DecodedLook): Px {
+  if (l.piece.slot === 'weapon') return drawWeapon(l);
+  const code = `${l.piece.id}|${l.tier}|${l.way ?? ''}`;
+  const look = lookOf({ skin: '#b8bcc8', hair: '#b8bcc8', hairStyle: 'bald' }, { shirt: undefined, looks: { [l.piece.slot]: code } });
+  look.shirt = look.looks?.shirt ? look.shirt : { style: 'plain', color: '#5a5e70' };
+  look.pants = { style: 'plain', color: '#454a5c' };
+  const f = drawCharacter(look, 'down', 0);
+  const out = new Px(16, 16);
+  out.ctx.drawImage(f.canvas, 0, ICON_WINDOW[l.piece.slot], 16, 16, 0, 0, 16, 16);
+  return out;
 }
