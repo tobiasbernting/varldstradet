@@ -8,7 +8,6 @@ import { ANIMALS, objectDef } from './data.ts';
 import { addItem, countItem, removeItem } from './inventory.ts';
 import { addObject, inInterior, mapH, mapW, objectAt, removeObject, tileIndex } from './map.ts';
 import type { Change } from './protocol.ts';
-import { randInt } from './rng.ts';
 import {
   CLASSES,
   DUNGEON_IDS,
@@ -1086,7 +1085,7 @@ function watchStop(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
   return out;
 }
 
-/** The boss has fallen: its sagafrön, the statistics and a bag of seeds from the farm's crops. */
+/** The boss has fallen: its sagafrön and the statistics. */
 function victory(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
   const out: Change[] = [];
   run.phase = 'victory';
@@ -1095,7 +1094,6 @@ function victory(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
   const boss = run.plan.boss;
   // f6 is the planter's own: only the member who planted it gets the five extra
   pay(farm, run, (p) => (run.plan.replay ? RUN_SEEDS.bossReplay : RUN_SEEDS.bossFirst) + (effectFor(farm, run, p).bossSeeds ?? 0), out);
-  const crops = ['carrot', 'potato', 'strawberry', 'tomato', 'pumpkin', 'sunflower', 'wheat'];
   for (const p of humans(farm, run)) {
     // the chapter is cleared for everyone in the party, offline members too (sagasim already did it for those standing in the stop)
     const prog = (p.saga ??= newSagaProgress());
@@ -1107,7 +1105,6 @@ function victory(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
     s.wins++;
     s.clears[boss] = (s.clears[boss] ?? 0) + 1;
     s.best[boss] = Math.min(s.best[boss] ?? Infinity, Math.round(run.elapsed));
-    giveHere(farm, p, `${crops[randInt(ctx.rnd, 0, crops.length - 1)]}_seed`, randInt(ctx.rnd, 3, 6), out);
     out.push(banner(p.id, run.key, RUN_T.win, RUN_T.winSub, 'cleared'), playerChange(p));
   }
   out.push(stateChange(farm, run));

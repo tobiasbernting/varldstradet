@@ -336,6 +336,9 @@ addO(O('palm', { breakWith: 'axe', drops: [{ item: 'wood', min: 2, max: 4 }] }))
 addO(O('shell', { solid: false, flat: true, harvest: true, drops: [{ item: 'shell', min: 1, max: 1 }] }));
 addO(O('cactus', { harvest: true, drops: [{ item: 'cactus_fruit', min: 1, max: 2 }] }));
 addO(O('signpost', { breakWith: undefined }));
+// The lobby: a signboard with a picture (variant) and the kennel where you pick your first pet
+addO(O('lobby_sign', { breakWith: undefined }));
+addO(O('kennel', { w: 2, h: 2, interact: 'kennel', breakWith: undefined }));
 // The wider world (2026-10-29). Skogen: blueberries. Träsket: cloudberries, reeds, dead trees and will-o'-the-wisps
 addO(O('blueberry_bush', { harvest: true, drops: [{ item: 'blueberry', min: 2, max: 4 }] }));
 addO(O('cloudberry', { solid: false, flat: true, harvest: true, drops: [{ item: 'cloudberry', min: 1, max: 2 }] }));
@@ -793,130 +796,25 @@ export const COOKING: RecipeDef[] = [
 
 // ---------- Villagers ----------
 
-export const NPCS: Record<string, NpcDef> = {
-  greta: {
-    id: 'greta',
-    name: 'Tant Greta',
-    x: 20,
-    y: 13,
-    appearance: { skin: '#f1c9a5', hair: '#d9d9d9', hairStyle: 'curly' },
-    outfit: { shirt: 'shirt_purple', pants: 'pants_skirt_blue', shoes: 'shoes_red' },
-    greeting: ['Hej lilla vän! Vad roligt att du kom.', 'Så fint ni har det på gården!', 'Jag bakar gärna om jag får ingredienser.'],
-    routine: [
-      { at: 0, x: 20, y: 13 }, // morning by the path
-      { at: 0.25, x: 26, y: 22 }, // a stroll past the fields
-      { at: 0.45, x: 36, y: 35 }, // visiting Sven by the pond
-      { at: 0.7, x: 20, y: 13 }, // back for the evening
-    ],
-  },
-  sven: {
-    id: 'sven',
-    name: 'Fiskar-Sven',
-    x: 37,
-    y: 36,
-    appearance: { skin: '#dba97d', hair: '#8a4a1e', hairStyle: 'short' },
-    outfit: { shirt: 'shirt_stripes', pants: 'pants_brown', shoes: 'shoes_rubber', hat: 'hat_straw' },
-    greeting: ['Hallå där! Fiskarna nappar bra idag.', 'Vet du att det finns en guldfisk i dammen?', 'Stå stilla vid vattnet och vänta på napp.'],
-    routine: [
-      { at: 0, x: 37, y: 36 }, // north-west shore
-      { at: 0.12, x: 45, y: 33 }, // around the north side
-      { at: 0.24, x: 53, y: 37 }, // east shore
-      { at: 0.36, x: 53, y: 45 },
-      { at: 0.44, x: 44, y: 47 }, // south shore
-      { at: 0.5, x: 35, y: 42 },
-      { at: 0.55, x: 37, y: 36 }, // back where Greta comes visiting
-    ],
-  },
-  elsa: {
-    id: 'elsa',
-    name: 'Lilla Elsa',
-    x: 6,
-    y: 20,
-    appearance: { skin: '#f7d7c0', hair: '#f2d16b', hairStyle: 'ponytail' },
-    outfit: { shirt: 'shirt_pink', pants: 'pants_skirt_blue', shoes: 'shoes_red' },
-    greeting: ['Hej! Vill du leka?', 'Jag letar efter blommor. Har du sett några?', 'Min kanin heter Snövit. Fast hon bor hemma.', 'Jag kan springa jättefort!'],
-    routine: [
-      { at: 0, x: 6, y: 20 }, // by the forest edge, picking flowers
-      { at: 0.2, x: 18, y: 16 }, // comes to look at the farm
-      { at: 0.4, x: 30, y: 44 }, // plays by the pond's south side
-      { at: 0.6, x: 24, y: 30 }, // the meadow
-      { at: 0.8, x: 6, y: 20 }, // home for the evening
-    ],
-  },
-};
+export const NPCS: Record<string, NpcDef> = {};
 
 /** The village east of the farm. */
 export const VILLAGE_KEY = 'a:1,0';
-NPCS.bo = {
-  id: 'bo',
-  name: 'Bagar-Bo',
-  area: VILLAGE_KEY,
-  x: 27,
-  y: 29,
-  appearance: { skin: '#f1c9a5', hair: '#2b2119', hairStyle: 'short' },
-  outfit: { shirt: 'shirt_yellow', pants: 'pants_brown', shoes: 'shoes_boots', hat: 'hat_cap_red' },
-  greeting: ['Välkommen till bageriet! Mjöl behövs alltid.', 'Nybakat bröd är det bästa som finns.', 'Har du vete? Jag bakar gärna.'],
-  routine: [
-    { at: 0, x: 27, y: 29 },
-    { at: 0.3, x: 35, y: 29 },
-    { at: 0.5, x: 28, y: 24 },
-    { at: 0.7, x: 27, y: 29 },
-  ],
-};
-NPCS.pino = {
-  id: 'pino',
-  name: 'Pizza-Pino',
-  area: VILLAGE_KEY,
-  x: 40,
-  y: 24,
-  appearance: { skin: '#dba97d', hair: '#2b2119', hairStyle: 'curly' },
-  outfit: { shirt: 'shirt_red', pants: 'pants_brown', shoes: 'shoes_boots', hat: 'hat_cap_red' },
-  greeting: ['Buongiorno! Vill du ha en pizza?', 'Pizzan är nybakad i stenugnen!', 'Tomater och vete – då blir det pizza!'],
-  routine: [
-    { at: 0, x: 40, y: 24 },
-    { at: 0.35, x: 37, y: 28 },
-    { at: 0.5, x: 40, y: 24 },
-    { at: 0.75, x: 43, y: 26 },
-    { at: 0.85, x: 40, y: 24 },
-  ],
-};
 NPCS.stina = {
   id: 'stina',
   name: 'Smed-Stina',
-  area: VILLAGE_KEY,
-  x: 38,
-  y: 30,
+  x: 37,
+  y: 17,
   appearance: { skin: '#b97a4e', hair: '#c43a2a', hairStyle: 'ponytail' },
   outfit: { shirt: 'shirt_overalls', pants: 'pants_blue', shoes: 'shoes_boots' },
   greeting: ['Hör du hammaren? Det är jag!', 'Sten och malm, det är mina favoriter.', 'Ädelstenar från bergen är underbara.'],
-  routine: [
-    { at: 0, x: 38, y: 30 },
-    { at: 0.4, x: 42, y: 30 },
-    { at: 0.6, x: 38, y: 30 },
-  ],
-};
-NPCS.lind = {
-  id: 'lind',
-  name: 'Fru Lind',
-  area: VILLAGE_KEY,
-  x: 45,
-  y: 27,
-  appearance: { skin: '#f7d7c0', hair: '#f2d16b', hairStyle: 'long' },
-  outfit: { shirt: 'shirt_green', pants: 'pants_skirt_pink', shoes: 'shoes_red', hat: 'hat_straw' },
-  greeting: ['Mina blommor behöver sällskap.', 'Honung från ängen är det godaste jag vet.', 'Har du varit i skogen? Där växer svamp.'],
-  routine: [
-    { at: 0, x: 45, y: 27 },
-    { at: 0.25, x: 41, y: 30 },
-    { at: 0.55, x: 36, y: 26 },
-    { at: 0.75, x: 45, y: 27 },
-  ],
+  routine: [{ at: 0, x: 37, y: 17 }],
 };
 
 /** Völvan Sigrun, the seeress who tells the saga, by Kämpastenen on the square. */
 NPCS[VOLVA_ID] = {
   id: VOLVA_ID,
   name: 'Völvan Sigrun',
-  area: VILLAGE_KEY,
   x: VOLVA_SPOT.x,
   y: VOLVA_SPOT.y,
   appearance: { skin: '#eccdb0', hair: '#ece6da', hairStyle: 'long' },
@@ -933,47 +831,11 @@ export const NPC_LINES: Record<string, { morning: string[]; day: string[]; eveni
     evening: ['Nu vaknar draugarna…', 'God kväll, {name}. Var försiktig i mörkret.'],
     meet: ['Hej Bo. Ditt bröd doftar ända hit.', 'Stina! Smid ett svärd åt hjältarna.', 'Fru Lind, rosorna viskar i natt.'],
   },
-  greta: {
-    morning: ['God morgon, {name}!', 'Vilken fin morgon!'],
-    day: ['Hej {name}!', 'Så flitigt du jobbar!', 'Har du sett mina blomlådor?'],
-    evening: ['God kväll, {name}.', 'Nu blir det snart mörkt.'],
-    meet: ['Hej Sven! Nappar det?', 'Hej Elsa, var är dina föräldrar?', 'Vilket väder!'],
-  },
-  sven: {
-    morning: ['Morrn! Fiskarna är pigga nu.', 'God morgon, {name}!'],
-    day: ['Hallå {name}!', 'Stå still så nappar det.', 'Gäddan är lurig.'],
-    evening: ['Kvällen är bäst för fiske.', 'God kväll, {name}!'],
-    meet: ['Hej Greta! Vill du ha fisk?', 'Hej Elsa! Inte för nära vattnet.', 'Fint väder för fiske!'],
-  },
-  bo: {
-    morning: ['God morgon! Brödet är nybakat.', 'Morgonstund har guld i mund!'],
-    day: ['Hej {name}! Vill du ha en bulle?', 'Vete, vete, vete…'],
-    evening: ['Nu stänger bageriet.', 'God kväll, {name}!'],
-    meet: ['Hej Stina! Hammaren går varm?', 'Fru Lind, vilka blommor!'],
-  },
   stina: {
     morning: ['Smedjan är varm redan!', 'God morgon, {name}!'],
     day: ['Hej {name}! Har du sten med dig?', 'Klang, klang!'],
     evening: ['Jag släcker ässjan nu.', 'God kväll!'],
     meet: ['Hej Bo! Bröd till lunch?', 'Fru Lind, honung till kaffet?'],
-  },
-  pino: {
-    morning: ['Buongiorno! Ugnen är varm.', 'God morgon, {name}! Pizza till frukost?'],
-    day: ['Hej {name}! En pizza med extra ost?', 'Mamma mia, vilken dag!', 'Pizzapower gör dig snabb som vinden!'],
-    evening: ['Sista pizzan för idag!', 'Buonanotte, {name}!'],
-    meet: ['Bo! Har du vete till min deg?', 'Stina, ugnen behöver ses över!', 'Fru Lind, basilika till pizzan?'],
-  },
-  lind: {
-    morning: ['God morgon! Blommorna har vaknat.', 'Vilken fin dag!'],
-    day: ['Hej {name}! Luktar du på rosorna?', 'Bina surrar så fint idag.'],
-    evening: ['Blommorna somnar nu.', 'God kväll, {name}.'],
-    meet: ['Hej Bo! Fint väder!', 'Stina, du är alltid så flitig.'],
-  },
-  elsa: {
-    morning: ['God morgon! Jag är redan vaken!', 'Titta, en fjäril!'],
-    day: ['Hej {name}! Kom och lek!', 'Ska vi plocka blommor?', 'Jag har hittat en fin sten.'],
-    evening: ['Jag måste hem snart…', 'Natti natti, {name}!'],
-    meet: ['Hej tant Greta!', 'Hej Sven! Får jag se fisken?', 'Jag vann!'],
   },
 };
 

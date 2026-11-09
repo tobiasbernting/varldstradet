@@ -66,16 +66,16 @@ export function accessPage(gate: Gate, device: Device | null, access: Access, no
       body = `<h1>⏸️ Pausad</h1><div class="card"><p>${T.gatePaused}</p></div>`;
       break;
     case 'closed':
-      body = `<h1>🌙 Gården är stängd</h1><div class="card"><p>${T.gateClosed}</p></div>`;
+      body = `<h1>🌙 Spelet är stängt</h1><div class="card"><p>${T.gateClosed}</p></div>`;
       break;
     case 'guests-closed':
-      body = `<h1>🌙 Gården är stängd för gäster</h1><div class="card"><p>${T.gateGuestsClosed}</p></div>`;
+      body = `<h1>🌙 Spelet är stängt för gäster</h1><div class="card"><p>${T.gateGuestsClosed}</p></div>`;
       break;
     case 'hours':
-      body = `<h1>🌙 Gården är stängd</h1><div class="card"><p>${tfmt(esc(T.gateHours), { from: esc(s.from ?? ''), to: esc(s.to ?? '') })}</p></div>`;
+      body = `<h1>🌙 Spelet är stängt</h1><div class="card"><p>${tfmt(esc(T.gateHours), { from: esc(s.from ?? ''), to: esc(s.to ?? '') })}</p></div>`;
       break;
     case 'unknown':
-      body = `<h1>🔒 ${T.title}</h1><div class="card"><p>Det här är en privat gård. För att komma in behöver du en kod från en förälder på gården.</p>
+      body = `<h1>🔒 ${T.title}</h1><div class="card"><p>Det här är ett privat spel. För att komma in behöver du en kod från en förälder.</p>
 ${codeForm('')}</div>`;
       break;
     case 'ok':
@@ -205,7 +205,7 @@ ${v.players.map((p) => `<label><input type="checkbox" name="player" value="${p.i
 ${online.length ? ` · <strong>spelar nu: ${online.map(esc).join(', ')}</strong>` : ''}<br>
 <span class="muted">Inbjudan: ${esc(d.inviteLabel)} · senast ${fmt(d.lastSeenAt)} från ${esc(d.lastIp)}${d.kind === 'guest' && d.players.length ? ` · spelar som ${d.players.map((p) => esc(playerName.get(p) ?? '?')).join(', ')}` : ''}</span><br>
 ${chars}
-<form method="post" action="/admin/access/reopen"><input type="hidden" name="id" value="${d.id}"><button class="alt" title="Ny kod om enheten glömt bort gården (rensad webbläsare, ny webbläsare). Behåller karaktärerna.">Öppna igen</button></form>
+<form method="post" action="/admin/access/reopen"><input type="hidden" name="id" value="${d.id}"><button class="alt" title="Ny kod om enheten glömt bort spelet (rensad webbläsare, ny webbläsare). Behåller karaktärerna.">Öppna igen</button></form>
 <form method="post" action="/admin/access/pause"><input type="hidden" name="id" value="${d.id}"><input type="hidden" name="paused" value="${d.paused ? '0' : '1'}"><button class="alt">${d.paused ? 'Släpp på' : 'Pausa'}</button></form>
 <form method="post" action="/admin/access/remove"><input type="hidden" name="id" value="${d.id}"><button class="bad">Ta bort</button></form></div>`;
         })

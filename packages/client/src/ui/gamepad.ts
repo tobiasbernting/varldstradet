@@ -164,7 +164,7 @@ export function initGamepad(opts: {
     const slot = hotbarStep();
     if (slot !== null) hud.select(slot);
     if (hit(B.Y)) menus.toggle('inventory');
-    if (hit(B.Back)) menus.toggle('book');
+    if (hit(B.Back)) document.dispatchEvent(new Event('lilla:journal'));
   }
 
   /** The hotbar slot after LB/RB or d-pad left/right, or null. */

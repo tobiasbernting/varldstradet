@@ -1349,3 +1349,23 @@ body.touch .round.pet-btn i {
 .label.talking::before {
   content: '🔊 ';
 }
+
+/* the kennel: two big cards, a dog and a cat */
+.kennel-row {
+  display: flex;
+  gap: calc(6 * var(--u));
+  justify-content: center;
+  margin-top: calc(4 * var(--u));
+}
+.kennel-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(2 * var(--u));
+  padding: calc(4 * var(--u)) calc(8 * var(--u));
+  font-size: calc(6 * var(--u));
+}
+.kennel-card .em {
+  font-size: calc(22 * var(--u));
+  line-height: 1;
+}

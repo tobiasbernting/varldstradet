@@ -898,21 +898,6 @@ export class View implements HudTarget {
     if (me.moving || this.wasMoving) this.sendMove(!me.moving && this.wasMoving);
     this.wasMoving = me.moving;
 
-    // --- walking off the edge of the map into the next area ---
-    // (each map has its own size: 64 for the farm and the cities, 96 out in the wild)
-    if (!this.cave && performance.now() - this.travelSentAt > 1500 && inEdgeGap(world, tileOf(me.x), tileOf(me.y))) {
-      let dir: 'n' | 's' | 'e' | 'w' | null = null;
-      if (dy < 0 && me.y <= PLAYER_HALF_H + 1) dir = 'n';
-      else if (dy > 0 && me.y >= mapH(world) * TILE - PLAYER_HALF_H - 1) dir = 's';
-      else if (dx < 0 && me.x <= PLAYER_HALF_W + 1) dir = 'w';
-      else if (dx > 0 && me.x >= mapW(world) * TILE - PLAYER_HALF_W - 1) dir = 'e';
-      if (dir) {
-        this.travelSentAt = performance.now();
-        this.sendMove(true);
-        net.send({ t: 'travel', dir });
-      }
-    }
-
     // reconcile with the server if we drifted a lot
     const mySnap = client.snaps.players.get(me.id);
     if (mySnap && Math.hypot(mySnap.x - me.x, mySnap.y - me.y) > 40) {

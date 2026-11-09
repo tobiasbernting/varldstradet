@@ -61,10 +61,10 @@ import { stackIconUrl } from '@art/painting.ts';
 import { SFX } from '../sound.ts';
 import { FORGE_NPC, hasSagaQuests, landmarkMarks, sagaQuestRows } from './saga.ts';
 
-export type MenuKind = 'inventory' | 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'emotes' | 'nameAnimal' | 'help' | 'npc' | 'cook' | 'book' | 'map' | 'paint' | 'pizzeria' | 'travel';
+export type MenuKind = 'inventory' | 'wardrobe' | 'emotes' | 'nameAnimal' | 'help' | 'npc' | 'kennel';
 
 const TAB_NAMES: Record<string, string> = { seeds: T.tabSeeds, animals: T.tabAnimals, feed: T.tabFeed, materials: T.tabMaterials, furniture: T.tabFurniture, clothes: T.tabClothes, season: T.tabSeason, stars: `⭐ ${T.tabStars}`, vehicles: T.tabVehicles };
-const SEARCH_KINDS: readonly MenuKind[] = ['inventory', 'chest', 'catalogue', 'sell'];
+const SEARCH_KINDS: readonly MenuKind[] = ['inventory'];
 
 /** The parts of a search menu that outlive a rerender. */
 interface SearchFrame {
@@ -111,26 +111,15 @@ export class Menus {
 
   constructor(private ui: HTMLElement) {
     bus.on('me', () => this.rerender());
-    // the shop's "on the way tomorrow" list shows everybody's orders
-    bus.on('player', (id) => {
-      if (this.kind === 'catalogue' && id !== client.me) this.rerender();
-    });
-    bus.on('change', (c) => {
-      if (c.t === 'object' && this.kind === 'chest' && c.id === this.chestId) {
-        if (!c.obj) this.close();
-        else this.rerender();
-      }
-    });
     bus.on('open', (c) => {
-      if (c.ui === 'chest') this.open('chest', c.id);
-      else if (c.ui === 'travel') this.open('travel', c.id);
-      else if (c.ui === 'nameAnimal') this.open('nameAnimal', c.id);
+      if (c.ui === 'nameAnimal') this.open('nameAnimal', c.id);
+      else if (c.ui === 'kennel') this.open('kennel');
       else if (c.ui === 'saga' || c.ui === 'sagaClass') return; // the saga's own windows (ui/saga.ts)
       else if (c.ui === 'seed' || c.ui === 'run') return; // windows the server can open that this client has no UI for yet
       else if (c.ui === 'npc') {
         this.npcId = c.npc ?? null;
         this.open('npc');
-      } else this.open(c.ui);
+      } else if (c.ui === 'wardrobe') this.open('wardrobe');
     });
     bus.on('connection', (s) => {
       if (s !== 'open') this.close();
@@ -159,9 +148,7 @@ export class Menus {
     this.picked = null;
     this.query = '';
     this.filter = 'all';
-    if (kind === 'chest') this.chestId = id ?? null;
     if (kind === 'nameAnimal') this.animalId = id ?? null;
-    if (kind === 'travel') this.travelId = id ?? null;
     this.modal = h('div', { class: 'modal' });
     this.modal.addEventListener('pointerdown', (e) => {
       if (e.target === this.modal) this.close();
@@ -200,47 +187,25 @@ export class Menus {
     clear(this.modal);
     const title = {
       inventory: `🎒 ${T.inventory}`,
-      chest: `📦 ${T.chest}`,
-      catalogue: `🏪 ${T.catalogue}`,
-      sell: `💰 ${T.sell}`,
-      workbench: `🔨 ${T.craft}`,
       wardrobe: `👕 ${T.wardrobe}`,
       emotes: '😊',
       nameAnimal: '🐾',
       help: `❓ ${T.help}`,
-      cook: `🍳 ${T.cook}`,
-      book: `📖 ${T.book}`,
-      map: `🗺️ ${T.worldMap}`,
-      paint: `🎨 ${T.paint}`,
-      pizzeria: `🍕 ${T.pizzeria}`,
-      travel: this.travelVia() === 'train' ? `🚂 ${T.travelTrain}` : `🚌 ${T.travelBus}`,
+      kennel: `🐾 ${T.kennelTitle}`,
       npc: this.npcId ? (NPCS[this.npcId]?.name ?? '') : '',
     }[this.kind];
     const closeBtn = h('button', { class: 'close' }, '✕');
     onTap(closeBtn, () => this.close());
-    const coins = h('span', { class: 'price' }, `${me.coins} ${T.coins}${this.kind === 'catalogue' ? ` · ⭐ ${me.stars}` : ''}`);
-    const head = h('h2', null, title, h('span', { class: 'spacer' }), this.kind === 'catalogue' || this.kind === 'sell' || this.kind === 'pizzeria' || this.kind === 'travel' ? coins : null, closeBtn);
+    const head = h('h2', null, title, h('span', { class: 'spacer' }), closeBtn);
     const body = h('div', { class: 'body' });
     const panel = h('div', { class: 'panel' }, head, body);
     if (SEARCH_KINDS.includes(this.kind)) {
-      this.frame = this.buildFrame(panel, head, body, this.kind === 'catalogue' || this.kind === 'sell' ? coins : null);
+      this.frame = this.buildFrame(panel, head, body, null);
       this.modal.append(panel);
       this.renderBody(true);
       return;
     }
     switch (this.kind) {
-      case 'pizzeria':
-        this.renderPizzeria(body);
-        break;
-      case 'travel':
-        this.renderTravel(body);
-        break;
-      case 'workbench':
-        this.renderCraft(body, RECIPES, 'craft');
-        break;
-      case 'cook':
-        this.renderCraft(body, COOKING, 'cook');
-        break;
       case 'wardrobe':
         this.renderWardrobe(panel, body);
         break;
@@ -256,22 +221,8 @@ export class Menus {
       case 'npc':
         this.renderNpc(body);
         break;
-      case 'book':
-        this.renderBook(body);
-        break;
-      case 'map':
-        this.renderMap(body);
-        break;
-      case 'paint':
-        body.append(
-          new PaintBoard(
-            (pixels) => {
-              net.send({ t: 'paint', pixels });
-              this.close();
-            },
-            () => this.close(),
-          ).el,
-        );
+      case 'kennel':
+        this.renderKennel(body);
         break;
     }
     this.modal.append(panel);
@@ -342,28 +293,8 @@ export class Menus {
       this.renderBody(true);
     });
     const hint = h('div', { class: 'hint' });
-    let tabs: HTMLElement | null = null;
-    if (kind === 'catalogue') {
-      // the search box lives in the header row, between the title and the coins
-      head.insertBefore(search, head.querySelector('.spacer'));
-      tabs = h('div', { class: 'tabs' });
-      panel.insertBefore(tabs, body);
-    } else {
-      const extra: (HTMLElement | null)[] = [];
-      if (kind === 'inventory' || kind === 'chest') {
-        extra.push(this.sortButton(kind === 'chest' ? `${T.sort} ${T.inventory.toLowerCase()}` : T.sort));
-        if (kind === 'chest' && this.chestId !== null) {
-          const chestId = this.chestId;
-          const stackBtn = h('button', { class: 'alt' }, `📥 ${T.quickStack}`);
-          onTap(stackBtn, () => {
-            net.send({ t: 'quickStack', chest: chestId });
-            this.picked = null;
-          });
-          extra.push(stackBtn);
-        }
-      }
-      panel.insertBefore(h('div', { class: 'toolbar' }, search, ...chips.values(), clearBtn, ...extra), body);
-    }
+    panel.insertBefore(h('div', { class: 'toolbar' }, search, ...chips.values(), clearBtn, this.sortButton(T.sort)), body);
+    const tabs: HTMLElement | null = null;
     return { kind, panel, body, search, chips, clearBtn, tabs, hint, coins };
   }
 
@@ -382,22 +313,35 @@ export class Menus {
     const me = myPlayer();
     if (!f || !this.modal || !me) return;
     const scrollTop = resetScroll ? 0 : f.body.scrollTop;
-    if (f.coins) f.coins.textContent = `${me.coins} ${T.coins}${f.kind === 'catalogue' ? ` · ⭐ ${me.stars}` : ''}`;
     if (f.search.value !== this.query) f.search.value = this.query;
     for (const [id, el] of f.chips) el.classList.toggle('on', this.filter === id);
     f.clearBtn.disabled = this.query === '';
     f.hint.remove();
     clear(f.body);
-    if (f.kind === 'inventory') this.renderInventory(f, null);
-    else if (f.kind === 'chest') this.renderInventory(f, this.chestId);
-    else if (f.kind === 'catalogue') this.renderCatalogue(f);
-    else this.renderSell(f);
+    if (f.kind === 'inventory') this.renderInventory(f);
+
     if (scrollTop) f.body.scrollTop = scrollTop;
+  }
+
+  // ---- the kennel: one free first pet ----
+
+  private renderKennel(body: HTMLElement): void {
+    body.append(h('p', { class: 'help-intro' }, T.kennelPick));
+    const row = h('div', { class: 'kennel-row' });
+    for (const [species, label, glyph] of [['dog', T.kennelDog, '🐶'], ['cat', T.kennelCat, '🐱']] as const) {
+      const card = h('button', { class: 'kennel-card' }, h('span', { class: 'em' }, glyph), h('b', null, label));
+      onTap(card, () => {
+        net.send({ t: 'pet', a: 'adopt', species });
+        this.close();
+      });
+      row.append(card);
+    }
+    body.append(row);
   }
 
   // ---- inventory & chest (tap one slot, then another to move) ----
 
-  private renderInventory(f: SearchFrame, chestId: number | null): void {
+  private renderInventory(f: SearchFrame): void {
     const { panel, body } = f;
     const me = myPlayer()!;
     const world = client.world!;
@@ -437,13 +381,7 @@ export class Menus {
       }
       return g;
     };
-    const sortBtn = (label: string, chest?: number) => this.sortButton(label, chest);
     const hint = f.hint;
-    if (chestId !== null) {
-      const chest = world.objects[chestId];
-      const items = chest?.items ?? [];
-      body.append(h('div', { class: 'hint title-row' }, T.chest, sortBtn(`${T.sort} ${T.chest.toLowerCase()}`, chestId)), grid(items, chestId, 0, CHEST_SIZE, false));
-    }
     body.append(h('div', { class: 'hint' }, this.filter === 'all' ? T.inventory : `${T.inventory} · ${FILTER_NAMES[this.filter] ?? ''}`), grid(me.inventory, undefined, 0, HOTBAR_SIZE, true), grid(me.inventory, undefined, HOTBAR_SIZE, INVENTORY_SIZE, false));
     if (filtering && !anyMatch) {
       hint.textContent = T.noMatch;
@@ -464,194 +402,19 @@ export class Menus {
         this.picked = null;
         this.close();
       });
-      const drop1 = h('button', { class: 'alt' }, T.dropOne);
-      onTap(drop1, () => {
-        net.send({ t: 'drop', slot, qty: 1 });
-        this.picked = null;
-      });
-      const dropAll = h('button', { class: 'alt' }, T.dropAll);
-      onTap(dropAll, () => {
-        net.send({ t: 'drop', slot, qty: 99 });
-        this.picked = null;
-      });
-      actions.append(useBtn, drop1);
-      if (s.count > 1) actions.append(dropAll);
+      actions.append(useBtn);
     } else if (!picked) actions.append(h('span', { class: 'hint' }, T.moveHint));
     body.append(actions);
   }
 
   // ---- catalogue ----
 
-  private renderCatalogue(f: SearchFrame): void {
-    const { body } = f;
-    const me = myPlayer()!;
-    const searching = normalizeQuery(this.query) !== '';
-    const tabs = f.tabs!;
-    clear(tabs);
-    for (const t of TABS) {
-      if (t === 'season' && client.season === 'none') continue;
-      const b = h('button', { class: this.tab === t && !searching ? 'on' : '' }, TAB_NAMES[t]!);
-      onTap(b, () => {
-        this.tab = t;
-        this.query = '';
-        this.renderBody(true);
-      });
-      tabs.append(b);
-    }
-    const rows = h('div', { class: 'rows' });
-    // a search looks in every tab, so kids find things without knowing where they live
-    const items = Object.values(ITEMS)
-      .filter((d) => (searching ? d.tab !== undefined && (TABS as readonly string[]).includes(d.tab) && itemMatches(d.id, this.query) : d.tab === this.tab) && catalogueAvailable(d.id, client.season))
-      .sort((a, b) => (searching ? TABS.indexOf(a.tab as (typeof TABS)[number]) - TABS.indexOf(b.tab as (typeof TABS)[number]) : 0));
-    const orders = this.tab === 'animals' || searching ? this.pendingOrders(searching ? this.query : '') : [];
-    if (orders.length) {
-      rows.append(h('div', { class: 'hint section' }, `🚚 ${T.onTheWay}`));
-      for (const o of orders) {
-        const itemId = `animal_${o.species}`;
-        rows.append(h('div', { class: 'row' }, icon(getArt().iconUrl[itemId] ?? ''), h('span', { class: 'name' }, SPECIES_NAMES[o.species] ?? o.species), h('span', { class: 'have' }, o.owner)));
-      }
-    }
-    if (items.length === 0 && orders.length === 0) rows.append(h('div', { class: 'hint' }, searching ? T.noMatch : T.nothingHere));
-    for (const d of items) {
-      const owned = d.category === 'clothing' && me.wardrobe.includes(d.id);
-      const price = d.stars !== undefined ? `⭐ ${d.stars}` : `${d.buy} ${T.coins}`;
-      const have = d.category === 'clothing' ? 0 : countItem(me.inventory, d.id);
-      const name = h('span', { class: 'name' }, this.catalogueName(d));
-      if (searching && d.tab) name.append(h('span', { class: 'tag' }, TAB_NAMES[d.tab] ?? d.tab));
-      if (have > 0) name.append(h('br'), h('span', { class: 'have' }, fmt(T.youHave, { n: have })));
-      const row = h('div', { class: `row${owned ? ' off' : ''}` }, icon(getArt().iconUrl[d.id] ?? ''), name, h('span', { class: 'price' }, price));
-      if (owned) row.append(h('span', { class: 'hint' }, T.alreadyOwn));
-      else if (d.stars !== undefined) {
-        const b = h('button', { disabled: me.stars < d.stars }, T.buy);
-        onTap(b, () => net.send({ t: 'buy', item: d.id, qty: 1 }));
-        row.append(b);
-      } else {
-        const qtys = d.category === 'seed' || d.category === 'feed' || d.category === 'material' ? [1, 5, 10] : [1];
-        for (const q of qtys) {
-          const b = h('button', { disabled: me.coins < (d.buy ?? 0) * q }, qtys.length > 1 ? `${T.buy} ${q}` : T.buy);
-          onTap(b, () => net.send({ t: 'buy', item: d.id, qty: q }));
-          row.append(b);
-        }
-      }
-      rows.append(row);
-    }
-    body.append(rows);
-  }
-
-  /** Animals ordered by anyone in the world, arriving tomorrow. A query keeps only the matching species. */
-  private pendingOrders(query: string): { species: string; owner: string }[] {
-    const out: { species: string; owner: string }[] = [];
-    const q = normalizeQuery(query);
-    for (const p of Object.values(client.world?.players ?? {})) {
-      for (const o of p.orders ?? []) {
-        if (q !== '' && !itemMatches(`animal_${o.species}`, q) && !normalizeQuery(SPECIES_NAMES[o.species] ?? o.species).includes(q)) continue;
-        out.push({ species: o.species, owner: p.name });
-      }
-    }
-    return out;
-  }
-
   // ---- pizzeria ----
 
-  private renderPizzeria(body: HTMLElement): void {
-    const me = myPlayer()!;
-    body.append(h('div', { class: 'hint' }, T.pizzeriaHint));
-    const rows = h('div', { class: 'rows' });
-    for (const d of Object.values(ITEMS).filter((x) => x.tab === 'pizzeria' && catalogueAvailable(x.id, client.season))) {
-      const row = h('div', { class: 'row' }, icon(getArt().iconUrl[d.id] ?? ''), h('span', { class: 'name' }, itemName(d.id)), h('span', { class: 'price' }, `${d.buy} ${T.coins}`));
-      const b = h('button', { disabled: me.coins < (d.buy ?? 0) }, T.buy);
-      onTap(b, () => net.send({ t: 'buy', item: d.id, qty: 1 }));
-      row.append(b);
-      rows.append(row);
-    }
-    body.append(rows);
-  }
-
   // ---- bus stop / train station ----
-  private travelVia(): 'bus' | 'train' {
-    const w = activeWorld();
-    const o = w && this.travelId !== null ? w.objects[this.travelId] : undefined;
-    return o?.kind === 'train_station' ? 'train' : 'bus';
-  }
-
-  private renderTravel(body: HTMLElement): void {
-    const me = myPlayer()!;
-    const via = this.travelVia();
-    body.append(h('div', { class: 'hint' }, T.travelHint));
-    const dests = transportDestinations(me, via);
-    if (!dests.length) {
-      body.append(h('p', { class: 'help-intro' }, T.noDestinations));
-      return;
-    }
-    const rows = h('div', { class: 'rows' });
-    for (const d of dests) {
-      const row = h('div', { class: 'row' }, h('span', { class: 'em' }, d.key === 'farm' ? '🏡' : d.unknown ? '❔' : '🏙️'), h('span', { class: 'name' }, d.name), h('span', { class: 'price' }, `${d.price} ${T.coins}`));
-      const b = h('button', { disabled: me.coins < d.price }, `${via === 'train' ? '🚂' : '🚌'} ${T.go}`);
-      onTap(b, () => {
-        net.send({ t: 'ride', via, to: d.key });
-        this.close();
-      });
-      row.append(b);
-      rows.append(row);
-    }
-    body.append(rows);
-  }
-
-  private catalogueName(d: ItemDef): string {
-    if (d.category === 'animal' && d.species && !ANIMALS[d.species]?.vehicle) {
-      const house = ANIMALS[d.species]?.house;
-      return `${SPECIES_NAMES[d.species] ?? d.id}${house ? ` (${T.needs} ${itemName(house)})` : ''}`;
-    }
-    return itemName(d.id);
-  }
-
   // ---- sell ----
 
-  private renderSell(f: SearchFrame): void {
-    const { body } = f;
-    const me = myPlayer()!;
-    const rows = h('div', { class: 'rows' });
-    let any = false;
-    let sellable = false;
-    me.inventory.forEach((s, slot) => {
-      if (!s) return;
-      const d = itemDef(s.item);
-      if (d.sell === undefined) return;
-      sellable = true;
-      if (!this.stackMatches(s.item)) return;
-      any = true;
-      const price = s.data !== undefined ? PAINTED_SELL : d.sell;
-      const one = h('button', null, `${T.sellOne} (${price} ${T.coins})`);
-      onTap(one, () => net.send({ t: 'sell', slot, qty: 1 }));
-      const all = h('button', { class: 'alt' }, `${T.sellAll} (${price * s.count} ${T.coins})`);
-      onTap(all, () => net.send({ t: 'sell', slot, qty: s.count }));
-      rows.append(h('div', { class: 'row' }, icon(stackIconUrl(s)), h('span', { class: 'name' }, `${itemName(s.item)} × ${s.count}`), one, s.count > 1 ? all : null!));
-    });
-    if (!any) rows.append(h('div', { class: 'hint' }, sellable && this.hasFilter() ? T.noMatch : T.nothingToSell));
-    body.append(rows);
-  }
-
   // ---- craft ----
-
-  private renderCraft(body: HTMLElement, recipes: RecipeDef[], msg: 'craft' | 'cook'): void {
-    const me = myPlayer()!;
-    const rows = h('div', { class: 'rows' });
-    for (const r of recipes) {
-      const ok = r.in.every((i) => countItem(me.inventory, i.item) >= i.count);
-      const needs = h(
-        'span',
-        { class: 'need' },
-        ...r.in.map((i, idx) => {
-          const have = countItem(me.inventory, i.item);
-          return h('span', { class: `need ${have >= i.count ? 'ok' : 'no'}` }, `${idx ? ' · ' : ''}${itemName(i.item)} ${have}/${i.count}`);
-        }),
-      );
-      const b = h('button', { disabled: !ok }, msg === 'cook' ? T.cook : T.craft);
-      onTap(b, () => net.send({ t: msg, recipe: r.id }));
-      rows.append(h('div', { class: `row${ok ? '' : ' off'}` }, icon(getArt().iconUrl[r.out.item] ?? ''), h('span', { class: 'name' }, `${itemName(r.out.item)}${r.out.count > 1 ? ` × ${r.out.count}` : ''}`, h('br'), needs), b));
-    }
-    body.append(rows);
-  }
 
   // ---- wardrobe ----
 
@@ -712,89 +475,7 @@ export class Menus {
 
   // ---- world map ----
 
-  private renderMap(body: HTMLElement): void {
-    const me = myPlayer()!;
-    // in a cave, the bath house or on the moon, the map shows the place you came from
-    const cave = parseCaveKey(me.area);
-    const outside = me.area === 'dungeon' ? 'farm' : cave ? cave.parent : isBathKey(me.area) ? villageOfBath(me.area) : me.area === MOON_KEY ? SPACEPORT_KEY : me.area;
-    const here = parseCaveKey(outside)?.parent ?? (outside === MOON_KEY ? SPACEPORT_KEY : outside);
-    const c = areaCoords(here) ?? { ax: 0, ay: 0 };
-    const visited = new Set(me.visited ?? ['farm']);
-    const marks = landmarkMarks(me);
-    const R = 3;
-    const grid = h('div', { class: 'worldmap' });
-    for (let dy = -R; dy <= R; dy++)
-      for (let dx = -R; dx <= R; dx++) {
-        const ax = c.ax + dx;
-        const ay = c.ay + dy;
-        const k = ax === 0 && ay === 0 ? 'farm' : areaKey(ax, ay);
-        const known = visited.has(k);
-        const biome = k === 'farm' ? 'farm' : known ? (client.biomes[k] ?? client.areas[k]?.biome ?? biomeAt(ax, ay)) : null;
-        // the rocket is rumoured about before anyone finds it
-        const rumour = !known && k === SPACEPORT_KEY;
-        // Upptäcktsboken: a landmark seen here but not yet touched ("?"), or every one seen here found (🧭)
-        const mark = known ? marks.get(k) : undefined;
-        const tip = known ? `${placeName(biome!)}${mark ? ` · ${mark === 'seen' ? T.mapLandmarkSeen : T.mapLandmarkFound}` : ''}` : rumour ? T.spaceportRumour : T.notVisited;
-        const cell = h(
-          'div',
-          { class: `cell${known ? ' known' : ''}${k === here ? ' here' : ''}`, title: tip },
-          h('span', { class: 'em' }, known ? placeEmoji(biome!) : rumour ? '🚀' : '❔'),
-          known ? h('span', { class: 'nm' }, placeName(biome!)) : rumour ? h('span', { class: 'nm' }, '?') : null,
-          mark ? h('span', { class: `lm-mark ${mark}` }, mark === 'seen' ? '?' : '🧭') : null,
-        );
-        if (known && k !== me.area && me.area !== 'dungeon') {
-          onTap(cell, () => {
-            net.send({ t: 'teleport', to: k });
-            this.close();
-          });
-        }
-        grid.append(cell);
-      }
-    const home = h('button', { disabled: me.area === 'farm' || me.area === 'dungeon' }, `🏡 ${T.teleportHome}`);
-    onTap(home, () => {
-      net.send({ t: 'teleport', to: 'farm' });
-      this.close();
-    });
-    const buttons = [home];
-    if (visited.has(MOON_KEY) && me.area !== MOON_KEY && me.area !== 'dungeon') {
-      const moon = h('button', {}, `🌙 ${placeName('mane')}`);
-      onTap(moon, () => {
-        net.send({ t: 'teleport', to: MOON_KEY });
-        this.close();
-      });
-      buttons.push(moon);
-    }
-    const mini = h('button', { class: 'alt' }, `🧭 ${T.minimapToggle}`);
-    onTap(mini, () => document.dispatchEvent(new CustomEvent('lilla:minimap')));
-    buttons.push(mini);
-    const place = me.area === 'farm' ? 'farm' : me.area === 'dungeon' ? 'dungeon' : client.areas[me.area]?.biome;
-    const where = isBathKey(me.area) ? `🏊 ${T.bathhouseName}` : `${placeEmoji(place)} ${placeName(place)}`;
-    body.append(h('p', { class: 'help-intro' }, `${T.youAreHere}: ${where} · Norr är uppåt. Kallt i norr, varmt i söder, hav i väster och berg i öster.`), grid, h('div', { class: 'tabs' }, ...buttons));
-  }
-
   // ---- gårdsbok ----
-
-  private renderBook(body: HTMLElement): void {
-    const me = myPlayer()!;
-    const done = ACHIEVEMENTS.filter((a) => me.achievements?.includes(a.id)).length;
-    body.append(h('p', { class: 'help-intro' }, `⭐ ${me.stars} ${T.stars} · ${fmt(T.achievementsDone, { done, total: ACHIEVEMENTS.length })}`));
-    const rows = h('div', { class: 'rows' });
-    for (const a of ACHIEVEMENTS) {
-      const have = Math.min(a.goal, me.stats?.[a.stat] ?? 0);
-      const unlocked = me.achievements?.includes(a.id);
-      const txt = ACHIEVEMENT_TEXT[a.id] ?? { title: a.id, text: '' };
-      rows.append(
-        h(
-          'div',
-          { class: `row${unlocked ? ' done' : ''}` },
-          h('span', { class: 'badge' }, unlocked ? '🏅' : icon(getArt().iconUrl[a.icon] ?? '')),
-          h('span', { class: 'name' }, txt.title, h('br'), h('span', { class: 'need' }, txt.text), h('div', { class: 'bar' }, h('i', { style: { width: `${(have / a.goal) * 100}%` } }))),
-          h('span', { class: 'price' }, unlocked ? `+${a.stars} ⭐` : fmt(T.progress, { have, goal: a.goal })),
-        ),
-      );
-    }
-    body.append(rows);
-  }
 
   // ---- villager dialogue ----
 
@@ -905,7 +586,7 @@ export class Menus {
 
   // ---- help ----
 
-  private helpTopic = 'controls';
+  private helpTopic = 'lobby';
 
   private helpText(text: string): string {
     return text
@@ -920,7 +601,8 @@ export class Menus {
   private helpIcon(ref: string | undefined): HTMLElement {
     if (!ref) return h('span', { class: 'help-icon' });
     if (ref.startsWith('emoji:')) return h('span', { class: 'help-icon emoji' }, ref.slice(6));
-    const url = getArt().iconUrl[ref] ?? getArt().objects[ref]?.frames[0]?.dataUrl();
+    const [name, frame] = ref.split(':') as [string, string | undefined];
+    const url = getArt().iconUrl[ref] ?? getArt().objects[name]?.frames[Number(frame ?? 0)]?.dataUrl();
     return url ? h('span', { class: 'help-icon' }, icon(url)) : h('span', { class: 'help-icon' });
   }
 

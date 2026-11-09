@@ -15,12 +15,10 @@ import {
   equipGear,
   forgeGear,
   noticeLandmarks,
-  setHero,
   shownHeld,
   drinkPotion,
   isSagaKey,
   isRunKey,
-  jumpTo,
   rejoinRun,
   rejoinSaga,
   runMessage,
@@ -34,38 +32,28 @@ import {
   MAX_PLAYERS,
   NPCS,
   TICK_HZ,
+  adoptPet,
   applyMove,
   areaOf,
-  buy,
-  completeQuest,
-  cook,
-  craft,
   createPlayer,
-  dropItem,
   emote,
-  honk,
   equip,
   getArea,
   isSeason,
   leaveCave,
   mulberry32,
   nameAnimal,
-  paint,
   newDay,
   npcState,
   performAction,
   seasonForDate,
   selectSlot,
-  sell,
   setOnline,
   swapSlots,
   sortSlots,
   quickStackToChest,
   tagArea,
-  teleport,
-  ride,
   tick,
-  travel,
   type AnimalSnap,
   type NpcSnap,
   type Appearance,
@@ -401,16 +389,6 @@ export class Game {
       case 'act':
         changes = tagArea(performAction(w, pid, Math.floor(msg.tx), Math.floor(msg.ty), this.ctx()), areaK);
         break;
-      case 'travel':
-        changes = travel(this.world, pid, msg.dir);
-        if (changes.length) this.store.noteArea?.(me.area);
-        break;
-      case 'teleport':
-        changes = teleport(this.world, pid, String(msg.to ?? ''));
-        break;
-      case 'ride':
-        changes = ride(this.world, pid, msg.via, String(msg.to ?? ''), this.ctx());
-        break;
       case 'select':
         changes = selectSlot(w, pid, msg.slot);
         break;
@@ -433,38 +411,17 @@ export class Game {
           changes = [];
         }
         break;
-      case 'craft':
-        changes = craft(w, pid, msg.recipe);
-        break;
-      case 'cook':
-        changes = cook(w, pid, msg.recipe);
-        break;
-      case 'buy':
-        changes = buy(w, pid, msg.item, msg.qty, this.ctx());
-        break;
-      case 'sell':
-        changes = sell(w, pid, msg.slot, msg.qty);
-        break;
       case 'equip':
         changes = equip(w, pid, msg.slot, msg.item);
         break;
       case 'emote':
         changes = emote(w, pid, msg.id, this.ctx());
         break;
-      case 'honk':
-        changes = tagArea(honk(w, pid), areaK);
-        break;
-      case 'drop':
-        changes = dropItem(w, pid, msg.slot, msg.qty);
-        break;
       case 'nameAnimal':
         changes = tagArea(nameAnimal(w, pid, msg.id, String(msg.name ?? '')), areaK);
         break;
-      case 'paint':
-        changes = paint(w, pid, String(msg.pixels ?? ''));
-        break;
-      case 'quest':
-        changes = completeQuest(w, pid, String(msg.id ?? ''));
+      case 'pet':
+        if (msg.a === 'adopt') changes = tagArea(adoptPet(this.world, pid, String(msg.species ?? ''), this.ctx()), areaK);
         break;
       case 'pets':
         changes = callPets(this.world, pid, msg.cmd, this.ctx());
@@ -480,12 +437,8 @@ export class Game {
         else if (msg.a === 'chapter') changes = sagaChapter(this.world, pid);
         else if (msg.a === 'quest') changes = sagaQuestAct(this.world, pid, String(msg.id ?? ''));
         else if (msg.a === 'equip') changes = equipGear(this.world, pid, String(msg.slot ?? ''), typeof msg.item === 'string' ? msg.item : null);
-        else if (msg.a === 'hero') changes = setHero(this.world, pid, msg.on === true);
         else if (msg.a === 'forge') changes = forgeGear(this.world, pid, String(msg.item ?? ''));
         else if (msg.a === 'craft') changes = craftGear(this.world, pid, String(msg.item ?? ''));
-        break;
-      case 'jump':
-        changes = jumpTo(this.world, pid, String(msg.to ?? ''));
         break;
       case 'run':
       case 'seed':

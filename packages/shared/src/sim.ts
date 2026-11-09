@@ -289,9 +289,6 @@ export const STARTER_WARDROBE = ['shirt_red', 'shirt_blue', 'shirt_green', 'shir
 export function createPlayer(world: WorldState, name: string, appearance: Appearance, shirt = 'shirt_blue'): PlayerState {
   const id = `p${world.nextId++}`;
   const inventory = makeInventory(INVENTORY_SIZE);
-  for (const tool of ['hoe', 'can', 'axe', 'pick', 'scythe', 'hammer', 'brush']) addItem(inventory, tool, 1);
-  addItem(inventory, 'carrot_seed', 6);
-  addItem(inventory, 'potato_seed', 4);
   const p: PlayerState = {
     id,
     name: name.trim().slice(0, 16) || 'Spelare',
@@ -484,6 +481,7 @@ export function performAction(world: WorldState, playerId: string, tx: number, t
     return out;
   }
   if (isSagaKey(world.area)) return sagaAct(world, p, tx, ty, ctx);
+  if (isFarm(world)) return lobbyAct(world, p, tx, ty, ctx, out);
   // hero mode out in the world: a monster in reach gets the class's attack spell instead of the farm tool
   if (p.saga?.hero) {
     const hero = heroAction(world, p, tx, ty, ctx);
@@ -651,6 +649,32 @@ export function performAction(world: WorldState, playerId: string, tx: number, t
 
   // 4. Terrain
   actOnTerrain(world, p, tx, ty, held, ctx, out);
+  return out;
+}
+
+/** What can be used in the lobby: people, the wardrobe, the arch, the sagaträd, Kämpastenen, the kennel and your own pets. Nothing can be changed. */
+const LOBBY_USES = new Set(['wardrobe', 'fardport', 'yggdrasil', 'sagaclass', 'kennel']);
+
+function lobbyAct(world: WorldState, p: PlayerState, tx: number, ty: number, ctx: SimCtx, out: Change[]): Change[] {
+  const npc = npcAt(world, tx, ty);
+  if (npc) {
+    out.push({ t: 'open', to: p.id, ui: npc.id === VOLVA_ID ? 'saga' : 'npc', npc: npc.id });
+    return out;
+  }
+  const held = heldItem(p);
+  const kind = held ? sagaItem(held.item)?.kind : undefined;
+  // a pet or mount from the dungeons: out of the bag and by your side
+  if (held && (kind === 'pet' || kind === 'mount') && !objectAt(world, tx, ty) && !animalAt(world, tx, ty)) {
+    summonFromBag(world, p, held.item, out);
+    return out;
+  }
+  const animal = animalAt(world, tx, ty);
+  if (animal && animal.owner === p.id && (isPetAnimal(animal) || isMount(animal))) {
+    actOnAnimal(world, p, animal, held, ctx, out);
+    return out;
+  }
+  const obj = objectAt(world, tx, ty);
+  if (obj && LOBBY_USES.has(objectDef(obj.kind).interact ?? '')) interactObject(world, p, obj, held, ctx, out);
   return out;
 }
 
@@ -927,6 +951,9 @@ function interactObject(world: WorldState, p: PlayerState, obj: WorldObject, hel
     case 'sagaclass':
       out.push({ t: 'open', to: p.id, ui: 'sagaClass', id: obj.id });
       return;
+    case 'kennel':
+      out.push({ t: 'open', to: p.id, ui: 'kennel', id: obj.id });
+      return;
     case 'sleep':
       goToSleep(world, p, out);
       return;
@@ -951,9 +978,6 @@ function interactObject(world: WorldState, p: PlayerState, obj: WorldObject, hel
       return;
     case 'landmark':
       out.push(...discoverLandmark(world, p, obj));
-      return;
-    case 'rocket':
-      out.push(...flyRocket(world, p.id));
       return;
     case 'water':
       if (held && item(held.item).tool === 'can') {
@@ -1455,7 +1479,7 @@ export function paint(world: WorldState, playerId: string, pixels: string): Chan
 export function nameAnimal(world: WorldState, playerId: string, id: number, name: string): Change[] {
   const a = world.animals[id];
   const p = world.players[playerId];
-  if (!a || !p) return [];
+  if (!a || !p || a.owner !== p.id) return [];
   const clean = name.replace(/\s+/g, ' ').trim().slice(0, 14);
   if (!clean) return [];
   const old = animalDisplayName(a);
@@ -1938,58 +1962,6 @@ function moveAnimalAlong(from: WorldState, to: WorldState, toKey: string, a: Ani
   out.push(gone, here);
 }
 
-const DIRS: Record<'n' | 's' | 'e' | 'w', { dx: number; dy: number; opposite: 'n' | 's' | 'e' | 'w' }> = {
-  n: { dx: 0, dy: -1, opposite: 's' },
-  s: { dx: 0, dy: 1, opposite: 'n' },
-  e: { dx: 1, dy: 0, opposite: 'w' },
-  w: { dx: -1, dy: 0, opposite: 'e' },
-};
-
-/** Walks off an edge of the current area into the neighbouring one. */
-export function travel(world: WorldState, playerId: string, dir: 'n' | 's' | 'e' | 'w'): Change[] {
-  const farm = farmOf(world);
-  const p = farm.players[playerId];
-  if (!p || p.area === 'dungeon') return [];
-  const c = areaCoords(p.area);
-  if (!c) return [];
-  // must stand in the edge gap on that side (of this map, whatever its size)
-  const here = areaOf(farm, p);
-  const tx = tileOf(p.x);
-  const ty = tileOf(p.y);
-  const atEdge = (dir === 'n' && ty <= 1) || (dir === 's' && ty >= mapH(here) - 2) || (dir === 'w' && tx <= 1) || (dir === 'e' && tx >= mapW(here) - 2);
-  if (!atEdge || !inEdgeGap(here, tx, ty)) return [];
-  const d = DIRS[dir];
-  const nx = c.ax + d.dx;
-  const ny = c.ay + d.dy;
-  const keyStr = nx === 0 && ny === 0 ? 'farm' : areaKey(nx, ny);
-  // you come out in the opening on the far side of the next map, in the middle of that map's own edge
-  const target = getArea(farm, keyStr);
-  if (!target) return [];
-  const arrive = arrivalTile(target, d.opposite);
-  const out: Change[] = [];
-  placeIn(farm, p, keyStr, arrive.x, arrive.y, dir === 'n' ? 'up' : dir === 's' ? 'down' : dir === 'e' ? 'right' : 'left', out);
-  return out;
-}
-
-/** Jumps to a visited area (or home). */
-export function teleport(world: WorldState, playerId: string, keyStr: string): Change[] {
-  const farm = farmOf(world);
-  const p = farm.players[playerId];
-  // (inside a saga dungeon or a run you leave by its way out: a jump from there would leave your fighter behind)
-  if (!p || p.area === 'dungeon' || isSagaKey(p.area) || keyStr === 'dungeon' || isCaveKey(keyStr) || isIndoorKey(keyStr)) return [];
-  if (keyStr !== 'farm' && !(p.visited ?? []).includes(keyStr)) return [];
-  const out: Change[] = [];
-  if (keyStr === 'farm') placeIn(farm, p, 'farm', SPAWN.x, SPAWN.y, 'down', out);
-  else {
-    const target = getArea(farm, keyStr);
-    if (!target) return [];
-    const at = isMoonKey(keyStr) ? rocketFront(MOON_ROCKET) : openTileNear(target, mapW(target) / 2, mapH(target) / 2);
-    placeIn(farm, p, keyStr, at.x, at.y, 'down', out);
-  }
-  out.push(fx(tileOf(p.x), tileOf(p.y), 'sparkle'));
-  return out;
-}
-
 /** The open tile nearest (x, y) that you can walk to from the map's openings (else just any open tile). */
 export function openTileNear(world: WorldState, x: number, y: number): { x: number; y: number } {
   const reach = reachableFrom(world, arrivalTile(world, 'n'));
@@ -2007,104 +1979,7 @@ export function openTileNear(world: WorldState, x: number, y: number): { x: numb
   return fallback ?? { x, y };
 }
 
-// ---------------------------------------------------------------------------
-// Public transport: buses between places you know, trains also to one unknown city
-// ---------------------------------------------------------------------------
-export const TRANSPORT_PRICE: Record<'bus' | 'train', number> = { bus: 5, train: 15 };
-export interface Destination {
-  key: string;
-  name: string;
-  price: number;
-  /** A city nobody has visited yet (train only). */
-  unknown?: boolean;
-}
-
-/** Name of a city area (the first city is just "Byn"; others get their map coordinates). */
-export const cityName = (keyStr: string): string => {
-  if (keyStr === 'farm') return T.travelHome;
-  const c = areaCoords(keyStr);
-  if (!c) return BIOME_NAMES.by;
-  return c.ax === 1 && c.ay === 0 ? BIOME_NAMES.by : `${T.cityName} ${c.ax},${c.ay}`;
-};
-
-/** The nearest city nobody in the party has been to (scanning outward from the farm). */
-export function nearestUnknownCity(visited: string[]): string | null {
-  for (let r = 1; r <= 16; r++)
-    for (let ax = -r; ax <= r; ax++)
-      for (const ay of ax === -r || ax === r ? Array.from({ length: 2 * r + 1 }, (_, i) => i - r) : [-r, r]) {
-        if (biomeAt(ax, ay) !== 'by') continue;
-        const k = areaKey(ax, ay);
-        if (!visited.includes(k)) return k;
-      }
-  return null;
-}
-
-/** Where this player can go from a bus stop / station right now. */
-export function transportDestinations(p: PlayerState, via: 'bus' | 'train'): Destination[] {
-  const visited = p.visited ?? ['farm'];
-  const price = TRANSPORT_PRICE[via];
-  const out: Destination[] = [];
-  if (p.area !== 'farm') out.push({ key: 'farm', name: T.travelHome, price });
-  for (const k of visited) {
-    const c = areaCoords(k);
-    if (!c || k === 'farm' || k === p.area || biomeAt(c.ax, c.ay) !== 'by') continue;
-    out.push({ key: k, name: cityName(k), price });
-  }
-  if (via === 'train') {
-    const unknown = nearestUnknownCity(visited);
-    if (unknown && unknown !== p.area) out.push({ key: unknown, name: T.unknownCity, price, unknown: true });
-  }
-  return out;
-}
-
 const stopKind = (via: 'bus' | 'train', keyStr: string): string => (via === 'train' && keyStr !== 'farm' ? 'train_station' : 'bus_stop');
-
-/** Is the player standing next to a stop of this kind? */
-function nearStop(world: WorldState, p: PlayerState, via: 'bus' | 'train'): boolean {
-  const kind = stopKind(via, p.area);
-  const ptx = tileOf(p.x);
-  const pty = tileOf(p.y);
-  for (const o of Object.values(world.objects)) {
-    if (o.kind !== kind) continue;
-    const def = objectDef(o.kind);
-    if (ptx >= o.x - REACH - 1 && ptx <= o.x + def.w + REACH && pty >= o.y - REACH - 1 && pty <= o.y + def.h + REACH) return true;
-  }
-  return false;
-}
-
-/** Boards a bus or train: charges the fare and moves the player to the stop at the destination. */
-export function ride(world: WorldState, playerId: string, via: 'bus' | 'train', to: string, ctx: SimCtx): Change[] {
-  const farm = farmOf(world);
-  const p = farm.players[playerId];
-  if (!p || p.area === 'dungeon' || (via !== 'bus' && via !== 'train')) return [];
-  const here = areaOf(farm, p);
-  if (!nearStop(here, p, via)) return [toast(p.id, T.noTransportHere)];
-  const dest = transportDestinations(p, via).find((d) => d.key === to);
-  if (!dest) return [toast(p.id, T.notNow)];
-  if (p.coins < dest.price) return [toast(p.id, T.notEnoughCoins)];
-  const target = getArea(farm, to);
-  if (!target) return [toast(p.id, T.notNow)];
-  p.coins -= dest.price;
-  // land in front of the stop at the other end
-  const kind = stopKind(via, to);
-  const stop = Object.values(target.objects).find((o) => o.kind === kind) ?? Object.values(target.objects).find((o) => o.kind === 'bus_stop');
-  let tx = to === 'farm' ? SPAWN.x : mapW(target) / 2;
-  let ty = to === 'farm' ? SPAWN.y : mapH(target) / 2;
-  if (stop) {
-    const def = objectDef(stop.kind);
-    tx = stop.x + Math.floor(def.w / 2);
-    ty = stop.y + def.h;
-  }
-  for (let r = 0; r < 6 && isSolidForPlayer(target, tx, ty); r++) ty += 1;
-  const place = dest.unknown ? cityName(to) : dest.name;
-  const out: Change[] = [{ t: 'ride', to: p.id, via, place }, toast(p.id, fmt(via === 'bus' ? T.busLeaving : T.trainLeaving, { place }))];
-  placeIn(farm, p, to, tx, ty, 'down', out);
-  bump(p, 'rides', 1, out);
-  if (via === 'train') bump(p, 'train_rides', 1, out);
-  out.push(playerChange(p));
-  void ctx;
-  return out;
-}
 
 const dungeonOccupied = (d: WorldState): boolean => Object.values(d.players).some((p) => p.online && p.area === 'dungeon');
 
@@ -2435,31 +2310,6 @@ export function leaveGrotto(world: WorldState, playerId: string): Change[] {
     ? openTileNear(parent, Math.min(cave.out.x, mapW(parent) - 1), Math.min(cave.out.y, mapH(parent) - 1))
     : cave.out;
   placeIn(farm, p, cave.parent, at.x, at.y, 'down', out);
-  return out;
-}
-
-/** The rocket: from the space base to the moon, and from the moon back to the base. */
-export function flyRocket(world: WorldState, playerId: string): Change[] {
-  const farm = farmOf(world);
-  const p = farm.players[playerId];
-  if (!p) return [];
-  const toMoon = !isMoonKey(p.area);
-  const dest = toMoon ? MOON_KEY : SPACEPORT_KEY;
-  const target = getArea(farm, dest);
-  if (!target) return [];
-  const rocket = Object.values(target.objects).find((o) => o.kind === 'rocket');
-  const front = rocketFront(rocket ?? (toMoon ? MOON_ROCKET : BASE_ROCKET));
-  const out: Change[] = [
-    { t: 'ride', to: p.id, via: 'rocket', place: toMoon ? BIOME_NAMES.mane : BIOME_NAMES.rymdbas },
-    toast(p.id, toMoon ? T.rocketUp : T.rocketHome),
-  ];
-  let ty = front.y;
-  for (let r = 0; r < 4 && isSolidForPlayer(target, front.x, ty); r++) ty++;
-  if (!placeIn(farm, p, dest, front.x, ty, 'down', out)) return [];
-  if (toMoon) {
-    bump(p, 'moon', 1, out);
-    if ((p.stats.moon ?? 0) > 1) out.push(toast(p.id, T.onTheMoon));
-  }
   return out;
 }
 
@@ -2969,10 +2819,6 @@ export function tick(world: WorldState, dtMs: number, ctx: SimCtx): Change[] {
   const out: Change[] = [];
   if (!anyoneOnline(world)) return out;
   world.timeMs += dtMs;
-  if (world.questsDay !== world.day || world.quests.length === 0) {
-    generateQuests(world);
-    out.push({ t: 'quests', quests: world.quests });
-  }
   tickAnimals(world, dtMs, ctx, out);
   tickNpcs(world, dtMs);
   tickDrops(world, out);
@@ -3226,127 +3072,12 @@ function spawnWild(world: WorldState, kind: string, count: number, cap: number, 
   }
 }
 
-export function newDay(world: WorldState, ctx: SimCtx, out: Change[] = []): Change[] {
+export function newDay(world: WorldState, _ctx: SimCtx, out: Change[] = []): Change[] {
   world.day++;
   world.timeMs = Math.min(world.timeMs, 1000);
   out.push({ t: 'day', day: world.day });
-  // Fixed quests keep their done-state; daily ones are fresh
-  for (const p of Object.values(world.players)) p.questsDone = p.questsDone.filter((id) => !id.startsWith('d'));
-  generateQuests(world);
-  out.push({ t: 'quests', quests: world.quests }, toast(null, T.questNew));
-
-  // Crops grow if watered
-  for (const [k, c] of Object.entries(world.crops)) {
-    const def = CROPS[c.crop];
-    if (!def) continue;
-    if (c.watered && !cropMature(c)) {
-      c.progress++;
-      if (c.progress >= (def.stages[c.stage] ?? 1)) {
-        c.stage++;
-        c.progress = 0;
-      }
-    }
-    c.watered = false;
-    out.push({ t: 'crop', k, crop: c });
-  }
-  // Wet soil dries
-  for (let i = 0; i < world.terrain.length; i++)
-    if (world.terrain[i] === 'soil_wet') {
-      world.terrain[i] = 'soil';
-      out.push({ t: 'terrain', x: i % mapW(world), y: Math.floor(i / mapW(world)), terrain: 'soil' });
-    }
-
-  // Troughs feed nearby animals
-  const troughs = Object.values(world.objects).filter((o) => o.kind === 'trough' && (o.items?.[0]?.count ?? 0) > 0);
-  for (const a of Object.values(world.animals)) {
-    if (a.fed) continue;
-    const t = troughs.find((o) => (o.items![0]?.count ?? 0) > 0 && Math.hypot((o.x + 0.5) * TILE - a.x, (o.y + 0.5) * TILE - a.y) <= 8 * TILE);
-    if (t) {
-      t.items![0]!.count--;
-      if (t.items![0]!.count === 0) t.items![0] = null;
-      a.fed = true;
-      out.push({ t: 'object', id: t.id, obj: t });
-    }
-  }
-
-  // Animals: hearts, products, growing up
-  for (const a of Object.values(world.animals)) {
-    const def = ANIMALS[a.species];
-    if (!def) continue;
-    let gain = 0;
-    if (a.fed) gain += 0.34;
-    if (a.petted) gain += 0.2;
-    if (a.brushed) gain += 0.2;
-    a.heartProgress += gain;
-    while (a.heartProgress >= 1 && a.hearts < 5) {
-      a.hearts++;
-      a.heartProgress -= 1;
-    }
-    if (a.hearts >= 5) a.heartProgress = Math.min(a.heartProgress, 0.99);
-    a.age++;
-    if (def.product && a.fed && a.hearts >= 1 && a.age >= def.growDays) a.hasProduct = true;
-    a.fed = false;
-    a.petted = false;
-    a.brushed = false;
-    out.push({ t: 'animal', id: a.id, animal: a });
-  }
-
-  // Wild animals out in the world are happy to be petted again tomorrow, and the ones that ran off come back
-  for (const [k, a] of Object.entries(world.areas ?? {})) {
-    for (const an of Object.values(a.animals)) an.petted = false;
-    if (a.biome) {
-      const local: Change[] = [];
-      for (const an of spawnWildAnimals(a, a.biome, ctx.rnd, true)) local.push({ t: 'animal', id: an.id, animal: an });
-      out.push(...tagArea(local, k));
-    }
-  }
-  regrowAreas(world, ctx, out);
-  hatchEggs(world, ctx, out);
-
-  // Ordered animals arrive
-  for (const p of Object.values(world.players)) {
-    if (p.orders.length === 0) continue;
-    for (const o of p.orders) {
-      const home = world.objects[o.homeId];
-      const def = ANIMALS[o.species];
-      if (!def) continue;
-      const c = home ? homeCenter(world, { ...dummyAnimal, homeId: home.id }) : { x: p.x, y: p.y };
-      const a: AnimalState = {
-        ...dummyAnimal,
-        id: world.nextId++,
-        species: o.species,
-        name: DEFAULT_ANIMAL_NAMES[randInt(ctx.rnd, 0, DEFAULT_ANIMAL_NAMES.length - 1)] ?? 'Ny vän',
-        x: c.x,
-        y: c.y,
-        homeId: home?.id ?? 0,
-        waitMs: 2000,
-      };
-      if (def.pet) {
-        a.owner = p.id;
-        a.age = 10;
-      }
-      if (o.species === 'horse') a.owner = p.id;
-      world.animals[a.id] = a;
-      out.push({ t: 'animal', id: a.id, animal: a }, toast(null, fmt(def.pet ? T.petArrived : T.animalArrived, { name: `${animalDisplayName(a)} (${SPECIES_NAMES[o.species] ?? o.species})` })));
-    }
-    p.orders = [];
-    out.push(playerChange(p));
-  }
-
-  // Resources regrow
-  for (const r of REGROW) spawnWild(world, r.kind, r.perDay, baseline(r.kind), r.where, ctx, out, r.variant ?? 0);
-
-  // Season twists
-  if (ctx.season === 'halloween') spawnWild(world, 'wild_pumpkin', 3, 12, (x, y) => !(x >= 4 && x <= 40 && y >= 4 && y <= 46) || edgeDist(x, y) <= 6, ctx, out);
-  if (ctx.season === 'midsommar') spawnWild(world, 'wild_flower_mid', 20, 80, () => true, ctx, out, 3);
-  for (const o of Object.values(world.objects)) {
-    if ((o.kind === 'wild_pumpkin' && ctx.season !== 'halloween') || (o.kind === 'wild_flower_mid' && ctx.season !== 'midsommar')) {
-      removeObject(world, o.id);
-      out.push({ t: 'object', id: o.id, obj: null });
-    }
-  }
-
-  out.push(toast(null, `${fmt(T.day, { day: world.day })} – ${T.newDay}`));
+  // pets are happy to be petted again tomorrow
+  for (const a of Object.values(world.animals)) a.petted = false;
   return out;
 }
 
@@ -3369,6 +3100,35 @@ const dummyAnimal: AnimalState = {
   homeId: 0,
   waitMs: 0,
 };
+
+/** The animals the kennel gives away: one free pet for every player, once. */
+export const KENNEL_SPECIES = ['dog', 'cat'] as const;
+
+/** Picks the first pet at the kennel in the lobby: free, once per player. The pet follows its owner from then on (see tickPet and movePetsAlong). */
+export function adoptPet(world: WorldState, playerId: string, species: string, ctx: SimCtx): Change[] {
+  const farm = farmOf(world);
+  const p = farm.players[playerId];
+  if (!p || p.area !== 'farm' || !(KENNEL_SPECIES as readonly string[]).includes(species)) return [];
+  const kennel = Object.values(farm.objects).find((o) => o.kind === 'kennel');
+  if (!kennel || Math.hypot((kennel.x + 1) * TILE - p.x, (kennel.y + 1) * TILE - p.y) > 5 * TILE) return [];
+  if ((p.stats.petAdopted ?? 0) > 0) return [toast(p.id, T.kennelOnce)];
+  const a: AnimalState = {
+    ...dummyAnimal,
+    id: farm.nextId++,
+    species,
+    name: DEFAULT_ANIMAL_NAMES[randInt(ctx.rnd, 0, DEFAULT_ANIMAL_NAMES.length - 1)] ?? 'Ny vän',
+    x: p.x,
+    y: p.y + 3,
+    owner: p.id,
+    age: 10,
+    waitMs: 2000,
+  };
+  farm.animals[a.id] = a;
+  const out: Change[] = [];
+  bump(p, 'petAdopted', 1, out);
+  out.push({ t: 'animal', id: a.id, animal: a }, fx(tileOf(p.x), tileOf(p.y), 'heart'), toast(p.id, fmt(T.kennelGot, { name: a.name })), playerChange(p), { t: 'open', to: p.id, ui: 'nameAnimal', id: a.id });
+  return out;
+}
 
 /** Convenience for tests and the admin page: add a grown animal next to a house. */
 export function addAnimal(world: WorldState, species: string, homeId: number, name?: string): AnimalState {

@@ -825,7 +825,15 @@ describe('starting, joining and leaving', () => {
     }
     // clear the arch's whole footprint in the occupancy
     for (const [k, id] of Object.entries(w.occupancy)) if (!w.objects[id]) delete w.occupancy[k];
-    const own = addObject(w, 'yggdrasil', 40, 30, { by: 'p1' })!;
+    // (make room: the lobby has forest here)
+    for (const [k, id] of Object.entries(w.occupancy)) {
+      const [tx, ty] = k.split(',').map(Number) as [number, number];
+      if (Math.abs(tx - 41) <= 4 && Math.abs(ty - 8) <= 4) {
+        delete w.occupancy[k];
+        delete w.objects[id];
+      }
+    }
+    const own = addObject(w, 'yggdrasil', 41, 8, { by: 'p1' })!;
     expect(ensureRunPlaces(w)).toBe(true);
     expect(shootOf(w)!.id).toBe(own.id);
     expect(Math.hypot(fardportOf(w)!.x - own.x, fardportOf(w)!.y - own.y)).toBeLessThan(8);
@@ -1964,7 +1972,7 @@ describe('the clock, the wipe and the end', () => {
     expect(runOf(party.world)).toBe(run);
   });
 
-  it('the boss falling pays its sagafrön once, clears the chapter for everyone, gives a bag of seeds, and the run ends after the chest', () => {
+  it('the boss falling pays its sagafrön once, clears the chapter for everyone, and the run ends after the chest', () => {
     const party = makeParty(['vaktare', 'helare', 'magiker'], { seed: 6 });
     startRun(party.world, party.players[0]!.id, { seed: 6 }, party.ctx());
     const run = runOf(party.world)!;
@@ -2004,7 +2012,6 @@ describe('the clock, the wipe and the end', () => {
       expect(readRun(p).wins).toBe(1);
       expect(readRun(p).clears.draug).toBe(1);
       expect(p.saga!.cleared).toContain('draug');
-      expect(p.inventory.some((s) => s?.item.endsWith('_seed') && s.item !== 'carrot_seed' && s.item !== 'potato_seed')).toBe(true);
     });
     // seeds are paid once
     for (let i = 0; i < 20; i++) step(party, false, []);
@@ -2089,28 +2096,6 @@ describe('the clock, the wipe and the end', () => {
     expect(c.coins).toBe(coins);
     expect(JSON.stringify(c.inventory)).toBe(bag);
     expect(readRun(c).seeds).toBe(0);
-  });
-
-  it('a full bag at the boss’s fall: the crop seeds land in the zone, not in the farm', () => {
-    const party = makeParty(['magiker'], { seed: 6 });
-    startRun(party.world, party.players[0]!.id, { seed: 6 }, party.ctx());
-    const { run, inst } = atTheBoss(party);
-    const p = party.players[0]!;
-    const ids = Object.keys(ITEMS).filter((k) => !k.endsWith('_seed'));
-    p.inventory = p.inventory.map((_, i) => ({ item: ids[i]!, count: 1 }));
-    const farmDrops = Object.keys(party.world.drops).length;
-    const out: Change[] = [];
-    out.push(...castSpell(party.world, p.id, 'eldboll', inst.boss, party.ctx()));
-    for (let i = 0; i < 4; i++) {
-      party.now += 50;
-      out.push(...tick(party.world, 50, party.ctx()));
-    }
-    expect(run.phase).toBe('victory');
-    const drop = out.find((c) => c.t === 'drop' && c.drop?.item.endsWith('_seed'));
-    expect(drop).toBeTruthy();
-    expect(drop!.t === 'drop' && drop!.area).toBe(run.key);
-    expect(Object.values(party.world.areas![run.key]!.drops).some((d) => d.item.endsWith('_seed'))).toBe(true);
-    expect(Object.keys(party.world.drops)).toHaveLength(farmDrops);
   });
 
   it('f6 pays its five extra sagafrön to the planter only, not to the whole party', () => {

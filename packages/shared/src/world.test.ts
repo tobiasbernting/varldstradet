@@ -49,7 +49,6 @@ import {
   setOnline,
   themeOfEntrance,
   tileIndex,
-  travel,
   wildSpeciesOf,
   LANDMARKS,
   LANDMARK_IDS,
@@ -67,6 +66,7 @@ import {
   type SimCtx,
   type WorldState,
 } from './index.ts';
+import { travel } from './testtravel.ts';
 
 const ctx = (seed = 7): SimCtx => ({ season: 'none', rnd: mulberry32(seed), now: 1_000_000 });
 const toasts = (ch: Change[]): string[] => ch.filter((c) => c.t === 'toast').map((c) => (c as { text: string }).text);
@@ -318,21 +318,6 @@ describe('grottorna', () => {
     expect(areaOf(world, p)).toBe(cave);
   });
 
-  it('crystals and ore grow back over the days, never beyond what the cave had', () => {
-    const c = generateCave('g:test#1', 'kristall', 'a:9,9', { x: 1, y: 1 });
-    const base = c.renew!.crystal ?? 0;
-    expect(base).toBeGreaterThan(0);
-    const crystals = Object.values(c.objects).filter((o) => o.kind === 'crystal');
-    for (const o of crystals) {
-      delete c.objects[o.id];
-      for (let dy = 0; dy < 1; dy++) delete c.occupancy[`${o.x},${o.y + dy}`];
-    }
-    const { world } = setup();
-    world.areas = { 'g:test#1': c };
-    for (let d = 0; d < 6; d++) newDay(world, ctx(d));
-    const back = Object.values(c.objects).filter((o) => o.kind === 'crystal').length;
-    expect(back).toBe(base);
-  });
 });
 
 describe('skatter och älvor', () => {
@@ -372,31 +357,6 @@ describe('skatter och älvor', () => {
 });
 
 describe('rymden', () => {
-  it('the rocket at the space base flies to the moon and back', () => {
-    const { world, p } = setup();
-    const base = getArea(world, SPACEPORT_KEY)!;
-    expect(base.biome).toBe('rymdbas');
-    const rocket = Object.values(base.objects).find((o) => o.kind === 'rocket')!;
-    expect(rocket.x).toBe(BASE_ROCKET.x);
-    const front = rocketFront(rocket);
-    goTo(world, p, SPACEPORT_KEY, front.x, front.y);
-    expect(isSolidForPlayer(base, front.x, front.y)).toBe(false);
-    const up = performAction(areaOf(world, p), p.id, rocket.x, rocket.y + 2, ctx());
-    expect(up.some((c) => c.t === 'ride' && c.via === 'rocket')).toBe(true);
-    expect(p.area).toBe(MOON_KEY);
-    expect(p.stats.moon).toBe(1);
-    expect(p.achievements).toContain('moon_1');
-    const moon = areaOf(world, p);
-    expect(moon.biome).toBe('mane');
-    // walking off the moon is not possible: no openings, only the sky
-    expect(travel(world, p.id, 'n')).toEqual([]);
-    expect(moon.terrain[tileIndex(moon, 0, 0)]).toBe('space');
-    // home again
-    const mr = Object.values(moon.objects).find((o) => o.kind === 'rocket')!;
-    performAction(areaOf(world, p), p.id, mr.x, mr.y + 2, ctx());
-    expect(p.area).toBe(SPACEPORT_KEY);
-  });
-
   it('the moon has aliens, cheese, star crystals, a UFO with a chest and a cave, all reachable', () => {
     const m = generateMoon();
     const kinds = new Set(Object.values(m.objects).map((o) => o.kind));
@@ -432,26 +392,6 @@ describe('upptäckter och drakar', () => {
     expect(p.stars).toBe(stars + 2);
   });
 
-  it('a dragon egg put down hatches the next morning into a dragon that follows its owner', () => {
-    const { world, p } = setup();
-    hold(p, 'dragon_egg');
-    p.x = 20 * TILE + 8;
-    p.y = 20 * TILE + 8;
-    for (const [x, y] of [[21, 20]] as const) {
-      const o = objectAt(world, x, y);
-      if (o) delete world.objects[o.id], delete world.occupancy[`${x},${y}`];
-      world.terrain[tileIndex(world, x, y)] = 'grass';
-    }
-    performAction(areaOf(world, p), p.id, 21, 20, ctx());
-    const egg = objectAt(world, 21, 20);
-    expect(egg?.kind).toBe('dragon_egg');
-    const ch = newDay(world, ctx());
-    expect(objectAt(world, 21, 20)).toBeUndefined();
-    const dragon = Object.values(world.animals).find((a) => a.species === 'dragon')!;
-    expect(dragon.owner).toBe(p.id);
-    expect(ch.some((c) => c.t === 'open' && c.ui === 'nameAnimal' && c.id === dragon.id)).toBe(true);
-    expect(p.achievements).toContain('dragon_1');
-  });
 });
 
 describe('gamla kartor', () => {

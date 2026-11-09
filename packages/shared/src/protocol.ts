@@ -29,9 +29,7 @@ export type Change =
   | { t: 'player'; id: string; player: PlayerState | null }
   | { t: 'day'; day: number }
   | { t: 'toast'; to: string | null; text: string }
-  | { t: 'open'; to: string; ui: 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'nameAnimal' | 'npc' | 'cook' | 'paint' | 'pizzeria' | 'travel' | 'saga' | 'sagaClass' | 'run' | 'seed'; id?: number; npc?: string }
-  /** Private: the rider boards a bus, a train or the rocket (the client plays the trip). */
-  | { t: 'ride'; to: string; via: 'bus' | 'train' | 'rocket'; place: string }
+  | { t: 'open'; to: string; ui: 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'nameAnimal' | 'npc' | 'cook' | 'paint' | 'pizzeria' | 'travel' | 'saga' | 'sagaClass' | 'run' | 'seed' | 'kennel'; id?: number; npc?: string }
   | { t: 'quests'; quests: Quest[] }
   | { t: 'fx'; x: number; y: number; kind: 'heart' | 'sparkle' | 'water' | 'chop' | 'poof' | 'coin' | 'hit' | 'arrow' | 'rocket' | 'boom' | 'splash' | 'lasso' | 'honk'; area?: string; from?: { x: number; y: number } }
   /** 2D game: someone said something. `old` marks history sent to a player who just came online. */
@@ -93,12 +91,11 @@ export type ClientMsg =
   | { t: 'drop'; slot: number; qty: number }
   | { t: 'nameAnimal'; id: number; name: string }
   | { t: 'quest'; id: string }
-  | { t: 'travel'; dir: 'n' | 's' | 'e' | 'w' }
-  | { t: 'teleport'; to: string }
-  | { t: 'ride'; via: 'bus' | 'train'; to: string }
   | { t: 'paint'; pixels: string }
   /** 2D game: tell your pets and horses to stay, or whistle for them. */
   | { t: 'pets'; cmd: 'stay' | 'come' }
+  /** The lobby's kennel: take your first pet (free, once): a dog or a cat. */
+  | { t: 'pet'; a: 'adopt'; species: string }
   /** 2D game: a chat line to everyone. */
   | { t: 'chat'; text: string }
   /** Dungeons: cast a spell at a monster (animal id) or a friend (player id); left out, the server picks. */
@@ -111,13 +108,9 @@ export type ClientMsg =
   | { t: 'saga'; a: 'quest'; id: string }
   /** Gear: put a weapon, an offhand or an amulet from the bag on (null takes it off again, back into the bag). */
   | { t: 'saga'; a: 'equip'; slot: 'weapon' | 'offhand' | 'amulet'; item: string | null }
-  /** Hero mode: walk the world as your class (spells, weapon drawn, hero outfit), or as a farmer again. */
-  | { t: 'saga'; a: 'hero'; on: boolean }
   /** Smedjan at Smed-Stina: forge a piece one level up, or have her make a piece of the starter set. */
   | { t: 'saga'; a: 'forge'; item: string }
   | { t: 'saga'; a: 'craft'; item: string }
-  /** Jump to a family member, wherever they are. */
-  | { t: 'jump'; to: string }
   /** Röstprat: pick up (want voice) or hang up; make this device the room's speaker; move to a room of your own,
    * back to the automatic room, or into another player's room; a WebRTC signal to another speaker; speaking or not. */
   | { t: 'voice'; a: 'join' }

@@ -1041,7 +1041,7 @@ export class SagaUi {
   // ---- the quest tracker ----
 
   private trackerHidden(): boolean {
-    return !sagaStarted(myPlayer()) || document.body.classList.contains('saga-bossfight');
+    return !myPlayer() || document.body.classList.contains('saga-bossfight');
   }
 
   private renderTracker(): void {
@@ -1253,12 +1253,11 @@ export class SagaUi {
       act.append(take);
     } else {
       body.append(h('div', { class: 'saga-goal' }, h('b', null, `🎯 ${T.sagaGoal}: `), ch.goal));
-      if (!prog.cls) {
-        const way = h('button', null, T.sagaChooseWay);
-        onTap(way, () => this.open('class'));
-        act.append(way);
-      }
     }
+    // the four classes are picked (and changed between runs) with Völvan
+    const way = h('button', { class: prog.cls ? 'alt' : '' }, prog.cls ? `🔄 ${T.sagaChangeWay}` : T.sagaChooseWay);
+    onTap(way, () => this.open('class'));
+    if (this.line >= lines.length - 1) act.append(way);
     body.append(act);
   }
 
@@ -1358,12 +1357,6 @@ export class SagaUi {
       h('span', { class: 'hp' }, `❤️ ${fmt(T.sagaHealth, { hp: fighterMax(me, cls.id) })}`),
       h('span', { class: 'arm' }, `🛡️ ${fmt(T.sagaStatArmor, { n: Math.round(gs.armor * 100) })}`),
     );
-    const heroBtn = h('button', { class: `hero-toggle${heroOn(me) ? ' on' : ''}`, disabled: inSaga() }, heroOn(me) ? `🧑‍🌾 ${T.sagaFarmerMode}` : `${cls.emoji} ${T.sagaHeroMode}`);
-    onTap(heroBtn, () => {
-      if (inSaga()) return;
-      net.send({ t: 'saga', a: 'hero', on: !heroOn(me) });
-      SAGA_SFX.hero(!heroOn(me));
-    });
     const card = vars(
       h(
         'div',
@@ -1378,7 +1371,6 @@ export class SagaUi {
           h('span', { class: 'lvl' }, `⭐ ${fmt(T.sagaLevelOf, { n: span.level, max: MAX_LEVEL })}`),
           meter,
           totals,
-          h('div', { class: 'q-act' }, heroBtn),
         ),
       ),
       { '--c': cls.color },
@@ -1619,14 +1611,6 @@ export class SagaUi {
         h('img', { class: 'face', src: portraitUrl(p.appearance, p.outfit, 2) }),
         h('span', { class: 'name' }, `${c ? `${c.emoji} ` : ''}${p.name}${me ? ` (${T.sagaYou.toLowerCase()})` : ''}`, title ? h('span', { class: 'ttl' }, ` <${title}>`) : null, h('br'), h('span', { class: 'need' }, where)),
       );
-      if (!me && p.online) {
-        const b = h('button', { disabled: p.area === 'dungeon' || myPlayer()?.area === 'dungeon' }, T.familyJump);
-        onTap(b, () => {
-          net.send({ t: 'jump', to: p.id });
-          this.close();
-        });
-        row.append(b);
-      }
       rows.append(row);
     }
     body.append(rows);

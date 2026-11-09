@@ -1293,19 +1293,19 @@ export const SAGA_CHAPTERS: SagaChapter[] = [
       'Men ingen hjälte går ensam. Välj först din väg vid Kämpastenen här bredvid mig: Väktare, Helare, Krigare eller Magiker.',
     ],
     done: ['Bra! Nu har du en väg att gå. Lyssna noga, för nu börjar sagan.'],
-    goal: 'Välj klass vid Kämpastenen bredvid Völvan',
+    goal: 'Välj din väg vid Kämpastenen bredvid Völvan',
     reward: { coins: 20, stars: 1 },
   },
   {
     dungeon: 'draug',
     title: 'Solrunan',
     tell: [
-      'Den förste är Draugkungen Hrolf. Han har vaknat i sin krypta i skogen nordväst om gården.',
+      'Den förste är Draugkungen Hrolf. Han har vaknat i sin krypta under skogen.',
       'Han har stulit Solrunan, som håller vintern borta från Midgård. Redan blir nätterna kallare…',
-      'Gå till Draugkryptan och besegra honom. Ta med vänner om du kan, för kryptan är djup.',
+      'Gå genom färdporten och besegra honom. Ta med vänner om du kan, för kryptan är djup.',
     ],
     done: ['Solrunan! Känn så varm den är. Sommaren är räddad, tack vare dig.', 'Men jag ser mer i mina drömmar… is, och en jätte.'],
-    goal: 'Besegra Draugkungen i Draugkryptan (skogen nordväst om gården)',
+    goal: 'Besegra Draugkungen på en färd genom färdporten',
     reward: { coins: 100, stars: 2, item: 'solruna', title: 'Draugdödare' },
   },
   {
@@ -1317,7 +1317,7 @@ export const SAGA_CHAPTERS: SagaChapter[] = [
       'Solrunan har smält isporten, så nu kan du komma in. Akta dig för hans isfängelse, och hjälp varandra!',
     ],
     done: ['Källorna porlar igen! Rimtursen är besegrad.', 'Men nu brinner det i mina drömmar… Surt har vaknat.'],
-    goal: 'Besegra Rimtursen i Frostjättens borg (isen två kartor norr om gården)',
+    goal: 'Besegra Rimtursen i Frostjättens borg (färdporten)',
     reward: { coins: 150, stars: 3, title: 'Frostbrytare' },
   },
   {
@@ -1325,11 +1325,11 @@ export const SAGA_CHAPTERS: SagaChapter[] = [
     title: 'Surts svärd',
     tell: [
       'Den värste av dem alla är Surt, eldjätten från Muspelheim.',
-      'I vulkanen sydost om gården smider han ett svärd av eld. Med det vill han bränna Världsträdet!',
+      'I sin vulkan smider han ett svärd av eld. Med det vill han bränna Världsträdet!',
       'Det här blir ert svåraste äventyr. Gå tillsammans, och ge inte upp.',
     ],
-    done: ['Ni gjorde det! Surt är besegrad och Världsträdet är räddat!', 'Ta det här skottet av Yggdrasil. Plantera det hemma, så minns alla vad ni gjorde.'],
-    goal: 'Besegra Surt i Surts smedja (vulkanen sydost om gården)',
+    done: ['Ni gjorde det! Surt är besegrad och Världsträdet är räddat!', 'Ta det här skottet av Yggdrasil. Det växer vid färdporten, så minns alla vad ni gjorde.'],
+    goal: 'Besegra Surt i Surts smedja (färdporten)',
     reward: { coins: 300, stars: 5, item: 'yggdrasil', title: 'Världsträdets väktare' },
   },
   // Act II, Lokes list
@@ -1337,40 +1337,37 @@ export const SAGA_CHAPTERS: SagaChapter[] = [
     dungeon: null,
     title: 'Viskningar i mörkret',
     tell: [
-      'Du är tillbaka! Jag har inte sovit gott. Om nätterna viskar Yggdrasils skott hemma hos er.',
+      'Du är tillbaka! Jag har inte sovit gott. Om nätterna viskar Yggdrasils skott vid färdporten.',
       'I drömmen hörde jag ett skratt. Det var Loke, den listige! Det var han som släppte loss Draugkungen, Rimtursen och Surt.',
-      'Nu vandrar hans tjänare runt i Midgård. Tryck på hjälteknappen (🧑‍🌾 → din klass) så bär du dina vapen och besvärjelser ute i världen.',
-      'Jaga bort åtta vandrardraugar i skogen, så ska jag se vad mer drömmen vill säga.',
+      'Nu vandrar hans tjänare runt i Midgård. Men hjältar som ni stoppar dem, en färd i taget genom färdporten.',
+      'Lyssna på mig, så ska jag berätta vad drömmen vill säga härnäst.',
     ],
     done: ['Bra gjort! Skogen är lugn igen. Ta den här runan, Vegvisir. Den hjälper dig att hitta hem.', 'Men drömmen fortsätter… Loke har öppnat porten till Helheim.'],
-    goal: 'Jaga bort 8 vandrardraugar i skogen (tryck på hjälteknappen först)',
-    field: { target: 'vandrardraug', count: 8, where: 'skog', text: 'Jaga bort 8 vandrardraugar i skogen' },
+    goal: 'Lyssna på Völvan och gå sedan vidare genom färdporten',
     reward: { coins: 60, stars: 2, item: 'amulet_vegvisir' },
   },
   {
     dungeon: 'hel',
     title: 'Hels port',
     tell: [
-      'Loke har en dotter som heter Hel. Hon är drottning i dödsriket Helheim, och porten dit ligger i träsket väster om gården.',
-      'Mosspökar har krupit upp ur träsket. Jaga bort sex av dem, och gå sedan ner till Hel.',
+      'Loke har en dotter som heter Hel. Hon är drottning i dödsriket Helheim, och porten dit ligger i ett träsk.',
+      'Mosspökar har krupit upp ur träsket. Gå genom färdporten och ta dig ner till Hel.',
       'Var inte rädda, Hel är inte så farlig som hon tror. Men akta er när hon drar er till sig!',
     ],
     done: ['Hel har gått tillbaka till sin tron och lovar att stanna där. Här är en lykta från Helheim.', 'Men Loke är inte klar. Jag hör hammarslag och dvärgsånger i mina drömmar…'],
-    goal: 'Jaga bort 6 mosspökar i träsket och besegra Hel i Helheim (träsket väster om gården)',
-    field: { target: 'mosspoke', count: 6, where: 'trask', text: 'Jaga bort 6 mosspökar i träsket väster om gården' },
+    goal: 'Besegra Hel i Helheim (färdporten)',
     reward: { coins: 150, stars: 3, item: 'hels_lykta', title: 'Helfarare' },
   },
   {
     dungeon: 'dvarg',
     title: 'Dvärgarnas guld',
     tell: [
-      'I bergen öster om byn ligger Svartalfheims gamla gruvor. Dvärgarna som bodde där flyttade för länge sedan.',
+      'I bergen ligger Svartalfheims gamla gruvor. Dvärgarna som bodde där flyttade för länge sedan.',
       'Nu har draken Fafner flyttat in, och Loke har lovat honom allt guld i världen. Till och med guldet i era fickor!',
-      'Jaga först bort sex gruvtroll i bergen. I gruvan finns tre guldplattor: tryck på alla tre, så öppnas dörren till drakens skattkammare.',
+      'I gruvan finns tre guldplattor: tryck på alla tre, så öppnas dörren till drakens skattkammare.',
     ],
     done: ['Fafner sover gott på en mycket mindre guldhög nu. Ta den här dvärgstatyn som tack!', 'Men vågorna har blivit så stora… Något väldigt långt rör sig i havet.'],
-    goal: 'Jaga bort 6 gruvtroll i bergen och besegra Fafner i Svartalfheims gruvor (bergen öster om byn)',
-    field: { target: 'gruvtroll', count: 6, where: 'berg', text: 'Jaga bort 6 gruvtroll i bergen öster om byn' },
+    goal: 'Besegra Fafner i Svartalfheims gruvor (färdporten)',
     reward: { coins: 180, stars: 3, item: 'dvargstaty', title: 'Dvärgavän' },
   },
   {
@@ -1379,11 +1376,10 @@ export const SAGA_CHAPTERS: SagaChapter[] = [
     tell: [
       'Vid stranden långt i väster har ett gammalt tempel stigit upp ur havet.',
       'Där bor Jörmungandr, Midgårdsormen, Lokes son. Han är så lång att han ligger runt hela världen!',
-      'Om han släpper sin svans skakar hela Midgård. Jaga bort sex sjödraugar på stranden, och gå sedan in i templet.',
+      'Om han släpper sin svans skakar hela Midgård. Gå in i templet genom färdporten.',
     ],
     done: ['Ormen har bitit sig i svansen igen, och havet är lugnt. Här är en tand han tappade.', 'Men nu drömmer alla så otäckt… Det kommer från Alvernas lund.'],
-    goal: 'Jaga bort 6 sjödraugar på stranden och besegra Jörmungandr i Havsormens tempel (stranden två kartor väster om gården)',
-    field: { target: 'sjodraug', count: 6, where: 'strand', text: 'Jaga bort 6 sjödraugar på stranden två kartor väster om gården' },
+    goal: 'Besegra Jörmungandr i Havsormens tempel (färdporten)',
     reward: { coins: 200, stars: 4, item: 'ormtand', title: 'Ormtämjare' },
   },
   {
@@ -1391,12 +1387,11 @@ export const SAGA_CHAPTERS: SagaChapter[] = [
     title: 'Skuggan över Alfheim',
     tell: [
       'Har du sovit dåligt på sistone? Det har alla. Det är Nattmaran!',
-      'Hon har tagit över Alvernas lund i svampskogen nordost om gården, och ljusalverna har slutat lysa.',
-      'Jaga bort sex skuggalver i svampskogen. Inne i lunden finns tre runplattor bland svamparna: tänd alla tre, så öppnas vägen.',
+      'Hon har tagit över Alvernas lund i svampskogen, och ljusalverna har slutat lysa.',
+      'Inne i lunden finns tre runplattor bland svamparna: tänd alla tre, så öppnas vägen.',
     ],
     done: ['Ljusalverna lyser igen, och i natt får alla sova gott. De skickar den här lyktan som tack.', 'Men nu ylar det i norr… Loke har släppt Fenrisulven fri!'],
-    goal: 'Jaga bort 6 skuggalver i svampskogen och besegra Nattmaran i Alvernas lund (svampskogen nordost om gården)',
-    field: { target: 'skuggalv', count: 6, where: 'svamp', text: 'Jaga bort 6 skuggalver i svampskogen nordost om gården' },
+    goal: 'Besegra Nattmaran i Alvernas lund (färdporten)',
     reward: { coins: 220, stars: 4, item: 'alvlykta', title: 'Ljusbärare' },
   },
   {
@@ -1404,12 +1399,11 @@ export const SAGA_CHAPTERS: SagaChapter[] = [
     title: 'Fenrisulven',
     tell: [
       'Fenrisulven är Lokes största barn. Gudarna band honom med Gleipner, ett band som är mjukt som silke men starkare än järn.',
-      'Nu har Loke slitit sönder bandet! Ulven bor i Fenrisklyftan, på isen två kartor norr om gården, en bit från Frostjättens borg.',
-      'Jaga bort sex isvargar på isen först. Sedan får ni binda Fenrisulven igen. Ta med alla ni kan!',
+      'Nu har Loke slitit sönder bandet! Ulven bor i Fenrisklyftan, på isen, en bit från Frostjättens borg.',
+      'Gå genom färdporten och bind Fenrisulven igen. Ta med alla ni kan!',
     ],
-    done: ['Fenrisulven är bunden igen, och han ser faktiskt ganska nöjd ut. Här är en länk från hans kedja.', 'Nu vet jag var Loke är. Han väntar på Bifrost, regnbågsbron vid rymdbasen.'],
-    goal: 'Jaga bort 6 isvargar på isen och besegra Fenrisulven i Fenrisklyftan (isen två kartor norr om gården)',
-    field: { target: 'isvarg', count: 6, where: 'is', text: 'Jaga bort 6 isvargar på isen två kartor norr om gården' },
+    done: ['Fenrisulven är bunden igen, och han ser faktiskt ganska nöjd ut. Här är en länk från hans kedja.', 'Nu vet jag var Loke är. Han väntar på Bifrost, regnbågsbron.'],
+    goal: 'Besegra Fenrisulven i Fenrisklyftan (färdporten)',
     reward: { coins: 260, stars: 5, item: 'fenrislanka', title: 'Ulvbindare' },
   },
   {
@@ -1417,7 +1411,7 @@ export const SAGA_CHAPTERS: SagaChapter[] = [
     title: 'Ragnarök',
     tell: [
       'Nu gäller det. Loke vill starta Ragnarök, slutet på alla världar, och han börjar på Bifrost.',
-      'Hans eldimpar springer runt vid vulkanen sydost om gården. Jaga bort sex av dem, och res sedan till rymdbasen söder om gården. Där går regnbågsbron upp mot himlen.',
+      'Regnbågsbron Bifrost går upp mot himlen, och du når den genom färdporten.',
       'Loke kan se ut som alla ni har besegrat. Men kom ihåg: det är bara lögner, och ni är riktiga hjältar!',
     ],
     done: [
@@ -1425,16 +1419,15 @@ export const SAGA_CHAPTERS: SagaChapter[] = [
       'Ta den här biten av Bifrost. Den lyser i alla regnbågens färger, precis som ni.',
       'Och Loke? Han sitter bunden med ett starkt rep och fnissar för sig själv. Han är fast… tills nästa gång.',
     ],
-    goal: 'Jaga bort 6 eldimpar vid vulkanen och besegra Loke på Bifrost (rymdbasen söder om gården)',
-    field: { target: 'eldimp', count: 6, where: 'vulkan', text: 'Jaga bort 6 eldimpar vid vulkanen sydost om gården' },
+    goal: 'Besegra Loke på Bifrost (färdporten)',
     reward: { coins: 500, stars: 8, item: 'bifrostbit', title: 'Ragnaröks hjälte' },
   },
 ];
 
-/** Völvan Sigrun, who tells the saga, stands by the Kämpastenen on the city square. */
+/** Völvan Sigrun, who tells the saga, stands by the Kämpastenen in the lobby (Gården). */
 export const VOLVA_ID = 'sigrun';
-export const VOLVA_SPOT = { x: 46, y: 30 };
-export const STONE_SPOT = { x: 47, y: 29 };
+export const VOLVA_SPOT = { x: 21, y: 15 };
+export const STONE_SPOT = { x: 22, y: 15 };
 
 /** The way into a dungeon out in the world: a stone arch 3 tiles wide and 2 high, walked into from below. */
 export const SAGA_PORTAL = { w: 3, h: 2 };

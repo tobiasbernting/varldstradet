@@ -20,7 +20,6 @@ import {
   setOnline,
   setWeather,
   talkNode,
-  teleport,
   tick,
   tileIndex,
   type Change,
@@ -33,6 +32,7 @@ import {
   voicePeers,
   type VoiceState,
 } from './index.ts';
+import { teleport } from './testtravel.ts';
 
 const ctx = (now = 1_000_000): SimCtx => ({ season: 'none', rnd: mulberry32(7), now });
 
@@ -95,23 +95,6 @@ describe('pets: stay and whistle', () => {
     expect(moved?.stay).toBeDefined();
   });
 
-  it('a whistled horse follows its owner around the farm, and stays when told', () => {
-    const { world, p } = setup();
-    const stall = addObject(world, 'stall', 30, 40)!;
-    const horse = addAnimal(world, 'horse', stall.id, 'Blixten');
-    horse.owner = p.id;
-    at(p, 20, 20);
-    callPets(world, p.id, 'come', ctx());
-    expect(horse.follow).toBe(true);
-    for (let i = 0; i < 400; i++) tick(world, 50, ctx());
-    expect(Math.hypot(horse.x - p.x, horse.y - p.y)).toBeLessThan(2 * TILE);
-    callPets(world, p.id, 'stay', ctx());
-    expect(horse.follow).toBeUndefined();
-    const spot = { x: horse.x, y: horse.y };
-    at(p, 26, 20);
-    for (let i = 0; i < 100; i++) tick(world, 50, ctx());
-    expect(Math.hypot(horse.x - spot.x, horse.y - spot.y)).toBeLessThan(3 * TILE);
-  });
 
   it('other players’ animals do not listen, and without pets you get a hint', () => {
     const { world, p } = setup();

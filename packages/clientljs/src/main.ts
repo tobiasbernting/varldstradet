@@ -1,4 +1,4 @@
-// Lilla Gården (LittleJS): the same server, HUD, menus, sounds and pixel art as the 2D game, with the world drawn by
+// Sagan om Världsträdet (LittleJS): the same server, HUD, menus, sounds and pixel art as the 2D game, with the world drawn by
 // LittleJS: light and shadow through the day, lamps at night, and things that sway, squash and pop.
 import './prefs.ts';
 import { T } from '@lilla-garden/shared';
@@ -129,7 +129,7 @@ window.addEventListener('keydown', (e) => {
     menus.toggle('inventory');
   } else if (e.key === 'f' || e.key === 'F') menus.toggle('emotes');
   else if (e.key === 'h' || e.key === 'H' || e.key === '?') menus.toggle('help');
-  else if (e.key === 'b' || e.key === 'B') menus.toggle('book');
+  else if (e.key === 'b' || e.key === 'B') document.dispatchEvent(new Event('lilla:journal'));
   else if (e.key === 'm' || e.key === 'M') hud.minimap.toggle();
   else if (/^[1-8]$/.test(e.key)) hud.select(Number(e.key) - 1);
 });
@@ -187,7 +187,7 @@ void engineInit(
       speedChecked = true;
       if (averageFPS < 45 && !forceQuality) {
         postProcess.enabled = false;
-        console.info(`Lilla Gården: ${Math.round(averageFPS)} fps, glow and tilt-shift turned off`);
+        console.info(`Sagan om Världsträdet: ${Math.round(averageFPS)} fps, glow and tilt-shift turned off`);
       }
     }
     if (on('glow') && postProcess?.enabled) {

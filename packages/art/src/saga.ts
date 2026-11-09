@@ -1856,6 +1856,72 @@ function bifrostArch(f: number): Px {
   return p;
 }
 
+
+// ---------------------------------------------------------------------------
+// The färdport in the lobby: the great arch every run starts under
+// ---------------------------------------------------------------------------
+
+const ARCHSTONE = pal('#4a4752', '#6f6c78', '#948f9c', '#b9b4c0', '#dedae6');
+const PORTGOLD = { outer: '#c0701a', mid: '#f0b030', core: '#fff0a0', light: '#ffe488' };
+
+/** A grand stone arch carved with runes, its doorway full of swirling golden light (two frames). */
+function fardportArch(f: number): Px {
+  const p = new Px(48, 56);
+  const g = PORTGOLD;
+  // steps and a stone footing
+  p.rect(0, 50, 48, 6, ARCHSTONE.b).rect(0, 50, 48, 1, ARCHSTONE.l2).rect(2, 53, 44, 1, ARCHSTONE.d).rect(0, 55, 48, 1, ARCHSTONE.d2);
+  for (const x of [8, 16, 24, 32, 40]) p.rect(x, 51, 1, 4, ARCHSTONE.d);
+  // two pillars and the round arch over them, built of blocks
+  paint(p, 3, 2, 42, 50, (x, y) => {
+    const dx = x + 0.5 - 24;
+    const dy = y + 0.5 - 22;
+    const r = dy < 0 ? Math.hypot(dx, dy) : Math.abs(dx);
+    if (r < 9.5 || r > 19) return null;
+    // block seams: rings of stones, each course offset
+    const course = Math.floor((r - 9.5) / 4.75);
+    const along = dy < 0 ? Math.atan2(dy, dx) * 10 : (y + course * 3) * 0.5;
+    const seam = Math.floor(along + course * 2.5) % 3 === 0 && Math.round(along * 4) % 4 === 0;
+    if (seam || Math.abs(r - 14.25) > 4.7) return ARCHSTONE.d;
+    const nx = (r - 14.25) / 4.75;
+    return tone(ARCHSTONE, 0.45 * light(dx < 0 ? -Math.abs(nx) : Math.abs(nx), dy < 0 ? -0.3 : 0.1, 0.8) + 0.5 + 0.3 * grain(x, y, 311));
+  });
+  // the keystone, with a gold sun on it
+  p.rect(21, 1, 6, 8, ARCHSTONE.l).rect(21, 1, 6, 1, ARCHSTONE.l2).rect(21, 8, 6, 1, ARCHSTONE.d).rect(21, 1, 1, 8, ARCHSTONE.l2).rect(26, 1, 1, 8, ARCHSTONE.d);
+  p.circle(24, 5, 2, '#f0b030').px(24, 5, '#fff0a0').px(24, 2, '#f0b030').px(24, 8, '#f0b030').px(21, 5, '#f0b030').px(27, 5, '#f0b030');
+  // runes on the pillars
+  const rune = (x: number, y: number, k: number) => {
+    const c = f && k % 2 ? '#fff0a0' : '#f0b030';
+    p.rect(x, y, 1, 4, c);
+    if (k % 3 === 0) p.px(x + 1, y + 1, c).px(x + 1, y + 3, c);
+    else if (k % 3 === 1) p.px(x - 1, y + 1, c).px(x + 1, y + 2, c);
+    else p.px(x + 1, y, c).px(x - 1, y + 3, c);
+  };
+  [0, 1, 2].forEach((k) => {
+    rune(6, 28 + k * 7, k);
+    rune(41, 28 + k * 7, k + 1);
+  });
+  // the doorway: golden light rising from the ground, in soft arcs that shift a step each frame
+  paint(p, 14, 12, 20, 40, (x, y) => {
+    const dx = x + 0.5 - 24;
+    const dy = y + 0.5 - 22;
+    if (Math.abs(dx) >= 9.5 || (dy < 0 && Math.hypot(dx, dy) >= 9.5)) return null;
+    const r = Math.hypot(dx * 0.7, y + 0.5 - 60);
+    const band = ((Math.floor((r + f * 1.6) / 2.6) % 3) + 3) % 3;
+    const fade = (y - 12) / 38;
+    if (fade < 0.25 && (x + y) % 2 === 0) return g.outer;
+    return band === 0 ? g.core : band === 1 ? g.mid : g.light;
+  });
+  for (const [x, y] of (f ? [[19, 22], [28, 32], [23, 42]] : [[27, 20], [20, 35], [25, 45]]) as [number, number][]) p.px(x, y, '#ffffff');
+  // moss at the foot
+  for (const [x, y] of [[4, 49], [5, 49], [6, 48], [41, 49], [42, 48], [43, 49]] as const) p.px(x, y, '#4a8a3a');
+  p.outline(OUTLINE);
+  halo(p, 24, 40, 14, g.light, f ? 0.3 : 0.24);
+  halo(p, 24, 5, 7, g.light, 0.3);
+  twinkle(p, f ? 3 : 44, f ? 10 : 6, '#fff3b0');
+  twinkle(p, f ? 43 : 4, f ? 36 : 40, '#ffffff');
+  return p;
+}
+
 const PORTALS = [barrow, iceGate, forgeDoor, helGate, mineDoor, seaTemple, alvTree, fenrisCleft, bifrostArch];
 const sagaPortal = (look: number, f: number): Px => PORTALS[look % PORTALS.length]!(f);
 
@@ -3766,6 +3832,7 @@ export function drawSaga(set: SetArt): void {
   set('saga_chest', n(3, sagaChest), -4, -4);
   set('saga_portal', n(LOOKS * 2, (i) => sagaPortal(i % LOOKS, Math.floor(i / LOOKS))), 0, -24);
   set('saga_stone', n(4, kampasten), -4, -20, true);
+  set('fardport', n(2, fardportArch), 0, -24, true);
   set('saga_coffin', n(3, coffin), 0, -4);
   set('saga_bones', n(3, boneHeap));
   set('saga_candles', n(6, (i) => candles(i % 3, Math.floor(i / 3))), 0, -4);

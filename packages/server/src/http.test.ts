@@ -63,7 +63,7 @@ describe('the gate', () => {
     // röstprat needs the microphone on our own pages (a `microphone=()` blocks it whatever the player allowed)
     expect(page.headers.get('permissions-policy')).toContain('microphone=(self)');
     expect(page.headers.get('permissions-policy')).toContain('camera=()');
-    expect(await page.text()).toContain('privat gård');
+    expect(await page.text()).toContain('privat spel');
   });
 
   it('runs the whole invite → approval → play flow, and kicks the device when access is taken away', async () => {
