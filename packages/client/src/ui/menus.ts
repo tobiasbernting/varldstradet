@@ -116,7 +116,7 @@ export class Menus {
       if (c.ui === 'nameAnimal') this.open('nameAnimal', c.id);
       else if (c.ui === 'kennel') this.open('kennel');
       else if (c.ui === 'saga' || c.ui === 'sagaClass') return; // the saga's own windows (ui/saga.ts)
-      else if (c.ui === 'seed' || c.ui === 'run') return; // windows the server can open that this client has no UI for yet
+      else if (c.ui === 'seed' || c.ui === 'run') return; // the run's windows (ui/run.ts)
       else if (c.ui === 'npc') {
         this.npcId = c.npc ?? null;
         this.open('npc');

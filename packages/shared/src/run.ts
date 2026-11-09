@@ -19,8 +19,13 @@ import type { WeatherKind } from './types.ts';
 export const RUN_MAX_MS = 30 * 60_000;
 export const RUN_WARN_MS = 25 * 60_000;
 export const RUN_NUDGE_MS = 10 * 60_000;
-/** The vote on a runa ends after this long at the latest. */
-export const RUN_PICK_MS = 20_000;
+/**
+ * The vote on a runa ends after this long at the latest (time to read for a child: 60 s on the two easiest levels, 30 s on the
+ * others), and at once when every human has voted. `RUN_PICK_MS` is the longest.
+ */
+export const RUN_PICK_MS = 60_000;
+export const RUN_PICK_MS_HARD = 30_000;
+export const runPickMs = (level: number): number => (level <= 1 ? RUN_PICK_MS : RUN_PICK_MS_HARD);
 /** The route (GAME2.md section 2): ten rows of stops, the mid-boss on row 5, the boss on row 10; wings of rows 1–4, 5–8 and 9–10. */
 export const ROUTE_ROWS = 10;
 export const ROUTE_MINI_ROW = 5;

@@ -39,7 +39,7 @@ import {
   RUN_PARTY_MAX,
   RUN_PARTY_MAX_LONGHALL,
   companionClass,
-  RUN_PICK_MS,
+  runPickMs,
   RUN_SEEDS,
   RUN_VICTORY_MS,
   RUN_WARN_MS,
@@ -898,7 +898,7 @@ function tickRoute(farm: WorldState, run: RunState, ctx: SimCtx, late = false): 
 function makeOffer(farm: WorldState, run: RunState, ctx: SimCtx, avoid: string[]): NonNullable<RunState['offer']> {
   // the hired companion's class is not offered: a solo player sees their own class and the party-wide runor
   const classes = humans(farm, run).map((m) => m.saga!.cls!).filter(Boolean);
-  return { cards: offerRunor(ctx.rnd, classes, [...run.runor, ...avoid]), votes: {}, order: [], until: run.elapsed + RUN_PICK_MS, from: run.node };
+  return { cards: offerRunor(ctx.rnd, classes, [...run.runor, ...avoid]), votes: {}, order: [], until: run.elapsed + runPickMs(run.level), from: run.node };
 }
 
 /** A vote for a card. */

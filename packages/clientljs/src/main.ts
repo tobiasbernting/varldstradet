@@ -38,6 +38,7 @@ import { Hud } from '@v1/ui/hud.ts';
 import { Menus } from '@v1/ui/menus.ts';
 import { Picker } from '@v1/ui/picker.ts';
 import { SagaUi } from '@v1/ui/saga.ts';
+import { RunUi } from '@v1/ui/run.ts';
 import { initSound, isMuted, setMuted } from '@v1/sound.ts';
 import { Chat, SocialButtons, petCommand, weatherChip } from '@v1/ui/social.ts';
 import { VoiceUi } from '@v1/ui/voice.ts';
@@ -92,13 +93,16 @@ const voice = new VoiceUi(hud.root);
 const social = new SocialButtons(hud.root, chat, voice);
 // Sagan om Världsträdet: the dungeon HUD, Kämpastenen, Völvan, the journal, loot and the family list
 const saga = new SagaUi(ui, hud.root, menus, social.el);
+// färderna: the arch window, the run's HUD, the cards of a runa, the summary and the sagaträd
+const run = new RunUi(ui, hud.root);
 /** Any window open: the world stops reading taps and keys. */
 function syncUiOpen(): void {
-  view.uiOpen = menus.isOpen() || saga.isOpen();
+  view.uiOpen = menus.isOpen() || saga.isOpen() || run.isOpen();
 }
 menus.onChange = syncUiOpen;
 saga.onChange = syncUiOpen;
-initGamepad({ ui, target: () => (started ? view : null), menus, windows: [menus, saga], hud });
+run.onChange = syncUiOpen;
+initGamepad({ ui, target: () => (started ? view : null), menus, windows: [menus, saga, run], hud });
 
 const status = h('div', { class: 'status', style: { display: 'none' } }, T.disconnected);
 ui.append(status);
@@ -112,6 +116,7 @@ window.addEventListener('keydown', (e) => {
   if (!started) return;
   if (e.target instanceof HTMLInputElement) return;
   // in a dungeon 1–5 are spells and a potion and Tab picks a monster; the saga's windows take their keys
+  if (run.key(e)) return;
   if (saga.key(e)) return;
   if ((e.key === 'Enter' || e.key === 't' || e.key === 'T') && !menus.isOpen()) {
     e.preventDefault();
