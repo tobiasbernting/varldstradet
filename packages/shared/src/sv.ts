@@ -1192,10 +1192,16 @@ export const T = {
   runEndedSeeds: 'Sagafrön',
   runEndedRunor: 'Runor',
   runEndedSpirit: 'Sagoandar använda',
-  runLevelLatt: 'Lätt',
-  runLevelLattText: 'Snällare monster. Alla reser sig igen om ni faller.',
-  runLevelVanlig: 'Vanlig',
-  runLevelVanligText: 'Som vanligt. En Sagoande hjälper er en gång.',
+  /** The five levels of a run, by level 0..4 (`RUN_LEVEL_IDS` in run.ts): the name, one line for a kid and a picture. */
+  runLevelName: ['Mycket lätt', 'Lätt', 'Medel', 'Svår', 'Extrem'] as readonly string[],
+  runLevelBlurb: [
+    'För de minsta. Svaga monster, lång tid att hinna undan, och ni reser er alltid igen.',
+    'Snällare monster. Alla reser sig igen om ni faller.',
+    'Som vanligt. En Sagoande hjälper er en gång.',
+    'Starkare monster och ett särdrag. Mer sagafrön och bättre fynd.',
+    'Ingen Sagoande. Två särdrag. Mest sagafrön och bästa fynden.',
+  ] as readonly string[],
+  runLevelIcon: ['emoji:🐣', 'emoji:🌱', 'emoji:⚔️', 'emoji:🔥', 'emoji:💀'] as readonly string[],
   runPartyTitle: 'Med på färden',
   treeTitle: 'Sagaträdet',
   treePlant: 'Plantera',
@@ -1834,8 +1840,11 @@ export const TREE_TEXT: Record<string, string> = {
 };
 export const BRANCH_NAMES: Record<string, string> = { hjalte: 'Hjälten', gemenskap: 'Gemenskapen', gard: 'Gården' };
 
-export const MODIFIER_NAMES: Record<string, string> = { fler: 'Fler monster', segare: 'Segare monster', harda: 'Hårda slag', vakten: 'Vakten', snabba: 'Snabba fötter', dimma: 'Dimma' };
+export const MODIFIER_NAMES: Record<string, string> = { stalhud: 'Stålhud', stormig: 'Stormig', starkande: 'Stärkande', jakten: 'Jakten', fler: 'Fler monster', segare: 'Segare monster', harda: 'Hårda slag', vakten: 'Vakten', snabba: 'Snabba fötter', dimma: 'Dimma' };
+/** A picture for each särdrag (and replay modifier) of `RunSnap.modifiers`. */
+export const MODIFIER_ICON: Record<string, string> = { stalhud: 'emoji:🛡️', stormig: 'emoji:⛈️', starkande: 'emoji:💪', jakten: 'emoji:😡', fler: 'emoji:👥', segare: 'emoji:🪨', harda: 'emoji:💥', vakten: 'emoji:🗝️', snabba: 'emoji:👁️', dimma: 'emoji:🌫️' };
 export const MODIFIER_TEXT: Record<string, string> = {
+  stalhud: 'Flockarna tål 20 % mer', stormig: 'Bossar tål 20 % mer och slår 10 % hårdare', starkande: 'När en i flocken faller blir de andra starkare', jakten: 'Ett monster med lite hälsa kvar blir snabbare och argare',
   fler: 'En till i varje flock', segare: 'Monstren tål 25 % mer', harda: 'Monstren slår 20 % hårdare', vakten: 'En mellanboss vaktar vägen', snabba: 'Monstren ser dig på längre håll', dimma: 'Dimma, och monstren ger inte upp',
 };
 

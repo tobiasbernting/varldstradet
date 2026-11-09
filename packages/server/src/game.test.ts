@@ -442,7 +442,7 @@ describe('runs over the socket', () => {
     await game.stop();
   });
 
-  it('a run start carries the level: 0 is Lätt, nothing is Vanlig, and a level that is not 0 or 1 starts nothing', async () => {
+  it('a run start carries the level: 1 is Lätt, nothing is Medel, and a level that is not 0 to 4 starts nothing', async () => {
     const game = new Game(new MemoryStore(), { autoStart: false });
     await game.start();
     const a = game.createPlayer('Astrid', look)!;
@@ -458,11 +458,11 @@ describe('runs over the socket', () => {
     h({ t: 'run', a: 'start', level: '0' as unknown as 0 });
     expect(runOf(game.world)).toBeUndefined();
     expect(changesOf(l).some((c) => c.t === 'toast' && c.text === RUN_T.badLevel)).toBe(true);
-    h({ t: 'run', a: 'start', level: 0 });
+    h({ t: 'run', a: 'start', level: 1 });
     const run = runOf(game.world)!;
-    expect(run.level).toBe(0);
+    expect(run.level).toBe(1);
     expect(run.spirit).toBe(3);
-    expect(changesOf(l).some((c) => c.t === 'run' && c.ev === 'state' && c.run?.level === 0 && c.run.spirit === 3)).toBe(true);
+    expect(changesOf(l).some((c) => c.t === 'run' && c.ev === 'state' && c.run?.level === 1 && c.run.spirit === 3)).toBe(true);
   });
 
   it('a run with one player (no longhouse needed) has a companion that is no character: not listed, not counted, gone afterwards', async () => {

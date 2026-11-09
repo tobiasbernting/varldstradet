@@ -98,6 +98,8 @@ export const DOWN_MS = 10_000;
 export const WIPE_MS = 4_000;
 /** Health a fighter has after the Sagoandan of a run (a fraction of the maximum; GAME2.md section 4.5). */
 export const SAGOANDAN_HP = 0.5;
+/** The monsters' speed and attack rate when a `jakten` monster is below a quarter health. */
+export const ENRAGE = { below: 0.25, speed: 1.4, rate: 1.4 } as const;
 /** Out of a fight for this long, health comes back by itself (much faster by a rest stone). */
 export const CALM_MS = 5_000;
 export const REST_RADIUS = 3;
@@ -1964,6 +1966,8 @@ export interface SagaMob {
   tauntUntil?: number;
   stunUntil?: number;
   slowUntil?: number;
+  /** Stärkande: how many of its pack have fallen. */
+  fallen?: number;
   atkAt: number;
   /** An ice block: the player frozen inside, and when it melts by itself. */
   holds?: string;
@@ -2128,6 +2132,13 @@ export interface SagaRunLink {
   warnMul?: number;
   /** Lätt: 0.6 for everything the boss calls in (phase adds, summons, the ice and web blocks); left out on Vanlig. */
   levelHp?: number;
+  /** Särdrag (levels Svår and Extrem): bosses hit this much harder; a monster below a quarter health is faster; the others of a pack hit this much harder per fallen member. */
+  bossDmg?: number;
+  enrage?: boolean;
+  grow?: number;
+  /** Loot (levels): the chance of a chest's rare finds times this, and the extra weight of a rarer piece of gear per rarity step. */
+  lootRare?: number;
+  lootRank?: number;
   /**
    * The Sagoandan: free "everyone gets up" on a wipe. `spirit` is how many are left (the star on the HUD); `soft` (Lätt)
    * means a wipe never ends the run, so with none left everyone still gets up. `revive` is set while a wipe's pause is
