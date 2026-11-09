@@ -119,17 +119,25 @@ function horse(p: Px, f: number): void {
 function dog(p: Px, f: number): void {
   const c = '#c8924a';
   const d = shade(c, 0.75);
-  p.ellipse(1, 4, 11, 7, c).rect(10, 2, 5, 6, c).rect(12, 1, 3, 2, d).rect(9, 1, 2, 4, d).px(13, 4, OUTLINE).px(15, 6, OUTLINE);
-  p.rect(0, 2, 2, 4, d).px(1, 1, d); // tail
-  p.rect(2 + f, 10, 2, 4, c).rect(5, 10, 2, 4, d).rect(8, 10, 2, 4, c).rect(10 - f, 10, 2, 4, d);
+  // the head and body, and an ear that flaps and a tail that wags between the frames
+  p.ellipse(1, 4, 11, 7, c).rect(10, 2, 5, 6, c).rect(12, 1, 3, 2, d).rect(9, 1 + f, 2, 4, d).px(13, 4, OUTLINE).px(15, 6, OUTLINE);
+  if (f) p.rect(0, 3, 2, 4, d).px(0, 2, d);
+  else p.rect(0, 2, 2, 4, d).px(1, 1, d).px(0, 1, d);
+  // trotting: diagonal pairs of legs, the pair in the air one pixel short
+  const [bk, fk] = f ? [3, 8] : [1, 10]; // legs spread out on one frame, gathered under the body on the other
+  p.rect(bk, 10, 2, f ? 4 : 3, c).rect(bk + 3, 10, 2, f ? 3 : 4, d).rect(fk, 10, 2, f ? 4 : 3, c).rect(fk + 2, 10, 2, f ? 3 : 4, d);
   p.rect(4, 7, 4, 3, '#f0e0c0');
 }
 function cat(p: Px, f: number): void {
   const c = '#7a7a7a';
   const d = shade(c, 0.7);
   p.ellipse(1, 4, 10, 6, c).rect(9, 2, 5, 5, c).rect(9, 0, 2, 2, c).rect(12, 0, 2, 2, c).px(11, 3, '#9ad04a').px(13, 3, '#9ad04a').px(12, 5, '#ffb0c8');
-  p.rect(0, 1, 2, 2, c).rect(0, 2, 1, 4, c); // tail up
-  p.rect(2 + f, 9, 2, 3, d).rect(5, 9, 2, 3, c).rect(8 - f, 9, 2, 3, d).rect(10, 9, 2, 3, c);
+  // an ear twitches and the tail swishes from up to a curl
+  if (f) p.rect(12, 0, 2, 1, d);
+  if (f) p.rect(0, 2, 2, 2, c).rect(0, 1, 1, 2, c).px(1, 1, c);
+  else p.rect(0, 1, 2, 2, c).rect(0, 2, 1, 4, c);
+  const [bk, fk] = f ? [3, 8] : [1, 10];
+  p.rect(bk, 9, 2, f ? 3 : 2, d).rect(bk + 3, 9, 2, f ? 2 : 3, c).rect(fk, 9, 2, f ? 3 : 2, d).rect(fk + 2, 9, 2, f ? 2 : 3, c);
   for (let x = 3; x < 9; x += 2) p.rect(x, 5, 1, 2, d);
 }
 

@@ -741,6 +741,7 @@ export class View implements HudTarget {
         break;
       }
       case 'spell': {
+        if (typeof c.by === 'number' && c.spell.startsWith('pet_')) this.petCue.set(c.by, c.spell);
         // a hero swings their weapon (or staff) with every spell, like the ✋ button
         if (typeof c.by !== 'string' || c.area !== this.area || c.spell.startsWith('cast_') || c.spell.startsWith('land_') || c.spell === 'potion') break;
         const a = this.players.get(c.by);
@@ -1608,14 +1609,67 @@ export class View implements HudTarget {
       const hop = rider ? 0 : this.hopOf(a);
       const w = s.w * (1 + a.squash * 0.6) * turnScale(a.flip);
       const h = s.h * (1 - a.squash * 0.6);
-      // a pet in a fight: a little lunge when it acts, half see-through while the lodjur hides, shaking when it is scared
-      if (an.petKind && an.pf) {
-        const since = serverNow() - (an.pf.actAt ?? 0);
-        const act = since >= 0 && since < 380 ? Math.sin((since / 380) * Math.PI) : 0;
-        const side = a.flip < 0 ? -1 : 1;
-        const shake = an.pf.st === 'scared' ? Math.sin(this.t * 45) * 0.9 : 0;
-        const tint = an.pf.st === 'hidden' ? alpha(0.4) : an.pf.st === 'scared' ? rgba(0.72, 0.82, 1, 1) : undefined;
-        q.push(a.y + 4, s, a.x + shake + side * act * 3, a.y + 4 - hop - h / 2 - act * 4, w, h, side * act * 0.32, tint);
+      // a pet: a small bounce in its step, and in a fight a pose when it acts that reads at sprite size, by what it does:
+      // bite and ram lunge, pounce leaps, purr hops and floats a heart, guard rears up, howl lifts its nose, peck dips, dig dips and throws dirt
+      if (an.petKind) {
+        const bob = a.wasMoving && Math.floor(a.walk * 5) % 2 === 1 ? 1 : 0;
+        let dx = 0;
+        let dy = -bob;
+        let ang = 0;
+        let sw = w;
+        let sh = h;
+        let tint: ReturnType<typeof rgba> | undefined;
+        if (an.pf) {
+          const since = serverNow() - (an.pf.actAt ?? 0);
+          const act = since >= 0 && since < 380 ? Math.sin((since / 380) * Math.PI) : 0;
+          const side = a.flip < 0 ? -1 : 1;
+          const cue = act > 0 ? this.petCue.get(id) : undefined;
+          switch (cue) {
+            case 'pet_pounce':
+              dx = side * act * 7;
+              dy -= act * 9;
+              ang = side * act * 0.5;
+              break;
+            case 'pet_purr':
+              dy -= act * 3;
+              this.petHeart(q, a.x - side * 1, a.y + 4 - hop - sh - 3 - act * 5, act);
+              break;
+            case 'pet_roar':
+              sw = w * (1 + 0.22 * act);
+              sh = h * (1 + 0.3 * act);
+              ang = -side * act * 0.35;
+              break;
+            case 'pet_howl':
+              ang = -side * act * 0.55;
+              dy -= act * 2;
+              break;
+            case 'pet_mark':
+              ang = side * act * 0.55;
+              dy += act;
+              break;
+            case 'pet_dig':
+              ang = side * act * 0.45;
+              dy += act;
+              dx = Math.sin(this.t * 50) * act * 0.7;
+              this.petDirt(q, a.x + side * 7, a.y + 4, act);
+              break;
+            case 'pet_ram':
+              dx = side * act * 6;
+              ang = side * act * 0.25;
+              break;
+            case undefined:
+              break;
+            default:
+              // pet_bite and anything new: a lunge
+              dx = side * act * 3;
+              dy -= act * 4;
+              ang = side * act * 0.32;
+          }
+          const shake = an.pf.st === 'scared' ? Math.sin(this.t * 45) * 0.9 : 0;
+          dx += shake;
+          tint = an.pf.st === 'hidden' ? alpha(0.4) : an.pf.st === 'scared' ? rgba(0.72, 0.82, 1, 1) : undefined;
+        }
+        q.push(a.y + 4, s, a.x + dx, a.y + 4 - hop - sh / 2 + dy, sw, sh, ang, tint);
         continue;
       }
       q.push(a.y + 4, s, a.x, a.y + 4 - hop - h / 2, w, h);
@@ -1716,6 +1770,24 @@ export class View implements HudTarget {
   }
 
   /** The players in sight that wear looks, for the effects (the others cost nothing). */
+  /** What a pet did last (its spell name), to pose it: set from the server's spell changes. */
+  private petCue = new Map<number, string>();
+
+  /** A little pixel heart that floats up from a purring pet. */
+  private petHeart(q: DrawQueue, x: number, y: number, k: number): void {
+    const cells: [number, number][] = [[0, 0], [2, 0], [-1, 1], [0, 1], [1, 1], [2, 1], [3, 1], [0, 2], [1, 2], [2, 2], [1, 3]];
+    const c = rgba(1, 0.42, 0.55, Math.min(1, k * 1.6));
+    for (const [cx, cy] of cells) q.push(9500, this.art.white, x + cx - 1, y + cy, 1, 1, 0, c);
+  }
+
+  /** Dirt thrown up where a fox digs. */
+  private petDirt(q: DrawQueue, x: number, y: number, k: number): void {
+    for (let i = 0; i < 4; i++) {
+      const u = (this.t * 9 + i * 0.37) % 1;
+      q.push(9500, this.art.white, x + (i - 1.5) * 2.2, y - 2 - Math.sin(u * Math.PI) * 6 * k, 1, 1, 0, rgba(0.55, 0.38, 0.2, k));
+    }
+  }
+
   private fxActors(world: WorldState): FxActor[] {
     const out: FxActor[] = [];
     const [vx, vy, vw, vh] = this.viewRect();

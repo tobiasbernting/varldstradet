@@ -71,21 +71,22 @@ function pet_wolf(p: Px, f: number): void {
 }
 
 function pet_lynx(p: Px, f: number): void {
-  // a young lynx: black-tipped tufted ears, a dark-striped face, white chest, bold spots, a stubby black-tipped tail, big paws
-  const fur = pal('#5a3a1c', '#7c5628', '#a87838', '#cc9c58', '#e8c488');
+  // a young lynx: a long low body, a head held up on its own with black-tipped tufted ears, a striped face, white chest, spots, a stubby black-tipped tail, big white paws
+  const fur = pal('#4a2c10', '#6e4a1e', '#a87838', '#d4a460', '#f0cc90');
   const white = '#f6ecd8';
-  const [b, fr] = stride(f, 3, 11);
-  p.rect(b, 8, 3, 5, fur.d).rect(b + 3, 8, 2, 5, fur.b).rect(b - 1, 12, 4, 2, white);
-  p.rect(fr - 2, 8, 2, 5, fur.d).rect(fr, 8, 3, 5, fur.b).rect(fr, 12, 4, 2, white);
-  lump(p, 1, 3, 12, 6, fur, 0.2, 221, 0.3);
-  p.rect(0, 4, 2, 3, fur.b).rect(0, 6, 2, 1, K); // short tail with a black tip
-  for (const [x, y] of [[3, 4], [6, 4], [9, 5], [4, 6], [7, 7], [11, 6]] as const) p.rect(x, y, 2, 1, fur.d2);
-  p.rect(4, 8, 6, 1, white); // pale belly
-  lump(p, 10, 1, 8, 8, fur, 0.15, 222, 0.35);
+  const [b, fr] = stride(f, 2, 11, 2);
+  // four legs with air between them: the far ones dark, the near ones lighter, all with white paws
+  for (const [x, c] of [[b, fur.d], [b + 4, fur.b], [fr - 3, fur.d], [fr + 1, fur.b]] as const) p.rect(x, 8, 2, 4, c).rect(x, 12, 3, 1, white);
+  lump(p, 1, 4, 12, 6, fur, 0.2, 221, 0.3); // body
+  p.rect(0, 5, 2, 3, fur.b).rect(0, 7, 2, 1, K); // short tail with a black tip
+  for (const [x, y] of [[3, 5], [6, 4], [9, 5], [4, 7], [7, 7]] as const) p.rect(x, y, 2, 1, fur.d2); // bold spots
+  p.rect(4, 9, 6, 1, white); // pale belly
+  p.rect(10, 6, 2, 3, fur.d2); // a shadow where the head sits on the body, so head and body read as two parts
+  lump(p, 11, 1, 7, 7, fur, 0.15, 222, 0.35); // head
   p.rect(11, 0, 2, 3, fur.b).px(11, 0, K).px(12, 0, K).px(12, 1, '#e8a0a8'); // tufted ears, black tips
   p.rect(15, 0, 2, 3, fur.d).px(15, 0, K).px(16, 0, K);
-  p.rect(10, 6, 2, 3, white).rect(16, 6, 2, 3, white); // cheek ruffs
-  p.rect(10, 5, 2, 1, fur.d2).rect(10, 7, 1, 1, K); // dark face stripes
+  p.rect(11, 6, 2, 2, white).rect(16, 6, 2, 2, white); // cheek ruffs
+  p.rect(12, 5, 6, 1, fur.d2); // a dark stripe across the face
   p.rect(14, 5, 3, 3, white).rect(16, 5, 1, 1, '#e87890').px(15, 7, K); // muzzle, nose and mouth
   p.rect(12, 3, 3, 2, '#f0d84a').px(13, 3, K).px(13, 4, K); // a big yellow eye with a slit pupil
 }
@@ -110,16 +111,16 @@ function pet_goat(p: Px, f: number): void {
 }
 
 function pet_fox(p: Px, f: number): void {
-  // a fox kit: orange, a white chest and cheeks, black socks and a huge tail with a white tip
+  // a fox kit: orange, a white chest and cheeks, black socks you can count (four legs with a gap between them) and a huge tail with a white tip
   const fur = pal('#7a2a0a', '#b84a16', '#e07a2a', '#f09a52', '#ffc07a');
   const white = '#f8f2e4';
-  const [b, fr] = stride(f, 4, 11);
-  for (const [x, c] of [[b, fur.d], [b + 3, fur.b], [fr - 3, fur.d], [fr, fur.b]] as const) p.rect(x, 9, 2, 2, c).rect(x, 11, 2, 2, '#2e2018'); // orange legs, black socks
+  const [b, fr] = f ? [4, 11] : [1, 14]; // legs spread out on one frame, gathered under the body on the other
+  for (const [x, c] of [[b, fur.d], [b + 4, fur.b], [fr - 4, fur.d], [fr, fur.b]] as const) p.rect(x, 8, 2, 2, c).rect(x, 10, 2, 3, '#6a4630'); // orange legs, long dark-brown socks
   // the big tail, curling up behind
   lump(p, 0, 2, 7, 6, fur, 0.25, 241, 0.3);
   p.rect(0, 2, 3, 3, white).px(1, 5, white);
-  lump(p, 3, 4, 11, 6, fur, 0.2, 242, 0.3);
-  p.rect(10, 8, 4, 2, white); // chest
+  lump(p, 3, 3, 11, 6, fur, 0.2, 242, 0.3);
+  p.rect(10, 7, 4, 2, white); // chest
   lump(p, 11, 2, 7, 7, fur, 0.15, 243, 0.35);
   p.rect(11, 0, 2, 3, fur.b).rect(11, 1, 1, 2, K).rect(15, 0, 2, 3, fur.d).rect(15, 1, 1, 2, K); // ears
   p.rect(14, 6, 4, 2, white).px(17, 6, K); // muzzle and nose
