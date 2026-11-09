@@ -8,7 +8,17 @@ import {
   DUNGEON_IDS,
   RUNA_TEXT,
   RUN_JOIN_RADIUS,
-  RUN_LEVEL_INFO,
+  RUN_LEVEL_IDS,
+  RUN_LEVEL_DEFAULT,
+  AFFIX_IDS,
+  MODIFIER_ICON,
+  MODIFIER_NAMES,
+  MODIFIER_TEXT,
+  SPELLS,
+  T,
+  runPickMs,
+  isRunKey,
+  type RunLevel,
   RUN_PARTY_MAX,
   RUN_T,
   RUN_UI,
@@ -38,6 +48,7 @@ import {
   type RunSnap,
   type TreeNode,
 } from '@lilla-garden/shared';
+import { CLASS_IDS } from '@lilla-garden/shared';
 import { portraitUrl } from '@art/textures.ts';
 import { net } from '../net.ts';
 import { KIND_COLOR, KIND_ICON, myRun, offerLeft, routeLeft, runClient, runElapsed } from '../run.ts';
@@ -73,7 +84,10 @@ function svg<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string,
   return el;
 }
 
-const levelInfo = (level: number): { name: string; icon: string; blurb: string } => RUN_LEVEL_INFO.find((l) => l.level === level) ?? { name: String(level), icon: '⚔️', blurb: '' };
+/** An icon from the shared tables ('emoji:🔥') as text. */
+const ico = (s: string | undefined): string => (s ?? '').replace(/^emoji:/, '');
+/** A level as the windows show it: the shared names, icons and blurbs (T.runLevelName, T.runLevelIcon, T.runLevelBlurb). */
+const levelInfo = (level: number): { level: number; name: string; icon: string; blurb: string } => ({ level, name: T.runLevelName[level] ?? String(level), icon: ico(T.runLevelIcon[level]) || '⚔️', blurb: T.runLevelBlurb[level] ?? '' });
 const ms = (v: number): string => fmtDuration(Math.max(0, v));
 const dungeonName = (id: DungeonId | undefined): string => (id ? DUNGEONS[id].name : '');
 
@@ -104,7 +118,8 @@ export class RunUi {
   private win: Win | null = null;
   // the arch window's choices
   private dungeon: DungeonId | null = null;
-  private level = 1;
+  private level: number = RUN_LEVEL_DEFAULT;
+  private lookCls: ClassId | null = null;
   private companion = true;
   private fardSig = '';
   // the tree window's choice
@@ -163,6 +178,9 @@ export class RunUi {
       else if (c.t === 'seed') {
         if (this.win === 'tree' || this.win === 'fard') this.render();
       }
+    });
+    bus.on('toast', (text) => {
+      if (this.win === 'fard') this.hint(text, 6000);
     });
     bus.on('welcome', () => {
       // a reload in the middle of a run: the server puts us back in the stop (rejoinRun) and sends the run; asking makes sure
@@ -366,7 +384,8 @@ export class RunUi {
   /** Draws the HUD from the state: shown only while I am in a run. */
   private sync(): void {
     const run = myRun();
-    document.body.classList.toggle('in-run', !!run);
+    // (the run's area counts at once, before its first state arrives: no flash of the farm's buttons)
+    document.body.classList.toggle('in-run', !!run || isRunKey(myPlayer()?.area));
     document.body.classList.toggle('run-route', run?.phase === 'route');
     if (!run) {
       this.bar.hidden = this.vote.hidden = this.cardsBtn.hidden = this.runorStrip.hidden = this.note.hidden = true;
@@ -434,7 +453,8 @@ export class RunUi {
     const home = h('button', { class: 'round-btn danger', 'aria-label': RUN_UI.home }, '🚪');
     this.tap(home, () => this.open('leave'));
     this.info(home, '🚪', RUN_UI.home, RUN_UI.infoHome);
-    this.bar.append(h('div', { class: 'line1' }, stop, level, clock, spirit, seeds, ask, map, home), rail, h('div', { class: 'clockbar' }, this.clockFill));
+    const affixes = run.modifiers.filter((m) => AFFIX_IDS.includes(m)).map((m) => chip('affix', `${ico(MODIFIER_ICON[m])} ${MODIFIER_NAMES[m] ?? m}`, MODIFIER_NAMES[m] ?? m, { icon: ico(MODIFIER_ICON[m]), name: MODIFIER_NAMES[m] ?? m, text: MODIFIER_TEXT[m] ?? '' }));
+    this.bar.append(h('div', { class: 'line1' }, stop, level, ...affixes, clock, spirit, seeds, ask, map, home), rail, h('div', { class: 'clockbar' }, this.clockFill));
     this.tickClock(run);
   }
 
@@ -491,7 +511,7 @@ export class RunUi {
     if (this.win === 'offer' && this.offerBars) {
       const o = runClient.offer;
       const left = offerLeft();
-      this.offerBars.fill.style.width = `${o ? Math.min(100, (left / 20000) * 100) : 0}%`;
+      this.offerBars.fill.style.width = `${o ? Math.min(100, (left / runPickMs(myRun()?.level ?? 2)) * 100) : 0}%`;
       this.offerBars.text.textContent = fmt(RUN_UI.cardsLeft, { n: Math.ceil(left / 1000) });
     }
   }
@@ -628,8 +648,8 @@ export class RunUi {
     const open = runnableDungeons(cleared);
     const next = chapterBoss(cleared);
     if (!this.dungeon || !open.includes(this.dungeon)) this.dungeon = next ?? open[0] ?? DUNGEON_IDS[0]!;
-    const levels = RUN_LEVEL_INFO.filter((l) => parseRunLevel(l.level) !== null);
-    if (!levels.some((l) => l.level === this.level)) this.level = (levels.find((l) => l.level === 1) ?? levels[0])?.level ?? 1;
+    const levels = RUN_LEVEL_IDS.filter((l) => parseRunLevel(l) !== null).map(levelInfo);
+    if (!levels.some((l) => l.level === this.level)) this.level = RUN_LEVEL_DEFAULT;
     const tree = runClient.tree;
     const running = runClient.run && runClient.run.phase !== 'ended' ? runClient.run : null;
 
@@ -696,6 +716,39 @@ export class RunUi {
     }
     body.append(lv, h('div', { class: 'blurb' }, levelInfo(this.level).blurb));
 
+    // who am I today: the four classes, and what each spell does
+    body.append(h('div', { class: 'sect' }, `🎭 ${RUN_UI.whoToday}`));
+    const look = this.lookCls ?? cls ?? CLASS_IDS[0]!;
+    const row = h('div', { class: 'classes' });
+    for (const id of CLASS_IDS) {
+      const c = CLASSES[id];
+      const mine = cls === id;
+      const b = h('button', { class: `classcard${mine ? ' sel' : ''}${look === id ? ' look' : ''}`, 'aria-pressed': String(mine), style: { '--c': c.color } }, h('span', { class: 'ic' }, c.emoji), h('span', { class: 'nm' }, mine ? `✔ ${c.name}` : c.name), h('span', { class: 'role' }, c.roleName));
+      this.info(b, c.emoji, `${c.name} · ${c.roleName}`, c.blurb);
+      this.tap(b, () => {
+        this.lookCls = id;
+        if (!mine) net.send({ t: 'saga', a: 'class', cls: id });
+        SFX.talk();
+        this.render();
+      });
+      b.addEventListener('focus', () => {
+        if (this.lookCls !== id && !this.quiet) {
+          this.lookCls = id;
+          this.render();
+        }
+      });
+      row.append(b);
+    }
+    body.append(row);
+    const spells = h('div', { class: 'spellrow' });
+    for (const sid of CLASSES[look].spells) {
+      const sp = SPELLS[sid]!;
+      const b = h('button', { class: 'alt spell', 'aria-label': sp.name }, h('span', { class: 'ic' }, sp.icon), h('span', { class: 'nm' }, sp.name));
+      this.tap(b, () => this.showInfo(b));
+      spells.append(this.info(b, sp.icon, sp.name, sp.text));
+    }
+    body.append(spells);
+
     // who comes
     body.append(h('div', { class: 'sect' }, `👪 ${RUN_UI.whoComes}`));
     const classes = arch.party.map((p) => p.saga?.cls).filter((c): c is ClassId => !!c);
@@ -716,7 +769,7 @@ export class RunUi {
     const go = h('button', { class: 'go', disabled: !cls || !arch.near }, `▶️ ${RUN_UI.start}`);
     this.tap(go, () => {
       if (!cls || !arch.near || !this.dungeon) return;
-      net.send({ t: 'run', a: 'start', level: this.level as 0 | 1, dungeon: this.dungeon, ...(help && !this.companion ? { companion: false } : {}) });
+      net.send({ t: 'run', a: 'start', level: this.level as RunLevel, dungeon: this.dungeon, ...(help && !this.companion ? { companion: false } : {}) });
     });
     body.append(h('div', { class: 'actions sticky' }, go));
     if (!cls) body.append(h('div', { class: 'hint' }, RUN_UI.noClass));
@@ -731,15 +784,16 @@ export class RunUi {
       p ? h('img', { src: portraitUrl(p.appearance, p.outfit, 3), alt: '' }) : h('span', { class: 'emo' }, emoji ?? '🤝'),
       h('span', { class: 'nm' }, name),
       c ? h('span', { class: 'cls', title: c.name }, c.emoji) : null,
+      c ? h('span', { class: 'rolew' }, c.roleName) : null,
     );
   }
 
   /** A short line in the window (a toast would be under it). */
-  private hint(text: string): void {
+  private hint(text: string, ms = 2400): void {
     this.modal?.querySelector('.flash')?.remove();
     const el = h('div', { class: 'flash' }, text);
     this.modal?.querySelector('.panel')?.append(el);
-    setTimeout(() => el.remove(), 2400);
+    setTimeout(() => el.remove(), ms);
   }
 
   // ---- the cards of a runa ----
@@ -893,7 +947,7 @@ export class RunUi {
     const e = runClient.ended;
     if (!e) return;
     const last = runClient.last;
-    const lvl = levelInfo(e.level ?? last?.level ?? 1);
+    const lvl = levelInfo(e.level ?? last?.level ?? RUN_LEVEL_DEFAULT);
     body.append(h('div', { class: `outcome ${e.outcome}` }, h('span', { class: 'big' }, RUN_UI.outcomes[e.outcome] ?? '🏁'), h('b', null, RUN_T.ended[e.outcome] ?? ''), last ? h('span', { class: 'where' }, `${DUNGEON_ICON[last.boss]} ${dungeonName(last.boss)}`) : null));
     const stat = (icon: string, label: string, value: string | HTMLElement): HTMLElement => h('div', { class: 'stat' }, h('span', { class: 'ic' }, icon), h('span', { class: 'lb' }, label), h('b', { class: 'val' }, value));
     const path = h('span', { class: 'path' }, (e.path ?? []).map((k) => h('span', { title: STOP_NAMES[k] }, KIND_ICON[k])));

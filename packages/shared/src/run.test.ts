@@ -2,6 +2,7 @@
 // the wipe, joining, the companion, the sagaträd, the farm's objects, saves) and whole runs played by bot parties.
 import { describe, expect, it } from 'vitest';
 import {
+  RUN_LEVEL_MEDEL,
   BOSS_STOP,
   MINI_STOP,
   REST_STOP,
@@ -39,6 +40,13 @@ import {
   RUN_SEEDS,
   RUN_T,
   LATT,
+  RUN_LEVELS,
+  RUN_LEVEL_IDS,
+  AFFIX_IDS,
+  MODIFIER_ICON,
+  T,
+  type RunLevel,
+  type StopPlan,
   fmt,
   SAGOANDAN,
   SAGOANDAN_HP,
@@ -200,7 +208,7 @@ describe('the route generator (generateRoute)', () => {
   it('makes 300 seeded routes for every dungeon: ten rows, the fixed rows, every stop reachable and leading to the boss, a Vilosten in each wing', () => {
     for (let seed = 1; seed <= 300; seed++) {
       const dungeon = DUNGEON_IDS[seed % DUNGEON_IDS.length]!;
-      const route = generateRoute(seed, { dungeon, level: seed % 2 === 0 ? 0 : 1 });
+      const route = generateRoute(seed, { dungeon, level: (seed % 5) as RunLevel });
       const why = `seed ${seed} ${dungeon}`;
       expect(route.dungeon).toBe(dungeon);
       route.nodes.forEach((n, i) => expect(n.id, why).toBe(i));
@@ -473,7 +481,7 @@ describe('the data', () => {
 // ---------------------------------------------------------------------------
 
 /** A run of two heroes in its first zone, with the first hero's buffs set to `effect` before the fight begins. */
-function lab(effect: RunEffect, classes: ClassId[] = ['magiker', 'helare'], level?: 0 | 1) {
+function lab(effect: RunEffect, classes: ClassId[] = ['magiker', 'helare'], level?: RunLevel) {
   const party = makeParty(classes, { seed: 3 });
   // the lab is exactly its own fighters: no hired companion (those have their own tests)
   startRun(party.world, party.players[0]!.id, { seed: 3, companion: false, ...(level === undefined ? {} : { level }) }, party.ctx());
@@ -1137,11 +1145,11 @@ describe('the run is one dungeon, chosen at the arch (GAME2.md section 2.4)', ()
     const a = runOf(party.world)!;
     expect(['draug', 'frost']).toContain(a.plan.boss);
     expect(a.plan.replay).toBe(true);
-    const p1 = generateRun(11, { boss: 'draug', level: 0 });
-    const p2 = generateRun(11, { boss: 'draug', level: 1 });
+    const p1 = generateRun(11, { boss: 'draug', level: 1 });
+    const p2 = generateRun(11, { boss: 'draug', level: 2 });
     expect(p1.route.nodes).toEqual(p2.route.nodes);
-    expect(p1.route.level).toBe(0);
-    expect(p2.route.level).toBe(1);
+    expect(p1.route.level).toBe(1);
+    expect(p2.route.level).toBe(2);
   });
 
   it('the state names the run: the stop, its row and kind, the path walked, the whole route and who has the turn; the end tells the route taken', () => {
@@ -2125,6 +2133,8 @@ describe('the clock, the wipe and the end', () => {
     expect(inst.bossDown).toBe(true);
     expect(readRun(a).seeds).toBe(before[0]! + RUN_SEEDS.bossFirst + 5);
     expect(readRun(b).seeds).toBe(before[1]! + RUN_SEEDS.bossFirst);
+    // a run's win leaves every member the boss's trophy, at the run's level
+    for (const p of [a, b]) expect(p.inventory.filter((x) => x?.item.startsWith('trophy_') && x.data === String(RUN_LEVEL_MEDEL))).toHaveLength(1);
   });
 
   it('a win is a win once: the clock passing 30:00 or a wipe tick after the boss fell shows no nudge and counts no timeout or wipe', () => {
@@ -2314,44 +2324,117 @@ describe('Lätt and the Sagoandan (GAME2.md 4.5 and 5.3)', () => {
     return l.go(WIPE_MS + 400);
   };
 
-  it('a level is 0 (Lätt) or 1 (Vanlig); left out it is Vanlig; anything else is refused and no run starts', () => {
-    expect([parseRunLevel(0), parseRunLevel(1), parseRunLevel(undefined)]).toEqual([0, 1, 1]);
-    for (const bad of [2, -1, 0.5, '0', '1', null, true, NaN]) expect(parseRunLevel(bad)).toBeNull();
-    for (const bad of [2, '0', null, 0.5]) {
+  it('a level is a whole 0 to 4; left out it is Medel (2); anything else is refused and no run starts', () => {
+    expect([0, 1, 2, 3, 4].map(parseRunLevel)).toEqual([0, 1, 2, 3, 4]);
+    expect(parseRunLevel(undefined)).toBe(2);
+    for (const bad of [5, -1, 0.5, '0', '1', null, true, NaN]) expect(parseRunLevel(bad)).toBeNull();
+    for (const bad of [5, '0', null, 0.5]) {
       const party = makeParty(['krigare']);
       const out = runMessage(party.world, party.players[0]!.id, { t: 'run', a: 'start', level: bad }, party.ctx());
       expect(runOf(party.world)).toBeUndefined();
       expect(listen(out, RUN_T.badLevel)).toBe(true);
     }
     const a = makeParty(['krigare']);
-    runMessage(a.world, a.players[0]!.id, { t: 'run', a: 'start', level: 0 }, a.ctx());
-    expect(runOf(a.world)!.level).toBe(0);
+    runMessage(a.world, a.players[0]!.id, { t: 'run', a: 'start', level: 1 }, a.ctx());
+    expect(runOf(a.world)!.level).toBe(1);
     const b = makeParty(['krigare']);
     runMessage(b.world, b.players[0]!.id, { t: 'run', a: 'start' }, b.ctx());
-    expect(runOf(b.world)!.level).toBe(1);
+    expect(runOf(b.world)!.level).toBe(2);
   });
 
-  it('the state the clients get carries the level and the Sagoandans: 3 on Lätt, 1 on Vanlig', () => {
-    for (const level of [0, 1] as const) {
+  it('the state the clients get carries the level and the Sagoandans: 5, 3, 1, 1, 0', () => {
+    for (const level of RUN_LEVEL_IDS) {
       const party = makeParty(['krigare']);
       const out = startRun(party.world, party.players[0]!.id, { seed: 2, level }, party.ctx());
       const st = out.filter((c) => c.t === 'run' && c.ev === 'state' && c.run).pop();
       expect(st && st.t === 'run' && st.ev === 'state' ? [st.run!.level, st.run!.spirit, st.run!.spiritUsed] : null).toEqual([level, SAGOANDAN[level], 0]);
     }
-    expect(SAGOANDAN[0]).toBe(3);
-    expect(SAGOANDAN[1]).toBe(1);
+    expect(RUN_LEVEL_IDS.map((l) => SAGOANDAN[l])).toEqual([5, 3, 1, 1, 0]);
+    expect(RUN_LEVEL_IDS.map((l) => [T.runLevelName[l], T.runLevelBlurb[l], T.runLevelIcon[l]].every((x) => !!x))).toEqual([true, true, true, true, true]);
   });
 
-  it('Lätt: monster health ×0.6, damage ×0.5, warnings +40 %, the boss’s first two attacks only; Vanlig is as before', () => {
-    const v = lab({}, ['magiker', 'helare'], 1);
-    const l = lab({}, ['magiker', 'helare'], 0);
-    expect(l.inst.run!.hpMul / v.inst.run!.hpMul).toBeCloseTo(LATT.hp, 5);
-    expect(l.inst.run!.dmgMul / v.inst.run!.dmgMul).toBeCloseTo(LATT.dmg, 5);
-    expect(l.inst.run!.bossMul / v.inst.run!.bossMul).toBeCloseTo(LATT.hp, 5);
+  it('the table: Lätt is what Lätt was and Medel what Vanlig was; the numbers climb with the level', () => {
+    expect(levelMuls(1)).toEqual({ hp: 0.6, dmg: 0.5, warn: 1.4, seeds: 0.5 });
+    expect(levelMuls(2)).toEqual({ hp: 1, dmg: 1, warn: 1, seeds: 1 });
+    const L = RUN_LEVEL_IDS.map((l) => RUN_LEVELS[l]);
+    for (let i = 1; i < L.length; i++) {
+      expect(L[i]!.hp).toBeGreaterThan(L[i - 1]!.hp);
+      expect(L[i]!.dmg).toBeGreaterThanOrEqual(L[i - 1]!.dmg);
+      expect(L[i]!.warn).toBeLessThan(L[i - 1]!.warn);
+      expect(L[i]!.seeds).toBeGreaterThan(L[i - 1]!.seeds);
+      expect(L[i]!.rare).toBeGreaterThanOrEqual(L[i - 1]!.rare);
+    }
+    expect(L.map((l) => l.affixes)).toEqual([0, 0, 0, 1, 2]);
+  });
+
+  it('särdrag: Svår has one, Extrem two, by the seed and reported in the state; the other levels have none; a särdrag changes what it says', () => {
+    for (const level of RUN_LEVEL_IDS) {
+      for (let seed = 1; seed <= 12; seed++) {
+        const plan = generateRun(seed, { boss: 'draug', level });
+        const aff = plan.modifiers.filter((m) => AFFIX_IDS.includes(m));
+        expect(aff.length, `level ${level} seed ${seed}`).toBe(RUN_LEVELS[level].affixes);
+        expect(new Set(aff).size).toBe(aff.length);
+        expect(generateRun(seed, { boss: 'draug', level }).modifiers).toEqual(plan.modifiers);
+      }
+    }
+    expect(new Set(Array.from({ length: 30 }, (_, i) => generateRun(i + 1, { boss: 'draug', level: 3 }).modifiers[0])).size).toBeGreaterThan(2);
+    for (const id of AFFIX_IDS) expect([MODIFIER_NAMES[id], MODIFIER_TEXT[id], MODIFIER_ICON[id]].every((x) => !!x), id).toBe(true);
+    const stop = (id: string, kind: 'flock' | 'boss'): StopPlan => {
+      const plan = generateRun(5, { boss: 'draug', level: 2, modifiers: [id] });
+      return plan.stops.find((s) => s.kind === kind)!;
+    };
+    const base = generateRun(5, { boss: 'draug', level: 2, modifiers: [] }).stops;
+    expect(stop('stalhud', 'flock').hpMul / base.find((s) => s.kind === 'flock')!.hpMul).toBeCloseTo(1.2, 5);
+    expect(stop('stormig', 'boss').bossMul).toBeCloseTo(1.2, 5);
+    expect(stop('stormig', 'boss').bossDmg).toBeCloseTo(1.1, 5);
+    expect(stop('stormig', 'flock').bossDmg).toBe(1.1);
+    expect(stop('jakten', 'flock').enrage).toBe(true);
+    expect(stop('starkande', 'flock').grow).toBe(0.1);
+    // a run snapshot names them
+    const party = makeParty(['krigare']);
+    const out = startRun(party.world, party.players[0]!.id, { seed: 2, level: 4 }, party.ctx());
+    const st = out.filter((c) => c.t === 'run' && c.ev === 'state' && c.run).pop();
+    expect(st && st.t === 'run' && st.ev === 'state' ? st.run!.modifiers.filter((m) => AFFIX_IDS.includes(m)).length : -1).toBe(2);
+  });
+
+  it('särdrag in a fight: Jakten speeds a weak monster up, Stärkande makes the rest of a pack hit harder, Stormig bosses', () => {
+    const l = lab({}, ['magiker', 'helare'], 2);
+    const sk = l.place('skelett', 3);
+    const run = l.inst.run!;
+    const dmgOf = (): number => {
+      const f = l.inst.fighters[l.p.id]!;
+      f.hp = f.max;
+      const before = f.hp;
+      l.go(50);
+      sk.mob.state = 'fight';
+      sk.mob.threat[l.p.id] = 5;
+      sk.mob.atkAt = 0;
+      const pos = l.area.animals[sk.mob.id]!;
+      l.p.x = pos.x + 4;
+      l.p.y = pos.y;
+      l.go(100);
+      return before - f.hp;
+    };
+    const plain = dmgOf();
+    run.grow = 0.5;
+    sk.mob.fallen = 2;
+    const grown = dmgOf();
+    expect(grown).toBeGreaterThan(plain);
+    run.grow = undefined;
+    run.enrage = true;
+    sk.mob.hp = Math.floor(sk.mob.max * 0.2);
+    expect(dmgOf()).toBeGreaterThanOrEqual(plain);
+  });
+
+  it('Lätt (1): monster health ×0.6, damage ×0.5, warnings +40 %, the boss’s first two attacks only; Vanlig is as before', () => {
+    const v = lab({}, ['magiker', 'helare'], 2);
+    const l = lab({}, ['magiker', 'helare'], 1);
+    expect(l.inst.run!.hpMul / v.inst.run!.hpMul).toBeCloseTo(0.6, 5);
+    expect(l.inst.run!.dmgMul / v.inst.run!.dmgMul).toBeCloseTo(0.5, 5);
+    expect(l.inst.run!.bossMul / v.inst.run!.bossMul).toBeCloseTo(0.6, 5);
     expect(l.inst.run!.warnMul).toBe(1.4);
     expect(v.inst.run!.warnMul).toBeUndefined();
-    expect([LATT.hp, LATT.dmg, LATT.warn, LATT.seeds, LATT.bossMoves]).toEqual([0.6, 0.5, 1.4, 0.5, 2]);
-    expect(levelMuls(1)).toEqual({ hp: 1, dmg: 1, warn: 1, seeds: 1 });
+    expect([RUN_LEVELS[1].hp, RUN_LEVELS[1].dmg, RUN_LEVELS[1].warn, RUN_LEVELS[1].seeds, LATT.bossMoves]).toEqual([0.6, 0.5, 1.4, 0.5, 2]);
     // a monster pulled on Lätt has 0.6 of the health it has on Vanlig
     const max = (x: ReturnType<typeof lab>): number => {
       const { mob } = x.place('skelett', 3);
@@ -2392,7 +2475,7 @@ describe('Lätt and the Sagoandan (GAME2.md 4.5 and 5.3)', () => {
   });
 
   it('Lätt pays half the sagafrön (a pack is half a seed; two packs, one)', () => {
-    for (const level of [0, 1] as const) {
+    for (const level of [1, 2] as const) {
       const l = lab({}, ['magiker', 'helare'], level);
       for (const i of [0, 1]) {
         l.inst.packs[i]!.dead = true;
@@ -2402,12 +2485,12 @@ describe('Lätt and the Sagoandan (GAME2.md 4.5 and 5.3)', () => {
         }
       }
       l.go(100);
-      expect(readRun(l.p).seeds).toBe(level === 0 ? 1 : 2);
+      expect(readRun(l.p).seeds).toBe(level === 1 ? 1 : 2);
     }
   });
 
-  it('Vanlig: the first wipe is saved by the Sagoandan (half health at the stone, monsters reset, a clear banner), the second ends the run', () => {
-    const l = lab({}, ['magiker', 'helare'], 1);
+  it('Medel: the first wipe is saved by the Sagoandan (half health at the stone, monsters reset, a clear banner), the second ends the run', () => {
+    const l = lab({}, ['magiker', 'helare'], 2);
     const { mob } = l.place('skelett', 3);
     mob.state = 'fight';
     mob.threat[l.p.id] = 5;
@@ -2430,11 +2513,11 @@ describe('Lätt and the Sagoandan (GAME2.md 4.5 and 5.3)', () => {
     expect(runOf(l.party.world)).toBeUndefined();
     expect(l.run.outcome).toBe('wipe');
     const ended = out2.find((c) => c.t === 'run' && c.ev === 'ended');
-    expect(ended && ended.t === 'run' && ended.ev === 'ended' ? [ended.level, ended.spiritUsed] : null).toEqual([1, 1]);
+    expect(ended && ended.t === 'run' && ended.ev === 'ended' ? [ended.level, ended.spiritUsed] : null).toEqual([2, 1]);
   });
 
   it('Lätt: three Sagoandans, then a wipe still never ends the run (everyone is up, free); one more Sagoande after each stop', () => {
-    const l = lab({}, ['magiker', 'helare'], 0);
+    const l = lab({}, ['magiker', 'helare'], 1);
     expect(l.run.spirit).toBe(3);
     for (let n = 1; n <= 3; n++) {
       wipeIt(l);
@@ -2470,7 +2553,7 @@ describe('Lätt and the Sagoandan (GAME2.md 4.5 and 5.3)', () => {
   });
 
   it('a wipe after the boss has fallen: Vanlig is not saved (the win stands and the run ends), Lätt gets everyone up free and the run goes on', () => {
-    const v = lab({}, ['magiker', 'helare'], 1);
+    const v = lab({}, ['magiker', 'helare'], 2);
     v.inst.bossDown = true;
     v.run.outcome = 'win';
     const out = wipeIt(v);
@@ -2479,7 +2562,7 @@ describe('Lätt and the Sagoandan (GAME2.md 4.5 and 5.3)', () => {
     expect(v.run.spirit).toBe(1);
     expect(v.run.outcome).toBe('win');
     expect(runOf(v.party.world)).toBeUndefined();
-    const l = lab({}, ['magiker', 'helare'], 0);
+    const l = lab({}, ['magiker', 'helare'], 1);
     l.inst.bossDown = true;
     l.run.outcome = 'win';
     const out2 = wipeIt(l);
@@ -2511,7 +2594,7 @@ describe('Lätt and the Sagoandan (GAME2.md 4.5 and 5.3)', () => {
         expect(lattMoves().every((k) => k < boss.moves.length), d).toBe(true);
       }
     }
-    const adds = (level: 0 | 1): number => {
+    const adds = (level: RunLevel): number => {
       const x = lab({}, ['magiker', 'helare'], level);
       const b = x.place('draugkung', 4, 'boss');
       x.inst.run!.dmgMul = 0;
@@ -2527,8 +2610,8 @@ describe('Lätt and the Sagoandan (GAME2.md 4.5 and 5.3)', () => {
       const a = Object.values(x.inst.mobs).find((m) => m.kind === 'add');
       return a ? a.max : 0;
     };
-    const v = adds(1);
-    const l = adds(0);
+    const v = adds(2);
+    const l = adds(1);
     expect(v).toBeGreaterThan(0);
     expect(l / v).toBeCloseTo(0.6, 1);
   });

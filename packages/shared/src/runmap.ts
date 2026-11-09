@@ -16,6 +16,9 @@ import {
   LATT_FLOCK_PACKS,
   LATT_MINI_PACKS,
   MAX_MODIFIERS,
+  AFFIXES,
+  RUN_LEVELS,
+  isEasy,
   MINI_PACKS,
   MINI_STOP,
   MODIFIERS,
@@ -31,7 +34,6 @@ import {
   type NodeKind,
   type RouteNodeSnap,
   type RunBiome,
-  RUN_LEVEL_LATT,
   type RunLevel,
   type ZoneRoom,
 } from './run.ts';
@@ -136,6 +138,10 @@ export interface StopPlan {
   /** The room (index in `def.rooms`) that holds the väg-runor (every kind but the boss's) or the boss. */
   endRoom: number;
   hpMul: number;
+  /** Särdrag: bosses hit harder, a monster below a quarter health enrages, the rest of a pack hit harder for each fallen member (fraction). */
+  bossDmg?: number;
+  enrage?: boolean;
+  grow?: number;
   dmgMul: number;
   bossMul: number;
   sight: number;
@@ -265,7 +271,7 @@ function planStop(seed: number, node: RouteNode, boss: DungeonId, mods: string[]
       const t = ZONE_TEMPLATES[pick(rnd, RUN_BIOMES)];
       layout = t.biome;
       const cut = dropRooms(t.rooms as ZoneRoom[], t.links, [3, 5]);
-      const table = level === RUN_LEVEL_LATT ? LATT_FLOCK_PACKS : FLOCK_PACKS;
+      const table = isEasy(level) ? LATT_FLOCK_PACKS : FLOCK_PACKS;
       const spec = table[Math.min(wing, table.length - 1)]!;
       let order = 0;
       cut.rooms.forEach((r, i) => {
@@ -293,7 +299,7 @@ function planStop(seed: number, node: RouteNode, boss: DungeonId, mods: string[]
     case 'mini': {
       const hall = d.rooms.find((r) => r.kind === 'mini')!;
       rooms.push({ ...at(MINI_STOP.start), kind: 'start' });
-      const mp = level === RUN_LEVEL_LATT ? LATT_MINI_PACKS : MINI_PACKS;
+      const mp = isEasy(level) ? LATT_MINI_PACKS : MINI_PACKS;
       packRoom(at(MINI_STOP.pack), n(mp.count), mp.size);
       rooms.push({ ...at({ x: MINI_STOP.hall.x, y: MINI_STOP.hall.y, w: hall.w, h: hall.h }), kind: 'mini' }, { ...at(MINI_STOP.exit), kind: 'pack', gated: true });
       links = [[0, 1], [1, 2], [2, 3]];
@@ -307,7 +313,7 @@ function planStop(seed: number, node: RouteNode, boss: DungeonId, mods: string[]
       const guard = mod.some((m) => m.guard);
       const hall = d.rooms.find((r) => r.kind === 'boss')!;
       rooms.push({ ...at(BOSS_STOP.start), kind: 'start' });
-      const bp = level === RUN_LEVEL_LATT ? LATT_BOSS_PACKS : BOSS_PACKS;
+      const bp = isEasy(level) ? LATT_BOSS_PACKS : BOSS_PACKS;
       packRoom(at(BOSS_STOP.pack), n(bp.count), bp.size);
       links = [[0, 1]];
       if (guard) {
@@ -340,9 +346,12 @@ function planStop(seed: number, node: RouteNode, boss: DungeonId, mods: string[]
     required,
     gate,
     endRoom,
-    hpMul: (WING_HP[wing] ?? 1) * mod.reduce((m, x) => m * (x.hpMul ?? 1), 1),
+    hpMul: (WING_HP[wing] ?? 1) * mod.reduce((m, x) => m * (x.hpMul ?? 1) * (x.packHp ?? 1), 1),
     dmgMul: mod.reduce((m, x) => m * (x.dmgMul ?? 1), 1),
-    bossMul: node.kind === 'boss' ? mod.reduce((m, x) => m * (x.hpMul ?? 1), 1) : 1,
+    bossMul: (node.kind === 'boss' ? mod.reduce((m, x) => m * (x.hpMul ?? 1), 1) : 1) * (node.kind === 'boss' || node.kind === 'mini' ? mod.reduce((m, x) => m * (x.bossHp ?? 1), 1) : 1),
+    ...(mod.some((m) => m.bossDmg) ? { bossDmg: mod.reduce((m, x) => m * (x.bossDmg ?? 1), 1) } : {}),
+    ...(mod.some((m) => m.enrage) ? { enrage: true } : {}),
+    ...(mod.some((m) => m.grow) ? { grow: mod.reduce((m, x) => m + (x.grow ?? 0), 0) } : {}),
     sight: mod.reduce((m, x) => m * (x.sight ?? 1), 1),
     leash: mod.reduce((s, x) => s + (x.leash ?? 0), 0),
   };
@@ -352,6 +361,12 @@ function planStop(seed: number, node: RouteNode, boss: DungeonId, mods: string[]
 export function generateRun(seed: number, opts: RunOptions): RunPlan {
   const rnd = mulberry32(hashInts(seed, 0x7a11));
   const modifiers = pickModifiers(rnd, opts);
+  // the särdrag of Svår and Extrem, by the seed (after the replay's modifiers, so those stay as they were)
+  if (!opts.modifiers) {
+    const pool = AFFIXES.map((m) => m.id);
+    const n = RUN_LEVELS[opts.level ?? 2].affixes;
+    for (let i = 0; i < n && pool.length; i++) modifiers.push(pool.splice(Math.floor(rnd() * pool.length), 1)[0]!);
+  }
   const replay = !!opts.replay;
   const route = generateRoute(seed, { dungeon: opts.boss, level: opts.level ?? 1 });
   const stops = route.nodes.map((n) => planStop(seed, n, opts.boss, modifiers, route.level));

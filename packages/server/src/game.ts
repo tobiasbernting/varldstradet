@@ -9,6 +9,12 @@ import {
   craftGear,
   devEnterSaga,
   devKit,
+  devTrophy,
+  devDecor,
+  devWarp,
+  enterHouse,
+  homeKey,
+  pickUpFurniture,
   devSagaBest,
   devStarterKit,
   devUnlockChapters,
@@ -22,6 +28,8 @@ import {
   isRunKey,
   jumpTo,
   rejoinRun,
+  leaveRun,
+  runOf,
   rejoinSaga,
   runMessage,
   ensureRunPlaces,
@@ -31,7 +39,7 @@ import {
   cleanChat,
   setWeather,
   T,
-  MAX_PLAYERS,
+  DEFAULT_MAX_PLAYERS,
   NPCS,
   TICK_HZ,
   applyMove,
@@ -86,7 +94,20 @@ import { Voice } from './voice.ts';
 
 export interface Link {
   send(msg: ServerMsg): void;
-  close(): void;
+  close(code?: number): void;
+}
+
+/** The socket was closed because this device or character may not play (any more): the client goes to the gate. */
+export const CLOSE_NO_ACCESS = 4003;
+
+/** One character on the parent page. */
+export interface CharacterInfo {
+  id: string;
+  name: string;
+  cls: string | null;
+  level: number;
+  lastPlayed: number | null;
+  online: boolean;
 }
 
 /** What the server knows about a connection before the player says hello (for the voice rooms). */
@@ -110,6 +131,10 @@ export interface GameOptions {
   voice?: { policy?: () => VoicePolicy; ice?: () => Promise<IceServer[]> };
   /** DEV_TELEPORT=1: the `dev` message may put a player straight into a dungeon (for a client without a world map). */
   devTeleport?: boolean;
+  /** How many characters the server holds (the parent page's setting; default DEFAULT_MAX_PLAYERS). */
+  maxPlayers?: () => number;
+  /** The highest run level (0..4) a character may play (the parent page's setting; default: all levels). */
+  levelCap?: (playerId: string) => number;
 }
 
 /** How long an offline player may stay in the cave before being carried out. */
@@ -172,7 +197,7 @@ export class Game {
   }
 
   ctx(): SimCtx {
-    return { season: this.season(), rnd: this.rnd, now: Date.now() };
+    return { season: this.season(), rnd: this.rnd, now: Date.now(), ...(this.opts.levelCap ? { levelCap: this.opts.levelCap } : {}) };
   }
 
   // ---- loops ----
@@ -267,12 +292,68 @@ export class Game {
       .map((p) => ({ id: p.id, name: p.name, appearance: p.appearance, outfit: p.outfit }));
   }
 
+  /** How many characters the server holds. */
+  maxPlayers(): number {
+    return this.opts.maxPlayers?.() ?? DEFAULT_MAX_PLAYERS;
+  }
+
+  /** No room for another character. */
+  full(): boolean {
+    return Object.values(this.world.players).filter((p) => !p.bot).length >= this.maxPlayers();
+  }
+
   createPlayer(name: string, appearance: Appearance, shirt?: string): PlayerSummary | null {
-    if (Object.values(this.world.players).filter((p) => !p.bot).length >= MAX_PLAYERS) return null;
+    if (this.full()) return null;
     const p = createPlayer(this.world, name, appearance, shirt);
     this.pending.push({ t: 'player', id: p.id, player: p });
     this.dispatchPending();
     return { id: p.id, name: p.name, appearance: p.appearance, outfit: p.outfit };
+  }
+
+  /** The parent page's list of characters. */
+  characters(): CharacterInfo[] {
+    return Object.values(this.world.players)
+      .filter((p) => !p.bot)
+      .map((p) => ({ id: p.id, name: p.name, cls: p.saga?.cls ?? null, level: p.saga?.level ?? 1, lastPlayed: p.lastPlayed ?? null, online: p.online }));
+  }
+
+  /** The parent page: a new name for a character (false: no such character or an empty name). */
+  renamePlayer(id: string, name: string): boolean {
+    const p = this.world.players[id];
+    const clean = name.replace(/\s+/g, ' ').trim().slice(0, 16);
+    if (!p || p.bot || !clean) return false;
+    p.name = clean;
+    this.pending.push({ t: 'player', id, player: p });
+    this.dispatchPending();
+    return true;
+  }
+
+  /** The parent page: removes a character for good. They leave a run they are in, and their connection is closed (4003). */
+  deletePlayer(id: string): boolean {
+    const p = this.world.players[id];
+    if (!p || p.bot) return false;
+    this.pending.push(...leaveRun(this.world, id, this.ctx()));
+    this.voice.offline(id);
+    for (const c of [...this.clients]) {
+      if (c.playerId !== id) continue;
+      c.playerId = null;
+      this.clients.delete(c);
+      c.link.close(CLOSE_NO_ACCESS);
+    }
+    for (const a of Object.values(this.world.areas ?? {})) delete a.players[id];
+    if (this.world.dungeon) delete this.world.dungeon.players[id];
+    delete this.world.players[id];
+    this.chatLog = this.chatLog.filter((c) => c.from !== id);
+    this.pending.push({ t: 'player', id, player: null });
+    this.dispatchPending();
+    return true;
+  }
+
+  /** The runs going on (one at a time, for now): which dungeon, which level, who is in it. */
+  runStatus(): { boss: string; level: number; phase: string; party: string[] }[] {
+    const run = runOf(this.world);
+    if (!run || run.phase === 'ended') return [];
+    return [{ boss: run.plan.boss, level: run.level, phase: run.phase, party: run.party.map((id) => this.world.players[id]?.name ?? '?') }];
   }
 
   onlinePlayers(): string[] {
@@ -324,6 +405,7 @@ export class Game {
       if (c.playerId && ![...this.clients].some((o) => o.playerId === c.playerId)) {
         const p = this.world.players[c.playerId];
         this.voice.offline(c.playerId);
+        if (p) p.lastPlayed = Date.now();
         this.pending.push(...setOnline(this.world, c.playerId, false));
         this.dispatchPending();
         // A flaky tablet connection must not throw you out of the cave: wait a while before carrying you out
@@ -382,6 +464,7 @@ export class Game {
           client.link.send({ t: 'changes', changes: [{ t: 'areaData', to: p.id, key: p.area, world: area }] });
         } else p.area = 'farm';
       }
+      p.lastPlayed = Date.now();
       this.pending.push(...setOnline(this.world, p.id, true));
       this.dispatchPending();
       if (this.chatLog.length) client.link.send({ t: 'changes', changes: this.chatLog.map((c) => ({ ...c, old: true })) });
@@ -484,6 +567,13 @@ export class Game {
         else if (msg.a === 'forge') changes = forgeGear(this.world, pid, String(msg.item ?? ''));
         else if (msg.a === 'craft') changes = craftGear(this.world, pid, String(msg.item ?? ''));
         break;
+      case 'house':
+        if (msg.a === 'enter') {
+          const of = typeof msg.of === 'string' ? msg.of : pid;
+          changes = enterHouse(this.world, pid, of);
+          if (changes.length) this.store.noteArea?.(homeKey(of));
+        } else if (msg.a === 'pick') changes = tagArea(pickUpFurniture(w, pid, Math.floor(msg.x), Math.floor(msg.y)), areaK);
+        break;
       case 'jump':
         changes = jumpTo(this.world, pid, String(msg.to ?? ''));
         break;
@@ -502,6 +592,9 @@ export class Game {
         else if (msg.a === 'starter') changes = devStarterKit(this.world, pid);
         else if (msg.a === 'unlock') changes = devUnlockChapters(this.world, pid);
         else if (msg.a === 'kit') changes = devKit(this.world, pid);
+        else if (msg.a === 'warp') changes = devWarp(this.world, pid, Number(msg.x), Number(msg.y));
+        else if (msg.a === 'decor') changes = devDecor(this.world, pid);
+        else if (msg.a === 'trophy') changes = devTrophy(this.world, pid, String(msg.id ?? ''), Number(msg.level));
         else if (msg.a === 'sagaBest') changes = devSagaBest(this.world, pid, String(msg.id ?? ''), Number(msg.ms));
         break;
       case 'voice':

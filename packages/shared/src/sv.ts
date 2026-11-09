@@ -892,20 +892,20 @@ export const T = {
   sagaNoBestTime: 'Ingen tid än. Klara den hela vägen!',
   // The gate: joining with a code, waiting for a parent, why the farm is closed (the web pages and the native client)
   joinWelcome: 'Välkommen till {title}!',
-  joinIntro: 'Skriv koden du har fått och vem du är, så att föräldrarna på gården ser vem som kommit.',
+  joinIntro: 'Skriv koden du har fått och vem du är, så att föräldrarna ser vem som kommit.',
   joinCode: 'Kod',
   joinEnter: 'Kom in',
   joinLimit: 'För många försök. Vänta en stund.',
   joinFull: 'Många väntar redan på att bli godkända. Försök igen senare.',
   joinInvalid: 'Koden fungerar inte. Kolla att den är rätt skriven – den kan också vara använd eller för gammal.',
   gatePendingTitle: 'Nästan klart!',
-  gatePending: 'En förälder på gården måste godkänna {name} innan du kan spela.',
+  gatePending: 'En förälder måste godkänna {name} innan du kan spela.',
   gatePendingCode: 'Om föräldern frågar, visa den här koden:',
   gatePendingWait: 'Spelet öppnar av sig självt när du är godkänd.',
   gatePaused: 'En förälder har pausat den här enheten. Fråga en vuxen.',
-  gateClosed: 'Djuren sover. Gården är stängd just nu.',
-  gateGuestsClosed: 'Just nu får bara familjen vara på gården. Välkommen tillbaka en annan gång!',
-  gateHours: 'Gården är öppen {from}–{to}. Välkommen tillbaka då!',
+  gateClosed: 'Världsträdet sover. Äventyren är stängda just nu.',
+  gateGuestsClosed: 'Just nu får bara familjen spela. Välkommen tillbaka en annan gång!',
+  gateHours: 'Äventyren är öppna {from}–{to}. Välkommen tillbaka då!',
   gateUnknown: 'Den här enheten är inte längre godkänd. Be om en ny kod.',
   // The native client (Godot)
   serverUrl: 'Serverns adress',
@@ -1192,10 +1192,16 @@ export const T = {
   runEndedSeeds: 'Sagafrön',
   runEndedRunor: 'Runor',
   runEndedSpirit: 'Sagoandar använda',
-  runLevelLatt: 'Lätt',
-  runLevelLattText: 'Snällare monster. Alla reser sig igen om ni faller.',
-  runLevelVanlig: 'Vanlig',
-  runLevelVanligText: 'Som vanligt. En Sagoande hjälper er en gång.',
+  /** The five levels of a run, by level 0..4 (`RUN_LEVEL_IDS` in run.ts): the name, one line for a kid and a picture. */
+  runLevelName: ['Mycket lätt', 'Lätt', 'Medel', 'Svår', 'Extrem'] as readonly string[],
+  runLevelBlurb: [
+    'För de minsta. Svaga monster, lång tid att hinna undan, och ni reser er alltid igen.',
+    'Snällare monster. Alla reser sig igen om ni faller.',
+    'Som vanligt. En Sagoande hjälper er en gång.',
+    'Starkare monster och ett särdrag. Mer sagafrön och bättre fynd.',
+    'Ingen Sagoande. Två särdrag. Mest sagafrön och bästa fynden.',
+  ] as readonly string[],
+  runLevelIcon: ['emoji:🐣', 'emoji:🌱', 'emoji:⚔️', 'emoji:🔥', 'emoji:💀'] as readonly string[],
   runPartyTitle: 'Med på färden',
   treeTitle: 'Sagaträdet',
   treePlant: 'Plantera',
@@ -1361,8 +1367,8 @@ export const fmtDuration = (ms: number): string => {
   return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
 };
 
-export const itemName = (id: string): string => ITEM_NAMES[id] ?? id;
-export const objectName = (kind: string): string => OBJECT_NAMES[kind] ?? ITEM_NAMES[kind] ?? kind;
+export const itemName = (id: string): string => ITEM_NAMES[id] ?? HOUSE_NAMES[id] ?? id;
+export const objectName = (kind: string): string => OBJECT_NAMES[kind] ?? ITEM_NAMES[kind] ?? HOUSE_NAMES[kind] ?? kind;
 
 export const fmt = (s: string, vars: Record<string, string | number>): string =>
   s.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ''));
@@ -1834,8 +1840,11 @@ export const TREE_TEXT: Record<string, string> = {
 };
 export const BRANCH_NAMES: Record<string, string> = { hjalte: 'Hjälten', gemenskap: 'Gemenskapen', gard: 'Gården' };
 
-export const MODIFIER_NAMES: Record<string, string> = { fler: 'Fler monster', segare: 'Segare monster', harda: 'Hårda slag', vakten: 'Vakten', snabba: 'Snabba fötter', dimma: 'Dimma' };
+export const MODIFIER_NAMES: Record<string, string> = { stalhud: 'Stålhud', stormig: 'Stormig', starkande: 'Stärkande', jakten: 'Jakten', fler: 'Fler monster', segare: 'Segare monster', harda: 'Hårda slag', vakten: 'Vakten', snabba: 'Snabba fötter', dimma: 'Dimma' };
+/** A picture for each särdrag (and replay modifier) of `RunSnap.modifiers`. */
+export const MODIFIER_ICON: Record<string, string> = { stalhud: 'emoji:🛡️', stormig: 'emoji:⛈️', starkande: 'emoji:💪', jakten: 'emoji:😡', fler: 'emoji:👥', segare: 'emoji:🪨', harda: 'emoji:💥', vakten: 'emoji:🗝️', snabba: 'emoji:👁️', dimma: 'emoji:🌫️' };
 export const MODIFIER_TEXT: Record<string, string> = {
+  stalhud: 'Flockarna tål 20 % mer', stormig: 'Bossar tål 20 % mer och slår 10 % hårdare', starkande: 'När en i flocken faller blir de andra starkare', jakten: 'Ett monster med lite hälsa kvar blir snabbare och argare',
   fler: 'En till i varje flock', segare: 'Monstren tål 25 % mer', harda: 'Monstren slår 20 % hårdare', vakten: 'En mellanboss vaktar vägen', snabba: 'Monstren ser dig på längre håll', dimma: 'Dimma, och monstren ger inte upp',
 };
 
@@ -1885,6 +1894,9 @@ export const RUN_T = {
   spiritFreeSub: 'Ni reser er vid vilostenen och försöker igen.',
   spiritGained: 'En Sagoande till!',
   badLevel: 'Det svårighetsvalet finns inte.',
+  /** A parent capped the highest level a character may play (the parent page): who, and the level they may go up to. */
+  capped: '{names} får inte spela {level} än. Välj lättare, eller be en förälder.',
+  cappedYou: 'En förälder har satt att du får spela upp till {max}. Hoppa på en lättare färd!',
   win: 'Färden är klar!',
   winSub: 'Öppna kistan, sen går vi hem.',
   home: 'Hemma igen',
@@ -1905,21 +1917,13 @@ export const RUN_T = {
 export const runaName = (id: string): string => RUNA_NAMES[id] ?? id;
 export const treeName = (id: string): string => TREE_NAMES[id] ?? id;
 
-/**
- * The difficulty levels the arch window offers: ONE table (the lead swaps it when the levels grow to five). `level` is what the
- * server is sent; the window only offers the ones the server accepts (parseRunLevel in run.ts).
- */
-export const RUN_LEVEL_INFO: readonly { level: number; name: string; icon: string; blurb: string }[] = [
-  { level: 0, name: 'Lätt', icon: '🌼', blurb: 'Snälla monster. Sagoandar hjälper er upp igen.' },
-  { level: 1, name: 'Vanlig', icon: '⚔️', blurb: 'Som det är tänkt. Monstren slår på riktigt.' },
-];
-
 /** The run's windows and HUD (ui/run.ts). Short words, every one with a picture next to it in the window. */
 export const RUN_UI = {
   fardport: 'Färdporten',
   whereTo: 'Vart ska ni?',
   howHard: 'Hur svårt?',
   whoComes: 'Vilka följer med?',
+  whoToday: 'Vem är du i dag?',
   start: 'Starta färden!',
   join: 'Hänga på!',
   running: 'Det pågår en färd',
@@ -2005,3 +2009,61 @@ export const RUN_UI = {
   kinds: { flock: 'Här slåss ni mot ett flock monster.', mini: 'Här väntar vakten som håller halva vägen.', rest: 'Här får ni vila och bli läkta.', boss: 'Här väntar bossen. Vinner ni är färden klar!' } as Record<string, string>,
   ann: { stop: 'Nytt steg: {name}', vote: 'Välj väg. Gå ut på en vägruna.', offer: 'Välj en runa bland tre kort.', ended: 'Färden är slut.' },
 };
+// ---------------------------------------------------------------------------
+// Hus: everyone's own house, Norse decor and boss trophies (house.ts)
+// ---------------------------------------------------------------------------
+
+export const HOUSE_NAMES: Record<string, string> = {
+  hearth: 'Eldstad',
+  gear_stand: 'Rustningsställ',
+  viking_shield: 'Vikingasköld',
+  rune_stone: 'Runsten',
+  weapon_rack: 'Vapenställ',
+  drinking_horn: 'Dryckeshorn',
+  viking_banner: 'Vikingabaner',
+  bear_rug: 'Björnfäll',
+  mead_barrel: 'Mjödtunna',
+  candle_stick: 'Ljusstake',
+  yggdrasil_sapling: 'Yggdrasilsplanta',
+  raven_perch: 'Korpstång',
+  trophy_draugkung: 'Trofé: Draugkungen',
+  trophy_rimturs: 'Trofé: Rimtursen',
+  trophy_surt: 'Trofé: Surt',
+  trophy_hel: 'Trofé: Hel',
+  trophy_fafner: 'Trofé: Fafner',
+  trophy_jormungand: 'Trofé: Jörmungandr',
+  trophy_nattmara: 'Trofé: Nattmaran',
+  trophy_fenrisulven: 'Trofé: Fenrisulven',
+  trophy_loke: 'Trofé: Loke',
+};
+
+/** The difficulty levels a trophy remembers (0..4), as the run screen calls them. */
+export const TROPHY_LEVEL_NAMES = ['Mycket lätt', 'Lätt', 'Medel', 'Svår', 'Extrem'] as const;
+/** The rim of a trophy by level: wood, bronze, silver, gold, and a gem-set gold one. */
+export const TROPHY_RIM_NAMES = ['trä', 'brons', 'silver', 'guld', 'guld med ädelsten'] as const;
+
+export const HOUSE_T = {
+  myHouse: 'Mitt hus',
+  /** "Astrids hus", "Lars hus": a name ending in s, x or z gets no extra s. */
+  houseOf: '{name} hus',
+  whoseHouse: 'Vems hus vill du gå in i?',
+  welcomeOwn: 'Välkommen hem! Möblera hur du vill.',
+  welcomeGuest: 'Du är på besök hos {name}. Du får titta, men inte flytta något.',
+  guestLook: 'Du är gäst här. Du får bara titta!',
+  furnish: 'Möblera',
+  furnishOn: 'Tryck på en möbel för att ta upp den. Tryck på golvet för att sätta ner.',
+  furnishOff: 'Klar med möbleringen.',
+  pickedUp: 'Du tog upp {item}. Tryck på golvet för att sätta ner den.',
+  cantMove: 'Den där kan inte flyttas.',
+  trophyNew: 'Du fick en trofé: {boss}! Ställ den i ditt hus.',
+  trophyHome: 'Din ryggsäck är full, så trofén {boss} står redan i ditt hus!',
+  trophyUp: 'Din trofé {boss} blev finare: {level}!',
+  trophyLevel: 'Vunnen på: {level}',
+  standPut: 'Du ställde {item} på stället.',
+  standTake: 'Du tog tillbaka {item}.',
+  standNone: 'Håll i ett vapen, en sköld eller en amulett och tryck på stället.',
+  leave: 'Ut',
+};
+
+/** Possessive for a house: "Astrids hus", "Lars hus". */
+export const houseTitle = (name: string): string => fmt(HOUSE_T.houseOf, { name: /[sxzSXZ]$/.test(name) ? name : `${name}s` });

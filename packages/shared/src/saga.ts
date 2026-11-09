@@ -98,6 +98,8 @@ export const DOWN_MS = 10_000;
 export const WIPE_MS = 4_000;
 /** Health a fighter has after the Sagoandan of a run (a fraction of the maximum; GAME2.md section 4.5). */
 export const SAGOANDAN_HP = 0.5;
+/** The monsters' speed and attack rate when a `jakten` monster is below a quarter health. */
+export const ENRAGE = { below: 0.25, speed: 1.4, rate: 1.4 } as const;
 /** Out of a fight for this long, health comes back by itself (much faster by a rest stone). */
 export const CALM_MS = 5_000;
 export const REST_RADIUS = 3;
@@ -1099,6 +1101,28 @@ export const SAGA_TREASURE: Record<DungeonId, SagaLoot> = {
   loke: { coins: [80, 130], stars: 0, gear: [{ item: 'healing_potion', weight: 3 }, { item: 'star_crystal', weight: 3 }, { item: 'gem', weight: 2 }, { item: 'styrkedryck', weight: 2 }] },
 };
 
+/**
+ * What the dungeons give for a house (house.ts): Norse decor, and the farm's own furniture and keepsakes, as a chance on top of a
+ * chest's loot. Per dungeon: its last boss's chest (which a run's reward is too) and the treasure chest in its side room.
+ */
+const HOUSE_LOOT: Record<DungeonId, { boss: [string, number][]; treasure: [string, number][] }> = {
+  draug: { boss: [['candle_stick', 0.35], ['viking_shield', 0.15]], treasure: [['rune_stone', 0.25], ['clock', 0.15]] },
+  frost: { boss: [['bear_rug', 0.35], ['drinking_horn', 0.15]], treasure: [['sofa', 0.15], ['viking_banner', 0.15]] },
+  surt: { boss: [['weapon_rack', 0.35], ['dragon_egg', 0.1]], treasure: [['viking_shield', 0.25], ['lamp', 0.15]] },
+  hel: { boss: [['raven_perch', 0.35]], treasure: [['wisp_jar', 0.2], ['plant', 0.15]] },
+  dvarg: { boss: [['mead_barrel', 0.35], ['crystal_lamp', 0.15]], treasure: [['weapon_rack', 0.15], ['bookshelf', 0.15]] },
+  orm: { boss: [['viking_banner', 0.35], ['flowerbox', 0.1]], treasure: [['drinking_horn', 0.2], ['rug', 0.15]] },
+  alv: { boss: [['yggdrasil_sapling', 0.3], ['mushroom_lamp', 0.15]], treasure: [['candle_stick', 0.2], ['chair', 0.1]] },
+  fenrir: { boss: [['gear_stand', 0.3], ['bear_rug', 0.2]], treasure: [['mead_barrel', 0.15], ['bench', 0.15]] },
+  loke: { boss: [['rune_stone', 0.3], ['yggdrasil_sapling', 0.2], ['gear_stand', 0.2]], treasure: [['raven_perch', 0.2], ['table', 0.15]] },
+};
+for (const [id, d] of Object.entries(HOUSE_LOOT) as [DungeonId, (typeof HOUSE_LOOT)[DungeonId]][]) {
+  const boss = SAGA_LOOT[DUNGEONS[id].boss];
+  const treasure = SAGA_TREASURE[id];
+  if (boss) boss.rare = [...(boss.rare ?? []), ...d.boss.map(([item, chance]) => ({ item, chance }))];
+  treasure.rare = [...(treasure.rare ?? []), ...d.treasure.map(([item, chance]) => ({ item, chance }))];
+}
+
 /** Loot only found in the dungeons (registered as items in data.ts). */
 export interface SagaItemDef {
   id: string;
@@ -1964,6 +1988,8 @@ export interface SagaMob {
   tauntUntil?: number;
   stunUntil?: number;
   slowUntil?: number;
+  /** Stärkande: how many of its pack have fallen. */
+  fallen?: number;
   atkAt: number;
   /** An ice block: the player frozen inside, and when it melts by itself. */
   holds?: string;
@@ -2128,6 +2154,13 @@ export interface SagaRunLink {
   warnMul?: number;
   /** Lätt: 0.6 for everything the boss calls in (phase adds, summons, the ice and web blocks); left out on Vanlig. */
   levelHp?: number;
+  /** Särdrag (levels Svår and Extrem): bosses hit this much harder; a monster below a quarter health is faster; the others of a pack hit this much harder per fallen member. */
+  bossDmg?: number;
+  enrage?: boolean;
+  grow?: number;
+  /** Loot (levels): the chance of a chest's rare finds times this, and the extra weight of a rarer piece of gear per rarity step. */
+  lootRare?: number;
+  lootRank?: number;
   /**
    * The Sagoandan: free "everyone gets up" on a wipe. `spirit` is how many are left (the star on the HUD); `soft` (Lätt)
    * means a wipe never ends the run, so with none left everyone still gets up. `revive` is set while a wipe's pause is

@@ -1,17 +1,20 @@
 // A tuning script for the runs (GAME2.md section 8): plays bot runs of the route and prints the table of section 5.4.
-//   node --experimental-transform-types packages/shared/src/runtune.ts [--level 0|1] [--style clumsy|careful] [--seeds 20] [--from 1]
-//        [--dungeon draug] [--parties solo|duo|all] [--lane safe|random] [--limit 60]
+//   node --experimental-transform-types packages/shared/src/runtune.ts [--level 0..4] [--style clumsy|careful|kid7] [--seeds 20] [--from 1]
+//        [--dungeon draug] [--parties solo|duo|pair|all] [--lane safe|random] [--limit 60]
 // One row per party: wins, runs that ended on a wipe, Sagoandans used, minutes until the boss falls, and what the route held on
 // average (fights, Vilosten). Not part of the game.
+import { T } from './sv.ts';
 import { DUNGEON_IDS, type ClassId, type DungeonId } from './saga.ts';
+import { RUN_LEVELS, type RunLevel } from './run.ts';
+import type { BotStyle } from './runbot.ts';
 import { makeParty, playRun } from './runplay.ts';
 
 const arg = (name: string, d: string): string => {
   const i = process.argv.indexOf(`--${name}`);
   return i >= 0 ? (process.argv[i + 1] ?? d) : d;
 };
-const level = Number(arg('level', '1')) === 0 ? 0 : 1;
-const style = arg('style', 'clumsy') === 'careful' ? 'careful' : 'clumsy';
+const level = Math.min(4, Math.max(0, Math.floor(Number(arg('level', '2'))))) as RunLevel;
+const style = (['careful', 'kid7'].includes(arg('style', 'clumsy')) ? arg('style', 'clumsy') : 'clumsy') as BotStyle;
 const count = Number(arg('seeds', '20'));
 const from = Number(arg('from', '1'));
 const dungeon = arg('dungeon', 'draug') as DungeonId;
@@ -29,9 +32,18 @@ const DUO: [string, ClassId[]][] = [
   ['krigare + magiker', ['krigare', 'magiker']],
   ['väktare + helare', ['vaktare', 'helare']],
 ];
-const PARTIES = which === 'solo' ? SOLO : which === 'duo' ? DUO : [...SOLO, ...DUO];
+const PAIR: [string, ClassId[]][] = [
+  ['väktare + krigare', ['vaktare', 'krigare']],
+  ['helare + magiker', ['helare', 'magiker']],
+  ['krigare + magiker', ['krigare', 'magiker']],
+];
+// try numbers without editing the table: --hp 1.6 --dmg 1.5 --warn 0.8 (this level only)
+for (const k of ['hp', 'dmg', 'warn', 'seeds'] as const) if (arg(k, '') !== '') RUN_LEVELS[level][k] = Number(arg(k, ''));
+const only = arg('only', '');
+const PARTIES0 = which === 'solo' ? SOLO : which === 'duo' ? DUO : which === 'pair' ? PAIR : [...SOLO, ...DUO];
+const PARTIES = only === '' ? PARTIES0 : PARTIES0.filter((_, i) => String(i) === only);
 
-console.log(`${dungeon}, level ${level} (${level === 0 ? 'Lätt' : 'Vanlig'}), ${style} bots${lane ? `, lane ${lane}` : ''}, seeds ${from}..${from + count - 1}`);
+console.log(`${dungeon}, level ${level} (${T.runLevelName[level]}), ${style} bots${lane ? `, lane ${lane}` : ''}, seeds ${from}..${from + count - 1}`);
 for (const [label, classes] of PARTIES) {
   let wins = 0;
   let wipes = 0;

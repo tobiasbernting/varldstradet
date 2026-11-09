@@ -1100,3 +1100,46 @@ body.in-run.touch .saga-boss {
 .run-panel {
   max-height: 94vh;
 }
+
+/* the class row at the arch */
+.run-modal { z-index: 60; }
+.run-panel .classes {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.run-panel .classcard {
+  --c: #888;
+  background: #fff8e4;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+  border-color: var(--c);
+  padding: 4px;
+}
+.run-panel .classcard .ic { font-size: max(26px, calc(8 * var(--u))); }
+.run-panel .classcard .nm { font-weight: 900; }
+.run-panel .classcard .role { font-size: max(14px, calc(3.6 * var(--u))); background: var(--c); color: #fff; border-radius: 8px; padding: 0 8px; }
+.run-panel .classcard.sel { background: #fff3c0; box-shadow: 0 0 0 4px #d9a52a, 0 var(--u) 0 var(--ink); }
+.run-panel .spellrow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
+.run-panel .spell { display: flex; flex-direction: column; align-items: center; line-height: 1.1; padding: 2px; }
+.run-panel .spell .ic { font-size: 24px; }
+.run-panel .spell .nm { font-size: max(14px, calc(3.4 * var(--u))); }
+.run-panel .face .rolew { font-size: 14px; color: #5a5040; }
+.run-bar .chip-btn.affix { background: #5a2a6a; }
+@media (max-width: 900px) {
+  .run-panel .classes, .run-panel .spellrow { grid-template-columns: repeat(2, 1fr); }
+}
+.run-panel .flash { bottom: auto; top: 56px; z-index: 5; }
+@media (max-height: 500px) {
+  .run-info.in-panel { padding: 4px 10px; gap: 10px; }
+  .run-info.in-panel .ic { font-size: 26px; }
+  .run-info.in-panel .tx b { font-size: 17px; }
+  .run-info.in-panel .tx { font-size: 16px; line-height: 1.15; }
+  .run-info.in-panel .dismiss { display: none; }
+}
+/* the way-on vote stays above the banners and the confetti */
+.run-vote, .run-cards-btn, .run-note, .run-bar { z-index: 50; }
+.run-runor[hidden], .run-bar[hidden], .run-vote[hidden], .run-cards-btn[hidden], .run-note[hidden], .run-info[hidden] { display: none !important; }

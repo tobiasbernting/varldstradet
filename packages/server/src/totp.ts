@@ -60,4 +60,4 @@ export function verifyTotp(secret: string, code: string, now = Date.now()): numb
 }
 
 export const otpauthUri = (secret: string, account: string): string =>
-  `otpauth://totp/${encodeURIComponent(`Lilla Gården:${account}`)}?secret=${secret}&issuer=${encodeURIComponent('Lilla Gården')}`;
+  `otpauth://totp/${encodeURIComponent(`Sagan om Världsträdet:${account}`)}?secret=${secret}&issuer=${encodeURIComponent('Sagan om Världsträdet')}`;

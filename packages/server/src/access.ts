@@ -4,7 +4,7 @@
 // in with a password (and optionally a code from an authenticator app). Rules on top: world closed / family only /
 // open to guests, and play hours.
 import crypto from 'node:crypto';
-import type { VoicePolicy } from '../../shared/src/index.ts';
+import { DEFAULT_MAX_PLAYERS, MAX_PLAYERS_LIMIT, RUN_LEVEL_EXTREM, RUN_LEVEL_IDS, type VoicePolicy } from '../../shared/src/index.ts';
 import type { AccessStore } from './db/accessStore.ts';
 import { verifyTotp } from './totp.ts';
 
@@ -63,6 +63,12 @@ export interface AccessSettings {
   mode: AccessMode;
   /** Röstprat: nobody, family devices, or guests too (missing in settings saved before it existed = family). */
   voice?: VoicePolicy;
+  /** How many characters the server holds (missing = DEFAULT_MAX_PLAYERS). */
+  maxPlayers?: number;
+  /** The highest run level (0..4) a character may play, by character id; missing = every level (RUN_LEVEL_EXTREM). */
+  maxLevel?: Record<string, number>;
+  /** Which device made a character (so the parent page can say whose it is). Characters made without access control have none. */
+  owners?: Record<string, { deviceId: string; device: string; invite: string }>;
   /** Play hours, 'HH:MM' in Swedish time; both null = any time */
   from: string | null;
   to: string | null;
@@ -88,8 +94,8 @@ export interface ParentSession {
   newCode?: { code: string; link: string; label: string; reopen: boolean };
 }
 
-export const DEVICE_COOKIE = 'lg_device';
-export const PARENT_COOKIE = 'lg_parent';
+export const DEVICE_COOKIE = 'vt_device';
+export const PARENT_COOKIE = 'vt_parent';
 
 /**
  * A native client has no cookie jar: it sends the same device token as `Authorization: Bearer
@@ -311,6 +317,21 @@ export class Access {
     await this.store.saveSettings(this.settings);
     await this.record('voice', { off: 'röstprat av', family: 'röstprat för familjen', open: 'röstprat för familj och gäster' }[policy], ip);
     this.onChange();
+  }
+
+  /** How many characters the server holds. */
+  maxPlayers(): number {
+    return this.settings.maxPlayers ?? DEFAULT_MAX_PLAYERS;
+  }
+
+  /** Sets the character limit; false when it is not a whole number from 1 to MAX_PLAYERS_LIMIT. */
+  async setMaxPlayers(n: number, ip: string): Promise<boolean> {
+    if (!Number.isInteger(n) || n < 1 || n > MAX_PLAYERS_LIMIT) return false;
+    this.settings.maxPlayers = n;
+    await this.store.saveSettings(this.settings);
+    await this.record('max-players', `högst ${n} karaktärer`, ip);
+    this.onChange();
+    return true;
   }
 
   async setHours(from: string | null, to: string | null, ip: string): Promise<boolean> {
@@ -586,12 +607,56 @@ export class Access {
   }
 
   async created(d: Device, playerId: string, name: string, ip: string): Promise<void> {
+    (this.settings.owners ??= {})[playerId] = { deviceId: d.id, device: d.name, invite: d.inviteLabel };
+    await this.store.saveSettings(this.settings);
     if (d.kind === 'guest') {
       d.players.push(playerId);
       d.newPlayers = Math.max(0, d.newPlayers - 1);
       await this.store.saveDevice(d);
     }
     await this.record('character', `${d.name} skapade ${name}`, ip);
+  }
+
+  // ---- characters (the parent page) ----
+
+  /** The highest run level this character may play (0..4). */
+  maxLevelFor(playerId: string): number {
+    const n = this.settings.maxLevel?.[playerId];
+    return typeof n === 'number' && (RUN_LEVEL_IDS as readonly number[]).includes(n) ? n : RUN_LEVEL_EXTREM;
+  }
+
+  /** Sets the highest run level of a character; false when the level is not one of the five. */
+  async setMaxLevel(playerId: string, level: number, name: string, ip: string): Promise<boolean> {
+    if (!(RUN_LEVEL_IDS as readonly number[]).includes(level)) return false;
+    const map = (this.settings.maxLevel ??= {});
+    if (level === RUN_LEVEL_EXTREM) delete map[playerId];
+    else map[playerId] = level;
+    await this.store.saveSettings(this.settings);
+    await this.record('max-level', `${name}: högst nivå ${level}`, ip);
+    return true;
+  }
+
+  /** The device (and invite) a character was made on, if known. */
+  ownerOf(playerId: string): { deviceId: string; device: string; invite: string } | null {
+    return this.settings.owners?.[playerId] ?? null;
+  }
+
+  /** A character is gone: nobody keeps a right to it. */
+  async forgetPlayer(playerId: string, name: string, ip: string): Promise<void> {
+    delete this.settings.maxLevel?.[playerId];
+    delete this.settings.owners?.[playerId];
+    await this.store.saveSettings(this.settings);
+    for (const d of this.devices.values()) {
+      if (!d.players.includes(playerId)) continue;
+      d.players = d.players.filter((x) => x !== playerId);
+      await this.store.saveDevice(d);
+    }
+    await this.record('character-deleted', name, ip);
+    this.onChange();
+  }
+
+  async noteRenamed(from: string, to: string, ip: string): Promise<void> {
+    await this.record('character-renamed', `${from} → ${to}`, ip);
   }
 
   /** Drops old waiting devices and spent invites. */

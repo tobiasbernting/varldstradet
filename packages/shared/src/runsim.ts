@@ -5,8 +5,9 @@
 // objects and the hired companion.
 // The run lives in memory only (like a dungeon): it is never saved, what players earn is paid out at once.
 import { ANIMALS, objectDef } from './data.ts';
+import { awardTrophy } from './house.ts';
 import { addItem, countItem, removeItem } from './inventory.ts';
-import { addObject, inInterior, mapH, mapW, objectAt, removeObject, tileIndex } from './map.ts';
+import { addObject, mapH, mapW, objectAt, removeObject, tileIndex } from './map.ts';
 import type { Change } from './protocol.ts';
 import { randInt } from './rng.ts';
 import {
@@ -39,22 +40,23 @@ import {
   RUN_PARTY_MAX,
   RUN_PARTY_MAX_LONGHALL,
   companionClass,
-  RUN_PICK_MS,
+  runPickMs,
   RUN_SEEDS,
   RUN_VICTORY_MS,
   RUN_WARN_MS,
   SMITHY_EFFECT,
   SOLO_MERCY,
   SAGOANDAN,
-  SAGOANDAN_LATT_MAX,
+  RUN_LEVELS,
+  AFFIX_IDS,
   ROUTE_DISC_RADIUS,
   ROUTE_DWELL_MS,
   ROUTE_VOTE_MS,
   VILOSTEN_HEAL,
   tally,
   type RouteChoiceSnap,
-  RUN_LEVEL_LATT,
-  RUN_LEVEL_VANLIG,
+  RUN_LEVEL_DEFAULT,
+  RUN_LEVEL_EXTREM,
   LATT,
   levelMuls,
   parseRunLevel,
@@ -106,7 +108,7 @@ export interface RunState {
   seed: number;
   plan: RunPlan;
   starter: string;
-  /** 0 Lätt, 1 Vanlig (GAME2.md 5.3). */
+  /** 0 Mycket lätt … 4 Extrem (GAME2.md 5.7). */
   level: RunLevel;
   /** The Sagoandans left (the star on the HUD), and the wipes they (or Lätt) have saved so far. */
   spirit: number;
@@ -200,7 +202,7 @@ function boxFree(a: WorldState, x: number, y: number, w: number, h: number, ring
   if (x - ring < 2 || y - ring < 2 || x + w + ring > mapW(a) - 2 || y + h + ring > mapH(a) - 2) return false;
   for (let ty = y - ring; ty < y + h + ring; ty++)
     for (let tx = x - ring; tx < x + w + ring; tx++) {
-      if (inInterior(tx, ty) || BLOCKED.has(a.terrain[tileIndex(a, tx, ty)] ?? '') || a.crops[`${tx},${ty}`]) return false;
+      if (BLOCKED.has(a.terrain[tileIndex(a, tx, ty)] ?? '') || a.crops[`${tx},${ty}`]) return false;
       const o = objectAt(a, tx, ty);
       if (o && !CLEARABLE.has(o.kind)) return false;
     }
@@ -363,7 +365,7 @@ function pay(farm: WorldState, run: RunState, base: number | ((p: PlayerState) =
   for (const p of humans(farm, run)) {
     const n = typeof base === 'function' ? base(p) : base;
     if (n <= 0) continue;
-    const bonus = (effectFor(farm, run, p).seeds ?? 0) + MODIFIER_SEEDS * run.plan.modifiers.length;
+    const bonus = (effectFor(farm, run, p).seeds ?? 0) + MODIFIER_SEEDS * run.plan.modifiers.filter((m) => !AFFIX_IDS.includes(m)).length;
     // the bonuses are added exactly: whole seeds are paid and the remainder is carried to the next payment
     const exact = n * (1 + bonus) * levelMuls(run.level).seeds + (run.carry[p.id] ?? 0);
     const amount = Math.floor(exact + 1e-9);
@@ -535,6 +537,10 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
     .filter((q) => q.id !== p.id && !q.bot && q.online && q.area === 'farm' && !!q.saga?.cls && distTo(q, (arch.x + 1.5) * TILE, (arch.y + 1) * TILE) <= RUN_JOIN_RADIUS)
     .slice(0, max - 1);
   const party = [p, ...near];
+  // a parent may cap the highest level a character plays: the arch refuses to start and says who is capped
+  const wanted = opts.level ?? RUN_LEVEL_DEFAULT;
+  const capped = party.filter((q) => wanted > (ctx.levelCap?.(q.id) ?? RUN_LEVEL_EXTREM));
+  if (capped.length) return [toast(p.id, fmt(RUN_T.capped, { names: capped.map((q) => q.name).join(', '), level: T.runLevelName[wanted]! }))];
   // the dungeon asked for (one cleared, or the next), else the chapter's, or a cleared one at random on a replay (or when all are cleared)
   const cleared = p.saga.cleared;
   const seed = opts.seed ?? Math.floor(ctx.rnd() * 0x7fffffff);
@@ -551,14 +557,14 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
     replay = true;
   }
   const clears = readRun(p).clears[boss] ?? 1;
-  const plan = generateRun(seed, { boss, replay, clears, level: opts.level ?? RUN_LEVEL_VANLIG });
+  const plan = generateRun(seed, { boss, replay, clears, level: opts.level ?? RUN_LEVEL_DEFAULT });
   const run: RunState = {
     id: `run${++counter}`,
     seed,
     plan,
     starter: p.id,
-    level: opts.level ?? RUN_LEVEL_VANLIG,
-    spirit: SAGOANDAN[opts.level ?? RUN_LEVEL_VANLIG],
+    level: opts.level ?? RUN_LEVEL_DEFAULT,
+    spirit: SAGOANDAN[opts.level ?? RUN_LEVEL_DEFAULT],
     spiritUsed: 0,
     phase: 'stop',
     node: 0,
@@ -638,11 +644,12 @@ export function enterStop(farm: WorldState, run: RunState, node: number, ctx: Si
   // the mercy is for one human with the hired companion (two fighters), not for a lone player without one
   const solo = run.party.length === 1 && run.companions.length > 0;
   const lvl = levelMuls(run.level);
-  const latt = run.level === RUN_LEVEL_LATT;
-  // Lätt: one more Sagoandan after each stop (up to a few: the star on the HUD must stay readable)
-  if (latt && run.path.length > 0) run.spirit = Math.min(SAGOANDAN_LATT_MAX, run.spirit + 1);
-  // Lätt: the boss (and the mid-boss, and the guard) use only their first two attacks
-  const moves = latt ? lattMoves() : z.kind === 'boss' ? run.plan.moves : undefined;
+  const def = RUN_LEVELS[run.level];
+  const easy = def.soft;
+  // the gentle levels: more Sagoandar after each stop (up to a few: the star on the HUD must stay readable)
+  if (def.spiritPerStop > 0 && run.path.length > 0) run.spirit = Math.min(def.spiritMax, run.spirit + def.spiritPerStop);
+  // the two gentlest levels: the boss (and the mid-boss, and the guard) use only their first two attacks
+  const moves = def.bossMoves > 0 ? lattMoves() : z.kind === 'boss' ? run.plan.moves : undefined;
   inst.run = {
     run: run.id,
     node,
@@ -656,7 +663,13 @@ export function enterStop(farm: WorldState, run: RunState, node: number, ctx: Si
     sight: z.sight,
     leash: z.leash,
     ...(moves ? { moves } : {}),
-    ...(latt ? { warnMul: lvl.warn, levelHp: lvl.hp, soft: true } : {}),
+    ...(lvl.warn !== 1 || lvl.hp !== 1 ? { warnMul: lvl.warn, levelHp: lvl.hp } : {}),
+    ...(easy ? { soft: true } : {}),
+    ...(z.bossDmg ? { bossDmg: z.bossDmg } : {}),
+    ...(z.enrage ? { enrage: true } : {}),
+    ...(z.grow ? { grow: z.grow } : {}),
+    ...(def.rare !== 1 ? { lootRare: def.rare } : {}),
+    ...(def.rank ? { lootRank: def.rank } : {}),
     spirit: run.spirit,
     used: run.spiritUsed,
     buffs: {},
@@ -674,7 +687,7 @@ export function enterStop(farm: WorldState, run: RunState, node: number, ctx: Si
   run.paid = new Set([...run.paid].filter((k) => k.startsWith('x:')));
   run.waiting = [];
   refresh(farm, run);
-  if (latt && run.path.length > 1) for (const q of humans(farm, run)) out.push(toast(q.id, RUN_T.spiritGained));
+  if (def.spiritPerStop > 0 && run.path.length > 1) for (const q of humans(farm, run)) out.push(toast(q.id, RUN_T.spiritGained));
   for (const p of members(farm, run)) {
     if (p.online) {
       placeIn(farm, p, key, inst.start.x, inst.start.y, 'up', out);
@@ -701,6 +714,8 @@ export function joinRun(world: WorldState, playerId: string, ctx: SimCtx): Chang
   if (!p.saga?.cls) return [toast(p.id, T.sagaNeedClass)];
   if (p.area !== 'farm') return [toast(p.id, RUN_T.needPort)];
   if (run.party.length >= partyMax(farm)) return [toast(p.id, RUN_T.full)];
+  const cap = ctx.levelCap?.(p.id) ?? RUN_LEVEL_EXTREM;
+  if (run.level > cap) return [toast(p.id, fmt(RUN_T.cappedYou, { max: T.runLevelName[cap]! }))];
   const out: Change[] = [];
   // a lone player's hired companion steps aside for a real friend
   if (run.companions.length) dismissCompanions(farm, run, out);
@@ -884,7 +899,7 @@ function tickRoute(farm: WorldState, run: RunState, ctx: SimCtx, late = false): 
 function makeOffer(farm: WorldState, run: RunState, ctx: SimCtx, avoid: string[]): NonNullable<RunState['offer']> {
   // the hired companion's class is not offered: a solo player sees their own class and the party-wide runor
   const classes = humans(farm, run).map((m) => m.saga!.cls!).filter(Boolean);
-  return { cards: offerRunor(ctx.rnd, classes, [...run.runor, ...avoid]), votes: {}, order: [], until: run.elapsed + RUN_PICK_MS, from: run.node };
+  return { cards: offerRunor(ctx.rnd, classes, [...run.runor, ...avoid]), votes: {}, order: [], until: run.elapsed + runPickMs(run.level), from: run.node };
 }
 
 /** A vote for a card. */
@@ -1103,6 +1118,7 @@ function victory(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
       prog.cleared.push(boss);
       bump(p, CLEARED_STAT[boss], 1, out);
     }
+    awardTrophy(farm, p, boss, run.level, out);
     const s = runSaveOf(p);
     s.wins++;
     s.clears[boss] = (s.clears[boss] ?? 0) + 1;

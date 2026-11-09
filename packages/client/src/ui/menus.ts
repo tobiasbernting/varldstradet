@@ -18,6 +18,11 @@ import {
   COOKING,
   FILTER_NAMES,
   HELP,
+  HOUSE_T,
+  homeKey,
+  houseTitle,
+  isHomeKey,
+  ownerOfHome,
   INVENTORY_FILTERS,
   NPCS,
   openQuests,
@@ -61,7 +66,7 @@ import { stackIconUrl } from '@art/painting.ts';
 import { SFX } from '../sound.ts';
 import { FORGE_NPC, hasSagaQuests, landmarkMarks, sagaQuestRows } from './saga.ts';
 
-export type MenuKind = 'inventory' | 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'emotes' | 'nameAnimal' | 'help' | 'npc' | 'cook' | 'book' | 'map' | 'paint' | 'pizzeria' | 'travel';
+export type MenuKind = 'inventory' | 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'emotes' | 'nameAnimal' | 'help' | 'npc' | 'cook' | 'book' | 'map' | 'paint' | 'pizzeria' | 'travel' | 'houses';
 
 const TAB_NAMES: Record<string, string> = { seeds: T.tabSeeds, animals: T.tabAnimals, feed: T.tabFeed, materials: T.tabMaterials, furniture: T.tabFurniture, clothes: T.tabClothes, season: T.tabSeason, stars: `⭐ ${T.tabStars}`, vehicles: T.tabVehicles };
 const SEARCH_KINDS: readonly MenuKind[] = ['inventory', 'chest', 'catalogue', 'sell'];
@@ -213,6 +218,7 @@ export class Menus {
       map: `🗺️ ${T.worldMap}`,
       paint: `🎨 ${T.paint}`,
       pizzeria: `🍕 ${T.pizzeria}`,
+      houses: `🏠 ${HOUSE_T.whoseHouse}`,
       travel: this.travelVia() === 'train' ? `🚂 ${T.travelTrain}` : `🚌 ${T.travelBus}`,
       npc: this.npcId ? (NPCS[this.npcId]?.name ?? '') : '',
     }[this.kind];
@@ -234,6 +240,9 @@ export class Menus {
         break;
       case 'travel':
         this.renderTravel(body);
+        break;
+      case 'houses':
+        this.renderHouses(body);
         break;
       case 'workbench':
         this.renderCraft(body, RECIPES, 'craft');
@@ -597,6 +606,23 @@ export class Menus {
     body.append(rows);
   }
 
+  /** The lobby's house door: your own house first, then everyone else's, each with its owner's portrait. */
+  private renderHouses(body: HTMLElement): void {
+    const me = myPlayer()!;
+    const cards = h('div', { class: 'cards' });
+    const card = (id: string, label: string, p: typeof me, own: boolean) => {
+      const c = h('div', { class: `card${own ? ' last' : ''}`, title: label }, h('img', { class: 'portrait', src: portraitUrl(p.appearance, p.outfit, 4) }), h('div', { class: 'nm' }, `${own ? '🏠 ' : ''}${label}`));
+      onTap(c, () => {
+        net.send({ t: 'house', a: 'enter', of: id });
+        this.close();
+      });
+      cards.append(c);
+    };
+    card(me.id, HOUSE_T.myHouse, me, true);
+    for (const p of Object.values(client.world?.players ?? {})) if (p.id !== me.id && !p.bot) card(p.id, houseTitle(p.name), p, false);
+    body.append(cards);
+  }
+
   private catalogueName(d: ItemDef): string {
     if (d.category === 'animal' && d.species && !ANIMALS[d.species]?.vehicle) {
       const house = ANIMALS[d.species]?.house;
@@ -768,7 +794,7 @@ export class Menus {
     onTap(mini, () => document.dispatchEvent(new CustomEvent('lilla:minimap')));
     buttons.push(mini);
     const place = me.area === 'farm' ? 'farm' : me.area === 'dungeon' ? 'dungeon' : client.areas[me.area]?.biome;
-    const where = isBathKey(me.area) ? `🏊 ${T.bathhouseName}` : `${placeEmoji(place)} ${placeName(place)}`;
+    const where = isBathKey(me.area) ? `🏊 ${T.bathhouseName}` : isHomeKey(me.area) ? `🏠 ${me.area === homeKey(me.id) ? HOUSE_T.myHouse : houseTitle(client.world?.players[ownerOfHome(me.area)]?.name ?? '')}` : `${placeEmoji(place)} ${placeName(place)}`;
     body.append(h('p', { class: 'help-intro' }, `${T.youAreHere}: ${where} · Norr är uppåt. Kallt i norr, varmt i söder, hav i väster och berg i öster.`), grid, h('div', { class: 'tabs' }, ...buttons));
   }
 

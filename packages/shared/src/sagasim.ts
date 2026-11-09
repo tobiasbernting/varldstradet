@@ -7,8 +7,10 @@
 import { ANIMALS, ITEMS, NPCS, VILLAGE_KEY, objectDef } from './data.ts';
 import { MAX_HEARTS } from './dungeon.ts';
 import { isIndoorKey } from './bath.ts';
+import { awardTrophy } from './house.ts';
+import { RUN_LEVEL_MEDEL } from './run.ts';
 import { addItem, countItem, removeItem } from './inventory.ts';
-import { addObject, inBounds, inInterior, mapH, mapW, objectAt, removeObject, tileIndex } from './map.ts';
+import { addObject, inBounds, mapH, mapW, objectAt, removeObject, tileIndex } from './map.ts';
 import type { Change } from './protocol.ts';
 import { randInt } from './rng.ts';
 import {
@@ -80,6 +82,7 @@ import {
   forgeLevel,
   type ForgeCost,
   SAGOANDAN_HP,
+  ENRAGE,
 } from './saga.ts';
 import { runHooks } from './runhooks.ts';
 import { sagaCheckpoint, spawnSagaMob } from './sagamap.ts';
@@ -679,6 +682,9 @@ function replayChest(h: Here, p: PlayerState, table: SagaLoot, from: string, fin
   out.push({ t: 'loot', to: p.id, from, items, coins, stars: 0, replay: true }, playerChange(p));
 }
 
+/** How many steps up from common a piece of gear is (a level's loot bonus adds weight per step). */
+const RARITY_STEP: Record<string, number> = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };
+
 /** Things that come once each (clothes, weapons, offhands, amulets, pets, mounts), so the same one does not come twice while there are new ones. */
 const unique = (id: string): boolean => {
   const k = sagaItem(id)?.kind;
@@ -693,17 +699,20 @@ function rollLoot(h: Here, p: PlayerState, table: SagaLoot, from: string, ctx: S
   const fresh = table.gear.filter((g) => !unique(g.item) || !prog.found.includes(g.item));
   const pool = fresh.length ? fresh : table.gear;
   const total = pool.reduce((n, g) => n + g.weight, 0);
-  let r = ctx.rnd() * total;
+  const rank = h.inst.run?.lootRank ?? 0;
+  const wt = (g: { item: string; weight: number }): number => g.weight * (1 + rank * RARITY_STEP[sagaItem(g.item)?.rarity ?? 'common']!);
+  const sum = pool.reduce((n, g) => n + wt(g), 0);
+  let r = ctx.rnd() * (rank ? sum : total);
   let pick = pool[0]!;
   for (const g of pool) {
-    r -= g.weight;
+    r -= rank ? wt(g) : g.weight;
     if (r <= 0) {
       pick = g;
       break;
     }
   }
   items.push({ item: pick.item, count: pick.item === 'healing_potion' ? 2 : 1 });
-  for (const rare of table.rare ?? []) if (!prog.found.includes(rare.item) && ctx.rnd() < rare.chance) items.push({ item: rare.item, count: 1 });
+  for (const rare of table.rare ?? []) if (!prog.found.includes(rare.item) && ctx.rnd() < rare.chance * (h.inst.run?.lootRare ?? 1)) items.push({ item: rare.item, count: 1 });
   items.push(...extra);
   p.coins += coins;
   p.stars += table.stars;
@@ -975,13 +984,24 @@ function heal(h: Here, p: PlayerState, f: SagaFighter, amount: number, out: Chan
   if (f.hp > before || crit) out.push(hit(h, p.id, f.hp - before, crit ? 'crit' : 'heal'));
 }
 
+/** The särdrag that make a monster hit harder: Stormig (bosses), Stärkande (per fallen pack member) and Jakten (below a quarter health). */
+function mobBoost(h: Here, by: SagaMob | null): number {
+  const run = h.inst.run;
+  if (!run || !by) return 1;
+  let n = 1;
+  if (run.bossDmg && (by.kind === 'boss' || by.kind === 'mini')) n *= run.bossDmg;
+  if (run.grow && by.fallen) n *= 1 + run.grow * by.fallen;
+  if (run.enrage && by.kind === 'mob' && by.hp < by.max * ENRAGE.below) n *= 1.15;
+  return n;
+}
+
 function hurtFighter(h: Here, p: PlayerState, amount: number, by: SagaMob | null, now: number, out: Change[]): void {
   const f = h.inst.fighters[p.id];
   // the ice that holds a frozen player keeps everything else out too
   if (!f || f.down !== undefined || f.frozen !== undefined) return;
   const rb = buffsOf(h, p.id);
   const armor = Math.min(0.6, gearStats(p).armor + rb.armor);
-  let n = Math.max(1, Math.round(amount * mobDmgScale(partyOf(h).length) * (h.inst.run?.dmgMul ?? 1) * (1 - armor) * (1 - Math.min(0.5, rb.taken)) * (f.wall !== undefined && now < f.wall ? 0.4 : 1)));
+  let n = Math.max(1, Math.round(amount * mobDmgScale(partyOf(h).length) * (h.inst.run?.dmgMul ?? 1) * mobBoost(h, by) * (1 - armor) * (1 - Math.min(0.5, rb.taken)) * (f.wall !== undefined && now < f.wall ? 0.4 : 1)));
   if (n >= f.hp && f.hp > f.max * 0.5 && n < f.max) n = f.hp - 1; // one hit from full health never knocks you down
   f.hp -= n;
   f.fightAt = now;
@@ -1120,6 +1140,7 @@ function mobDown(h: Here, m: SagaMob, by: string, ctx: SimCtx, out: Change[]): v
   }
   if (m.pack >= 0) {
     const pack = h.inst.packs[m.pack]!;
+    if (h.inst.run?.grow) for (const id of pack.members) if (id !== m.id && h.inst.mobs[id]) h.inst.mobs[id]!.fallen = (h.inst.mobs[id]!.fallen ?? 0) + 1;
     if (pack.members.every((id) => !h.inst.mobs[id])) pack.dead = true;
   }
   const boss = SAGA_BOSSES[m.species];
@@ -1172,6 +1193,7 @@ function mobDown(h: Here, m: SagaMob, by: string, ctx: SimCtx, out: Change[]): v
         bump(p, CLEARED_STAT[h.inst.id], 1, out);
       }
       names.push(p.name);
+      if (!h.inst.run) awardTrophy(h.farm, p, d.boss, RUN_LEVEL_MEDEL, out); // (a run's trophies come with its win, at its level)
       out.push({ t: 'banner', to: p.id, area: h.key, text: fmt(T.sagaBossDown, { boss: boss.name }), sub: fmt(T.sagaCleared, { dungeon: d.name }), kind: 'cleared' });
     }
     out.push(toast(null, fmt(T.sagaFamilyWin, { names: names.join(' och '), boss: boss.name })));
@@ -1433,6 +1455,7 @@ function tickMob(h: Here, m: SagaMob, dtMs: number, ctx: SimCtx, fields: Map<str
   }
   if (boss && m.next && startCast(h, m, a, ctx, out)) return;
   const reach = stats.reach;
+  const raged = !!h.inst.run?.enrage && m.kind === 'mob' && m.hp < m.max * ENRAGE.below;
   const d = dist(a, target);
   const ranged = reach > 2.5;
   const see = lineOfSight(h.area, a.x, a.y, target.x, target.y);
@@ -1442,7 +1465,7 @@ function tickMob(h: Here, m: SagaMob, dtMs: number, ctx: SimCtx, fields: Map<str
     const dy = target.y - a.y;
     a.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up';
     if (now >= m.atkAt) {
-      m.atkAt = now + stats.atkMs;
+      m.atkAt = now + stats.atkMs / (raged ? ENRAGE.rate : 1);
       if (ranged) out.push(spellFx(h, m.id, `mob_${m.species}`, a, target, target.id));
       else out.push(spellFx(h, m.id, 'claw', a, target, target.id));
       hurtFighter(h, target, stats.dmg, m, now, out);
@@ -1460,7 +1483,7 @@ function tickMob(h: Here, m: SagaMob, dtMs: number, ctx: SimCtx, fields: Map<str
     fields.set(target.id, field);
   }
   const was = { x: a.x, y: a.y };
-  stepTowards(h, m, a, target, stats.speed * TILE * slow, dtMs, field ?? null);
+  stepTowards(h, m, a, target, stats.speed * TILE * slow * (raged ? ENRAGE.speed : 1), dtMs, field ?? null);
   if (boss && dist(a, m.home) > BOSS_HALL && dist(a, m.home) > dist(was, m.home)) {
     // a boss stops at the edge of its hall
     a.x = was.x;
@@ -2120,7 +2143,7 @@ function canFieldCast(world: WorldState, p: PlayerState): boolean {
   if (!p.saga?.cls || !p.saga.hero || p.sleeping || p.hearts <= 0) return false;
   if (isSagaKey(p.area) || p.area === 'dungeon' || isIndoorKey(p.area)) return false;
   const area = getArea(farmOf(world), p.area);
-  return !!area && !(isFarm(area) && inInterior(tileOf(p.x), tileOf(p.y)));
+  return !!area;
 }
 
 /** A monster out in the world is dazed: it stands still and does not bite for a while (sim's tickMob reads attackAt). */

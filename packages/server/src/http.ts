@@ -4,9 +4,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
-import { T, WEATHER_NAMES, isSeason, isWeatherKind, type ClientMsg, type ServerMsg } from '../../shared/src/index.ts';
-import type { Game, Link } from './game.ts';
-import { adminPage } from './admin.ts';
+import { MAX_PLAYERS_LIMIT, T, type ClientMsg, type ServerMsg } from '../../shared/src/index.ts';
+import { CLOSE_NO_ACCESS, type Game, type Link } from './game.ts';
+import { adminPage, charactersSection } from './admin.ts';
 import { DEVICE_COOKIE, PARENT_COOKIE, bearerToken, type Access, type AccessMode, type Device } from './access.ts';
 import { COPY_SCRIPT, accessPage, accessSections, joinPage, loginPage } from './pages.ts';
 import { newTotpSecret } from './totp.ts';
@@ -30,7 +30,7 @@ const MIME: Record<string, string> = {
 const PUBLIC_FILES = new Set(['/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png']);
 
 /** WebSocket close code that tells the client to go to the gate page instead of reconnecting. */
-export const CLOSE_NO_ACCESS = 4003;
+export { CLOSE_NO_ACCESS };
 
 export function findClientDist(): string | null {
   const env = process.env.CLIENT_DIST;
@@ -195,6 +195,30 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
     return m;
   };
 
+  /** The parent page's character controls (the caller has checked the parent session, or that there is no access control). */
+  const characterAction = async (action: 'rename' | 'level' | 'delete', form: URLSearchParams, ip: string): Promise<string> => {
+    const id = form.get('id') ?? '';
+    const p = game.world.players[id];
+    if (!p || p.bot) return 'Karaktären finns inte';
+    if (action === 'rename') {
+      const from = p.name;
+      if (!game.renamePlayer(id, form.get('name') ?? '')) return 'Skriv ett namn';
+      await access?.noteRenamed(from, p.name, ip);
+      return `Nytt namn: ${p.name}`;
+    }
+    if (action === 'level') {
+      if (!access) return 'Svårighetsgränser kräver åtkomstkontroll';
+      const level = Number(form.get('level') ?? '');
+      if (!(await access.setMaxLevel(id, level, p.name, ip))) return 'Välj en av nivåerna';
+      access.onChange();
+      return `${p.name} får spela upp till ${T.runLevelName[level]}`;
+    }
+    const name = p.name;
+    if (!game.deletePlayer(id)) return 'Karaktären finns inte';
+    await access?.forgetPlayer(id, name, ip);
+    return `${name} är borttagen`;
+  };
+
   const handle = async (req: http.IncomingMessage, res: http.ServerResponse, surface: Surface): Promise<void> => {
     try {
       const url = new URL(req.url ?? '/', 'http://localhost');
@@ -237,12 +261,13 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
         device = isAdminPath(p) ? access.deviceFor(cookies[DEVICE_COOKIE]) : deviceOf(req);
         if (device) access.seen(device, ip);
 
+        if (p === '/access' && access.gate(device) === 'ok') return redirect(res, '/');
         if (p === '/access') return html(res, 200, accessPage(access.gate(device), device, access, nonce, surface === 'all'));
         if (p === '/api/me' || p === '/api/gate') {
           const gate = access.gate(device);
           return json(res, gate === 'ok' ? 200 : 403, {
             gate,
-            ...(device ? { name: device.name, kind: device.kind, canCreate: access.mayCreate(device) } : {}),
+            ...(device ? { name: device.name, kind: device.kind, canCreate: access.mayCreate(device) && !game.full() } : {}),
             // a native client has no gate page: it shows the play hours itself
             ...(gate === 'hours' ? { hours: { from: access.settings.from, to: access.settings.to } } : {}),
           });
@@ -299,9 +324,10 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
               thisDevice: device?.id ?? null,
               // a family device made on the parent server would only be a cookie for the parent page's address
               canAddThisDevice: surface === 'all',
+              charactersHtml: charactersSection(game, access),
             });
             delete session.newCode; // shown once
-            return html(res, 200, adminPage(game, opts.seasonEnv, url.searchParams.get('m') ?? '', nonce, accessHtml, COPY_SCRIPT));
+            return html(res, 200, adminPage(game, access, url.searchParams.get('m') ?? '', nonce, accessHtml, COPY_SCRIPT));
           }
           if (p.startsWith('/admin/access/') && req.method === 'POST') {
             const form = new URLSearchParams(await readBody(req));
@@ -324,6 +350,9 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
                 }
                 break;
               }
+              case 'max-players':
+                m = (await access.setMaxPlayers(Number(form.get('max') ?? ''), ip)) ? 'Sparat' : `Skriv ett heltal från 1 till ${MAX_PLAYERS_LIMIT}`;
+                break;
               case 'hours':
                 m = (await access.setHours(form.get('from') || null, form.get('to') || null, ip)) ? 'Speltiden sparad' : 'Fyll i både från och till (eller inget av dem)';
                 break;
@@ -376,6 +405,18 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
                 m = 'Den här webbläsaren är nu en familjeenhet';
                 break;
               }
+              case 'character-rename': {
+                m = await characterAction('rename', form, ip);
+                break;
+              }
+              case 'character-level': {
+                m = await characterAction('level', form, ip);
+                break;
+              }
+              case 'character-delete': {
+                m = await characterAction('delete', form, ip);
+                break;
+              }
               case 'totp-start':
                 session.totpPending = newTotpSecret();
                 break;
@@ -412,7 +453,7 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
       }
 
       // no access control (ACCESS=open): every device is in, a native client needs no token
-      if (p === '/api/me' || p === '/api/gate') return json(res, 200, { gate: 'ok', canCreate: true });
+      if (p === '/api/me' || p === '/api/gate') return json(res, 200, { gate: 'ok', canCreate: !game.full() });
       if (p === '/api/join' && req.method === 'POST') return json(res, 200, { gate: 'ok' });
       if (p === '/api/players' && req.method === 'GET') {
         const all = game.playerSummaries();
@@ -435,36 +476,11 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
         return json(res, 201, created);
       }
       if (p === '/api/season') return json(res, 200, { season: game.season() });
-      if (p === '/admin' && req.method === 'GET') return html(res, 200, adminPage(game, opts.seasonEnv, url.searchParams.get('m') ?? '', nonce));
-      if (p.startsWith('/admin/') && req.method === 'POST') {
-        const form = Object.fromEntries(new URLSearchParams(await readBody(req)));
-        let m = '';
-        if (p === '/admin/season') {
-          const s = form.season ?? 'auto';
-          game.setSeasonOverride(s !== 'auto' && isSeason(s) ? s : null);
-          m = 'Säsong uppdaterad';
-        } else if (p === '/admin/save') {
-          await game.flush();
-          m = 'Sparat';
-        } else if (p === '/admin/skipday') {
-          game.skipDay();
-          m = `Ny dag: ${game.world.day}`;
-        } else if (p === '/admin/evening') {
-          game.setTimeOfDay(0.72);
-          m = 'Kvällen kommer';
-        } else if (p === '/admin/morning') {
-          game.setTimeOfDay(0.05);
-          m = 'God morgon';
-        } else if (p === '/admin/weather') {
-          if (isWeatherKind(form.weather)) {
-            game.setWeather(form.weather);
-            m = `Vädret: ${WEATHER_NAMES[form.weather]}`;
-          }
-        } else if (p === '/admin/time') {
-          const f = Number(form.fraction);
-          if (Number.isFinite(f)) game.setTimeOfDay(f);
-          m = 'Tiden ändrad';
-        }
+      // ACCESS=open: the parent page without a login (the characters and the status, nothing that needs a device)
+      if (p === '/admin' && req.method === 'GET') return html(res, 200, adminPage(game, null, url.searchParams.get('m') ?? '', nonce, '', COPY_SCRIPT));
+      if (p.startsWith('/admin/access/character-') && req.method === 'POST') {
+        const form = new URLSearchParams(await readBody(req));
+        const m = await characterAction(p.slice('/admin/access/character-'.length) as 'rename' | 'level' | 'delete', form, ip);
         return redirect(res, `/admin?m=${encodeURIComponent(m)}`);
       }
       if (opts.clientDist && req.method === 'GET') {
@@ -514,7 +530,7 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
           console.error('could not send', msg.t, e);
         }
       },
-      close: () => ws.close(),
+      close: (code) => ws.close(code),
     };
     const handle = game.connect(link, { ip, guest: device?.kind === 'guest' });
     ws.on('message', (data) => {
