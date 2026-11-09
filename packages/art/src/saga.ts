@@ -3752,6 +3752,75 @@ export function sagaIcons(): Record<string, Px> {
 
 // ---------------------------------------------------------------------------
 
+
+// ---------------------------------------------------------------------------
+// The väg-runor of a run: a round rune stone flat on the floor of the exit room, one for each stop the next row leads to.
+// Its picture is the stop it leads to (variant 0 a flock: crossed swords, 1 a Vilosten: a heart, 2 the Mellanboss: a horned
+// helm, 3 the boss: a crown) in that stop's colour; two frames pulse. It is 32 px wide, as wide as the circle you stand in to vote.
+// ---------------------------------------------------------------------------
+
+const EXIT_COL = [
+  { d: '#8a3a12', b: '#ff9a3c', l: '#ffe2a8' },
+  { d: '#14744a', b: '#4fe39a', l: '#d4ffe8' },
+  { d: '#5a2290', b: '#c07cff', l: '#f2dcff' },
+  { d: '#8a6208', b: '#ffd23f', l: '#fff6b8' },
+];
+const EXIT_SIGN: string[][] = [
+  [],
+  ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'],
+  ['#.....#', '##...##', '.#####.', '#######', '##.#.##', '.#.#.#.'],
+  ['#..#..#', '##.#.##', '#######', '#######', '#######'],
+];
+const big = (p: Px, x: number, y: number, rows: string[], c: string): Px => {
+  rows.forEach((row, j) => [...row].forEach((ch, i) => ch === '#' && p.rect(x + i * 2, y + j * 2, 2, 2, c)));
+  return p;
+};
+
+function runExit(kind: number, f: number): Px {
+  const p = new Px(32, 32);
+  const c = EXIT_COL[kind % 4]!;
+  const cx = 16;
+  const cy = 16.5;
+  // the stone disc (a little flattened, we look down at it from the south), a lit ring of runes, a lighter middle
+  paint(p, 0, 2, 32, 29, (x, y) => {
+    const dx = (x + 0.5 - cx) / 15.6;
+    const dy = (y + 0.5 - cy) / 13.6;
+    const r = dx * dx + dy * dy;
+    if (r > 1) return null;
+    if (r > 0.9) return c.d;
+    if (r > 0.8) return f ? c.l : c.b;
+    if (r > 0.74) return c.d;
+    if (r > 0.42) return tone(STONE, light(dx, dy, 0.8) + 0.18 * grain(x, y, 31 + kind) - 0.15);
+    return tone(STONE, light(dx, dy, 0.7) + 0.12 * grain(x, y, 37 + kind) + 0.12);
+  });
+  // eight little runes round the ring
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + 0.2;
+    const x = Math.round(cx + Math.cos(a) * 11.2) - 1;
+    const y = Math.round(cy + Math.sin(a) * 9.8) - 2;
+    rune(p, x, y, i + kind, (i + f) % 2 ? c.l : c.b);
+  }
+  // the picture of the stop it leads to
+  if (kind === 0) {
+    for (const [dx, dy] of [[0, 1], [0, 0]] as const) {
+      const col = dy ? c.d : c.l;
+      p.line(10 + dx, 12 + dy, 22 + dx, 24 + dy, col).line(11 + dx, 12 + dy, 22 + dx, 23 + dy, col);
+      p.line(22 + dx, 12 + dy, 10 + dx, 24 + dy, col).line(21 + dx, 12 + dy, 10 + dx, 23 + dy, col);
+    }
+    p.rect(9, 11, 3, 2, c.b).rect(20, 11, 3, 2, c.b).rect(9, 23, 3, 2, c.b).rect(20, 23, 3, 2, c.b);
+  } else {
+    const sign = EXIT_SIGN[kind]!;
+    big(p, 9, 11, sign, c.d);
+    big(p, 9, 10, sign, c.l);
+  }
+  p.outline(OUTLINE);
+  glowOn(p, cx, cy, 15, c.b, f ? 0.2 : 0.1);
+  halo(p, cx, cy, 16, c.b, f ? 0.32 : 0.2);
+  if (f) twinkle(p, 6, 8, c.l, '#ffffff');
+  else twinkle(p, 26, 24, c.l, '#ffffff');
+  return p;
+}
+
 /** How many looks the dungeons' walls, gates, torches, ways out and arches come in (one per dungeon). */
 export const SAGA_LOOKS = 9;
 const LOOKS = SAGA_LOOKS;
@@ -3777,6 +3846,8 @@ export function drawSaga(set: SetArt): void {
   set('saga_brazier', n(6, (i) => brazier(i % 3, Math.floor(i / 3))), 0, -10);
   set('saga_lavacrack', n(6, (i) => lavaCrack(i % 3, Math.floor(i / 3))));
   set('solruna', n(2, solruna), 0, -8, true);
+  // the väg-runor of a run: the stop each leads to in its variant, then the same four a step on
+  set('run_exit', n(8, (i) => runExit(i % 4, Math.floor(i / 4))), -8, -8);
   set('yggdrasil', n(2, yggdrasil), -4, -16, true);
   // the second act: the puzzle rooms' rune plates, then each new dungeon's things (three of each, picked at random)
   set('saga_plate', n(4, (i) => sagaPlate(i % 2 === 1, Math.floor(i / 2))));
@@ -3809,6 +3880,6 @@ export function drawSaga(set: SetArt): void {
 }
 
 /** Per kind, how many looks its frames hold before the same looks come again a step on (flames, glows). */
-export const SAGA_STEPPED: Record<string, number> = { saga_torch: LOOKS, saga_rest: 2, saga_portal: LOOKS, saga_candles: 3, saga_icecrystal: 3, saga_brazier: 3, saga_lavacrack: 3,
+export const SAGA_STEPPED: Record<string, number> = { saga_torch: LOOKS, saga_rest: 2, run_exit: 4, saga_portal: LOOKS, saga_candles: 3, saga_icecrystal: 3, saga_brazier: 3, saga_lavacrack: 3,
   saga_plate: 2, saga_ghostlight: 3, saga_goldpile: 3, saga_minelamp: 3, saga_seaweed: 3, saga_pearl: 3, saga_glowshroom: 3, saga_fairylight: 3, saga_rainbowshard: 3, saga_starlamp: 3,
 };

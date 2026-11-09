@@ -12,6 +12,8 @@ import {
   CROPS,
   DAY_LENGTH_MS,
   dungeonOfKey,
+  NODE_KIND_CODE,
+  STOP_WORDS,
   DUNGEON_H,
   DUNGEON_W,
   facingTile,
@@ -66,6 +68,7 @@ import { net } from '@v1/net.ts';
 import { SFX } from '@v1/sound.ts';
 import { activeWorld, bus, client, myArea, myPlayer, serverNow } from '@v1/state.ts';
 import { attackTarget, heroOn, levelOf, sagaMarker, sagaSpeed, titleOf } from '@v1/saga.ts';
+import { KIND_ICON, runClient } from '@v1/run.ts';
 import type { HudTarget } from '@v1/ui/hud.ts';
 import { animalSprites, characterSprites, loadSprites, paintingSprite, type ObjectSprites, type Sprites } from './art.ts';
 import type { Sprite } from './atlas.ts';
@@ -365,7 +368,8 @@ export class View implements HudTarget {
     this.loading = true;
     this.world = world;
     this.area = myArea();
-    this.saga = isSagaKey(this.area) ? dungeonOfKey(this.area) : null;
+    // a stop of a run (saga:run<n>z<i>) has the look of the chapter's dungeon, which its map carries
+    this.saga = isSagaKey(this.area) ? (dungeonOfKey(this.area) ?? world.saga?.id ?? null) : null;
     this.cave = isUnderground(this.area) || this.saga !== null;
     this.moon = this.area === MOON_KEY;
     // an indoor room (the bath house): lit inside and dark around it
@@ -413,6 +417,7 @@ export class View implements HudTarget {
     this.roofs = [];
     this.talk.clear();
     this.labels.innerHTML = '';
+    this.runeLabels.clear();
     this.fx?.clear();
     this.sagaFx?.clear();
     this.weather?.reset();
@@ -1933,6 +1938,34 @@ export class View implements HudTarget {
 
   // ------------------------------------------------------------------ labels (DOM)
 
+  /** The väg-runor of a run carry a label with the stop they lead to and who stands on them. */
+  private runeLabels = new Map<number, HTMLDivElement>();
+  private placeRuneLabels(place: (el: HTMLElement, x: number, y: number) => void): void {
+    const run = runClient.run;
+    const live = new Set<number>();
+    for (const [id, ov] of this.objects) {
+      if (ov.o.kind !== 'run_exit') continue;
+      live.add(id);
+      let el = this.runeLabels.get(id);
+      if (!el) {
+        el = this.makeLabel('', 'rune');
+        this.runeLabels.set(id, el);
+      }
+      const kind = (Object.keys(NODE_KIND_CODE) as (keyof typeof NODE_KIND_CODE)[]).find((k) => NODE_KIND_CODE[k] === (ov.o.variant ?? 0)) ?? 'flock';
+      const choice = run?.choices?.find((c) => c.x === ov.o.x && c.y === ov.o.y);
+      const names = (choice?.on ?? []).map((pid) => run?.party.find((p) => p.id === pid)?.name).filter(Boolean);
+      const text = `${KIND_ICON[kind]} ${STOP_WORDS[kind]}${names.length ? ` · ${names.join(', ')}` : ''}`;
+      if (el.textContent !== text) el.textContent = text;
+      el.classList.toggle('on', names.length > 0);
+      place(el, ov.o.x * TILE + TILE / 2, ov.o.y * TILE - 6);
+    }
+    for (const [id, el] of this.runeLabels) {
+      if (live.has(id)) continue;
+      el.remove();
+      this.runeLabels.delete(id);
+    }
+  }
+
   /** Names and bubbles follow their owners on screen. Called after the camera moved. */
   placeLabels(): void {
     const world = this.world;
@@ -1948,6 +1981,7 @@ export class View implements HudTarget {
     };
     // the dungeons' floating numbers and health bars
     this.sagaFx.placeLabels(place, (y) => (y - cy) * z + offY);
+    this.placeRuneLabels(place);
     for (const [id, a] of this.players) {
       // a fallen friend lies down: the name comes down too
       const low = this.sagaFx.pose(id) === 'down' ? 12 : 0;
