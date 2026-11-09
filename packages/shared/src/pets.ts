@@ -130,7 +130,7 @@ export const PETS: Record<string, PetDef> = {
     courage: 35,
     source: { kind: 'drop', boss: 'draugkung', chance: 0.3 },
     trick: { kind: 'mark', bonus: 0.2, ms: 6000, cd: 9000, range: 8 },
-    anchors: A([14, 3], [11, 6], [7, 5], 0),
+    anchors: A([14, 3], [10, 5], [7, 5], 0),
   },
   bjorn: {
     id: 'bjorn',
@@ -190,7 +190,7 @@ export const PETS: Record<string, PetDef> = {
     courage: 50,
     source: { kind: 'drop', boss: 'nattmara', chance: 0.3 },
     trick: { kind: 'ambush', first: 28, dmg: 3, cd: 2200, range: 1.6, hideMs: 6000 },
-    anchors: A([13, 3], [10, 5], [6, 3], 0),
+    anchors: A([13, 3], [8, 6], [6, 3], 0),
   },
 };
 
@@ -200,7 +200,7 @@ export const petDef = (id: string | undefined): PetDef | undefined => (id ? PETS
 export const petOfSpecies = (species: string): PetDef | undefined => Object.values(PETS).find((d) => d.species === species);
 
 /** Pet strength by run level (0 Mycket lätt .. 4 Extrem): the hard levels get a smaller helper so they do not get easier. */
-export const PET_LEVEL_MUL: readonly number[] = [1, 1, 1, 0.4, 0.25];
+export const PET_LEVEL_MUL: readonly number[] = [1, 1, 1, 0.35, 0.15];
 export const petLevelMul = (level: number | undefined): number => PET_LEVEL_MUL[Math.max(0, Math.min(4, level ?? 2))] ?? 1;
 
 // ---- cosmetic gear for pets (prepared: one test item, no collection or drops yet) ----

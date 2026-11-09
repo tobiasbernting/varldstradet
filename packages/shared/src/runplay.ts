@@ -44,7 +44,7 @@ export function makeParty(classes: ClassId[], opts: { level?: number; style?: Bo
     p.x = (front.x + (i % 3) - 1) * TILE + TILE / 2;
     p.y = (front.y + 1 + Math.floor(i / 3)) * TILE + TILE / 2;
     party.players.push(p);
-    const pet = Array.isArray(opts.pet) ? opts.pet[i] : opts.pet; // (every bot brings the same pet, or the list gives one per hero)
+    const pet = (Array.isArray(opts.pet) ? opts.pet[i] : opts.pet) ?? (typeof process !== 'undefined' ? process.env.BOT_PET : undefined); // (BOT_PET=hund runs the bot tests with a pet each) (every bot brings the same pet, or the list gives one per hero)
     if (pet) grantPet(world, p, pet, [], { quiet: true, now: 0 });
     party.minds.set(p.id, newMind(opts.style ?? 'careful', mulberry32(100 + i), opts.lane));
   });
