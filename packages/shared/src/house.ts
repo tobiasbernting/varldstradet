@@ -215,22 +215,30 @@ export function standAct(world: WorldState, p: PlayerState, obj: WorldObject, he
 // Boss trophies
 // ---------------------------------------------------------------------------
 
+/** What a win gave: the trophy's kind, its level, and whether it is new in the bag, stands in the house (full bag) or an old one got finer. */
+export interface TrophyAward {
+  item: string;
+  level: number;
+  where: 'bag' | 'home' | 'up';
+}
+
 /**
  * A boss beaten at difficulty `level` (0..4): the player's trophy for that boss is made, or made finer when this level beats
  * the best one so far (the one in the bag or standing in their house is upgraded, never a second one). Nothing for a lower level.
  */
-export function awardTrophy(world: WorldState, p: PlayerState, bossOrDungeon: string, level: number, out: Change[]): void {
+export function awardTrophy(world: WorldState, p: PlayerState, bossOrDungeon: string, level: number, out: Change[]): TrophyAward | null {
   // (a run knows its chapter by the dungeon's id, a dungeon's boss by its own)
   const bossId = DUNGEONS[bossOrDungeon as keyof typeof DUNGEONS]?.boss ?? bossOrDungeon;
-  if (p.bot || !TROPHY_BOSSES.includes(bossId)) return;
+  if (p.bot || !TROPHY_BOSSES.includes(bossId)) return null;
   const lv = clampTrophyLevel(level);
   const rec = (p.trophies ??= {});
   const best = rec[bossId];
-  if (best !== undefined && best >= lv) return;
+  if (best !== undefined && best >= lv) return null;
   rec[bossId] = lv;
   const kind = TROPHY_PREFIX + bossId;
   const bossName = itemName(kind).replace('Trofé: ', '');
   let upgraded = false;
+  let where: TrophyAward['where'] = 'bag';
   if (best !== undefined) {
     for (const s of p.inventory) if (s?.item === kind) { s.data = String(lv); upgraded = true; }
     const farm = farmOf(world);
@@ -246,12 +254,16 @@ export function awardTrophy(world: WorldState, p: PlayerState, bossOrDungeon: st
         }
   }
   if (upgraded) out.push(toast(p.id, fmt(HOUSE_T.trophyUp, { boss: bossName, level: TROPHY_LEVEL_NAMES[lv]! })));
-  else if (p.inventory.indexOf(null) < 0 && standInHouse(world, p, kind, lv, out)) out.push(toast(p.id, fmt(HOUSE_T.trophyHome, { boss: bossName })));
+  else if (p.inventory.indexOf(null) < 0 && standInHouse(world, p, kind, lv, out)) {
+    where = 'home';
+    out.push(toast(p.id, fmt(HOUSE_T.trophyHome, { boss: bossName })));
+  }
   else {
     giveStack(world, p, { item: kind, count: 1, data: String(lv) }, out);
     out.push(toast(p.id, fmt(HOUSE_T.trophyNew, { boss: bossName })));
   }
   out.push(playerChange(p));
+  return { item: kind, level: lv, where: upgraded ? 'up' : where };
 }
 
 /** A trophy with nowhere to go (a full bag) stands in the owner's house instead: along the back wall, the first free spot. */

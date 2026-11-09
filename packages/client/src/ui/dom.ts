@@ -31,16 +31,18 @@ export const clear = (el: HTMLElement): void => {
 
 export const icon = (url: string, alt = ''): HTMLImageElement => h('img', { src: url, alt, draggable: 'false' });
 
-/** Fire on tap/click without the 300ms delay and without double firing. */
+/** When the last tap was handled on pointerup, anywhere: the click a touch makes after it must not reach whatever the tap opened under the finger. */
+let lastTapAt = -1e9;
+
+/** Fire on tap/click without the 300ms delay and without double firing (also not on a window's button that opened where the finger was). */
 export function onTap(el: HTMLElement, fn: (ev: Event) => void): void {
-  let handled = 0;
   el.addEventListener('pointerup', (ev) => {
     if (ev.button !== 0) return;
-    handled = performance.now();
+    lastTapAt = performance.now();
     fn(ev);
   });
   el.addEventListener('click', (ev) => {
-    if (performance.now() - handled < 500) return;
+    if (performance.now() - lastTapAt < 500) return;
     fn(ev);
   });
 }

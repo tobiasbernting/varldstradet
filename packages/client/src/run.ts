@@ -16,6 +16,8 @@ export interface RunEnded {
   level?: number;
   spiritUsed?: number;
   path?: NodeKind[];
+  trophy?: string;
+  trophyWhere?: string;
 }
 export interface TreeInfo {
   seeds: number;
@@ -63,6 +65,6 @@ bus.on('change', (c: Change) => {
     } else if (c.ev === 'offer') {
       runClient.offer = c.offer;
       runClient.offerAt = performance.now();
-    } else if (c.ev === 'ended' && c.to === client.me) runClient.ended = { outcome: c.outcome, ms: c.ms, seeds: c.seeds, zones: c.zones, runor: c.runor, level: c.level, spiritUsed: c.spiritUsed, path: c.path };
+    } else if (c.ev === 'ended' && c.to === client.me) runClient.ended = { outcome: c.outcome, ms: c.ms, seeds: c.seeds, zones: c.zones, runor: c.runor, level: c.level, spiritUsed: c.spiritUsed, path: c.path, trophy: c.trophy, trophyWhere: c.trophyWhere };
   } else if (c.t === 'seed' && c.ev === 'tree' && c.to === client.me) runClient.tree = { seeds: c.seeds, earned: c.earned, tree: c.tree, stage: c.stage };
 });

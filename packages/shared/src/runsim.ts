@@ -83,6 +83,7 @@ import {
   giveItems,
   openTileNear,
   placeIn,
+  petsHome,
   playerChange,
   toast,
   bump,
@@ -140,6 +141,8 @@ export interface RunState {
   /** Who has been brought in for this run (their dishes, potions and the run count): a rejoiner is not brought twice. Never saved. */
   brought: Set<string>;
   earned: Record<string, number>;
+  /** The trophy each player was given by the win (shown in the loot window and the summary; never saved). */
+  trophies?: Record<string, { item: string; level: number; where: string }>;
   /** The fraction of a sagafrö each player is owed by the bonuses (whole seeds are paid; never saved). */
   carry: Record<string, number>;
   paid: Set<string>;
@@ -746,9 +749,12 @@ function sendHome(farm: WorldState, p: PlayerState, out: Change[]): void {
   if (p.area === 'farm') return;
   if (p.online) placeIn(farm, p, 'farm', front.x, front.y, 'down', out);
   else {
+    const from = farm.areas?.[p.area];
     p.area = 'farm';
     p.x = front.x * TILE + TILE / 2;
     p.y = front.y * TILE + TILE / 2;
+    // (their pet goes with them: the run's map is about to be thrown away)
+    if (from) petsHome(farm, from, p, out);
   }
 }
 
@@ -1116,7 +1122,11 @@ function victory(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
       prog.cleared.push(boss);
       bump(p, CLEARED_STAT[boss], 1, out);
     }
-    awardTrophy(farm, p, boss, run.level, out);
+    const award = awardTrophy(farm, p, boss, run.level, out);
+    if (award) {
+      (run.trophies ??= {})[p.id] = award;
+      out.push({ t: 'loot', to: p.id, from: RUN_T.trophyFrom, items: [{ item: award.item, count: 1 }], coins: 0, stars: 0 });
+    }
     const s = runSaveOf(p);
     s.wins++;
     s.clears[boss] = (s.clears[boss] ?? 0) + 1;
@@ -1140,7 +1150,7 @@ export function endRun(farm: WorldState, run: RunState, outcome: RunOutcome, ctx
     sendHome(farm, p, out);
     if (p.id !== except)
       out.push(
-        { t: 'run', ev: 'ended', to: p.id, outcome: run.outcome, ms: Math.round(run.elapsed), seeds: run.earned[p.id] ?? 0, zones: s.zones, runor: [...run.runor], level: run.level, spiritUsed: run.spiritUsed, path: run.path.map((n) => run.plan.route.nodes[n]!.kind) },
+        { t: 'run', ev: 'ended', to: p.id, outcome: run.outcome, ms: Math.round(run.elapsed), seeds: run.earned[p.id] ?? 0, zones: s.zones, runor: [...run.runor], level: run.level, spiritUsed: run.spiritUsed, path: run.path.map((n) => run.plan.route.nodes[n]!.kind), ...(run.trophies?.[p.id] ? { trophy: run.trophies[p.id]!.item, trophyWhere: run.trophies[p.id]!.where } : {}) },
         toast(p.id, fmt(RUN_T.summary, { time: fmtDuration(run.elapsed), seeds: run.earned[p.id] ?? 0 })),
         playerChange(p),
       );

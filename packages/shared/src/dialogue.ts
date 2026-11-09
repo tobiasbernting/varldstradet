@@ -90,7 +90,7 @@ export const WRONG = ['Nästan! Vill du gissa en gång till?', 'Hmm, nej… För
 export const WEATHER_TALK: Record<WeatherKind, string[]> = {
   sun: ['Vilket härligt solsken! Perfekt dag att vara ute.', 'Solen värmer så skönt idag. ☀️'],
   cloudy: ['Lite grått idag, men molnen ser ut som djur om man tittar noga. Jag ser en kanin!', 'Molnigt, men det kanske klarnar upp.'],
-  rain: ['Plask plask! Regnet vattnar alla blommor och grödor. Glöm inte att hoppa i vattenpölar!', 'Det regnar! Bra för åkrarna, men ta på dig stövlarna.'],
+  rain: ['Plask plask! Regnet vattnar alla blommor. Glöm inte att hoppa i vattenpölar!', 'Det regnar! Bra för blommorna, men ta på dig stövlarna.'],
   storm: ['Oj, vad det mullrar! Åskan låter farlig men den är långt borta. Räkna sekunderna mellan blixten och mullret!', 'Åskväder! Det är mysigt att höra regnet när man sitter inne.'],
   snow: ['Det snöar! Ska vi bygga en snögubbe? ⛄', 'Titta på snöflingorna – inga två är likadana!'],
   hail: ['Hagel! Små isbollar från himlen. Hu, det smattrar på taket!', 'Hagel är som regn som har frusit på vägen ner.'],
@@ -349,7 +349,7 @@ export const NPC_TALK: Record<string, NpcTalk> = {
       'lind:honey': { say: 'De suger upp nektar från blommorna och tar hem den till kupan. Där blir den till honung. Ett bi gör bara en liten tesked under hela sitt liv!', opts: [['Bara en tesked?!', 'lind:spoon'], BACK] },
       'lind:spoon': { say: 'Ja, så nästa gång du äter honung – tacka bina! 🐝', opts: [BACK] },
       'lind:grow': { say: 'Sol, vatten och lite kärlek. Jag pratar med mina blommor varje morgon. De växer bättre då, tror jag.', opts: [['Vad säger du till dem?', 'lind:say'], BACK] },
-      'lind:say': { say: '"God morgon, mina sötnosar! Vad fina ni är idag!" Prova själv på dina grödor!', opts: [BACK] },
+      'lind:say': { say: '"God morgon, mina sötnosar! Vad fina ni är idag!" Prova själv på blommorna hemma!', opts: [BACK] },
     },
     ask: {
       q: 'Vilken färg tycker du är finast på en blomma?',

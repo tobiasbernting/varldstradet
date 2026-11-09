@@ -523,6 +523,10 @@ body.saga-banner-on .saga-yell {
     opacity 0.6s,
     transform 0.6s;
 }
+/* the loot window is the news: a banner ("Draugkungen är besegrad!") must not print over its title */
+body:has(.saga-panel.loot) .saga-banners {
+  display: none;
+}
 @keyframes saga-banner-in {
   from {
     opacity: 0;

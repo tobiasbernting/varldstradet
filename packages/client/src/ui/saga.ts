@@ -193,7 +193,7 @@ function hasIcon(id: string): boolean {
   return ok;
 }
 /** An item's picture for the HTML windows (an emoji while it has none yet). */
-const itemIcon = (id: string, fallback?: string): HTMLElement => {
+export const itemIcon = (id: string, fallback?: string): HTMLElement => {
   const url = getArt().iconUrl[id];
   return url && hasIcon(id) ? h('img', { src: url, alt: '', draggable: 'false' }) : h('span', { class: 'em' }, fallback ?? KIND_EMOJI[sagaItem(id)?.kind ?? ''] ?? '🎁');
 };
@@ -1576,7 +1576,7 @@ export class SagaUi {
         ),
       );
     }
-    rows.append(h('div', { class: 'loot coins' }, h('span', { class: 'pic' }, h('span', { class: 'em' }, '🪙')), h('b', null, `+${c.coins} ${T.coins}`), c.stars ? h('b', { class: 'stars' }, `+${c.stars} ⭐`) : null));
+    if (c.coins > 0 || c.stars > 0) rows.append(h('div', { class: 'loot coins' }, h('span', { class: 'pic' }, h('span', { class: 'em' }, '🪙')), h('b', null, `+${c.coins} ${T.coins}`), c.stars ? h('b', { class: 'stars' }, `+${c.stars} ⭐`) : null));
     const rar = RARITY_ORDER[best]!;
     // the day's second (and later) chest from a boss: a plainer one, no rays and no fireworks
     const replay = !!c.replay;

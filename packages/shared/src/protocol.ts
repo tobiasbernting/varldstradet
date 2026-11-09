@@ -61,7 +61,7 @@ export type Change =
    */
   | { t: 'run'; ev: 'state'; to: string | null; run: RunSnap | null }
   | { t: 'run'; ev: 'offer'; to: string | null; offer: RunOfferSnap | null }
-  | { t: 'run'; ev: 'ended'; to: string; outcome: RunOutcome; ms: number; seeds: number; zones: number; runor: string[]; level?: RunLevel; spiritUsed?: number; path?: NodeKind[] }
+  | { t: 'run'; ev: 'ended'; to: string; outcome: RunOutcome; ms: number; seeds: number; zones: number; runor: string[]; level?: RunLevel; spiritUsed?: number; path?: NodeKind[]; trophy?: string; trophyWhere?: string }
   /** Runs: one player's sagafrön, the nodes they have planted, and how grown the family's tree is (0..4). */
   | { t: 'seed'; ev: 'tree'; to: string; seeds: number; earned: number; tree: string[]; stage: number }
   /** Runs: the dishes this player has chosen to bring and how many they may bring. */

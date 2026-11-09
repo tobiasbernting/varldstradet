@@ -5,7 +5,7 @@ import { inArray, sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { AREA_GEN, CAVE_EXIT_TILE, MAX_HEARTS, TILE, settlePlayer, upgradeSavedArea, ensureBathhouse, ensureGear, ensureLevelRewards, ensureRoaming, ensureTownDress, ensureSagaPlaces, ensureCity, ensureLandmarks, ensureNpcSpots, ensurePizzeria, ensureTransport, generateWorld, isRemovedAreaKey, isSagaKey, scrubArea, scrubPlayer, DUNGEONS, dungeonOfKey, portalFront, archFront, archFrontOf, ensureRunPlaces, isRunKey, newRunSave, rebuildOccupancy, type Change, type DungeonId, type WorldState } from '../../../shared/src/index.ts';
+import { AREA_GEN, CAVE_EXIT_TILE, MAX_HEARTS, TILE, settlePlayer, upgradeSavedArea, ensureBathhouse, ensureGear, ensureLevelRewards, ensureRoaming, ensureTownDress, ensureSagaPlaces, ensureCity, ensureLandmarks, ensureNpcSpots, ensurePizzeria, ensureTransport, generateWorld, isRemovedAreaKey, isSagaKey, scrubArea, scrubPlayer, DUNGEONS, dungeonOfKey, portalFront, archFront, archFrontOf, ensureRunPlaces, isRunKey, newRunSave, restorePets, rebuildOccupancy, type Change, type DungeonId, type WorldState } from '../../../shared/src/index.ts';
 import * as s from './schema.ts';
 import { PgAccessStore } from './accessStore.ts';
 
@@ -222,6 +222,13 @@ export class PgStore implements Store {
       const front = archFrontOf(world);
       world.players[id]!.x = front.x * TILE + TILE / 2;
       world.players[id]!.y = front.y * TILE + TILE / 2;
+    }
+    // pets that were in a run or dungeon (maps that are never saved) come home with their owner
+    for (const p of Object.values(world.players)) {
+      if (!p.petsAway) continue;
+      if (p.area === 'farm') for (const a of restorePets(world, p)) this.animals.add(a.id);
+      else delete p.petsAway;
+      this.players.add(p.id);
     }
     // Objects removed by the repairs above must also leave the database
     for (const id of loadedObjectIds) if (!world.objects[id]) this.gone.objects.add(id);
