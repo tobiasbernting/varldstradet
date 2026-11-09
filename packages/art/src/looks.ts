@@ -238,17 +238,29 @@ export function drawShoulders(p: Px, set: string, l: DecodedLook, dir: Dir, fram
         break;
       }
       default: {
-        // Hugin och Munin: a tall raven perched on each shoulder, outside the head: beak outwards, a pale eye, a long tail
-        const r = (n: number, y: number, c: string): void => void p.px(o(n), y, c);
-        const y0 = 5 - big;
-        r(1, y0, pal.main);
-        r(2, y0, pal.main);
-        r(0, y0, tier >= T2 ? pal.trim : pal.light);
-        r(1, y0 - 1, pal.main);
-        r(1, y0, pal.accent);
-        for (let y = 1; y <= 4; y++) for (let n = 0; n <= 3; n++) if (!(n === 0 && y > 2)) r(n, y0 + y, n === 2 && y < 4 ? pal.light : pal.main);
-        for (let y = 5; y <= 7 + big; y++) for (let n = 0; n <= 2; n++) r(n, y0 + y, y > 6 ? pal.light : pal.main);
-        if (tier >= T2) p.px(o(0), y0 + 7 + big, pal.trim).px(o(2), y0 + 7 + big, pal.trim);
+        // Hugin och Munin: a raven perched on each shoulder, beak outwards, in a pale rim so it reads against the dark cloak
+        const rows = [
+          '.LLL.',
+          'LMMML',
+          'BEMMML',
+          'LMMMML',
+          '.LMMML',
+          '..LMML',
+          '..LDDL',
+          '...L.L',
+        ];
+        const y0 = 3 - big;
+        const beak = '#e8b84a';
+        rows.forEach((row, ry) => {
+          for (let rx = 0; rx < row.length; rx++) {
+            const ch = row[rx]!;
+            if (ch === '.') continue;
+            const c = ch === 'L' ? pal.dark : ch === 'M' ? (rx + ry) % 3 === 0 ? pal.trim : pal.light : ch === 'D' ? pal.main : ch === 'E' ? pal.accent : beak;
+            p.px(o(rx), y0 + ry, c);
+          }
+        });
+        if (tier >= T3) p.px(o(2), y0 + 1, pal.glow);
+        if (big) p.px(o(2), y0 - 1, pal.glow).px(o(3), y0 - 1, pal.glow);
       }
     }
     if (tier >= T3) p.px(o(1), 11, pal.glow).px(o(1), 12, pal.accent);
@@ -258,8 +270,8 @@ export function drawShoulders(p: Px, set: string, l: DecodedLook, dir: Dir, fram
   };
   if (side) pad(5, 1);
   else {
-    pad(1, 1);
-    pad(14, -1);
+    pad(set === 'huginmunin' ? 0 : 1, 1);
+    pad(set === 'huginmunin' ? 15 : 14, -1);
   }
 }
 

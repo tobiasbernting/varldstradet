@@ -335,7 +335,7 @@ export class LooksFx {
       }
       case 'glitter': {
         // three fixed spots near the item that twinkle in turn
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < (g.at === 'chest' || g.at === 'hand' ? 1 : 3); i++) {
           const tw = Math.sin(t * 3.1 + i * 2.1 + a.seed * 3);
           if (tw < 0.55) continue;
           const [ax, ay] = this.anchor(g.at, a, i);
@@ -372,11 +372,11 @@ export class LooksFx {
         break;
       }
       case 'aurora': {
-        if (!full) break;
-        // a two-pixel band that cycles through the colours across the item
-        for (let i = 0; i < 6; i++) {
-          const [r, gg, b] = hsv((t * 0.25 + i * 0.09 + a.seed * 0.1) % 1);
-          drawSprite(px, Math.round(x - 6 + i * 2.2), Math.round(y + Math.sin(t * 2 + i) * 1.5), 2, 2, 0, rgba(r, gg, b, 0.55));
+        if (!full || (g.at !== 'back' && g.at !== 'head')) break; // one band on the cloak and one on the hat: calm, not a rainbow all over
+        // a band of four bigger squares that cycles through the colours across the item
+        for (let i = 0; i < 4; i++) {
+          const [r, gg, b] = hsv((t * 0.2 + i * 0.12 + a.seed * 0.1) % 1);
+          drawSprite(px, Math.round(x - 5 + i * 3.4), Math.round(y + Math.sin(t * 2 + i) * 1.5), 3, 3, 0, rgba(r, gg, b, 0.5));
         }
         break;
       }
