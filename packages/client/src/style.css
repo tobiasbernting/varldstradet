@@ -1368,6 +1368,8 @@ body.touch .round.pet-btn i {
 .kennel-card .em {
   font-size: calc(22 * var(--u));
   line-height: 1;
+}
+
 /* ---- hus: Möblera (only in your own house) and whose house it is ---- */
 .round.furnish-btn.on {
   background: var(--gold, #f5c542);
