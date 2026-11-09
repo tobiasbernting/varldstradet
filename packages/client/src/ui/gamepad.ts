@@ -7,7 +7,7 @@
 // LT/L3 runs.
 // Menus: stick/d-pad moves a highlight between buttons, A presses, B closes, right stick scrolls.
 import { castSlot, cycleTarget, drinkPotion, fightMode, inSaga } from '../saga.ts';
-import { myPlayer } from '../state.ts';
+import { inOwnHouse, myPlayer } from '../state.ts';
 import type { Hud, HudTarget } from './hud.ts';
 import type { Menus } from './menus.ts';
 
@@ -164,7 +164,11 @@ export function initGamepad(opts: {
     const slot = hotbarStep();
     if (slot !== null) hud.select(slot);
     if (hit(B.Y)) menus.toggle('inventory');
-    if (hit(B.Back)) menus.toggle('book');
+    // in your own house Select is Möblera, else the book
+    if (hit(B.Back)) {
+      if (inOwnHouse()) hud.toggleFurnish();
+      else menus.toggle('book');
+    }
   }
 
   /** The hotbar slot after LB/RB or d-pad left/right, or null. */

@@ -1,7 +1,9 @@
 // Client-side mirror of the world plus a tiny event bus.
 import {
   CHAT_BUBBLE_MS,
+  isHomeKey,
   objectDef,
+  ownerOfHome,
   rebuildOccupancy,
   tileIndex,
   key as tileKey,
@@ -88,6 +90,14 @@ export const client = {
   saga: {} as Record<string, SagaSnap>,
   /** Röstprat: the speakers whose room is talking right now (a 🔊 by their name). */
   talking: new Set<string>(),
+};
+
+/** Furnishing your own house: a tap on a piece takes it up into the bag (the HUD's button, G, or a pad's Select). */
+export const furnish = { on: false };
+/** Is the local player in their own house? */
+export const inOwnHouse = (): boolean => {
+  const me = myPlayer();
+  return !!me && isHomeKey(me.area) && ownerOfHome(me.area) === me.id;
 };
 
 export const serverNow = (): number => Date.now() - client.serverOffset;

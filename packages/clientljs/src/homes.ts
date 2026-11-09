@@ -1,6 +1,6 @@
 // Homes that feel lived in: smoke curling from the chimneys, and inside the farmhouse the sun falling in through the
 // windows in long beams with dust drifting in them (the moon's at night).
-import { INTERIOR, TILE } from '@lilla-garden/shared';
+import { TILE } from '@lilla-garden/shared';
 import { on } from './features.ts';
 import { clamp01, drawSprite, rgba, smooth } from './gfx.ts';
 import { inView, type Scene } from './scene.ts';
@@ -22,8 +22,8 @@ interface Mote {
   phase: number;
 }
 
-/** Where the beams fall in through the farmhouse's back wall (tile columns). */
-const BEAMS = [INTERIOR.x + 2.6, INTERIOR.x + 6.4];
+/** Where the beams fall in through the back wall's windows (tile columns, from the room's left wall). */
+const BEAMS = [4.6, 13.5];
 
 export class Homes {
   private puffs: Puff[] = [];
@@ -63,18 +63,20 @@ export class Homes {
     }
     this.puffs = this.puffs.filter((p) => p.life > 0);
 
-    // dust in the farmhouse air
-    if (on('indoors') && sc.where === 'inside') {
+    // dust in the house's air
+    const room = sc.room;
+    if (on('indoors') && sc.where === 'inside' && room) {
+      const I = { x: room.x + 1, y: room.y + 1, w: room.w - 2, h: room.h - 2 };
       while (this.motes.length < 34)
-        this.motes.push({ x: (INTERIOR.x + Math.random() * INTERIOR.w) * TILE, y: (INTERIOR.y - 0.5 + Math.random() * (INTERIOR.h + 0.5)) * TILE, vx: 0, vy: 0, phase: Math.random() * 10 });
+        this.motes.push({ x: (I.x + Math.random() * I.w) * TILE, y: (I.y - 0.5 + Math.random() * (I.h + 0.5)) * TILE, vx: 0, vy: 0, phase: Math.random() * 10 });
       for (const m of this.motes) {
         m.vx += (Math.random() - 0.5) * 8 * dt - m.vx * dt * 0.5;
         m.vy += ((Math.random() - 0.5) * 8 + 0.6) * dt - m.vy * dt * 0.5;
         m.x += m.vx * dt;
         m.y += m.vy * dt;
-        if (m.x < INTERIOR.x * TILE || m.x > (INTERIOR.x + INTERIOR.w) * TILE || m.y < (INTERIOR.y - 0.5) * TILE || m.y > (INTERIOR.y + INTERIOR.h) * TILE) {
-          m.x = (INTERIOR.x + Math.random() * INTERIOR.w) * TILE;
-          m.y = (INTERIOR.y - 0.5) * TILE;
+        if (m.x < I.x * TILE || m.x > (I.x + I.w) * TILE || m.y < (I.y - 0.5) * TILE || m.y > (I.y + I.h) * TILE) {
+          m.x = (I.x + Math.random() * I.w) * TILE;
+          m.y = (I.y - 0.5) * TILE;
         }
       }
     } else this.motes = [];
@@ -93,7 +95,8 @@ export class Homes {
 
   /** Over the lit scene, indoors: sunbeams (or moonbeams) from the windows, with dust glittering in them. */
   drawBright(sc: Scene): void {
-    if (!on('indoors') || sc.where !== 'inside') return;
+    if (!on('indoors') || sc.where !== 'inside' || !sc.room) return;
+    const room = sc.room;
     const out = sc.outdoor;
     const sun = out.shadowAlpha / 0.24; // 0 at night or overcast … 1 in full sun
     const night = smooth((out.dark - 0.55) / 0.3);
@@ -106,11 +109,11 @@ export class Homes {
     const golden = out.golden;
     const [r, g, b] = sun >= moon ? [1, 0.93 - golden * 0.18, 0.78 - golden * 0.35] : [0.62, 0.72, 1];
     const beam = sc.extras.beam;
-    const top = (INTERIOR.y - 0.6) * TILE;
-    const len = (INTERIOR.h + 0.2) * TILE;
+    const top = (room.y + 0.4) * TILE;
+    const len = (room.h - 1.8) * TILE;
     const beams: { x0: number; dx: number }[] = [];
     for (const bx of BEAMS) {
-      const x0 = bx * TILE;
+      const x0 = (room.x + bx) * TILE;
       const dx = Math.sin(lean) * len;
       beams.push({ x0, dx });
       // the shaft, and the bright patch where it lands on the floor
