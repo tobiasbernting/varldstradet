@@ -18,7 +18,7 @@ let game: Game;
 let access: Access;
 
 beforeAll(async () => {
-  game = new Game(new MemoryStore(), { autoStart: false });
+  game = new Game(new MemoryStore(), { autoStart: false, maxPlayers: () => access.maxPlayers() });
   await game.start();
   access = new Access(new MemoryAccessStore(), { parentPassword: PW });
   await access.load();
@@ -63,7 +63,7 @@ describe('the gate', () => {
     // röstprat needs the microphone on our own pages (a `microphone=()` blocks it whatever the player allowed)
     expect(page.headers.get('permissions-policy')).toContain('microphone=(self)');
     expect(page.headers.get('permissions-policy')).toContain('camera=()');
-    expect(await page.text()).toContain('privat spel');
+    expect(await page.text()).toContain('privat saga');
   });
 
   it('runs the whole invite → approval → play flow, and kicks the device when access is taken away', async () => {
@@ -72,7 +72,7 @@ describe('the gate', () => {
     const login = await post('/admin/login', { password: PW });
     expect(login.status).toBe(303);
     const parent = cookieFrom(login);
-    expect(parent).toMatch(/^lg_parent=/);
+    expect(parent).toMatch(/^vt_parent=/);
     expect((await get('/admin', parent)).status).toBe(200);
 
     // forms from other sites are refused
@@ -94,7 +94,7 @@ describe('the gate', () => {
     const joined = await post('/join', { code: token!, name: 'Annas iPad' });
     expect(joined.headers.get('location')).toBe('/access');
     const guest = cookieFrom(joined);
-    expect(guest).toMatch(/^lg_device=/);
+    expect(guest).toMatch(/^vt_device=/);
     expect(await (await get('/access', guest)).text()).toContain('måste godkänna');
     expect((await get('/api/players', guest)).status).toBe(403);
     expect(await openSocket(guest)).toEqual({ refused: 403 });
@@ -138,10 +138,108 @@ describe('the gate', () => {
     const parent = cookieFrom(await post('/admin/login', { password: PW }));
     const res = await post('/admin/access/this-device', { name: 'Barnens platta' }, parent);
     const device = cookieFrom(res);
-    expect(device).toMatch(/^lg_device=/);
+    expect(device).toMatch(/^vt_device=/);
     expect((await get('/api/players', device)).status).toBe(200);
     await post('/admin/logout', {}, parent);
     expect((await get('/admin', parent)).headers.get('location')).toBe('/admin/login');
+  });
+  it('sets how many characters the server holds on the parent page', async () => {
+    const parent = cookieFrom(await post('/admin/login', { password: PW }));
+    const device = cookieFrom(await post('/admin/access/this-device', { name: 'Köksdatorn' }, parent));
+    expect(await (await get('/admin', parent)).text()).toContain('name="max" min="1" max="100" step="1" value="20"');
+    expect(await (await get('/api/me', device)).json()).toMatchObject({ canCreate: true });
+
+    // full: the game says so and refuses another character
+    const count = Object.keys(game.world.players).length;
+    expect((await post('/admin/access/max-players', { max: String(count) }, parent)).status).toBe(303);
+    expect(access.maxPlayers()).toBe(count);
+    expect(await (await get('/api/me', device)).json()).toMatchObject({ canCreate: false });
+    const refused = await fetch(`${base}/api/players`, { method: 'POST', headers: { cookie: device, origin: base, 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Extra' }) });
+    expect(refused.status).toBe(409);
+
+    // nonsense is refused and the old limit stays; then back to 20
+    const bad = await post('/admin/access/max-players', { max: 'många' }, parent);
+    expect(decodeURIComponent(bad.headers.get('location') ?? '')).toContain('heltal');
+    expect(access.maxPlayers()).toBe(count);
+    await post('/admin/access/max-players', { max: '20' }, parent);
+    expect(await (await get('/api/me', device)).json()).toMatchObject({ canCreate: true });
+  });
+});
+
+describe('the characters on the parent page', () => {
+  const create = (cookie: string, name: string) =>
+    fetch(`${base}/api/players`, { method: 'POST', headers: { cookie, origin: base, 'content-type': 'application/json' }, body: JSON.stringify({ name }) }).then((r) => r.json() as Promise<{ id: string }>);
+
+  it('needs the parent session and our own origin for every character control', async () => {
+    const parent = cookieFrom(await post('/admin/login', { password: PW }));
+    const device = cookieFrom(await post('/admin/access/this-device', { name: 'Surfplattan' }, parent));
+    const kid = await create(device, 'Ville');
+    for (const action of ['rename', 'level', 'delete']) {
+      const form = { id: kid.id, name: 'Hackad', level: '0' };
+      expect((await post(`/admin/access/character-${action}`, form)).status).toBe(401); // no session
+      expect((await post(`/admin/access/character-${action}`, form, device)).status).toBe(401); // a device is not a parent
+      expect((await post(`/admin/access/character-${action}`, form, parent, 'https://evil.example')).status).toBe(403); // another site
+      const noOrigin = await fetch(`${base}/admin/access/character-${action}`, { method: 'POST', redirect: 'manual', headers: { cookie: parent, 'sec-fetch-site': 'cross-site' }, body: new URLSearchParams(form) });
+      expect(noOrigin.status).toBe(403);
+    }
+    expect(game.world.players[kid.id]!.name).toBe('Ville');
+    expect(access.maxLevelFor(kid.id)).toBe(4);
+    // the page is for parents only, and never shows device keys
+    expect((await get('/admin', device)).headers.get('location')).toBe('/admin/login');
+    const page = await (await get('/admin', parent)).text();
+    expect(page).not.toContain(device.split('=')[1]!);
+    expect(page).not.toContain(parent.split('=')[1]!);
+    await post('/admin/logout', {}, parent);
+  });
+
+  it('lists who made a character, caps its difficulty, renames it and deletes it', async () => {
+    const parent = cookieFrom(await post('/admin/login', { password: PW }));
+    const device = cookieFrom(await post('/admin/access/this-device', { name: 'Köksdatorn' }, parent));
+    const kid = await create(device, 'Stina');
+    expect(access.ownerOf(kid.id)).toMatchObject({ device: 'Köksdatorn' });
+    let page = await (await get('/admin', parent)).text();
+    expect(page).toContain('Karaktärer');
+    expect(page).toContain('Stina');
+    expect(page).toContain('gjord på: Köksdatorn');
+    expect(page).toContain('Läget just nu');
+    expect(page).toContain('Sagan om Världsträdet');
+    expect(page).not.toContain('Lilla Gården');
+    expect(page).not.toMatch(/Väder|Skip|Gröd/);
+
+    // the cap: kept, shown selected, and refused for a level that does not exist
+    expect(decodeURIComponent((await post('/admin/access/character-level', { id: kid.id, level: '2' }, parent)).headers.get('location') ?? '')).toContain('Medel');
+    expect(access.maxLevelFor(kid.id)).toBe(2);
+    expect(await (await get('/admin', parent)).text()).toMatch(/<option value="2" selected>Medel/);
+    expect(decodeURIComponent((await post('/admin/access/character-level', { id: kid.id, level: '7' }, parent)).headers.get('location') ?? '')).toContain('Välj');
+    expect(access.maxLevelFor(kid.id)).toBe(2);
+    await post('/admin/access/character-level', { id: kid.id, level: '4' }, parent);
+    expect(access.maxLevelFor(kid.id)).toBe(4);
+    await post('/admin/access/character-level', { id: kid.id, level: '0' }, parent);
+    expect(access.maxLevelFor(kid.id)).toBe(0);
+
+    // rename: trimmed, never empty
+    await post('/admin/access/character-rename', { id: kid.id, name: '  Stina Ek ' }, parent);
+    expect(game.world.players[kid.id]!.name).toBe('Stina Ek');
+    await post('/admin/access/character-rename', { id: kid.id, name: '   ' }, parent);
+    expect(game.world.players[kid.id]!.name).toBe('Stina Ek');
+    // unknown characters are not made up
+    expect(decodeURIComponent((await post('/admin/access/character-delete', { id: 'nope' }, parent)).headers.get('location') ?? '')).toContain('finns inte');
+
+    // delete: the character in the game goes, its socket is thrown out (4003), the cap and owner are forgotten
+    const sock = await openSocket(device);
+    if (!('ws' in sock)) throw new Error('refused');
+    const welcomed = new Promise<void>((r) => sock.ws.on('message', (d) => String(d).includes('"welcome"') && r()));
+    sock.ws.send(JSON.stringify({ t: 'hello', playerId: kid.id }));
+    await welcomed;
+    await post('/admin/access/character-delete', { id: kid.id }, parent);
+    expect(await sock.closed).toBe(4003);
+    expect(game.world.players[kid.id]).toBeUndefined();
+    expect(access.maxLevelFor(kid.id)).toBe(4);
+    expect(access.ownerOf(kid.id)).toBeNull();
+    expect(access.log.some((e) => e.event === 'character-deleted' && e.detail === 'Stina Ek')).toBe(true);
+    page = await (await get('/admin', parent)).text();
+    expect(page).not.toContain('<strong>Stina Ek</strong>');
+    await post('/admin/logout', {}, parent);
   });
 });
 
@@ -219,7 +317,7 @@ describe('a native client (bearer token)', () => {
 
     // the parent page never takes a bearer: not a device's, not a parent session's
     expect((await api('/admin', { token: j.token })).headers.get('location')).toBe('/admin/login');
-    const session = parent.replace(/^lg_parent=/, '');
+    const session = parent.replace(/^vt_parent=/, '');
     expect((await api('/admin', { token: session })).headers.get('location')).toBe('/admin/login');
     expect((await api('/admin/skipday', { method: 'POST', token: session })).status).toBe(401);
     expect((await api('/admin/access/mode', { method: 'POST', token: session, body: { mode: 'closed' } })).status).toBe(401);
@@ -227,7 +325,7 @@ describe('a native client (bearer token)', () => {
 
     // the socket: bearer on the upgrade, no Origin; the header wins over a cookie
     expect(await socket({})).toEqual({ refused: 403 });
-    expect(await socket({ authorization: 'Bearer nope', cookie: `lg_device=${j.token}` })).toEqual({ refused: 403 });
+    expect(await socket({ authorization: 'Bearer nope', cookie: `vt_device=${j.token}` })).toEqual({ refused: 403 });
     expect(await socket({ authorization: `Bearer ${j.token}`, origin: 'https://evil.example' })).toEqual({ refused: 403 });
     const s = await socket({ authorization: `Bearer ${j.token}` });
     if (!('ws' in s)) throw new Error('refused');
@@ -362,7 +460,7 @@ describe('ntfy', () => {
       notify({ at: 0, event: 'mode', detail: 'not interesting', ip: 'x' });
       notify({ at: 0, event: 'join', detail: 'Kalles iPad kom in med koden för Kalle', ip: '1.2.3.4' });
       await vi.waitFor(() => expect(got).toHaveLength(1));
-      expect(got[0]).toMatchObject({ auth: 'Bearer tk_secret', topic: 'lilla-garden', title: 'Någon kom in på gården', message: 'Kalles iPad kom in med koden för Kalle\n1.2.3.4' });
+      expect(got[0]).toMatchObject({ auth: 'Bearer tk_secret', topic: 'lilla-garden', title: 'Någon kom in i Världsträdet', message: 'Kalles iPad kom in med koden för Kalle\n1.2.3.4' });
     } finally {
       ntfy.close();
     }

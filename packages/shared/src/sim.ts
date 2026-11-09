@@ -13,12 +13,14 @@ import { DUNGEONS, VOLVA_ID, dungeonOfKey, isSagaKey, sagaItem } from './saga.ts
 import { generateSaga } from './sagamap.ts';
 import { } from './explore.ts';
 import { openFardport, openYggdrasil, tickRuns } from './runsim.ts';
+import { HOUSE_FIXED, generateHome, houseAct, houseName, isGuestHere, placedExtra, standAct, tickHome, tickHouseDoor } from './house.ts';
+import { homeKey, isHomeKey, ownerOfHome } from './homekeys.ts';
 import { ensureSagaPlaces, idleSaga, killXp, roamingDown, sagaAct, sagaRooted, tickSaga } from './sagasim.ts';
-import { addItem, makeInventory, moveStack, quickStack, removeItem, sortInventory, } from './inventory.ts';
-import { PORTALS, SPAWN, addObject, inBounds, inInterior, mapH, mapW, objectAt, portalAt, tileIndex } from './map.ts';
+import { addItem, makeInventory, moveStack, quickStack, removeItem, sortInventory, takeFromSlot } from './inventory.ts';
+import { SPAWN, addObject, inBounds, isHouseDoor, mapH, mapW, objectAt, removeObject, tileIndex } from './map.ts';
 import { randInt } from './rng.ts';
 import { isValidPainting } from './paint.ts';
-import { ACHIEVEMENT_TEXT, DEFAULT_ANIMAL_NAMES, SPECIES_NAMES, T, fmt, itemName, } from './sv.ts';
+import { ACHIEVEMENT_TEXT, DEFAULT_ANIMAL_NAMES, HOUSE_T, SPECIES_NAMES, T, fmt, itemName } from './sv.ts';
 import type { Change, SlotRef } from './protocol.ts';
 import { tickWeather } from './weather.ts';
 import { WALL_TERRAIN, } from './types.ts';
@@ -61,6 +63,8 @@ export interface SimCtx {
   rnd: () => number;
   /** Wall clock, ms since epoch (for emote expiry). */
   now: number;
+  /** The highest run level (0..4) a character may play; the parent page sets it per character. Left out: all levels. */
+  levelCap?: (playerId: string) => number;
 }
 
 export const PLAYER_HALF_W = 5;
@@ -134,7 +138,7 @@ export const isMount = (a: AnimalState): boolean => a.species === 'horse' || !!A
 
 /** Maps you may drive or ride in: any overworld map, not the cave, the bath house or indoors. */
 const canRideIn = (world: WorldState, tx: number, ty: number): boolean =>
-  !isUnderground(world.area) && !isIndoorKey(world.area) && !isSagaKey(world.area) && !(isFarm(world) && inInterior(tx, ty));
+  !isUnderground(world.area) && !isIndoorKey(world.area) && !isSagaKey(world.area);
 
 /** Speed multiplier while riding or driving: horses are steady, vehicles love roads and hate mud. */
 export function rideSpeedMul(world: WorldState, p: { x: number; y: number; riding?: number }): number {
@@ -155,20 +159,9 @@ export function isSolidForPlayer(world: WorldState, tx: number, ty: number): boo
   if (vehicleBlocks(world, tx, ty)) return true;
   if (world.area === 'dungeon') {
     for (const a of Object.values(world.animals)) if (tileOf(a.x) === tx && tileOf(a.y) === ty) return true;
-  } else if (isFarm(world) && portalAt(tx, ty)) return false;
+  } else if (isFarm(world) && isHouseDoor(tx, ty)) return false;
   const obj = objectAt(world, tx, ty);
   return !!obj && objectDef(obj.kind).solid;
-}
-
-/** Teleports through a portal if standing on one. Returns true if moved. */
-export function applyPortal(p: { x: number; y: number; facing: Facing }, world?: WorldState): boolean {
-  if (world && !isFarm(world)) return false;
-  const portal = portalAt(tileOf(p.x), tileOf(p.y));
-  if (!portal) return false;
-  p.x = portal.to.x * TILE + TILE / 2;
-  p.y = portal.to.y * TILE + TILE / 2;
-  p.facing = portal.facing;
-  return true;
 }
 
 export function isSolidForAnimal(world: WorldState, tx: number, ty: number): boolean {
@@ -176,7 +169,7 @@ export function isSolidForAnimal(world: WorldState, tx: number, ty: number): boo
   const t = world.terrain[tileIndex(world, tx, ty)]!;
   if (WALL_TERRAIN.has(t) || t === 'pool' || t === 'soil' || t === 'soil_wet') return true; // animals stay off the fields (and out of the pool)
   if (world.crops[key(tx, ty)]) return true;
-  if (npcAt(world, tx, ty) || portalAt(tx, ty)) return true;
+  if (npcAt(world, tx, ty) || (isFarm(world) && isHouseDoor(tx, ty))) return true;
   const obj = objectAt(world, tx, ty);
   if (!obj) return false;
   const def = objectDef(obj.kind);
@@ -242,7 +235,6 @@ export function stepPlayer(
   p.x = r.x;
   p.y = r.y;
   p.facing = Math.abs(ux) > Math.abs(uy) ? (ux > 0 ? 'right' : 'left') : uy > 0 ? 'down' : 'up';
-  applyPortal(p, world);
 }
 
 /** Standing in the bath house pool? */
@@ -388,9 +380,43 @@ export function performAction(world: WorldState, playerId: string, tx: number, t
     return out;
   }
   if (isSagaKey(world.area)) return sagaAct(world, p, tx, ty, ctx);
+  // in a house a visitor only looks, and the owner works on the floor
+  const home = houseAct(world, p, tx, ty);
+  if (home) return home;
+  if (isHomeKey(world.area)) return homeFloorAct(world, p, tx, ty, ctx, out);
   if (isFarm(world)) return lobbyAct(world, p, tx, ty, ctx, out);
   // (the old wild maps, caves and villages cannot be reached any more: nothing to do on them)
   return out;
+}
+
+/** In your own house: put a placeable piece down on the floor, use the gear stand. (Picking a piece up is the house message, in house.ts.) */
+function homeFloorAct(world: WorldState, p: PlayerState, tx: number, ty: number, ctx: SimCtx, out: Change[]): Change[] {
+  const held = heldItem(p);
+  const obj = objectAt(world, tx, ty);
+  if (obj) {
+    if (objectDef(obj.kind).interact === 'stand') standAct(world, p, obj, held, out);
+    return out;
+  }
+  const def = held ? item(held.item) : null;
+  if (!held || !def || def.category !== 'placeable' || !def.places) return out;
+  if (footprintBlocked(world, tx, ty, def.places)) return out;
+  const extra: Partial<WorldObject> = { by: p.id };
+  Object.assign(extra, placedExtra(def.places, held.data));
+  const placed = addObject(world, def.places, tx, ty, extra);
+  if (!placed) return [toast(p.id, T.cantPlaceHere)];
+  takeFromSlot(p.inventory, p.selected, 1);
+  out.push({ t: 'object', id: placed.id, obj: placed }, fx(tx, ty, 'poof'), playerChange(p));
+  void ctx;
+  return out;
+}
+
+/** Is a player or a pet standing where a piece would go? */
+function footprintBlocked(world: WorldState, tx: number, ty: number, kind: string): boolean {
+  const d = objectDef(kind);
+  const inside = (px: number, py: number) => px + 5 > tx * TILE && px - 5 < (tx + d.w) * TILE && py + 3 > ty * TILE && py - 3 < (ty + d.h) * TILE;
+  for (const q of Object.values(world.players)) if (q.online && q.area === world.area && inside(q.x, q.y)) return true;
+  for (const a of Object.values(world.animals)) if (inside(a.x, a.y)) return true;
+  return false;
 }
 
 /** What can be used in the lobby: people, the wardrobe, the arch, the sagaträd, Kämpastenen, the kennel and your own pets. Nothing can be changed. */
@@ -512,7 +538,7 @@ function mount(world: WorldState, p: PlayerState, a: AnimalState, out: Change[])
   }
   const vehicle = isVehicle(a);
   const anywhere = vehicle || !!ANIMALS[a.species]?.mount;
-  if (anywhere ? !canRideIn(world, tileOf(p.x), tileOf(p.y)) : !isFarm(world) || inInterior(tileOf(p.x), tileOf(p.y))) {
+  if (anywhere ? !canRideIn(world, tileOf(p.x), tileOf(p.y)) : !isFarm(world)) {
     out.push(toast(p.id, T.notNow));
     return;
   }
@@ -539,7 +565,7 @@ export function dismount(world: WorldState, p: PlayerState, out: Change[]): void
   const d = DIR_VEC[p.facing] ?? { dx: 0, dy: 1 };
   const btx = tileOf(p.x) - d.dx;
   const bty = tileOf(p.y) - d.dy;
-  const behindFree = inBounds(here, btx, bty) && !isSolidForAnimal(here, btx, bty) && !(isFarm(here) && inInterior(btx, bty));
+  const behindFree = inBounds(here, btx, bty) && !isSolidForAnimal(here, btx, bty);
   a.x = behindFree ? btx * TILE + TILE / 2 : p.x;
   a.y = behindFree ? bty * TILE + TILE / 2 : p.y;
   a.moving = false;
@@ -667,6 +693,9 @@ function interactObject(world: WorldState, p: PlayerState, obj: WorldObject, _he
       return;
     case 'sagaclass':
       out.push({ t: 'open', to: p.id, ui: 'sagaClass', id: obj.id });
+      return;
+    case 'stand':
+      standAct(world, p, obj, _held, out);
       return;
     case 'kennel':
       out.push({ t: 'open', to: p.id, ui: 'kennel', id: obj.id });
@@ -874,19 +903,6 @@ function applyMoveInner(world: WorldState, playerId: string, x: number, y: numbe
     if (Math.hypot(x - p.x, y - p.y) > 3 * TILE) return;
     delete p.moveLock;
   }
-  // A client that just walked through a portal reports a position by the portal's exit
-  for (const portal of isFarm(world) ? PORTALS : []) {
-    const nearFrom = Math.hypot(p.x - (portal.from.x + 0.5) * TILE, p.y - (portal.from.y + 0.5) * TILE) <= 3 * TILE;
-    const nearTo = Math.hypot(x - (portal.to.x + 0.5) * TILE, y - (portal.to.y + 0.5) * TILE) <= 3 * TILE;
-    if (nearFrom && nearTo && !isSolidForPlayer(world, tileOf(x), tileOf(y))) {
-      p.x = x;
-      p.y = y;
-      p.facing = facing;
-      p.moving = moving;
-      delete p.fishing;
-      return;
-    }
-  }
   if (clamp) [x, y] = clamp(x, y);
   const r = resolveMove((tx, ty) => isSolidForPlayer(world, tx, ty), p.x, p.y, x, y, PLAYER_HALF_W, PLAYER_HALF_H, world);
   const moved = r.x !== p.x || r.y !== p.y;
@@ -895,17 +911,6 @@ function applyMoveInner(world: WorldState, playerId: string, x: number, y: numbe
   p.facing = facing;
   p.moving = moving;
   if (moved && p.fishing) delete p.fishing;
-  if (applyPortal(p, world) && p.riding !== undefined) {
-    // walked indoors: the horse waits outside where it was (tickRiding would otherwise drag it along)
-    const a = world.animals[p.riding];
-    delete p.riding;
-    if (a) {
-      a.x = r.x;
-      a.y = r.y;
-      a.moving = false;
-      a.waitMs = 1500;
-    }
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -974,7 +979,7 @@ const isSolidForNpc = (world: WorldState, tx: number, ty: number): boolean => {
   if (!inBounds(world, tx, ty)) return true;
   const t = world.terrain[tileIndex(world, tx, ty)];
   if (t === 'water' || t === 'pool' || t === 'soil' || t === 'soil_wet') return true;
-  if (world.crops[key(tx, ty)] || portalAt(tx, ty)) return true;
+  if (world.crops[key(tx, ty)] || (isFarm(world) && isHouseDoor(tx, ty))) return true;
   const obj = objectAt(world, tx, ty);
   return !!obj && objectDef(obj.kind).solid;
 };
@@ -1036,6 +1041,10 @@ export function getArea(world: WorldState, keyStr: string): WorldState | null {
       const id = dungeonOfKey(keyStr);
       if (!id) return null;
       a = generateSaga(id);
+    } else if (isHomeKey(keyStr)) {
+      const owner = farm.players[ownerOfHome(keyStr)];
+      if (!owner || owner.bot) return null;
+      a = generateHome(owner.id);
     } else if (isMoonKey(keyStr)) a = generateMoon();
     else if (isCaveKey(keyStr)) {
       // a cave is built from its entrance: the theme from the entrance, the way out in front of it
@@ -1065,6 +1074,7 @@ const sagaChecked = new WeakSet<WorldState>();
 export const areaName = (keyStr: string, world?: WorldState): string => {
   if (keyStr === 'farm' || keyStr === 'dungeon') return BIOME_NAMES[keyStr];
   if (isBathKey(keyStr)) return T.bathhouseName;
+  if (isHomeKey(keyStr)) return world ? houseName(farmOf(world), keyStr) : T.enteredHouse;
   const sagaId = dungeonOfKey(keyStr);
   if (sagaId) return DUNGEONS[sagaId].name;
   const a = world ? getArea(world, keyStr) : null;
@@ -1101,7 +1111,7 @@ export function placeIn(world: WorldState, p: PlayerState, keyStr: string, tx: n
   }
   if (!p.visited) p.visited = ['farm'];
   // dungeons greet you themselves and are not places on the world map
-  const firstVisit = !isSagaKey(keyStr) && !p.visited.includes(keyStr);
+  const firstVisit = !isSagaKey(keyStr) && !isHomeKey(keyStr) && !p.visited.includes(keyStr);
   if (firstVisit) {
     p.visited.push(keyStr);
     if (isCaveKey(keyStr)) bump(p, 'caves', 1, out);
@@ -1278,7 +1288,7 @@ export function grantLoot(world: WorldState, p: PlayerState, table: string, ctx:
 function summonFromBag(world: WorldState, p: PlayerState, itemId: string, out: Change[]): void {
   const s = sagaItem(itemId);
   if (!s?.species) return;
-  if (isUnderground(world.area) || isIndoorKey(world.area) || isSagaKey(world.area) || (isFarm(world) && inInterior(tileOf(p.x), tileOf(p.y)))) {
+  if (isUnderground(world.area) || isIndoorKey(world.area) || isSagaKey(world.area)) {
     out.push(toast(p.id, T.notNow));
     return;
   }
@@ -1591,6 +1601,7 @@ function tickOtherAreas(world: WorldState, dtMs: number, ctx: SimCtx, out: Chang
     if (a.saga) tickSaga(a, k, dtMs, ctx, out);
     tickAnimals(a, dtMs, ctx, local);
     tickDrops(a, local);
+    if (isHomeKey(k)) tickHome(a, out);
     out.push(...tagArea(local, k));
   }
 }
@@ -1608,6 +1619,7 @@ export function tick(world: WorldState, dtMs: number, ctx: SimCtx): Change[] {
   tickSleep(world, ctx, out);
   tickWeather(world, ctx, out);
   tickOtherAreas(world, dtMs, ctx, out);
+  tickHouseDoor(world, out);
   out.push(...tickRuns(world, dtMs, ctx));
   for (const p of Object.values(world.players)) {
     if (p.emote && p.emote.until < ctx.now) delete p.emote;
@@ -1641,7 +1653,6 @@ function tickPet(world: WorldState, a: AnimalState, dtMs: number): boolean {
   if (!owner || !owner.online || owner.area !== (world.area ?? 'farm')) return false;
   const horse = isMount(a);
   // a horse waits outside while you are indoors
-  if (horse && isFarm(world) && inInterior(tileOf(owner.x), tileOf(owner.y))) return false;
   const dx = owner.x - a.x;
   const dy = owner.y - a.y;
   const dist = Math.hypot(dx, dy);

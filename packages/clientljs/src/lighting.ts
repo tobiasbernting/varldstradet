@@ -350,6 +350,15 @@ export function lampFor(kind: string, variant: number | undefined): LampSpec | n
       return { color: [0.95, 0.8, 1], radius: 2.6, strength: 0.65, glow: 1, twinkle: true };
     case 'saga_starlamp':
       return { color: [0.95, 0.85, 1], radius: 3.4, strength: 0.8, flicker: 0.1, glow: 1.2, sparkle: 0.3 };
+    // a player's house: the longhouse hearth, candles, a glowing sapling and a rune stone
+    case 'hearth':
+      return { color: FIRE, radius: 5.5, strength: 1, flicker: 0.9, glow: 1.8, always: true };
+    case 'candle_stick':
+      return { color: WARM, radius: 2.8, strength: 0.75, flicker: 0.6, glow: 1.2 };
+    case 'yggdrasil_sapling':
+      return { color: [0.6, 1, 0.55], radius: 2.8, strength: 0.65, flicker: 0.15, glow: 1.2, always: true };
+    case 'rune_stone':
+      return { color: [0.3, 0.7, 1], radius: 2.4, strength: 0.65, flicker: 0.15, glow: 1, always: true };
     // the keepsakes the saga gives for home
     case 'hels_lykta':
       return { color: [0.6, 1, 0.78], radius: 3, strength: 0.75, flicker: 0.3, glow: 1.4, always: true };

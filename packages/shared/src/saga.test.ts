@@ -490,6 +490,11 @@ describe('loot', () => {
     expect(inst.bossDown).toBe(true);
     expect(a.saga!.cleared).toContain('draug');
     expect(b.saga!.cleared).toContain('draug');
+    // each of them gets the boss's trophy, at the dungeon's level
+    for (const p of [a, b]) {
+      expect(p.trophies?.draugkung).toBe(2);
+      expect(p.inventory.find((x) => x?.item === 'trophy_draugkung')?.data).toBe('2');
+    }
     const chest = Object.values(d.objects).find((o) => o.kind === 'saga_chest' && o.variant === 2)!;
     // never on top of (or right next to) someone, so nobody gets stuck in it
     for (const q of [a, b]) expect(Math.max(Math.abs(Math.floor(q.x / TILE) - chest.x), Math.abs(Math.floor(q.y / TILE) - chest.y))).toBeGreaterThan(1);

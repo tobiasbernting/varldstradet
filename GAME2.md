@@ -597,6 +597,36 @@ A sagafrön count: a careful Krigare earns **93 per run on Vanlig** (79–107) a
 4. *The Lätt bot rows* never wipe, as in R2: the Sagoandan and the free Lätt wipe are exercised by the unit tests, not by the bot runs.
 5. *Where the time goes.* A good part of a clumsy run is walking (64 × 64 tile maps with long corridors; the Flock layouts are the templates of v1, and the clumsy bot pauses between steps). Shorter corridors would shorten the run without touching a monster, and are the first lever if the kids find it long.
 
+### 5.7 Five levels per run (L1), and what the bots measured
+
+The arch chooses one of five levels (`RUN_LEVELS` in `run.ts`; names, one-line blurbs and pictures in `sv.ts`: `T.runLevelName/Blurb/Icon[level]`; `RUN_LEVEL_IDS`). Lätt and Medel are exactly the old Lätt (R2) and Vanlig; a start message with no `level` is **Medel (2)**.
+
+| Level | Hp | Dmg | Warning | Sagoandar (start, +per stop, max) | Wipe | Sagafrön | Rare finds / rarer gear | Särdrag |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 Mycket lätt | ×0.4 | ×0.3 | ×1.8 | 5, +1, 5 | never ends the run | ×0.35 | ×0.6 / – | 0 |
+| 1 Lätt | ×0.6 | ×0.5 | ×1.4 | 3, +1, 5 | never ends the run | ×0.5 | ×1 / – | 0 |
+| 2 Medel | ×1 | ×1 | ×1 | 1 | ends the run after the one | ×1 | ×1 / – | 0 |
+| 3 Svår | ×1.65 | ×1.6 | ×0.8 | 1 | as Medel | ×1.5 | ×1.5 / +0.5 weight per rarity step | 1 |
+| 4 Extrem | ×1.9 | ×1.6 | ×0.65 | none | the first wipe ends the run | ×2 | ×2 / +1.0 weight per rarity step | 2 |
+
+Levels 0 and 1 use only the boss's first two attacks and the small packs of Lätt. "Rare finds" multiplies the chance of a chest's rare items; "rarer gear" adds weight to a piece of gear for every step above common (uncommon 1 … legendary 4). Nobody loses anything they own on any level.
+
+**Särdrag** (`AFFIXES`, in `plan.modifiers` and so in `RunSnap.modifiers`, named by `MODIFIER_NAMES/TEXT/ICON`; drawn from the seed, after any replay modifiers): **Stålhud** (packs +20 % health), **Stormig** (bosses and mid-bosses +20 % health, bosses +10 % damage), **Stärkande** (each fallen pack member makes the rest hit 10 % harder), **Jakten** (a monster below 25 % health is 1.4 times as fast and quick, and hits 15 % harder). Skälvning, Sprängbär, Mörkret, Glödpölar are still to do (they need new effects on the ground).
+
+**Measured** (`runtune.ts --level n --style careful|clumsy|kid7`, level-3 heroes in the starter set, the Hirdmannen hired where the party allows, Draugkryptan; the `kid7` bot is clumsy with 1.2 times the thinking pause and 40 % misses):
+
+| Party | Level | Bot | Seeds | Wins | Minutes (avg) |
+| --- | --- | --- | --- | --- | --- |
+| ensam väktare / helare / krigare / magiker | 0 | kid7 | 1-8 | 8/8 each, no wipe | 24.5 / 22.7 / 21.4 / 24.6 |
+| ensam (all four) | 1 | clumsy | 1-6 | 6/6 each | 25.0 / 21.6 / 21.0 / 23.5 |
+| ensam (all four) | 2 | careful | 1-6 | 6/6 each | 18.6 / 18.8 / 13.2 / 17.5 |
+| krigare + magiker | 3 | careful | 1-16 | 11/16 (69 %) | 27.1 |
+| väktare + krigare | 3 | careful | 1-12 | 12/12 | 27.9 (at hp 1.7, dmg 1.6) |
+| krigare + magiker | 4 | careful | 1-16 | 3/16 (19 %) | 32.0 |
+| väktare + krigare / helare + magiker | 4 | careful | 1-12 | 9/12 / 8/12 | 31.5 / 37.3 |
+
+The damage multiplier is a cliff: at ×1.5 the Krigare + Magiker pair wins every Svår run, at ×1.8 it wins 3 of 8; the numbers above sit just on the right side of it. **A Väktare in the party makes the hard levels much easier** (taunt and shield): the pair with a tank wins Svår always and Extrem about 70-75 %, so the 50-75 % and 15-40 % targets hold for the party without a tank (the fragile case: two adults who play Krigare and Magiker) and are missed upward for parties with one. A tank-aware tuning (more damage per tank, or a särdrag that ignores taunt) is the next lever. `run.hard.test.ts` keeps Svår (3-7 wins of 8) and Extrem (1-4 of 8) for Krigare + Magiker; `run.latt.test.ts` keeps level 0 (kid7) and 1 (clumsy) at 6/6 with no wipe.
+
 ---
 
 ## 6. Meta-progression between runs

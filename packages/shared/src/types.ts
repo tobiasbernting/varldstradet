@@ -22,7 +22,10 @@ export const PLAYER_SPEED = 64; // px per second
 export const RIDE_SPEED_MUL = 1.8; // on horseback
 /** Holding Shift / LT (the browser's 🏃): faster on foot, never stacked with a mount. No stamina. The server takes the walk as it comes (`move` carries positions), so this is the client's rule; see the run test in sim.test.ts. */
 export const RUN_SPEED_MUL = 1.7;
-export const MAX_PLAYERS = 8;
+/** How many characters a server holds when the parent page has not said otherwise (every character ever made counts). */
+export const DEFAULT_MAX_PLAYERS = 20;
+/** The most the parent page may set. */
+export const MAX_PLAYERS_LIMIT = 100;
 export const HOTBAR_SIZE = 8;
 export const BACKPACK_SIZE = 24;
 export const INVENTORY_SIZE = HOTBAR_SIZE + BACKPACK_SIZE;
@@ -160,7 +163,7 @@ export interface ObjectDef {
   /** Housing capacity for a species. */
   houses?: { species: string; capacity: number };
   /** Opens a UI when interacted with. */
-  interact?: 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'water' | 'feed' | 'cook' | 'cave' | 'exit' | 'treasure' | 'pizzeria' | 'bath' | 'sleep' | 'bus' | 'train' | 'grotto' | 'loot' | 'rocket' | 'fairy' | 'saga' | 'sagaclass' | 'rest' | 'sagachest' | 'landmark' | 'fardport' | 'runexit' | 'yggdrasil' | 'kennel';
+  interact?: 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'water' | 'feed' | 'cook' | 'cave' | 'exit' | 'treasure' | 'pizzeria' | 'bath' | 'sleep' | 'bus' | 'train' | 'grotto' | 'loot' | 'rocket' | 'fairy' | 'saga' | 'sagaclass' | 'rest' | 'sagachest' | 'landmark' | 'fardport' | 'runexit' | 'yggdrasil' | 'stand' | 'kennel';
   /** A loot table (LOOT in data.ts) rolled when it is broken, dug up or opened. */
   loot?: string;
   /** Gives light at night (client). */
@@ -290,6 +293,10 @@ export interface PlayerState {
   saga?: SagaProgress;
   /** Runs (M5b): sagafrön, the bought nodes of the sagaträd and run statistics. Optional: old saves load as they were. */
   run?: RunSave;
+  /** When this character was last in the game (server clock, ms): set on connect and disconnect, shown on the parent page. */
+  lastPlayed?: number;
+  /** Boss trophies won: the highest difficulty level (0..4) each dungeon boss was beaten on. */
+  trophies?: Record<string, number>;
   /** A fighter the server runs (the hired companion of a run): not a character, never saved, never listed. */
   bot?: true;
 }

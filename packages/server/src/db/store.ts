@@ -5,7 +5,7 @@ import { inArray, sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { AREA_GEN, CAVE_EXIT_TILE, MAX_HEARTS, TILE, settlePlayer, upgradeSavedArea, ensureBathhouse, ensureGear, ensureLevelRewards, ensureRoaming, ensureTownDress, ensureSagaPlaces, ensureCity, ensureLandmarks, ensureInterior, ensureNpcSpots, ensurePizzeria, ensureTransport, generateWorld, isRemovedAreaKey, isSagaKey, scrubArea, scrubPlayer, DUNGEONS, dungeonOfKey, portalFront, archFront, archFrontOf, ensureRunPlaces, isRunKey, newRunSave, rebuildOccupancy, type Change, type DungeonId, type WorldState } from '../../../shared/src/index.ts';
+import { AREA_GEN, CAVE_EXIT_TILE, MAX_HEARTS, TILE, settlePlayer, upgradeSavedArea, ensureBathhouse, ensureGear, ensureLevelRewards, ensureRoaming, ensureTownDress, ensureSagaPlaces, ensureCity, ensureLandmarks, ensureNpcSpots, ensurePizzeria, ensureTransport, generateWorld, isRemovedAreaKey, isSagaKey, scrubArea, scrubPlayer, DUNGEONS, dungeonOfKey, portalFront, archFront, archFrontOf, ensureRunPlaces, isRunKey, newRunSave, rebuildOccupancy, type Change, type DungeonId, type WorldState } from '../../../shared/src/index.ts';
 import * as s from './schema.ts';
 import { PgAccessStore } from './accessStore.ts';
 
@@ -216,7 +216,6 @@ export class PgStore implements Store {
     }
     // Worlds saved by older versions: add the farmhouse interior and room for the villagers
     const before = Object.keys(world.objects).length;
-    if (ensureInterior(world)) console.log('added the farmhouse interior to the saved world');
     ensureNpcSpots(world);
     if (ensureRunPlaces(world)) console.log('put the färdport and the Yggdrasil shoot on the farm');
     for (const id of outOfRun) {

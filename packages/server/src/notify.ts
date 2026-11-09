@@ -9,7 +9,7 @@ interface Note {
 
 /** Which gate events are worth a push, and how loud. */
 const NOTES: Record<string, Note> = {
-  join: { title: 'Någon kom in på gården', priority: 3, tags: ['farmer'] },
+  join: { title: 'Någon kom in i Världsträdet', priority: 3, tags: ['farmer'] },
   'join-waiting': { title: 'Någon väntar på att få komma in', priority: 4, tags: ['hourglass'] },
   reopened: { title: 'En enhet öppnades igen', priority: 3, tags: ['key'] },
   'join-blocked': { title: 'Många fel koder – inbjudningar spärrade en stund', priority: 4, tags: ['warning'] },

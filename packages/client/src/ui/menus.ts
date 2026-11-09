@@ -5,6 +5,11 @@ import {
   isIndoorKey,
   FILTER_NAMES,
   HELP,
+  HOUSE_T,
+  homeKey,
+  houseTitle,
+  isHomeKey,
+  ownerOfHome,
   INVENTORY_FILTERS,
   NPCS,
   HOTBAR_SIZE,
@@ -64,7 +69,7 @@ import {
   sagaQuestRows,
 } from './saga.ts';
 
-export type MenuKind = 'inventory' | 'wardrobe' | 'emotes' | 'nameAnimal' | 'help' | 'npc' | 'kennel';
+export type MenuKind = 'inventory' | 'wardrobe' | 'emotes' | 'nameAnimal' | 'help' | 'npc' | 'kennel' | 'houses';
 
 const SEARCH_KINDS: readonly MenuKind[] = ['inventory'];
 
@@ -116,6 +121,7 @@ export class Menus {
         this.npcId = c.npc ?? null;
         this.open('npc');
       } else if (c.ui === 'wardrobe') this.open('wardrobe');
+      else if (c.ui === 'houses') this.open('houses');
     });
     bus.on('connection', (s) => {
       if (s !== 'open') this.close();
@@ -187,6 +193,7 @@ export class Menus {
       nameAnimal: '🐾',
       help: `❓ ${T.help}`,
       kennel: `🐾 ${T.kennelTitle}`,
+      houses: `🏠 ${HOUSE_T.whoseHouse}`,
       npc: this.npcId ? (NPCS[this.npcId]?.name ?? '') : '',
     }[this.kind];
     const closeBtn = h('button', { class: 'close' }, '✕');
@@ -201,6 +208,9 @@ export class Menus {
       return;
     }
     switch (this.kind) {
+      case 'houses':
+        this.renderHouses(body);
+        break;
       case 'wardrobe':
         this.renderWardrobe(panel, body);
         break;
@@ -316,6 +326,23 @@ export class Menus {
     if (f.kind === 'inventory') this.renderInventory(f);
 
     if (scrollTop) f.body.scrollTop = scrollTop;
+  }
+
+  /** The lobby's house door: your own house first, then everyone else's, each with its owner's portrait. */
+  private renderHouses(body: HTMLElement): void {
+    const me = myPlayer()!;
+    const cards = h('div', { class: 'cards' });
+    const card = (id: string, label: string, p: typeof me, own: boolean) => {
+      const c = h('div', { class: `card${own ? ' last' : ''}`, title: label }, h('img', { class: 'portrait', src: portraitUrl(p.appearance, p.outfit, 4) }), h('div', { class: 'nm' }, `${own ? '🏠 ' : ''}${label}`));
+      onTap(c, () => {
+        net.send({ t: 'house', a: 'enter', of: id });
+        this.close();
+      });
+      cards.append(c);
+    };
+    card(me.id, HOUSE_T.myHouse, me, true);
+    for (const p of Object.values(client.world?.players ?? {})) if (p.id !== me.id && !p.bot) card(p.id, houseTitle(p.name), p, false);
+    body.append(cards);
   }
 
   // ---- the kennel: one free first pet ----

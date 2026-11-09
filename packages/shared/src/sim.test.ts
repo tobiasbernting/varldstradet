@@ -31,7 +31,6 @@ import {
   RUN_SPEED_MUL,
   RIDE_SPEED_MUL,
   MOVE_CREDIT_S,
-  PORTALS,
   MOVE_SLACK,
   inPool,
   ensureBathhouse,
@@ -242,19 +241,6 @@ describe('movement', () => {
       expect(p.x).toBeCloseTo(x0 + 8, 6);
     });
 
-    it('the farmhouse door (a portal on the farm) still works with the clock', () => {
-      const { world, p } = setup();
-      const portal = PORTALS[0]!;
-      p.x = (portal.from.x + 0.5) * TILE;
-      p.y = (portal.from.y + 0.5) * TILE;
-      applyMove(world, p.id, p.x, p.y, 'up', false, 1000);
-      const tx = (portal.to.x + 0.5) * TILE;
-      const ty = (portal.to.y + 0.5) * TILE;
-      applyMove(world, p.id, tx, ty, 'up', true, 1050);
-      expect(p.x).toBeCloseTo(tx, 6);
-      expect(p.y).toBeCloseTo(ty, 6);
-    });
-
     it('without a clock (the bots in the tests) a move is taken as it comes', () => {
       const { world, p } = setup();
       standAt(world, p, 10, 20);
@@ -343,18 +329,13 @@ describe('season calendar', () => {
 });
 
 describe('house, villagers, fishing', () => {
-  it('walking into the farmhouse door teleports inside and back out', () => {
+  it('the farmhouse door is walkable and asks whose house to enter (house.ts takes it from there)', () => {
     const { world, p } = setup();
     standAt(world, p, 10, 9);
-    for (let i = 0; i < 10 && Math.floor(p.x / 16) !== 57; i++) stepPlayer(world, p, 0, -1, 50);
-    expect(Math.floor(p.x / 16)).toBe(57);
-    expect(Math.floor(p.y / 16)).toBe(59);
-    expect(p.facing).toBe('up');
-    expect(objectAt(world, 56, 60)?.kind).toBeUndefined();
-    expect(objectAt(world, 51, 59)?.kind).toBe('wall_wood');
-    for (let i = 0; i < 12 && p.y > 20 * 16; i++) stepPlayer(world, p, 0, 1, 50);
-    expect(Math.floor(p.x / 16)).toBe(10);
-    expect(Math.floor(p.y / 16)).toBe(9);
+    for (let i = 0; i < 4; i++) stepPlayer(world, p, 0, -1, 50);
+    expect([Math.floor(p.x / 16), Math.floor(p.y / 16)]).toEqual([10, 8]);
+    delete p.moveLock;
+    expect(tick(world, 50, ctx()).some((c) => c.t === 'open' && c.ui === 'houses' && c.to === p.id)).toBe(true);
   });
 
 

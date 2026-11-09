@@ -65,52 +65,9 @@ export function rebuildOccupancy(world: WorldState): void {
   }
 }
 
-/** The inside of the farmhouse lives in a walled-off room in the forest corner of the map. */
-export const INTERIOR = { x: 52, y: 55, w: 10, h: 6 };
-export const inInterior = (tx: number, ty: number): boolean =>
-  tx >= INTERIOR.x - 1 && tx <= INTERIOR.x + INTERIOR.w && ty >= INTERIOR.y - 1 && ty <= INTERIOR.y + INTERIOR.h;
-
-/** Walking onto `from` teleports to `to`. */
-export const PORTALS: { from: { x: number; y: number }; to: { x: number; y: number }; facing: 'up' | 'down' }[] = [
-  { from: { x: 10, y: 8 }, to: { x: 57, y: 59 }, facing: 'up' }, // farmhouse door -> inside
-  { from: { x: 57, y: 61 }, to: { x: 10, y: 9 }, facing: 'down' }, // inside exit -> outside the door
-];
-export const portalAt = (tx: number, ty: number) => PORTALS.find((p) => p.from.x === tx && p.from.y === ty);
-
-/** Builds (or repairs) the farmhouse interior and makes room for the villagers. Idempotent. */
-const NATURAL = new Set(['tree', 'tree_pine', 'tree_apple', 'stump', 'rock', 'rock_small', 'grass_tuft', 'bush', 'flower', 'wild_pumpkin', 'wild_flower_mid']);
-
-export function ensureInterior(world: WorldState): boolean {
-  const x0 = INTERIOR.x - 1;
-  const y0 = INTERIOR.y - 1;
-  const x1 = INTERIOR.x + INTERIOR.w;
-  const y1 = INTERIOR.y + INTERIOR.h;
-  // Nothing wild inside the room, nor in a margin around it (tree tops would poke through the walls)
-  for (const o of Object.values(world.objects)) if (NATURAL.has(o.kind) && o.x >= x0 - 1 && o.x <= x1 + 1 && o.y >= y0 - 1 && o.y <= y1 + 2) removeObject(world, o.id);
-  if (Object.values(world.objects).some((o) => o.kind === 'door_out')) return false;
-  for (let y = y0; y <= y1; y++)
-    for (let x = x0; x <= x1; x++) {
-      const o = objectAt(world, x, y);
-      if (o) removeObject(world, o.id);
-      delete world.crops[key(x, y)];
-      const wall = x === x0 || x === x1 || y === y0 || y === y1;
-      world.terrain[tileIndex(world, x, y)] = wall ? 'floor_stone' : 'floor_wood';
-      if (wall) {
-        if (x === 57 && y === y1) addObject(world, 'door_out', x, y);
-        else addObject(world, 'wall_wood', x, y);
-      }
-    }
-  // Starter furniture
-  addObject(world, 'bed', INTERIOR.x, INTERIOR.y);
-  addObject(world, 'rug', INTERIOR.x + 4, INTERIOR.y + 2);
-  addObject(world, 'table', INTERIOR.x + 7, INTERIOR.y + 1);
-  addObject(world, 'chair', INTERIOR.x + 6, INTERIOR.y + 1);
-  addObject(world, 'chair', INTERIOR.x + 8, INTERIOR.y + 1);
-  addObject(world, 'stove', INTERIOR.x + 9, INTERIOR.y);
-  addObject(world, 'bookshelf', INTERIOR.x + 2, INTERIOR.y);
-  addObject(world, 'plant', INTERIOR.x + 9, INTERIOR.y + 4);
-  return true;
-}
+/** The lobby's house door: stepping onto it asks whose house to go into (see house.ts). Players' houses are their own maps. */
+export const HOUSE_DOOR = { x: 10, y: 8 };
+export const isHouseDoor = (tx: number, ty: number): boolean => tx === HOUSE_DOOR.x && ty === HOUSE_DOOR.y;
 
 /** A blank map of grass; any size other than 64×64 is written on the map. */
 export function emptyWorld(w = MAP_W, h = MAP_H): WorldState {
@@ -258,12 +215,11 @@ export function generateWorld(seed = 1337): WorldState {
   // Forest all round the yard (the rest of the map): nobody can leave
   for (let y = 0; y < MAP_H; y++)
     for (let x = 0; x < MAP_W; x++) {
-      if (inYard(x, y) || inInterior(x, y) || objectAt(world, x, y)) continue;
+      if (inYard(x, y) || objectAt(world, x, y)) continue;
       const outside = Math.max(L.x0 - x, x - L.x1, L.y0 - y, y - L.y1);
       if (outside <= 11) addObject(world, rnd() < 0.45 ? 'tree_pine' : 'tree', x, y);
       else set(x, y, 'rock');
     }
-  ensureInterior(world);
   ensureNpcSpots(world);
   return world;
 }

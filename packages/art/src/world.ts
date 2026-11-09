@@ -4,6 +4,7 @@ import { Px, hash2, shade } from './px.js';
 import { drawBiomeObjects } from './objects2.ts';
 import { caveWallThemed, drawLandmarks } from './landmarks.ts';
 import { drawSaga } from './saga.ts';
+import { drawHouse } from './house.ts';
 import { drawSagaPlaces } from './sagaplaces.ts';
 import { addBiomeTerrain, edgeGroup } from './terrain2.ts';
 
@@ -1358,6 +1359,7 @@ export function drawObjects(): Record<string, ObjectArt> {
   drawBiomeObjects(set);
   drawLandmarks(set);
   drawSaga(set);
+  drawHouse(set);
   drawSagaPlaces(set);
   return art;
 }
