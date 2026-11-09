@@ -40,7 +40,6 @@ import {
   equip,
   getArea,
   isSeason,
-  leaveCave,
   mulberry32,
   nameAnimal,
   newDay,
@@ -99,9 +98,6 @@ export interface GameOptions {
   /** DEV_TELEPORT=1: the `dev` message may put a player straight into a dungeon (for a client without a world map). */
   devTeleport?: boolean;
 }
-
-/** How long an offline player may stay in the cave before being carried out. */
-const DUNGEON_GRACE_MS = 90_000;
 
 export class Game {
   world!: WorldState;
@@ -191,7 +187,6 @@ export class Game {
       players.push(snap);
     }
     const animals: AnimalSnap[] = Object.values(this.world.animals).map((a) => ({ id: a.id, x: a.x, y: a.y, facing: a.facing, moving: a.moving }));
-    if (this.world.dungeon) for (const a of Object.values(this.world.dungeon.animals)) animals.push({ id: a.id, x: a.x, y: a.y, facing: a.facing, moving: a.moving, area: 'dungeon' });
     for (const [k, area] of Object.entries(this.world.areas ?? {})) {
       if (!Object.values(area.players).some((p) => p.online)) continue;
       for (const a of Object.values(area.animals)) animals.push({ id: a.id, x: a.x, y: a.y, facing: a.facing, moving: a.moving, area: k });
@@ -310,20 +305,9 @@ export class Game {
       if (c.link !== link) continue;
       this.clients.delete(c);
       if (c.playerId && ![...this.clients].some((o) => o.playerId === c.playerId)) {
-        const p = this.world.players[c.playerId];
         this.voice.offline(c.playerId);
         this.pending.push(...setOnline(this.world, c.playerId, false));
         this.dispatchPending();
-        // A flaky tablet connection must not throw you out of the cave: wait a while before carrying you out
-        if (p?.area === 'dungeon') {
-          const id = c.playerId;
-          setTimeout(() => {
-            const q = this.world.players[id];
-            if (!q || q.online || q.area !== 'dungeon') return;
-            this.pending.push(...leaveCave(this.world, id, false));
-            this.dispatchPending();
-          }, DUNGEON_GRACE_MS);
-        }
       }
     }
   }
@@ -353,14 +337,7 @@ export class Game {
       client.link.send({ t: 'welcome', you: p.id, world: { ...this.world, areas: undefined, dungeon: undefined }, season: this.season(), now: Date.now(), tick: this.tickCount, biomes });
       // voice after the welcome: the client starts its voice window over on a welcome, so a state sent before it was lost
       this.voice.online(msg.playerId, client.ip ?? 'local', !!client.guest);
-      if (p.area === 'dungeon') {
-        // back in the cave after a dropped connection (the cave may have been cleared meanwhile)
-        const d = this.world.dungeon;
-        if (d) {
-          d.players[p.id] = p;
-          client.link.send({ t: 'changes', changes: [{ t: 'areaData', to: p.id, key: 'dungeon', world: d }] });
-        } else this.pending.push(...leaveCave(this.world, p.id, false));
-      } else if (isSagaKey(p.area)) {
+      if (isSagaKey(p.area)) {
         // back in a dungeon: up at its last rest stone (it may have started over meanwhile); in a run: the same, or home if it is over
         this.pending.push(...(isRunKey(p.area) ? rejoinRun(this.world, p.id) : rejoinSaga(this.world, p.id)));
       } else if (p.area !== 'farm') {

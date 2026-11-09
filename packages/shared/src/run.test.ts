@@ -50,6 +50,7 @@ import {
   SAGA_BOSSES,
   SEED_TREE,
   TILE,
+  adoptPet,
   TREE_NAMES,
   TREE_STAGES,
   TREE_TEXT,
@@ -2524,3 +2525,25 @@ void applyMove;
 void fardportOf;
 void DUNGEON_IDS;
 void ({} as DungeonId);
+
+describe('pets and runs', () => {
+  it('a hero’s pet from the lobby’s kennel goes into the run’s stop with its owner (placeIn moves pets along) and is back in the lobby afterwards', () => {
+    const party = makeParty(['krigare'], { seed: 3 });
+    const p = party.players[0]!;
+    const k = Object.values(party.world.objects).find((o) => o.kind === 'kennel')!;
+    p.x = (k.x + 1) * TILE;
+    p.y = (k.y + 3) * TILE;
+    adoptPet(party.world, p.id, 'dog', party.ctx());
+    const front = archFrontOf(party.world);
+    p.x = (front.x + 0.5) * TILE;
+    p.y = (front.y + 0.5) * TILE;
+    startRun(party.world, p.id, { seed: 3 }, party.ctx());
+    const run = runOf(party.world)!;
+    const dogs = (w: WorldState) => Object.values(w.animals).filter((a) => a.owner === p.id && a.species === 'dog');
+    expect(dogs(party.world)).toHaveLength(0);
+    expect(dogs(party.world.areas![run.key]!)).toHaveLength(1);
+    endRun(party.world, run, 'leave', party.ctx());
+    expect(p.area).toBe('farm');
+    expect(dogs(party.world)).toHaveLength(1);
+  });
+});

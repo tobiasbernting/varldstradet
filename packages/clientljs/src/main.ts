@@ -37,7 +37,6 @@ import { initGamepad } from '@v1/ui/gamepad.ts';
 import { Hud } from '@v1/ui/hud.ts';
 import { Menus } from '@v1/ui/menus.ts';
 import { Picker } from '@v1/ui/picker.ts';
-import { initRide } from '@v1/ui/ride.ts';
 import { SagaUi } from '@v1/ui/saga.ts';
 import { initSound, isMuted, setMuted } from '@v1/sound.ts';
 import { Chat, SocialButtons, petCommand, weatherChip } from '@v1/ui/social.ts';
@@ -73,7 +72,6 @@ window.addEventListener('resize', applyZoom);
 
 // ---- UI (the 2D game's) ----
 initSound();
-initRide(ui);
 const menus = new Menus(ui);
 const hud = new Hud(
   ui,

@@ -1,69 +1,71 @@
 // All in-game menus as HTML overlays: ryggsäck, kista, gårdsbutik, sälj, snickra, garderob, emotes, namn.
 import {
-  ACHIEVEMENTS,
   isVehicle,
-  ACHIEVEMENT_TEXT,
   ANIMALS,
-  CHEST_SIZE,
-  MOON_KEY,
-  SPACEPORT_KEY,
-  areaCoords,
-  areaKey,
-  biomeAt,
-  parseCaveKey,
-  placeEmoji,
-  placeName,
-  villageOfBath,
   isIndoorKey,
-  COOKING,
   FILTER_NAMES,
   HELP,
   INVENTORY_FILTERS,
   NPCS,
-  openQuests,
   HOTBAR_SIZE,
   INVENTORY_SIZE,
   ITEMS,
-  PAINTED_SELL,
   RECIPES,
   SPECIES_NAMES,
   T,
-  catalogueAvailable,
-  countItem,
   fmt,
-  item as itemDef,
   itemName,
   filterOf,
   itemMatches,
   normalizeQuery,
   type ClothingSlot,
-  type ItemDef,
   type ItemStack,
-  type RecipeDef,
   type SlotRef,
-  transportDestinations,
   DAY_LENGTH_MS,
-  isBathKey,
   isCallable,
   localWeather,
   noWeatherHere,
   talkNode,
   type Talk,
 } from '@lilla-garden/shared';
-import { portraitUrl, getArt } from '@art/textures.ts';
-import { EMOTE_GLYPH } from '@art/world.ts';
-import { net } from '../net.js';
-import { activeWorld, bus, client, myPlayer } from '../state.js';
-import { clear, h, icon, onTap } from './dom.js';
-import { slotEl } from './hud.js';
-import { PaintBoard } from './paint.ts';
-import { stackIconUrl } from '@art/painting.ts';
-import { SFX } from '../sound.ts';
-import { FORGE_NPC, hasSagaQuests, landmarkMarks, sagaQuestRows } from './saga.ts';
+import {
+  portraitUrl,
+  getArt,
+} from '@art/textures.ts';
+import {
+  EMOTE_GLYPH,
+} from '@art/world.ts';
+import {
+  net,
+} from '../net.js';
+import {
+  activeWorld,
+  bus,
+  client,
+  myPlayer,
+} from '../state.js';
+import {
+  clear,
+  h,
+  icon,
+  onTap,
+} from './dom.js';
+import {
+  slotEl,
+} from './hud.js';
+
+
+import {
+  SFX,
+} from '../sound.ts';
+import {
+  FORGE_NPC,
+  hasSagaQuests,
+  sagaQuestRows,
+} from './saga.ts';
 
 export type MenuKind = 'inventory' | 'wardrobe' | 'emotes' | 'nameAnimal' | 'help' | 'npc' | 'kennel';
 
-const TAB_NAMES: Record<string, string> = { seeds: T.tabSeeds, animals: T.tabAnimals, feed: T.tabFeed, materials: T.tabMaterials, furniture: T.tabFurniture, clothes: T.tabClothes, season: T.tabSeason, stars: `⭐ ${T.tabStars}`, vehicles: T.tabVehicles };
 const SEARCH_KINDS: readonly MenuKind[] = ['inventory'];
 
 /** The parts of a search menu that outlive a rerender. */
@@ -81,18 +83,12 @@ interface SearchFrame {
   hint: HTMLElement;
   coins: HTMLElement | null;
 }
-const TABS = ['seeds', 'animals', 'vehicles', 'feed', 'materials', 'furniture', 'clothes', 'season', 'stars'] as const;
-
 export class Menus {
   private modal: HTMLElement | null = null;
   private kind: MenuKind | null = null;
-  private chestId: number | null = null;
-  /** The bus stop / station the travel menu was opened at. */
-  private travelId: number | null = null;
   private animalId: number | null = null;
   private npcId: string | null = null;
   private picked: SlotRef | null = null;
-  private tab: (typeof TABS)[number] = 'seeds';
   private wardrobeTab: ClothingSlot = 'hat';
   /** Villager conversation in progress (null: the greeting and quests). */
   private talk: Talk | null = null;
@@ -164,7 +160,6 @@ export class Menus {
     this.modal = null;
     this.frame = null;
     this.kind = null;
-    this.chestId = null;
     this.animalId = null;
     this.talk = null;
     this.said = '';
@@ -480,47 +475,23 @@ export class Menus {
   // ---- villager dialogue ----
 
   private renderNpc(body: HTMLElement): void {
-    const me = myPlayer()!;
     const npc = this.npcId ? NPCS[this.npcId] : undefined;
     if (!npc) {
       this.close();
       return;
     }
-    const quests = openQuests(client.world!, me, npc.id);
     const saga = hasSagaQuests(npc.id);
     if (this.talk) {
-      this.renderTalk(body, npc.id, quests.length > 0 || saga);
+      this.renderTalk(body, npc.id, saga);
       return;
     }
     const greeting = npc.greeting[(client.day + npc.name.length) % npc.greeting.length]!;
-    const talk = h('div', { class: 'npc-talk' }, h('img', { class: 'portrait', src: portraitUrl(npc.appearance, npc.outfit, 4) }), h('div', { class: 'bubble-text' }, quests.length || saga ? greeting : T.questAllDone));
-    body.append(talk);
+    body.append(h('div', { class: 'npc-talk' }, h('img', { class: 'portrait', src: portraitUrl(npc.appearance, npc.outfit, 4) }), h('div', { class: 'bubble-text' }, greeting)));
     const chat = h('button', null, '💬 Prata!');
     onTap(chat, () => this.say(npc.id, 'start', ''));
     body.append(h('div', { class: 'npc-actions' }, chat, this.forgeButton(npc.id)));
     // the saga's quests (ui/saga.ts)
     if (saga) body.append(sagaQuestRows(npc.id));
-    const rows = h('div', { class: 'rows' });
-    for (const q of quests) {
-      const have = countItem(me.inventory, q.want.item);
-      const ok = have >= q.want.count;
-      const reward = [q.reward.coins ? `${q.reward.coins} ${T.coins}` : '', q.reward.item ? itemName(q.reward.item.item) : '', `${q.reward.stars} ⭐`].filter(Boolean).join(' + ');
-      const give = h('button', { disabled: !ok }, T.questGive);
-      onTap(give, () => {
-        net.send({ t: 'quest', id: q.id });
-        setTimeout(() => this.rerender(), 150);
-      });
-      rows.append(
-        h(
-          'div',
-          { class: `row${ok ? '' : ' off'}` },
-          icon(getArt().iconUrl[q.want.item] ?? ''),
-          h('span', { class: 'name' }, q.text, h('br'), h('span', { class: `need ${ok ? 'ok' : 'no'}` }, `${T.questWant}: ${q.want.count} ${itemName(q.want.item)} (du har ${have})`), h('br'), h('span', { class: 'need' }, `${T.questReward}: ${reward}`)),
-          give,
-        ),
-      );
-    }
-    body.append(rows);
   }
 
   // ---- conversations (2D game) ----

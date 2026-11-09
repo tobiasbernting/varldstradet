@@ -261,99 +261,6 @@ describe('grottorna', () => {
     }
   });
 
-  it('walk in through a cave mouth, open the chest once a week per player, and walk out in front of the mouth', () => {
-    const { world, p } = setup();
-    // find a map near home with a cave mouth
-    let k = '';
-    for (const [ax, ay] of [[2, 0], [0, -2], [-1, 2], [2, 2], [1, 1], [-2, 0]] as const) {
-      const a = getArea(world, areaKey(ax, ay))!;
-      if (Object.values(a.objects).some((o) => o.kind === 'cave_mouth' || o.kind === 'temple' || o.kind === 'pyramid')) {
-        k = areaKey(ax, ay);
-        break;
-      }
-    }
-    expect(k).not.toBe('');
-    const area = getArea(world, k)!;
-    const mouth = Object.values(area.objects).find((o) => themeOfEntrance(o))!;
-    const front = entranceFront(mouth);
-    goTo(world, p, k, front.x, front.y);
-    const ch = performAction(areaOf(world, p), p.id, front.x, front.y - 1, ctx());
-    expect(p.area).toBe(caveKey(k, mouth.id));
-    expect(ch.some((c) => c.t === 'areaData' && c.key === p.area)).toBe(true);
-    expect(p.stats.caves).toBe(1);
-    const cave = areaOf(world, p);
-    expect(cave.cave?.parent).toBe(k);
-    // straight to the chest
-    const chest = Object.values(cave.objects).find((o) => o.kind === 'loot_chest' && o.loot?.startsWith('cave_'))!;
-    p.x = chest.x * TILE + TILE / 2;
-    p.y = (chest.y + 1) * TILE + TILE / 2;
-    const coins = p.coins;
-    const stars = p.stars;
-    const opened = performAction(areaOf(world, p), p.id, chest.x, chest.y, ctx());
-    expect(toasts(opened).some((t) => t.startsWith('Skatt!'))).toBe(true);
-    expect(p.coins).toBeGreaterThan(coins);
-    expect(p.stars).toBeGreaterThan(stars);
-    expect(p.stats.loot).toBe(1);
-    // empty for this player until a week has passed
-    const again = performAction(areaOf(world, p), p.id, chest.x, chest.y, ctx());
-    expect(toasts(again).some((t) => t.includes('redan tömt'))).toBe(true);
-    // another player gets their own loot
-    const q = createPlayer(world, 'Syster', { skin: '#f0c0a0', hair: '#553322', hairStyle: 'long' });
-    setOnline(world, q.id, true);
-    goTo(world, q, p.area, chest.x, chest.y + 1);
-    expect(toasts(performAction(areaOf(world, q), q.id, chest.x, chest.y, ctx())).some((t) => t.startsWith('Skatt!'))).toBe(true);
-    // a week later it is full again
-    world.day += 7;
-    expect(toasts(performAction(areaOf(world, p), p.id, chest.x, chest.y, ctx())).some((t) => t.startsWith('Skatt!'))).toBe(true);
-    // out through the exit, landing in front of the mouth
-    const start = cave.cave!.start;
-    p.x = start.x * TILE + TILE / 2;
-    p.y = start.y * TILE + TILE / 2;
-    performAction(areaOf(world, p), p.id, start.x, start.y + 1, ctx());
-    expect(p.area).toBe(k);
-    expect(Math.floor(p.x / TILE)).toBe(front.x);
-    expect(Math.floor(p.y / TILE)).toBe(front.y);
-    // the same cave next time (saved, not rebuilt)
-    performAction(areaOf(world, p), p.id, front.x, front.y - 1, ctx());
-    expect(areaOf(world, p)).toBe(cave);
-  });
-
-});
-
-describe('skatter och älvor', () => {
-  it('an X in the sand is dug up with the hoe for loot that fits the place', () => {
-    const { world, p } = setup();
-    const k = areaKey(-2, 0); // Stranden
-    const a = getArea(world, k)!;
-    expect(a.biome).toBe('strand');
-    const x = Object.values(a.objects).find((o) => o.kind === 'dig_spot')!;
-    expect(x).toBeDefined();
-    goTo(world, p, k, x.x, x.y + 1);
-    p.selected = p.inventory.findIndex((s) => s === null);
-    expect(toasts(performAction(areaOf(world, p), p.id, x.x, x.y, ctx())).some((t) => t.includes('hackan'))).toBe(true);
-    hold(p, 'hoe');
-    const ch = performAction(areaOf(world, p), p.id, x.x, x.y, ctx());
-    expect(toasts(ch).some((t) => t.startsWith('Du grävde upp'))).toBe(true);
-    expect(objectAt(a, x.x, x.y)).toBeUndefined();
-    expect(p.stats.dig).toBe(1);
-  });
-
-  it('dancing in a fairy ring gives fairy dust once a day', () => {
-    const { world, p } = setup();
-    const k = areaKey(1, -1); // Svampskogen
-    const a = getArea(world, k)!;
-    expect(a.biome).toBe('svamp');
-    let ring = Object.values(a.objects).find((o) => o.kind === 'fairy_ring');
-    if (!ring) {
-      ring = addObject(a, 'fairy_ring', 30, 40)!;
-    }
-    goTo(world, p, k, ring.x, ring.y + 2);
-    const ch = performAction(areaOf(world, p), p.id, ring.x, ring.y + 1, ctx());
-    expect(toasts(ch).some((t) => t.startsWith('Du dansade'))).toBe(true);
-    expect(toasts(performAction(areaOf(world, p), p.id, ring.x, ring.y + 1, ctx())).some((t) => t.startsWith('Älvorna vilar'))).toBe(true);
-    world.day++;
-    expect(toasts(performAction(areaOf(world, p), p.id, ring.x, ring.y + 1, ctx())).some((t) => t.startsWith('Du dansade'))).toBe(true);
-  });
 });
 
 describe('rymden', () => {
@@ -463,27 +370,6 @@ describe('stora kartor', () => {
     return back;
   };
 
-  it('farm, cities, the space base, the moon and caves stay 64; the wild is 96 and as full as before', () => {
-    expect(generateWorld(1).w).toBeUndefined();
-    for (const m of [generateWorld(1), generateArea(1, 0), generateArea(SPACEPORT.ax, SPACEPORT.ay), generateMoon(), generateCave('g:a:0,-1#1', 'rot', 'a:0,-1', { x: 10, y: 10 })])
-      expect([mapW(m), mapH(m), m.terrain.length], m.area ?? 'farm').toEqual([MAP_W, MAP_H, MAP_W * MAP_H]);
-    // the same place at both sizes: 2.25 times the tiles, about as many things and animals per tile
-    let small = { things: 0, animals: 0, caves: 0 };
-    let big = { things: 0, animals: 0, caves: 0 };
-    for (const [ax, ay] of [[0, -1], [-1, 0], [0, 1], [1, -1], [1, 1], [2, 0], [-2, 0], [0, -2], [0, 2], [-1, 2], [2, 2], [-1, -1]] as const) {
-      for (const [size, sum] of [[MAP_W, small], [WILD_MAP, big]] as const) {
-        const a = generateArea(ax, ay, 1337, size);
-        sum.things += Object.keys(a.objects).length;
-        sum.animals += Object.keys(a.animals).length;
-        sum.caves += Object.values(a.objects).filter((o) => o.kind === 'cave_mouth').length;
-      }
-    }
-    expect(big.things / small.things).toBeGreaterThan(1.7);
-    expect(big.animals / small.animals).toBeGreaterThan(1.9);
-    expect(big.animals / small.animals).toBeLessThan(2.6);
-    expect(big.caves / small.caves).toBeGreaterThan(1.6);
-  });
-
   it('walking east off a 96 map into a 64 city and back west lands on open ground both times', () => {
     // a city with the wild to its west
     let city: [number, number] | null = null;
@@ -568,25 +454,6 @@ describe('stora kartor', () => {
     expect(upgradeSavedArea(farmed, k).rebuilt).toBe(false);
   });
 
-  it('someone in a cave of a map that was rebuilt bigger comes out on open ground', () => {
-    const { world, p } = setup();
-    const k = areaKey(0, -1);
-    const forest = getArea(world, k)!;
-    const mouth = Object.values(forest.objects).find((o) => o.kind === 'cave_mouth')!;
-    expect(mouth).toBeDefined();
-    const ck = caveKey(k, mouth.id);
-    const cave = getArea(world, ck)!;
-    // the cave remembers a way out that is now in the middle of a rock
-    cave.cave!.out = { x: 5, y: 5 };
-    forest.terrain[tileIndex(forest, 5, 5)] = 'rock';
-    goTo(world, p, ck, cave.cave!.start.x, cave.cave!.start.y);
-    const front = cave.cave!.start;
-    const exit = objectAt(cave, front.x, front.y + 1)!;
-    performAction(cave, p.id, exit.x, exit.y, ctx());
-    expect(p.area).toBe(k);
-    expect(isSolidForPlayer(forest, Math.floor(p.x / TILE), Math.floor(p.y / TILE))).toBe(false);
-  });
-
   it('roaming monsters and wild animals come in numbers that fit the map', () => {
     for (const [ax, ay] of [[0, -1], [-1, 0], [0, 1]] as const) {
       const big = generateArea(ax, ay);
@@ -648,39 +515,6 @@ describe('Upptäcktsboken', () => {
     goTo(world, p, k, front.x, front.y);
     return { world, p, a, lm, id: landmarkOfKind(lm.kind)!, touch: () => performAction(a, p.id, front.x, front.y - 1, ctx()) };
   };
-
-  it('touching one the first time finds it: a star, the cache, a banner with its lore; later only the lore', () => {
-    const { p, a, id, touch } = atLandmark();
-    const def = LANDMARKS[id]!;
-    const stars = p.stars;
-    const coins = p.coins;
-    const have = (item: string) => p.inventory.reduce((n, s) => n + (s?.item === item ? s.count : 0), 0);
-    const before = def.cache.map(([item]) => have(item));
-    const ch = touch();
-    expect(p.saga?.discovered).toEqual([id]);
-    expect(p.stars).toBe(stars + 1);
-    expect(p.coins).toBe(coins + def.coins);
-    def.cache.forEach(([item, n], i) => expect(have(item), item).toBe(before[i]! + n));
-    expect(p.stats.landmarks).toBe(1);
-    const banner = ch.find((c) => c.t === 'banner');
-    expect(banner && banner.t === 'banner' && [banner.kind, banner.text, banner.sub, banner.to]).toEqual(['reward', `Du hittade ${def.name}!`, def.lore, p.id]);
-    expect(p.saga?.seen).toContain(seenKey(a.area!, id));
-    // again: the lore as a toast, nothing more
-    const again = touch();
-    expect(again.some((c) => c.t === 'banner')).toBe(false);
-    expect(toasts(again).some((t) => t.includes(def.lore))).toBe(true);
-    expect([p.stars, p.coins, p.stats.landmarks, p.saga?.discovered]).toEqual([stars + 1, coins + def.coins, 1, [id]]);
-  });
-
-  it('five found give Upptäcktsresande; the badges go to 26', () => {
-    const { p, id, touch } = atLandmark();
-    p.saga = { chapter: 0, heard: false, cleared: [], titles: [], quests: {}, done: [], found: [], discovered: LANDMARK_IDS.filter((x) => x !== id).slice(0, 4) };
-    p.stats.landmarks = 4;
-    touch();
-    expect(p.achievements).toContain('landmarks_5');
-    expect(p.achievements).not.toContain('landmarks_15');
-    expect(ACHIEVEMENTS.filter((a) => a.stat === 'landmarks').map((a) => a.goal)).toEqual([5, 15, 26]);
-  });
 
   it('coming within 12 tiles of one notes it as seen (for the world map), once', () => {
     const { world, p, a, lm, id } = atLandmark();

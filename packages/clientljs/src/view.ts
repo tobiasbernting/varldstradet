@@ -16,7 +16,6 @@ import {
   DUNGEON_W,
   facingTile,
   heldItem,
-  inEdgeGap,
   INTERIOR,
   inInterior,
   isMount,
@@ -280,7 +279,6 @@ export class View implements HudTarget {
   private hoverTile: { tx: number; ty: number } | null = null;
   private lastMoveSent = 0;
   private wasMoving = false;
-  private travelSentAt = 0;
   /** Camera centre (world pixels) and zoom (screen pixels per world pixel). */
   private camX = 0;
   private camY = 0;

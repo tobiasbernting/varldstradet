@@ -186,7 +186,7 @@ describe('dungeon maps', () => {
     });
   }
 
-  it('puts each arch out in the world where you can walk to it, and Kämpastenen on the square', () => {
+  it('puts each arch out in the world where you can walk to it, and Kämpastenen in the lobby', () => {
     const { world } = family();
     DUNGEON_IDS.forEach((id, variant) => {
       const a = getArea(world, DUNGEONS[id].portal.area)!;
@@ -196,8 +196,8 @@ describe('dungeon maps', () => {
       expect(isSolidForPlayer(a, front.x, front.y)).toBe(false);
       expect(reach(a, front).size).toBeGreaterThan(400);
     });
-    const v = getArea(world, VILLAGE_KEY)!;
-    expect(objectAt(v, STONE_SPOT.x, STONE_SPOT.y)?.kind).toBe('saga_stone');
+    // (Kämpastenen stands in the lobby, beside Völvan)
+    expect(objectAt(world, STONE_SPOT.x, STONE_SPOT.y)?.kind).toBe('saga_stone');
   });
 });
 
@@ -963,27 +963,6 @@ describe('Lokes list: out in the world', () => {
     expect(q.saga?.hero).toBeFalsy();
   });
 
-  it('in hero mode the use key casts the attack spell at a monster in reach; taunts and heals work too', () => {
-    const { world, p, a, roamers } = outdoors('krigare', 'a:0,-1');
-    setHero(world, p.id, true);
-    const m = nextTo(a, p, roamers[0]!);
-    const hp = m.hp!;
-    const out = performAction(a, p.id, Math.floor(p.x / TILE), Math.floor(p.y / TILE) + 1, ctx());
-    expect(out.some((c) => c.t === 'spell' && c.spell === 'yxhugg')).toBe(true);
-    expect(a.animals[m.id] ? m.hp! : 0).toBeLessThan(hp);
-    // a guardian's challenge makes it go for them, a healer's rune gives hearts back
-    const g = outdoors('vaktare', 'a:0,-1');
-    setHero(g.world, g.p.id, true);
-    const t = nextTo(g.a, g.p, g.roamers[0]!, 2);
-    castSpell(g.world, g.p.id, 'utmana', undefined, ctx());
-    expect(t.hunt).toBe(g.p.id);
-    const h = outdoors('helare', 'a:0,-1');
-    setHero(h.world, h.p.id, true);
-    h.p.hearts = 1;
-    castSpell(h.world, h.p.id, 'lakerunan', undefined, ctx());
-    expect(h.p.hearts).toBe(3);
-  });
-
   it("the saga's ending: Loke's fall clears Bifrost, and handing in the last chapter pays, says the saga is won and ends it", () => {
     const { world, players } = family(1);
     const p = players[0]!;
@@ -1069,36 +1048,6 @@ describe('Saga III: hero levels for everyone', () => {
     const swing = (): Change[] => performAction(a, p.id, Math.floor(p.x / TILE) + 1, Math.floor(p.y / TILE), ctx());
     return { world, a, p, friend, far, monster, swing };
   }
-
-  it('a sword beats a wild monster in two hits, and everyone close by gets experience, with or without a class', () => {
-    const { a, p, friend, far, monster, swing } = forest();
-    expect(p.saga?.cls).toBeUndefined();
-    const m = monster('trollunge');
-    expect(swing().some((c) => c.t === 'xp')).toBe(false);
-    expect(a.animals[m.id]).toBeDefined();
-    const out = swing();
-    expect(a.animals[m.id]).toBeUndefined();
-    expect(p.saga!.xp).toBe(SAGA_XP.wild);
-    expect(friend.saga!.xp).toBe(SAGA_XP.wild);
-    expect(far.saga?.xp ?? 0).toBe(0);
-    // the +4 xp floats up from each of them
-    expect(out).toContainEqual({ t: 'xp', to: p.id, n: SAGA_XP.wild, x: p.x, y: p.y, area: 'a:0,-1' });
-    expect(out.some((c) => c.t === 'xp' && c.to === friend.id)).toBe(true);
-    expect(out.some((c) => c.t === 'player' && c.id === friend.id)).toBe(true);
-  });
-
-  it('a predator, a cave monster, the cave troll and a world boss are worth their own experience', () => {
-    const { p, monster, swing } = forest();
-    const wolf = monster('wolf');
-    wolf.hp = 1;
-    swing();
-    expect(p.saga!.xp).toBe(SAGA_XP.predator);
-    expect(killXpOf('slime')).toBe(SAGA_XP.cave);
-    expect(killXpOf('boss')).toBe(SAGA_XP.caveBoss);
-    expect(killXpOf('bergatroll')).toBe(SAGA_XP.worldBoss);
-    expect(killXpOf('angsvatte')).toBe(SAGA_XP.wild);
-    expect(killXpOf('hen')).toBe(0);
-  });
 
   it('the meadow gnome only notices you close up', () => {
     const { world, a, p, monster } = forest();

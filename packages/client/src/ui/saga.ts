@@ -10,7 +10,6 @@ import {
   BLOCK_SPECIES,
   CLASSES,
   CLASS_IDS,
-  DISCOVERABLE,
   DOWN_MS,
   FORGE_COSTS,
   FORGE_CRAFTS,
@@ -53,7 +52,6 @@ import {
   itemName,
   landmarkKind,
   levelSpan,
-  parseSeenKey,
   placeEmoji,
   placeName,
   previousDungeon,
@@ -82,7 +80,6 @@ import {
   fightMode,
   flagsOf,
   getTarget,
-  heroOn,
   inSaga,
   levelOf,
   liveTarget,
@@ -92,10 +89,8 @@ import {
   potionCount,
   pressedAt,
   sagaSnap,
-  sagaStarted,
   sagaTick,
   setTarget,
-  showsLevel,
   titleOf,
   webbed,
 } from '../saga.ts';
@@ -122,9 +117,9 @@ const FLAG_ICONS: [number, string][] = [
   [FLAG.slow, '🐌'],
 ];
 
-type Win = 'class' | 'volva' | 'journal' | 'family' | 'loot' | 'gear' | 'finds' | 'forge';
+type Win = 'class' | 'volva' | 'journal' | 'family' | 'loot' | 'gear' | 'forge';
 /** The windows that are tabs of the saga's book. */
-const BOOK: readonly Win[] = ['journal', 'gear', 'finds'];
+const BOOK: readonly Win[] = ['journal', 'gear'];
 type LootChange = Extract<Change, { t: 'loot' }>;
 type BannerChange = Extract<Change, { t: 'banner' }>;
 
@@ -340,32 +335,6 @@ function landmarkPic(id: string): HTMLElement {
     lmPics.set(id, url);
   }
   return url ? h('img', { src: url, alt: '', draggable: 'false' }) : h('span', { class: 'em' }, '🧭');
-}
-/** The landmark ids of each biome, in DISCOVERABLE order (biomes without any are left out). */
-function landmarksByBiome(): { biome: (typeof DISCOVERABLE)[number]; ids: string[] }[] {
-  const out: { biome: (typeof DISCOVERABLE)[number]; ids: string[] }[] = [];
-  for (const biome of DISCOVERABLE) {
-    const ids = Object.keys(LANDMARKS).filter((id) => LANDMARKS[id]!.biome === biome);
-    if (ids.length) out.push({ biome, ids });
-  }
-  return out;
-}
-/**
- * The world map's marks: for each map where you have seen a landmark, 'seen' while one of them is still to be
- * touched, 'found' once every one seen there is discovered.
- */
-export function landmarkMarks(me: PlayerState): Map<string, 'seen' | 'found'> {
-  const prog = readProgress(me);
-  const found = new Set(prog.discovered ?? []);
-  const marks = new Map<string, 'seen' | 'found'>();
-  for (const s of prog.seen ?? []) {
-    const at = parseSeenKey(s);
-    if (!at) continue;
-    const { area, id } = at;
-    if (!found.has(id)) marks.set(area, 'seen');
-    else if (!marks.has(area)) marks.set(area, 'found');
-  }
-  return marks;
 }
 /** What the forge has done for a player, as text that changes when a level is reached or a piece is smithed. */
 const forgeKey = (p: PlayerState | undefined): string => {
@@ -593,11 +562,7 @@ export class SagaUi {
     }
     if (this.menus.isOpen()) return false;
     if (e.key === 'j' || e.key === 'J') {
-      // the saga's book; a player who has only found landmarks so far gets the discoveries page
-      const me = myPlayer();
-      if (sagaStarted(me) || showsLevel(me)) this.open('journal');
-      else if (readProgress(me).discovered?.length) this.open('finds');
-      else return false;
+      this.open('journal');
       return true;
     }
     if ((e.key === 'g' || e.key === 'G') && myClass()) {
@@ -1114,7 +1079,6 @@ export class SagaUi {
       family: `👪 ${T.familyTitle}`,
       loot: '',
       gear: `⚔️ ${T.sagaGearTitle}`,
-      finds: `📖 ${T.sagaJournalTitle}`,
       forge: `🔨 ${T.forgeTitle}`,
     };
     const body = h('div', { class: 'body' });
@@ -1128,7 +1092,6 @@ export class SagaUi {
       // the journal, the gear window and the discoveries are tabs of one book (the gear one only with a class)
       const pages: [Win, string][] = [['journal', T.sagaJournalTab]];
       if (myClass()) pages.push(['gear', `⚔️ ${T.sagaGearTitle}`]);
-      pages.push(['finds', T.sagaFindsTab]);
       {
         const tabs = h('div', { class: 'tabs' });
         for (const [w, label] of pages) {
@@ -1144,7 +1107,6 @@ export class SagaUi {
         panel.insertBefore(tabs, body);
       }
       if (this.win === 'gear') this.renderGear(body);
-      else if (this.win === 'finds') this.renderFinds(body);
       else this.renderJournal(body);
     } else if (this.win === 'forge') this.renderForge(panel, body);
     else if (this.win === 'family') this.renderFamily(body);
@@ -1450,36 +1412,6 @@ export class SagaUi {
       grid.append(el);
     }
     body.append(grid.children.length ? grid : h('div', { class: 'hint' }, T.sagaGearBagEmpty));
-  }
-
-  // Upptäcktsboken: every wild biome's landmarks, the found ones with their picture, name and story
-  private renderFinds(body: HTMLElement): void {
-    const prog = readProgress(myPlayer());
-    const found = new Set(prog.discovered ?? []);
-    const groups = landmarksByBiome();
-    const total = groups.reduce((n, g) => n + g.ids.length, 0);
-    const have = groups.reduce((n, g) => n + g.ids.filter((id) => found.has(id)).length, 0);
-    body.append(
-      h('p', { class: 'saga-intro' }, T.sagaFindsIntro),
-      h('div', { class: 'saga-meter finds-all' }, h('i', { style: { width: `${(have / Math.max(1, total)) * 100}%` } }), h('span', null, `🧭 ${fmt(T.sagaFindsAll, { n: have, total })}`)),
-    );
-    const list = h('div', { class: 'saga-finds' });
-    for (const g of groups) {
-      const n = g.ids.filter((id) => found.has(id)).length;
-      const row = h('div', { class: `biome${n === g.ids.length ? ' all' : ''}` }, h('div', { class: 'bhead' }, h('span', { class: 'em' }, placeEmoji(g.biome)), h('b', null, placeName(g.biome)), h('span', { class: 'count' }, `${n === g.ids.length ? '✓ ' : ''}${fmt(T.sagaFindsCount, { n, total: g.ids.length })}`)));
-      const cards = h('div', { class: 'lms' });
-      for (const id of g.ids) {
-        const lm = LANDMARKS[id]!;
-        cards.append(
-          found.has(id)
-            ? h('div', { class: 'lm found' }, h('span', { class: 'pic' }, landmarkPic(id)), h('div', { class: 'col' }, h('b', { class: 'nm' }, lm.name), h('span', { class: 'lore' }, lm.lore)))
-            : h('div', { class: 'lm unknown' }, h('span', { class: 'pic' }, h('span', { class: 'q' }, '?')), h('div', { class: 'col' }, h('b', { class: 'nm' }, '???'), h('span', { class: 'lore' }, fmt(T.sagaFindsUnknown, { biome: placeName(g.biome) })))),
-        );
-      }
-      row.append(cards);
-      list.append(row);
-    }
-    body.append(list);
   }
 
   // Smedjan: Smed-Stina makes the gear you own stronger (Förbättra), or smiths a simple piece of each kind (Smid)

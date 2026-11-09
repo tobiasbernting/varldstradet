@@ -53,13 +53,8 @@ import {
   npcAt,
   npcState,
   npcsIn,
-  completeQuest,
-  cook,
-  buy,
   countItem,
-  craft,
   createPlayer,
-  dropItem,
   emote,
   equip,
   generateWorld,
@@ -78,7 +73,6 @@ import {
   mapW,
   WILD_MAP,
   seasonForDate,
-  sell,
   setOnline,
   stepPlayer,
   BOOST_SPEED_MUL,
@@ -276,36 +270,6 @@ describe('movement', () => {
     });
   });
 
-  it('cannot walk into water or trees', () => {
-    const { world, p } = setup();
-    const water = world.terrain.indexOf('water');
-    const wx = water % 64;
-    const wy = Math.floor(water / 64);
-    standAt(world, p, wx - 1, wy);
-    for (let i = 0; i < 40; i++) stepPlayer(world, p, 1, 0, 50);
-    expect(Math.floor(p.x / TILE)).toBeLessThan(wx);
-    applyMove(world, p.id, wx * TILE + 8, wy * TILE + 8, 'right', false);
-    expect(Math.floor(p.x / TILE)).toBeLessThan(wx);
-  });
-});
-
-describe('economy', () => {
-
-  it('season items only in season', () => {
-    const { world, p } = setup();
-    p.coins = 1000;
-    expect(buy(world, p.id, 'hat_santa', 1, ctx('none'))).toEqual([]);
-    buy(world, p.id, 'hat_santa', 1, ctx('jul'));
-    expect(p.wardrobe).toContain('hat_santa');
-    equip(world, p.id, 'hat', 'hat_santa');
-    expect(p.outfit.hat).toBe('hat_santa');
-    equip(world, p.id, 'shirt', 'hat_santa');
-    expect(p.outfit.shirt).toBe('shirt_blue');
-    equip(world, p.id, 'hat', null);
-    expect(p.outfit.hat).toBeUndefined();
-  });
-
-
 });
 
 describe('tick', () => {
@@ -393,105 +357,8 @@ describe('house, villagers, fishing', () => {
     expect(Math.floor(p.y / 16)).toBe(9);
   });
 
-  it('the server accepts a predicted move through the portal', () => {
-    const { world, p } = setup();
-    standAt(world, p, 10, 9);
-    applyMove(world, p.id, 57 * 16 + 8, 58 * 16 + 12, 'up', true);
-    expect(Math.floor(p.x / 16)).toBe(57);
-    expect(Math.floor(p.y / 16)).toBe(58);
-  });
 
 
-
-});
-
-describe('tavlor (rita på papper)', () => {
-  const pic = '2' + '.'.repeat(254) + '7';
-  const draw = (world: WorldState, p: PlayerState) => {
-    addItem(p.inventory, 'paper', 1);
-    return paint(world, p.id, pic);
-  };
-
-
-  it('rejects bad drawings and needs paper', () => {
-    const { world, p } = setup();
-    expect(toasts(paint(world, p.id, 'xyz')).length).toBe(1);
-    expect(toasts(paint(world, p.id, PAINT_EMPTY)).length).toBe(1);
-    expect(toasts(paint(world, p.id, pic)).length).toBe(1);
-    expect(countItem(p.inventory, 'painting')).toBe(0);
-  });
-
-  it('turns paper into a tavla carrying the drawing, worth 20 kr', () => {
-    const { world, p } = setup();
-    const ch = draw(world, p);
-    expect(countItem(p.inventory, 'paper')).toBe(0);
-    const slot = p.inventory.findIndex((s) => s?.item === 'painting');
-    expect(p.inventory[slot]?.data).toBe(pic);
-    expect(p.inventory[slot]?.count).toBe(1);
-    expect(p.achievements).toContain('paint_1');
-    expect(toasts(ch)).toContain('Vilken fin tavla!');
-    // two drawings never merge into one stack
-    draw(world, p);
-    expect(p.inventory.filter((s) => s?.item === 'painting').length).toBe(2);
-    // a bought painting does not join a painted one
-    addItem(p.inventory, 'painting', 1);
-    expect(p.inventory.filter((s) => s?.item === 'painting' && s.data === undefined).length).toBe(1);
-    const coins = p.coins;
-    sell(world, p.id, slot, 1);
-    expect(p.coins - coins).toBe(20);
-  });
-
-
-  it('keeps the drawing when dropped, moved and picked up', () => {
-    const { world, p } = setup();
-    draw(world, p);
-    const slot = p.inventory.findIndex((s) => s?.item === 'painting');
-    swap(world, p.id, { slot }, { slot: 0 });
-    expect(p.inventory[0]?.data).toBe(pic);
-    standAt(world, p, 20, 20);
-    clearTile(world, 21, 20);
-    const ch = dropItem(world, p.id, 0, 1);
-    const drop = ch.find((c) => c.t === 'drop');
-    expect(drop && drop.t === 'drop' && drop.drop?.data).toBe(pic);
-    p.x = 21 * TILE + 8;
-    for (let i = 0; i < 80; i++) tick(world, 50, ctx());
-    expect(Object.keys(world.drops).length).toBe(0);
-    expect(p.inventory.find((s) => s?.item === 'painting')?.data).toBe(pic);
-  });
-});
-
-describe('gårdsbok and routines', () => {
-  it('unlocks achievements with stars as counters grow', () => {
-    const { world, p } = setup();
-    const out: Change[] = [];
-    bump(p, 'harvest', 1, out);
-    expect(p.achievements).toEqual(['harvest_1']);
-    expect(p.stars).toBe(1);
-    expect(toasts(out)[0]).toContain('Första skörden');
-    bump(p, 'harvest', 30, out);
-    expect(p.achievements).toEqual(['harvest_1', 'harvest_25']);
-    bump(p, 'harvest', 1, out);
-    expect(p.achievements.length).toBe(2);
-    // selling counts coins earned
-    addItem(p.inventory, 'pumpkin', 10);
-    const slot = p.inventory.findIndex((s) => s?.item === 'pumpkin');
-    sell(world, p.id, slot, 10);
-    expect(p.stats.earned).toBe(600);
-    expect(p.achievements).toContain('coins_500');
-    void world;
-  });
-
-  it('stars buy special clothes', () => {
-    const { world, p } = setup();
-    expect(toasts(buy(world, p.id, 'hat_crown', 1, ctx()))).toContain('Du behöver fler stjärnor');
-    p.stars = 25;
-    buy(world, p.id, 'hat_crown', 1, ctx());
-    expect(p.stars).toBe(5);
-    expect(p.wardrobe).toContain('hat_crown');
-    expect(p.coins).toBe(150);
-    equip(world, p.id, 'hat', 'hat_crown');
-    expect(p.outfit.hat).toBe('hat_crown');
-  });
 
 });
 
@@ -606,19 +473,6 @@ describe('hästar', () => {
   });
 });
 
-describe('grisar', () => {
-
-  it('truffle pasta is cooked at the stove from truffle, wheat and milk', () => {
-    const { world, p } = setup();
-    addItem(p.inventory, 'truffle', 1);
-    addItem(p.inventory, 'wheat', 2);
-    addItem(p.inventory, 'milk', 1);
-    cook(world, p.id, 'truffle_pasta');
-    expect(countItem(p.inventory, 'truffle_pasta')).toBe(1);
-    expect(countItem(p.inventory, 'truffle')).toBe(0);
-  });
-});
-
 describe('badhuset', () => {
   const toVillage = () => {
     const { world, p } = setup();
@@ -641,57 +495,6 @@ describe('badhuset', () => {
     expect(Object.values(village.objects).filter((o) => o.kind === 'bathhouse')).toHaveLength(1);
   });
 
-  it('enter, swim slowly, earn the badge and walk out again', () => {
-    const { world, p, village } = toVillage();
-    const bath = Object.values(village.objects).find((o) => o.kind === 'bathhouse')!;
-    standAt(world, p, bath.x + 1, bath.y + 2);
-    p.facing = 'up';
-    const ch = performAction(village, p.id, bath.x + 1, bath.y + 1, ctx());
-    expect(p.area).toBe('bath:a:1,0');
-    expect(ch.some((c) => c.t === 'areaData' && c.key === 'bath:a:1,0')).toBe(true);
-    const inside = areaOf(world, p);
-    expect(inside).toBe(getArea(world, 'bath:a:1,0'));
-    expect(inside.terrain.filter((t) => t === 'pool')).toHaveLength(BATH_POOL.w * BATH_POOL.h);
-    expect(Math.floor(p.y / TILE)).toBe(BATH_EXIT.y - 1);
-    expect(() => JSON.stringify(ch)).not.toThrow();
-    // the pool is walkable but slow
-    const px = BATH_POOL.x + 2;
-    const py = BATH_POOL.y + 2;
-    expect(isSolidForPlayer(inside, px, py)).toBe(false);
-    standAt(world, p, px, py);
-    expect(inPool(inside, p)).toBe(true);
-    const x0 = p.x;
-    stepPlayer(inside, p, 1, 0, 1000);
-    expect(p.x - x0).toBeCloseTo(PLAYER_SPEED * SWIM_SPEED_MUL, 0);
-    // the server tick notices the swimmer: splash, badge, flag
-    delete p.moveLock;
-    const t1 = tick(world, 50, ctx());
-    expect(p.swimming).toBe(true);
-    expect(t1.some((c) => c.t === 'fx' && c.kind === 'splash' && c.area === 'bath:a:1,0')).toBe(true);
-    expect(p.achievements).toContain('swim_1');
-    expect(p.stats?.swim).toBe(1);
-    // out of the pool
-    standAt(world, p, BATH_EXIT.x, BATH_EXIT.y - 1);
-    tick(world, 50, ctx());
-    expect(p.swimming).toBeUndefined();
-    // the exit door takes you back to the village square
-    performAction(inside, p.id, BATH_EXIT.x, BATH_EXIT.y, ctx());
-    expect(p.area).toBe('a:1,0');
-    expect(Math.floor(p.x / TILE)).toBe(bath.x + 1);
-    expect(Math.floor(p.y / TILE)).toBe(bath.y + 2);
-    expect(Object.keys(inside.players)).toHaveLength(0);
-    // stepping on the door tile also walks you out
-    performAction(village, p.id, bath.x + 1, bath.y + 1, ctx());
-    expect(p.area).toBe('bath:a:1,0');
-    delete p.moveLock;
-    standAt(world, p, BATH_EXIT.x, BATH_EXIT.y);
-    tick(world, 50, ctx());
-    expect(p.area).toBe('a:1,0');
-    // and home works from inside too
-    performAction(village, p.id, bath.x + 1, bath.y + 1, ctx());
-    teleport(world, p.id, 'farm');
-    expect(p.area).toBe('farm');
-  });
 });
 
 describe('vilda djur skräms och kommer tillbaka (M7b)', () => {
@@ -762,26 +565,6 @@ describe('vilda djur skräms och kommer tillbaka (M7b)', () => {
     expect(other.a.haunt).toBeUndefined();
   });
 
-  it('a calmed animal creeps to a tile the hero can face (never a diagonal one) and stays there while the hero stands still', () => {
-    for (const deg of [0, 30, 45, 60, 90, 135, 180, 225, 270, 315]) {
-      const { world, p, a } = outdoors('hare', 2);
-      const r = 4.5 * TILE;
-      a.x = p.x + Math.cos((deg * Math.PI) / 180) * r;
-      a.y = p.y + Math.sin((deg * Math.PI) / 180) * r;
-      a.haunt = { x: a.x, y: a.y }; // (it has been startled before)
-      p.moving = false;
-      let adjacent = 0;
-      for (let i = 0; i < 400; i++) {
-        tick(world, 100, at(1_000_000 + i * 100));
-        if (i >= 200) {
-          const off = Math.abs(Math.floor(a.x / TILE) - Math.floor(p.x / TILE)) + Math.abs(Math.floor(a.y / TILE) - Math.floor(p.y / TILE));
-          if (off === 1) adjacent++;
-        }
-      }
-      expect(`${deg}: ${adjacent}`).toBe(`${deg}: 200`); // in the hero's own row or column next to them, for the whole last 20 s
-    }
-  });
-
   it('it takes the other side of the hero when the tile on its own side is blocked', () => {
     const { world, p, area, a } = outdoors('hare', 2);
     a.x = p.x + 4 * TILE; // straight to the right of the hero, who faces the water on that side
@@ -793,73 +576,6 @@ describe('vilda djur skräms och kommer tillbaka (M7b)', () => {
     expect([Math.floor(a.x / TILE) - Math.floor(p.x / TILE), Math.floor(a.y / TILE) - Math.floor(p.y / TILE)]).toEqual([0, 1]);
   });
 
-
-  it('a hero who stands still, an animal out of reach, a petted one, predators, pets and farm animals are left alone', () => {
-    // standing still, 3 tiles away
-    let t = outdoors('hare');
-    tick(t.world, 100, at(1_000_100));
-    expect(t.a.fleeUntil).toBeUndefined();
-    // moving, but 6 tiles away
-    t = outdoors('hare', 6);
-    t.p.moving = true;
-    tick(t.world, 100, at(1_000_100));
-    expect(t.a.fleeUntil).toBeUndefined();
-    // moving and close, but it has been petted today
-    t = outdoors('hare');
-    t.p.moving = true;
-    t.a.petted = true;
-    tick(t.world, 100, at(1_000_100));
-    expect(t.a.fleeUntil).toBeUndefined();
-    // a tamed one follows its owner instead
-    t = outdoors('hare');
-    t.p.moving = true;
-    t.a.owner = t.p.id;
-    tick(t.world, 100, at(1_000_100));
-    expect(t.a.fleeUntil).toBeUndefined();
-    expect(t.a.haunt).toBeUndefined();
-    // a bear comes for the hero (it is not startled)
-    t = outdoors('bear');
-    t.p.moving = true;
-    tick(t.world, 100, at(1_000_100));
-    expect(t.a.startled).toBeUndefined();
-    expect(t.a.haunt).toBeUndefined();
-  });
-
-  it('a startled animal that is then tamed with the lasso loses its wild spot', () => {
-    const { world, p, area, a } = outdoors('hare', 2);
-    const spot = { x: a.x, y: a.y };
-    p.moving = true;
-    tick(world, 100, at(1_000_100));
-    expect(a.haunt).toBeDefined();
-    p.moving = false;
-    a.x = spot.x; // (it has come back: the throw is at the tile next to the hero, as in the lasso tests)
-    a.y = spot.y;
-    delete a.fleeUntil;
-    addItem(p.inventory, 'lasso', 1);
-    p.selected = p.inventory.findIndex((s) => s?.item === 'lasso');
-    performAction(area, p.id, 31, 30, { season: 'none', rnd: () => 0.1, now: 1_000_200 });
-    expect(a.owner).toBe(p.id);
-    expect(a.haunt).toBeUndefined();
-    expect(a.startled).toBeUndefined();
-  });
-
-  it('a missed lasso throw at an animal that is bolting scares it at the lasso pace (1.5 x), not the bolt pace (2.2 x)', () => {
-    const { world, p, area, a } = outdoors('hare', 2);
-    p.moving = true;
-    tick(world, 100, at(1_000_100));
-    expect(a.startled).toBe(true);
-    p.moving = false;
-    addItem(p.inventory, 'lasso', 1);
-    p.selected = p.inventory.findIndex((s) => s?.item === 'lasso');
-    performAction(area, p.id, 31, 30, { season: 'none', rnd: () => 0.95, now: 1_000_200 });
-    expect(a.owner).toBeUndefined();
-    expect(a.startled).toBeUndefined();
-    const x0 = a.x;
-    const y0 = a.y;
-    tick(world, 200, at(1_000_300));
-    const speed = ANIMALS.hare!.speed;
-    expect(Math.hypot(a.x - x0, a.y - y0)).toBeCloseTo(speed * 1.5 * 0.2, 0);
-  });
 
   it('only online players on the animal\'s own map startle it (the watchers are collected once per tick)', () => {
     let t = outdoors('hare');
@@ -903,40 +619,6 @@ describe('lasso och rovdjur', () => {
     return { world, p, area, a };
   }
 
-  it('a lucky throw tames the animal into a pet that asks for a name', () => {
-    const { world, p, area, a } = outdoors('hare');
-    const ch = performAction(area, p.id, 31, 30, at(1_000_000, 0.1));
-    expect(ch.some((c) => c.t === 'fx' && c.kind === 'lasso')).toBe(true);
-    expect(a.owner).toBe(p.id);
-    expect(isPetAnimal(a)).toBe(true);
-    expect(ch.some((c) => c.t === 'open' && c.ui === 'nameAnimal' && c.id === a.id)).toBe(true);
-    expect(toasts(ch).some((t) => t.includes('kompis'))).toBe(true);
-    expect(p.stats.tame).toBe(1);
-    expect(p.stats.tame_species).toBe(1);
-    expect(p.achievements).toContain('tame_1');
-    // it follows its owner now: moving away makes it walk after you
-    standAt(world, p, 30, 30);
-    a.x = 36 * TILE;
-    const before = a.x;
-    tick(world, 200, at(1_000_100, 0.5));
-    expect(a.x).toBeLessThan(before);
-    // and petting it is like petting a dog, not a wild animal
-    expect(p.stats.wildpet).toBeUndefined();
-  });
-
-  it('a missed throw scares the animal away for a while', () => {
-    const { world, p, area, a } = outdoors('hare');
-    const ch = performAction(area, p.id, 31, 30, at(1_000_000, 0.95));
-    expect(a.owner).toBeUndefined();
-    expect(a.fleeUntil).toBe(1_003_000);
-    expect(toasts(ch).some((t) => t.includes('Missade'))).toBe(true);
-    const before = a.x;
-    tick(world, 200, at(1_000_100, 0.5));
-    expect(a.x).toBeGreaterThan(before); // runs away from the player on its left
-    tick(world, 200, at(1_004_000, 0.5));
-    expect(a.fleeUntil).toBeUndefined();
-  });
-
   it('predators bite one heart with a cooldown, tamed ones do not, and fainting sends you home', () => {
     const { world, p, area, a } = outdoors('bear');
     a.x = p.x + TILE; // right next to the player
@@ -973,24 +655,6 @@ describe('lasso och rovdjur', () => {
     expect(toasts(ch).some((t) => t.includes('svimmade'))).toBe(true);
   });
 
-  it('a sword hurts predators outdoors but never other animals, and a beaten predator drops fur', () => {
-    const { p, area, a } = outdoors('bear');
-    a.x = p.x + TILE;
-    a.y = p.y;
-    addItem(p.inventory, 'sword', 1);
-    p.selected = p.inventory.findIndex((s) => s?.item === 'sword');
-    performAction(area, p.id, 31, 30, at(3_000_000, 0.5));
-    expect(a.hp).toBe(3);
-    performAction(area, p.id, 31, 30, at(3_000_000, 0.5));
-    performAction(area, p.id, 31, 30, at(3_000_000, 0.5));
-    expect(area.animals[a.id]).toBeUndefined();
-    expect(Object.values(area.drops).some((d) => d.item === 'fur')).toBe(true);
-    expect(p.stats.predators).toBe(1);
-    const hare = spawnMob(area, 'hare', 31, 30);
-    performAction(area, p.id, 31, 30, at(3_000_000, 0.5));
-    expect(area.animals[hare.id]).toBeDefined();
-  });
-
 });
 
 
@@ -1024,46 +688,6 @@ describe('staden', () => {
         expect(objectAt(city, w.x, w.y)).toBeUndefined();
         expect(['road', 'crossing']).not.toContain(T[tileIndex(city, w.x, w.y)]);
       }
-  });
-
-  it('traffic drives along the streets, stops and honks for a player in the way, and cannot be walked into', () => {
-    const { world, p } = setup();
-    standAt(world, p, 63, 32);
-    travel(world, p.id, 'e');
-    const city = areaOf(world, p);
-    expect(city.biome).toBe('by');
-    const car = Object.values(city.animals).find((a) => a.species === 'car')!;
-    const start = { x: car.x, y: car.y };
-    let now = 1_000_000;
-    const step = () => {
-      now += 100;
-      return tick(world, 100, { ...ctx(), now });
-    };
-    for (let i = 0; i < 40; i++) step();
-    expect(Math.hypot(car.x - start.x, car.y - start.y)).toBeGreaterThan(TILE);
-    expect(car.moving).toBe(true);
-    expect(['road', 'crossing']).toContain(city.terrain[tileIndex(city, tileOfPx(car.x), tileOfPx(car.y))]);
-    // stand right in front of it: it stops, and after a while it honks (kindly)
-    const [dx, dy] = DIRS[car.facing]!;
-    p.x = car.x + dx * TILE * 1.3;
-    p.y = car.y + dy * TILE * 1.3;
-    const before = { x: car.x, y: car.y };
-    let honked = false;
-    for (let i = 0; i < 30; i++) if (step().some((c) => c.t === 'fx' && c.kind === 'honk')) honked = true;
-    expect(car.x).toBe(before.x);
-    expect(car.y).toBe(before.y);
-    expect(car.moving).toBe(false);
-    expect(honked).toBe(true);
-    expect(isSolidForPlayer(city, tileOfPx(car.x), tileOfPx(car.y))).toBe(true);
-    // tapping a car just makes it honk; nothing to feed or pet
-    const ch = performAction(city, p.id, tileOfPx(car.x), tileOfPx(car.y), ctx());
-    expect(toasts(ch).some((t) => t.includes('Gnägg'))).toBe(true);
-    expect(car.petted).toBe(false);
-    // out of the way again: it drives on
-    p.x = 8 * TILE;
-    p.y = 8 * TILE;
-    for (let i = 0; i < 20; i++) step();
-    expect(Math.hypot(car.x - before.x, car.y - before.y)).toBeGreaterThan(TILE / 2);
   });
 
   it('is dressed as a Norse market town, and a city saved before that gets dressed once, still walkable', () => {
