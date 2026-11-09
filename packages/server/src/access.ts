@@ -94,8 +94,8 @@ export interface ParentSession {
   newCode?: { code: string; link: string; label: string; reopen: boolean };
 }
 
-export const DEVICE_COOKIE = 'lg_device';
-export const PARENT_COOKIE = 'lg_parent';
+export const DEVICE_COOKIE = 'vt_device';
+export const PARENT_COOKIE = 'vt_parent';
 
 /**
  * A native client has no cookie jar: it sends the same device token as `Authorization: Bearer
