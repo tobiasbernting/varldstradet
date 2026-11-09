@@ -11,7 +11,8 @@ import { CLASSES, REST_RADIUS, SAGA_BOSSES, SPELLS, type ClassId, type SagaMob }
 import { PLAYER_SPEED, TILE, type AnimalState, type Facing, type PlayerState, type WorldState } from './types.ts';
 import type { Change } from './protocol.ts';
 
-export type BotStyle = 'careful' | 'clumsy';
+/** `kid7` is a 7-year-old: clumsy with a 1.2 times longer think between moves and 40 % misses (GAME2.md section 8). */
+export type BotStyle = 'careful' | 'clumsy' | 'kid7';
 
 export interface BotMind {
   style: BotStyle;
@@ -169,7 +170,7 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
       p.moving = false;
       return out;
     }
-    mind.pause = 120 + mind.rnd() * 380;
+    mind.pause = (120 + mind.rnd() * 380) * (mind.style === 'kid7' ? 1.2 : 1);
   }
 
   // 2. a healing potion when low
@@ -223,9 +224,9 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     if (target && target.kind !== 'ice' && target.hp > 150 && cast(farm, p, 'isspjut', target.id, ctx, out)) return true;
     return !!target && cast(farm, p, 'eldboll', target.id, ctx, out);
   };
-  // the clumsy bot misses a third of its chances
+  // the clumsy bot misses a third of its chances (a kid of seven 40 %)
   if (fighting.length || ice) {
-    if (careful || mind.rnd() > 0.35) casting();
+    if (careful || mind.rnd() > (mind.style === 'kid7' ? 0.4 : 0.35)) casting();
   }
 
   // 4. where to go

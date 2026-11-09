@@ -46,30 +46,64 @@ export const RUN_OFFLINE_END_MS = 60_000;
 export const RUNA_CARDS = 3;
 
 /**
- * The difficulty of a run (GAME2.md section 5.3): `0` Lätt, the kids' level, and `1` Vanlig, as before. The level is chosen
- * at the arch and fixed for the run.
+ * The difficulty of a run (GAME2.md section 5.7): five levels chosen at the arch and fixed for the run. `0` Mycket lätt (kids
+ * alone), `1` Lätt (kids with an adult: what Lätt was in R2), `2` Medel (what Vanlig was), `3` Svår, `4` Extrem.
  */
-export type RunLevel = 0 | 1;
-export const RUN_LEVEL_LATT: RunLevel = 0;
-export const RUN_LEVEL_VANLIG: RunLevel = 1;
-/** A level from a message: whole 0 or 1, left out is Vanlig; anything else is `null` (the server refuses it). */
-export const parseRunLevel = (v: unknown): RunLevel | null => (v === undefined ? RUN_LEVEL_VANLIG : v === 0 || v === 1 ? v : null);
-/**
- * What Lätt changes: monster health ×0.6 and damage ×0.5, the warnings before a boss's big attacks 40 % longer, half the
- * sagafrön, and only the first two attacks of the boss. A wipe never ends the run on Lätt.
- */
-export const LATT = { hp: 0.6, dmg: 0.5, warn: 1.4, seeds: 0.5, bossMoves: 2 } as const;
-/**
- * The Sagoandan (GAME2.md section 4.5): free "everyone gets up" on a wipe, so the run does not end. How many a run starts
- * with, by level; on Lätt one more comes after each stop (up to SAGOANDAN_LATT_MAX; the count is what the star on the HUD shows). A
- * Lätt wipe with none left still gets everyone up, for free: it never ends the run.
- */
-export const SAGOANDAN = { [RUN_LEVEL_LATT]: 3, [RUN_LEVEL_VANLIG]: 1 } as const;
-/** On Lätt a stop cleared brings one more Sagoande, but never more than this many at a time (the route has ten stops, the star must stay readable). */
+export type RunLevel = 0 | 1 | 2 | 3 | 4;
+export const RUN_LEVEL_IDS: readonly RunLevel[] = [0, 1, 2, 3, 4];
+export const RUN_LEVEL_MYCKET_LATT: RunLevel = 0;
+export const RUN_LEVEL_LATT: RunLevel = 1;
+export const RUN_LEVEL_MEDEL: RunLevel = 2;
+export const RUN_LEVEL_SVAR: RunLevel = 3;
+export const RUN_LEVEL_EXTREM: RunLevel = 4;
+/** Left out of a start message, a run is Medel. */
+export const RUN_LEVEL_DEFAULT: RunLevel = RUN_LEVEL_MEDEL;
+/** A level from a message: a whole 0..4, left out is Medel; anything else is `null` (the server refuses it). */
+export const parseRunLevel = (v: unknown): RunLevel | null => (v === undefined ? RUN_LEVEL_DEFAULT : v === 0 || v === 1 || v === 2 || v === 3 || v === 4 ? v : null);
+
+/** What a level changes (the one table: the names and blurbs are in sv.ts `T.runLevelName`/`T.runLevelBlurb`). */
+export interface RunLevelDef {
+  id: RunLevel;
+  /** Monster health (packs and bosses, and what a boss calls in), monster damage, the boss's warning times (a multiplier: longer is easier). */
+  hp: number;
+  dmg: number;
+  warn: number;
+  /** Sagafrön multiplier on everything a run pays. */
+  seeds: number;
+  /** Sagoandar: how many a run starts with, how many more each stop after the first brings, and the most at a time. */
+  spirit: number;
+  spiritPerStop: number;
+  spiritMax: number;
+  /** A wipe never ends the run (with none left everyone still gets up, free). */
+  soft: boolean;
+  /** The boss uses only its first n attacks (0: all of them). */
+  bossMoves: number;
+  /** Loot: the chance of the rare finds of a chest times this, and the extra weight of a rarer piece of gear per rarity step. */
+  rare: number;
+  rank: number;
+  /** How many särdrag (affixes) the run has. */
+  affixes: number;
+}
+
+export const RUN_LEVELS: Record<RunLevel, RunLevelDef> = {
+  0: { id: 0, hp: 0.4, dmg: 0.3, warn: 1.8, seeds: 0.35, spirit: 5, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 0.6, rank: 0, affixes: 0 },
+  1: { id: 1, hp: 0.6, dmg: 0.5, warn: 1.4, seeds: 0.5, spirit: 3, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 1, rank: 0, affixes: 0 },
+  2: { id: 2, hp: 1, dmg: 1, warn: 1, seeds: 1, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1, rank: 0, affixes: 0 },
+  3: { id: 3, hp: 1.65, dmg: 1.6, warn: 0.8, seeds: 1.5, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1.5, rank: 0.5, affixes: 1 },
+  4: { id: 4, hp: 1.9, dmg: 1.6, warn: 0.65, seeds: 2, spirit: 0, spiritPerStop: 0, spiritMax: 0, soft: false, bossMoves: 0, rare: 2, rank: 1, affixes: 2 },
+};
+/** The boss attacks the easiest levels allow: its first two, whatever a first run's plan has locked. */
+export const LATT = { bossMoves: 2 } as const;
 export const SAGOANDAN_LATT_MAX = 5;
+/** The Sagoandan (GAME2.md section 4.5): free "everyone gets up" on a wipe, so the run does not end. How many a run starts with, by level (`RUN_LEVELS[l].spirit`). */
+export const SAGOANDAN: Record<RunLevel, number> = { 0: RUN_LEVELS[0].spirit, 1: RUN_LEVELS[1].spirit, 2: RUN_LEVELS[2].spirit, 3: RUN_LEVELS[3].spirit, 4: RUN_LEVELS[4].spirit };
 /** Monster health, damage and warning multipliers for a level (the zone's own are multiplied by these). */
-export const levelMuls = (level: RunLevel): { hp: number; dmg: number; warn: number; seeds: number } =>
-  level === RUN_LEVEL_LATT ? { hp: LATT.hp, dmg: LATT.dmg, warn: LATT.warn, seeds: LATT.seeds } : { hp: 1, dmg: 1, warn: 1, seeds: 1 };
+export const levelMuls = (level: RunLevel): { hp: number; dmg: number; warn: number; seeds: number } => {
+  const l = RUN_LEVELS[level];
+  return { hp: l.hp, dmg: l.dmg, warn: l.warn, seeds: l.seeds };
+};
+/** The two gentlest levels: fewer monsters in a pack and no Stark vakt. */
+export const isEasy = (level: RunLevel): boolean => level <= 1;
 
 /**
  * The rule of both votes of a run (the cards, the way on): a strict majority of the voters ends it at once (`majority`),
@@ -89,7 +123,7 @@ export function tally(counts: readonly number[], voters: number, opts: { late: b
 
 /** Sagafrön for what happens in a run (GAME2.md section 6): a pack 1, a stop cleared 3 (`zone`: the name is kept), the mid-boss 5 (`guard`), the boss 20 (12 on a replay). */
 export const RUN_SEEDS = { pack: 1, zone: 3, chest: 2, guard: 5, bossFirst: 20, bossReplay: 12 } as const;
-/** More sagafrön for each modifier. */
+/** More sagafrön for each modifier (the särdrag of a level pay through the level's own multiplier instead). */
 export const MODIFIER_SEEDS = 0.15;
 
 // ---------------------------------------------------------------------------
@@ -253,6 +287,14 @@ export interface ModifierDef {
   guard?: boolean;
   /** The zones are drawn foggy. */
   fog?: boolean;
+  /** A särdrag (affix) of the levels Svår and Extrem, not a replay modifier: it is chosen by the level (`RUN_LEVELS[l].affixes`). */
+  affix?: boolean;
+  /** Särdrag: monster health in packs; the health of a boss and a mid-boss; the damage of bosses; a monster below a quarter health is faster and hits quicker; when a pack member falls the rest hit harder (per fallen, fraction). */
+  packHp?: number;
+  bossHp?: number;
+  bossDmg?: number;
+  enrage?: boolean;
+  grow?: number;
 }
 
 export const MODIFIERS: ModifierDef[] = [
@@ -263,9 +305,16 @@ export const MODIFIERS: ModifierDef[] = [
   { id: 'snabba', sight: 1.4 },
   { id: 'dimma', leash: 6, fog: true },
 ];
+/** The särdrag (GAME2.md 4.7, section 5.7): the ones the sim can express cheaply. A level of Svår has one of them, Extrem two, chosen by the seed. */
+export const AFFIXES: ModifierDef[] = [
+  { id: 'stalhud', affix: true, packHp: 1.2 },
+  { id: 'stormig', affix: true, bossHp: 1.2, bossDmg: 1.1 },
+  { id: 'starkande', affix: true, grow: 0.1 },
+  { id: 'jakten', affix: true, enrage: true },
+];
+export const AFFIX_IDS: readonly string[] = AFFIXES.map((m) => m.id);
 export const MAX_MODIFIERS = 3;
-export const modifier = (id: string): ModifierDef | undefined => MODIFIERS.find((m) => m.id === id);
-
+export const modifier = (id: string): ModifierDef | undefined => MODIFIERS.find((m) => m.id === id) ?? AFFIXES.find((m) => m.id === id);
 // ---------------------------------------------------------------------------
 // The sagaträd (the tree at the Yggdrasil shoot)
 // ---------------------------------------------------------------------------

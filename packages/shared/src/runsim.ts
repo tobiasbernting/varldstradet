@@ -46,15 +46,15 @@ import {
   SMITHY_EFFECT,
   SOLO_MERCY,
   SAGOANDAN,
-  SAGOANDAN_LATT_MAX,
+  RUN_LEVELS,
+  AFFIX_IDS,
   ROUTE_DISC_RADIUS,
   ROUTE_DWELL_MS,
   ROUTE_VOTE_MS,
   VILOSTEN_HEAL,
   tally,
   type RouteChoiceSnap,
-  RUN_LEVEL_LATT,
-  RUN_LEVEL_VANLIG,
+  RUN_LEVEL_DEFAULT,
   LATT,
   levelMuls,
   parseRunLevel,
@@ -106,7 +106,7 @@ export interface RunState {
   seed: number;
   plan: RunPlan;
   starter: string;
-  /** 0 Lätt, 1 Vanlig (GAME2.md 5.3). */
+  /** 0 Mycket lätt … 4 Extrem (GAME2.md 5.7). */
   level: RunLevel;
   /** The Sagoandans left (the star on the HUD), and the wipes they (or Lätt) have saved so far. */
   spirit: number;
@@ -363,7 +363,7 @@ function pay(farm: WorldState, run: RunState, base: number | ((p: PlayerState) =
   for (const p of humans(farm, run)) {
     const n = typeof base === 'function' ? base(p) : base;
     if (n <= 0) continue;
-    const bonus = (effectFor(farm, run, p).seeds ?? 0) + MODIFIER_SEEDS * run.plan.modifiers.length;
+    const bonus = (effectFor(farm, run, p).seeds ?? 0) + MODIFIER_SEEDS * run.plan.modifiers.filter((m) => !AFFIX_IDS.includes(m)).length;
     // the bonuses are added exactly: whole seeds are paid and the remainder is carried to the next payment
     const exact = n * (1 + bonus) * levelMuls(run.level).seeds + (run.carry[p.id] ?? 0);
     const amount = Math.floor(exact + 1e-9);
@@ -551,14 +551,14 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
     replay = true;
   }
   const clears = readRun(p).clears[boss] ?? 1;
-  const plan = generateRun(seed, { boss, replay, clears, level: opts.level ?? RUN_LEVEL_VANLIG });
+  const plan = generateRun(seed, { boss, replay, clears, level: opts.level ?? RUN_LEVEL_DEFAULT });
   const run: RunState = {
     id: `run${++counter}`,
     seed,
     plan,
     starter: p.id,
-    level: opts.level ?? RUN_LEVEL_VANLIG,
-    spirit: SAGOANDAN[opts.level ?? RUN_LEVEL_VANLIG],
+    level: opts.level ?? RUN_LEVEL_DEFAULT,
+    spirit: SAGOANDAN[opts.level ?? RUN_LEVEL_DEFAULT],
     spiritUsed: 0,
     phase: 'stop',
     node: 0,
@@ -638,11 +638,12 @@ export function enterStop(farm: WorldState, run: RunState, node: number, ctx: Si
   // the mercy is for one human with the hired companion (two fighters), not for a lone player without one
   const solo = run.party.length === 1 && run.companions.length > 0;
   const lvl = levelMuls(run.level);
-  const latt = run.level === RUN_LEVEL_LATT;
-  // Lätt: one more Sagoandan after each stop (up to a few: the star on the HUD must stay readable)
-  if (latt && run.path.length > 0) run.spirit = Math.min(SAGOANDAN_LATT_MAX, run.spirit + 1);
-  // Lätt: the boss (and the mid-boss, and the guard) use only their first two attacks
-  const moves = latt ? lattMoves() : z.kind === 'boss' ? run.plan.moves : undefined;
+  const def = RUN_LEVELS[run.level];
+  const easy = def.soft;
+  // the gentle levels: more Sagoandar after each stop (up to a few: the star on the HUD must stay readable)
+  if (def.spiritPerStop > 0 && run.path.length > 0) run.spirit = Math.min(def.spiritMax, run.spirit + def.spiritPerStop);
+  // the two gentlest levels: the boss (and the mid-boss, and the guard) use only their first two attacks
+  const moves = def.bossMoves > 0 ? lattMoves() : z.kind === 'boss' ? run.plan.moves : undefined;
   inst.run = {
     run: run.id,
     node,
@@ -656,7 +657,13 @@ export function enterStop(farm: WorldState, run: RunState, node: number, ctx: Si
     sight: z.sight,
     leash: z.leash,
     ...(moves ? { moves } : {}),
-    ...(latt ? { warnMul: lvl.warn, levelHp: lvl.hp, soft: true } : {}),
+    ...(lvl.warn !== 1 || lvl.hp !== 1 ? { warnMul: lvl.warn, levelHp: lvl.hp } : {}),
+    ...(easy ? { soft: true } : {}),
+    ...(z.bossDmg ? { bossDmg: z.bossDmg } : {}),
+    ...(z.enrage ? { enrage: true } : {}),
+    ...(z.grow ? { grow: z.grow } : {}),
+    ...(def.rare !== 1 ? { lootRare: def.rare } : {}),
+    ...(def.rank ? { lootRank: def.rank } : {}),
     spirit: run.spirit,
     used: run.spiritUsed,
     buffs: {},
@@ -674,7 +681,7 @@ export function enterStop(farm: WorldState, run: RunState, node: number, ctx: Si
   run.paid = new Set([...run.paid].filter((k) => k.startsWith('x:')));
   run.waiting = [];
   refresh(farm, run);
-  if (latt && run.path.length > 1) for (const q of humans(farm, run)) out.push(toast(q.id, RUN_T.spiritGained));
+  if (def.spiritPerStop > 0 && run.path.length > 1) for (const q of humans(farm, run)) out.push(toast(q.id, RUN_T.spiritGained));
   for (const p of members(farm, run)) {
     if (p.online) {
       placeIn(farm, p, key, inst.start.x, inst.start.y, 'up', out);
