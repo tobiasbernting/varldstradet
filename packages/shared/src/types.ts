@@ -293,6 +293,8 @@ export interface PlayerState {
   saga?: SagaProgress;
   /** Runs (M5b): sagafrön, the bought nodes of the sagaträd and run statistics. Optional: old saves load as they were. */
   run?: RunSave;
+  /** When this character was last in the game (server clock, ms): set on connect and disconnect, shown on the parent page. */
+  lastPlayed?: number;
   /** A fighter the server runs (the hired companion of a run): not a character, never saved, never listed. */
   bot?: true;
 }

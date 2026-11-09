@@ -4,6 +4,9 @@ import { MAX_PLAYERS_LIMIT, T, fmt as tfmt } from '../../shared/src/index.ts';
 import type { Access, Device, Gate, ParentSession } from './access.ts';
 import { otpauthUri } from './totp.ts';
 
+/** What the server-rendered pages call the game (the in-game name is `T.title`, owned by the client strings). */
+export const GAME_NAME = 'Sagan om Världsträdet';
+
 export const esc = (s: string): string => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
 export const STYLE = `
@@ -27,6 +30,7 @@ ul{padding-left:1.2rem}
 .dev{border-top:1px solid #eee3cf;padding:.6rem 0}
 .link{width:100%;box-sizing:border-box;font-family:ui-monospace,monospace;font-size:.85rem}
 .num{width:4rem}
+@media(max-width:520px){body{padding:1rem}.card{padding:.8rem .9rem}input:not([type=checkbox]):not([type=radio]):not(.num){max-width:100%;box-sizing:border-box}.codein{width:100%}button{padding:.65rem 1rem}}
 table{border-collapse:collapse;width:100%;font-size:.85rem}td{padding:.2rem .4rem;border-top:1px solid #eee3cf;vertical-align:top}
 `;
 
@@ -66,24 +70,24 @@ export function accessPage(gate: Gate, device: Device | null, access: Access, no
       body = `<h1>⏸️ Pausad</h1><div class="card"><p>${T.gatePaused}</p></div>`;
       break;
     case 'closed':
-      body = `<h1>🌙 Gården är stängd</h1><div class="card"><p>${T.gateClosed}</p></div>`;
+      body = `<h1>🌙 Världsträdet är stängt</h1><div class="card"><p>${T.gateClosed}</p></div>`;
       break;
     case 'guests-closed':
-      body = `<h1>🌙 Gården är stängd för gäster</h1><div class="card"><p>${T.gateGuestsClosed}</p></div>`;
+      body = `<h1>🌙 Stängt för gäster</h1><div class="card"><p>${T.gateGuestsClosed}</p></div>`;
       break;
     case 'hours':
-      body = `<h1>🌙 Gården är stängd</h1><div class="card"><p>${tfmt(esc(T.gateHours), { from: esc(s.from ?? ''), to: esc(s.to ?? '') })}</p></div>`;
+      body = `<h1>🌙 Världsträdet är stängt</h1><div class="card"><p>${tfmt(esc(T.gateHours), { from: esc(s.from ?? ''), to: esc(s.to ?? '') })}</p></div>`;
       break;
     case 'unknown':
-      body = `<h1>🔒 ${T.title}</h1><div class="card"><p>Det här är en privat gård. För att komma in behöver du en kod från en förälder på gården.</p>
+      body = `<h1>🔒 ${GAME_NAME}</h1><div class="card"><p>Det här är en privat saga. För att komma in behöver du en kod från en förälder.</p>
 ${codeForm('')}</div>`;
       break;
     case 'ok':
-      body = `<h1>🌱 ${T.title}</h1><div class="card"><p><a href="/">Till spelet</a></p></div>`;
+      body = `<h1>🌳 ${GAME_NAME}</h1><div class="card"><p><a href="/">Till spelet</a></p></div>`;
       break;
   }
   if (parentLink) body += `<p class="muted"><a href="/admin">Förälder? Logga in</a></p>`;
-  return layout(T.title, body, nonce, gate === 'unknown' ? '' : POLL);
+  return layout(GAME_NAME, body, nonce, gate === 'unknown' ? '' : POLL);
 }
 
 /** The code field: typed on the start page, or filled in from a link (/join#CODE). */
@@ -95,7 +99,7 @@ const codeForm = (error: string): string => `${error ? `<p class="warn">${esc(er
 </form>`;
 
 export function joinPage(nonce: string, error = ''): string {
-  const body = `<h1>🌱 ${tfmt(T.joinWelcome, { title: T.title })}</h1>
+  const body = `<h1>🌳 ${tfmt(T.joinWelcome, { title: GAME_NAME })}</h1>
 <div class="card">
 <p>${T.joinIntro}</p>
 ${codeForm(error)}
@@ -104,18 +108,18 @@ ${codeForm(error)}
   const script = `
 const t=decodeURIComponent(location.hash.slice(1));
 if(t){document.getElementById('code').value=t;history.replaceState(null,'','/join');}`;
-  return layout(`${T.title} – kom in`, body, nonce, script);
+  return layout(`${GAME_NAME} – kom in`, body, nonce, script);
 }
 
 export function loginPage(nonce: string, totp: boolean, error = ''): string {
-  const body = `<h1>🌱 ${T.title} – ${T.admin}</h1>
+  const body = `<h1>🌳 ${GAME_NAME} – ${T.admin}</h1>
 ${error ? `<p class="warn">${esc(error)}</p>` : ''}
 <div class="card"><form method="post" action="/admin/login" class="block">
 <p><label>Lösenord<br><input type="password" name="password" required autocomplete="current-password"></label></p>
 ${totp ? `<p><label>Kod från appen<br><input name="code" inputmode="numeric" pattern="[0-9 ]{6,7}" required autocomplete="one-time-code"></label></p>` : ''}
 <p><button>Logga in</button></p></form></div>
 <p class="muted"><a href="/access">Tillbaka</a></p>`;
-  return layout(`${T.title} – logga in`, body, nonce);
+  return layout(`${GAME_NAME} – logga in`, body, nonce);
 }
 
 // ---- the parent page ----
@@ -153,6 +157,9 @@ const EVENTS: Record<string, string> = {
   hours: 'speltid',
   voice: 'röstprat',
   'max-players': 'antal karaktärer',
+  'max-level': 'högsta svårighet',
+  'character-renamed': 'nytt namn',
+  'character-deleted': 'karaktär borttagen',
   'totp-on': 'tvåsteg på',
   'totp-off': 'tvåsteg av',
   refused: 'stoppad',
@@ -166,6 +173,8 @@ export interface AccessView {
   online: Map<string, string[]>;
   /** device id of the browser looking at the page */
   thisDevice: string | null;
+  /** The characters card (admin.ts), shown after the devices */
+  charactersHtml?: string;
   /** Offer to make this browser a family device (not on a separate parent server) */
   canAddThisDevice: boolean;
 }
@@ -206,7 +215,7 @@ ${v.players.map((p) => `<label><input type="checkbox" name="player" value="${p.i
 ${online.length ? ` · <strong>spelar nu: ${online.map(esc).join(', ')}</strong>` : ''}<br>
 <span class="muted">Inbjudan: ${esc(d.inviteLabel)} · senast ${fmt(d.lastSeenAt)} från ${esc(d.lastIp)}${d.kind === 'guest' && d.players.length ? ` · spelar som ${d.players.map((p) => esc(playerName.get(p) ?? '?')).join(', ')}` : ''}</span><br>
 ${chars}
-<form method="post" action="/admin/access/reopen"><input type="hidden" name="id" value="${d.id}"><button class="alt" title="Ny kod om enheten glömt bort gården (rensad webbläsare, ny webbläsare). Behåller karaktärerna.">Öppna igen</button></form>
+<form method="post" action="/admin/access/reopen"><input type="hidden" name="id" value="${d.id}"><button class="alt" title="Ny kod om enheten glömt bort spelet (rensad webbläsare, ny webbläsare). Behåller karaktärerna.">Öppna igen</button></form>
 <form method="post" action="/admin/access/pause"><input type="hidden" name="id" value="${d.id}"><input type="hidden" name="paused" value="${d.paused ? '0' : '1'}"><button class="alt">${d.paused ? 'Släpp på' : 'Pausa'}</button></form>
 <form method="post" action="/admin/access/remove"><input type="hidden" name="id" value="${d.id}"><button class="bad">Ta bort</button></form></div>`;
         })
@@ -316,6 +325,7 @@ ${
 <p class="muted">Logga in här på barnens surfplatta och tryck på knappen, så behövs ingen kod för den.</p>`
   }
 </div>
+${v.charactersHtml ?? ''}
 <div class="card">
   <h2>🔑 Tvåstegsinloggning för föräldrar</h2>
   ${totp}
@@ -323,10 +333,10 @@ ${
 <div class="card">
   <h2>📜 Logg</h2>
   <table>${log || '<tr><td class="muted">Inget än.</td></tr>'}</table>
-</div>
-<form method="post" action="/admin/logout"><button class="alt">Logga ut</button></form>`;
+</div>`;
 }
 
 export const COPY_SCRIPT = `
 const b=document.getElementById('copy');
-if(b)b.addEventListener('click',()=>{const i=document.getElementById('newlink');i.select();navigator.clipboard?.writeText(i.value).catch(()=>{});b.textContent='Kopierad!';});`;
+if(b)b.addEventListener('click',()=>{const i=document.getElementById('newlink');i.select();navigator.clipboard?.writeText(i.value).catch(()=>{});b.textContent='Kopierad!';});
+document.querySelectorAll('form[data-confirm]').forEach(f=>f.addEventListener('submit',e=>{if(!confirm(f.dataset.confirm))e.preventDefault();}));`;

@@ -63,7 +63,7 @@ describe('the gate', () => {
     // röstprat needs the microphone on our own pages (a `microphone=()` blocks it whatever the player allowed)
     expect(page.headers.get('permissions-policy')).toContain('microphone=(self)');
     expect(page.headers.get('permissions-policy')).toContain('camera=()');
-    expect(await page.text()).toContain('privat gård');
+    expect(await page.text()).toContain('privat saga');
   });
 
   it('runs the whole invite → approval → play flow, and kicks the device when access is taken away', async () => {
@@ -163,6 +163,83 @@ describe('the gate', () => {
     expect(access.maxPlayers()).toBe(count);
     await post('/admin/access/max-players', { max: '20' }, parent);
     expect(await (await get('/api/me', device)).json()).toMatchObject({ canCreate: true });
+  });
+});
+
+describe('the characters on the parent page', () => {
+  const create = (cookie: string, name: string) =>
+    fetch(`${base}/api/players`, { method: 'POST', headers: { cookie, origin: base, 'content-type': 'application/json' }, body: JSON.stringify({ name }) }).then((r) => r.json() as Promise<{ id: string }>);
+
+  it('needs the parent session and our own origin for every character control', async () => {
+    const parent = cookieFrom(await post('/admin/login', { password: PW }));
+    const device = cookieFrom(await post('/admin/access/this-device', { name: 'Surfplattan' }, parent));
+    const kid = await create(device, 'Ville');
+    for (const action of ['rename', 'level', 'delete']) {
+      const form = { id: kid.id, name: 'Hackad', level: '0' };
+      expect((await post(`/admin/access/character-${action}`, form)).status).toBe(401); // no session
+      expect((await post(`/admin/access/character-${action}`, form, device)).status).toBe(401); // a device is not a parent
+      expect((await post(`/admin/access/character-${action}`, form, parent, 'https://evil.example')).status).toBe(403); // another site
+      const noOrigin = await fetch(`${base}/admin/access/character-${action}`, { method: 'POST', redirect: 'manual', headers: { cookie: parent, 'sec-fetch-site': 'cross-site' }, body: new URLSearchParams(form) });
+      expect(noOrigin.status).toBe(403);
+    }
+    expect(game.world.players[kid.id]!.name).toBe('Ville');
+    expect(access.maxLevelFor(kid.id)).toBe(4);
+    // the page is for parents only, and never shows device keys
+    expect((await get('/admin', device)).headers.get('location')).toBe('/admin/login');
+    const page = await (await get('/admin', parent)).text();
+    expect(page).not.toContain(device.split('=')[1]!);
+    expect(page).not.toContain(parent.split('=')[1]!);
+    await post('/admin/logout', {}, parent);
+  });
+
+  it('lists who made a character, caps its difficulty, renames it and deletes it', async () => {
+    const parent = cookieFrom(await post('/admin/login', { password: PW }));
+    const device = cookieFrom(await post('/admin/access/this-device', { name: 'Köksdatorn' }, parent));
+    const kid = await create(device, 'Stina');
+    expect(access.ownerOf(kid.id)).toMatchObject({ device: 'Köksdatorn' });
+    let page = await (await get('/admin', parent)).text();
+    expect(page).toContain('Karaktärer');
+    expect(page).toContain('Stina');
+    expect(page).toContain('gjord på: Köksdatorn');
+    expect(page).toContain('Läget just nu');
+    expect(page).toContain('Sagan om Världsträdet');
+    expect(page).not.toContain('Lilla Gården');
+    expect(page).not.toMatch(/Väder|Skip|Gröd/);
+
+    // the cap: kept, shown selected, and refused for a level that does not exist
+    expect(decodeURIComponent((await post('/admin/access/character-level', { id: kid.id, level: '2' }, parent)).headers.get('location') ?? '')).toContain('Medel');
+    expect(access.maxLevelFor(kid.id)).toBe(2);
+    expect(await (await get('/admin', parent)).text()).toMatch(/<option value="2" selected>Medel/);
+    expect(decodeURIComponent((await post('/admin/access/character-level', { id: kid.id, level: '7' }, parent)).headers.get('location') ?? '')).toContain('Välj');
+    expect(access.maxLevelFor(kid.id)).toBe(2);
+    await post('/admin/access/character-level', { id: kid.id, level: '4' }, parent);
+    expect(access.maxLevelFor(kid.id)).toBe(4);
+    await post('/admin/access/character-level', { id: kid.id, level: '0' }, parent);
+    expect(access.maxLevelFor(kid.id)).toBe(0);
+
+    // rename: trimmed, never empty
+    await post('/admin/access/character-rename', { id: kid.id, name: '  Stina Ek ' }, parent);
+    expect(game.world.players[kid.id]!.name).toBe('Stina Ek');
+    await post('/admin/access/character-rename', { id: kid.id, name: '   ' }, parent);
+    expect(game.world.players[kid.id]!.name).toBe('Stina Ek');
+    // unknown characters are not made up
+    expect(decodeURIComponent((await post('/admin/access/character-delete', { id: 'nope' }, parent)).headers.get('location') ?? '')).toContain('finns inte');
+
+    // delete: the character in the game goes, its socket is thrown out (4003), the cap and owner are forgotten
+    const sock = await openSocket(device);
+    if (!('ws' in sock)) throw new Error('refused');
+    const welcomed = new Promise<void>((r) => sock.ws.on('message', (d) => String(d).includes('"welcome"') && r()));
+    sock.ws.send(JSON.stringify({ t: 'hello', playerId: kid.id }));
+    await welcomed;
+    await post('/admin/access/character-delete', { id: kid.id }, parent);
+    expect(await sock.closed).toBe(4003);
+    expect(game.world.players[kid.id]).toBeUndefined();
+    expect(access.maxLevelFor(kid.id)).toBe(4);
+    expect(access.ownerOf(kid.id)).toBeNull();
+    expect(access.log.some((e) => e.event === 'character-deleted' && e.detail === 'Stina Ek')).toBe(true);
+    page = await (await get('/admin', parent)).text();
+    expect(page).not.toContain('<strong>Stina Ek</strong>');
+    await post('/admin/logout', {}, parent);
   });
 });
 
@@ -383,7 +460,7 @@ describe('ntfy', () => {
       notify({ at: 0, event: 'mode', detail: 'not interesting', ip: 'x' });
       notify({ at: 0, event: 'join', detail: 'Kalles iPad kom in med koden för Kalle', ip: '1.2.3.4' });
       await vi.waitFor(() => expect(got).toHaveLength(1));
-      expect(got[0]).toMatchObject({ auth: 'Bearer tk_secret', topic: 'lilla-garden', title: 'Någon kom in på gården', message: 'Kalles iPad kom in med koden för Kalle\n1.2.3.4' });
+      expect(got[0]).toMatchObject({ auth: 'Bearer tk_secret', topic: 'lilla-garden', title: 'Någon kom in i Världsträdet', message: 'Kalles iPad kom in med koden för Kalle\n1.2.3.4' });
     } finally {
       ntfy.close();
     }

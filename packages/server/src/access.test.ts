@@ -37,6 +37,40 @@ describe('Access', () => {
     expect(again.maxPlayers()).toBe(30);
   });
 
+  it('keeps a highest difficulty and the maker per character, and forgets both when the character goes', async () => {
+    let saved: AccessSettings | null = null;
+    const store: AccessStore = {
+      load: async () => ({ devices: [], invites: [], settings: saved, log: [] }),
+      saveSettings: async (st) => {
+        saved = structuredClone(st);
+      },
+      saveDevice: async () => {},
+      deleteDevice: async () => {},
+      saveInvite: async () => {},
+      deleteInvite: async () => {},
+      log: async () => {},
+    };
+    const access = new Access(store, { parentPassword: PW });
+    const fam = await access.addFamilyDevice('Köksdatorn', 'ip', 'ua');
+    expect(access.maxLevelFor('p1')).toBe(4); // every level by default
+    expect(await access.setMaxLevel('p1', 1, 'Kim', 'ip')).toBe(true);
+    for (const bad of [-1, 5, 1.5, Number.NaN]) expect(await access.setMaxLevel('p1', bad, 'Kim', 'ip')).toBe(false);
+    expect(access.maxLevelFor('p1')).toBe(1);
+    await access.created(fam.device, 'p1', 'Kim', 'ip');
+    expect(access.ownerOf('p1')).toMatchObject({ device: 'Köksdatorn' });
+    const again = new Access(store, { parentPassword: PW });
+    await again.load();
+    expect(again.maxLevelFor('p1')).toBe(1);
+    expect(again.ownerOf('p1')?.device).toBe('Köksdatorn');
+    // back to Extrem leaves nothing in the settings
+    await access.setMaxLevel('p1', 4, 'Kim', 'ip');
+    expect(access.settings.maxLevel).toEqual({});
+    await access.setMaxLevel('p1', 0, 'Kim', 'ip');
+    await access.forgetPlayer('p1', 'Kim', 'ip');
+    expect(access.maxLevelFor('p1')).toBe(4);
+    expect(access.ownerOf('p1')).toBeNull();
+  });
+
   it('refuses short parent passwords', () => {
     expect(() => new Access(new MemoryAccessStore(), { parentPassword: 'short' })).toThrow();
   });

@@ -64,6 +64,8 @@ export interface SimCtx {
   rnd: () => number;
   /** Wall clock, ms since epoch (for emote expiry). */
   now: number;
+  /** The highest run level (0..4) a character may play; the parent page sets it per character. Left out: all levels. */
+  levelCap?: (playerId: string) => number;
 }
 
 export const PLAYER_HALF_W = 5;

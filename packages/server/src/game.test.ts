@@ -3,15 +3,17 @@ import { DEFAULT_MAX_PLAYERS, DUNGEONS, DUNGEON_IDS, RUN_MAX_MS, RUN_NUDGE_MS, R
 import { Game, type Link } from './game.ts';
 import { MemoryStore } from './db/store.ts';
 
-const fakeLink = (): Link & { msgs: ServerMsg[]; closed: boolean } => {
+const fakeLink = (): Link & { msgs: ServerMsg[]; closed: boolean; closeCode?: number } => {
   const l = {
     msgs: [] as ServerMsg[],
     closed: false,
     send(m: ServerMsg) {
       l.msgs.push(m);
     },
-    close() {
+    closeCode: undefined as number | undefined,
+    close(code?: number) {
       l.closed = true;
+      l.closeCode = code;
     },
   };
   return l;
@@ -510,5 +512,92 @@ describe('runs over the socket', () => {
     expect(Object.values(game.world.players).some((p) => p.bot)).toBe(false);
     expect(pa.area).toBe('farm');
     await game.stop();
+  });
+});
+
+describe('the parent page: difficulty caps and characters', () => {
+  const look = { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' as const };
+  const changesOf = (l: ReturnType<typeof fakeLink>): Change[] => l.msgs.flatMap((m) => (m.t === 'changes' ? m.changes : []));
+  const toasts = (l: ReturnType<typeof fakeLink>): string[] => changesOf(l).flatMap((c) => (c.t === 'toast' ? [c.text] : []));
+
+  const setup = async (caps: Record<string, number>) => {
+    const game = new Game(new MemoryStore(), { autoStart: false, levelCap: (id) => caps[id] ?? 4 });
+    await game.start();
+    const a = game.createPlayer('Astrid', look)!;
+    const b = game.createPlayer('Bo', look)!;
+    const la = fakeLink();
+    const lb = fakeLink();
+    const ha = game.connect(la);
+    const hb = game.connect(lb);
+    ha({ t: 'hello', playerId: a.id });
+    hb({ t: 'hello', playerId: b.id });
+    const pa = game.world.players[a.id]!;
+    const pb = game.world.players[b.id]!;
+    for (const [p, cls] of [[pa, 'vaktare'], [pb, 'helare']] as const) p.saga = { cls, chapter: 1, heard: true, cleared: [], titles: [], quests: {}, done: [], found: [] };
+    const front = archFrontOf(game.world);
+    for (const p of [pa, pb]) {
+      p.x = TILE * front.x + TILE / 2;
+      p.y = TILE * front.y + TILE / 2;
+    }
+    return { game, a, b, la, lb, ha, hb };
+  };
+
+  it('refuses to start a run above the cap of the starter, and allows a lower level', async () => {
+    const caps: Record<string, number> = {};
+    const s = await setup(caps);
+    caps[s.a.id] = 1;
+    s.ha({ t: 'run', a: 'start', level: 3 });
+    expect(runOf(s.game.world)).toBeUndefined();
+    expect(toasts(s.la).some((x) => x.includes('Astrid') && x.includes('Svår'))).toBe(true);
+    s.la.msgs.length = 0;
+    s.ha({ t: 'run', a: 'start', level: 1, companion: false });
+    expect(runOf(s.game.world)?.level).toBe(1);
+  });
+
+  it('names everyone who is capped in the party, and refuses a capped joiner', async () => {
+    const caps: Record<string, number> = {};
+    const s = await setup(caps);
+    caps[s.a.id] = 2;
+    caps[s.b.id] = 0;
+    s.ha({ t: 'run', a: 'start', level: 3 });
+    expect(runOf(s.game.world)).toBeUndefined();
+    const text = toasts(s.la).join(' ');
+    expect(text).toContain('Astrid');
+    expect(text).toContain('Bo');
+    // Astrid starts Medel; Bo (cap 0) may not join it, then the cap is lifted and he may
+    s.game.world.players[s.b.id]!.x = 0;
+    s.ha({ t: 'run', a: 'start', level: 2, companion: false });
+    const run = runOf(s.game.world)!;
+    expect(run.party).toEqual([s.a.id]);
+    const front = archFrontOf(s.game.world);
+    const pb = s.game.world.players[s.b.id]!;
+    pb.x = TILE * front.x + TILE / 2;
+    pb.y = TILE * front.y + TILE / 2;
+    s.hb({ t: 'run', a: 'join' });
+    expect(run.party).toEqual([s.a.id]);
+    expect(toasts(s.lb).some((x) => x.includes('Lätt') || x.includes('Mycket lätt'))).toBe(true);
+    caps[s.b.id] = 2;
+    s.hb({ t: 'run', a: 'join' });
+    expect(run.party).toEqual([s.a.id, s.b.id]);
+  });
+
+  it('lists, renames and deletes characters, and shows the runs', async () => {
+    const s = await setup({});
+    const info = s.game.characters().find((c) => c.id === s.a.id)!;
+    expect(info).toMatchObject({ name: 'Astrid', cls: 'vaktare', level: 1, online: true });
+    expect(info.lastPlayed).toBeGreaterThan(0);
+    expect(s.game.renamePlayer(s.a.id, '  Astrid   Ek ')).toBe(true);
+    expect(s.game.world.players[s.a.id]!.name).toBe('Astrid Ek');
+    expect(s.game.renamePlayer(s.a.id, '   ')).toBe(false);
+    s.ha({ t: 'run', a: 'start', level: 1, companion: false });
+    expect(s.game.runStatus()).toMatchObject([{ level: 1, party: ['Astrid Ek', 'Bo'] }]);
+    expect(s.game.deletePlayer(s.a.id)).toBe(true);
+    expect(s.la.closed).toBe(true);
+    expect(s.la.closeCode).toBe(4003);
+    expect(s.game.world.players[s.a.id]).toBeUndefined();
+    expect(s.game.characters().map((c) => c.name)).toEqual(['Bo']);
+    expect(runOf(s.game.world)?.party).toEqual([s.b.id]);
+    expect(s.game.deletePlayer(s.a.id)).toBe(false);
+    s.game.tick(50);
   });
 });

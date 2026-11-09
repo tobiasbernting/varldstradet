@@ -78,7 +78,7 @@ pnpm --filter @lilla-garden/server dev        # the server on :8080, also serves
 
 Open `http://localhost:8080` (or `http://<your-computer-ip>:8080` from another device on the home network). With
 `ACCESS=open` you get the character picker straight away; otherwise the gate asks for a join code made on the parent
-page `/admin` (log in with `PARENT_PASSWORD`; join codes, devices, season, save, next day, evening/morning).
+page `/admin` (log in with `PARENT_PASSWORD`; join codes, devices, play hours, voice, character limit, the characters with a difficulty cap per character, and a status box).
 
 For client work use the Vite dev server with hot reload, which proxies `/api` and `/ws` to the server on :8080:
 `pnpm --filter @lilla-garden/clientljs dev` (open http://localhost:5173). `DEV_TELEPORT=1` in the server's environment
@@ -206,9 +206,9 @@ saves it. Run it from a checkout (`pnpm install` first): it is a development scr
 
 ## Who may enter (access control)
 
-Lilla Gården is a kids' game, so nobody gets in without a parent having said yes:
+Sagan om Världsträdet is a kids' game, so nobody gets in without a parent having said yes:
 
-1. **Nothing without an approved device.** Strangers only ever see a "private farm" page with a code field. The game
+1. **Nothing without an approved device.** Strangers only ever see a "private game" page with a code field. The game
    itself, `/api` and the WebSocket all refuse browsers without an approved device cookie.
 2. **Join codes.** On the parent page a parent makes a code (`ABCD-1234`) for a named person or family: guest or
    family, 1–5 devices, valid 1 hour–30 days. It's typed on the start page or opened as a link (`/join#CODE`; the
@@ -221,7 +221,7 @@ Lilla Gården is a kids' game, so nobody gets in without a parent having said ye
    make it a family device directly (not when the parent page runs on its own port).
 5. **Öppna igen**: a device that forgot the farm (cleared browser, new browser) gets a fresh one-time code from the
    device list and keeps its characters; the old key stops working.
-6. **The parent stays in control**: close the farm for everyone, family only, or family + guests; play hours
+6. **The parent stays in control**: close the game for everyone, family only, or family + guests; play hours
    (Swedish time); pause or remove any device. Changes take effect at once: open connections are closed and the
    device lands on the gate page.
 7. **Parent login**: password (`PARENT_PASSWORD`), optional two-step login with an authenticator app, rate limited
@@ -233,6 +233,13 @@ Lilla Gården is a kids' game, so nobody gets in without a parent having said ye
 9. **Push notifications** (`NTFY_URL`): someone joined, someone waits for approval, a device was reopened, parent
    logins and failed logins, code entry locked.
 10. **Log**: everything at the gate is logged on the parent page.
+11. **Characters and difficulty** (parent page, "Karaktärer"): every character with class, level, last played and the
+    device it was made on; rename or delete it (a deleted character leaves its run and its socket is closed with 4003).
+    Each character has a **highest difficulty** (default Extrem = all five levels). The server enforces it in
+    `startRun`/`joinRun`: when a party's chosen level is above any member's cap, the run does **not** start and the starter
+    is told who is capped; a capped player cannot join a running run above their cap. The cap is stored with the gate
+    settings (`maxLevel` by character id). It needs access control (not available under `ACCESS=open`).
+12. **Character limit**: 20 by default, set on the parent page (1 to 100); lowering it removes nobody.
 11. **Web hardening**: `HttpOnly` + `SameSite=Strict` cookies (`Secure` over HTTPS), origin checks on every form and
     on the WebSocket, strict Content-Security-Policy, no framing, `noindex`, `/health` reveals nothing.
 

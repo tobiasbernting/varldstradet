@@ -55,6 +55,7 @@ import {
   tally,
   type RouteChoiceSnap,
   RUN_LEVEL_DEFAULT,
+  RUN_LEVEL_EXTREM,
   LATT,
   levelMuls,
   parseRunLevel,
@@ -535,6 +536,10 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
     .filter((q) => q.id !== p.id && !q.bot && q.online && q.area === 'farm' && !!q.saga?.cls && distTo(q, (arch.x + 1.5) * TILE, (arch.y + 1) * TILE) <= RUN_JOIN_RADIUS)
     .slice(0, max - 1);
   const party = [p, ...near];
+  // a parent may cap the highest level a character plays: the arch refuses to start and says who is capped
+  const wanted = opts.level ?? RUN_LEVEL_DEFAULT;
+  const capped = party.filter((q) => wanted > (ctx.levelCap?.(q.id) ?? RUN_LEVEL_EXTREM));
+  if (capped.length) return [toast(p.id, fmt(RUN_T.capped, { names: capped.map((q) => q.name).join(', '), level: T.runLevelName[wanted]! }))];
   // the dungeon asked for (one cleared, or the next), else the chapter's, or a cleared one at random on a replay (or when all are cleared)
   const cleared = p.saga.cleared;
   const seed = opts.seed ?? Math.floor(ctx.rnd() * 0x7fffffff);
@@ -708,6 +713,8 @@ export function joinRun(world: WorldState, playerId: string, ctx: SimCtx): Chang
   if (!p.saga?.cls) return [toast(p.id, T.sagaNeedClass)];
   if (p.area !== 'farm') return [toast(p.id, RUN_T.needPort)];
   if (run.party.length >= partyMax(farm)) return [toast(p.id, RUN_T.full)];
+  const cap = ctx.levelCap?.(p.id) ?? RUN_LEVEL_EXTREM;
+  if (run.level > cap) return [toast(p.id, fmt(RUN_T.cappedYou, { max: T.runLevelName[cap]! }))];
   const out: Change[] = [];
   // a lone player's hired companion steps aside for a real friend
   if (run.companions.length) dismissCompanions(farm, run, out);
