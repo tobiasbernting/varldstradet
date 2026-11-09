@@ -277,6 +277,7 @@ export function petSoak(h: Here, victim: PlayerState, n: number, now: number, ou
 export function petSeedBonus(farm: WorldState, p: PlayerState, level: number | undefined): number {
   const def = activePet(p);
   if (!def || def.trick.kind !== 'find') return 0;
+  if (Date.now() - (p.pets?.owned[def.id]?.since ?? 0) < 60_000) return 0; // (one found a moment ago, at this very clear, has not started digging yet)
   const a = Object.values(areaOf(farm, p).animals).find((x) => x.owner === p.id && x.petKind === def.id);
   if (!a || a.pf?.st === 'scared') return 0;
   return def.trick.seeds * petLevelMul(level);

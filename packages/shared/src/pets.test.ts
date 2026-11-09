@@ -352,7 +352,7 @@ describe('pets in a fight', () => {
     expect(idle.mob.hp).toBe(idle.mob.max);
     // a bite is small: about a tenth of a hero (the dog's 6 a bite is not a hero's 20)
     const bites = out.filter((c) => c.t === 'hit' && c.on === mob.id).length;
-    expect(bites).toBeLessThanOrEqual(3000 / PETS.hund!.trick.cd + 2);
+    expect(bites).toBeLessThanOrEqual(3000 / (PETS.hund!.trick as { cd: number }).cd + 2);
   });
 
   it('purr (katt): heals the most hurt hero near it, on a cooldown', () => {
@@ -364,7 +364,7 @@ describe('pets in a fight', () => {
     expect(l.f.hp).toBeGreaterThan(before);
     expect(out.some((c) => c.t === 'spell' && c.spell === 'pet_purr' && c.on === l.p.id)).toBe(true);
     const n = out.filter((c) => c.t === 'spell' && c.spell === 'pet_purr').length;
-    l.go(PETS.katt!.trick.cd * 3);
+    l.go((PETS.katt!.trick as { cd: number }).cd * 3);
     expect(l.f.hp).toBeGreaterThan(before + (n ? 0 : 1));
     // a healthy party gets nothing
     const h = lab('katt');
@@ -422,6 +422,8 @@ describe('pets in a fight', () => {
 
   it('find (rav): adds a fraction to the sagafrön a run pays, while it is with its owner and not scared', () => {
     const l = lab('rav');
+    expect(petSeedBonus(l.party.world, l.p, 2)).toBe(0); // (found a moment ago: not digging yet)
+    l.p.pets!.owned.rav!.since -= 120_000;
     expect(petSeedBonus(l.party.world, l.p, 2)).toBeCloseTo(PETS.rav!.trick.kind === 'find' ? PETS.rav!.trick.seeds : 0);
     expect(petSeedBonus(l.party.world, l.p, 4)).toBeLessThan(petSeedBonus(l.party.world, l.p, 2));
     l.pa().pf!.st = 'scared';
