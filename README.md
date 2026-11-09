@@ -1,6 +1,6 @@
-# Lilla Gården
+# Sagan om Världsträdet
 
-Ett litet bondgårdsspel på svenska för hela familjen. Odla, ta hand om djur, snickra och bygg – tillsammans på samma gård från surfplatta och dator.
+Ett familjespel på svenska för 2–4 spelare, i webbläsaren: sköt gården på dagen och ge dig ut mot draugar och jättar. It grew out of the family farm game "Lilla Gården" (the code and art come from there). The game runs in the browser again (since 2026-11-09 the native Godot client is gone); the server serves it at `/`.
 
 See [DESIGN.md](DESIGN.md) for the agreed design.
 
@@ -70,16 +70,19 @@ See [DESIGN.md](DESIGN.md) for the agreed design.
 
 ```bash
 pnpm install
-pnpm db:up          # Postgres 17 in a container on port 5435
-cp .env.example .env
-pnpm dev            # the server on :8080 (the native client is the client: see "Native client" below)
+pnpm db:up                 # Postgres 17 in a container on port 5435 (podman or docker)
+cp .env.example .env       # set PARENT_PASSWORD; ACCESS=open turns the gate off on a home network
+pnpm --filter @lilla-garden/clientljs build   # the game's build, packages/clientljs/dist (the server serves it at /)
+pnpm --filter @lilla-garden/server dev        # the server on :8080, also serves the build
 ```
 
-Open `http://localhost:8080` for the download page and `http://<your-computer-ip>:8080` from another device on the
-home network. Röstprat (voice) has no native client yet (the browser one was retired on 2026-11-02; the server side
-stays), so there is nothing to set up for it. The parent page is at `/admin`
-(log in with `PARENT_PASSWORD`; make join codes, manage devices, force a season, save, skip to the next day,
-make it evening/morning).
+Open `http://localhost:8080` (or `http://<your-computer-ip>:8080` from another device on the home network). With
+`ACCESS=open` you get the character picker straight away; otherwise the gate asks for a join code made on the parent
+page `/admin` (log in with `PARENT_PASSWORD`; join codes, devices, season, save, next day, evening/morning).
+
+For client work use the Vite dev server with hot reload, which proxies `/api` and `/ws` to the server on :8080:
+`pnpm --filter @lilla-garden/clientljs dev` (open http://localhost:5173). `DEV_TELEPORT=1` in the server's environment
+lets a player jump straight into a dungeon (the dev message, see `packages/server/src/game.ts`); never on a real farm.
 
 `pnpm test` runs everything; the importer's tests that need a real Postgres (`importSave.pg.test.ts`) run when `TEST_DATABASE_URL` points
 at a server where they may create scratch databases (`TEST_DATABASE_URL=postgres://postgres@localhost:5435/postgres pnpm test`; CI
@@ -91,13 +94,12 @@ useless for a real farm.
 ## Production
 
 ```bash
-pnpm build                     # the server bundle (the native client is built by the Godot workflow)
-DATABASE_URL=postgres://… node packages/server/dist/server/src/main.js   # the server and the download page on :8080
+pnpm build                     # the server bundle; the browser game is built separately (see Develop) and found through CLIENT_DIST
+DATABASE_URL=postgres://… node packages/server/dist/server/src/main.js   # the server on :8080
 ```
 
 Or use the container image built by GitHub Actions: `ghcr.io/tobiasbernting/varldstradet:latest` (a new package is private by default: make it public in the package settings, or log the server in to ghcr, before another machine can pull it; it is deliberately not the old farm's `lilla-garden` image).
-It needs `DATABASE_URL` and listens on 8080; it holds only the server (no game files: the game is downloaded from the
-GitHub Release). Migrations run on boot.
+It needs `DATABASE_URL` and listens on 8080; it holds the server and the built browser game (`CLIENT_DIST=/app/client`). Migrations run on boot.
 The public farm takes each new `:latest` the night after it's built (03:30 Swedish time): it dumps the database,
 starts the new version and goes back to the old one, database included, if it doesn't answer on `/health`. So a
 merge to `main` is live the next morning, and a migration must work on the real farm's data. The deploy lives in the
@@ -135,7 +137,7 @@ can run another one yourself:
   Postgres database of its own (never the old farm's), `DATABASE_URL`, and `PARENT_PASSWORD` (12+ characters).
 - **Players** come in over the internet through the tunnel at `spel.<your domain>`: set `PUBLIC_URL=https://spel.<your
   domain>` and `TRUST_PROXY=1`, and publish only the game's port (`PORT`, 8080). Nothing else is opened on the machine.
-  The address people type into the game is that one, and the download page shows it.
+  The address people type into the game is that one,.
 - **The parent page** (`/admin`) is not on the public address. Set `ADMIN_PORT` (for example 8081) and `ADMIN_HOST` to
   the machine's Tailscale address, and open `http://<tailscale-name>:8081/admin` from a phone or computer on your
   tailnet. There you make join codes, approve devices, close the farm or set play hours. A join code is typed once in
@@ -163,7 +165,7 @@ maps) included. The old database is never written: a dump is just a file, and a 
 
 What does **not** come over, and what the owner does about it:
 
-- **Devices and join codes.** A browser's device token is a cookie the native client cannot read, and the old
+- **Devices and join codes.** The old
   `lg_device` cookies mean nothing to the new server. After the import, open the parent page (`/admin`), make a join code
   for each person or device, and everybody types it once in the new game ("Ny karaktär" is not needed: the old
   characters are in the list under "Vem är du?"). The gate settings (family only, play hours, the authenticator
@@ -202,355 +204,6 @@ recreate the database to run it again). The first start of the new server tidies
 game needs in this version (the färdport and Yggdrasil's shoot on the farm, hero rewards for the level, and so on) and
 saves it. Run it from a checkout (`pnpm install` first): it is a development script and is not in the container image.
 
-## The download page
-
-The web page of the server, `GET /`, is the download page (since M5a, 2026-11-02; the browser game is gone from this
-repository). It is server-rendered in `packages/server/src/pages.ts`, needs no JavaScript and is open to everyone: the
-game's name, a line about it, links to the latest GitHub Release and to the four builds by stable names
-(`https://github.com/tobiasbernting/varldstradet/releases/latest/download/varldstradet-windows-x86_64.zip`, `…-macos-universal.zip`,
-`…-linux-x86_64.zip`, `…-linux-arm64.zip`; the "Godot client" workflow attaches the zips under these names when a `v*` tag is
-pushed), the server's address to type into the game, and the join-code field. A parent can redeem a code on a phone there
-and read the 6-digit number (the page shows it while the device waits to be approved). The links work once the first `v*`
-tag has been pushed. `/access`, `/join` and the parent page are unchanged.
-
-**Releasing, and a dry run first.** A release is a tag: `git tag v0.1.0 && git push origin v0.1.0` starts the "Godot
-client" workflow, whose `export` job builds the four zips and whose `release` job attaches them to a GitHub Release for
-the tag (the page's `releases/latest/download/…` links then resolve). To see the same build without a tag and without a
-Release, run the workflow by hand with the slow pictures job off:
-
-```bash
-gh workflow run godot.yml --ref <branch> -f pictures=false     # or Actions -> Godot client -> Run workflow, untick "pictures"
-```
-
-The run's `export` job exports Windows, Linux x86_64, Linux arm64 and macOS, zips them under the stable names and
-uploads them as the artifact `varldstradet-builds` (download it from the run's page and open a zip on a real machine).
-Nothing is published: only the `release` job makes a Release and it runs on `v*` tags alone.
-`packages/server/src/release.test.ts` reads the workflow and the page and fails if the zip names and the links drift apart.
-
-## Native client
-
-The game is being rewritten as a native Godot client (`packages/godot`, [PLAN.md](PLAN.md) section 3). Milestone M2
-gave it login with a join code; **M3a** put the first dungeon on the screen: Draugkryptan as an HD-2D scene (a low-poly
-3D crypt with the family's pixel characters and the saga's monsters standing in it as billboards), built from the same
-data the browser draws, with your hero walking in it and everyone else interpolated. **M3b** makes it a fight: the
-Krigare's four spells, the dungeon's telegraphs and bosses on screen, falling and getting up, chests with the loot
-window, chat and emotes, a gamepad setting for the kids, a frame-time overlay and a bench, and a headless bot that
-clears the first pack in CI. No farm and no world map yet. **M4a** draws the farm: the 64×64 map (and the wild maps beyond
-its edges, with the same code) from the server's data, with day and night, the seasons and the weather, other players
-in their own clothes, animals and villagers, and the real way into Draugkryptan: walk off the farm's north edge, west
-through the forest, and use the arch in the forest beyond. **M4b** makes the farm usable: the hotbar and the bag (and a
-chest's), the tools on the tile in front of you (till, plant, water, harvest, cut grass, chop, mine), things on the ground
-that you pick up by walking over them, the animals (pet, brush, feed, collect, name, ride) and the pets' commands, fishing,
-and coins and stars on the HUD. **M4c** is the rest of the farm evening: the workbench (recipes with what is missing in red)
-and building with a preview of where the thing goes (green or red) and the ownership rule (only the one who built it takes it down;
-the prompt and the toast say whose it is), the farmhouse (walk through the door; the camera closes in, the room has its own warm
-light at night), the Gårdsbutik, the sell box and the pizzeria, the wardrobe, the gear window and the hero switch, the stove,
-the villagers (their talk, the day's önskningar and a list of them), Köpingen drawn like the farm with its buildings and
-villagers, the bus between the farm and the village, and Völvan Sigrun at the Kämpastenen, where the class is chosen. After
-this the browser client was not needed for a farm evening, and on 2026-11-02 (M5a) it was removed from this repository. `packages/godot/ART.md` has the art rules;
-`packages/godot/assets/LICENSES.md` every asset's origin.
-
-![Draugkryptan in the native client](packages/godot/docs/m3a-draugkryptan.png)
-
-![The farm in the native client](packages/godot/docs/m4a-farm-day.png)
-
-**M5c** puts the runs (färder) on screen. On the farm the **färdport** is a real 3 × 2 arch with a teal-gold glow, the **Yggdrasil shoot**
-grows in five stages with the family's tree (a mound, a sapling, a young tree, a big tree, the glowing Världsträd), and the smithy, herb garden
-and longhouse are buildings. Using the arch opens **the arch window** (your class as a picture, the färdkost slots with the dishes from your
-bag, a **Lätt / Vanlig** choice, one big "Starta färden", or "Följ med" when a run lives); the stops are drawn by the dungeon view in the chapter's own look (see R3 below); the HUD has the clock against the 30-minute target (past it the clock keeps
-counting in a warmer colour), the route rail, and the runor taken; after each fight **three big cards** are voted on by tap, click, the
-pad's A or the keys 1-3; the end of a run shows a summary; and the shoot opens **the sagaträd** with its 18 nodes. The hired Hirdmannen is a hero
-sprite; one or two players get him in every run without a longhouse (a healer for a lone fighter, a tank for a lone healer, a healer or tank for a pair that lacks one), a longhouse only adds the fourth place. **To play the easy level** (the kids): walk into the färdport and press the green **Lätt** button before "Starta färden" (Vanlig is lit by default). Lätt has softer monsters, longer warnings, three Sagoandar (the star 🌟 on the clock panel: a free "everyone gets up" if the party falls, one more after each stop, up to five) and a fall never ends the run; it pays half the sagafrön. Vanlig has one Sagoande. `pnpm godot:bot` has a run pair (`BOT_ONLY=run`, the lead picks Lätt and the check sees the level and the star on the HUD; `BOT_RUN_LEVEL=1` plays Vanlig; `-- --full` plays to the boss, `BOT_RUN_SECONDS=2400`): two bots walk to the arch, start,
-fight their way through the first wing of the route (the Vilosten taken whenever offered), vote on the runor and the runes and enter the Mellanboss's stop (row 5). Pictures: [the arch window](packages/godot/docs/m5c-arch.png), [a zone](packages/godot/docs/m5c-zone.png),
-[the cards](packages/godot/docs/m5c-cards.png), [the end of a run](packages/godot/docs/m5c-end.png) and [the sagaträd](packages/godot/docs/m5c-tree.png).
-
-**R3 (GAME2.md, the route).** A run is now **one dungeon** (a chapter), a route of ten rows of stops with up to three lanes: row 1 a Flock, rows 2-4 and 6-8 a choice (a Flock, now and then a
-**Vilosten**, and on rows 4 and 8 always one), row 5 the **Mellanboss**, row 9 the last **Vilosten** and row 10 the **Boss**; every stop is built in that chapter's own look from the same builder as the dungeons.
-The arch window has a ◀ ▶ row to choose the dungeon (the ones cleared and the next one; the default is your current chapter). When a stop is cleared and the runa is voted, **väg-runor** (glowing discs, one for each
-stop the next row leads to, with a picture of the stop) light up in the exit room: **walk onto one**. When everybody who plays is on a rune, or 20 s after the first stepped on one, the rune with most players wins; a tie
-goes to the **Stigfinnare** (a 🧭 over their head, the next player each row); the Hirdfolk never vote. A **Vilosten** gives 40 % of everyone's health back and gets the fallen up. The HUD has a **rail** of the ten rows (the
-stops walked, the one now, the mid-boss, last rest and boss to come); **R** (or the pad's misc button) opens the **map** of the whole route; the summary at the end shows the route taken. Measured by the bots
-(Draugkryptan, one human and the Hirdmannen, level-3 heroes in the starter set): see GAME2.md section 5.6. `BOT_ONLY=run` plays the first wing through the client (`BOT_RUN_ROWS`, `BOT_RUN_LANE`); `node --experimental-transform-types packages/shared/src/runtune.ts --dungeon draug --style careful` prints the tables. Pictures: [the runes in the exit room](packages/godot/docs/r3-route-runes.png) (the Flock, the Vilosten, the Flock; the 🧭 over the Stigfinnare, the rail on the clock panel) and [the map of the route](packages/godot/docs/r3-route-map.png).
-
-**M6a** (chapters 2-4) makes the client handle any saga dungeon and finishes the first three after Draugkryptan: **Frostjättens borg**,
-**Surts smedja** and **Helheim**. Each has its own look from one table (`scripts/dungeon_look.gd`: stone and floor palette, torch colour,
-fog, bloom, and something drifting in the air: snow, embers, ghost-lights), its own creatures and bosses as sprites from the existing pixel art
-(Isbjörnen Kall and the Rimtursen; Smeden Glöd and Surt; Garm and Hel), and every boss move drawn with its telegraph. `--demo=frost` (or `surt`,
-`hel`) draws the recorded dungeon, `--fight` plays each boss's moves from the data (`--once` leaves when done) and
-`--boss-move=rimturs:freeze:after` holds one move for a picture. `BOT_ONLY=dungeon BOT_DUNGEON=frost pnpm godot:bot` sends the fighter pair into a chosen
-dungeon the dev way. Pictures: [Frostjättens borg](packages/godot/docs/m6a-frost.png), [its hall](packages/godot/docs/m6a-frost-hall.png),
-[its bosses' moves](packages/godot/docs/m6a-frost-bosses.png); [Surts smedja](packages/godot/docs/m6a-surt.png), [its hall](packages/godot/docs/m6a-surt-hall.png),
-[its bosses' moves](packages/godot/docs/m6a-surt-bosses.png); [Helheim](packages/godot/docs/m6a-hel.png), [its hall](packages/godot/docs/m6a-hel-hall.png),
-[its bosses' moves](packages/godot/docs/m6a-hel-bosses.png).
-
-**M6b** (chapters 5-7) does the same for **Svartalfheims gruvor** (`dvarg`: amber lamps in dark rock, dust and gold glints; the Järnväktaren and Fafner),
-**Havsormens tempel** (`orm`: a teal haze with bubbles rising; Bläckis and Jörmungandr) and **Alvernas lund** (`alv`: violet bark, green moss and glowing
-mushrooms with spores in the air; the Spindeldrottningen and the Nattmaran). `--demo=dvarg` (or `orm`, `alv`) draws the recorded dungeon and `--fight` plays every move of
-both bosses, the helpers they call, a mend's glow and heal, and the spider's web round a friend. `BOT_ONLY=dungeon BOT_DUNGEON=orm pnpm godot:bot` sends the fighter pair in the dev way.
-Pictures: [Svartalfheims gruvor](packages/godot/docs/m6b-dvarg.png), [its hall](packages/godot/docs/m6b-dvarg-hall.png), [its bosses' moves](packages/godot/docs/m6b-dvarg-bosses.png);
-[Havsormens tempel](packages/godot/docs/m6b-orm.png), [its hall](packages/godot/docs/m6b-orm-hall.png), [its bosses' moves](packages/godot/docs/m6b-orm-bosses.png);
-[Alvernas lund](packages/godot/docs/m6b-alv.png), [its hall](packages/godot/docs/m6b-alv-hall.png), [its bosses' moves](packages/godot/docs/m6b-alv-bosses.png).
-
-**M6c** (chapters 9-10) finishes the saga's dungeons: **Fenrisklyftan** (`fenrir`: steel-blue rock, trampled snow and a gale; Sköll and Fenrisulven) and **Bifrost**
-(`loke`: pearly glass, rose-gold lanterns and rainbow stars; Lokes skugga and Loke, whose monsters are drawn as ghostly illusions). `--demo=fenrir` (or `loke`) draws the
-recorded dungeon, `--fight` plays every move of both bosses (Loke's seven, one for each boss he copies) and `BOT_ONLY=dungeon BOT_DUNGEON=loke pnpm godot:bot` sends the fighter pair in the dev way.
-The end of the saga is on screen too: `--demo=loke --ending` plays what the server sends when Loke falls and `--demo=ending` what it sends when Völvan is handed the last chapter
-(the toasts of that moment now take turns instead of wiping each other). Pictures: [Fenrisklyftan](packages/godot/docs/m6c-fenrir.png), [its hall](packages/godot/docs/m6c-fenrir-hall.png),
-[its bosses' moves](packages/godot/docs/m6c-fenrir-bosses.png); [Bifrost](packages/godot/docs/m6c-loke.png), [its hall](packages/godot/docs/m6c-loke-hall.png), [its bosses' moves](packages/godot/docs/m6c-loke-bosses.png).
-
-**M9a** gives the native client what the browser game had and it lacked. **The minimap** is a small map in the top right corner of the map you are on (the farm, a wild map, a dungeon): the terrain, you (a big yellow dot), the other players (white), the villagers (pink), the animals (cream) and the monsters (red), and a marker for what is worth finding: each dungeon's arch in that dungeon's colour, the färdport, doors and caves, the bus stop and the station, Kämpastenen, the landmarks and a dungeon's way out. `M` (or the world map's button) shows and hides it; the choice is remembered in `settings.cfg` and it grows with the text size. **The world map with fast travel** (`N`, the pause menu's "Karta" or a controller's `Share`/`Capture` button) shows the 7 × 7 maps round the one you are on, north up: the ones you have been to with their place's emoji and name, ❔ for the rest, a "?" where you have seen a landmark you have not touched and a 🧭 where you found them all, and "här" on yours. A visited map is a button: it sends `{t:'teleport'}` and the server puts you in the middle of it; "Åk hem" goes to the farm and "Månen" to the moon when you have been there. Exactly as the server allows (`teleport()` in `sim.ts`): never from inside a dungeon or a run (the buttons are greyed; the server now refuses it there too, it used to leave your fighter behind), only to a map you have visited, never into a cave or a building. **Every dungeon has its own arch** (the server has always put all nine out in the world; the client drew one stone arch for all of them): a barrow for Draugkryptan, an ice gate for Frostjättens borg, a black forge door for Surts smedja, a bone gate for Helheim, a timber mine for Svartalfheims gruvor, a sea temple for Havsormens tempel, two living trees for Alvernas lund, a cleft of steel-blue rock for Fenrisklyftan and a rainbow arch for Bifrost, as the browser's art drew them. They stand where the plans put them (`DUNGEONS[id].portal`), all reachable on foot from the farm, and use the server's own rule for going in (a class, and the chapter before it cleared): Draugkryptan in the forest west of the north map (`a:-1,-1`), Frostjättens borg in the icy map two north of the farm (`a:0,-2`, with Fenrisklyftan's arch in the same map's south-west), Surts smedja in the volcano (`a:2,2`), Helheim in the swamp west of the farm (`a:-1,0`), Svartalfheims gruvor in the mountains east of it (`a:2,0`), Havsormens tempel on the beach (`a:-2,0`), Alvernas lund in the mushroom forest (`a:1,-1`) and Bifrost at the space base (`a:1,3`); the world map says which maps you have been to. The pause menu's "Gå in i …" entries stay what they were: a dev shortcut that only works on a server with `DEV_TELEPORT=1`. `--demo=forest --arch=0..8` draws one arch for a picture, `--demo=farm --open-map --visited=a:0,-1=skog|a:1,0=by` the world map with some visited maps. `pnpm godot:bot` has a map walker (`Bot-Kartvandrare`, `BOT_ONLY=walker`): it walks north, opens the world map with `K`, goes home and back by the buttons (the server moved it), toggles the minimap with `M`, meets Frostjättens locked arch, asks `dev unlock`, goes in by the arch and checks that the map is greyed inside. Five more walkers (`Bot-Valv-<id>`, two lanes on a server of their own, each with a time budget from its route's length) walk to Fenrisklyftan's, Helheim's, Havsormens, Svartalfheims' and Alvernas arches over the real maps (`BOT_ARCHES=surt,loke` walks Surts and Bifrost's too: five maps out through the volcano and the space base, where monsters knock an unarmed walker back to the farm, so it is not in the default run; `BOT_ARCHES=hel,orm` picks some), and `saga.test.ts` checks every one of the nine without walking: the arch is where the plan says, its map and every map on the way are walkable from the farm, and it sends you into its own dungeon only once the chapter before it is cleared, meet the chapter lock, ask `dev unlock` and go in by the arch; every dev message a bot's client sends is recorded and none may be `saga`.
-
-![The minimap on the farm](packages/godot/docs/m9a-minimap.png)
-
-![The world map](packages/godot/docs/m9a-worldmap.png)
-
-![Frostjättens arch](packages/godot/docs/m9a-arch-frost.png)
-
-![The nine arches](packages/godot/docs/m9a-arches.png)
-
-**Röstprat** (voice chat) is back in the native client (2026-11-06). Open it from the pause menu ("Röstprat") or the small button at the top right of the HUD. The game picks up the phone for you when you log in (the window's "Lägg på" hangs up and keeps it hung up). Hold **C** (or the window's "Håll här för att prata" button) to talk: push-to-talk is the default, for the kids; "Öppen mikrofon" in the window keeps the microphone open, "Tysta mikrofonen" turns it off, and "Volym" sets how loud the others are (all of it is remembered in `settings.cfg`). Everything about rooms is as before: devices behind the same address are one room and do not hear each other, one device per room is the speakerphone. Sound goes straight between the rooms' speakers as small mu-law packets on a WebRTC data channel (Godot has no WebRTC audio tracks), 16 kB/s a peer.
-
-![Röstprat](packages/godot/docs/voice.png)
-
-Röstprat needs the `webrtc-native` GDExtension, which is not committed: the Godot workflow fetches it, and a developer runs `packages/godot/tools/fetch-webrtc.sh` once after cloning (then the import step). Without it the game runs and says "Röstprat finns inte i den här versionen" and never picks up the phone. `godot --headless --path packages/godot -- --voicecheck --require-webrtc` checks the codec, the room rules and two peers exchanging packets; `BOT_ONLY=voice pnpm godot:bot` checks the server side with two bots. **What to check by hand** (headless cannot hear): two devices in different places (one on mobile data if possible) hear each other; on a Mac the microphone prompt comes the first time the phone is picked up; two devices at the same Wi-Fi do not hear each other; hanging up and a dropped connection let go.
-
-The character creator (login screen, "Ny karaktär"): ![The character creator](packages/godot/docs/creator.png)
-
-Home and village (M4c): [the workbench](packages/godot/docs/m4c-workbench.png), [a fence that is not yours](packages/godot/docs/m4c-not-yours.png),
-[the farmhouse at night](packages/godot/docs/m4c-house-night.png), [the shop](packages/godot/docs/m4c-shop.png),
-[the wardrobe](packages/godot/docs/m4c-wardrobe.png), [Köpingen](packages/godot/docs/m4c-village.png),
-[the class stone](packages/godot/docs/m4c-class.png), [the Völvan](packages/godot/docs/m4c-volva.png) and [the gear window](packages/godot/docs/m4c-gear.png).
-
-Smedjan: [the forge window](packages/godot/docs/smedjan-forge.png), [two levels up](packages/godot/docs/smedjan-forge-level2.png), [the starter set Stina smiths](packages/godot/docs/smedjan-smith.png)
-and [the gear window with "Järnyxa +2"](packages/godot/docs/smedjan-gear.png). Paper and paint: [the paint screen](packages/godot/docs/paint-screen.png),
-[the paint screen at 175 % text](packages/godot/docs/paint-screen-175.png), [the forge at 175 % text](packages/godot/docs/smedjan-forge-175.png), [a painted tavla hung in its frame](packages/godot/docs/paint-frames.png), [a painted wall](packages/godot/docs/paint-walls.png) and [a painted farmhouse](packages/godot/docs/paint-house.png).
-
-Köpingen as a Viking market town (2026-11-07): cobblestone streets, flagstone pavements, pale slabs to cross on, timber houses and shops with
-hanging signs, the Vägvisare signposts and iron lanterns, and the horse cart, the riding horse and Diligensen instead of cars and a bus
-([the main street](packages/godot/docs/koepingen-street.png), [at night](packages/godot/docs/koepingen-street-night.png),
-[the houses and shops](packages/godot/docs/koepingen-houses.png), [the square](packages/godot/docs/koepingen-square.png),
-[the station](packages/godot/docs/koepingen-station.png), [the street on the Låg preset](packages/godot/docs/koepingen-street-lag.png), [what it looked like before](packages/godot/docs/koepingen-before.png) and
-[the browser's art for the same spot beside the native client](packages/godot/docs/koepingen-browser-vs-native.png), the left half drawn by the browser's own art code, not a screenshot of the running browser).
-
-![Köpingen's main street in the native client](packages/godot/docs/koepingen-street.png)
-
-Farming (M4b): [watering](packages/godot/docs/m4b-watering.png), [the bag and a chest](packages/godot/docs/m4b-bag-chest.png),
-[the bag from the demo](packages/godot/docs/m4b-bag-demo.png) [a bite](packages/godot/docs/m4b-fishing-bite.png) and [a wild fox petted](packages/godot/docs/m4b-pet.png).
-
-Night, rain and snow: [night](packages/godot/docs/m4a-farm-night.png), [rain](packages/godot/docs/m4a-farm-rain.png),
-[snow](packages/godot/docs/m4a-farm-snow.png); [the arch in the forest](packages/godot/docs/m4a-forest-arch.png).
-
-**Once per checkout.**
-
-1. Install [Godot 4.7](https://godotengine.org/download) (the standard build, not .NET). Any 4.7.x works for
-   editing; CI pins 4.7.2. Below, `godot` stands for the program: on Linux and Windows the one on your path, on a Mac
-   `/Applications/Godot.app/Contents/MacOS/Godot` (so `alias godot=/Applications/Godot.app/Contents/MacOS/Godot`
-   makes every command here work as written).
-2. Import the project once, from the repository's root: `godot --headless --path packages/godot --import` (or open
-   `packages/godot/project.godot` in the editor once and close it). The import builds Godot's class list and its
-   cache of the art in `packages/godot/.godot/` (not committed). Without it a fresh checkout does not know the scripts'
-   `class_name`s: `login.gd`, `world.gd` and others fail to load ("Parse Error: Cannot infer the type of …" in the
-   console) and the login screen's character button does nothing. Run it again after pulling new scripts.
-
-**Look at the farm without a server (demo mode):** `godot --path packages/godot -- --demo=farm` plays the recorded farm
-of `assets/fixtures/farm.json` (its field with crops, fences, animals, villagers and two friends in other outfits) and
-`--demo=forest` the forest with Draugkryptan's arch; both are made by `pnpm godot:fixture` from the shared world
-generator. `--time=0.9` (a fraction of the day: 0 sunrise, 0.4 midday, 0.9 night), `--weather=rain|snow|fog|storm|hail|wind`,
-`--season=jul|halloween|pask|midsommar`, `--at=x,y` and `--screenshot=file.png` set the picture. `-- --bench --scene=farm`
-(or `forest`) measures the farm as `--bench` measures the crypt.
-
-**Look at the dungeon without a server (demo mode):**
-
-1. `godot --path packages/godot -- --demo` (or open `packages/godot/project.godot` in Godot, press Play, and the
-   login screen comes up instead; the demo needs the command line). The recorded Draugkryptan of
-   `packages/godot/assets/fixtures/draug.json` is drawn with its monsters, and you walk in it with WASD, the arrows
-   or a gamepad's left stick; Escape or the start button opens the menu with the settings. Add `--at=24,53`
-   to start in the first monster room (`--demo=frost`, `--demo=surt` and `--demo=hel` are the next three dungeons), `--fight` to play a scripted fight with the mid-boss on the recording
-   (telegraphs of every shape, the boss bar and cast bar, hit numbers, a wipe, a chest with the loot window; no
-   server and no rules, only the pictures), and `--screenshot=/tmp/draug.png` to save a frame after 90 frames and quit.
-2. `godot --path packages/godot -- --bench` runs that scripted fight on each quality preset (a second of settling and
-   one unmeasured pass of the fight, then 10 s measured, so every preset is in steady state) and prints per preset the
-   average frame time and the 1 % low (the mean of the slowest 1 % of frames), the draw calls, primitives, lights and
-   shadow-casting lights, the render CPU and GPU milliseconds and the window's size in pixels, after the Godot version
-   and renderer; `--bench=mellan` runs one preset. F3 in the game shows the frame times live. It needs a window:
-   headless Godot renders nothing. `packages/godot/ART.md` ("Measured") keeps the numbers.
-
-**Run it against a server.** The server is the one in `packages/server` (`pnpm dev` starts it on port 8080). It refuses to start without a choice about access, and dies if
-`DATABASE_URL` points at a Postgres that is not running, so pick one of two recipes. Both set `DEV_TELEPORT=1`, which a normal game does not need:
-every dungeon has its own arch out in the world (see "Native client", M9a), and the switch only adds shortcuts for checking: the pause menu's "Gå in i …"
-entries ask the server to put you inside a dungeon at once, as its arch would, making you a Krigare first if you
-have no class; and the bots' dev messages (`dev starter` hands a hero with a class the starter weapon Smed-Stina's forge
-makes, `dev nextDay`, and `dev unlock`, which counts the chapters before the last as cleared so a check can use a later arch, and `dev kit` hands anyone the materials and kronor for two forge levels and a starter piece, two papers, two buckets of red paint and a run of wall pieces, for the smithy and paint checks). Never set it on the real farm.
-
-- *Throwaway, nothing to set up* (no password, no database, nothing saved; a home network only):
-
-  ```bash
-  pnpm install
-  ACCESS=open DEV_TELEPORT=1 DATABASE_URL= pnpm dev
-  ```
-
-  `ACCESS=open` turns the access control off, so there is no join code and no parent login (the client connects
-  without a device token). `DATABASE_URL=` (empty) makes the server keep everything in memory. It has to be said
-  out loud: `pnpm dev` also reads a `.env` in the repository's root if there is one, and a `.env` made from
-  `.env.example` points `DATABASE_URL` at the container's Postgres on port 5435, which is not running. What is set in
-  the shell wins over `.env`, empty values included.
-- *With join codes and a saved farm* (the way the real farm runs):
-
-  ```bash
-  pnpm install
-  pnpm db:up                       # Postgres in a container on port 5435 (podman or docker)
-  cp .env.example .env             # DATABASE_URL for that container; edit PARENT_PASSWORD, 12 characters or more
-  DEV_TELEPORT=1 pnpm dev
-  ```
-
-  or without a `.env`: `PARENT_PASSWORD=<12+ characters> DATABASE_URL=postgres://lilla_garden:lilla_garden@localhost:5435/lilla_garden DEV_TELEPORT=1 pnpm dev`.
-  Open the parent page at **`http://localhost:8080/admin`**, log in with `PARENT_PASSWORD` and make a join code.
-  The parent page and the whole API belong to the server on **8080**; use it for the parent page and for the native client.
-
-Then start the client:
-
-1. `godot --path packages/godot` (on a Mac: `/Applications/Godot.app/Contents/MacOS/Godot --path packages/godot`;
-   or press Play in the editor, once the project has been imported as above). If the login screen says "Servern svarar
-   inte på … Startade du den?", nothing answers on that address: the server is not running or died on start (look at
-   the terminal where `pnpm dev` runs), or the address is wrong.
-2. On the login screen, type the server's address: `http://localhost:8080` for a local server (plain `http`/`ws` is
-   only used for `localhost`; anything else becomes `https`/`wss`), or the real farm's address. With `ACCESS=open`
-   the server ignores the code, but the field must not be empty (type anything); otherwise it is the join code from the
-   parent page. Then what to call this computer, and press Kom in.
-3. A code the parent approves shows the 6-digit number; the client polls `/api/gate` every few seconds and goes on
-   to "Vem är du?" when the parent has approved the device. Pick a character, or press **Ny karaktär** to make one: a
-   name (up to 16 letters), skin, hair colour, hair style and shirt, each with the arrow buttons (mouse, touch or pad),
-   a live picture of the character, then **Skapa**. The new character is listed and selected; press its card to play
-   (the creator in [the picture](packages/godot/docs/creator.png)). A guest device may only make as many characters as
-   the parent allowed, and the farm holds eight; the creator says so in Swedish when it is refused.
-4. You start on the farm. Walk with WASD, the arrows or the left stick. Draugkryptan is reached the way the browser
-   did, so the character needs a class first, and **it is chosen at the Kämpastenen in Köpingen** (M4c): walk out
-   of the farm through the opening in the middle of the east edge (or take the bus: the stop north-east of the farm and
-   the one on the main street of the village, once you have been there), use the stone and pick a way; Völvan Sigrun
-   beside it tells the chapter and gives the reward. (On a server with `DEV_TELEPORT=1` the pause menu's "Gå in i …"
-   entries still make a character without a class a Krigare.) Then walk out of the farm through the opening in the middle of the
-   north edge (the client asks the server for the next map, as the browser does), through the forest, west through
-   the opening in the middle of that map's west edge, and in the forest beyond up to the stone arch with the glowing
-   doorway; press `E` facing it. The server generates the dungeon the normal way (`generateSaga`), sends it as
-   `areaData`, and the crypt appears with you at its start. Without a class the arch says so.
-   **At home and in the village** (M4c): the prompt under the tile says what the use key does ("E · Använd Arbetsbänk",
-   "E · Prata med Tant Greta"). *Workbench*: every recipe with its ingredients, what is missing in red, "Snickra". *Building*:
-   hold a placeable (a fence, a path, a wall, a chest, a lamp, an animal house…) and the outline shows its footprint, green
-   where the server would put it and red where not; use puts it down and it remembers who built it, the hammer takes it
-   down again, and someone else's build is refused ("Pappa byggde Staket"). *The farmhouse*: walk onto the door under the
-   roof and you are inside (the camera comes closer, the room is lit warm at night); the stove cooks ("Laga mat"), the bed
-   sleeps (E wakes you), the way out is the mat at the bottom. *The shop stand* (the Gårdsbutik): tabs, search, "Köp 1/5/10";
-   *the sell box*: "Sälj 1/alla" with what it fetches; *the wardrobe*: hats, shirts, pants and shoes you own (hair and skin
-   are chosen when the character is made, as in the browser). `G` (or the pause menu) opens the **gear window**: your class,
-   level, the weapon, shield and amulet you wear and carry (kraft, hälsa, skydd) and the **hero switch**, which puts the
-   class's clothes on out in the world and back; `J` lists the day's **önskningar**. *Villagers*: use the key facing one:
-   "Prata!" (stories, questions, jokes, riddles, sten sax påse) and their wishes, handed over with "Lämna".
-   **Smedjan**: Smed-Stina's window (in Köpingen) has a "🔨 Smedjan" button. *Förbättra* lists every weapon, shield and
-   amulet you wear or carry with its five stars, what it gives now and after one more level, what the level costs (each
-   material and the kronor green when you have enough, red when not) and the button that forges it; *Smid* is the starter
-   set she makes once for each hero. The server's refusals ("Du behöver mer: …", "Gå till Smed-Stina …") are the toasts.
-   The gear window shows a forged piece as "Järnyxa +2" with its stars.
-   **Paper and paint**: a paper used on nothing opens the **paint screen** (16 × 16 cells, the browser's twelve colours, a
-   brush, a fill and an eraser): drag with the mouse or the touchpad (a right press erases), or use the arrows / d-pad
-   to move the cursor and Enter, space or `A` to paint (held while moving it draws a line; the shoulder buttons and the
-   mouse wheel step through the colours). "Klar" turns the paper into a painted tavla (the bag slot shows its picture);
-   put it down and the frame on the wall shows the drawing. A **paint bucket** used on the farmhouse or a wall piece
-   colours it (a wall with every wall piece joined to it, as the server does).
-   **Farming** (M4b) works on the tile in front of you, which is outlined (green when something would happen) with the
-   action written under it ("E · Vattna"): `1`–`8` (the shoulder buttons `LB`/`RB`, the mouse wheel, `[` `]`) pick the
-   hotbar square; `E`, space, `A` or a click on a tile beside you use it. The hoe tills grass, seeds go in tilled soil, the
-   watering can waters (20 charges, refilled at the pond: face the water and use it; the number is on the hotbar), a ripe
-   crop is harvested whatever you hold, the scythe cuts grass, the axe chops trees and bushes, the pick breaks rocks,
-   the hammer takes down what you built and the brush grooms an animal. Walk over
-   what lies on the ground to pick it up. `Q` or `I` (`Y` on a pad) opens the bag: press one square and then another to
-   move the stack, "Sortera", "Håll", "Lägg ner"; face a chest and use it to open it beside the bag, with "Lägg i kistan".
-   Animals: use the tool-less hand or a brush on one to pet or groom it, hay feeds it, a ripe animal gives its egg or wool,
-   a new one asks for its name (OK keeps the suggestion, so a pad can do it), `X` (`R3`) tells your pets to stay and `V`
-   (`L3`) whistles for them, and a named horse can be ridden (use it again to get off). Fishing: hold the rod, face the
-   water, use it, wait for "Napp!" (the ring and the ❗) and use it again. Fiskar-Sven gives a rod for five wood (the
-   errand is a wish in his window.)
-5. **Fight.** `1`–`4` (gamepad `X`/`Y`/`B`/`RB`) are the Krigare's spells: Yxhugg, Stormsteg, Virvelvind,
-   Bärsärkaraseri, on the bar at the bottom with their cooldowns; `5` (`LB`) drinks a potion. The server picks the
-   monster (the nearest in reach, in sight for a ranged spell) unless you aim: click a monster, or Tab (d-pad right)
-   cycles the monsters near you; Escape lets go. `E`, space or the south button use what is in front of you (the
-   stairs, a chest, a rest stone, a plate; the prompt says what) and otherwise swing the axe. A boss marks its big
-   attacks on the floor in red, filling up until they land: step out. Its cast bar at the top says when Sköldslag,
-   Stormsteg or Isspjut can stop it (blue), and the spell's button lights up blue then. Numbers float up from hits,
-   monsters flash and poof, the one chasing you carries a warning sign. Fallen heroes lie down (a box counts down to
-   the rest stone; everyone fallen shows the pause and the walk back); chests open the loot window.
-6. `Enter` or `T` (Back on the gamepad) opens the chat with the ready-made phrases; `F` (d-pad up) the emote wheel.
-   Lines show as bubbles over heads and in the log in the corner.
-7. Escape → Inställningar (also a button on the login screen, so the text size can be set before the game starts). Four pages, all
-   applied at once and remembered in `settings.cfg`:
-   - *Bild*: *Grafik* Låg / Mellan / Hög (Mellan is the default; Låg is for a laptop with an Intel GPU), and under it the effects the
-     preset defines, one by one (*Vind*, *Vatten* with waves and reflections, *Eldflugor, fjärilar, löv, rök och dimma*, *Regn, snö och
-     hagel*, *Sparvar*; picking a preset resets them to its own), *Fönster / Hela skärmen*, *Hur skarp bilden är* (50–100 % of the preset's
-     3D resolution; the text stays sharp) and *Visa bildfrekvens (F3)*.
-   - *Ljud*: *Allt ljud*, *Strid, knappar och fanfarer*, *Stegljud*, *Omgivning* (birds, crickets, wind, rain, water, fire, the village's murmur)
-     and their *Ljudstyrka*, and, where Röstprat exists, how loud the others are. (The game has no music yet, so there is no music slider.)
-   - *Läsa och se*: *Hur stor texten är* 100 / 125 / 150 / 175 % (the HUD, windows, chat, hotbar, names over heads and floating numbers; the
-     sample line shows "Bärsärkaraseri"), *Färger för faror och hjärtan* (Vanliga / Rött och grönt är svårt / Blått och gult är svårt), *Ränder och
-     tjock kant på farliga ytor* (on by itself with a colour-blind choice) with a sample of danger, a safe place and full, half and low hearts, and
-     *Mindre skakningar och blixtar* (no camera shake, no lightning, a dimmer glow when a boss's attack lands).
-   - *Styrning*: *Trollformler: Knappar / Hjul* (the four spells on the face buttons, or one button, `RB`/`Q`, that opens a wheel you lean the stick
-     towards) and the Röstprat key (hold to talk; default `C`: press the button, then the key you want, `Esc` cancels).
-   Out in the world, wild animals run from you when you walk up to them and come back; stand still near one that has run off and it creeps up to you.
-   For pictures and checks, `--ui-scale=1.75`, `--colours=rg|tritan`, `--pattern`, `--reduce-motion` and `--res-scale=0.7` set a choice for that run only,
-   and `--settings-page=picture|sound|reading|controls` and `--open-npc=volva` (with `--demo`) open a window for a screenshot. `pnpm godot:bot` runs the
-   settings check (`BOT_ONLY=settings` for just that): about four seconds, no server needed.
-
-**Two players.** Start the server with `DEV_TELEPORT=1` and log two Godot clients in as above (two characters, two
-devices, or two bots) and go in through the menu or the arch. Both see each other's spells, the same monster health and
-the same telegraphs, because all of it is the server's.
-
-**Without a human (the bots).** A fourth bot, the farmer (`-- --farmbot`, `scripts/farm_bot.gd`), works a second in-memory
-server of its own (it rolls the day over with the dev message `{t:'dev',a:'nextDay'}`, which only `DEV_TELEPORT=1` accepts):
-it tills, plants, waters, waits for the carrot to grow, harvests, drops and picks up a carrot, chops trees and mines rocks,
-does Elsa's and Fiskar-Sven's errands, fills the can at the pond, fishes, opens the chest and moves a stack through the
-bag window, and pets a wild animal in the forest. Since M4c it also buys seeds and a hat, plants wheat, sells a carrot, hands in
-wishes through the villagers' windows, crafts fences, shows the placement preview, builds and takes a fence down, is refused on a
-neighbour's fence (`tools/friend.mts` is a second player that joins over the socket and builds first), walks through the farmhouse
-door and out, bakes bread at the stove, puts the hat on at the wardrobe, talks (a joke, a riddle, sten sax påse), walks to Köpingen,
-picks a class at the Kämpastenen, hears Völvan and takes her reward, buys and eats a pizza, equips the starter weapon, switches to
-hero and back, and rides the bus home and out again, all by pressing the same buttons a person would. Its report is checked against the
-server's own record of the player (bag, coins, stars, and what the HUD shows). `BOT_ONLY=farm GODOT=~/godot/godot pnpm godot:bot` runs it alone; with
-`BOT_FARM_SHOTS=dir` under `xvfb-run` it also saves pictures. A third bot of the fight takes the real way in: it walks across the farm, the forest and the forest
-beyond to the arch and uses it, and the check is that it arrives in `saga:draug` with the dev message never sent. `GODOT=~/godot/godot pnpm godot:bot` starts the server in memory (`ACCESS=open`,
-`DEV_TELEPORT=1`, no Postgres), runs two headless clients in bot mode (`-- --bot`: log in, enter, walk to the first
-pack, cast the four spells on cooldown, step out of telegraphs) and checks their reports against each other: casts
-acknowledged, each other's casts seen, monsters beaten, the same monster health at the same server tick. The Godot
-workflow runs it on every pull request. The pictures and benches under Xvfb (software GL, 20+ minutes) are a separate
-`pictures` job that runs only when the workflow is started by hand (Actions → Godot client → Run workflow).
-
-The client stores the server address, its device token, the quality preset, the input settings and the world's sound settings in `user://settings.cfg`
-(`~/.local/share/godot/app_userdata/Sagan om Världsträdet/` on Linux, `~/Library/Application Support/Godot/app_userdata/…`
-on macOS, `%APPDATA%\Godot\app_userdata\…` on Windows); "Glöm den här enheten" clears the device. The token is the
-same long random device token the browser keeps in its cookie, sent as `Authorization: Bearer` instead; the parent
-page shows the device like any other and can pause or remove it, which closes the game socket at once (code 4003) and
-sends the client back to the login screen. With `ACCESS=open` the server hands out no token and the client connects
-without one.
-
-**Generated files.** Every Swedish text comes from `packages/shared/src/sv.ts`; the client also reads object
-footprints and solidity, the dungeons' colours and names, the creatures, the classes, the spells, the bosses' moves,
-the saga's items and the chat phrases from the shared data, and the demo fixture from the shared dungeon generator. `pnpm godot:gen` writes all three (`assets/sv.json`, `assets/game.json`,
-`assets/fixtures/draug.json`; each also has its own script, `godot:strings`, `godot:data`, `godot:fixture`). Commit
-them; the Godot workflow fails when they are out of date. `pnpm godot:sprites` renders the pixel art in
-`packages/art/src` to the sheets in `assets/sprites` with Playwright's Chromium (it needs one; the sheets are
-committed, so CI does not run it), and `icons.png` with the spells' and emotes' emoji and the pictures of every item (the bag, the hotbar and the pick-up lines draw them).
-
-**Art.** Free CC0 packs only (the owner's decision of 2026-11-01): KayKit Dungeon Remastered for the crypt's walls,
-floor, torches, stairs, chests and candles, tinted to the palette in `ART.md`; KayKit Halloween Bits for the coffins, bones and rest shrines, and with Furniture
-Bits for some of the farm's props; what no reachable pack had (urn, gate) is made in code. `packages/godot/tools/fetch-assets.sh` downloads the whole packs,
-including the Kenney kits the build sandbox could not reach.
-
-**Builds.** `.github/workflows/godot.yml` checks the generated files, imports the project, runs the login scene, the
-Draugkryptan demo and the scripted fight headless for a moment (script errors fail there), runs the two bots against
-a server in memory (in Draugkryptan, and in each of the six dungeons after it, side by side), plays the bosses' moves of those six headless, and exports Windows x86_64, macOS universal,
-Linux x86_64 and Linux arm64 with Godot 4.7.2 and its export templates (downloaded by pinned URL and SHA-512, cached
-between runs). Every pull request runs it as a check (the exports are workflow artifacts), and a tag `v*` attaches the
-four zips to a GitHub Release. The macOS app is ad-hoc signed and not notarized: the first start needs right-click →
-Open.
-
 ## Who may enter (access control)
 
 Lilla Gården is a kids' game, so nobody gets in without a parent having said yes:
@@ -583,74 +236,21 @@ Lilla Gården is a kids' game, so nobody gets in without a parent having said ye
 11. **Web hardening**: `HttpOnly` + `SameSite=Strict` cookies (`Secure` over HTTPS), origin checks on every form and
     on the WebSocket, strict Content-Security-Policy, no framing, `noindex`, `/health` reveals nothing.
 
-A native client (the Godot game) cannot hold the cookie, so the same device token is also accepted as an
-`Authorization: Bearer` header on `/api/*` and on the game socket; `POST /api/join` answers it in JSON. The parent page
-stays cookie-only. See "Native login" in [DESIGN.md](DESIGN.md).
+
+The same device token is also accepted as an `Authorization: Bearer` header on `/api/*` and on the game socket (for bots and
+tests that have no cookie jar); `POST /api/join` answers it in JSON. The browser uses the cookie. The parent page
+stays cookie-only.
 
 There is still no text chat: players can only use emotes.
 
 ## Layout
 
-- `packages/shared` – game data, world simulation, Swedish strings (no I/O). The saga lives in
-  `saga.ts` (data, forge tables) and `sagasim.ts` (rules), the wild maps' landmarks in `landmarks.ts` (the table) and
-  `explore.ts` (discovery, seen, old saves). Vitest covers the sim.
-- `packages/server` – WebSocket game server (20 Hz), Postgres via Drizzle, `/api/players`, `/admin`, `/health`
-- `packages/godot` – the native client (Godot 4.7, GDScript): the login screen, the farm and the village, Draugkryptan and
-  the fights in it; `tools/` makes its generated files from the shared package, renders the sprite sheets and runs the
-  bots
-- `packages/art` – the pixel art, drawn in code (characters, animals, items, terrain); `pnpm godot:sprites` renders it to
-  `packages/godot/assets/sprites`, nothing runs it at play time. The browser clients (`packages/client`, `packages/clientljs`) were
-  removed in M5a (2026-11-02).
-
-## Controls
-
-The native client's keys and buttons, read from `packages/godot/project.godot` (the input map) and the scripts that
-use it. A gamepad and the keyboard work at the same time; the mouse is for clicking tiles, monsters and windows. The
-pause menu (`Esc` or Start) has the settings: graphics quality, **Trollformler** (spells on buttons, or one button and
-a wheel), the frame-rate counter and the world's sounds, plus the gear, quest, Gårdsbok, journal, family and help windows and "Röstprat".
-
-| | Keyboard and mouse | Gamepad (Xbox names; PlayStation: ✕ ○ □ △) |
-| --- | --- | --- |
-| Walk | `W` `A` `S` `D` or the arrow keys | left stick or the d-pad |
-| Run (1.7 times as fast as walking, no stamina; on a mount the mount's speed counts instead) | hold `Shift` | hold the left trigger, or `B` outside a fight (in a fight `B` is a spell) |
-| Use (talk, open, harvest, hit what is in front of you) | `E` or `Space`, or click a tile next to you | `A`, or the right trigger |
-| Choose tool (the hotbar, 8 squares) | `1`–`8`, the mouse wheel, `[` and `]`, or click a square | `LB` and `RB` |
-| Bag | `Q` or `I` (a click on the held square also opens it) | `Y` |
-| Pets stay / come back | `X` / `V` (the whistle), or the ✋ / 🎵 buttons on the right edge (shown once you have a pet or a horse) | press the right stick / the left stick |
-| Emotes | `F` opens the wheel; lean the mouse towards one and click | d-pad up opens the wheel; lean the stick, `A` picks |
-| Chat | `T` or `Enter`, type, `Enter` sends, `Esc` closes | `Back` / `Select` |
-| Gear and the day's wishes | `G` and `J` (also in the pause menu) | the pause menu's buttons |
-| Gårdsbok (the 78 achievements, with bars and stars) | `B` (again to close) | the pause menu: "Gårdsbok" |
-| Sagans dagbok (hero level, chapters, the nine dungeons with how to beat them and the family's best times, titles) and Upptäcktsboken (the landmarks found, with their lore): tabs of one window | `K`; the level chip at the top right opens it too | the pause menu: "Sagans dagbok" |
-| Familjen: who is online and where, "Hoppa till" a family member | `P`, or the 👪 button on the right edge | the pause menu: "Familjen" |
-| Hjälp (21 topics, the browser's texts) | `H` or `?`; `←` `→` change topic | the pause menu: "Hjälp" |
-| World map (fast travel; also in the pause menu) | `N`, then click a place you have been to (or move with the arrows and `Enter`) | the pause menu's "Karta", or `Share`/`Capture`; then the d-pad and `A` |
-| Minimap (the corner map) on / off | `M` (or the button in the world map) | the button in the world map |
-| Pause menu, close a window, drop the target | `Esc` | `Start` |
-| Talk on Röstprat (push-to-talk) | hold `C` (or choose the open microphone in the voice window) | |
-| Frame-rate counter | `F3` | |
-
-In a dungeon or a run the same keys fight:
-
-| | Keyboard and mouse | Gamepad |
-| --- | --- | --- |
-| Four spells of your class | `1`–`4` | `X`, `Y`, `B` and `RB` |
-| Spells on the wheel instead (Settings → Trollformler → Hjul) | hold `Q`, lean the mouse, let go | hold `RB`, lean the stick, let go |
-| Health potion | `5` | `LB` |
-| Aim at a monster, swing at it | click it, or `E`/`Space` for the nearest in reach | `A` / right trigger |
-| Next target | `Tab` | d-pad right |
-| Drop the target / pause | `Esc` | `Start` |
-
-Notes: the minimap is not on the d-pad's down, which the browser used: down also walks, so the map would flicker with every step. It is the key `M`, and a button in the world map for the pad. The world map is the pause menu's "Karta" for the pad (`Start`, then `A`), or the controller's extra button (`Share` / `Capture`, where it has one); the left trigger is the run button, so it is not the map's. Running is the browser game's 🏃 (there is no touch screen in the native client, so no on-screen run button); the left stick press is the pets' whistle, so it does not run as it did in the browser.
-
-The books and the other windows (Gårdsbok, journal, family, help) work with the keyboard (`Tab`/arrows move between the buttons, `Enter` presses, `Esc` or the same key closes), the mouse (click, wheel) and a pad (d-pad or left stick moves, `A` presses, `B` closes, the right stick scrolls a long page; in the help `←`/`→` or the d-pad change topic). The pad has no button free for them, so it opens them from the pause menu. Villagers show a yellow `!` (a new saga quest to take), a yellow `?` (to hand in), a red-orange `❗` (a wish of the day you can fill from your bag now), a plain `?` (a wish you cannot fill yet) and a dim `?` (a saga quest going on) over their heads, and say their lines when you come close; the saga's chapter and quests stay on the left of the screen once you have heard Völvan (click the header to fold them).
-
-Notes: running is the browser game's 🏃 (there is no touch screen in the native client, so no on-screen run button); the left stick press is the pets' whistle, so it does not run as it did in the browser. The d-pad is shared. Its four directions also walk, so d-pad up opens the emote wheel (and walks up) and, in a fight, d-pad right switches target (and walks right); use the left stick for walking if that is in the way. The hotbar numbers and the spell numbers share `1`–`4`, so outdoors on the farm they pick tools and in a
-dungeon they cast. The gamepad's `Y` is the bag on the farm and the second spell in a dungeon. The kids' setting
-**Hjul** keeps the face buttons free of the spells; the choice is saved per computer in `user://settings.cfg`. To pair a controller with a Mac or a PC use the system's Bluetooth settings.
+- `packages/shared` – game data, world simulation, Swedish strings (no I/O). The saga, runs (färd) and the open world live here too. Vitest covers the sim.
+- `packages/server` – WebSocket game server (20 Hz), Postgres via Drizzle, `/api/players`, `/admin`, `/health`, and the static server for the built game
+- `packages/clientljs` – the browser game's view: LittleJS (Vite) draws the world, dungeons and effects; `pnpm --filter @lilla-garden/clientljs build`
+- `packages/client` – the browser game's HUD, menus, saga windows, networking, sound, gamepad and voice, imported by clientljs as `@v1/...`
+- `packages/art` – the pixel art, drawn in code (characters, animals, items, terrain); the one place the art lives, imported by the client as `@art/...`
 
 ## Art
 
-The pixel art (terrain, objects, crops, animals, characters, icons) is drawn in code in `packages/art/src` and rendered
-once to sprite sheets for the native client (see "Generated files" above). The 3D crypt and the farm's world come from
-the free packs listed in `packages/godot/assets/LICENSES.md`.
+The pixel art is drawn in code in `packages/art/src` and rendered by the browser at start-up.

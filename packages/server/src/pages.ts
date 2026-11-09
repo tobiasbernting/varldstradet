@@ -1,5 +1,5 @@
-// Server-rendered pages around the game: the download page (/), the gate (/access), invite links (/join), the parent
-// login and the access sections of the parent page. Swedish, plain HTML, no external resources.
+// Server-rendered pages around the game: the gate (/access), invite links (/join), the parent login and the
+// access sections of the parent page. Swedish, plain HTML, no external resources.
 import { T, fmt as tfmt } from '../../shared/src/index.ts';
 import type { Access, Device, Gate, ParentSession } from './access.ts';
 import { otpauthUri } from './totp.ts';
@@ -93,70 +93,6 @@ const codeForm = (error: string): string => `${error ? `<p class="warn">${esc(er
 <p><label>${T.whoAreYou}<br><input name="name" maxlength="40" placeholder="T.ex. Kalle, iPad" autocomplete="off"></label></p>
 <p><button>${T.joinEnter}</button></p>
 </form>`;
-
-// ---- the download page ----
-
-/** The game's name on the download page (the working title from PLAN.md; the old browser game was "Lilla Gården"). */
-export const GAME_NAME = 'Sagan om Världsträdet';
-/** Where the builds live: the latest GitHub Release of this repository. */
-export const RELEASES_URL = 'https://github.com/tobiasbernting/varldstradet/releases';
-/**
- * The four builds, by the stable names the "Godot client" workflow gives its zips on a v* tag (no version in the
- * name), so that `releases/latest/download/<name>` always means the newest release.
- */
-export const DOWNLOADS: { file: string; label: string; note: string }[] = [
-  { file: 'varldstradet-windows-x86_64.zip', label: 'Windows', note: '64 bitar' },
-  { file: 'varldstradet-macos-universal.zip', label: 'Mac', note: 'både Apple-chip och Intel; första gången: högerklicka och välj Öppna' },
-  { file: 'varldstradet-linux-x86_64.zip', label: 'Linux', note: 'x86_64' },
-  { file: 'varldstradet-linux-arm64.zip', label: 'Linux (ARM)', note: 'arm64, t.ex. Raspberry Pi 5' },
-];
-
-export interface DownloadPageOptions {
-  /** The address players type into the game, e.g. https://gard.example.se */
-  origin: string;
-  /** With access control on, the code field and (for this device) its state; null when the server is open to all. */
-  access: { device: Device | null } | null;
-  parentLink: boolean;
-}
-
-/**
- * The web page of the game is only this: what it is, where to download it, the address to type into it and (with
- * access control) the code field, so that a parent can redeem a code from a phone and read the 6-digit number. It
- * needs no JavaScript.
- */
-export function downloadPage(nonce: string, o: DownloadPageOptions): string {
-  const links = DOWNLOADS.map(
-    (d) => `<li><a href="${RELEASES_URL}/latest/download/${d.file}"><strong>${esc(d.label)}</strong></a> <span class="muted">${esc(d.note)}</span></li>`,
-  ).join('\n');
-  let code = '';
-  if (o.access) {
-    const d = o.access.device;
-    if (d?.status === 'approved') {
-      code = `<div class="card"><h2>Den här enheten är med</h2><p>${esc(d.name)} är godkänd. Spela i spelet du laddat ner.</p></div>`;
-    } else if (d?.status === 'pending') {
-      code = `<div class="card"><h2>Väntar på en förälder</h2><p>${tfmt(esc(T.gatePending), { name: `<strong>${esc(d.name)}</strong>` })}</p>
-<p>${T.gatePendingCode}</p><p class="code">${spaced(d.code)}</p></div>`;
-    } else {
-      code = `<div class="card"><h2>Har du en kod?</h2>
-<p>${T.joinIntro} Är du godkänd visar den här sidan ett nummer med sex siffror som föräldern ser på sin sida.</p>
-${codeForm('')}</div>`;
-    }
-  }
-  const body = `<h1>🌳 ${GAME_NAME}</h1>
-<p>Ett äventyr för hela familjen: sköt gården på dagen och ge dig ut mot draugar och jättar tillsammans, 2–4 spelare.</p>
-<div class="card"><h2>Ladda ner spelet</h2>
-<ul>
-${links}
-</ul>
-<p class="muted">Packa upp och starta. Alla versioner och nyheter finns på <a href="${RELEASES_URL}/latest">senaste utgåvan</a>.</p></div>
-<div class="card"><h2>Servern</h2>
-<p>Första gången frågar spelet efter serverns adress. Skriv den här:</p>
-<p><code>${esc(o.origin)}</code></p>
-<p class="muted">Svarar den inte? Startade du servern?</p></div>
-${code}
-${o.parentLink ? '<p class="muted"><a href="/admin">Förälder? Logga in</a></p>' : ''}`;
-  return layout(GAME_NAME, body, nonce);
-}
 
 export function joinPage(nonce: string, error = ''): string {
   const body = `<h1>🌱 ${tfmt(T.joinWelcome, { title: T.title })}</h1>

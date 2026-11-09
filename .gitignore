@@ -4,8 +4,5 @@ dist/
 *.log
 .DS_Store
 .claude/
-# Godot exports (CI)
-build/
-
-# the webrtc-native GDExtension, fetched by tools/fetch-webrtc.sh (CI and developers)
-packages/godot/addons/
+packages/clientljs/dev-dist/
+packages/clientljs/public/icon-*.png
