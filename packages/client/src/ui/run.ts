@@ -56,13 +56,11 @@ import { KIND_COLOR, KIND_ICON, myRun, offerLeft, routeLeft, runClient, runElaps
 import { SFX } from '../sound.ts';
 import { bus, client, myPlayer } from '../state.ts';
 import { clear, h, onTap } from './dom.ts';
+import { announce } from './access.ts';
+import { cards } from './info.ts';
+import type { Info } from './info.ts';
 
-/** What the info card (tap and hold, the ? button, keyboard and gamepad focus) shows about a thing. */
-export interface Info {
-  icon: string;
-  name: string;
-  text: string;
-}
+export type { Info } from './info.ts';
 import './run.css';
 
 /** One picture for each chapter's dungeon. */
@@ -146,13 +144,15 @@ export class RunUi {
   private offerBars: { fill: HTMLElement; text: HTMLElement } | null = null;
 
   // explaining things, focus and the screen reader
-  private infoEl = h('div', { class: 'run-info', role: 'status', 'aria-live': 'polite' });
-  private infoFor: HTMLElement | null = null;
-  private infoMode = false;
-  private noTapUntil = 0;
+  // (the info card itself is ui/info.ts: the same card for the whole game)
+  private get infoMode(): boolean {
+    return cards.mode;
+  }
+  private set infoMode(v: boolean) {
+    cards.setMode(v);
+  }
   private opener: HTMLElement | null = null;
   private fresh = false;
-  private quiet = false;
   private live = h('div', { class: 'run-live', role: 'status', 'aria-live': 'polite' });
   private announced = '';
 
@@ -162,13 +162,12 @@ export class RunUi {
   ) {
     hudRoot.append(this.bar, this.vote, this.cardsBtn, this.runorStrip, this.note, this.live);
     this.bar.hidden = this.vote.hidden = this.cardsBtn.hidden = this.runorStrip.hidden = this.note.hidden = true;
-    this.infoEl.hidden = true;
-    ui.append(this.infoEl);
-    onTap(this.infoEl, () => this.hideInfo());
+    cards.onMode(() => {
+      if (!this.win && myRun()) this.sync();
+    });
     this.tap(this.cardsBtn, () => this.open('offer'));
     this.tap(this.runorStrip, () => this.open('runor'));
     this.info(this.runorStrip, '🎴', RUN_UI.runorHeld, RUN_UI.infoRunor);
-    this.setupInfo();
 
     bus.on('open', (c) => {
       if (c.ui === 'run') this.open('fard');
@@ -226,7 +225,7 @@ export class RunUi {
           list[(at + (e.shiftKey ? -1 : 1) + list.length) % list.length]!.focus();
         }
       } else if (e.key === 'Escape') {
-        if (this.infoFor && !this.infoEl.hidden) this.hideInfo();
+        if (cards.shown) this.hideInfo();
         else this.close();
       }
       else if (this.win === 'offer' && runClient.offer) {
@@ -246,89 +245,20 @@ export class RunUi {
 
   /** A tap: explains the thing instead of using it while the ? button is on, and is ignored right after a long press. */
   private tap(el: HTMLElement, fn: (ev: Event) => void): void {
-    onTap(el, (ev) => {
-      if (performance.now() < this.noTapUntil) return;
-      if (this.infoMode && el.dataset.infoName) {
-        this.showInfo(el);
-        return;
-      }
-      fn(ev);
-    });
+    cards.tap(el, fn);
   }
 
   /** Marks a thing as explainable: an icon, a name and one short sentence. */
   private info<E extends HTMLElement>(el: E, icon: string, name: string, text: string): E {
-    el.dataset.infoIcon = icon;
-    el.dataset.infoName = name;
-    el.dataset.infoText = text;
-    return el;
+    return cards.info(el, icon, name, text);
   }
 
   private showInfo(el: HTMLElement): void {
-    if (!el.dataset.infoName) return;
-    clear(this.infoEl);
-    this.infoEl.append(h('span', { class: 'ic' }, el.dataset.infoIcon ?? ''), h('div', { class: 'tx' }, h('b', null, el.dataset.infoName), h('span', null, el.dataset.infoText ?? '')), h('span', { class: 'dismiss' }, RUN_UI.dismiss));
-    // in a window the card sits in the window above the buttons (it never covers one); in the HUD it floats
-    const panel = this.modal?.querySelector('.panel');
-    if (panel) {
-      panel.insertBefore(this.infoEl, panel.querySelector('.foot'));
-      this.infoEl.classList.add('in-panel');
-    } else {
-      if (this.infoEl.parentElement !== this.ui) this.ui.append(this.infoEl);
-      this.infoEl.classList.remove('in-panel');
-    }
-    this.infoEl.hidden = false;
-    this.infoFor = el;
+    cards.show(el);
   }
 
   private hideInfo(): void {
-    this.infoEl.hidden = true;
-    this.infoFor = null;
-  }
-
-  /** The info card comes up on a long press, on keyboard focus and on the gamepad's focus ring. */
-  private setupInfo(): void {
-    const own = (el: EventTarget | null): HTMLElement | null => {
-      const t = (el as HTMLElement | null)?.closest?.('[data-info-name]') as HTMLElement | null;
-      return t && (this.ui.contains(t) || document.body.contains(t)) ? t : null;
-    };
-    let timer = 0;
-    document.addEventListener(
-      'pointerdown',
-      (e) => {
-        clearTimeout(timer);
-        const t = own(e.target);
-        if (!t) {
-          if (!(e.target as HTMLElement).closest?.('.run-info')) this.hideInfo();
-          return;
-        }
-        timer = window.setTimeout(() => {
-          this.noTapUntil = performance.now() + 800;
-          this.showInfo(t);
-        }, 450);
-      },
-      true,
-    );
-    for (const ev of ['pointerup', 'pointercancel', 'pointermove']) document.addEventListener(ev, () => clearTimeout(timer), true);
-    document.addEventListener('contextmenu', (e) => {
-      if (own(e.target)) e.preventDefault();
-    });
-    document.addEventListener('focusin', (e) => {
-      const t = own(e.target);
-      if (t && !this.quiet && (e.target as HTMLElement).matches?.(':focus-visible') && (this.modal?.contains(t) || this.bar.contains(t) || this.vote.contains(t) || this.runorStrip === t)) this.showInfo(t);
-    });
-    document.addEventListener('focusout', (e) => {
-      if (this.infoFor && e.target === this.infoFor) this.hideInfo();
-    });
-    // the gamepad moves a ring (the class pad-focus) instead of the browser's focus
-    new MutationObserver((muts) => {
-      for (const m of muts) {
-        const t = m.target as HTMLElement;
-        if (!t.dataset?.infoName) continue;
-        if (t.classList.contains('pad-focus')) this.showInfo(t);
-        else if (this.infoFor === t) this.hideInfo();
-      }
-    }).observe(this.ui, { attributes: true, attributeFilter: ['class'], subtree: true });
+    cards.hide();
   }
 
   /** A line for screen readers (and a quiet one for everybody: it sits out of sight). */
@@ -336,6 +266,7 @@ export class RunUi {
     if (text === this.announced) return;
     this.announced = text;
     this.live.textContent = text;
+    announce(text);
   }
 
   private focusables(): HTMLElement[] {
@@ -440,11 +371,8 @@ export class RunUi {
     const ask = h('button', { class: `round-btn${this.infoMode ? ' on' : ''}`, 'aria-label': RUN_UI.explain, 'aria-pressed': String(this.infoMode) }, '❔');
     onTap(ask, () => {
       this.infoMode = !this.infoMode;
-      if (this.infoMode) {
-        this.infoEl.hidden = false;
-        clear(this.infoEl);
-        this.infoEl.append(h('span', { class: 'ic' }, '❔'), h('div', { class: 'tx' }, h('b', null, RUN_UI.explain), h('span', null, RUN_UI.explainOn)));
-      } else this.hideInfo();
+      if (this.infoMode) cards.note('❔', RUN_UI.explain, RUN_UI.explainOn);
+      else this.hideInfo();
       this.sync();
     });
     this.info(ask, '❔', RUN_UI.explain, RUN_UI.explainOn);
@@ -623,13 +551,13 @@ export class RunUi {
     const now = this.focusables();
     if (this.fresh) {
       this.fresh = false;
-      this.quiet = true;
+      cards.quiet = true;
       (this.modal.querySelector<HTMLElement>('.tile.sel, .runa-card, button.go, .actions button, .foot button') ?? now.find((e) => !e.classList.contains('close')))?.focus({ preventScroll: true });
-      this.quiet = false;
+      cards.quiet = false;
     } else if (at >= 0) {
-      this.quiet = true;
+      cards.quiet = true;
       now[Math.min(at, now.length - 1)]?.focus({ preventScroll: true });
-      this.quiet = false;
+      cards.quiet = false;
     }
   }
 
@@ -733,7 +661,7 @@ export class RunUi {
         this.render();
       });
       b.addEventListener('focus', () => {
-        if (this.lookCls !== id && !this.quiet) {
+        if (this.lookCls !== id && !cards.quiet) {
           this.lookCls = id;
           this.render();
         }

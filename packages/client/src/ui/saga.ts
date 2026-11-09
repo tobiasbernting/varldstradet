@@ -6,6 +6,7 @@
 // Out in the world with hero mode on, the spell bar and your frame (hearts for health) and your target's come along,
 // and the gear window puts a weapon, an offhand and an amulet on the hero.
 import {
+  A11Y_T,
   ATTACK_KINDS,
   BLOCK_SPECIES,
   CLASSES,
@@ -25,6 +26,7 @@ import {
   SAGA_CHAPTERS,
   SAGA_QUESTS,
   SPELLS,
+  SPELL_LABEL,
   T,
   TILE,
   VOLVA_ID,
@@ -96,6 +98,9 @@ import { lootLookCard, rememberLooks, renderLooks, resetLooksWindow } from './lo
 import { SFX } from '../sound.ts';
 import { activeWorld, bus, client, myPlayer, serverNow } from '../state.ts';
 import { clear, h, onTap } from './dom.ts';
+import { announce } from './access.ts';
+import { cards } from './info.ts';
+import { currentDevice } from '../a11y.ts';
 import type { Menus } from './menus.ts';
 import './saga.css';
 
@@ -331,6 +336,10 @@ interface Slot {
   id: string;
   wasCooling: boolean;
   last: string;
+  /** The tag on the button (too far, can stop the boss, none left) and the words a screen reader says. */
+  tag: HTMLElement;
+  name: string;
+  text: string;
 }
 
 export class SagaUi {
@@ -352,8 +361,9 @@ export class SagaUi {
   private looksNote: string | null = null;
 
   private bar = h('div', { class: 'saga-bar' });
-  private tip = h('div', { class: 'saga-tip' });
   private slots: Slot[] = [];
+  private explainBtn: HTMLElement | null = null;
+  private castSaid = '';
   private barFor = '';
   private units = h('div', { class: 'saga-units' });
   private meFrame = new UnitView('saga-unit me');
@@ -375,6 +385,7 @@ export class SagaUi {
   private down = h('div', { class: 'saga-down' });
   private downSince = 0;
   private wasDown = false;
+  private wasFrozen = false;
   private tracker = h('div', { class: 'saga-tracker' });
   private trackerOpen = true;
   private hint = h('div', { class: 'saga-hint' });
@@ -389,12 +400,15 @@ export class SagaUi {
   ) {
     this.units.append(this.meFrame.el, this.targetFrame.el);
     this.castBar.append(this.castFill, this.castName);
-    this.bar.append(this.tip);
     hudRoot.append(this.party, this.units, this.boss, this.castBar, this.yellEl, this.bar, this.hint, this.tracker, this.down, this.banners);
     onTap(this.tracker, () => {
       this.trackerOpen = !this.trackerOpen;
       this.renderTracker();
     });
+    // the gamepad's face buttons (ui/gamepad.ts): a spell, or its card while the explain mode is on
+    document.addEventListener('lilla:spell', (e) => this.padPress((e as CustomEvent<number>).detail));
+    document.addEventListener('lilla:explain', () => this.setExplain(!cards.mode));
+    document.addEventListener('lilla:device', () => this.refreshLabels());
     // the family list sits with the chat button
     const fam = h('div', { class: 'round small', title: T.familyBtn }, '👪');
     onTap(fam, () => this.open('family'));
@@ -540,68 +554,77 @@ export class SagaUi {
   private buildBar(): void {
     for (const s of this.slots) s.el.remove();
     this.slots = [];
+    this.explainBtn?.remove();
+    this.explainBtn = null;
     const cls = myClass();
     this.barFor = fightMode() && cls ? cls.id : '';
     this.bar.hidden = !this.barFor;
     if (!cls || !this.barFor) return;
-    const add = (id: string, icon: HTMLElement, key: string, name: string, text: string, act: () => void, extra = ''): void => {
+    // the pad's buttons for each place on the bar (keys 1-5 on a keyboard)
+    const pad = ['X', 'Y', 'B', 'RB', 'LB'];
+    const add = (id: string, icon: HTMLElement, key: string, padKey: string, label: string, name: string, text: string, act: () => void, extra = ''): void => {
       const sweep = h('i', { class: 'sweep' });
       const num = h('b', { class: 'cd' });
-      const el = h('div', { class: `saga-spell${extra}` }, h('span', { class: 'ic' }, icon), sweep, num, h('span', { class: 'key' }, key));
-      this.pressable(el, act, () => this.showTip(el, name, text, key));
-      this.bar.insertBefore(el, this.tip);
-      this.slots.push({ el, sweep, num, id, wasCooling: false, last: '' });
+      const tag = h('span', { class: 'tag' });
+      const el = h('button', { class: `saga-spell${extra}`, type: 'button', 'aria-label': name }, h('span', { class: 'ic' }, icon), h('span', { class: 'lb' }, label), sweep, num, h('span', { class: 'key k' }, key), h('span', { class: 'key p' }, padKey), tag);
+      cards.info(el, '', name, text);
+      el.dataset.infoIcon = icon.textContent && !icon.querySelector('img') ? icon.textContent : '';
+      cards.press(el, act);
+      el.dataset.slot = String(this.slots.length);
+      this.bar.append(el);
+      this.slots.push({ el, sweep, num, id, wasCooling: false, last: '', tag, name, text });
     };
     cls.spells.forEach((id, i) => {
       const sp = SPELLS[id]!;
-      add(id, h('span', null, sp.icon), String(i + 1), sp.name, sp.text, () => castSlot(i));
+      add(id, h('span', null, sp.icon), String(i + 1), pad[i]!, SPELL_LABEL[id] ?? sp.name, sp.name, `${sp.text} ${this.numbers(sp)}`, () => castSlot(i));
     });
-    add('potion', itemIcon('healing_potion', '🧪'), '5', T.sagaPotionKey, sagaItem('healing_potion')?.text ?? '', drinkPotion, ' potion');
+    add('potion', itemIcon('healing_potion', '🧪'), '5', pad[4]!, A11Y_T.potion, T.sagaPotionKey, sagaItem('healing_potion')?.text ?? '', drinkPotion, ' potion');
     // touch screens have no Tab key: a button for the next monster
-    add('aim', h('span', null, '🎯'), '', T.sagaAimName, T.sagaAimText, cycleTarget, ' aim');
+    add('aim', h('span', null, '🎯'), 'Tab', '◀ ▶', A11Y_T.aim, T.sagaAimName, T.sagaAimText, cycleTarget, ' aim');
+    // "Förklara": while it is on a tap tells what a button does instead of doing it
+    const ex = h('button', { class: 'saga-spell explain', type: 'button', 'aria-label': A11Y_T.explain, 'aria-pressed': String(cards.mode) }, h('span', { class: 'ic' }, h('span', null, '❔')), h('span', { class: 'lb' }, A11Y_T.explain), h('span', { class: 'key p' }, 'R3'));
+    cards.info(ex, '❔', A11Y_T.explain, A11Y_T.explainBar);
+    onTap(ex, () => {
+      if (cards.suppressed()) return;
+      this.setExplain(!cards.mode);
+    });
+    this.explainBtn = ex;
+    this.bar.append(ex);
+    this.refreshLabels();
   }
 
-  /**
-   * A spell button: it fires the moment it is pressed, like the ✋ button (a small finger that holds the button or
-   * slides off it must still get its spell). Hovering, or holding a finger on it, shows what the spell does.
-   */
-  private pressable(el: HTMLElement, act: () => void, tip: () => void): void {
-    let timer = 0;
-    let held = false;
-    el.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      if (e.pointerType === 'mouse') {
-        if (e.button === 0) act();
-        return;
-      }
-      act();
-      held = true;
-      timer = window.setTimeout(tip, 420);
-    });
-    const release = (): void => {
-      if (!held) return;
-      held = false;
-      clearTimeout(timer);
-      this.tip.classList.remove('on');
-    };
-    el.addEventListener('pointerup', release);
-    el.addEventListener('pointercancel', release);
-    el.addEventListener('pointerenter', (e) => {
-      if (e.pointerType === 'mouse') tip();
-    });
-    el.addEventListener('pointerleave', (e) => {
-      if (e.pointerType === 'mouse') this.tip.classList.remove('on');
-      else release();
-    });
+  /** The explain mode on or off, with its card (and the pad and the button agreeing). */
+  private setExplain(on: boolean): void {
+    cards.setMode(on, on ? 10000 : 0);
+    if (on) cards.note('❔', A11Y_T.explain, A11Y_T.explainBar);
+    else cards.hide();
+    this.explainBtn?.setAttribute('aria-pressed', String(on));
+    this.explainBtn?.classList.toggle('on', on);
   }
 
-  private showTip(el: HTMLElement, name: string, text: string, key: string): void {
-    clear(this.tip);
-    this.tip.append(h('b', null, name), h('span', { class: 'k' }, key), h('div', null, text));
-    this.tip.classList.add('on');
-    const bar = this.bar.getBoundingClientRect();
-    const r = el.getBoundingClientRect();
-    this.tip.style.left = `${r.left + r.width / 2 - bar.left}px`;
+  /** Cooldown and reach as numbers for a card. */
+  private numbers(sp: { cd: number; range: number }): string {
+    return `${fmt(A11Y_T.cooldownIs, { n: Math.round(sp.cd / 100) / 10 })} ${sp.range > 0 ? fmt(A11Y_T.rangeIs, { n: sp.range }) : A11Y_T.rangeSelf}`;
+  }
+
+  /** The words a screen reader says about a button: its name, how to press it and what state it is in. */
+  private refreshLabels(): void {
+    const dev = currentDevice();
+    for (const s of this.slots) {
+      const i = Number(s.el.dataset.slot);
+      const how = dev === 'pad' ? fmt(A11Y_T.padIs, { key: ['X', 'Y', 'B', 'RB', 'LB', ''][Math.min(i, 5)]! }) : dev === 'key' || dev === 'mouse' ? (s.id === 'aim' ? 'Tab.' : fmt(A11Y_T.keyIs, { key: String(Math.min(i + 1, 5)) })) : '';
+      const st = s.el.classList.contains('cooling') ? fmt(A11Y_T.cooling, { n: s.num.textContent || '' }) : s.el.classList.contains('far') ? A11Y_T.far : s.el.classList.contains('off') ? A11Y_T.none : s.id === 'aim' ? '' : A11Y_T.ready;
+      s.el.setAttribute('aria-label', [s.name, st, how].filter(Boolean).join('. '));
+    }
+  }
+
+  /** The gamepad's face buttons: a spell goes off, or while the explain mode is on its card comes up. i is 0-3 spells, 4 the potion. */
+  private padPress(i: number): void {
+    const s = this.slots[i];
+    if (!s) return;
+    if (cards.mode) cards.show(s.el);
+    else if (i < 4) castSlot(i);
+    else drinkPotion();
   }
 
   /** Is the spell's target out of reach (or none in reach at all)? */
@@ -638,15 +661,24 @@ export class SagaUi {
       const stop = !!sp && kick && INTERRUPTS.has(sp.kind) && !cooling && !off;
       const state = `${+cooling}${+off}${+press}${+far}${+stop}${pots}`;
       if (cooling) s.sweep.style.setProperty('--p', `${(k * 100).toFixed(1)}%`);
-      if (num !== s.num.textContent) s.num.textContent = num;
+      if (num !== s.num.textContent) {
+        s.num.textContent = num;
+        if (cooling && cd.left % 5000 < 300) this.refreshLabels();
+      }
       if (state !== s.last) {
         s.last = state;
+        const none = pots <= 0;
         s.el.classList.toggle('cooling', cooling);
-        s.el.classList.toggle('off', off || pots <= 0);
+        s.el.classList.toggle('off', off || none);
         s.el.classList.toggle('press', press);
         s.el.classList.toggle('far', far);
         s.el.classList.toggle('kick', stop);
+        // a word on the button too, so no state is only a colour: too far away, can stop the boss, none left, fallen
+        const tag = none ? `✖ ${A11Y_T.none}` : off ? `✖ ${flagsOf(client.me) & FLAG.frozen ? A11Y_T.frozen : A11Y_T.down}` : stop ? `! ${A11Y_T.kick}` : far ? `↔ ${A11Y_T.far}` : '';
+        if (s.tag.textContent !== tag) s.tag.textContent = tag;
+        s.el.classList.toggle('tagged', !!tag);
         if (s.id === 'potion') s.el.dataset.n = String(pots);
+        this.refreshLabels();
       }
       if (s.wasCooling && !cooling) {
         // ready again: a quick shine
@@ -754,6 +786,12 @@ export class SagaUi {
     if (def.phases.length) this.bossPhase.append(fmt(T.sagaPhase, { n: b.phase + 1 }), ...[0, ...def.phases].map((_, i) => h('i', { class: i <= b.phase ? 'on' : '' })));
     const cast = b.cast;
     this.castBar.hidden = !cast;
+    // a screen reader hears what is coming (once for each wind-up)
+    const castKey = cast ? `${cast.name}:${cast.at}` : '';
+    if (castKey !== this.castSaid) {
+      this.castSaid = castKey;
+      if (cast) announce(fmt(cast.kick ? A11Y_T.annKick : A11Y_T.annBoss, { boss: def.name, move: cast.name }), true);
+    }
     if (cast) {
       this.castBar.classList.toggle('kick', cast.kick);
       const label = `${cast.kick ? '🛡️ ' : '⚠️ '}${cast.name}${cast.kick ? ` · ${T.sagaCanKick}` : ''}`;
@@ -882,8 +920,13 @@ export class SagaUi {
     if (isDown && !this.wasDown) {
       this.downSince = serverNow();
       SAGA_SFX.fall();
+      announce(A11Y_T.annDown, true);
+    } else if (frozen && !isDown && !this.wasFrozen) announce(A11Y_T.annFrozen, true);
+    if (!isDown && this.wasDown) {
+      SAGA_SFX.rise();
+      announce(A11Y_T.annUp);
     }
-    if (!isDown && this.wasDown) SAGA_SFX.rise();
+    this.wasFrozen = frozen;
     this.wasDown = isDown;
     this.down.hidden = !isDown && !frozen;
     // a spider's web holds you like the ice does

@@ -2,7 +2,7 @@
 <html lang="sv">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -16,7 +16,7 @@
     <div id="stage">
       <div id="ui"></div>
     </div>
-    <div id="rotate"><div>📱↻</div><p>Vänd plattan på längden</p></div>
+    <div id="rotate" role="dialog" aria-labelledby="rotate-text"><div class="ic" aria-hidden="true">📱↻</div><p id="rotate-text">Vänd plattan på längden</p><button id="rotate-go" type="button">Spela ändå</button></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

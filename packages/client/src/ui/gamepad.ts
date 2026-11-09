@@ -6,7 +6,8 @@
 // In a dungeon: X, Y, B and RB are spells 1–4, LB a potion, d-pad left/right the next monster, Select backpack,
 // LT/L3 runs.
 // Menus: stick/d-pad moves a highlight between buttons, A presses, B closes, right stick scrolls.
-import { castSlot, cycleTarget, drinkPotion, fightMode, inSaga } from '../saga.ts';
+import { cycleTarget, fightMode, inSaga } from '../saga.ts';
+import { setDevice } from '../a11y.ts';
 import { inOwnHouse, myPlayer } from '../state.ts';
 import type { Hud, HudTarget } from './hud.ts';
 import type { Menus } from './menus.ts';
@@ -22,7 +23,7 @@ const B = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, Back: 8, Start: 
 const DEAD = 0.2;
 const NAV_DELAY = 380;
 const NAV_REPEAT = 130;
-const FOCUSABLE = 'button:not(:disabled), input, select, textarea, .slot, .swatch, .card, .worldmap .cell.known';
+const FOCUSABLE = 'button:not(:disabled), input, select, textarea, [role=button]:not([aria-disabled=true]), [tabindex="0"], .slot, .swatch, .card, .worldmap .cell.known';
 
 function dead(v: number): number {
   const a = Math.abs(v);
@@ -59,6 +60,7 @@ export function initGamepad(opts: {
   function setActive(on: boolean): void {
     if (active === on) return;
     active = on;
+    if (on) setDevice('pad');
     if (!on) {
       stopPlaying();
       setFocus(null);
@@ -150,8 +152,10 @@ export function initGamepad(opts: {
     if (fightMode()) {
       // no hotbar in a fight (a dungeon, or hero mode out in the world): the face buttons are the spells, like the keys 1–4
       if (hit(B.A) || hit(B.RT)) t.act();
-      [B.X, B.Y, B.B, B.RB].forEach((b, i) => hit(b) && castSlot(i));
-      if (hit(B.LB)) drinkPotion();
+      // (the spell bar decides: a spell goes off, or its card comes up while the explain mode is on)
+      [B.X, B.Y, B.B, B.RB, B.LB].forEach((b, i) => hit(b) && document.dispatchEvent(new CustomEvent('lilla:spell', { detail: i })));
+      // R3 or up on the d-pad: the explain mode (the ? button)
+      if (hit(B.R3) || hit(B.Up)) document.dispatchEvent(new Event('lilla:explain'));
       if (hit(B.Left) || hit(B.Right)) cycleTarget();
       // Select: the backpack in a dungeon, the gear window out in the world
       if (hit(B.Back)) {

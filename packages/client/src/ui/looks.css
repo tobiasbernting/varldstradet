@@ -7,12 +7,12 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 16px;
+  font-size: calc(16px * var(--txt));
   line-height: 1.35;
   min-height: 0;
 }
 .looks button {
-  font-size: 16px;
+  font-size: calc(16px * var(--txt));
   min-height: 48px;
   min-width: 48px;
   padding: 6px 12px;
@@ -30,7 +30,7 @@
 .looks .intro,
 .looks .empty {
   margin: 4px 0;
-  font-size: 16px;
+  font-size: calc(16px * var(--txt));
 }
 .looks-head {
   display: flex;
@@ -52,7 +52,7 @@
   background: color-mix(in srgb, var(--c, #888) 55%, #1c1812);
 }
 .looks-classes .cls .em {
-  font-size: 22px;
+  font-size: calc(22px * var(--txt));
 }
 .looks-classes .cls.on,
 .looks-pages .pg.on,
@@ -100,7 +100,7 @@
 .looks-left .who .name {
   display: flex;
   flex-direction: column;
-  font-size: 18px;
+  font-size: calc(18px * var(--txt));
 }
 .look-detail {
   background: rgba(0, 0, 0, 0.22);
@@ -131,16 +131,16 @@
   gap: 2px;
 }
 .look-detail .nm {
-  font-size: 18px;
+  font-size: calc(18px * var(--txt));
 }
 .look-detail .tx,
 .look-detail .meta {
-  font-size: 16px;
+  font-size: calc(16px * var(--txt));
 }
 .look-detail .lines {
   margin: 0;
   padding: 0 0 0 18px;
-  font-size: 16px;
+  font-size: calc(16px * var(--txt));
 }
 .look-detail .lines li {
   margin: 2px 0;
@@ -198,11 +198,11 @@
 }
 .slot-sec h3 {
   margin: 4px 0;
-  font-size: 18px;
+  font-size: calc(18px * var(--txt));
 }
 .slot-sec h3 small {
   font-weight: 600;
-  font-size: 16px;
+  font-size: calc(16px * var(--txt));
 }
 .cards {
   display: flex;
@@ -233,7 +233,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
+  font-size: calc(28px * var(--txt));
 }
 .look-card .col {
   display: flex;
@@ -241,16 +241,16 @@
   min-width: 0;
 }
 .look-card .nm {
-  font-size: 16px;
+  font-size: calc(16px * var(--txt));
   line-height: 1.15;
 }
 .look-card .stars {
-  font-size: 16px;
+  font-size: calc(16px * var(--txt));
   color: #ffe9a8;
 }
 .look-card .stars.none,
 .look-card .state {
-  font-size: 16px;
+  font-size: calc(16px * var(--txt));
   color: #fff;
 }
 .look-card .state {
@@ -291,7 +291,7 @@
   position: relative;
   display: block;
   text-align: center;
-  font-size: 16px;
+  font-size: calc(16px * var(--txt));
   line-height: 22px;
   font-weight: 800;
   text-shadow: 0 1px 0 #000;
@@ -309,7 +309,7 @@
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.3);
   border: 3px solid #f2c33a;
-  font-size: 16px;
+  font-size: calc(16px * var(--txt));
 }
 .loot-look canvas {
   flex: none;
@@ -322,7 +322,7 @@
   gap: 3px;
 }
 .loot-look .nm {
-  font-size: 20px;
+  font-size: calc(20px * var(--txt));
 }
 .loot-look .stars {
   color: #ffe9a8;
@@ -330,7 +330,7 @@
 }
 .loot-look .wear-btn {
   min-height: 48px;
-  font-size: 16px;
+  font-size: calc(16px * var(--txt));
   width: auto;
   height: auto;
   margin-top: 4px;
@@ -354,11 +354,11 @@
   min-width: 48px;
   width: auto;
   height: auto;
-  font-size: 16px;
+  font-size: calc(16px * var(--txt));
   padding: 6px 12px;
 }
 .saga-panel.gear h2 button.close {
-  font-size: 20px;
+  font-size: calc(20px * var(--txt));
   padding: 6px 14px;
 }
 .saga-panel.gear button:focus-visible,
@@ -375,7 +375,7 @@
   color: #2b2419;
   border: 3px solid #f2c33a;
   border-radius: 10px;
-  font-size: 18px;
+  font-size: calc(18px * var(--txt));
   font-weight: 700;
 }
 
@@ -385,7 +385,7 @@
   gap: 8px;
   align-items: center;
   margin: 8px 0;
-  font-size: 16px;
+  font-size: calc(16px * var(--txt));
 }
 .look-summary .chip {
   display: inline-flex;

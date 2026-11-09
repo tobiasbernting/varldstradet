@@ -17,7 +17,7 @@ body.in-run .saga-tracker {
   padding: calc(1 * var(--u)) calc(2 * var(--u)) calc(1.2 * var(--u));
   color: #fff;
   font-weight: 800;
-  font-size: max(16px, calc(4 * var(--u)));
+  font-size: max(var(--fs), calc(4 * var(--u) * var(--txt)));
   pointer-events: auto;
 }
 .run-bar .line1 {
@@ -31,7 +31,7 @@ body.in-run .saga-tracker {
 }
 .run-bar .step {
   color: #d9cfe8;
-  font-size: max(16px, calc(3.4 * var(--u)));
+  font-size: max(var(--fs), calc(3.4 * var(--u) * var(--txt)));
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -63,7 +63,7 @@ body.in-run .saga-tracker {
   height: calc(8 * var(--u));
   padding: 0;
   border-radius: 50%;
-  font-size: max(16px, calc(4.6 * var(--u)));
+  font-size: max(var(--fs), calc(4.6 * var(--u) * var(--txt)));
   line-height: 1;
 }
 .run-bar .rail {
@@ -79,7 +79,7 @@ body.in-run .saga-tracker {
   justify-content: center;
   border-radius: calc(1.6 * var(--u));
   background: rgba(255, 255, 255, 0.1);
-  font-size: max(16px, calc(3.8 * var(--u)));
+  font-size: max(var(--fs), calc(3.8 * var(--u) * var(--txt)));
   color: #8a809a;
   --c: #ffd86a;
 }
@@ -135,7 +135,7 @@ body.in-run .saga-tracker {
   display: flex;
   justify-content: center;
   gap: calc(3 * var(--u));
-  font-size: max(16px, calc(5 * var(--u)));
+  font-size: max(var(--fs), calc(5 * var(--u) * var(--txt)));
   font-weight: 900;
   color: #ffe08a;
 }
@@ -167,19 +167,19 @@ body.in-run .saga-tracker {
   box-shadow: 0 0 calc(3 * var(--u)) var(--c);
 }
 .run-vote .choice .ic {
-  font-size: max(16px, calc(8 * var(--u)));
+  font-size: max(var(--fs), calc(8 * var(--u) * var(--txt)));
   line-height: 1.1;
 }
 .run-vote .choice .nm {
-  font-size: max(16px, calc(4 * var(--u)));
+  font-size: max(var(--fs), calc(4 * var(--u) * var(--txt)));
 }
 .run-vote .choice .who {
-  font-size: max(16px, calc(3.4 * var(--u)));
+  font-size: max(var(--fs), calc(3.4 * var(--u) * var(--txt)));
   color: #ffe98a;
   min-height: calc(4.2 * var(--u));
 }
 .run-vote .sub {
-  font-size: max(16px, calc(3.4 * var(--u)));
+  font-size: max(var(--fs), calc(3.4 * var(--u) * var(--txt)));
   color: #d9cfe8;
 }
 .run-cards-btn {
@@ -189,7 +189,7 @@ body.in-run .saga-tracker {
   transform: translateX(-50%);
   background: #e8b830;
   color: #2b2419;
-  font-size: max(16px, calc(5.5 * var(--u)));
+  font-size: max(var(--fs), calc(5.5 * var(--u) * var(--txt)));
   animation: run-pulse 1s ease-in-out infinite alternate;
 }
 @keyframes run-pulse {
@@ -209,7 +209,7 @@ body.in-run .saga-tracker {
   border-radius: calc(2.5 * var(--u));
   padding: calc(1 * var(--u));
   cursor: pointer;
-  font-size: max(16px, calc(5 * var(--u)));
+  font-size: max(var(--fs), calc(5 * var(--u) * var(--txt)));
 }
 .run-runor .r {
   line-height: 1;
@@ -225,7 +225,7 @@ body.in-run .saga-tracker {
   padding: calc(1.5 * var(--u)) calc(3 * var(--u));
   color: #fff3b0;
   font-weight: 900;
-  font-size: max(16px, calc(5 * var(--u)));
+  font-size: max(var(--fs), calc(5 * var(--u) * var(--txt)));
   pointer-events: none !important;
   text-align: center;
   max-width: calc(170 * var(--u));
@@ -246,23 +246,23 @@ body.saga-bossfight .run-vote {
 }
 .run-panel .intro {
   margin: 0 0 calc(2 * var(--u));
-  font-size: max(16px, calc(4.2 * var(--u)));
+  font-size: max(var(--fs), calc(4.2 * var(--u) * var(--txt)));
   color: #5a5040;
 }
 .run-panel .sect {
   margin: calc(2 * var(--u)) 0 calc(1 * var(--u));
   font-weight: 900;
-  font-size: max(16px, calc(4.8 * var(--u)));
+  font-size: max(var(--fs), calc(4.8 * var(--u) * var(--txt)));
 }
 .run-panel .hint {
   margin-top: calc(1.5 * var(--u));
-  font-size: max(16px, calc(4 * var(--u)));
+  font-size: max(var(--fs), calc(4 * var(--u) * var(--txt)));
   color: #8a4a1a;
   font-weight: 800;
   text-align: center;
 }
 .run-panel .small {
-  font-size: max(16px, calc(3.6 * var(--u)));
+  font-size: max(var(--fs), calc(3.6 * var(--u) * var(--txt)));
   color: #5a5040;
   font-weight: 700;
 }
@@ -274,7 +274,7 @@ body.saga-bossfight .run-vote {
   margin-top: calc(2 * var(--u));
 }
 .run-panel button.go {
-  font-size: max(16px, calc(6 * var(--u)));
+  font-size: max(var(--fs), calc(6 * var(--u) * var(--txt)));
   padding: calc(1.5 * var(--u)) calc(6 * var(--u));
   background: #4e9a2a;
 }
@@ -321,15 +321,15 @@ body.saga-bossfight .run-vote {
 }
 .run-panel .tile .ic {
   grid-area: ic;
-  font-size: max(16px, calc(8 * var(--u)));
+  font-size: max(var(--fs), calc(8 * var(--u) * var(--txt)));
 }
 .run-panel .tile .nm {
   grid-area: nm;
-  font-size: max(16px, calc(3.8 * var(--u)));
+  font-size: max(var(--fs), calc(3.8 * var(--u) * var(--txt)));
 }
 .run-panel .tile .st {
   grid-area: st;
-  font-size: max(16px, calc(3.2 * var(--u)));
+  font-size: max(var(--fs), calc(3.2 * var(--u) * var(--txt)));
   color: #6a5a30;
   min-height: calc(3.6 * var(--u));
 }
@@ -347,12 +347,12 @@ body.saga-bossfight .run-vote {
   justify-content: center;
 }
 .run-panel .tile.level .nm {
-  font-size: max(16px, calc(5 * var(--u)));
+  font-size: max(var(--fs), calc(5 * var(--u) * var(--txt)));
 }
 .run-panel .blurb {
   margin-top: calc(1.5 * var(--u));
   text-align: center;
-  font-size: max(16px, calc(4.2 * var(--u)));
+  font-size: max(var(--fs), calc(4.2 * var(--u) * var(--txt)));
   color: #5a5040;
   font-weight: 700;
 }
@@ -372,7 +372,7 @@ body.saga-bossfight .run-vote {
   border-radius: calc(2.5 * var(--u));
   padding: calc(1 * var(--u));
   font-weight: 800;
-  font-size: max(16px, calc(3.8 * var(--u)));
+  font-size: max(var(--fs), calc(3.8 * var(--u) * var(--txt)));
   text-align: center;
   line-height: 1.1;
 }
@@ -383,14 +383,14 @@ body.saga-bossfight .run-vote {
   object-fit: contain;
 }
 .run-panel .face .emo {
-  font-size: max(16px, calc(10 * var(--u)));
+  font-size: max(var(--fs), calc(10 * var(--u) * var(--txt)));
   line-height: calc(14 * var(--u));
 }
 .run-panel .face .cls {
   position: absolute;
   right: calc(1 * var(--u));
   top: calc(1 * var(--u));
-  font-size: max(16px, calc(5 * var(--u)));
+  font-size: max(var(--fs), calc(5 * var(--u) * var(--txt)));
 }
 .run-panel .runon {
   display: flex;
@@ -402,7 +402,7 @@ body.saga-bossfight .run-vote {
   margin-bottom: calc(2 * var(--u));
 }
 .run-panel .big {
-  font-size: max(16px, calc(12 * var(--u)));
+  font-size: max(var(--fs), calc(12 * var(--u) * var(--txt)));
   line-height: 1;
 }
 .run-panel .toggle.on {
@@ -443,25 +443,25 @@ body.saga-bossfight .run-vote {
   position: absolute;
   left: calc(1.5 * var(--u));
   top: calc(1 * var(--u));
-  font-size: max(16px, calc(3.4 * var(--u)));
+  font-size: max(var(--fs), calc(3.4 * var(--u) * var(--txt)));
   color: #8a7a50;
 }
 .runa-card .ic {
-  font-size: max(16px, calc(15 * var(--u)));
+  font-size: max(var(--fs), calc(15 * var(--u) * var(--txt)));
   line-height: 1.1;
 }
 .runa-card .nm {
-  font-size: max(16px, calc(5 * var(--u)));
+  font-size: max(var(--fs), calc(5 * var(--u) * var(--txt)));
   font-weight: 900;
 }
 .runa-card .tx {
-  font-size: max(16px, calc(4 * var(--u)));
+  font-size: max(var(--fs), calc(4 * var(--u) * var(--txt)));
   font-weight: 700;
   color: #4a4030;
   flex: 1;
 }
 .runa-card .for {
-  font-size: max(16px, calc(3.6 * var(--u)));
+  font-size: max(var(--fs), calc(3.6 * var(--u) * var(--txt)));
   color: #fff;
   background: var(--c);
   border-radius: calc(2 * var(--u));
@@ -479,7 +479,7 @@ body.saga-bossfight .run-vote {
   color: #ffe98a;
   border-radius: calc(2 * var(--u));
   padding: 0 calc(1.6 * var(--u));
-  font-size: max(16px, calc(3.4 * var(--u)));
+  font-size: max(var(--fs), calc(3.4 * var(--u) * var(--txt)));
 }
 .runa-card .votes .none {
   color: #b0a080;
@@ -494,7 +494,7 @@ body.saga-bossfight .run-vote {
   gap: calc(3 * var(--u));
   margin-top: calc(2.5 * var(--u));
   font-weight: 800;
-  font-size: max(16px, calc(4.2 * var(--u)));
+  font-size: max(var(--fs), calc(4.2 * var(--u) * var(--txt)));
 }
 .offer-foot .timer {
   flex: 1;
@@ -551,11 +551,11 @@ body.saga-bossfight .run-vote {
   opacity: 0.75;
 }
 .route-svg .em {
-  font-size: 17px;
+  font-size: calc(17px * var(--txt));
 }
 .route-svg .rownum {
   fill: #b8aad0;
-  font-size: 11px;
+  font-size: var(--fs);
   font-weight: 800;
 }
 .legend {
@@ -564,7 +564,7 @@ body.saga-bossfight .run-vote {
   justify-content: center;
   margin-top: calc(2 * var(--u));
   font-weight: 800;
-  font-size: max(16px, calc(4 * var(--u)));
+  font-size: max(var(--fs), calc(4 * var(--u) * var(--txt)));
 }
 
 /* the runor you hold */
@@ -576,7 +576,7 @@ body.saga-bossfight .run-vote {
   border-bottom: 1px solid var(--panel-dark);
 }
 .runor-list .ic {
-  font-size: max(16px, calc(8 * var(--u)));
+  font-size: max(var(--fs), calc(8 * var(--u) * var(--txt)));
 }
 .runor-list .nm {
   font-weight: 900;
@@ -585,7 +585,7 @@ body.saga-bossfight .run-vote {
 .runor-list .tx {
   flex: 1;
   color: #5a5040;
-  font-size: max(16px, calc(4 * var(--u)));
+  font-size: max(var(--fs), calc(4 * var(--u) * var(--txt)));
 }
 
 /* the summary */
@@ -593,15 +593,15 @@ body.saga-bossfight .run-vote {
   display: flex;
   flex-direction: column;
   align-items: center;
-  font-size: max(16px, calc(8 * var(--u)));
+  font-size: max(var(--fs), calc(8 * var(--u) * var(--txt)));
   gap: calc(0.5 * var(--u));
   margin-bottom: calc(2 * var(--u));
 }
 .run-panel .outcome .big {
-  font-size: max(16px, calc(18 * var(--u)));
+  font-size: max(var(--fs), calc(18 * var(--u) * var(--txt)));
 }
 .run-panel .outcome .where {
-  font-size: max(16px, calc(4.6 * var(--u)));
+  font-size: max(var(--fs), calc(4.6 * var(--u) * var(--txt)));
   color: #5a5040;
 }
 .run-panel .stats {
@@ -619,22 +619,22 @@ body.saga-bossfight .run-vote {
   line-height: 1.15;
 }
 .run-panel .stat .ic {
-  font-size: max(16px, calc(7 * var(--u)));
+  font-size: max(var(--fs), calc(7 * var(--u) * var(--txt)));
 }
 .run-panel .stat .lb {
-  font-size: max(16px, calc(3.4 * var(--u)));
+  font-size: max(var(--fs), calc(3.4 * var(--u) * var(--txt)));
   color: #5a5040;
   font-weight: 700;
 }
 .run-panel .stat .val {
-  font-size: max(16px, calc(6 * var(--u)));
+  font-size: max(var(--fs), calc(6 * var(--u) * var(--txt)));
 }
 .run-panel .trail {
   display: flex;
   gap: calc(2 * var(--u));
   align-items: center;
   margin-top: calc(2 * var(--u));
-  font-size: max(16px, calc(6 * var(--u)));
+  font-size: max(var(--fs), calc(6 * var(--u) * var(--txt)));
 }
 .run-panel .trail .path {
   display: flex;
@@ -661,7 +661,7 @@ body.saga-bossfight .run-vote {
 .treecol .bh {
   font-weight: 900;
   text-align: center;
-  font-size: max(16px, calc(4.4 * var(--u)));
+  font-size: max(var(--fs), calc(4.4 * var(--u) * var(--txt)));
 }
 .tnode {
   display: flex;
@@ -669,12 +669,12 @@ body.saga-bossfight .run-vote {
   gap: calc(1.5 * var(--u));
   background: #e8f2d6;
   color: var(--ink);
-  font-size: max(16px, calc(3.6 * var(--u)));
+  font-size: max(var(--fs), calc(3.6 * var(--u) * var(--txt)));
   text-align: left;
   padding: calc(1 * var(--u)) calc(1.5 * var(--u));
 }
 .tnode .ic {
-  font-size: max(16px, calc(6 * var(--u)));
+  font-size: max(var(--fs), calc(6 * var(--u) * var(--txt)));
 }
 .tnode .nm {
   flex: 1;
@@ -713,7 +713,7 @@ body.saga-bossfight .run-vote {
 .treeinfo .ti {
   display: flex;
   flex-direction: column;
-  font-size: max(16px, calc(4.4 * var(--u)));
+  font-size: max(var(--fs), calc(4.4 * var(--u) * var(--txt)));
 }
 
 /* small and upright screens: the windows take the width */
@@ -759,7 +759,7 @@ body.in-run .minimap:not([hidden]) ~ .saga-party {
   border-radius: calc(2 * var(--u));
   padding: 0 calc(2 * var(--u));
   font-weight: 800;
-  font-size: max(16px, calc(3.8 * var(--u)));
+  font-size: max(var(--fs), calc(3.8 * var(--u) * var(--txt)));
   white-space: nowrap;
 }
 .label.rune.on {
@@ -790,7 +790,7 @@ body.in-run .minimap:not([hidden]) ~ .saga-party {
 .label.rune,
 .runa-card .votes .v,
 .runa-card .key {
-  font-size: max(14px, calc(3.8 * var(--u)));
+  font-size: max(var(--fs), calc(3.8 * var(--u) * var(--txt)));
 }
 .run-bar .chip-btn,
 .run-bar .round-btn,
@@ -806,7 +806,7 @@ body.in-run .minimap:not([hidden]) ~ .saga-party {
   border-radius: 12px;
   box-shadow: none;
   padding: 0 10px;
-  font-size: max(16px, calc(4 * var(--u)));
+  font-size: max(var(--fs), calc(4 * var(--u) * var(--txt)));
   white-space: nowrap;
 }
 .run-bar .chip-btn.stop {
@@ -815,7 +815,7 @@ body.in-run .minimap:not([hidden]) ~ .saga-party {
 .run-bar .round-btn {
   width: 48px;
   height: 48px;
-  font-size: 24px;
+  font-size: calc(24px * var(--txt));
 }
 .run-bar .round-btn.on {
   background: #ffe08a;
@@ -827,7 +827,7 @@ body.in-run .minimap:not([hidden]) ~ .saga-party {
 }
 .run-bar .dot {
   height: 30px;
-  font-size: 18px;
+  font-size: calc(18px * var(--txt));
   min-width: 0;
 }
 /* the bar sits across the top, under the round buttons on a small screen, beside them on a big one */
@@ -897,7 +897,7 @@ body.in-run.touch .saga-boss {
   border: 2px solid #c8a95a;
   color: #fff;
   box-shadow: none;
-  font-size: 24px;
+  font-size: calc(24px * var(--txt));
 }
 .label.rune {
   background: #241a30;
@@ -940,10 +940,10 @@ body.in-run.touch .saga-boss {
 .runa-card .for,
 .run-panel .face,
 .runor-list .tx {
-  font-size: max(16px, calc(4 * var(--u)));
+  font-size: max(var(--fs), calc(4 * var(--u) * var(--txt)));
 }
 .run-panel .tile .nm {
-  font-size: max(17px, calc(4.4 * var(--u)));
+  font-size: max(calc(17px * var(--txt)), calc(4.4 * var(--u) * var(--txt)));
   font-weight: 900;
 }
 .run-panel .hint {
@@ -968,10 +968,10 @@ body.in-run.touch .saga-boss {
   border-radius: 10px;
   padding: 6px 12px;
   font-weight: 800;
-  font-size: max(16px, calc(4 * var(--u)));
+  font-size: max(var(--fs), calc(4 * var(--u) * var(--txt)));
 }
 .run-panel .legend-btn {
-  font-size: max(17px, calc(4.4 * var(--u)));
+  font-size: max(calc(17px * var(--txt)), calc(4.4 * var(--u) * var(--txt)));
 }
 .run-panel button.close {
   width: 48px;
@@ -1002,22 +1002,22 @@ body.in-run.touch .saga-boss {
   display: none;
 }
 .run-info .ic {
-  font-size: 44px;
+  font-size: calc(44px * var(--txt));
   line-height: 1;
 }
 .run-info .tx {
   display: flex;
   flex-direction: column;
   flex: 1;
-  font-size: 18px;
+  font-size: calc(18px * var(--txt));
   line-height: 1.25;
 }
 .run-info .tx b {
-  font-size: 22px;
+  font-size: calc(22px * var(--txt));
   color: #ffe08a;
 }
 .run-info .dismiss {
-  font-size: 14px;
+  font-size: var(--fs);
   color: #cfc4e0;
   align-self: flex-start;
 }
@@ -1057,7 +1057,7 @@ body.in-run.touch .saga-boss {
     align-items: center;
   }
   .runa-card .ic {
-    font-size: 36px;
+    font-size: calc(36px * var(--txt));
   }
   .runa-card .tx {
     flex-basis: 100%;
@@ -1079,22 +1079,22 @@ body.in-run.touch .saga-boss {
   flex: none;
 }
 .run-info.in-panel .ic {
-  font-size: 34px;
+  font-size: calc(34px * var(--txt));
 }
 .run-info.in-panel .tx {
-  font-size: 17px;
+  font-size: calc(17px * var(--txt));
 }
 .run-info.in-panel .tx b {
-  font-size: 19px;
+  font-size: calc(19px * var(--txt));
 }
 
 .run-panel button,
 .run-cards-btn,
 .run-runor {
-  font-size: max(16px, calc(4.5 * var(--u)));
+  font-size: max(var(--fs), calc(4.5 * var(--u) * var(--txt)));
 }
 .run-panel .tile .ic {
-  font-size: max(28px, calc(8 * var(--u)));
+  font-size: max(calc(28px * var(--txt)), calc(8 * var(--u) * var(--txt)));
 }
 
 .run-panel {
@@ -1119,15 +1119,15 @@ body.in-run.touch .saga-boss {
   border-color: var(--c);
   padding: 4px;
 }
-.run-panel .classcard .ic { font-size: max(26px, calc(8 * var(--u))); }
+.run-panel .classcard .ic { font-size: max(calc(26px * var(--txt)), calc(8 * var(--u) * var(--txt))); }
 .run-panel .classcard .nm { font-weight: 900; }
-.run-panel .classcard .role { font-size: max(14px, calc(3.6 * var(--u))); background: var(--c); color: #fff; border-radius: 8px; padding: 0 8px; }
+.run-panel .classcard .role { font-size: max(var(--fs), calc(3.6 * var(--u) * var(--txt))); background: var(--c); color: #fff; border-radius: 8px; padding: 0 8px; }
 .run-panel .classcard.sel { background: #fff3c0; box-shadow: 0 0 0 4px #d9a52a, 0 var(--u) 0 var(--ink); }
 .run-panel .spellrow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
 .run-panel .spell { display: flex; flex-direction: column; align-items: center; line-height: 1.1; padding: 2px; }
-.run-panel .spell .ic { font-size: 24px; }
-.run-panel .spell .nm { font-size: max(14px, calc(3.4 * var(--u))); }
-.run-panel .face .rolew { font-size: 14px; color: #5a5040; }
+.run-panel .spell .ic { font-size: calc(24px * var(--txt)); }
+.run-panel .spell .nm { font-size: max(var(--fs), calc(3.4 * var(--u) * var(--txt))); }
+.run-panel .face .rolew { font-size: var(--fs); color: #5a5040; }
 .run-bar .chip-btn.affix { background: #5a2a6a; }
 @media (max-width: 900px) {
   .run-panel .classes, .run-panel .spellrow { grid-template-columns: repeat(2, 1fr); }
@@ -1135,9 +1135,9 @@ body.in-run.touch .saga-boss {
 .run-panel .flash { bottom: auto; top: 56px; z-index: 5; }
 @media (max-height: 500px) {
   .run-info.in-panel { padding: 4px 10px; gap: 10px; }
-  .run-info.in-panel .ic { font-size: 26px; }
-  .run-info.in-panel .tx b { font-size: 17px; }
-  .run-info.in-panel .tx { font-size: 16px; line-height: 1.15; }
+  .run-info.in-panel .ic { font-size: calc(26px * var(--txt)); }
+  .run-info.in-panel .tx b { font-size: calc(17px * var(--txt)); }
+  .run-info.in-panel .tx { font-size: calc(16px * var(--txt)); line-height: 1.15; }
   .run-info.in-panel .dismiss { display: none; }
 }
 /* the way-on vote stays above the banners and the confetti */

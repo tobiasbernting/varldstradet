@@ -44,7 +44,7 @@ body {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  font-size: calc(5 * var(--u));
+  font-size: max(var(--fs), calc(5 * var(--u) * var(--txt)));
   line-height: 1.2;
 }
 #ui > * {
@@ -61,7 +61,7 @@ body {
   left: 0;
   top: 0;
   white-space: nowrap;
-  font-size: calc(4 * var(--u));
+  font-size: max(var(--fs), calc(4 * var(--u) * var(--txt)));
   font-weight: 800;
   color: #fff;
   text-shadow:
@@ -79,13 +79,13 @@ body {
 }
 .label.animal {
   color: #d8f5c8;
-  font-size: calc(3.5 * var(--u));
+  font-size: max(var(--fs), calc(3.5 * var(--u) * var(--txt)));
 }
 .label.bubble.emote {
-  font-size: calc(7 * var(--u));
+  font-size: max(var(--fs), calc(7 * var(--u) * var(--txt)));
 }
 .label.bubble.marker {
-  font-size: calc(6 * var(--u));
+  font-size: max(var(--fs), calc(6 * var(--u) * var(--txt)));
   color: var(--gold);
   background: #fff;
   animation: bob 1s infinite alternate ease-in-out;
@@ -99,7 +99,7 @@ body {
   }
 }
 .label.bubble {
-  font-size: calc(5 * var(--u));
+  font-size: max(var(--fs), calc(5 * var(--u) * var(--txt)));
   max-width: calc(90 * var(--u));
   white-space: normal;
   text-align: center;
@@ -125,12 +125,19 @@ body {
   font-size: 2rem;
   text-align: center;
 }
-#rotate div {
+#rotate .ic {
   font-size: 5rem;
 }
-@media (orientation: portrait) and (pointer: coarse) {
+#rotate p {
+  margin: 8px 16px 16px;
+}
+/* a phone held upright is the one place the game asks for a turn (a tablet works either way, and the player can dismiss it) */
+@media (orientation: portrait) and (pointer: coarse) and (max-width: 600px) {
   #rotate {
     display: flex;
+  }
+  html.rotate-off #rotate {
+    display: none;
   }
 }
 
@@ -149,7 +156,7 @@ body {
   border-radius: calc(3 * var(--u));
   padding: calc(1 * var(--u)) calc(2.5 * var(--u));
   font-weight: 800;
-  font-size: calc(5 * var(--u));
+  font-size: max(var(--fs), calc(5 * var(--u) * var(--txt)));
   display: flex;
   gap: calc(1.5 * var(--u));
   align-items: center;
@@ -171,7 +178,7 @@ body {
   border-radius: 50%;
   border: var(--u) solid var(--ink);
   background: var(--panel);
-  font-size: calc(7 * var(--u));
+  font-size: max(var(--fs), calc(7 * var(--u) * var(--txt)));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -181,7 +188,7 @@ body {
 .round.small {
   width: calc(10 * var(--u));
   height: calc(10 * var(--u));
-  font-size: calc(5 * var(--u));
+  font-size: max(var(--fs), calc(5 * var(--u) * var(--txt)));
   align-self: center;
 }
 .round:active {
@@ -235,7 +242,7 @@ body {
   position: absolute;
   right: calc(0.5 * var(--u));
   bottom: 0;
-  font-size: calc(4 * var(--u));
+  font-size: max(var(--fs), calc(4 * var(--u) * var(--txt)));
   font-weight: 900;
   color: #fff;
   text-shadow:
@@ -264,7 +271,7 @@ body {
   position: absolute;
   left: calc(0.5 * var(--u));
   top: 0;
-  font-size: calc(3 * var(--u));
+  font-size: max(var(--fs), calc(3 * var(--u) * var(--txt)));
   color: #777;
 }
 .hud-name {
@@ -272,7 +279,7 @@ body {
   left: 50%;
   bottom: calc(23 * var(--u));
   transform: translateX(-50%);
-  font-size: calc(4.5 * var(--u));
+  font-size: max(var(--fs), calc(4.5 * var(--u) * var(--txt)));
   font-weight: 800;
   color: #fff;
   text-shadow: 0 var(--u) 0 #000;
@@ -321,7 +328,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(9 * var(--u));
+  font-size: max(var(--fs), calc(9 * var(--u) * var(--txt)));
   color: #fff;
 }
 .act-btn:active {
@@ -351,7 +358,7 @@ body:not(.touch) .act-btn {
   border-radius: calc(3 * var(--u));
   padding: calc(1 * var(--u)) calc(3 * var(--u));
   font-weight: 800;
-  font-size: calc(4.5 * var(--u));
+  font-size: max(var(--fs), calc(4.5 * var(--u) * var(--txt)));
   animation: toast 3s forwards;
   white-space: nowrap;
 }
@@ -394,7 +401,7 @@ body:not(.touch) .act-btn {
 }
 .panel h2 {
   margin: 0;
-  font-size: calc(7 * var(--u));
+  font-size: max(var(--fs), calc(7 * var(--u) * var(--txt)));
   display: flex;
   align-items: center;
   gap: calc(2 * var(--u));
@@ -419,7 +426,7 @@ button {
   padding: calc(1 * var(--u)) calc(3 * var(--u));
   box-shadow: 0 var(--u) 0 var(--ink);
   cursor: pointer;
-  font-size: calc(4.5 * var(--u));
+  font-size: max(var(--fs), calc(4.5 * var(--u) * var(--txt)));
 }
 button:active {
   transform: translateY(var(--u));
@@ -469,7 +476,7 @@ button.close {
 .chip {
   background: var(--panel-dark);
   color: var(--ink);
-  font-size: calc(4 * var(--u));
+  font-size: max(var(--fs), calc(4 * var(--u) * var(--txt)));
   min-width: calc(10 * var(--u));
   min-height: calc(10 * var(--u));
   padding: calc(0.5 * var(--u)) calc(2 * var(--u));
@@ -480,7 +487,7 @@ button.close {
   color: #fff;
 }
 input[type='text'].search {
-  font-size: calc(5 * var(--u));
+  font-size: max(var(--fs), calc(5 * var(--u) * var(--txt)));
   height: calc(10 * var(--u));
   box-sizing: border-box;
   padding: 0 calc(2 * var(--u));
@@ -503,7 +510,7 @@ input[type='text'].search {
 }
 .hint.title-row button {
   min-height: calc(8 * var(--u));
-  font-size: calc(3.5 * var(--u));
+  font-size: max(var(--fs), calc(3.5 * var(--u) * var(--txt)));
 }
 .hint.section {
   font-weight: 800;
@@ -511,7 +518,7 @@ input[type='text'].search {
 }
 .picked-name {
   font-weight: 800;
-  font-size: calc(4.5 * var(--u));
+  font-size: max(var(--fs), calc(4.5 * var(--u) * var(--txt)));
   align-self: center;
 }
 .row .tag {
@@ -521,12 +528,12 @@ input[type='text'].search {
   border-radius: calc(2 * var(--u));
   background: var(--accent);
   color: #fff;
-  font-size: calc(3 * var(--u));
+  font-size: max(var(--fs), calc(3 * var(--u) * var(--txt)));
   font-weight: 800;
   vertical-align: middle;
 }
 .row .have {
-  font-size: calc(4 * var(--u));
+  font-size: max(var(--fs), calc(4 * var(--u) * var(--txt)));
   font-weight: 700;
   color: #7a6a4a;
   white-space: nowrap;
@@ -567,7 +574,7 @@ input[type='text'].search {
   white-space: nowrap;
 }
 .row .need {
-  font-size: calc(4 * var(--u));
+  font-size: max(var(--fs), calc(4 * var(--u) * var(--txt)));
   color: #555;
 }
 .row .need.ok {
@@ -580,7 +587,7 @@ input[type='text'].search {
   opacity: 0.6;
 }
 .hint {
-  font-size: calc(4 * var(--u));
+  font-size: max(var(--fs), calc(4 * var(--u) * var(--txt)));
   color: #5a5040;
 }
 .emotes {
@@ -589,13 +596,13 @@ input[type='text'].search {
   gap: calc(2 * var(--u));
 }
 .emotes button {
-  font-size: calc(12 * var(--u));
+  font-size: max(var(--fs), calc(12 * var(--u) * var(--txt)));
   padding: calc(2 * var(--u));
   background: var(--panel-dark);
 }
 input[type='text'] {
   font: inherit;
-  font-size: calc(6 * var(--u));
+  font-size: max(var(--fs), calc(6 * var(--u) * var(--txt)));
   padding: calc(1.5 * var(--u)) calc(2 * var(--u));
   border: var(--u) solid var(--ink);
   border-radius: calc(2 * var(--u));
@@ -644,7 +651,7 @@ input[type='text'] {
 .picker h1 {
   margin: 0;
   color: #fff;
-  font-size: calc(12 * var(--u));
+  font-size: max(var(--fs), calc(12 * var(--u) * var(--txt)));
   text-shadow: 0 var(--u) 0 var(--ink);
 }
 .cards {
@@ -674,11 +681,11 @@ input[type='text'] {
 .card.new {
   background: var(--panel-dark);
   justify-content: center;
-  font-size: calc(10 * var(--u));
+  font-size: max(var(--fs), calc(10 * var(--u) * var(--txt)));
 }
 .card .nm {
   font-weight: 900;
-  font-size: calc(5 * var(--u));
+  font-size: max(var(--fs), calc(5 * var(--u) * var(--txt)));
 }
 .card.last {
   box-shadow: 0 0 0 calc(1.5 * var(--u)) var(--gold), 0 calc(1.5 * var(--u)) 0 var(--ink);
@@ -707,7 +714,7 @@ input[type='text'] {
 }
 .creator label {
   font-weight: 800;
-  font-size: calc(4.5 * var(--u));
+  font-size: max(var(--fs), calc(4.5 * var(--u) * var(--txt)));
 }
 
 /* ---- help ---- */
@@ -715,7 +722,7 @@ input[type='text'] {
   margin: 0 0 var(--u);
   font-weight: 800;
   color: #5a5040;
-  font-size: calc(4.5 * var(--u));
+  font-size: max(var(--fs), calc(4.5 * var(--u) * var(--txt)));
 }
 .help-steps {
   margin: 0;
@@ -734,7 +741,7 @@ input[type='text'] {
   background: var(--panel-dark);
   border-radius: calc(2 * var(--u));
   padding: var(--u) calc(2 * var(--u));
-  font-size: calc(4.5 * var(--u));
+  font-size: max(var(--fs), calc(4.5 * var(--u) * var(--txt)));
   line-height: 1.3;
 }
 .help-steps li::before {
@@ -749,7 +756,7 @@ input[type='text'] {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(4 * var(--u));
+  font-size: max(var(--fs), calc(4 * var(--u) * var(--txt)));
 }
 .help-icon {
   width: calc(14 * var(--u));
@@ -768,7 +775,7 @@ input[type='text'] {
   object-fit: contain;
 }
 .help-icon.emoji {
-  font-size: calc(8 * var(--u));
+  font-size: max(var(--fs), calc(8 * var(--u) * var(--txt)));
 }
 
 /* ---- villagers ---- */
@@ -785,7 +792,7 @@ input[type='text'] {
   border-radius: calc(3 * var(--u));
   padding: calc(2 * var(--u)) calc(3 * var(--u));
   font-weight: 800;
-  font-size: calc(5 * var(--u));
+  font-size: max(var(--fs), calc(5 * var(--u) * var(--txt)));
   position: relative;
 }
 .bubble-text::before {
@@ -805,7 +812,7 @@ input[type='text'] {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(8 * var(--u));
+  font-size: max(var(--fs), calc(8 * var(--u) * var(--txt)));
 }
 .row .badge img {
   width: calc(12 * var(--u));
@@ -843,7 +850,7 @@ input[type='text'] {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(8 * var(--u));
+  font-size: max(var(--fs), calc(8 * var(--u) * var(--txt)));
 }
 .run-btn:active {
   transform: translateY(calc(1.5 * var(--u)));
@@ -869,7 +876,7 @@ body:not(.touch) .run-btn {
   image-rendering: pixelated;
 }
 .chip.hearts {
-  font-size: calc(4.5 * var(--u));
+  font-size: max(var(--fs), calc(4.5 * var(--u) * var(--txt)));
   letter-spacing: calc(-0.5 * var(--u));
 }
 .label.animal.mob {
@@ -894,11 +901,11 @@ body:not(.touch) .run-btn {
   opacity: 0.6;
 }
 .worldmap .cell .em {
-  font-size: calc(6 * var(--u));
+  font-size: max(var(--fs), calc(6 * var(--u) * var(--txt)));
   line-height: 1;
 }
 .worldmap .cell .nm {
-  font-size: calc(3 * var(--u));
+  font-size: max(var(--fs), calc(3 * var(--u) * var(--txt)));
   font-weight: 800;
 }
 .worldmap .cell.known {
@@ -1067,7 +1074,7 @@ body:not(.touch) .run-btn {
   right: 0;
   top: 55%;
   text-align: center;
-  font-size: calc(8 * var(--u));
+  font-size: max(var(--fs), calc(8 * var(--u) * var(--txt)));
   color: #fff;
   text-shadow: 0 calc(1 * var(--u)) 0 var(--ink), 0 0 calc(3 * var(--u)) rgba(0, 0, 0, 0.5);
 }
@@ -1159,7 +1166,7 @@ body:not(.touch) .run-btn {
   transform: translateX(-50%);
   font-style: normal;
   font-weight: 800;
-  font-size: calc(2.6 * var(--u));
+  font-size: max(var(--fs), calc(2.6 * var(--u) * var(--txt)));
   color: #fff;
   text-shadow: 0 calc(0.5 * var(--u)) 0 #000;
   white-space: nowrap;
@@ -1186,7 +1193,7 @@ body.touch .round.pet-btn i {
   color: #fff;
   border-radius: calc(2 * var(--u));
   padding: calc(0.5 * var(--u)) calc(1.5 * var(--u));
-  font-size: calc(3.6 * var(--u));
+  font-size: max(var(--fs), calc(3.6 * var(--u) * var(--txt)));
   font-weight: 700;
   overflow-wrap: anywhere;
   transition: opacity 0.6s;
@@ -1222,7 +1229,7 @@ body.touch .round.pet-btn i {
   gap: var(--u);
 }
 .chat-phrases button {
-  font-size: calc(3.8 * var(--u));
+  font-size: max(var(--fs), calc(3.8 * var(--u) * var(--txt)));
   padding: calc(0.5 * var(--u)) calc(2 * var(--u));
 }
 .chat-row {
@@ -1238,11 +1245,11 @@ body.touch .round.pet-btn i {
   -webkit-user-select: text;
 }
 .label.bubble.chat {
-  font-size: calc(4 * var(--u));
+  font-size: max(var(--fs), calc(4 * var(--u) * var(--txt)));
   max-width: calc(70 * var(--u));
 }
 .talk-said {
-  font-size: calc(4 * var(--u));
+  font-size: max(var(--fs), calc(4 * var(--u) * var(--txt)));
   font-style: italic;
   color: #6a5a40;
   margin: 0 0 var(--u) calc(30 * var(--u));
@@ -1254,7 +1261,7 @@ body.touch .round.pet-btn i {
 }
 .talk-opts button {
   text-align: left;
-  font-size: calc(4.2 * var(--u));
+  font-size: max(var(--fs), calc(4.2 * var(--u) * var(--txt)));
   padding: calc(1.5 * var(--u)) calc(2.5 * var(--u));
 }
 .talk-opts button.bye {
@@ -1292,11 +1299,11 @@ body.touch .round.pet-btn i {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: calc(4.5 * var(--u));
+  font-size: max(var(--fs), calc(4.5 * var(--u) * var(--txt)));
 }
 .voice-hint,
 .voice-status {
-  font-size: calc(3.6 * var(--u));
+  font-size: max(var(--fs), calc(3.6 * var(--u) * var(--txt)));
   color: #6a5a40;
   margin: 0;
 }
@@ -1322,7 +1329,7 @@ body.touch .round.pet-btn i {
   display: flex;
   flex-wrap: wrap;
   gap: var(--u) calc(2 * var(--u));
-  font-size: calc(4 * var(--u));
+  font-size: max(var(--fs), calc(4 * var(--u) * var(--txt)));
 }
 .voice-member.speaker {
   font-weight: 800;
@@ -1336,15 +1343,15 @@ body.touch .round.pet-btn i {
   gap: var(--u);
 }
 .voice-row button {
-  font-size: calc(3.8 * var(--u));
+  font-size: max(var(--fs), calc(3.8 * var(--u) * var(--txt)));
   padding: calc(0.5 * var(--u)) calc(2 * var(--u));
 }
 .voice-row button.small {
-  font-size: calc(3.4 * var(--u));
+  font-size: max(var(--fs), calc(3.4 * var(--u) * var(--txt)));
 }
 .voice-others {
   margin-top: calc(1.5 * var(--u));
-  font-size: calc(4 * var(--u));
+  font-size: max(var(--fs), calc(4 * var(--u) * var(--txt)));
 }
 .label.talking::before {
   content: '🔊 ';
@@ -1363,10 +1370,10 @@ body.touch .round.pet-btn i {
   align-items: center;
   gap: calc(2 * var(--u));
   padding: calc(4 * var(--u)) calc(8 * var(--u));
-  font-size: calc(6 * var(--u));
+  font-size: max(var(--fs), calc(6 * var(--u) * var(--txt)));
 }
 .kennel-card .em {
-  font-size: calc(22 * var(--u));
+  font-size: max(var(--fs), calc(22 * var(--u) * var(--txt)));
   line-height: 1;
 }
 
