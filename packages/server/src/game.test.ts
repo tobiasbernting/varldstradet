@@ -152,7 +152,7 @@ describe('cave and dropped connections', () => {
     }
   });
 
-  it('Smedjan: forge and craft messages reach Stina, with a toast for a refusal', async () => {
+  it('Smedjan: craft messages reach Stina, with a toast for a refusal', async () => {
     const game = new Game(new MemoryStore(), { autoStart: false });
     await game.start();
     const a = game.createPlayer('Astrid', { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' })!;
@@ -163,7 +163,7 @@ describe('cave and dropped connections', () => {
     p.saga = { cls: 'krigare', chapter: 1, heard: true, cleared: [], titles: [], quests: {}, done: [], found: [], gear: { weapon: 'runsvard' } };
     const toasts = (): string[] => la.msgs.flatMap((m) => (m.t === 'changes' ? m.changes.filter((c): c is Extract<Change, { t: 'toast' }> => c.t === 'toast').map((c) => c.text) : []));
     // at home, far from Stina
-    ha({ t: 'saga', a: 'forge', item: 'runsvard' });
+    ha({ t: 'saga', a: 'craft', item: 'jarnsvard' });
     expect(toasts().some((t) => t.includes('Smed-Stina'))).toBe(true);
     // by her side, with what it costs
     const town = getArea(game.world, VILLAGE_KEY)!;
@@ -171,11 +171,9 @@ describe('cave and dropped connections', () => {
     placeIn(game.world, p, VILLAGE_KEY, Math.floor(st.x / TILE), Math.floor(st.y / TILE) + 1, 'up', []);
     p.x = st.x;
     p.y = st.y + TILE;
-    addItem(p.inventory, 'stone', 14);
-    addItem(p.inventory, 'gold', 7);
-    p.coins = 100;
-    ha({ t: 'saga', a: 'forge', item: 'runsvard' });
-    expect(p.saga.forge).toEqual({ runsvard: 1 });
+    addItem(p.inventory, 'stone', 8);
+    addItem(p.inventory, 'gold', 4);
+    p.coins = 60;
     ha({ t: 'saga', a: 'craft', item: 'jarnsvard' });
     expect(p.inventory.some((s) => s?.item === 'jarnsvard')).toBe(true);
     expect(p.coins).toBe(0);

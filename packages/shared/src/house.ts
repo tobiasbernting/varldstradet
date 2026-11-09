@@ -5,6 +5,7 @@ import { AREA_GEN } from './biomes.ts';
 import { HOUSE_DOOR, addObject, emptyWorld, objectAt, removeObject } from './map.ts';
 import { ITEMS, NORSE_DECOR, TROPHY_LEVELS, TROPHY_PREFIX } from './data.ts';
 import { DUNGEONS, sagaItem } from './saga.ts';
+import { LOOK_T, hasLooks, lookPiece, standData, standLook } from './looks.ts';
 import { HOUSE_ROOM, HOUSE_EXIT, HOUSE_H, HOUSE_W, homeKey, isHomeKey, ownerOfHome } from './homekeys.ts';
 import { TILE } from './types.ts';
 import { HOUSE_T, T, TROPHY_LEVEL_NAMES, fmt, houseTitle, itemName } from './sv.ts';
@@ -193,6 +194,13 @@ export const displayable = (id: string): boolean => {
 /** Press on the stand holding a weapon, a shield or an amulet: it stands there (what was on it comes back). Empty-handed: take it back. */
 export function standAct(world: WorldState, p: PlayerState, obj: WorldObject, held: ItemStack | null, out: Change[]): void {
   const shown = obj.data;
+  const look = standLook(shown);
+  // a look from the collection (Garderoben) stands there without taking anything out of a bag: empty-handed, the owner picks which
+  if (!(held && displayable(held.item)) && (look || (!shown && hasLooks(p.saga))) && !isGuestHere(world, p)) {
+    out.push({ t: 'open', to: p.id, ui: 'looks', id: obj.id });
+    return;
+  }
+  if (look) return; // (a guest only looks)
   if (held && displayable(held.item)) {
     const mine = held.item;
     held.count -= 1;
@@ -209,6 +217,19 @@ export function standAct(world: WorldState, p: PlayerState, obj: WorldObject, he
     return;
   }
   out.push(toast(p.id, HOUSE_T.standNone));
+}
+
+/** The owner picks a look from their collection for a gear stand of their house (piece null: the stand is emptied). */
+export function setStandLook(world: WorldState, playerId: string, objId: number, pieceId: string | null, way: unknown): Change[] {
+  const p = world.players[playerId];
+  const obj = world.objects[objId];
+  if (!p || !obj || obj.kind !== 'gear_stand' || !isHomeKey(world.area) || isGuestHere(world, p)) return [];
+  const data = standData(p, pieceId, way);
+  if (data === undefined) return [];
+  if (data === null) delete obj.data;
+  else obj.data = data;
+  const name = pieceId ? (lookPiece(pieceId)?.name ?? '') : '';
+  return [{ t: 'object', id: obj.id, obj }, ...(pieceId ? [toast(p.id, fmt(LOOK_T.standPut, { item: name }))] : [])];
 }
 
 // ---------------------------------------------------------------------------

@@ -15,11 +15,13 @@ import {
   enterHouse,
   homeKey,
   pickUpFurniture,
+  setStandLook,
+  equipLook,
+  devGrantLooks,
   devSagaBest,
   devStarterKit,
   devUnlockChapters,
   equipGear,
-  forgeGear,
   noticeLandmarks,
   setHero,
   shownHeld,
@@ -564,7 +566,6 @@ export class Game {
         else if (msg.a === 'quest') changes = sagaQuestAct(this.world, pid, String(msg.id ?? ''));
         else if (msg.a === 'equip') changes = equipGear(this.world, pid, String(msg.slot ?? ''), typeof msg.item === 'string' ? msg.item : null);
         else if (msg.a === 'hero') changes = setHero(this.world, pid, msg.on === true);
-        else if (msg.a === 'forge') changes = forgeGear(this.world, pid, String(msg.item ?? ''));
         else if (msg.a === 'craft') changes = craftGear(this.world, pid, String(msg.item ?? ''));
         break;
       case 'house':
@@ -573,6 +574,13 @@ export class Game {
           changes = enterHouse(this.world, pid, of);
           if (changes.length) this.store.noteArea?.(homeKey(of));
         } else if (msg.a === 'pick') changes = tagArea(pickUpFurniture(w, pid, Math.floor(msg.x), Math.floor(msg.y)), areaK);
+        break;
+      case 'look':
+        // Garderoben: a look on or off (free, instant), or one on a gear stand of the player's house
+        if (typeof msg.obj === 'number') {
+          changes = tagArea(setStandLook(w, pid, msg.obj, typeof msg.piece === 'string' ? msg.piece : null, msg.way), areaK);
+          if (changes.length) this.store.noteArea?.(me.area);
+        } else changes = equipLook(me, msg.slot, typeof msg.piece === 'string' ? msg.piece : null, msg.way, msg.cls);
         break;
       case 'jump':
         changes = jumpTo(this.world, pid, String(msg.to ?? ''));
@@ -595,6 +603,7 @@ export class Game {
         else if (msg.a === 'warp') changes = devWarp(this.world, pid, Number(msg.x), Number(msg.y));
         else if (msg.a === 'decor') changes = devDecor(this.world, pid);
         else if (msg.a === 'trophy') changes = devTrophy(this.world, pid, String(msg.id ?? ''), Number(msg.level));
+        else if (msg.a === 'looks') changes = devGrantLooks(me, typeof msg.set === 'string' ? msg.set : undefined, Number(msg.tier ?? 5), msg.ways !== false, true, typeof msg.cls === 'string' ? msg.cls : undefined);
         else if (msg.a === 'sagaBest') changes = devSagaBest(this.world, pid, String(msg.id ?? ''), Number(msg.ms));
         break;
       case 'voice':

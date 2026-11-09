@@ -58,7 +58,10 @@ import {
   equipGear,
   fieldKey,
   fighterMax,
-  gearStats,
+  fightStats,
+  BASE_POWER,
+  BASE_ARMOR,
+  BASE_HP,
   newDay,
   openTileNear,
   placeIn,
@@ -75,14 +78,10 @@ import {
   ensureLevelRewards,
   giveXp,
   killXpOf,
-  FORGE_COSTS,
   FORGE_CRAFTS,
   ITEMS,
-  POWER_CAP,
   craftGear,
   devKit,
-  forgeGear,
-  forgeStats,
   itemName,
   leaveSaga,
   type AnimalState,
@@ -230,7 +229,7 @@ describe('classes and the way in', () => {
     expect(p.area).toBe('farm');
     enterSaga(world, p, arch);
     expect(p.area).toBe(sagaKey('draug'));
-    expect(world.areas![sagaKey('draug')]!.saga!.fighters[p.id]!.hp).toBe(CLASSES.vaktare.hp);
+    expect(world.areas![sagaKey('draug')]!.saga!.fighters[p.id]!.hp).toBe(CLASSES.vaktare.hp + BASE_HP);
   });
 });
 
@@ -401,7 +400,7 @@ describe('fighting', () => {
     const landed = run(world, 2000);
     expect(inst.fighters[healer.id]!.hp).toBe(hpBefore);
     // the tank stayed in front of the boss and took the sweep (gentler for a party of two)
-    const sweep = Math.round(SAGA_BOSSES.draugkung!.moves[0]!.dmg * mobDmgScale(2));
+    const sweep = Math.round(SAGA_BOSSES.draugkung!.moves[0]!.dmg * mobDmgScale(2) * (1 - BASE_ARMOR));
     expect(landed.some((c) => c.t === 'hit' && c.on === tank.id && c.n === sweep)).toBe(true);
   });
 
@@ -471,7 +470,7 @@ describe('fighting', () => {
     expect(inst.fighters[p.id]!.down).toBeDefined();
     run(world, WIPE_MS + 200);
     expect(inst.fighters[p.id]!.down).toBeUndefined();
-    expect(inst.fighters[p.id]!.hp).toBe(CLASSES.magiker.hp);
+    expect(inst.fighters[p.id]!.hp).toBe(CLASSES.magiker.hp + BASE_HP);
     const rest = inst.rests[0]!;
     expect(Math.hypot(p.x - px(rest.x), p.y - px(rest.y))).toBeLessThan(3 * TILE);
     expect(bm.state).not.toBe('fight');
@@ -494,7 +493,7 @@ describe('fighting', () => {
     inst.fighters[friend.id]!.down = clock;
     castSpell(world, healer.id, 'vackupp', undefined, ctx());
     expect(inst.fighters[friend.id]!.down).toBeUndefined();
-    expect(inst.fighters[friend.id]!.hp).toBe(CLASSES.krigare.hp / 2);
+    expect(inst.fighters[friend.id]!.hp).toBe((CLASSES.krigare.hp + BASE_HP) / 2);
   });
 });
 
@@ -520,6 +519,10 @@ describe('loot', () => {
     for (const p of [a, b]) {
       expect(p.trophies?.draugkung).toBe(2);
       expect(p.inventory.find((x) => x?.item === 'trophy_draugkung')?.data).toBe('2');
+      // and one look of the dungeon's set (a Väktare piece: the Draugkungens vakt), at the first shine
+      expect(Object.keys(p.saga!.looks ?? {})).toHaveLength(1);
+      expect(Object.keys(p.saga!.looks!)[0]).toMatch(/^draugvakt_/);
+      expect(p.saga!.lookClears?.draug).toBe(1);
     }
     const chest = Object.values(d.objects).find((o) => o.kind === 'saga_chest' && o.variant === 2)!;
     // never on top of (or right next to) someone, so nobody gets stuck in it
@@ -734,7 +737,7 @@ describe('Lokes list: the bosses', () => {
     expect(z.shape).toBe('line');
     expect(Math.abs(z.dir!)).toBeLessThan(0.2);
     const landed = run(world, SAGA_BOSSES.jarnvakten!.moves[i]!.warn + 100);
-    const dmg = Math.round(SAGA_BOSSES.jarnvakten!.moves[i]!.dmg * mobDmgScale(2));
+    const dmg = Math.round(SAGA_BOSSES.jarnvakten!.moves[i]!.dmg * mobDmgScale(2) * (1 - BASE_ARMOR));
     expect(landed.some((c) => c.t === 'hit' && c.on === tank.id && c.n === dmg)).toBe(true);
     expect(landed.some((c) => c.t === 'hit' && c.on === healer.id && c.kind === 'dmg')).toBe(false);
   });
@@ -908,13 +911,13 @@ describe('Lokes list: gear and levels', () => {
     equipGear(world, p.id, 'offhand', 'offhand_dvargskold');
     expect(p.saga.gear!.offhand).toBe('offhand_dvargskold');
     expect(p.inventory.some((s) => s?.item === 'offhand_dvargskold')).toBe(false);
-    const st = gearStats(p);
-    expect(st.armor).toBeCloseTo(0.1);
-    // an epic weapon, and a shield made for the tank
-    expect(st.power).toBeCloseTo(1.2 * 1.05);
+    // gear is only for show: an epic weapon, a shield and an amulet change nothing in a fight
+    const st = fightStats(p);
+    expect(st.armor).toBe(BASE_ARMOR);
+    expect(st.power).toBe(BASE_POWER);
     const max = fighterMax(p, 'vaktare');
     equipGear(world, p.id, 'amulet', 'amulet_helring');
-    expect(fighterMax(p, 'vaktare')).toBe(max + 20);
+    expect(fighterMax(p, 'vaktare')).toBe(max);
     // a full bag: nothing can come off
     for (let i = 0; i < p.inventory.length; i++) if (!p.inventory[i]) p.inventory[i] = { item: 'stone', count: 1 };
     const full = equipGear(world, p.id, 'amulet', null);
@@ -964,8 +967,8 @@ describe('Lokes list: gear and levels', () => {
     expect(out.some((c) => c.t === 'banner' && c.kind === 'level' && c.text === 'Nivå 2!')).toBe(true);
     expect(p.saga!.level).toBe(2);
     expect(p.stats.sagaLevel).toBe(2);
-    expect(inst.fighters[p.id]!.max).toBe(Math.round(CLASSES.krigare.hp * 1.015));
-    expect(gearStats(p).power).toBeCloseTo(1.015);
+    expect(inst.fighters[p.id]!.max).toBe(Math.round((CLASSES.krigare.hp + BASE_HP) * 1.015));
+    expect(fightStats(p).power).toBeCloseTo(BASE_POWER * 1.015);
   });
 });
 
@@ -1292,8 +1295,8 @@ describe('Saga III: hero levels for everyone', () => {
     for (const t of [...Object.values(SAGA_LOOT), ...Object.values(SAGA_TREASURE)]) for (const g of [...t.gear, ...(t.rare ?? [])]) expect(rewards.has(g.item)).toBe(false);
     const { p } = forest();
     p.saga = { cls: 'krigare', chapter: 0, heard: false, cleared: [], titles: [], quests: {}, done: [], found: [], xp: XP_LEVELS[19]! };
-    expect(gearStats(p).power).toBeCloseTo(1.285);
-    expect(fighterMax(p, 'krigare')).toBe(Math.round(CLASSES.krigare.hp * 1.285));
+    expect(fightStats(p).power).toBeCloseTo(BASE_POWER * 1.285);
+    expect(fighterMax(p, 'krigare')).toBe(Math.round((CLASSES.krigare.hp + BASE_HP) * 1.285));
   });
 });
 
@@ -1320,100 +1323,35 @@ const count = (p: PlayerState, item: string): number => p.inventory.reduce((n, s
 const said = (ch: Change[], text: string): boolean => ch.some((c) => c.t === 'toast' && c.text.includes(text));
 
 describe('Smedjan', () => {
-  it('forges a weapon from +1 to +5 for the listed materials and coins, and its power grows by 0.06 a level', () => {
+  it('refuses a craft away from Stina', () => {
     const { world, p } = atStina();
-    p.saga!.gear = { weapon: 'runsvard' };
-    const base = gearStats(p).power;
-    expect(base).toBeCloseTo(1.1);
-    // nothing to pay with
-    const poor = forgeGear(world, p.id, 'runsvard');
-    expect(said(poor, 'Du behöver mer')).toBe(true);
-    expect(p.saga!.forge?.runsvard).toBeUndefined();
-    give(p, 'stone', 6);
-    give(p, 'gold', 3);
-    expect(said(forgeGear(world, p.id, 'runsvard'), 'Det kostar 40 kr')).toBe(true);
-    expect([count(p, 'stone'), count(p, 'gold')]).toEqual([6, 3]);
-    // everything for all five levels (the third from two different rare things)
-    p.coins = 40 + 80 + 150 + 250 + 400 + 7;
-    give(p, 'crystal', 4);
-    give(p, 'gold', 2);
-    give(p, 'fire_crystal', 1);
-    give(p, 'obsidian', 1);
-    give(p, 'monsteressens', 8);
-    give(p, 'drakfjall', 2);
-    for (let n = 1; n <= 5; n++) {
-      const ch = forgeGear(world, p.id, 'runsvard');
-      expect(said(ch, `till +${n}`), `+${n}`).toBe(true);
-      expect(p.saga!.forge!.runsvard).toBe(n);
-      expect(gearStats(p).power).toBeCloseTo(1.1 * (1 + 0.06 * n));
-    }
-    expect(p.coins).toBe(7);
-    for (const item of ['stone', 'gold', 'crystal', 'fire_crystal', 'obsidian', 'monsteressens', 'drakfjall']) expect(count(p, item), item).toBe(0);
-    expect(said(forgeGear(world, p.id, 'runsvard'), '+5')).toBe(true);
-    expect(p.saga!.forge!.runsvard).toBe(5);
-    expect(FORGE_COSTS[3]!.anyOf!.items).toEqual(['fire_crystal', 'fairy_dust', 'frostros', 'alvdagg', 'obsidian', 'star_crystal']);
-  });
-
-  it('refuses away from Stina, for gear the hero does not have, and for things that are not gear', () => {
-    const { world, p } = atStina();
-    give(p, 'offhand_helskold', 1);
-    give(p, 'stone', 6);
-    give(p, 'gold', 3);
+    give(p, 'stone', 8);
+    give(p, 'gold', 4);
     p.coins = 100;
-    expect(said(forgeGear(world, p.id, 'frostbett'), 'Du har inte Frostbett')).toBe(true);
-    expect(said(forgeGear(world, p.id, 'stone'), 'går inte att smida')).toBe(true);
-    // in the bag counts as having it
-    expect(said(forgeGear(world, p.id, 'offhand_helskold'), 'till +1')).toBe(true);
-    // far from Stina
     p.x += 10 * TILE;
-    give(p, 'crystal', 4);
-    give(p, 'gold', 2);
-    expect(said(forgeGear(world, p.id, 'offhand_helskold'), T.forgeNotNear)).toBe(true);
     expect(said(craftGear(world, p.id, 'jarnsvard'), T.forgeNotNear)).toBe(true);
-    expect(p.saga!.forge!.offhand_helskold).toBe(1);
   });
 
-  it('the development kit pays for the first two forge levels and gives paper, paint and a wall piece', () => {
+  it('the development kit gives paper, paint and a wall piece', () => {
     const { world, p } = atStina();
-    p.saga!.gear = { weapon: 'runsvard' };
     expect(devKit(world, p.id).length).toBeGreaterThan(0);
     expect([count(p, 'paper'), count(p, 'paint_red'), count(p, 'wall_wood'), count(p, 'wall_stone'), count(p, 'door'), count(p, 'window'), p.coins]).toEqual([2, 2, 2, 1, 1, 1, 400]);
-    for (const n of [1, 2]) {
-      expect(said(forgeGear(world, p.id, 'runsvard'), `till +${n}`)).toBe(true);
-    }
-    expect(p.saga!.forge!.runsvard).toBe(2);
     expect(devKit(world, 'nobody')).toEqual([]);
   });
 
-  it('offhands and amulets grow by their own rules', () => {
-    // armor and power both on Tyr's glove; only armor on Hel's shield
-    expect(forgeStats('offhand_tyrshandske', 5)).toEqual({ power: expect.closeTo(0.19), hp: 0, armor: expect.closeTo(0.24) });
-    expect(forgeStats('offhand_helskold', 1)).toEqual({ power: 0, hp: 0, armor: expect.closeTo(0.08) });
-    expect(forgeStats('offhand_alvlykta', 2)).toEqual({ power: expect.closeTo(0.14), hp: 10, armor: 0 });
-    // health on every amulet, power only on those that have it
-    expect(forgeStats('amulet_helring', 3)).toEqual({ power: 0, hp: 44, armor: 0 });
-    expect(forgeStats('amulet_brisingamen', 2)).toEqual({ power: expect.closeTo(0.14), hp: 36, armor: 0 });
-    expect(forgeStats('runsvard', 0)).toEqual({ power: 0, hp: 0, armor: 0 });
-    expect(forgeStats('runsvard', 9).power).toBeCloseTo(0.3);
-    // a forged amulet gives more health in a fight
-    const { p } = atStina('vaktare');
-    p.saga!.gear = { amulet: 'amulet_helring' };
-    const max = fighterMax(p, 'vaktare');
-    p.saga!.forge = { amulet_helring: 2 };
-    expect(fighterMax(p, 'vaktare')).toBe(max + 16);
-  });
-
-  it('a fully forged legendary set reaches the new cap of 2.0', () => {
+  it('no gear has any effect on damage, healing or health: the stat fields are gone and a legendary set fights like none', () => {
     const { p } = atStina('magiker');
+    const bare = { power: fightStats(p).power, armor: fightStats(p).armor, max: fighterMax(p, 'magiker') };
     p.saga!.gear = { weapon: 'lokesstav', offhand: 'offhand_lokesmask', amulet: 'amulet_brisingamen' };
-    expect(POWER_CAP).toBe(2);
-    expect(gearStats(p).power).toBeCloseTo(1.3 * 1.2 * 1.05);
-    p.saga!.forge = { lokesstav: 5, offhand_lokesmask: 5, amulet_brisingamen: 5 };
-    expect(gearStats(p).power).toBe(POWER_CAP);
-    // level 20 alone, without gear, is still +28.5 %
-    p.saga!.gear = {};
+    expect(fightStats(p)).toMatchObject({ power: bare.power, armor: bare.armor, hp: BASE_HP });
+    expect(fighterMax(p, 'magiker')).toBe(bare.max);
+    for (const d of SAGA_ITEMS) expect(d, d.id).not.toHaveProperty('stats');
+    expect(p.saga).not.toHaveProperty('forge');
+    // the flat base is what the starter set gave, so the bots' measured minutes stay as they were
+    expect([BASE_POWER, BASE_ARMOR, BASE_HP]).toEqual([1.05, 0.04, 8]);
+    // level 20 alone is still +28.5 %
     p.saga!.xp = XP_LEVELS[19]!;
-    expect(gearStats(p).power).toBeCloseTo(1.285);
+    expect(fightStats(p).power).toBeCloseTo(BASE_POWER * 1.285);
   });
 
   it('makes each piece of the starter set once per hero', () => {
@@ -1431,12 +1369,13 @@ describe('Smedjan', () => {
     p.inventory[p.inventory.findIndex((s) => s?.item === 'jarnsvard')] = null;
     expect(said(craftGear(world, p.id, 'jarnsvard'), 'Du har redan Järnsvärd')).toBe(true);
     expect([count(p, 'stone'), p.coins]).toEqual([8, 60]);
-    // the shield is an uncommon offhand with a little armor, and it can be put on and forged
+    // the shield can be put on
     give(p, 'wood', 8);
     give(p, 'gold', 2);
     expect(said(craftGear(world, p.id, 'traskold'), 'Träsköld')).toBe(true);
     equipGear(world, p.id, 'offhand', 'traskold');
-    expect(gearStats(p).armor).toBeCloseTo(0.04);
+    expect(p.saga!.gear!.offhand).toBe('traskold');
+    expect(fightStats(p).armor).toBe(BASE_ARMOR);
     expect(craftGear(world, p.id, 'runsvard')).toEqual([]);
   });
 

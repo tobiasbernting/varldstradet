@@ -2135,6 +2135,8 @@ describe('the clock, the wipe and the end', () => {
     expect(readRun(b).seeds).toBe(before[1]! + RUN_SEEDS.bossFirst);
     // a run's win leaves every member the boss's trophy, at the run's level
     for (const p of [a, b]) expect(p.inventory.filter((x) => x?.item.startsWith('trophy_') && x.data === String(RUN_LEVEL_MEDEL))).toHaveLength(1);
+    // ...and one look of the dungeon's set, and a loot window change that shows it
+    for (const p of [a, b]) expect(Object.keys(p.saga!.looks ?? {})).toHaveLength(1);
   });
 
   it('a win is a win once: the clock passing 30:00 or a wipe tick after the boss fell shows no nudge and counts no timeout or wipe', () => {
