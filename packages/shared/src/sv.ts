@@ -1850,7 +1850,7 @@ export const PET_T = {
   btnOut: 'Vila',
   btnLabelIn: 'Djur: in',
   btnLabelOut: 'Djur: ut',
-  hint: 'Kalla fram ditt djur så det hjälper till, eller skicka bort det så det vilar. Tangent P, eller tryck på högra spaken.',
+  hint: 'Kalla fram ditt djur så det hjälper till (som 🎵), eller låt det vila (som ✋). Tangent P, eller tryck på högra spaken. ✋ och 🎵 finns kvar för hästar.',
   none2: 'Inget djur ännu',
   noneRow: 'Du har inget djur än. Hämta ett i Hundkojan!',
   chosen: 'Följer med',
