@@ -1,5 +1,5 @@
 import { LANDMARKS, landmarkKind } from './landmarks.ts';
-import { SAGA_BOSSES, SAGA_ITEMS, SAGA_MOBS, VOLVA_ID, VOLVA_SPOT } from './saga.ts';
+import { DUNGEONS, SAGA_BOSSES, SAGA_ITEMS, SAGA_MOBS, VOLVA_ID, VOLVA_SPOT } from './saga.ts';
 import { TILE, type Achievement, type AnimalDef, type CropDef, type ItemDef, type NpcDef, type ObjectDef, type RecipeDef } from './types.ts';
 
 // ---------- Items ----------
@@ -534,6 +534,24 @@ built('mushroom_lamp', { light: true });
 built('dino_skeleton', { w: 3, h: 2 });
 built('wisp_jar', { light: true });
 built('dragon_egg');
+
+// A house to show off in (house.ts): a hearth, a stand for gear, Norse decor from the dungeons and a trophy for every dungeon boss.
+addO(O('hearth', { w: 3, h: 1, interact: 'cook', breakWith: undefined, light: true }));
+built('gear_stand', { interact: 'stand' });
+place('gear_stand', { sell: 30 });
+/** The Norse set, each a drop from a dungeon's chests (SAGA_LOOT, SAGA_TREASURE). */
+export const NORSE_DECOR = ['viking_shield', 'rune_stone', 'weapon_rack', 'drinking_horn', 'viking_banner', 'bear_rug', 'mead_barrel', 'candle_stick', 'yggdrasil_sapling', 'raven_perch'] as const;
+for (const id of NORSE_DECOR) {
+  built(id, id === 'bear_rug' ? { w: 2, h: 2, solid: false, flat: true } : id === 'candle_stick' || id === 'yggdrasil_sapling' ? { light: true } : {});
+  place(id, { stack: 20, sell: 40 });
+}
+/** One trophy per dungeon boss; `variant` (and the stack's `data`) is the highest difficulty level it was won on, 0..4. */
+export const TROPHY_PREFIX = 'trophy_';
+export const TROPHY_LEVELS = 5;
+for (const b of Object.values(DUNGEONS)) {
+  built(TROPHY_PREFIX + b.boss, { light: false });
+  add(I(TROPHY_PREFIX + b.boss, 'placeable', { places: TROPHY_PREFIX + b.boss, stack: 1 }));
+}
 
 // Farmhouse fixtures (not breakable)
 addO(O('house', { w: 5, h: 4, breakWith: undefined }));

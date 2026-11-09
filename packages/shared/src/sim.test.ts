@@ -26,7 +26,6 @@ import {
   RUN_SPEED_MUL,
   RIDE_SPEED_MUL,
   MOVE_CREDIT_S,
-  PORTALS,
   MOVE_SLACK,
   inPool,
   ensureBathhouse,
@@ -59,6 +58,9 @@ import {
   countItem,
   craft,
   createPlayer,
+  HOUSE_DOOR,
+  enterHouse,
+  homeKey,
   dropItem,
   emote,
   equip,
@@ -112,6 +114,15 @@ function standAt(world: WorldState, p: PlayerState, tx: number, ty: number): voi
   p.x = tx * TILE + TILE / 2;
   p.y = ty * TILE + TILE / 2;
   p.facing = 'right';
+}
+
+/** The player walks into their own house (made on the way in): the house map. */
+function intoHouse(world: WorldState, p: PlayerState): WorldState {
+  p.x = (HOUSE_DOOR.x + 0.5) * TILE;
+  p.y = (HOUSE_DOOR.y + 0.5) * TILE;
+  enterHouse(world, p.id);
+  delete p.moveLock;
+  return world.areas![homeKey(p.id)]!;
 }
 
 function clearTile(world: WorldState, tx: number, ty: number): void {
@@ -254,19 +265,6 @@ describe('movement', () => {
       const x0 = p.x;
       applyMove(world, p.id, x0 + 8, p.y, 'right', true, 1050);
       expect(p.x).toBeCloseTo(x0 + 8, 6);
-    });
-
-    it('the farmhouse door (a portal on the farm) still works with the clock', () => {
-      const { world, p } = setup();
-      const portal = PORTALS[0]!;
-      p.x = (portal.from.x + 0.5) * TILE;
-      p.y = (portal.from.y + 0.5) * TILE;
-      applyMove(world, p.id, p.x, p.y, 'up', false, 1000);
-      const tx = (portal.to.x + 0.5) * TILE;
-      const ty = (portal.to.y + 0.5) * TILE;
-      applyMove(world, p.id, tx, ty, 'up', true, 1050);
-      expect(p.x).toBeCloseTo(tx, 6);
-      expect(p.y).toBeCloseTo(ty, 6);
     });
 
     it('without a clock (the bots in the tests) a move is taken as it comes', () => {
@@ -863,37 +861,6 @@ describe('season calendar', () => {
 });
 
 describe('house, villagers, fishing', () => {
-  it('walking into the farmhouse door teleports inside and back out', () => {
-    const { world, p } = setup();
-    standAt(world, p, 10, 9);
-    for (let i = 0; i < 10 && Math.floor(p.x / 16) !== 57; i++) stepPlayer(world, p, 0, -1, 50);
-    expect(Math.floor(p.x / 16)).toBe(57);
-    expect(Math.floor(p.y / 16)).toBe(59);
-    expect(p.facing).toBe('up');
-    expect(objectAt(world, 56, 60)?.kind).toBeUndefined();
-    expect(objectAt(world, 51, 59)?.kind).toBe('wall_wood');
-    for (let i = 0; i < 12 && p.y > 20 * 16; i++) stepPlayer(world, p, 0, 1, 50);
-    expect(Math.floor(p.x / 16)).toBe(10);
-    expect(Math.floor(p.y / 16)).toBe(9);
-  });
-
-  it('the server accepts a predicted move through the portal', () => {
-    const { world, p } = setup();
-    standAt(world, p, 10, 9);
-    applyMove(world, p.id, 57 * 16 + 8, 58 * 16 + 12, 'up', true);
-    expect(Math.floor(p.x / 16)).toBe(57);
-    expect(Math.floor(p.y / 16)).toBe(58);
-  });
-
-  it('furniture can be placed inside', () => {
-    const { world, p } = setup();
-    addItem(p.inventory, 'chair', 1);
-    standAt(world, p, 53, 59);
-    select(p, 'chair');
-    performAction(world, p.id, 54, 59, ctx());
-    expect(objectAt(world, 54, 59)?.kind).toBe('chair');
-  });
-
   it('villagers offer daily quests that reward coins and stars', () => {
     const { world, p } = setup();
     world.timeMs = 1000; // morning: everyone at their first spot
@@ -1046,9 +1013,10 @@ describe('cooking and pets', () => {
     cook(world, p.id, 'bread');
     expect(countItem(p.inventory, 'bread')).toBe(2);
     expect(countItem(p.inventory, 'wheat')).toBe(0);
-    const stove = Object.values(world.objects).find((o) => o.kind === 'stove')!;
-    standAt(world, p, stove.x, stove.y + 1);
-    const ch = performAction(world, p.id, stove.x, stove.y, ctx());
+    const house = intoHouse(world, p);
+    const stove = Object.values(house.objects).find((o) => o.kind === 'hearth')!;
+    standAt(house, p, stove.x, stove.y + 1);
+    const ch = performAction(house, p.id, stove.x, stove.y, ctx());
     expect(ch.some((c) => c.t === 'open' && c.ui === 'cook')).toBe(true);
   });
 
@@ -2085,16 +2053,17 @@ describe('lasso och rovdjur', () => {
 describe('sova', () => {
   it('crawling into bed, the night passes once everyone online sleeps, and any action wakes you', () => {
     const { world, p } = setup();
-    const bed = Object.values(world.objects).find((o) => o.kind === 'bed')!;
-    standAt(world, p, bed.x, bed.y + 2);
+    const house = intoHouse(world, p);
+    const bed = Object.values(house.objects).find((o) => o.kind === 'bed')!;
+    standAt(house, p, bed.x, bed.y + 2);
     p.facing = 'up';
     const day0 = world.day;
-    const ch = performAction(world, p.id, bed.x, bed.y + 1, ctx());
+    const ch = performAction(house, p.id, bed.x, bed.y + 1, ctx());
     expect(p.sleeping).toBe(true);
     expect(toasts(ch).some((t) => t.includes('God natt'))).toBe(true);
     // moving in your sleep is ignored
     const x0 = p.x;
-    applyMove(world, p.id, p.x + 40, p.y, 'right', true);
+    applyMove(house, p.id, p.x + 40, p.y, 'right', true);
     expect(p.x).toBe(x0);
     // a second player who is still up keeps the night from passing
     const other = createPlayer(world, 'Bo', { skin: '#f0c0a0', hair: '#553322', hairStyle: 'short' });
@@ -2113,14 +2082,14 @@ describe('sova', () => {
     expect(toasts(morning).some((t) => t.includes('God morgon'))).toBe(true);
     expect(world.timeMs).toBeLessThan(5000);
     // waking up by hand
-    performAction(world, p.id, bed.x, bed.y + 1, ctx());
+    performAction(house, p.id, bed.x, bed.y + 1, ctx());
     expect(p.sleeping).toBe(true);
     select(p, 'hoe');
-    const wake = performAction(world, p.id, bed.x, bed.y + 1, ctx());
+    const wake = performAction(house, p.id, bed.x, bed.y + 1, ctx());
     // holding a sword must not stop you from opening things
     addItem(p.inventory, 'sword', 1);
     select(p, 'sword');
-    expect(performAction(world, p.id, bed.x, bed.y + 1, ctx()).some((c) => c.t === 'player')).toBe(true);
+    expect(performAction(house, p.id, bed.x, bed.y + 1, ctx()).some((c) => c.t === 'player')).toBe(true);
     expect(p.sleeping).toBe(true);
     delete p.sleeping;
     expect(p.sleeping).toBeUndefined();

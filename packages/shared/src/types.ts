@@ -160,7 +160,7 @@ export interface ObjectDef {
   /** Housing capacity for a species. */
   houses?: { species: string; capacity: number };
   /** Opens a UI when interacted with. */
-  interact?: 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'water' | 'feed' | 'cook' | 'cave' | 'exit' | 'treasure' | 'pizzeria' | 'bath' | 'sleep' | 'bus' | 'train' | 'grotto' | 'loot' | 'rocket' | 'fairy' | 'saga' | 'sagaclass' | 'rest' | 'sagachest' | 'landmark' | 'fardport' | 'runexit' | 'yggdrasil';
+  interact?: 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'water' | 'feed' | 'cook' | 'cave' | 'exit' | 'treasure' | 'pizzeria' | 'bath' | 'sleep' | 'bus' | 'train' | 'grotto' | 'loot' | 'rocket' | 'fairy' | 'saga' | 'sagaclass' | 'rest' | 'sagachest' | 'landmark' | 'fardport' | 'runexit' | 'yggdrasil' | 'stand';
   /** A loot table (LOOT in data.ts) rolled when it is broken, dug up or opened. */
   loot?: string;
   /** Gives light at night (client). */
@@ -290,6 +290,8 @@ export interface PlayerState {
   saga?: SagaProgress;
   /** Runs (M5b): sagafrön, the bought nodes of the sagaträd and run statistics. Optional: old saves load as they were. */
   run?: RunSave;
+  /** Boss trophies won: the highest difficulty level (0..4) each dungeon boss was beaten on. */
+  trophies?: Record<string, number>;
   /** A fighter the server runs (the hired companion of a run): not a character, never saved, never listed. */
   bot?: true;
 }

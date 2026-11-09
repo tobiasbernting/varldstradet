@@ -1,7 +1,7 @@
 // Self-built houses: wall pieces that close a loop make a room.
 // The sim lays a floor in a freshly closed room; the 2D client puts a roof on it.
 
-import { inInterior, mapH, mapW } from './map.ts';
+import { mapH, mapW } from './map.ts';
 import type { WorldState } from './types.ts';
 
 /** Pieces of a self-built house; they link up, are painted together and close rooms. */
@@ -64,14 +64,11 @@ export function findRooms(world: WorldState): Room[] {
   for (let y = 1; y < H - 1; y++) edge.push(y * W, y * W + W - 1);
   flood(edge.filter((i) => !wall[i]));
 
-  const farm = !world.area;
   const rooms: Room[] = [];
   for (let i = 0; i < W * H; i++) {
     if (seen[i] || wall[i]) continue;
     const tiles = flood([i]);
     if (tiles.length > MAX_ROOM_TILES) continue;
-    // The farmhouse's inside is a walled room of its own (with its own exit), never roofed over
-    if (farm && tiles.some((t) => inInterior(t % W, Math.floor(t / W)))) continue;
     const walls = new Set<number>();
     for (const t of tiles) {
       const x = t % W;

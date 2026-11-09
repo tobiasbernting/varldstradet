@@ -5,8 +5,9 @@
 // objects and the hired companion.
 // The run lives in memory only (like a dungeon): it is never saved, what players earn is paid out at once.
 import { ANIMALS, objectDef } from './data.ts';
+import { awardTrophy } from './house.ts';
 import { addItem, countItem, removeItem } from './inventory.ts';
-import { addObject, inInterior, mapH, mapW, objectAt, removeObject, tileIndex } from './map.ts';
+import { addObject, mapH, mapW, objectAt, removeObject, tileIndex } from './map.ts';
 import type { Change } from './protocol.ts';
 import { randInt } from './rng.ts';
 import {
@@ -200,7 +201,7 @@ function boxFree(a: WorldState, x: number, y: number, w: number, h: number, ring
   if (x - ring < 2 || y - ring < 2 || x + w + ring > mapW(a) - 2 || y + h + ring > mapH(a) - 2) return false;
   for (let ty = y - ring; ty < y + h + ring; ty++)
     for (let tx = x - ring; tx < x + w + ring; tx++) {
-      if (inInterior(tx, ty) || BLOCKED.has(a.terrain[tileIndex(a, tx, ty)] ?? '') || a.crops[`${tx},${ty}`]) return false;
+      if (BLOCKED.has(a.terrain[tileIndex(a, tx, ty)] ?? '') || a.crops[`${tx},${ty}`]) return false;
       const o = objectAt(a, tx, ty);
       if (o && !CLEARABLE.has(o.kind)) return false;
     }
@@ -1103,6 +1104,7 @@ function victory(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
       prog.cleared.push(boss);
       bump(p, CLEARED_STAT[boss], 1, out);
     }
+    awardTrophy(farm, p, boss, run.level, out);
     const s = runSaveOf(p);
     s.wins++;
     s.clears[boss] = (s.clears[boss] ?? 0) + 1;

@@ -1361,8 +1361,8 @@ export const fmtDuration = (ms: number): string => {
   return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
 };
 
-export const itemName = (id: string): string => ITEM_NAMES[id] ?? id;
-export const objectName = (kind: string): string => OBJECT_NAMES[kind] ?? ITEM_NAMES[kind] ?? kind;
+export const itemName = (id: string): string => ITEM_NAMES[id] ?? HOUSE_NAMES[id] ?? id;
+export const objectName = (kind: string): string => OBJECT_NAMES[kind] ?? ITEM_NAMES[kind] ?? HOUSE_NAMES[kind] ?? kind;
 
 export const fmt = (s: string, vars: Record<string, string | number>): string =>
   s.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ''));
@@ -1904,3 +1904,62 @@ export const RUN_T = {
 };
 export const runaName = (id: string): string => RUNA_NAMES[id] ?? id;
 export const treeName = (id: string): string => TREE_NAMES[id] ?? id;
+
+// ---------------------------------------------------------------------------
+// Hus: everyone's own house, Norse decor and boss trophies (house.ts)
+// ---------------------------------------------------------------------------
+
+export const HOUSE_NAMES: Record<string, string> = {
+  hearth: 'Eldstad',
+  gear_stand: 'Rustningsställ',
+  viking_shield: 'Vikingasköld',
+  rune_stone: 'Runsten',
+  weapon_rack: 'Vapenställ',
+  drinking_horn: 'Dryckeshorn',
+  viking_banner: 'Vikingabaner',
+  bear_rug: 'Björnfäll',
+  mead_barrel: 'Mjödtunna',
+  candle_stick: 'Ljusstake',
+  yggdrasil_sapling: 'Yggdrasilsplanta',
+  raven_perch: 'Korpstång',
+  trophy_draugkung: 'Trofé: Draugkungen',
+  trophy_rimturs: 'Trofé: Rimtursen',
+  trophy_surt: 'Trofé: Surt',
+  trophy_hel: 'Trofé: Hel',
+  trophy_fafner: 'Trofé: Fafner',
+  trophy_jormungand: 'Trofé: Jörmungandr',
+  trophy_nattmara: 'Trofé: Nattmaran',
+  trophy_fenrisulven: 'Trofé: Fenrisulven',
+  trophy_loke: 'Trofé: Loke',
+};
+
+/** The difficulty levels a trophy remembers (0..4), as the run screen calls them. */
+export const TROPHY_LEVEL_NAMES = ['Mycket lätt', 'Lätt', 'Medel', 'Svår', 'Extrem'] as const;
+/** The rim of a trophy by level: wood, bronze, silver, gold, and a gem-set gold one. */
+export const TROPHY_RIM_NAMES = ['trä', 'brons', 'silver', 'guld', 'guld med ädelsten'] as const;
+
+export const HOUSE_T = {
+  myHouse: 'Mitt hus',
+  /** "Astrids hus", "Lars hus": a name ending in s, x or z gets no extra s. */
+  houseOf: '{name} hus',
+  whoseHouse: 'Vems hus vill du gå in i?',
+  welcomeOwn: 'Välkommen hem! Möblera hur du vill.',
+  welcomeGuest: 'Du är på besök hos {name}. Du får titta, men inte flytta något.',
+  guestLook: 'Du är gäst här. Du får bara titta!',
+  furnish: 'Möblera',
+  furnishOn: 'Tryck på en möbel för att ta upp den. Tryck på golvet för att sätta ner.',
+  furnishOff: 'Klar med möbleringen.',
+  pickedUp: 'Du tog upp {item}. Tryck på golvet för att sätta ner den.',
+  cantMove: 'Den där kan inte flyttas.',
+  trophyNew: 'Du fick en trofé: {boss}! Ställ den i ditt hus.',
+  trophyHome: 'Din ryggsäck är full, så trofén {boss} står redan i ditt hus!',
+  trophyUp: 'Din trofé {boss} blev finare: {level}!',
+  trophyLevel: 'Vunnen på: {level}',
+  standPut: 'Du ställde {item} på stället.',
+  standTake: 'Du tog tillbaka {item}.',
+  standNone: 'Håll i ett vapen, en sköld eller en amulett och tryck på stället.',
+  leave: 'Ut',
+};
+
+/** Possessive for a house: "Astrids hus", "Lars hus". */
+export const houseTitle = (name: string): string => fmt(HOUSE_T.houseOf, { name: /[sxzSXZ]$/.test(name) ? name : `${name}s` });
