@@ -10,7 +10,6 @@ import {
   BLOCK_SPECIES,
   CLASSES,
   CLASS_IDS,
-  DISCOVERABLE,
   DOWN_MS,
   FRIEND_KINDS,
   DUNGEONS,
@@ -51,7 +50,6 @@ import {
   itemName,
   landmarkKind,
   levelSpan,
-  parseSeenKey,
   placeEmoji,
   placeName,
   previousDungeon,
@@ -79,7 +77,6 @@ import {
   fightMode,
   flagsOf,
   getTarget,
-  heroOn,
   inSaga,
   levelOf,
   liveTarget,
@@ -89,10 +86,8 @@ import {
   potionCount,
   pressedAt,
   sagaSnap,
-  sagaStarted,
   sagaTick,
   setTarget,
-  showsLevel,
   titleOf,
   webbed,
 } from '../saga.ts';
@@ -120,9 +115,9 @@ const FLAG_ICONS: [number, string][] = [
   [FLAG.slow, '🐌'],
 ];
 
-type Win = 'class' | 'volva' | 'journal' | 'family' | 'loot' | 'gear' | 'finds';
+type Win = 'class' | 'volva' | 'journal' | 'family' | 'loot' | 'gear';
 /** The windows that are tabs of the saga's book. */
-const BOOK: readonly Win[] = ['journal', 'gear', 'finds'];
+const BOOK: readonly Win[] = ['journal', 'gear'];
 type LootChange = Extract<Change, { t: 'loot' }>;
 type BannerChange = Extract<Change, { t: 'banner' }>;
 
@@ -245,32 +240,6 @@ function landmarkPic(id: string): HTMLElement {
     lmPics.set(id, url);
   }
   return url ? h('img', { src: url, alt: '', draggable: 'false' }) : h('span', { class: 'em' }, '🧭');
-}
-/** The landmark ids of each biome, in DISCOVERABLE order (biomes without any are left out). */
-function landmarksByBiome(): { biome: (typeof DISCOVERABLE)[number]; ids: string[] }[] {
-  const out: { biome: (typeof DISCOVERABLE)[number]; ids: string[] }[] = [];
-  for (const biome of DISCOVERABLE) {
-    const ids = Object.keys(LANDMARKS).filter((id) => LANDMARKS[id]!.biome === biome);
-    if (ids.length) out.push({ biome, ids });
-  }
-  return out;
-}
-/**
- * The world map's marks: for each map where you have seen a landmark, 'seen' while one of them is still to be
- * touched, 'found' once every one seen there is discovered.
- */
-export function landmarkMarks(me: PlayerState): Map<string, 'seen' | 'found'> {
-  const prog = readProgress(me);
-  const found = new Set(prog.discovered ?? []);
-  const marks = new Map<string, 'seen' | 'found'>();
-  for (const s of prog.seen ?? []) {
-    const at = parseSeenKey(s);
-    if (!at) continue;
-    const { area, id } = at;
-    if (!found.has(id)) marks.set(area, 'seen');
-    else if (!marks.has(area)) marks.set(area, 'found');
-  }
-  return marks;
 }
 /** "4:07" from milliseconds. */
 const clock = (ms: number): string => {
@@ -490,11 +459,7 @@ export class SagaUi {
     }
     if (this.menus.isOpen()) return false;
     if (e.key === 'j' || e.key === 'J') {
-      // the saga's book; a player who has only found landmarks so far gets the discoveries page
-      const me = myPlayer();
-      if (sagaStarted(me) || showsLevel(me)) this.open('journal');
-      else if (readProgress(me).discovered?.length) this.open('finds');
-      else return false;
+      this.open('journal');
       return true;
     }
     if ((e.key === 'g' || e.key === 'G') && (myClass() || hasLooks(readProgress(myPlayer())))) {
@@ -938,7 +903,7 @@ export class SagaUi {
   // ---- the quest tracker ----
 
   private trackerHidden(): boolean {
-    return !sagaStarted(myPlayer()) || document.body.classList.contains('saga-bossfight');
+    return !myPlayer() || document.body.classList.contains('saga-bossfight');
   }
 
   private renderTracker(): void {
@@ -1017,7 +982,6 @@ export class SagaUi {
       family: `👪 ${T.familyTitle}`,
       loot: '',
       gear: `👕 ${LOOK_T.title}`,
-      finds: `📖 ${T.sagaJournalTitle}`,
     };
     const body = h('div', { class: 'body' });
     const panel = h('div', { class: `panel saga-panel ${this.win}` });
@@ -1028,8 +992,7 @@ export class SagaUi {
     else if (BOOK.includes(this.win)) {
       // the journal, the wardrobe (Garderoben) and the discoveries are tabs of one book (the wardrobe with a class or a look)
       const pages: [Win, string][] = [['journal', T.sagaJournalTab]];
-      if (myClass() || hasLooks(readProgress(me)) || this.standObj !== null) pages.push(['gear', `👕 ${LOOK_T.title}`]);
-      pages.push(['finds', T.sagaFindsTab]);
+      pages.push(['gear', `👕 ${LOOK_T.title}`]);
       if (this.standObj === null) {
         const tabs = h('div', { class: 'tabs' });
         for (const [w, label] of pages) {
@@ -1045,7 +1008,6 @@ export class SagaUi {
         panel.insertBefore(tabs, body);
       }
       if (this.win === 'gear') renderLooks({ rerender: () => this.render(), close: () => this.close(), stand: this.standObj }, body);
-      else if (this.win === 'finds') this.renderFinds(body);
       else this.renderJournal(body);
     } else if (this.win === 'family') this.renderFamily(body);
     else this.renderLoot(panel, body);
@@ -1153,12 +1115,11 @@ export class SagaUi {
       act.append(take);
     } else {
       body.append(h('div', { class: 'saga-goal' }, h('b', null, `🎯 ${T.sagaGoal}: `), ch.goal));
-      if (!prog.cls) {
-        const way = h('button', null, T.sagaChooseWay);
-        onTap(way, () => this.open('class'));
-        act.append(way);
-      }
     }
+    // the four classes are picked (and changed between runs) with Völvan
+    const way = h('button', { class: prog.cls ? 'alt' : '' }, prog.cls ? `🔄 ${T.sagaChangeWay}` : T.sagaChooseWay);
+    onTap(way, () => this.open('class'));
+    if (this.line >= lines.length - 1) act.append(way);
     body.append(act);
   }
 
@@ -1236,37 +1197,6 @@ export class SagaUi {
     body.append(list);
   }
 
-  // Upptäcktsboken: every wild biome's landmarks, the found ones with their picture, name and story
-  private renderFinds(body: HTMLElement): void {
-    const prog = readProgress(myPlayer());
-    const found = new Set(prog.discovered ?? []);
-    const groups = landmarksByBiome();
-    const total = groups.reduce((n, g) => n + g.ids.length, 0);
-    const have = groups.reduce((n, g) => n + g.ids.filter((id) => found.has(id)).length, 0);
-    body.append(
-      h('p', { class: 'saga-intro' }, T.sagaFindsIntro),
-      h('div', { class: 'saga-meter finds-all' }, h('i', { style: { width: `${(have / Math.max(1, total)) * 100}%` } }), h('span', null, `🧭 ${fmt(T.sagaFindsAll, { n: have, total })}`)),
-    );
-    const list = h('div', { class: 'saga-finds' });
-    for (const g of groups) {
-      const n = g.ids.filter((id) => found.has(id)).length;
-      const row = h('div', { class: `biome${n === g.ids.length ? ' all' : ''}` }, h('div', { class: 'bhead' }, h('span', { class: 'em' }, placeEmoji(g.biome)), h('b', null, placeName(g.biome)), h('span', { class: 'count' }, `${n === g.ids.length ? '✓ ' : ''}${fmt(T.sagaFindsCount, { n, total: g.ids.length })}`)));
-      const cards = h('div', { class: 'lms' });
-      for (const id of g.ids) {
-        const lm = LANDMARKS[id]!;
-        cards.append(
-          found.has(id)
-            ? h('div', { class: 'lm found' }, h('span', { class: 'pic' }, landmarkPic(id)), h('div', { class: 'col' }, h('b', { class: 'nm' }, lm.name), h('span', { class: 'lore' }, lm.lore)))
-            : h('div', { class: 'lm unknown' }, h('span', { class: 'pic' }, h('span', { class: 'q' }, '?')), h('div', { class: 'col' }, h('b', { class: 'nm' }, '???'), h('span', { class: 'lore' }, fmt(T.sagaFindsUnknown, { biome: placeName(g.biome) })))),
-        );
-      }
-      row.append(cards);
-      list.append(row);
-    }
-    body.append(list);
-  }
-
-  // Smedjan: Smed-Stina makes the gear you own stronger (Förbättra), or smiths a simple piece of each kind (Smid)
   // Everyone in the family: where they are, and a jump to their side
   private renderFamily(body: HTMLElement): void {
     body.append(h('p', { class: 'saga-intro' }, T.familyHint));
@@ -1283,14 +1213,6 @@ export class SagaUi {
         h('img', { class: 'face', src: portraitUrl(p.appearance, p.outfit, 2) }),
         h('span', { class: 'name' }, `${c ? `${c.emoji} ` : ''}${p.name}${me ? ` (${T.sagaYou.toLowerCase()})` : ''}`, title ? h('span', { class: 'ttl' }, ` <${title}>`) : null, h('br'), h('span', { class: 'need' }, where)),
       );
-      if (!me && p.online) {
-        const b = h('button', { disabled: p.area === 'dungeon' || myPlayer()?.area === 'dungeon' }, T.familyJump);
-        onTap(b, () => {
-          net.send({ t: 'jump', to: p.id });
-          this.close();
-        });
-        row.append(b);
-      }
       rows.append(row);
     }
     body.append(rows);

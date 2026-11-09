@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DEFAULT_MAX_PLAYERS, DUNGEONS, DUNGEON_IDS, RUN_MAX_MS, RUN_NUDGE_MS, RUN_T, TICK_HZ, TILE, VILLAGE_KEY, addItem, archFrontOf, areaKey, enterCave, fardportOf, getArea, landmarkOfKind, npcState, objectDef, placeIn, runOf, sagaKey, shootOf, type Change, type ServerMsg } from '../../shared/src/index.ts';
+import { DEFAULT_MAX_PLAYERS, DUNGEONS, DUNGEON_IDS, RUN_MAX_MS, RUN_NUDGE_MS, RUN_T, TICK_HZ, TILE, VILLAGE_KEY, addItem, archFrontOf, areaKey, fardportOf, getArea, landmarkOfKind, npcState, objectDef, placeIn, runOf, sagaKey, shootOf, type Change, type ServerMsg } from '../../shared/src/index.ts';
 import { Game, type Link } from './game.ts';
 import { MemoryStore } from './db/store.ts';
 
@@ -45,20 +45,22 @@ describe('Game', () => {
     // Both see Bo coming online
     expect(la.msgs.some((m) => m.t === 'changes' && m.changes.some((c) => c.t === 'player' && c.id === b.id))).toBe(true);
 
-    // Astrid hoes the tile in front of her
+    // Astrid takes a first pet at the kennel; everyone sees the animal
     const pa = game.world.players[a.id]!;
-    ha({ t: 'select', slot: 0 });
-    const tx = Math.floor(pa.x / 16) + 1;
-    const ty = Math.floor(pa.y / 16);
-    game.world.terrain[ty * 64 + tx] = 'grass';
-    ha({ t: 'act', tx, ty });
-    expect(game.world.terrain[ty * 64 + tx]).toBe('soil');
-    expect(lb.msgs.some((m) => m.t === 'changes' && m.changes.some((c) => c.t === 'terrain' && c.x === tx))).toBe(true);
+    const kennel = Object.values(game.world.objects).find((o) => o.kind === 'kennel')!;
+    pa.x = (kennel.x + 1) * 16;
+    pa.y = (kennel.y + 3) * 16;
+    ha({ t: 'pet', a: 'adopt', species: 'dog' });
+    expect(Object.values(game.world.animals).map((x) => [x.species, x.owner])).toEqual([['dog', a.id]]);
+    expect(lb.msgs.some((m) => m.t === 'changes' && m.changes.some((c) => c.t === 'animal'))).toBe(true);
+    // the farm's old messages do nothing any more: nothing is bought
+    ha({ t: 'buy' as never, item: 'animal_cow', qty: 1 } as never);
+    expect(pa.coins).toBe(150);
 
     // A private toast only reaches its recipient
     lb.msgs.length = 0;
     la.msgs.length = 0;
-    ha({ t: 'buy', item: 'animal_cow', qty: 1 });
+    ha({ t: 'pet', a: 'adopt', species: 'cat' });
     expect(la.msgs.some((m) => m.t === 'changes' && m.changes.some((c) => c.t === 'toast'))).toBe(true);
     expect(lb.msgs.some((m) => m.t === 'changes' && m.changes.some((c) => c.t === 'toast'))).toBe(false);
 
@@ -115,44 +117,8 @@ describe('Game', () => {
   });
 });
 
-describe('cave and dropped connections', () => {
-  it('keeps you in the cave through a short disconnect and carries you out after the grace period', async () => {
-    vi.useFakeTimers();
-    try {
-      const game = new Game(new MemoryStore(), { autoStart: false });
-      await game.start();
-      const a = game.createPlayer('Astrid', { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' })!;
-      const la = fakeLink();
-      const ha = game.connect(la);
-      ha({ t: 'hello', playerId: a.id });
-      const pa = game.world.players[a.id]!;
-      addItem(pa.inventory, 'sword', 1);
-      enterCave(game.world, a.id);
-      expect(pa.area).toBe('dungeon');
-      // the tablet drops the socket for a moment
-      game.disconnect(la);
-      expect(pa.online).toBe(false);
-      expect(pa.area).toBe('dungeon');
-      // ...and comes back: welcome plus the cave map, still inside
-      const lb = fakeLink();
-      const hb = game.connect(lb);
-      hb({ t: 'hello', playerId: a.id });
-      expect(pa.area).toBe('dungeon');
-      expect(lb.msgs.some((m) => m.t === 'changes' && m.changes.some((c) => c.t === 'areaData' && c.key === 'dungeon'))).toBe(true);
-      vi.advanceTimersByTime(120_000);
-      expect(pa.area).toBe('dungeon');
-      // gone for good: carried out after the grace period
-      game.disconnect(lb);
-      vi.advanceTimersByTime(60_000);
-      expect(pa.area).toBe('dungeon');
-      vi.advanceTimersByTime(60_000);
-      expect(pa.area).toBe('farm');
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('Smedjan: craft messages reach Stina, with a toast for a refusal', async () => {
+describe('the lobby and dropped connections', () => {
+  it('Smedjan: forge and craft messages reach Stina, with a toast for a refusal', async () => {
     const game = new Game(new MemoryStore(), { autoStart: false });
     await game.start();
     const a = game.createPlayer('Astrid', { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' })!;
@@ -166,9 +132,7 @@ describe('cave and dropped connections', () => {
     ha({ t: 'saga', a: 'craft', item: 'jarnsvard' });
     expect(toasts().some((t) => t.includes('Smed-Stina'))).toBe(true);
     // by her side, with what it costs
-    const town = getArea(game.world, VILLAGE_KEY)!;
-    const st = npcState(town, 'stina');
-    placeIn(game.world, p, VILLAGE_KEY, Math.floor(st.x / TILE), Math.floor(st.y / TILE) + 1, 'up', []);
+    const st = npcState(game.world, 'stina');
     p.x = st.x;
     p.y = st.y + TILE;
     addItem(p.inventory, 'stone', 8);
@@ -244,7 +208,7 @@ describe('cave and dropped connections', () => {
     expect(on.world.players[b.id]!.area).toBe(key);
   });
 
-  it('rolls the day over with the dev message only when DEV_TELEPORT is on, and a watered crop grows', async () => {
+  it('rolls the day over with the dev message only when DEV_TELEPORT is on', async () => {
     const appearance = { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' };
     const off = new Game(new MemoryStore(), { autoStart: false });
     await off.start();
@@ -264,16 +228,12 @@ describe('cave and dropped connections', () => {
     const lb = fakeLink();
     const hb = on.connect(lb);
     hb({ t: 'hello', playerId: b.id });
-    on.world.crops['3,3'] = { crop: 'carrot', stage: 0, progress: 0, watered: true };
     lb.msgs.length = 0;
     const day1 = on.world.day;
     hb({ t: 'dev', a: 'nextDay' });
     expect(on.world.day).toBe(day1 + 1);
     const changes = lb.msgs.flatMap((m) => (m.t === 'changes' ? m.changes : []));
     expect(changes.some((c) => c.t === 'day' && c.day === day1 + 1)).toBe(true);
-    expect(changes.some((c) => c.t === 'crop' && c.k === '3,3')).toBe(true);
-    expect(on.world.crops['3,3']!.watered).toBe(false);
-    expect(on.world.crops['3,3']!.stage + on.world.crops['3,3']!.progress).toBeGreaterThan(0);
   });
 
   it('gives the starter set with the dev message only when DEV_TELEPORT is on, and only to someone with a class', async () => {

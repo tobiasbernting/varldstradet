@@ -317,6 +317,9 @@ export function lampFor(kind: string, variant: number | undefined): LampSpec | n
       return SAGA_TORCH[(variant ?? 0) % LOOKS]!;
     case 'saga_exit':
       return { color: [1, 0.95, 0.82], radius: 3.6, strength: 0.75, glow: 0.7 };
+    // a run's väg-runor glow in the colour of the stop they lead to (a flock, a Vilosten, the Mellanboss, the boss)
+    case 'run_exit':
+      return { color: ([[1, 0.62, 0.24], [0.31, 0.89, 0.6], [0.75, 0.49, 1], [1, 0.82, 0.25]] as [number, number, number][])[(variant ?? 0) % 4]!, radius: 3.4, strength: 0.9, flicker: 0.12, glow: 1.4, always: true };
     case 'saga_rest':
       return variant === 1 ? { color: [0.35, 0.92, 1], radius: 4.2, strength: 0.9, flicker: 0.1, glow: 1.1 } : null;
     case 'saga_portal':

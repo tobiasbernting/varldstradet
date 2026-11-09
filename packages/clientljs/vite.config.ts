@@ -36,7 +36,7 @@ export default defineConfig({
       manifest: {
         name: 'Sagan om Världsträdet',
         short_name: 'Sagan om Världsträdet',
-        description: 'Ett familjespel: gård och saga',
+        description: 'Ett familjespel: sagan om Världsträdet',
         lang: 'sv',
         start_url: '/',
         display: 'fullscreen',

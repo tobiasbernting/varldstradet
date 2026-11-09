@@ -29,7 +29,6 @@ import {
   enterSaga,
   previousDungeon,
   tileIndex,
-  teleport,
   generateSaga,
   generateWorld,
   getArea,
@@ -92,6 +91,7 @@ import {
   type SimCtx,
   type WorldState,
 } from './index.ts';
+import { teleport } from './testtravel.ts';
 
 const px = (t: number): number => t * TILE + TILE / 2;
 let clock = 1_000_000;
@@ -186,7 +186,7 @@ describe('dungeon maps', () => {
     });
   }
 
-  it('puts each arch out in the world where you can walk to it, and Kämpastenen on the square', () => {
+  it('puts each arch out in the world where you can walk to it, and Kämpastenen in the lobby', () => {
     const { world } = family();
     DUNGEON_IDS.forEach((id, variant) => {
       const a = getArea(world, DUNGEONS[id].portal.area)!;
@@ -196,8 +196,8 @@ describe('dungeon maps', () => {
       expect(isSolidForPlayer(a, front.x, front.y)).toBe(false);
       expect(reach(a, front).size).toBeGreaterThan(400);
     });
-    const v = getArea(world, VILLAGE_KEY)!;
-    expect(objectAt(v, STONE_SPOT.x, STONE_SPOT.y)?.kind).toBe('saga_stone');
+    // (Kämpastenen stands in the lobby, beside Völvan)
+    expect(objectAt(world, STONE_SPOT.x, STONE_SPOT.y)?.kind).toBe('saga_stone');
   });
 });
 
@@ -231,32 +231,6 @@ describe('classes and the way in', () => {
     enterSaga(world, p, arch);
     expect(p.area).toBe(sagaKey('draug'));
     expect(world.areas![sagaKey('draug')]!.saga!.fighters[p.id]!.hp).toBe(CLASSES.vaktare.hp + BASE_HP);
-  });
-});
-
-describe('the world map\'s jump', () => {
-  it('works from the wild but not from inside a dungeon or a run (you leave by its way out)', () => {
-    const { world, players } = family();
-    const p = players[0]!;
-    p.visited = ['farm', 'a:0,-1'];
-    expect(teleport(world, p.id, 'a:0,-1').length).toBeGreaterThan(0);
-    expect(p.area).toBe('a:0,-1');
-    // the jump is the server's doing: the walking allowance of applyMove starts over at the new place (no snap back to the old one)
-    applyMove(world, p.id, p.x + 2, p.y, 'right', true, 1000);
-    teleport(world, p.id, 'farm');
-    const landed = { x: p.x, y: p.y };
-    applyMove(world, p.id, landed.x + 3, landed.y, 'right', true, 1050);
-    expect(Math.hypot(p.x - landed.x - 3, p.y - landed.y)).toBeLessThan(0.01);
-    teleport(world, p.id, 'a:0,-1');
-    inside(world, p, 'krigare');
-    expect(p.area).toBe(sagaKey('draug'));
-    const start = { x: p.x, y: p.y };
-    applyMove(world, p.id, start.x + 3, start.y, 'right', true, 2000);
-    expect(p.area).toBe(sagaKey('draug'));
-    expect(teleport(world, p.id, 'farm')).toEqual([]);
-    expect(teleport(world, p.id, 'a:0,-1')).toEqual([]);
-    expect(p.area).toBe(sagaKey('draug'));
-    expect(world.areas![sagaKey('draug')]!.saga!.fighters[p.id]).toBeDefined();
   });
 });
 
@@ -542,9 +516,7 @@ describe('the saga', () => {
   it('Völvan tells the chapters, and pays when they are done', () => {
     const { world, players } = family();
     const p = players[0]!;
-    getArea(world, VILLAGE_KEY);
-    p.area = VILLAGE_KEY;
-    world.areas![VILLAGE_KEY]!.players[p.id] = p;
+    p.area = 'farm';
     p.x = px(VOLVA_SPOT.x);
     p.y = px(VOLVA_SPOT.y + 1);
     sagaChapter(world, p.id);
@@ -556,30 +528,13 @@ describe('the saga', () => {
     sagaChapter(world, p.id);
     expect(p.saga!.chapter).toBe(1);
     expect(p.coins).toBe(coins + SAGA_CHAPTERS[0]!.reward.coins);
-    // the crypt's chapter is told, so Tant Greta has a quest
+    // the crypt's chapter is told
     sagaChapter(world, p.id);
-    expect(questState(p, sagaQuest('saga_skelett')!)).toBe('offer');
+    expect(p.saga!.heard).toBe(true);
     p.saga!.cleared.push('draug');
     sagaChapter(world, p.id);
     expect(p.saga!.titles).toContain('Draugdödare');
     expect(p.inventory.some((s) => s?.item === 'solruna')).toBe(true);
-  });
-
-  it('a villager\'s quest is taken, counted and handed in', () => {
-    const { world, players } = family();
-    const p = players[0]!;
-    p.saga = { cls: 'krigare', chapter: 1, heard: true, cleared: [], titles: [], quests: {}, done: [], found: [] };
-    const greta = npcState(world, NPCS.greta!.id);
-    p.area = 'farm';
-    p.x = greta.x;
-    p.y = greta.y + TILE;
-    sagaQuestAct(world, p.id, 'saga_skelett');
-    expect(p.saga.quests.saga_skelett).toBe(0);
-    p.saga.quests.saga_skelett = 8;
-    const stars = p.stars;
-    sagaQuestAct(world, p.id, 'saga_skelett');
-    expect(p.saga.done).toContain('saga_skelett');
-    expect(p.stars).toBe(stars + 1);
   });
 
   it('anyone can jump to a family member, even into their dungeon', () => {
@@ -1008,52 +963,6 @@ describe('Lokes list: out in the world', () => {
     expect(q.saga?.hero).toBeFalsy();
   });
 
-  it("spells beat Loke's roaming servants, and the chapter's field task counts them", () => {
-    const { world, p, a, roamers, friend } = outdoors('magiker', 'a:0,-1');
-    expect(roamers.some((x) => x.species === 'vandrardraug')).toBe(true);
-    // the friend close by has the same chapter: it counts for them too
-    friend.saga = { cls: 'helare', chapter: 4, heard: true, cleared: [], titles: [], quests: {}, done: [], found: [] };
-    placeIn(world, friend, 'a:0,-1', Math.floor(p.x / TILE), Math.floor(p.y / TILE) + 1, 'up', []);
-    // a farmer's spells do nothing out here
-    expect(castSpell(world, p.id, 'eldboll', undefined, ctx())).toEqual([]);
-    setHero(world, p.id, true);
-    const m = nextTo(a, p, roamers.find((x) => x.species === 'vandrardraug')!, 3);
-    let out: Change[] = [];
-    for (let i = 0; i < 6 && a.animals[m.id]; i++) {
-      out = out.concat(castSpell(world, p.id, 'eldboll', undefined, ctx(i + 1)));
-      clock += 1500;
-    }
-    expect(a.animals[m.id]).toBeUndefined();
-    expect(out.some((c) => c.t === 'spell' && c.area === 'a:0,-1')).toBe(true);
-    expect(p.saga!.quests[fieldKey(4)]).toBe(1);
-    expect(friend.saga!.quests[fieldKey(4)]).toBe(1);
-    expect(p.saga!.xp).toBe(SAGA_XP.wild);
-    expect(chapterDone(p.saga!)).toBe(false);
-    p.saga!.quests[fieldKey(4)] = 8;
-    expect(chapterDone(p.saga!)).toBe(true);
-  });
-
-  it('in hero mode the use key casts the attack spell at a monster in reach; taunts and heals work too', () => {
-    const { world, p, a, roamers } = outdoors('krigare', 'a:0,-1');
-    setHero(world, p.id, true);
-    const m = nextTo(a, p, roamers[0]!);
-    const hp = m.hp!;
-    const out = performAction(a, p.id, Math.floor(p.x / TILE), Math.floor(p.y / TILE) + 1, ctx());
-    expect(out.some((c) => c.t === 'spell' && c.spell === 'yxhugg')).toBe(true);
-    expect(a.animals[m.id] ? m.hp! : 0).toBeLessThan(hp);
-    // a guardian's challenge makes it go for them, a healer's rune gives hearts back
-    const g = outdoors('vaktare', 'a:0,-1');
-    setHero(g.world, g.p.id, true);
-    const t = nextTo(g.a, g.p, g.roamers[0]!, 2);
-    castSpell(g.world, g.p.id, 'utmana', undefined, ctx());
-    expect(t.hunt).toBe(g.p.id);
-    const h = outdoors('helare', 'a:0,-1');
-    setHero(h.world, h.p.id, true);
-    h.p.hearts = 1;
-    castSpell(h.world, h.p.id, 'lakerunan', undefined, ctx());
-    expect(h.p.hearts).toBe(3);
-  });
-
   it("the saga's ending: Loke's fall clears Bifrost, and handing in the last chapter pays, says the saga is won and ends it", () => {
     const { world, players } = family(1);
     const p = players[0]!;
@@ -1075,9 +984,8 @@ describe('Lokes list: out in the world', () => {
     expect(SAGA_CHAPTERS[last]!.dungeon).toBe('loke');
     p.saga!.chapter = last;
     p.saga!.heard = true;
-    p.saga!.quests[fieldKey(last)] = SAGA_CHAPTERS[last]!.field!.count;
     expect(chapterDone(p.saga!)).toBe(true);
-    placeIn(world, p, VILLAGE_KEY, VOLVA_SPOT.x, VOLVA_SPOT.y + 1, 'up', []);
+    placeIn(world, p, 'farm', VOLVA_SPOT.x, VOLVA_SPOT.y + 1, 'up', []);
     const end = sagaChapter(world, p.id);
     const r = SAGA_CHAPTERS[last]!.reward;
     expect(p.saga!.chapter).toBe(SAGA_CHAPTERS.length);
@@ -1096,25 +1004,6 @@ describe('Lokes list: out in the world', () => {
     expect(p.saga!.chapter).toBe(SAGA_CHAPTERS.length);
   });
 
-  it('chapter 5 needs both the field task and Helheim', () => {
-    const prog = { cls: 'krigare' as const, chapter: 5, heard: true, cleared: ['draug', 'frost', 'surt'] as DungeonId[], titles: [], quests: {} as Record<string, number>, done: [], found: [] };
-    expect(chapterDone(prog)).toBe(false);
-    prog.cleared.push('hel');
-    expect(chapterDone(prog)).toBe(false);
-    prog.quests[fieldKey(5)] = 6;
-    expect(chapterDone(prog)).toBe(true);
-    const { world, players } = family();
-    const p = players[0]!;
-    p.saga = { ...prog, titles: [], done: [], found: [] };
-    getArea(world, VILLAGE_KEY);
-    placeIn(world, p, VILLAGE_KEY, VOLVA_SPOT.x, VOLVA_SPOT.y + 1, 'up', []);
-    sagaChapter(world, p.id);
-    expect(p.saga.chapter).toBe(6);
-    expect(p.saga.titles).toContain('Helfarare');
-    expect(p.saga.quests[fieldKey(5)]).toBeUndefined();
-    expect(p.saga.xp).toBe(SAGA_XP.chapter);
-  });
-
   it('a world boss leaves a treasure chest behind', () => {
     const { world, p, a, roamers } = outdoors('magiker', 'a:2,0');
     const boss = roamers.find((x) => x.species === 'bergatroll')!;
@@ -1129,16 +1018,6 @@ describe('Lokes list: out in the world', () => {
     expect(out.some((c) => c.t === 'toast' && c.to === null && c.text.includes('Bergatrollet'))).toBe(true);
   });
 
-  it('the roaming monsters come back: on old maps, and every morning', () => {
-    const { world, a } = outdoors('magiker', 'a:0,-1');
-    expect(Object.values(a.animals).some((x) => x.species === 'vandrardraug')).toBe(false);
-    expect(ensureRoaming(a)).toBe(true);
-    expect(Object.values(a.animals).filter((x) => x.species === 'vandrardraug').length).toBeGreaterThanOrEqual(2);
-    expect(ensureRoaming(a)).toBe(false);
-    for (const x of Object.values(a.animals)) if (x.species === 'vandrardraug') delete a.animals[x.id];
-    newDay(world, ctx());
-    expect(Object.values(a.animals).filter((x) => x.species === 'vandrardraug').length).toBeGreaterThanOrEqual(2);
-  });
 });
 
 describe('Saga III: hero levels for everyone', () => {
@@ -1169,36 +1048,6 @@ describe('Saga III: hero levels for everyone', () => {
     const swing = (): Change[] => performAction(a, p.id, Math.floor(p.x / TILE) + 1, Math.floor(p.y / TILE), ctx());
     return { world, a, p, friend, far, monster, swing };
   }
-
-  it('a sword beats a wild monster in two hits, and everyone close by gets experience, with or without a class', () => {
-    const { a, p, friend, far, monster, swing } = forest();
-    expect(p.saga?.cls).toBeUndefined();
-    const m = monster('trollunge');
-    expect(swing().some((c) => c.t === 'xp')).toBe(false);
-    expect(a.animals[m.id]).toBeDefined();
-    const out = swing();
-    expect(a.animals[m.id]).toBeUndefined();
-    expect(p.saga!.xp).toBe(SAGA_XP.wild);
-    expect(friend.saga!.xp).toBe(SAGA_XP.wild);
-    expect(far.saga?.xp ?? 0).toBe(0);
-    // the +4 xp floats up from each of them
-    expect(out).toContainEqual({ t: 'xp', to: p.id, n: SAGA_XP.wild, x: p.x, y: p.y, area: 'a:0,-1' });
-    expect(out.some((c) => c.t === 'xp' && c.to === friend.id)).toBe(true);
-    expect(out.some((c) => c.t === 'player' && c.id === friend.id)).toBe(true);
-  });
-
-  it('a predator, a cave monster, the cave troll and a world boss are worth their own experience', () => {
-    const { p, monster, swing } = forest();
-    const wolf = monster('wolf');
-    wolf.hp = 1;
-    swing();
-    expect(p.saga!.xp).toBe(SAGA_XP.predator);
-    expect(killXpOf('slime')).toBe(SAGA_XP.cave);
-    expect(killXpOf('boss')).toBe(SAGA_XP.caveBoss);
-    expect(killXpOf('bergatroll')).toBe(SAGA_XP.worldBoss);
-    expect(killXpOf('angsvatte')).toBe(SAGA_XP.wild);
-    expect(killXpOf('hen')).toBe(0);
-  });
 
   it('the meadow gnome only notices you close up', () => {
     const { world, a, p, monster } = forest();
@@ -1296,15 +1145,13 @@ describe('Saga III: hero levels for everyone', () => {
 // Round 4: Smedjan at Smed-Stina, and the dungeons' replays
 // ---------------------------------------------------------------------------
 
-/** A hero standing by Smed-Stina in Köpingen. */
+/** A hero standing by Smed-Stina in the lobby. */
 function atStina(cls: keyof typeof CLASSES = 'krigare') {
   const { world, players } = family();
   const p = players[0]!;
   p.saga = { cls, chapter: 4, heard: true, cleared: ['draug', 'frost', 'surt'], titles: [], quests: {}, done: [], found: [], gear: {} };
-  const town = getArea(world, VILLAGE_KEY)!;
-  const st = npcState(town, 'stina');
-  const out: Change[] = [];
-  expect(placeIn(world, p, VILLAGE_KEY, Math.floor(st.x / TILE), Math.floor(st.y / TILE) + 1, 'up', out)).toBe(true);
+  const st = npcState(world, 'stina');
+  p.area = 'farm';
   p.x = st.x;
   p.y = st.y + TILE;
   p.coins = 0;

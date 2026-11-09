@@ -163,7 +163,7 @@ export interface ObjectDef {
   /** Housing capacity for a species. */
   houses?: { species: string; capacity: number };
   /** Opens a UI when interacted with. */
-  interact?: 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'water' | 'feed' | 'cook' | 'cave' | 'exit' | 'treasure' | 'pizzeria' | 'bath' | 'sleep' | 'bus' | 'train' | 'grotto' | 'loot' | 'rocket' | 'fairy' | 'saga' | 'sagaclass' | 'rest' | 'sagachest' | 'landmark' | 'fardport' | 'runexit' | 'yggdrasil' | 'stand';
+  interact?: 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'water' | 'feed' | 'cook' | 'cave' | 'exit' | 'treasure' | 'pizzeria' | 'bath' | 'sleep' | 'bus' | 'train' | 'grotto' | 'loot' | 'rocket' | 'fairy' | 'saga' | 'sagaclass' | 'rest' | 'sagachest' | 'landmark' | 'fardport' | 'runexit' | 'yggdrasil' | 'stand' | 'kennel';
   /** A loot table (LOOT in data.ts) rolled when it is broken, dug up or opened. */
   loot?: string;
   /** Gives light at night (client). */

@@ -1,8 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
+import * as shared from './index.ts';
 import {
   CROPS,
   DAY_LENGTH_MS,
   SPAWN,
+  NPCS,
+  T,
+  objectDef,
+  adoptPet,
   TILE,
   addAnimal,
   addItem,
@@ -31,9 +36,6 @@ import {
   ensureBathhouse,
   ensureFarmBusStop,
   ensureTransport,
-  nearestUnknownCity,
-  ride,
-  transportDestinations,
   FARM_BUS_STOP,
   CITY_BUS_STOP,
   CITY_STATION,
@@ -41,8 +43,6 @@ import {
   biomeAt,
   generateArea,
   spawnDrop,
-  teleport,
-  travel,
   rideSpeedMul,
   honk,
   bump,
@@ -52,16 +52,8 @@ import {
   npcAt,
   npcState,
   npcsIn,
-  completeQuest,
-  cook,
-  buy,
   countItem,
-  craft,
   createPlayer,
-  HOUSE_DOOR,
-  enterHouse,
-  homeKey,
-  dropItem,
   emote,
   equip,
   generateWorld,
@@ -80,7 +72,6 @@ import {
   mapW,
   WILD_MAP,
   seasonForDate,
-  sell,
   setOnline,
   stepPlayer,
   BOOST_SPEED_MUL,
@@ -99,6 +90,7 @@ import {
   type SimCtx,
   type WorldState,
 } from './index.ts';
+import { teleport, travel } from './testtravel.ts';
 
 const ctx = (season: SimCtx['season'] = 'none'): SimCtx => ({ season, rnd: mulberry32(7), now: 1_000_000 });
 
@@ -106,6 +98,8 @@ function setup(): { world: WorldState; p: PlayerState } {
   const world = generateWorld(1);
   const p = createPlayer(world, 'Test', { skin: '#f0c0a0', hair: '#553322', hairStyle: 'short' });
   setOnline(world, p.id, true);
+  // an open road along row 20 for the walking tests
+  for (let x = 0; x < 60; x++) clearTile(world, x, 20);
   return { world, p };
 }
 
@@ -114,15 +108,6 @@ function standAt(world: WorldState, p: PlayerState, tx: number, ty: number): voi
   p.x = tx * TILE + TILE / 2;
   p.y = ty * TILE + TILE / 2;
   p.facing = 'right';
-}
-
-/** The player walks into their own house (made on the way in): the house map. */
-function intoHouse(world: WorldState, p: PlayerState): WorldState {
-  p.x = (HOUSE_DOOR.x + 0.5) * TILE;
-  p.y = (HOUSE_DOOR.y + 0.5) * TILE;
-  enterHouse(world, p.id);
-  delete p.moveLock;
-  return world.areas![homeKey(p.id)]!;
 }
 
 function clearTile(world: WorldState, tx: number, ty: number): void {
@@ -142,17 +127,6 @@ const select = (p: PlayerState, itemId: string): void => {
 };
 
 const toasts = (ch: Change[]): string[] => ch.filter((c) => c.t === 'toast').map((c) => (c as { text: string }).text);
-
-describe('map', () => {
-  it('generates a farm with fixtures and open spawn', () => {
-    const world = generateWorld();
-    expect(world.terrain.length).toBe(64 * 64);
-    const kinds = new Set(Object.values(world.objects).map((o) => o.kind));
-    for (const k of ['house', 'mailbox', 'sellbox', 'wardrobe', 'start_chest', 'start_bench', 'tree', 'rock', 'grass_tuft']) expect(kinds.has(k)).toBe(true);
-    expect(isSolidForPlayer(world, SPAWN.x, SPAWN.y)).toBe(false);
-    expect(world.terrain.includes('water')).toBe(true);
-  });
-});
 
 describe('movement', () => {
   it('slides along solids and stays in bounds', () => {
@@ -282,473 +256,6 @@ describe('movement', () => {
     });
   });
 
-  it('cannot walk into water or trees', () => {
-    const { world, p } = setup();
-    const water = world.terrain.indexOf('water');
-    const wx = water % 64;
-    const wy = Math.floor(water / 64);
-    standAt(world, p, wx - 1, wy);
-    for (let i = 0; i < 40; i++) stepPlayer(world, p, 1, 0, 50);
-    expect(Math.floor(p.x / TILE)).toBeLessThan(wx);
-    applyMove(world, p.id, wx * TILE + 8, wy * TILE + 8, 'right', false);
-    expect(Math.floor(p.x / TILE)).toBeLessThan(wx);
-  });
-});
-
-describe('farming', () => {
-  it('hoe, plant, water, grow, harvest with seeds back', () => {
-    const { world, p } = setup();
-    standAt(world, p, 20, 20);
-    clearTile(world, 21, 20);
-    select(p, 'hoe');
-    performAction(world, p.id, 21, 20, ctx());
-    expect(world.terrain[tileIndex(world, 21, 20)]).toBe('soil');
-    select(p, 'carrot_seed');
-    const seedsBefore = countItem(p.inventory, 'carrot_seed');
-    performAction(world, p.id, 21, 20, ctx());
-    expect(countItem(p.inventory, 'carrot_seed')).toBe(seedsBefore - 1);
-    expect(world.crops['21,20']?.crop).toBe('carrot');
-    expect(world.crops['21,20']?.watered).toBe(false);
-    select(p, 'can');
-    const can = p.inventory[p.selected]!;
-    performAction(world, p.id, 21, 20, ctx());
-    expect(can.charges).toBe(19);
-    expect(world.crops['21,20']?.watered).toBe(true);
-    expect(world.terrain[tileIndex(world, 21, 20)]).toBe('soil_wet');
-    const days = CROPS.carrot!.stages.length;
-    for (let d = 0; d < days; d++) {
-      newDay(world, ctx());
-      expect(world.terrain[tileIndex(world, 21, 20)]).toBe('soil');
-      if (d < days - 1) {
-        world.crops['21,20']!.watered = true;
-      }
-    }
-    expect(world.crops['21,20']?.stage).toBe(days);
-    select(p, 'hoe'); // harvesting works regardless of held item
-    const ch = performAction(world, p.id, 21, 20, ctx());
-    expect(countItem(p.inventory, 'carrot')).toBeGreaterThanOrEqual(1);
-    expect(countItem(p.inventory, 'carrot_seed')).toBeGreaterThanOrEqual(seedsBefore);
-    expect(world.crops['21,20']).toBeUndefined();
-    expect(ch.some((c) => c.t === 'fx')).toBe(true);
-  });
-
-  it('unwatered crops do not grow; strawberries regrow after harvest', () => {
-    const { world, p } = setup();
-    standAt(world, p, 20, 20);
-    clearTile(world, 21, 20);
-    world.terrain[tileIndex(world, 21, 20)] = 'soil';
-    addItem(p.inventory, 'strawberry_seed', 1);
-    select(p, 'strawberry_seed');
-    performAction(world, p.id, 21, 20, ctx());
-    newDay(world, ctx());
-    expect(world.crops['21,20']?.stage).toBe(0);
-    const def = CROPS.strawberry!;
-    const total = def.stages.reduce((a, b) => a + b, 0);
-    for (let i = 0; i < total; i++) {
-      world.crops['21,20']!.watered = true;
-      newDay(world, ctx());
-    }
-    expect(world.crops['21,20']?.stage).toBe(def.stages.length);
-    performAction(world, p.id, 21, 20, ctx());
-    expect(world.crops['21,20']?.stage).toBe(def.regrowTo);
-    expect(countItem(p.inventory, 'strawberry')).toBeGreaterThanOrEqual(1);
-  });
-
-  it('refills the can at water and reports an empty can', () => {
-    const { world, p } = setup();
-    const water = world.terrain.indexOf('water');
-    const wx = water % 64;
-    const wy = Math.floor(water / 64);
-    select(p, 'can');
-    const can = p.inventory[p.selected]!;
-    can.charges = 0;
-    standAt(world, p, 20, 20);
-    clearTile(world, 21, 20);
-    world.terrain[tileIndex(world, 21, 20)] = 'soil';
-    expect(toasts(performAction(world, p.id, 21, 20, ctx()))).toContain('Vattenkannan är tom – fyll på vid vatten');
-    standAt(world, p, wx - 1, wy);
-    performAction(world, p.id, wx, wy, ctx());
-    expect(can.charges).toBe(20);
-  });
-
-  it('scythe reverts soil to grass', () => {
-    const { world, p } = setup();
-    standAt(world, p, 20, 20);
-    clearTile(world, 21, 20);
-    world.terrain[tileIndex(world, 21, 20)] = 'soil';
-    select(p, 'scythe');
-    performAction(world, p.id, 21, 20, ctx());
-    expect(world.terrain[tileIndex(world, 21, 20)]).toBe('grass');
-  });
-});
-
-describe('resources and building', () => {
-  it('chops a tree with the axe only, gets wood, leaves a stump', () => {
-    const { world, p } = setup();
-    standAt(world, p, 20, 20);
-    clearTile(world, 21, 20);
-    const tree = addObject(world, 'tree', 21, 20)!;
-    select(p, 'pick');
-    const ch = performAction(world, p.id, 21, 20, ctx());
-    expect(world.objects[tree.id]).toBeDefined();
-    expect(toasts(ch)[0]).toContain('Behöver Yxa');
-    select(p, 'axe');
-    performAction(world, p.id, 21, 20, ctx());
-    expect(world.objects[tree.id]).toBeUndefined();
-    expect(countItem(p.inventory, 'wood')).toBeGreaterThanOrEqual(3);
-    expect(objectAt(world, 21, 20)?.kind).toBe('stump');
-    performAction(world, p.id, 21, 20, ctx());
-    expect(objectAt(world, 21, 20)).toBeUndefined();
-  });
-
-  it('crafts a fence at the bench and places it, hammer takes it back', () => {
-    const { world, p } = setup();
-    addItem(p.inventory, 'wood', 2);
-    const ch = craft(world, p.id, 'fence');
-    expect(countItem(p.inventory, 'fence')).toBe(4);
-    expect(countItem(p.inventory, 'wood')).toBe(0);
-    expect(ch.some((c) => c.t === 'player')).toBe(true);
-    expect(craft(world, p.id, 'barn').some((c) => c.t === 'toast')).toBe(true);
-    standAt(world, p, 20, 20);
-    clearTile(world, 21, 20);
-    select(p, 'fence');
-    performAction(world, p.id, 21, 20, ctx());
-    expect(objectAt(world, 21, 20)?.kind).toBe('fence');
-    expect(countItem(p.inventory, 'fence')).toBe(3);
-    expect(isSolidForPlayer(world, 21, 20)).toBe(true);
-    select(p, 'hammer');
-    performAction(world, p.id, 21, 20, ctx());
-    expect(objectAt(world, 21, 20)).toBeUndefined();
-    expect(countItem(p.inventory, 'fence')).toBe(4);
-  });
-
-  it('only the one who built something may take it down', () => {
-    const { world, p } = setup();
-    const q = createPlayer(world, 'Syster', { skin: '#f0c0a0', hair: '#553322', hairStyle: 'short' });
-    setOnline(world, q.id, true);
-    addItem(p.inventory, 'fence', 1);
-    standAt(world, p, 20, 20);
-    clearTile(world, 21, 20);
-    select(p, 'fence');
-    performAction(world, p.id, 21, 20, ctx());
-    expect(objectAt(world, 21, 20)?.by).toBe(p.id);
-    standAt(world, q, 20, 20);
-    select(q, 'hammer');
-    const ch = performAction(world, q.id, 21, 20, ctx());
-    expect(objectAt(world, 21, 20)?.kind).toBe('fence');
-    expect(toasts(ch)).toContain('Test byggde den – bara Test kan riva den.');
-    expect(countItem(q.inventory, 'fence')).toBe(0);
-    select(p, 'hammer');
-    performAction(world, p.id, 21, 20, ctx());
-    expect(objectAt(world, 21, 20)).toBeUndefined();
-  });
-
-  it('paths set terrain and cannot be placed on water; hammer refunds', () => {
-    const { world, p } = setup();
-    addItem(p.inventory, 'path_stone', 2);
-    standAt(world, p, 20, 20);
-    clearTile(world, 21, 20);
-    select(p, 'path_stone');
-    performAction(world, p.id, 21, 20, ctx());
-    expect(world.terrain[tileIndex(world, 21, 20)]).toBe('path_stone');
-    expect(objectAt(world, 21, 20)).toBeUndefined();
-    world.terrain[tileIndex(world, 21, 21)] = 'water';
-    performAction(world, p.id, 21, 21, ctx());
-    expect(world.terrain[tileIndex(world, 21, 21)]).toBe('water');
-    expect(countItem(p.inventory, 'path_stone')).toBe(1);
-    select(p, 'hammer');
-    performAction(world, p.id, 21, 20, ctx());
-    expect(world.terrain[tileIndex(world, 21, 20)]).toBe('grass');
-    expect(countItem(p.inventory, 'path_stone')).toBe(2);
-  });
-
-  it('cannot place a building on top of a player', () => {
-    const { world, p } = setup();
-    addItem(p.inventory, 'coop', 1);
-    standAt(world, p, 20, 20);
-    for (let y = 20; y < 22; y++) for (let x = 20; x < 23; x++) clearTile(world, x, y);
-    select(p, 'coop');
-    const ch = performAction(world, p.id, 20, 20, ctx());
-    expect(toasts(ch)).toContain('Går inte att bygga här');
-    performAction(world, p.id, 21, 20, ctx());
-    expect(objectAt(world, 22, 21)?.kind).toBe('coop');
-  });
-
-  it('chest: swap items in and out, breaking it returns contents', () => {
-    const { world, p } = setup();
-    addItem(p.inventory, 'chest', 1);
-    standAt(world, p, 20, 20);
-    clearTile(world, 21, 20);
-    select(p, 'chest');
-    performAction(world, p.id, 21, 20, ctx());
-    const chest = objectAt(world, 21, 20)!;
-    expect(chest.items?.length).toBe(32);
-    const open = performAction(world, p.id, 21, 20, ctx());
-    expect(open.some((c) => c.t === 'open' && c.ui === 'chest' && c.id === chest.id)).toBe(true);
-    const seedSlot = p.inventory.findIndex((s) => s?.item === 'carrot_seed');
-    swapSlots(world, p.id, { slot: seedSlot }, { chest: chest.id, slot: 3 });
-    expect(chest.items![3]?.item).toBe('carrot_seed');
-    expect(p.inventory[seedSlot]).toBeNull();
-    // Too far away: no swap
-    standAt(world, p, 40, 40);
-    swapSlots(world, p.id, { chest: chest.id, slot: 3 }, { slot: seedSlot });
-    expect(chest.items![3]?.item).toBe('carrot_seed');
-    standAt(world, p, 20, 20);
-    select(p, 'hammer');
-    performAction(world, p.id, 21, 20, ctx());
-    expect(countItem(p.inventory, 'carrot_seed')).toBe(6);
-    expect(countItem(p.inventory, 'chest')).toBe(1);
-  });
-});
-
-describe('own house and paint', () => {
-  it('places walls, windows and a passable door; floor paints the ground', () => {
-    const { world, p } = setup();
-    standAt(world, p, 20, 20);
-    for (const [x, y] of [[21, 19], [21, 20], [21, 21], [19, 20]] as const) clearTile(world, x, y);
-    addItem(p.inventory, 'wood', 10);
-    addItem(p.inventory, 'stone', 2);
-    craft(world, p.id, 'wall_wood');
-    craft(world, p.id, 'window');
-    craft(world, p.id, 'door');
-    expect(countItem(p.inventory, 'wall_wood')).toBe(2);
-    select(p, 'wall_wood');
-    performAction(world, p.id, 21, 19, ctx());
-    select(p, 'window');
-    performAction(world, p.id, 21, 20, ctx());
-    select(p, 'door');
-    performAction(world, p.id, 21, 21, ctx());
-    expect(objectAt(world, 21, 19)?.kind).toBe('wall_wood');
-    expect(objectAt(world, 21, 20)?.kind).toBe('window');
-    expect(objectAt(world, 21, 21)?.kind).toBe('door');
-    expect(isSolidForPlayer(world, 21, 19)).toBe(true);
-    expect(isSolidForPlayer(world, 21, 20)).toBe(true);
-    expect(isSolidForPlayer(world, 21, 21)).toBe(false);
-    expect(p.stats?.walls).toBe(3);
-    // floor planks paint the ground; the hammer takes them back
-    addItem(p.inventory, 'floor_wood', 2);
-    select(p, 'floor_wood');
-    performAction(world, p.id, 19, 20, ctx());
-    expect(world.terrain[tileIndex(world, 19, 20)]).toBe('floor_wood');
-    expect(countItem(p.inventory, 'floor_wood')).toBe(1);
-    select(p, 'hammer');
-    performAction(world, p.id, 19, 20, ctx());
-    expect(world.terrain[tileIndex(world, 19, 20)]).toBe('grass');
-    expect(countItem(p.inventory, 'floor_wood')).toBe(2);
-  });
-
-  it('allows furniture on wooden floor outside the farmhouse', () => {
-    const { world, p } = setup();
-    standAt(world, p, 20, 20);
-    clearTile(world, 21, 20);
-    clearTile(world, 21, 21);
-    world.terrain[tileIndex(world, 21, 20)] = 'floor_wood';
-    world.terrain[tileIndex(world, 21, 21)] = 'floor_wood';
-    addItem(p.inventory, 'bed', 1);
-    select(p, 'bed');
-    performAction(world, p.id, 21, 20, ctx());
-    expect(objectAt(world, 21, 20)?.kind).toBe('bed');
-    expect(objectAt(world, 21, 21)?.kind).toBe('bed');
-  });
-
-  it('paints the farmhouse, and a wall piece together with everything connected to it', () => {
-    const { world, p } = setup();
-    standAt(world, p, 20, 20);
-    for (const [x, y] of [[21, 19], [21, 20], [21, 21], [19, 20], [20, 19]] as const) clearTile(world, x, y);
-    addItem(p.inventory, 'wall_wood', 2);
-    addItem(p.inventory, 'door', 1);
-    addItem(p.inventory, 'paint_blue', 2);
-    select(p, 'wall_wood');
-    performAction(world, p.id, 21, 19, ctx());
-    performAction(world, p.id, 19, 20, ctx()); // not connected
-    select(p, 'door');
-    performAction(world, p.id, 21, 20, ctx());
-    select(p, 'paint_blue');
-    const ch = performAction(world, p.id, 21, 19, ctx());
-    expect(objectAt(world, 21, 19)?.variant).toBe(3);
-    expect(objectAt(world, 21, 20)?.variant).toBe(3);
-    expect(objectAt(world, 19, 20)?.variant).toBeUndefined();
-    expect(countItem(p.inventory, 'paint_blue')).toBe(1);
-    expect(toasts(ch).some((t) => t.includes('målat'))).toBe(true);
-    expect(p.stats?.painted).toBe(1);
-    // the farmhouse
-    const house = Object.values(world.objects).find((o) => o.kind === 'house')!;
-    standAt(world, p, house.x + 2, house.y + 4);
-    performAction(world, p.id, house.x + 2, house.y + 3, ctx());
-    expect(house.variant).toBe(3);
-    expect(countItem(p.inventory, 'paint_blue')).toBe(0);
-    // paint on something else just says no
-    addItem(p.inventory, 'paint_red', 1);
-    select(p, 'paint_red');
-    standAt(world, p, 20, 20);
-    const rock = addObject(world, 'rock', 20, 19)!;
-    const ch2 = performAction(world, p.id, 20, 19, ctx());
-    expect(world.objects[rock.id]).toBeDefined();
-    expect(toasts(ch2).length).toBe(1);
-    expect(countItem(p.inventory, 'paint_red')).toBe(1);
-  });
-
-  /** Walls around the 2×2 room (21..22, 21..22), all but the door spot (23,22). */
-  const ringBut = (world: WorldState, kind: string, skip: [number, number]) => {
-    for (let y = 19; y <= 25; y++) for (let x = 19; x <= 25; x++) clearTile(world, x, y);
-    for (let y = 20; y <= 23; y++)
-      for (let x = 20; x <= 23; x++) {
-        const edge = x === 20 || x === 23 || y === 20 || y === 23;
-        if (edge && !(x === skip[0] && y === skip[1])) addObject(world, kind, x, y);
-      }
-  };
-
-  it('closing the walls lays a floor, clears what grew inside and keeps furniture', () => {
-    const { world, p } = setup();
-    ringBut(world, 'wall_wood', [23, 22]);
-    expect(findRooms(world)).toHaveLength(0);
-    addObject(world, 'grass_tuft', 21, 21);
-    addObject(world, 'chest', 22, 21, { items: [] });
-    world.terrain[tileIndex(world, 22, 22)] = 'soil';
-    world.crops[key(22, 22)] = { crop: 'carrot', stage: 0, progress: 0, watered: false };
-    world.terrain[tileIndex(world, 21, 22)] = 'path_dirt';
-    standAt(world, p, 24, 22);
-    const seeds = countItem(p.inventory, 'carrot_seed');
-    addItem(p.inventory, 'door', 1);
-    select(p, 'door');
-    const ch = performAction(world, p.id, 23, 22, ctx());
-    const rooms = findRooms(world);
-    expect(rooms).toHaveLength(1);
-    expect(rooms[0]!.tiles.sort()).toEqual([tileIndex(world, 21, 21), tileIndex(world, 22, 21), tileIndex(world, 21, 22), tileIndex(world, 22, 22)].sort());
-    for (const [x, y] of [[21, 21], [22, 21], [21, 22], [22, 22]] as const) expect(world.terrain[tileIndex(world, x, y)]).toBe('floor_wood');
-    expect(objectAt(world, 21, 21)).toBeUndefined();
-    expect(objectAt(world, 22, 21)?.kind).toBe('chest');
-    expect(world.crops[key(22, 22)]).toBeUndefined();
-    expect(countItem(p.inventory, 'fiber')).toBeGreaterThan(0);
-    expect(countItem(p.inventory, 'carrot_seed')).toBe(seeds + 1);
-    expect(countItem(p.inventory, 'path_dirt')).toBe(1);
-    expect(toasts(ch).some((t) => t.includes('taket'))).toBe(true);
-    expect(p.stats?.rooms).toBe(1);
-    expect(p.achievements).toContain('rooms_1');
-    // a wall inside an existing room does not "finish" it again
-    standAt(world, p, 21, 21);
-    addItem(p.inventory, 'wall_wood', 1);
-    select(p, 'wall_wood');
-    expect(toasts(performAction(world, p.id, 22, 22, ctx())).some((t) => t.includes('taket'))).toBe(false);
-  });
-
-  it('stone walls give a stone floor; a gap or a corner that only touches diagonally keeps it open', () => {
-    const { world, p } = setup();
-    ringBut(world, 'wall_stone', [23, 22]);
-    standAt(world, p, 24, 22);
-    addItem(p.inventory, 'wall_stone', 1);
-    select(p, 'wall_stone');
-    performAction(world, p.id, 23, 22, ctx());
-    expect(world.terrain[tileIndex(world, 21, 21)]).toBe('floor_stone');
-
-    const w2 = setup().world;
-    ringBut(w2, 'wall_wood', [23, 23]); // missing corner: the walls only meet diagonally
-    expect(findRooms(w2)).toHaveLength(0);
-    expect(w2.terrain[tileIndex(w2, 22, 22)]).toBe('grass');
-  });
-});
-
-describe('economy', () => {
-  it('buys seeds, refuses when poor, sells crops', () => {
-    const { world, p } = setup();
-    buy(world, p.id, 'carrot_seed', 5, ctx());
-    expect(p.coins).toBe(100);
-    expect(countItem(p.inventory, 'carrot_seed')).toBe(11);
-    expect(toasts(buy(world, p.id, 'pumpkin_seed', 10, ctx()))).toContain('Inte tillräckligt med kr');
-    addItem(p.inventory, 'pumpkin', 2);
-    const slot = p.inventory.findIndex((s) => s?.item === 'pumpkin');
-    sell(world, p.id, slot, 99);
-    expect(p.coins).toBe(220);
-    expect(countItem(p.inventory, 'pumpkin')).toBe(0);
-    expect(toasts(sell(world, p.id, 0, 1))).toContain('Inget händer här'); // tools cannot be sold
-  });
-
-  it('season items only in season', () => {
-    const { world, p } = setup();
-    p.coins = 1000;
-    expect(buy(world, p.id, 'hat_santa', 1, ctx('none'))).toEqual([]);
-    buy(world, p.id, 'hat_santa', 1, ctx('jul'));
-    expect(p.wardrobe).toContain('hat_santa');
-    equip(world, p.id, 'hat', 'hat_santa');
-    expect(p.outfit.hat).toBe('hat_santa');
-    equip(world, p.id, 'shirt', 'hat_santa');
-    expect(p.outfit.shirt).toBe('shirt_blue');
-    equip(world, p.id, 'hat', null);
-    expect(p.outfit.hat).toBeUndefined();
-  });
-
-  it('animals need a house, arrive next morning, produce when happy and fed', () => {
-    const { world, p } = setup();
-    p.coins = 1000;
-    expect(toasts(buy(world, p.id, 'animal_hen', 1, ctx()))).toContain('Bygg ett Hönshus först');
-    for (let y = 30; y < 36; y++) for (let x = 30; x < 36; x++) clearTile(world, x, y);
-    const coop = addObject(world, 'coop', 30, 30)!;
-    for (let i = 0; i < 4; i++) expect(toasts(buy(world, p.id, 'animal_hen', 1, ctx()))[0]).toContain('flyttar in i morgon');
-    expect(toasts(buy(world, p.id, 'animal_hen', 1, ctx()))).toContain('Fullt i Hönshus');
-    expect(p.coins).toBe(1000 - 4 * 150);
-    expect(p.orders.length).toBe(4);
-    const ch = newDay(world, ctx());
-    expect(Object.keys(world.animals).length).toBe(4);
-    expect(toasts(ch).some((t) => t.includes('En ny vän har flyttat in'))).toBe(true);
-    const hen = Object.values(world.animals)[0]!;
-    expect(hen.homeId).toBe(coop.id);
-    expect(hen.named).toBe(false);
-    // Feed, pet, brush over days until it lays an egg
-    hen.x = 33 * TILE + 8;
-    hen.y = 33 * TILE + 8;
-    standAt(world, p, 32, 33);
-    addItem(p.inventory, 'hay', 10);
-    for (let d = 0; d < 4; d++) {
-      select(p, 'hay');
-      performAction(world, p.id, 33, 33, ctx());
-      expect(hen.fed).toBe(true);
-      expect(toasts(performAction(world, p.id, 33, 33, ctx()))[0]).toContain('är mätt');
-      select(p, 'brush');
-      performAction(world, p.id, 33, 33, ctx());
-      expect(hen.brushed).toBe(true);
-      select(p, 'hoe');
-      if (hen.hasProduct) {
-        expect(d).toBe(3); // grown up after 3 days, fed and happy
-        performAction(world, p.id, 33, 33, ctx());
-        expect(countItem(p.inventory, 'egg')).toBe(1);
-        expect(hen.hasProduct).toBe(false);
-      }
-      const pet = performAction(world, p.id, 33, 33, ctx());
-      expect(hen.petted).toBe(true);
-      if (d === 0) expect(pet.some((c) => c.t === 'open' && c.ui === 'nameAnimal')).toBe(true);
-      nameAnimal(world, p.id, hen.id, '  Pippi  ');
-      expect(hen.name).toBe('Pippi');
-      newDay(world, ctx());
-      hen.x = 33 * TILE + 8;
-      hen.y = 33 * TILE + 8;
-    }
-    expect(hen.hearts).toBeGreaterThanOrEqual(2);
-    expect(hen.age).toBe(4);
-    expect(hen.hasProduct).toBe(true);
-    performAction(world, p.id, 33, 33, ctx('pask'));
-    expect(countItem(p.inventory, 'egg_pask')).toBe(1);
-    expect(hen.hasProduct).toBe(false);
-  });
-
-  it('a trough feeds nearby animals overnight', () => {
-    const { world, p } = setup();
-    for (let y = 30; y < 36; y++) for (let x = 30; x < 36; x++) clearTile(world, x, y);
-    const coop = addObject(world, 'coop', 30, 30)!;
-    const hen = addAnimal(world, 'hen', coop.id, 'Kotte');
-    addItem(p.inventory, 'trough', 1);
-    addItem(p.inventory, 'hay', 3);
-    standAt(world, p, 33, 34);
-    select(p, 'trough');
-    performAction(world, p.id, 34, 34, ctx());
-    const trough = objectAt(world, 34, 34)!;
-    select(p, 'hay');
-    performAction(world, p.id, 34, 34, ctx());
-    expect(trough.items![0]?.count).toBe(3);
-    expect(countItem(p.inventory, 'hay')).toBe(0);
-    newDay(world, ctx());
-    expect(trough.items![0]?.count).toBe(2);
-    expect(hen.heartProgress).toBeCloseTo(0.34);
-  });
 });
 
 describe('tick', () => {
@@ -767,23 +274,6 @@ describe('tick', () => {
     expect(world.timeMs).toBeLessThan(2000);
   });
 
-  it('picks up drops, but not your own right away', () => {
-    const { world, p } = setup();
-    standAt(world, p, 20, 20);
-    clearTile(world, 21, 20);
-    const seedSlot = p.inventory.findIndex((s) => s?.item === 'carrot_seed');
-    dropItem(world, p.id, seedSlot, 2);
-    expect(countItem(p.inventory, 'carrot_seed')).toBe(4);
-    const drop = Object.values(world.drops)[0]!;
-    expect(drop.count).toBe(2);
-    p.x = drop.x;
-    p.y = drop.y;
-    tick(world, 50, ctx());
-    expect(countItem(p.inventory, 'carrot_seed')).toBe(4);
-    for (let i = 0; i < 70; i++) tick(world, 50, ctx());
-    expect(countItem(p.inventory, 'carrot_seed')).toBe(6);
-    expect(Object.keys(world.drops).length).toBe(0);
-  });
 
   it('animals wander but never through fences', () => {
     const { world, p } = setup();
@@ -817,29 +307,7 @@ describe('tick', () => {
     expect(p.emote).toBeUndefined();
   });
 
-  it('season twists come and go with the day', () => {
-    const { world } = setup();
-    newDay(world, ctx('halloween'));
-    const pumpkins = () => Object.values(world.objects).filter((o) => o.kind === 'wild_pumpkin').length;
-    expect(pumpkins()).toBeGreaterThan(0);
-    newDay(world, ctx('none'));
-    expect(pumpkins()).toBe(0);
-    newDay(world, ctx('midsommar'));
-    expect(Object.values(world.objects).some((o) => o.kind === 'wild_flower_mid')).toBe(true);
-  });
 
-  it('resources regrow', () => {
-    const world = generateWorld();
-    const trees = () => Object.values(world.objects).filter((o) => o.kind === 'tree').length;
-    const n = trees();
-    for (const o of Object.values(world.objects).filter((o) => o.kind === 'tree').slice(0, 10)) {
-      delete world.objects[o.id];
-      delete world.occupancy[key(o.x, o.y)];
-    }
-    expect(trees()).toBe(n - 10);
-    newDay(world, ctx());
-    expect(trees()).toBeGreaterThan(n - 10);
-  });
 });
 
 describe('season calendar', () => {
@@ -861,239 +329,18 @@ describe('season calendar', () => {
 });
 
 describe('house, villagers, fishing', () => {
-  it('villagers offer daily quests that reward coins and stars', () => {
+  it('the farmhouse door is walkable and asks whose house to enter (house.ts takes it from there)', () => {
     const { world, p } = setup();
-    world.timeMs = 1000; // morning: everyone at their first spot
-    tick(world, 50, ctx());
-    expect(world.quests.length).toBeGreaterThanOrEqual(8);
-    expect(world.quests.filter((q) => q.npc === 'elsa').length).toBe(3);
-    const greta = world.quests.filter((q) => q.npc === 'greta');
-    expect(greta.length).toBe(2);
-    const q = greta[0]!;
-    world.timeMs = 1000; // morning: Greta by the path
-    standAt(world, p, 20, 14);
-    const open = performAction(world, p.id, 20, 13, ctx());
-    expect(open.some((c) => c.t === 'open' && c.ui === 'npc' && c.npc === 'greta')).toBe(true);
-    expect(toasts(completeQuest(world, p.id, q.id))).toContain('Du har inte det än');
-    addItem(p.inventory, q.want.item, q.want.count);
-    const coins = p.coins;
-    completeQuest(world, p.id, q.id);
-    expect(p.coins).toBe(coins + q.reward.coins);
-    expect(p.stars).toBe(q.reward.stars);
-    expect(countItem(p.inventory, q.want.item)).toBe(0);
-    expect(completeQuest(world, p.id, q.id)).toEqual([]);
-    // Sven's fixed quest gives the fishing rod
-    addItem(p.inventory, 'wood', 5);
-    standAt(world, p, 37, 37);
-    tick(world, 50, ctx());
-    completeQuest(world, p.id, 'sven_rod');
-    expect(countItem(p.inventory, 'rod')).toBe(1);
-    newDay(world, ctx());
-    expect(p.questsDone).toEqual(['sven_rod']);
-    expect(world.quests.filter((q2) => q2.npc === 'greta')[0]!.id).not.toBe(q.id);
+    standAt(world, p, 10, 9);
+    for (let i = 0; i < 4; i++) stepPlayer(world, p, 0, -1, 50);
+    expect([Math.floor(p.x / 16), Math.floor(p.y / 16)]).toEqual([10, 8]);
+    delete p.moveLock;
+    expect(tick(world, 50, ctx()).some((c) => c.t === 'open' && c.ui === 'houses' && c.to === p.id)).toBe(true);
   });
 
-  it('fishing: wait for the bite, then act to catch', () => {
-    const { world, p } = setup();
-    addItem(p.inventory, 'rod', 1);
-    select(p, 'rod');
-    const water = world.terrain.indexOf('water');
-    const wx = water % 64;
-    const wy = Math.floor(water / 64);
-    standAt(world, p, wx - 1, wy);
-    const c = ctx();
-    performAction(world, p.id, wx, wy, c);
-    expect(p.fishing).toBeDefined();
-    expect(p.emote?.id).toBe('fiske');
-    // too early: fish gets away
-    expect(toasts(performAction(world, p.id, wx, wy, c))).toContain('Fisken simmade iväg…');
-    performAction(world, p.id, wx, wy, c);
-    const bite = { ...c, now: c.now + 6000 };
-    tick(world, 50, bite);
-    expect(p.fishing?.bite).toBe(true);
-    expect(p.emote?.id).toBe('napp');
-    const ch = performAction(world, p.id, wx, wy, bite);
-    expect(toasts(ch).some((t) => t.includes('Du fick en'))).toBe(true);
-    expect(p.inventory.some((s) => s?.item.startsWith('fish_'))).toBe(true);
-    expect(p.fishing).toBeUndefined();
-    // moving cancels
-    performAction(world, p.id, wx, wy, c);
-    applyMove(world, p.id, p.x - 5, p.y, 'left', true);
-    expect(p.fishing).toBeUndefined();
-  });
-});
 
-describe('tavlor (rita på papper)', () => {
-  const pic = '2' + '.'.repeat(254) + '7';
-  const draw = (world: WorldState, p: PlayerState) => {
-    addItem(p.inventory, 'paper', 1);
-    return paint(world, p.id, pic);
-  };
 
-  it('paper opens the drawing screen', () => {
-    const { world, p } = setup();
-    standAt(world, p, 20, 20);
-    clearTile(world, 21, 20);
-    addItem(p.inventory, 'paper', 1);
-    select(p, 'paper');
-    const ch = performAction(world, p.id, 21, 20, ctx());
-    expect(ch.some((c) => c.t === 'open' && c.ui === 'paint')).toBe(true);
-    expect(countItem(p.inventory, 'paper')).toBe(1);
-  });
 
-  it('rejects bad drawings and needs paper', () => {
-    const { world, p } = setup();
-    expect(toasts(paint(world, p.id, 'xyz')).length).toBe(1);
-    expect(toasts(paint(world, p.id, PAINT_EMPTY)).length).toBe(1);
-    expect(toasts(paint(world, p.id, pic)).length).toBe(1);
-    expect(countItem(p.inventory, 'painting')).toBe(0);
-  });
-
-  it('turns paper into a tavla carrying the drawing, worth 20 kr', () => {
-    const { world, p } = setup();
-    const ch = draw(world, p);
-    expect(countItem(p.inventory, 'paper')).toBe(0);
-    const slot = p.inventory.findIndex((s) => s?.item === 'painting');
-    expect(p.inventory[slot]?.data).toBe(pic);
-    expect(p.inventory[slot]?.count).toBe(1);
-    expect(p.achievements).toContain('paint_1');
-    expect(toasts(ch)).toContain('Vilken fin tavla!');
-    // two drawings never merge into one stack
-    draw(world, p);
-    expect(p.inventory.filter((s) => s?.item === 'painting').length).toBe(2);
-    // a bought painting does not join a painted one
-    addItem(p.inventory, 'painting', 1);
-    expect(p.inventory.filter((s) => s?.item === 'painting' && s.data === undefined).length).toBe(1);
-    const coins = p.coins;
-    sell(world, p.id, slot, 1);
-    expect(p.coins - coins).toBe(20);
-  });
-
-  it('hangs up with the drawing and comes back down with it', () => {
-    const { world, p } = setup();
-    draw(world, p);
-    standAt(world, p, 20, 20);
-    clearTile(world, 21, 20);
-    select(p, 'painting');
-    performAction(world, p.id, 21, 20, ctx());
-    const obj = objectAt(world, 21, 20);
-    expect(obj?.kind).toBe('painting');
-    expect(obj?.data).toBe(pic);
-    expect(countItem(p.inventory, 'painting')).toBe(0);
-    // pick it up by hand
-    p.selected = p.inventory.findIndex((s) => s === null);
-    performAction(world, p.id, 21, 20, ctx());
-    expect(objectAt(world, 21, 20)).toBeUndefined();
-    expect(p.inventory.find((s) => s?.item === 'painting')?.data).toBe(pic);
-  });
-
-  it('keeps the drawing when dropped, moved and picked up', () => {
-    const { world, p } = setup();
-    draw(world, p);
-    const slot = p.inventory.findIndex((s) => s?.item === 'painting');
-    swap(world, p.id, { slot }, { slot: 0 });
-    expect(p.inventory[0]?.data).toBe(pic);
-    standAt(world, p, 20, 20);
-    clearTile(world, 21, 20);
-    const ch = dropItem(world, p.id, 0, 1);
-    const drop = ch.find((c) => c.t === 'drop');
-    expect(drop && drop.t === 'drop' && drop.drop?.data).toBe(pic);
-    p.x = 21 * TILE + 8;
-    for (let i = 0; i < 80; i++) tick(world, 50, ctx());
-    expect(Object.keys(world.drops).length).toBe(0);
-    expect(p.inventory.find((s) => s?.item === 'painting')?.data).toBe(pic);
-  });
-});
-
-describe('cooking and pets', () => {
-  it('cooks dishes at the stove', () => {
-    const { world, p } = setup();
-    addItem(p.inventory, 'wheat', 3);
-    expect(toasts(cook(world, p.id, 'pancakes'))).toContain('Inget händer här');
-    cook(world, p.id, 'bread');
-    expect(countItem(p.inventory, 'bread')).toBe(2);
-    expect(countItem(p.inventory, 'wheat')).toBe(0);
-    const house = intoHouse(world, p);
-    const stove = Object.values(house.objects).find((o) => o.kind === 'hearth')!;
-    standAt(house, p, stove.x, stove.y + 1);
-    const ch = performAction(house, p.id, stove.x, stove.y, ctx());
-    expect(ch.some((c) => c.t === 'open' && c.ui === 'cook')).toBe(true);
-  });
-
-  it('a dog needs no house, arrives next morning and follows its owner', () => {
-    const { world, p } = setup();
-    p.coins = 500;
-    buy(world, p.id, 'animal_dog', 1, ctx());
-    expect(p.orders).toEqual([{ species: 'dog', homeId: 0 }]);
-    expect(toasts(buy(world, p.id, 'animal_dog', 1, ctx()))).toContain('Inget händer här');
-    standAt(world, p, 20, 20);
-    newDay(world, ctx());
-    const dog = Object.values(world.animals).find((a) => a.species === 'dog')!;
-    expect(dog.owner).toBe(p.id);
-    standAt(world, p, 24, 20);
-    for (let i = 0; i < 40; i++) tick(world, 50, ctx());
-    expect(Math.hypot(dog.x - p.x, dog.y - p.y)).toBeLessThan(30);
-    // far away (e.g. into the house): pops up next to the owner
-    standAt(world, p, 57, 58);
-    tick(world, 50, ctx());
-    expect(Math.hypot(dog.x - p.x, dog.y - p.y)).toBeLessThan(16);
-    expect(Math.floor(dog.x / 16)).toBe(57);
-  });
-});
-
-describe('gårdsbok and routines', () => {
-  it('unlocks achievements with stars as counters grow', () => {
-    const { world, p } = setup();
-    const out: Change[] = [];
-    bump(p, 'harvest', 1, out);
-    expect(p.achievements).toEqual(['harvest_1']);
-    expect(p.stars).toBe(1);
-    expect(toasts(out)[0]).toContain('Första skörden');
-    bump(p, 'harvest', 30, out);
-    expect(p.achievements).toEqual(['harvest_1', 'harvest_25']);
-    bump(p, 'harvest', 1, out);
-    expect(p.achievements.length).toBe(2);
-    // selling counts coins earned
-    addItem(p.inventory, 'pumpkin', 10);
-    const slot = p.inventory.findIndex((s) => s?.item === 'pumpkin');
-    sell(world, p.id, slot, 10);
-    expect(p.stats.earned).toBe(600);
-    expect(p.achievements).toContain('coins_500');
-    void world;
-  });
-
-  it('stars buy special clothes', () => {
-    const { world, p } = setup();
-    expect(toasts(buy(world, p.id, 'hat_crown', 1, ctx()))).toContain('Du behöver fler stjärnor');
-    p.stars = 25;
-    buy(world, p.id, 'hat_crown', 1, ctx());
-    expect(p.stars).toBe(5);
-    expect(p.wardrobe).toContain('hat_crown');
-    expect(p.coins).toBe(150);
-    equip(world, p.id, 'hat', 'hat_crown');
-    expect(p.outfit.hat).toBe('hat_crown');
-  });
-
-  it('villagers walk their routine and stop to chat', () => {
-    const { world, p } = setup();
-    const c = ctx();
-    world.timeMs = 1000;
-    standAt(world, p, 2, 2); // far away
-    tick(world, 50, c);
-    const greta = world.npcs.greta!;
-    expect(Math.floor(greta.x / 16)).toBe(20);
-    world.timeMs = 0.3 * DAY_LENGTH_MS; // stroll time
-    for (let i = 0; i < 20 * 15; i++) tick(world, 50, c);
-    expect(greta.x / 16).toBeGreaterThan(22);
-    expect(greta.y / 16).toBeGreaterThan(16);
-    // a player standing close stops her
-    p.x = greta.x + 20;
-    p.y = greta.y;
-    tick(world, 50, c);
-    expect(greta.moving).toBe(false);
-    expect(greta.facing).toBe('right');
-    expect(npcAt(world, Math.floor(greta.x / 16), Math.floor(greta.y / 16))?.id).toBe('greta');
-  });
 });
 
 describe('grottan', () => {
@@ -1131,197 +378,10 @@ describe('grottan', () => {
     expect(seen.has(key(br.x + 1, br.y + 1))).toBe(true);
   });
 
-  it('needs a weapon to enter; entering and leaving moves between areas', () => {
-    const { world, p } = setup();
-    const cave = Object.values(world.objects).find((o) => o.kind === 'cave')!;
-    standAt(world, p, cave.x, cave.y + 2);
-    expect(toasts(performAction(world, p.id, cave.x, cave.y + 1, ctx()))).toContain('Ta med ett svärd eller en pilbåge in i grottan');
-    weapons(p);
-    const ch = performAction(world, p.id, cave.x, cave.y + 1, ctx());
-    expect(ch.some((c) => c.t === 'areaData' && c.key === 'dungeon' && c.world)).toBe(true);
-    expect(() => JSON.stringify(ch)).not.toThrow();
-    expect(p.area).toBe('dungeon');
-    const d = world.dungeon!;
-    expect(d.players[p.id]).toBe(p);
-    expect(areaOf(world, p)).toBe(d);
-    // walk to the exit tile and use it
-    const exit = Object.values(d.objects).find((o) => o.kind === 'cave_exit')!;
-    p.x = exit.x * 16 + 8;
-    p.y = (exit.y + 1) * 16 + 8;
-    p.facing = 'up';
-    performAction(d, p.id, exit.x, exit.y, ctx());
-    expect(p.area).toBe('farm');
-    expect(Math.floor(p.x / 16)).toBe(CAVE_EXIT_TILE.x);
-    expect(d.players[p.id]).toBeUndefined();
-  });
 
-  it('bazooka fires a rocket that blasts every monster nearby and reloads', () => {
-    const { world, p } = setup();
-    weapons(p);
-    addItem(p.inventory, 'bazooka', 1);
-    addItem(p.inventory, 'rocket', 2);
-    const cave = Object.values(world.objects).find((o) => o.kind === 'cave')!;
-    standAt(world, p, cave.x, cave.y + 2);
-    performAction(world, p.id, cave.x, cave.y + 1, ctx());
-    const d = world.dungeon!;
-    const px = Math.floor(p.x / 16);
-    const py = Math.floor(p.y / 16);
-    for (let dx = 1; dx <= 4; dx++) {
-      d.terrain[py * 64 + px + dx] = 'floor_stone';
-      const o = objectAt(d, px + dx, py);
-      if (o) {
-        delete d.objects[o.id];
-        delete d.occupancy[key(px + dx, py)];
-      }
-    }
-    const troll = spawnMob(d, 'troll', px + 3, py);
-    const slime = spawnMob(d, 'slime', px + 4, py);
-    p.facing = 'right';
-    select(p, 'bazooka');
-    const c = ctx();
-    const ch = performAction(d, p.id, px + 1, py, c);
-    expect(ch.some((x) => x.t === 'fx' && x.kind === 'rocket')).toBe(true);
-    expect(ch.some((x) => x.t === 'fx' && x.kind === 'boom')).toBe(true);
-    expect(troll.hp).toBe(0);
-    expect(d.animals[troll.id]).toBeUndefined();
-    expect(d.animals[slime.id]).toBeUndefined(); // within the blast radius
-    // experience for both, class or not (Saga III)
-    expect(p.saga?.xp).toBe(2 * SAGA_XP.cave);
-    expect(ch.filter((x) => x.t === 'xp' && x.to === p.id && x.area === 'dungeon')).toHaveLength(2);
-    expect(countItem(p.inventory, 'rocket')).toBe(1);
-    expect(p.achievements).toContain('boom_1');
-    // reloading: nothing happens for a second
-    expect(performAction(d, p.id, px + 1, py, c).some((x) => x.t === 'fx' && x.kind === 'rocket')).toBe(false);
-    expect(countItem(p.inventory, 'rocket')).toBe(1);
-    const later = { ...c, now: c.now + 1100 };
-    expect(performAction(d, p.id, px + 1, py, later).some((x) => x.t === 'fx' && x.kind === 'rocket')).toBe(true);
-    expect(countItem(p.inventory, 'rocket')).toBe(0);
-    // out of rockets: a toast, no shot
-    const empty = performAction(d, p.id, px + 1, py, { ...c, now: c.now + 2500 });
-    expect(empty.some((x) => x.t === 'fx' && x.kind === 'rocket')).toBe(false);
-    expect(toasts(empty).length).toBe(1);
-  });
 
-  it('on the farm the bazooka breaks rocks but never buildings, fences, crops or animals', () => {
-    const { world, p } = setup();
-    addItem(p.inventory, 'bazooka', 1);
-    addItem(p.inventory, 'rocket', 1);
-    standAt(world, p, 30, 30);
-    for (let dx = 0; dx <= 5; dx++) for (let dy = -2; dy <= 2; dy++) clearTile(world, 30 + dx, 30 + dy);
-    const rock = addObject(world, 'rock', 33, 30)!;
-    const fence = addObject(world, 'fence', 33, 31)!;
-    const chest = addObject(world, 'chest', 32, 29)!;
-    world.terrain[tileIndex(world, 34, 30)] = 'soil';
-    world.crops[key(34, 30)] = { crop: 'carrot', stage: 1, progress: 0, watered: false };
-    const hen = addAnimal(world, 'hen', 0);
-    hen.x = 34 * TILE + 8;
-    hen.y = 31 * TILE + 8;
-    p.facing = 'right';
-    select(p, 'bazooka');
-    const ch = performAction(world, p.id, 31, 30, ctx());
-    expect(ch.some((x) => x.t === 'fx' && x.kind === 'boom')).toBe(true);
-    expect(world.objects[rock.id]).toBeUndefined();
-    expect(countItem(p.inventory, 'stone')).toBeGreaterThan(0);
-    expect(world.objects[fence.id]).toBeDefined();
-    expect(world.objects[chest.id]).toBeDefined();
-    expect(world.crops[key(34, 30)]).toBeDefined();
-    expect(world.animals[hen.id]).toBeDefined();
-    expect(p.hearts).toBe(MAX_HEARTS);
-  });
 
-  it('sword and bow hurt monsters, monsters hurt players, shield blocks, hearts out = carried home', () => {
-    const { world, p } = setup();
-    weapons(p);
-    const cave = Object.values(world.objects).find((o) => o.kind === 'cave')!;
-    standAt(world, p, cave.x, cave.y + 2);
-    // the cave's layout comes from the clock; pin it so the troll always has the same way to walk
-    const now = vi.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
-    performAction(world, p.id, cave.x, cave.y + 1, ctx());
-    now.mockRestore();
-    const d = world.dungeon!;
-    const slime = spawnMob(d, 'slime', Math.floor(p.x / 16) + 1, Math.floor(p.y / 16));
-    p.facing = 'right';
-    select(p, 'sword');
-    performAction(d, p.id, Math.floor(slime.x / 16), Math.floor(slime.y / 16), ctx());
-    expect(d.animals[slime.id]).toBeUndefined(); // 2 hp, sword does 2
-    expect(p.stats.mobs).toBe(1);
-    // make sure the three tiles to the right are open floor (layouts differ per seed)
-    for (let dx = 1; dx <= 3; dx++) {
-      const x = Math.floor(p.x / 16) + dx;
-      const y = Math.floor(p.y / 16);
-      d.terrain[y * 64 + x] = 'floor_stone';
-      const o = objectAt(d, x, y);
-      if (o) {
-        delete d.objects[o.id];
-        delete d.occupancy[key(x, y)];
-      }
-    }
-    const troll = spawnMob(d, 'troll', Math.floor(p.x / 16) + 3, Math.floor(p.y / 16));
-    select(p, 'bow');
-    const ch = performAction(world.dungeon!, p.id, Math.floor(p.x / 16) + 1, Math.floor(p.y / 16), ctx());
-    expect(ch.some((c) => c.t === 'fx' && c.kind === 'arrow')).toBe(true);
-    expect(troll.hp).toBe(3);
-    // the troll walks up and hits
-    const c = ctx();
-    let t = c.now;
-    for (let i = 0; i < 60 && p.hearts === MAX_HEARTS; i++) {
-      t += 50;
-      tick(world, 50, { ...c, now: t });
-    }
-    expect(p.hearts).toBe(MAX_HEARTS - 1);
-    // shield up: no more damage
-    select(p, 'shield');
-    for (let i = 0; i < 60; i++) {
-      t += 50;
-      tick(world, 50, { ...c, now: t });
-    }
-    expect(p.hearts).toBe(MAX_HEARTS - 1);
-    // hands down: eventually carried out, nothing lost
-    select(p, 'hoe');
-    const gold = countItem(p.inventory, 'gold');
-    for (let i = 0; i < 400 && p.area === 'dungeon'; i++) {
-      t += 50;
-      tick(world, 50, { ...c, now: t });
-    }
-    expect(p.area).toBe('farm');
-    expect(p.hearts).toBe(MAX_HEARTS);
-    expect(countItem(p.inventory, 'gold')).toBe(gold);
-  });
 
-  it('beating the boss spawns the treasure, opening it gives loot and clears the cave', () => {
-    const { world, p } = setup();
-    weapons(p);
-    const cave = Object.values(world.objects).find((o) => o.kind === 'cave')!;
-    standAt(world, p, cave.x, cave.y + 2);
-    performAction(world, p.id, cave.x, cave.y + 1, ctx());
-    const d = world.dungeon!;
-    const boss = Object.values(d.animals).find((a) => a.species === 'boss')!;
-    p.x = boss.x - 16;
-    p.y = boss.y;
-    p.facing = 'right';
-    select(p, 'sword');
-    const bt = { x: Math.floor(boss.x / 16), y: Math.floor(boss.y / 16) };
-    let ch: Change[] = [];
-    for (let i = 0; i < 5; i++) ch = performAction(d, p.id, bt.x, bt.y, ctx());
-    expect(d.animals[boss.id]).toBeUndefined();
-    expect(toasts(ch)).toContain('Stora Trollet är besegrat! Skattkistan väntar.');
-    expect(p.achievements).toContain('boss_1');
-    const chest = Object.values(d.objects).find((o) => o.kind === 'treasure')!;
-    p.x = chest.x * 16 + 8;
-    p.y = (chest.y + 1) * 16 + 8;
-    const stars = p.stars;
-    const open = performAction(d, p.id, chest.x, chest.y, ctx());
-    expect(toasts(open).some((x) => x.startsWith('Skatten:'))).toBe(true);
-    expect(p.stars).toBe(stars + 5);
-    expect(countItem(p.inventory, 'gold')).toBeGreaterThanOrEqual(20);
-    expect(d.dungeonInfo!.cleared).toBe(true);
-    // leaving a cleared, empty cave removes it; the next visit is a new one
-    const exit = Object.values(d.objects).find((o) => o.kind === 'cave_exit')!;
-    p.x = exit.x * 16 + 8;
-    p.y = (exit.y + 1) * 16 + 8;
-    performAction(d, p.id, exit.x, exit.y, ctx());
-    expect(world.dungeon).toBeUndefined();
-  });
 });
 
 describe('världen utanför', () => {
@@ -1350,38 +410,6 @@ describe('världen utanför', () => {
     if (b.biome === 'strand') expect(b.terrain.includes('water')).toBe(true);
   });
 
-  it('walking off the farm edge enters the next area; teleport goes home and to visited areas', () => {
-    const { world, p } = setup();
-    // the farm has an opening in the middle of each edge
-    expect(isSolidForPlayer(world, 32, 0)).toBe(false);
-    standAt(world, p, 32, 0);
-    expect(travel(world, p.id, 'e')).toEqual([]); // not that edge
-    const ch = travel(world, p.id, 'n');
-    expect(ch.some((c) => c.t === 'areaData' && c.key === 'a:0,-1')).toBe(true);
-    expect(p.area).toBe('a:0,-1');
-    expect(p.visited).toContain('a:0,-1');
-    const north = areaOf(world, p);
-    expect(north.area).toBe('a:0,-1');
-    expect(mapW(north)).toBe(WILD_MAP); // the wild is bigger than the farm
-    expect(Math.floor(p.y / 16)).toBe(mapH(north) - 2);
-    expect(Math.floor(p.x / 16)).toBe(mapW(north) / 2);
-    expect(() => JSON.stringify(ch)).not.toThrow();
-    // acting in the new area hits that area's objects
-    const tree = Object.values(north.objects).find((o) => o.kind.startsWith('tree'))!;
-    expect(tree).toBeDefined();
-    // walk back south
-    standAt(world, p, mapW(north) / 2, mapH(north) - 1);
-    travel(world, p.id, 's');
-    expect(p.area).toBe('farm');
-    expect(Math.floor(p.y / 16)).toBe(1);
-    // teleport to the visited area and home again
-    teleport(world, p.id, 'a:0,-1');
-    expect(p.area).toBe('a:0,-1');
-    expect(teleport(world, p.id, 'a:5,5')).toEqual([]);
-    teleport(world, p.id, 'farm');
-    expect(p.area).toBe('farm');
-    expect(Math.floor(p.x / 16)).toBe(SPAWN.x);
-  });
 
   it('ticks animals and drops in occupied areas and tags their changes', () => {
     const { world, p } = setup();
@@ -1393,110 +421,6 @@ describe('världen utanför', () => {
     const drop = ch.find((c) => c.t === 'drop');
     expect(drop && 'area' in drop && drop.area).toBe('a:0,-1');
     expect(countItem(p.inventory, 'iceberry')).toBe(1);
-  });
-});
-
-describe('byn', () => {
-  it('lies east of the farm with houses, a market and villagers with wishes', () => {
-    const v = generateArea(1, 0);
-    expect(v.biome).toBe('by');
-    const kinds = Object.values(v.objects).map((o) => o.kind);
-    expect(kinds.filter((k) => k === 'house_small').length).toBeGreaterThanOrEqual(8);
-    expect(kinds).toContain('market');
-    expect(kinds).toContain('sellstall');
-    expect(npcsIn(v).map((n) => n.id).sort()).toEqual(['bo', 'lind', 'pino', 'sigrun', 'stina']);
-    expect(kinds).toContain('pizzeria');
-    for (const n of npcsIn(v)) for (const w of [n, ...n.routine]) expect(objectAt(v, w.x, w.y)?.kind ?? 'free').toBe('free');
-    const { world, p } = setup();
-    world.timeMs = 1000;
-    tick(world, 50, ctx());
-    expect(world.quests.filter((q) => q.npc === 'bo').length).toBe(2);
-    // village quests can only be handed in while in the village
-    const q = world.quests.find((x) => x.npc === 'bo')!;
-    addItem(p.inventory, q.want.item, q.want.count);
-    expect(completeQuest(world, p.id, q.id)).toEqual([]);
-    standAt(world, p, 63, 32);
-    travel(world, p.id, 'e');
-    expect(p.area).toBe('a:1,0');
-    const village = areaOf(world, p);
-    const st = npcState(village, 'bo');
-    p.x = st.x;
-    p.y = st.y + 16;
-    expect(completeQuest(world, p.id, q.id).some((c) => c.t === 'player')).toBe(true);
-    // the village keeps its own villagers moving when someone is there
-    tick(world, 50, ctx());
-    expect(village.npcs.bo).toBeDefined();
-  });
-});
-
-describe('pizzerian', () => {
-  it('sells pizza in the village, eating heals and gives pizzapower that wears off', () => {
-    const { world, p } = setup();
-    p.coins = 100;
-    // buy at the pizzeria (the UI is opened by acting on the building)
-    const village = generateArea(1, 0);
-    const pizzeria = Object.values(village.objects).find((o) => o.kind === 'pizzeria')!;
-    expect(pizzeria).toBeDefined();
-    expect(buy(world, p.id, 'pizza', 1, ctx()).some((c) => c.t === 'player')).toBe(true);
-    expect(p.coins).toBe(70);
-    expect(countItem(p.inventory, 'pizza')).toBe(1);
-    // eat it: hearts back, boost set, achievement progress
-    p.hearts = 1;
-    standAt(world, p, 20, 20);
-    clearTile(world, 21, 20);
-    select(p, 'pizza');
-    const now = 1_000_000;
-    const ch = performAction(world, p.id, 21, 20, { ...ctx(), now });
-    expect(ch.some((c) => c.t === 'toast' && c.text.includes('Pizzapower'))).toBe(true);
-    expect(countItem(p.inventory, 'pizza')).toBe(0);
-    expect(p.hearts).toBe(MAX_HEARTS);
-    expect(p.boostUntil).toBe(now + 60_000);
-    expect(p.stats?.pizza).toBe(1);
-    // the boost makes the shared movement faster (same multiplier the client predicts with)
-    const walker = { x: 300, y: 300, facing: 'right' as const, moving: false };
-    stepPlayer(world, walker, 1, 0, 100);
-    const plain = walker.x - 300;
-    walker.x = 300;
-    stepPlayer(world, walker, 1, 0, 100, BOOST_SPEED_MUL);
-    expect(walker.x - 300).toBeCloseTo(plain * BOOST_SPEED_MUL, 3);
-    // wears off
-    tick(world, 50, { ...ctx(), now: now + 61_000 });
-    expect(p.boostUntil).toBeUndefined();
-    // saved villages without a pizzeria get one
-    delete village.objects[pizzeria.id];
-    expect(ensurePizzeria(village)).toBe(true);
-    expect(Object.values(village.objects).some((o) => o.kind === 'pizzeria')).toBe(true);
-    expect(ensurePizzeria(village)).toBe(false);
-  });
-});
-
-describe('vilda djur', () => {
-  it('each biome has its own animal and petting them counts', () => {
-    const ice = generateArea(0, -2);
-    // (Loke's servants roam there too since Act II of the saga: they are monsters, not wild animals to pet)
-    const tame = Object.values(ice.animals).filter((a) => !ANIMALS[a.species]?.mob);
-    const kinds = new Set(tame.map((a) => a.species));
-    expect([...kinds]).toEqual(['penguin']);
-    expect(tame.length).toBeGreaterThanOrEqual(3);
-    const { world, p } = setup();
-    standAt(world, p, 32, 0);
-    travel(world, p.id, 'n');
-    const north = areaOf(world, p);
-    const wild = Object.values(north.animals).find((a) => !ANIMALS[a.species]?.mob);
-    if (wild) {
-      p.x = wild.x - 16;
-      p.y = wild.y;
-      p.facing = 'right';
-      const ch = performAction(north, p.id, Math.floor(wild.x / 16), Math.floor(wild.y / 16), ctx());
-      expect(toasts(ch).some((t) => t.includes('gillade det'))).toBe(true);
-      expect(p.stats.wildpet).toBe(1);
-      performAction(north, p.id, Math.floor(wild.x / 16), Math.floor(wild.y / 16), ctx());
-      expect(p.stats.wildpet).toBe(1); // once per day
-      newDay(world, ctx());
-      performAction(north, p.id, Math.floor(wild.x / 16), Math.floor(wild.y / 16), ctx());
-      expect(p.stats.wildpet).toBe(2);
-    }
-    expect(p.stats.areas).toBe(1);
   });
 });
 
@@ -1514,62 +438,8 @@ describe('hästar', () => {
     return { world, p, stall, horse };
   };
 
-  it('needs a stall and belongs to the buyer', () => {
-    const { world, p } = setup();
-    p.coins = 2000;
-    expect(toasts(buy(world, p.id, 'animal_horse', 1, ctx()))[0]).toContain('Stall');
-    for (let y = 28; y < 34; y++) for (let x = 28; x < 36; x++) clearTile(world, x, y);
-    addObject(world, 'stall', 30, 28);
-    buy(world, p.id, 'animal_horse', 1, ctx());
-    expect(p.coins).toBe(1500);
-    newDay(world, ctx());
-    const horse = Object.values(world.animals).find((a) => a.species === 'horse')!;
-    expect(horse.owner).toBe(p.id);
-  });
 
-  it('mounts, rides faster, and dismounts with the next action', () => {
-    const { world, p, horse } = stable();
-    expect(toasts(performAction(world, p.id, 34, 34, ctx())).some((t) => t.includes('hoppar upp'))).toBe(true);
-    expect(p.riding).toBe(horse.id);
-    expect(p.stats.ride).toBe(1);
-    expect(p.achievements).toContain('ride_1');
-    // the horse sticks to the rider
-    const before = { x: p.x, y: p.y };
-    stepPlayer(world, p, 1, 0, 1000, 1.8);
-    expect(p.x - before.x).toBeCloseTo(64 * 1.8, 0);
-    stepPlayer(world, p, 1, 0, 1000);
-    expect(p.x - before.x).toBeCloseTo(64 * 2.8, 0);
-    tick(world, 50, ctx());
-    expect(Math.hypot(horse.x - p.x, horse.y - p.y)).toBeLessThan(3);
-    // any action dismounts; tools do nothing while riding
-    addItem(p.inventory, 'hoe', 1);
-    select(p, 'hoe');
-    const ftx = Math.floor(p.x / TILE) + 1;
-    const ch = performAction(world, p.id, ftx, 34, ctx());
-    expect(toasts(ch).some((t) => t.includes('hoppar av'))).toBe(true);
-    expect(p.riding).toBeUndefined();
-    expect(world.terrain[tileIndex(world, ftx, 34)]).toBe('grass');
-    expect(Math.hypot(horse.x - p.x, horse.y - p.y)).toBeLessThan(2 * TILE);
-  });
 
-  it('only the owner may ride, foals and busy horses are refused', () => {
-    const { world, p, horse } = stable();
-    const other = createPlayer(world, 'Kompis', { skin: '#f0c0a0', hair: '#553322', hairStyle: 'short' });
-    setOnline(world, other.id, true);
-    standAt(world, other, 35, 34);
-    other.facing = 'left';
-    expect(toasts(performAction(world, other.id, 34, 34, ctx()))[0]).toContain('tillhör Test');
-    expect(other.riding).toBeUndefined();
-    horse.age = 0;
-    expect(toasts(performAction(world, p.id, 34, 34, ctx()))[0]).toContain('för liten');
-    horse.age = 10;
-    performAction(world, p.id, 34, 34, ctx());
-    expect(p.riding).toBe(horse.id);
-    tick(world, 50, ctx());
-    standAt(world, other, 34, 34);
-    other.facing = 'left';
-    expect(toasts(performAction(world, other.id, 33, 34, ctx()))[0]).toContain('rider redan');
-  });
 
   it('gets off the horse when leaving the farm', () => {
     const { world, p, horse } = stable();
@@ -1581,55 +451,6 @@ describe('hästar', () => {
     expect(p.riding).toBeUndefined();
     expect(horse.y).toBeLessThan(3 * TILE);
     expect(Object.values(areaOf(world, p).animals).some((a) => a.species === 'horse')).toBe(false);
-  });
-});
-
-describe('grisar', () => {
-  it('need a pigsty, root up truffles once grown and happy, and unlock Grisbonde', () => {
-    const { world, p } = setup();
-    p.coins = 2000;
-    expect(toasts(buy(world, p.id, 'animal_pig', 1, ctx()))).toContain('Bygg ett Svinstia först');
-    for (let y = 30; y < 36; y++) for (let x = 30; x < 36; x++) clearTile(world, x, y);
-    const sty = addObject(world, 'pigsty', 30, 30)!;
-    for (let i = 0; i < 3; i++) expect(toasts(buy(world, p.id, 'animal_pig', 1, ctx()))[0]).toContain('flyttar in i morgon');
-    expect(toasts(buy(world, p.id, 'animal_pig', 1, ctx()))).toContain('Fullt i Svinstia');
-    expect(p.coins).toBe(2000 - 3 * 350);
-    newDay(world, ctx());
-    const pig = Object.values(world.animals).find((a) => a.species === 'pig')!;
-    expect(pig.homeId).toBe(sty.id);
-    pig.x = 33 * TILE + 8;
-    pig.y = 33 * TILE + 8;
-    standAt(world, p, 32, 33);
-    addItem(p.inventory, 'hay', 10);
-    for (let d = 0; d < 3; d++) {
-      select(p, 'hay');
-      performAction(world, p.id, 33, 33, ctx());
-      expect(pig.fed).toBe(true);
-      select(p, 'hoe');
-      performAction(world, p.id, 33, 33, ctx()); // pet
-      expect(pig.hasProduct).toBe(false);
-      newDay(world, ctx());
-      pig.x = 33 * TILE + 8;
-      pig.y = 33 * TILE + 8;
-    }
-    expect(pig.age).toBe(3);
-    expect(pig.hasProduct).toBe(true);
-    const ch = performAction(world, p.id, 33, 33, ctx());
-    expect(countItem(p.inventory, 'truffle')).toBe(1);
-    expect(pig.hasProduct).toBe(false);
-    expect(p.stats?.truffle).toBe(1);
-    expect(p.achievements).toContain('truffle_1');
-    expect(toasts(ch).some((t) => t.includes('Grisbonde'))).toBe(true);
-  });
-
-  it('truffle pasta is cooked at the stove from truffle, wheat and milk', () => {
-    const { world, p } = setup();
-    addItem(p.inventory, 'truffle', 1);
-    addItem(p.inventory, 'wheat', 2);
-    addItem(p.inventory, 'milk', 1);
-    cook(world, p.id, 'truffle_pasta');
-    expect(countItem(p.inventory, 'truffle_pasta')).toBe(1);
-    expect(countItem(p.inventory, 'truffle')).toBe(0);
   });
 });
 
@@ -1655,57 +476,6 @@ describe('badhuset', () => {
     expect(Object.values(village.objects).filter((o) => o.kind === 'bathhouse')).toHaveLength(1);
   });
 
-  it('enter, swim slowly, earn the badge and walk out again', () => {
-    const { world, p, village } = toVillage();
-    const bath = Object.values(village.objects).find((o) => o.kind === 'bathhouse')!;
-    standAt(world, p, bath.x + 1, bath.y + 2);
-    p.facing = 'up';
-    const ch = performAction(village, p.id, bath.x + 1, bath.y + 1, ctx());
-    expect(p.area).toBe('bath:a:1,0');
-    expect(ch.some((c) => c.t === 'areaData' && c.key === 'bath:a:1,0')).toBe(true);
-    const inside = areaOf(world, p);
-    expect(inside).toBe(getArea(world, 'bath:a:1,0'));
-    expect(inside.terrain.filter((t) => t === 'pool')).toHaveLength(BATH_POOL.w * BATH_POOL.h);
-    expect(Math.floor(p.y / TILE)).toBe(BATH_EXIT.y - 1);
-    expect(() => JSON.stringify(ch)).not.toThrow();
-    // the pool is walkable but slow
-    const px = BATH_POOL.x + 2;
-    const py = BATH_POOL.y + 2;
-    expect(isSolidForPlayer(inside, px, py)).toBe(false);
-    standAt(world, p, px, py);
-    expect(inPool(inside, p)).toBe(true);
-    const x0 = p.x;
-    stepPlayer(inside, p, 1, 0, 1000);
-    expect(p.x - x0).toBeCloseTo(PLAYER_SPEED * SWIM_SPEED_MUL, 0);
-    // the server tick notices the swimmer: splash, badge, flag
-    delete p.moveLock;
-    const t1 = tick(world, 50, ctx());
-    expect(p.swimming).toBe(true);
-    expect(t1.some((c) => c.t === 'fx' && c.kind === 'splash' && c.area === 'bath:a:1,0')).toBe(true);
-    expect(p.achievements).toContain('swim_1');
-    expect(p.stats?.swim).toBe(1);
-    // out of the pool
-    standAt(world, p, BATH_EXIT.x, BATH_EXIT.y - 1);
-    tick(world, 50, ctx());
-    expect(p.swimming).toBeUndefined();
-    // the exit door takes you back to the village square
-    performAction(inside, p.id, BATH_EXIT.x, BATH_EXIT.y, ctx());
-    expect(p.area).toBe('a:1,0');
-    expect(Math.floor(p.x / TILE)).toBe(bath.x + 1);
-    expect(Math.floor(p.y / TILE)).toBe(bath.y + 2);
-    expect(Object.keys(inside.players)).toHaveLength(0);
-    // stepping on the door tile also walks you out
-    performAction(village, p.id, bath.x + 1, bath.y + 1, ctx());
-    expect(p.area).toBe('bath:a:1,0');
-    delete p.moveLock;
-    standAt(world, p, BATH_EXIT.x, BATH_EXIT.y);
-    tick(world, 50, ctx());
-    expect(p.area).toBe('a:1,0');
-    // and home works from inside too
-    performAction(village, p.id, bath.x + 1, bath.y + 1, ctx());
-    teleport(world, p.id, 'farm');
-    expect(p.area).toBe('farm');
-  });
 });
 
 describe('vilda djur skräms och kommer tillbaka (M7b)', () => {
@@ -1776,26 +546,6 @@ describe('vilda djur skräms och kommer tillbaka (M7b)', () => {
     expect(other.a.haunt).toBeUndefined();
   });
 
-  it('a calmed animal creeps to a tile the hero can face (never a diagonal one) and stays there while the hero stands still', () => {
-    for (const deg of [0, 30, 45, 60, 90, 135, 180, 225, 270, 315]) {
-      const { world, p, a } = outdoors('hare', 2);
-      const r = 4.5 * TILE;
-      a.x = p.x + Math.cos((deg * Math.PI) / 180) * r;
-      a.y = p.y + Math.sin((deg * Math.PI) / 180) * r;
-      a.haunt = { x: a.x, y: a.y }; // (it has been startled before)
-      p.moving = false;
-      let adjacent = 0;
-      for (let i = 0; i < 400; i++) {
-        tick(world, 100, at(1_000_000 + i * 100));
-        if (i >= 200) {
-          const off = Math.abs(Math.floor(a.x / TILE) - Math.floor(p.x / TILE)) + Math.abs(Math.floor(a.y / TILE) - Math.floor(p.y / TILE));
-          if (off === 1) adjacent++;
-        }
-      }
-      expect(`${deg}: ${adjacent}`).toBe(`${deg}: 200`); // in the hero's own row or column next to them, for the whole last 20 s
-    }
-  });
-
   it('it takes the other side of the hero when the tile on its own side is blocked', () => {
     const { world, p, area, a } = outdoors('hare', 2);
     a.x = p.x + 4 * TILE; // straight to the right of the hero, who faces the water on that side
@@ -1807,97 +557,6 @@ describe('vilda djur skräms och kommer tillbaka (M7b)', () => {
     expect([Math.floor(a.x / TILE) - Math.floor(p.x / TILE), Math.floor(a.y / TILE) - Math.floor(p.y / TILE)]).toEqual([0, 1]);
   });
 
-  it('every shy species ends up next to a hero who walked at it and then stood still, within 30 s of game time, at the normal tick and at the slowest the server steps (250 ms)', () => {
-    const species = Object.values(ANIMALS).filter((d) => d.wild && !d.mob && !d.predator && !d.vehicle && !d.mount);
-    expect(species.length).toBeGreaterThan(10);
-    for (const def of species) {
-      for (const dt of [50, 250]) {
-        const { world, p, a } = outdoors(def.species, 3);
-        let now = 1_000_000;
-        p.moving = true; // the hero walks at it for half a second...
-        for (let ms = 0; ms < 500; ms += dt) tick(world, dt, at((now += dt)));
-        expect(a.startled, `${def.species} was not startled`).toBe(true);
-        p.moving = false; // ...and then stands still
-        let adjacentAt = -1;
-        let stayed = true;
-        for (let ms = 0; ms < 30_000; ms += dt) {
-          tick(world, dt, at((now += dt)));
-          const off = Math.abs(Math.floor(a.x / TILE) - Math.floor(p.x / TILE)) + Math.abs(Math.floor(a.y / TILE) - Math.floor(p.y / TILE));
-          if (off === 1 && adjacentAt < 0) adjacentAt = ms;
-          if (adjacentAt >= 0 && off !== 1) stayed = false;
-        }
-        expect(adjacentAt, `${def.species} at ${dt} ms ticks never got next to the hero`).toBeGreaterThanOrEqual(0);
-        expect(stayed, `${def.species} at ${dt} ms ticks left again`).toBe(true);
-      }
-    }
-  }, 30_000);
-
-  it('a hero who stands still, an animal out of reach, a petted one, predators, pets and farm animals are left alone', () => {
-    // standing still, 3 tiles away
-    let t = outdoors('hare');
-    tick(t.world, 100, at(1_000_100));
-    expect(t.a.fleeUntil).toBeUndefined();
-    // moving, but 6 tiles away
-    t = outdoors('hare', 6);
-    t.p.moving = true;
-    tick(t.world, 100, at(1_000_100));
-    expect(t.a.fleeUntil).toBeUndefined();
-    // moving and close, but it has been petted today
-    t = outdoors('hare');
-    t.p.moving = true;
-    t.a.petted = true;
-    tick(t.world, 100, at(1_000_100));
-    expect(t.a.fleeUntil).toBeUndefined();
-    // a tamed one follows its owner instead
-    t = outdoors('hare');
-    t.p.moving = true;
-    t.a.owner = t.p.id;
-    tick(t.world, 100, at(1_000_100));
-    expect(t.a.fleeUntil).toBeUndefined();
-    expect(t.a.haunt).toBeUndefined();
-    // a bear comes for the hero (it is not startled)
-    t = outdoors('bear');
-    t.p.moving = true;
-    tick(t.world, 100, at(1_000_100));
-    expect(t.a.startled).toBeUndefined();
-    expect(t.a.haunt).toBeUndefined();
-  });
-
-  it('a startled animal that is then tamed with the lasso loses its wild spot', () => {
-    const { world, p, area, a } = outdoors('hare', 2);
-    const spot = { x: a.x, y: a.y };
-    p.moving = true;
-    tick(world, 100, at(1_000_100));
-    expect(a.haunt).toBeDefined();
-    p.moving = false;
-    a.x = spot.x; // (it has come back: the throw is at the tile next to the hero, as in the lasso tests)
-    a.y = spot.y;
-    delete a.fleeUntil;
-    addItem(p.inventory, 'lasso', 1);
-    p.selected = p.inventory.findIndex((s) => s?.item === 'lasso');
-    performAction(area, p.id, 31, 30, { season: 'none', rnd: () => 0.1, now: 1_000_200 });
-    expect(a.owner).toBe(p.id);
-    expect(a.haunt).toBeUndefined();
-    expect(a.startled).toBeUndefined();
-  });
-
-  it('a missed lasso throw at an animal that is bolting scares it at the lasso pace (1.5 x), not the bolt pace (2.2 x)', () => {
-    const { world, p, area, a } = outdoors('hare', 2);
-    p.moving = true;
-    tick(world, 100, at(1_000_100));
-    expect(a.startled).toBe(true);
-    p.moving = false;
-    addItem(p.inventory, 'lasso', 1);
-    p.selected = p.inventory.findIndex((s) => s?.item === 'lasso');
-    performAction(area, p.id, 31, 30, { season: 'none', rnd: () => 0.95, now: 1_000_200 });
-    expect(a.owner).toBeUndefined();
-    expect(a.startled).toBeUndefined();
-    const x0 = a.x;
-    const y0 = a.y;
-    tick(world, 200, at(1_000_300));
-    const speed = ANIMALS.hare!.speed;
-    expect(Math.hypot(a.x - x0, a.y - y0)).toBeCloseTo(speed * 1.5 * 0.2, 0);
-  });
 
   it('only online players on the animal\'s own map startle it (the watchers are collected once per tick)', () => {
     let t = outdoors('hare');
@@ -1941,40 +600,6 @@ describe('lasso och rovdjur', () => {
     return { world, p, area, a };
   }
 
-  it('a lucky throw tames the animal into a pet that asks for a name', () => {
-    const { world, p, area, a } = outdoors('hare');
-    const ch = performAction(area, p.id, 31, 30, at(1_000_000, 0.1));
-    expect(ch.some((c) => c.t === 'fx' && c.kind === 'lasso')).toBe(true);
-    expect(a.owner).toBe(p.id);
-    expect(isPetAnimal(a)).toBe(true);
-    expect(ch.some((c) => c.t === 'open' && c.ui === 'nameAnimal' && c.id === a.id)).toBe(true);
-    expect(toasts(ch).some((t) => t.includes('kompis'))).toBe(true);
-    expect(p.stats.tame).toBe(1);
-    expect(p.stats.tame_species).toBe(1);
-    expect(p.achievements).toContain('tame_1');
-    // it follows its owner now: moving away makes it walk after you
-    standAt(world, p, 30, 30);
-    a.x = 36 * TILE;
-    const before = a.x;
-    tick(world, 200, at(1_000_100, 0.5));
-    expect(a.x).toBeLessThan(before);
-    // and petting it is like petting a dog, not a wild animal
-    expect(p.stats.wildpet).toBeUndefined();
-  });
-
-  it('a missed throw scares the animal away for a while', () => {
-    const { world, p, area, a } = outdoors('hare');
-    const ch = performAction(area, p.id, 31, 30, at(1_000_000, 0.95));
-    expect(a.owner).toBeUndefined();
-    expect(a.fleeUntil).toBe(1_003_000);
-    expect(toasts(ch).some((t) => t.includes('Missade'))).toBe(true);
-    const before = a.x;
-    tick(world, 200, at(1_000_100, 0.5));
-    expect(a.x).toBeGreaterThan(before); // runs away from the player on its left
-    tick(world, 200, at(1_004_000, 0.5));
-    expect(a.fleeUntil).toBeUndefined();
-  });
-
   it('predators bite one heart with a cooldown, tamed ones do not, and fainting sends you home', () => {
     const { world, p, area, a } = outdoors('bear');
     a.x = p.x + TILE; // right next to the player
@@ -2011,284 +636,8 @@ describe('lasso och rovdjur', () => {
     expect(toasts(ch).some((t) => t.includes('svimmade'))).toBe(true);
   });
 
-  it('a sword hurts predators outdoors but never other animals, and a beaten predator drops fur', () => {
-    const { p, area, a } = outdoors('bear');
-    a.x = p.x + TILE;
-    a.y = p.y;
-    addItem(p.inventory, 'sword', 1);
-    p.selected = p.inventory.findIndex((s) => s?.item === 'sword');
-    performAction(area, p.id, 31, 30, at(3_000_000, 0.5));
-    expect(a.hp).toBe(3);
-    performAction(area, p.id, 31, 30, at(3_000_000, 0.5));
-    performAction(area, p.id, 31, 30, at(3_000_000, 0.5));
-    expect(area.animals[a.id]).toBeUndefined();
-    expect(Object.values(area.drops).some((d) => d.item === 'fur')).toBe(true);
-    expect(p.stats.predators).toBe(1);
-    const hare = spawnMob(area, 'hare', 31, 30);
-    performAction(area, p.id, 31, 30, at(3_000_000, 0.5));
-    expect(area.animals[hare.id]).toBeDefined();
-  });
-
-  it('tamed animals come home with you and areas get their wild animals back the next day', () => {
-    const { world, p, area, a } = outdoors('wolf');
-    performAction(area, p.id, 31, 30, at(1_000_000, 0.1));
-    expect(a.owner).toBe(p.id);
-    standAt(world, p, mapW(area) / 2, mapH(area) - 1);
-    const ch = travel(world, p.id, 's');
-    expect(p.area).toBe('farm');
-    expect(Object.values(area.animals).some((x) => x.species === 'wolf')).toBe(false);
-    const home = Object.values(world.animals).find((x) => x.species === 'wolf')!;
-    expect(home).toBeDefined();
-    expect(home.owner).toBe(p.id);
-    expect(ch.some((c) => c.t === 'animal' && c.animal === null && c.area === 'a:0,-1')).toBe(true);
-    expect(ch.some((c) => c.t === 'animal' && c.animal?.species === 'wolf' && c.area === undefined)).toBe(true);
-    // the emptied area is restocked with its own wild animals at dawn
-    const before = Object.keys(area.animals).length;
-    newDay(world, ctx());
-    expect(Object.keys(area.animals).length).toBeGreaterThan(before);
-    expect(Object.values(area.animals).every((x) => ANIMALS[x.species]?.wild?.split('|').includes(area.biome!))).toBe(true);
-  });
 });
 
-describe('sova', () => {
-  it('crawling into bed, the night passes once everyone online sleeps, and any action wakes you', () => {
-    const { world, p } = setup();
-    const house = intoHouse(world, p);
-    const bed = Object.values(house.objects).find((o) => o.kind === 'bed')!;
-    standAt(house, p, bed.x, bed.y + 2);
-    p.facing = 'up';
-    const day0 = world.day;
-    const ch = performAction(house, p.id, bed.x, bed.y + 1, ctx());
-    expect(p.sleeping).toBe(true);
-    expect(toasts(ch).some((t) => t.includes('God natt'))).toBe(true);
-    // moving in your sleep is ignored
-    const x0 = p.x;
-    applyMove(house, p.id, p.x + 40, p.y, 'right', true);
-    expect(p.x).toBe(x0);
-    // a second player who is still up keeps the night from passing
-    const other = createPlayer(world, 'Bo', { skin: '#f0c0a0', hair: '#553322', hairStyle: 'short' });
-    setOnline(world, other.id, true);
-    tick(world, 50, ctx());
-    expect(world.day).toBe(day0);
-    expect(p.sleeping).toBe(true);
-    // ...until they also go to bed
-    other.sleeping = true;
-    tick(world, 50, ctx());
-    expect(world.day).toBe(day0); // the lights go out first
-    const morning = tick(world, 50, { ...ctx(), now: 1_000_000 + 3000 });
-    expect(world.day).toBe(day0 + 1);
-    expect(p.sleeping).toBeUndefined();
-    expect(other.sleeping).toBeUndefined();
-    expect(toasts(morning).some((t) => t.includes('God morgon'))).toBe(true);
-    expect(world.timeMs).toBeLessThan(5000);
-    // waking up by hand
-    performAction(house, p.id, bed.x, bed.y + 1, ctx());
-    expect(p.sleeping).toBe(true);
-    select(p, 'hoe');
-    const wake = performAction(house, p.id, bed.x, bed.y + 1, ctx());
-    // holding a sword must not stop you from opening things
-    addItem(p.inventory, 'sword', 1);
-    select(p, 'sword');
-    expect(performAction(house, p.id, bed.x, bed.y + 1, ctx()).some((c) => c.t === 'player')).toBe(true);
-    expect(p.sleeping).toBe(true);
-    delete p.sleeping;
-    expect(p.sleeping).toBeUndefined();
-    expect(toasts(wake).some((t) => t.includes('vaknade'))).toBe(true);
-    expect(world.day).toBe(day0 + 1);
-  });
-});
-
-describe('fordon', () => {
-  const tileOf = (v: number) => Math.floor(v / TILE);
-  const lot = () => {
-    const { world, p } = setup();
-    for (let y = 28; y < 36; y++) for (let x = 28; x < 40; x++) clearTile(world, x, y);
-    standAt(world, p, 30, 30);
-    p.coins = 5000;
-    return { world, p };
-  };
-
-  it('a bought car is parked next to you at once, only you may drive it, and it is fast', () => {
-    const { world, p } = lot();
-    const ch = buy(world, p.id, 'vehicle_car_blue', 1, ctx());
-    expect(p.coins).toBe(2500);
-    const car = Object.values(world.animals).find((a) => a.species === 'car')!;
-    expect(car.owner).toBe(p.id);
-    expect(car.variant).toBe(1);
-    expect(Math.hypot(car.x - p.x, car.y - p.y)).toBeLessThanOrEqual(TILE * 1.5);
-    expect(toasts(ch).some((t) => t.includes('bredvid dig'))).toBe(true);
-    expect(toasts(buy(world, p.id, 'vehicle_car_red', 1, ctx()))[0]).toContain('redan');
-    // somebody else cannot take it
-    const other = createPlayer(world, 'Kompis', { skin: '#f0c0a0', hair: '#553322', hairStyle: 'short' });
-    setOnline(world, other.id, true);
-    standAt(world, other, tileOf(car.x) - 1, tileOf(car.y));
-    expect(toasts(performAction(world, other.id, tileOf(car.x), tileOf(car.y), ctx()))[0]).toContain('tillhör Test');
-    expect(other.riding).toBeUndefined();
-    // the owner drives, even with a sword in hand
-    standAt(world, p, tileOf(car.x) - 1, tileOf(car.y));
-    addItem(p.inventory, 'sword', 1);
-    select(p, 'sword');
-    const drive = performAction(world, p.id, tileOf(car.x), tileOf(car.y), ctx());
-    expect(p.riding).toBe(car.id);
-    expect(p.achievements).toContain('drive_1');
-    expect(toasts(drive).some((t) => t.includes('kör'))).toBe(true);
-    // road is fast, mud is slow
-    const idx = tileIndex(world, tileOf(p.x), tileOf(p.y));
-    expect(rideSpeedMul(world, p)).toBeCloseTo(2.6);
-    (world.terrain as string[])[idx] = 'road';
-    expect(rideSpeedMul(world, p)).toBeCloseTo(2.6 * 1.3);
-    world.terrain[idx] = 'soil';
-    expect(rideSpeedMul(world, p)).toBeCloseTo(2.6 * 0.7);
-    world.terrain[idx] = 'grass';
-    const x0 = p.x;
-    stepPlayer(world, p, 1, 0, 1000, rideSpeedMul(world, p));
-    expect(p.x - x0).toBeCloseTo(64 * 2.6, 0);
-    // the car sits under the driver and the odometer ticks
-    tick(world, 50, ctx());
-    expect(Math.hypot(car.x - p.x, car.y - p.y)).toBeLessThan(3);
-    expect(p.stats.drive_tiles).toBeGreaterThanOrEqual(10);
-    // any action parks it; tools do nothing while driving
-    addItem(p.inventory, 'hoe', 1);
-    select(p, 'hoe');
-    const ftx = tileOf(p.x) + 1;
-    const off = performAction(world, p.id, ftx, tileOf(p.y), ctx());
-    expect(p.riding).toBeUndefined();
-    expect(toasts(off).some((t) => t.includes('vägkanten'))).toBe(true);
-    expect(world.terrain[tileIndex(world, ftx, tileOf(p.y))]).toBe('grass');
-    expect(Math.hypot(car.x - p.x, car.y - p.y)).toBeLessThan(2 * TILE);
-    // parked cars stay where they are
-    const cx = car.x;
-    for (let i = 0; i < 40; i++) tick(world, 50, ctx());
-    expect(car.x).toBe(cx);
-  });
-
-  it('cannot drive into water, honks, and comes along when you drive over the edge', () => {
-    const { world, p } = lot();
-    buy(world, p.id, 'vehicle_motorcycle', 1, ctx());
-    const moped = Object.values(world.animals).find((a) => a.species === 'motorcycle')!;
-    standAt(world, p, tileOf(moped.x) - 1, tileOf(moped.y));
-    performAction(world, p.id, tileOf(moped.x), tileOf(moped.y), ctx());
-    expect(p.riding).toBe(moped.id);
-    expect(rideSpeedMul(world, p)).toBeCloseTo(2.2);
-    const ahead = tileIndex(world, tileOf(p.x) + 1, tileOf(p.y));
-    world.terrain[ahead] = 'water';
-    const x0 = p.x;
-    for (let i = 0; i < 20; i++) stepPlayer(world, p, 1, 0, 50, rideSpeedMul(world, p));
-    expect(p.x - x0).toBeLessThan(TILE);
-    world.terrain[ahead] = 'grass';
-    expect(honk(world, p.id).some((c) => c.t === 'fx' && c.kind === 'honk')).toBe(true);
-    // over the east edge into the village, still driving
-    standAt(world, p, 63, 32);
-    tick(world, 50, ctx());
-    const ch = travel(world, p.id, 'e');
-    expect(p.area).toBe('a:1,0');
-    const village = areaOf(world, p);
-    const there = Object.values(village.animals).find((a) => a.species === 'motorcycle' && a.owner === p.id)!;
-    expect(there).toBeDefined();
-    expect(there.owner).toBe(p.id);
-    expect(world.animals[moped.id]).toBeUndefined();
-    expect(p.riding).toBe(there.id);
-    expect(ch.some((c) => c.t === 'animal' && c.animal?.species === 'motorcycle' && c.area === 'a:1,0')).toBe(true);
-    // parking in the village and going home leaves it there
-    performAction(village, p.id, tileOf(p.x) + 1, tileOf(p.y), ctx());
-    expect(p.riding).toBeUndefined();
-    teleport(world, p.id, 'farm');
-    expect(village.animals[there.id]).toBeDefined();
-    expect(Object.values(world.animals).some((a) => a.species === 'motorcycle' && a.owner === p.id)).toBe(false);
-    // on foot there is nothing to honk with
-    expect(honk(world, p.id)).toEqual([]);
-  });
-});
-
-describe('buss och tåg', () => {
-  const toVillage = () => {
-    const { world, p } = setup();
-    p.coins = 100;
-    standAt(world, p, 63, 32);
-    travel(world, p.id, 'e');
-    expect(p.area).toBe('a:1,0');
-    return { world, p, village: areaOf(world, p) };
-  };
-
-  it('the farm and every city have stops, also when saved before they existed', () => {
-    const { world, village } = toVillage();
-    const farmStop = Object.values(world.objects).find((o) => o.kind === 'bus_stop')!;
-    expect(farmStop).toBeDefined();
-    expect([farmStop.x, farmStop.y]).toEqual([FARM_BUS_STOP.x, FARM_BUS_STOP.y]);
-    expect(ensureFarmBusStop(world)).toBe(false);
-    delete world.objects[farmStop.id];
-    expect(ensureFarmBusStop(world)).toBe(true);
-    expect(Object.values(village.objects).filter((o) => o.kind === 'bus_stop')).toHaveLength(1);
-    expect(Object.values(village.objects).filter((o) => o.kind === 'train_station')).toHaveLength(1);
-    expect(ensureTransport(village)).toBe(false);
-    for (const o of Object.values(village.objects)) if (o.kind === 'bus_stop' || o.kind === 'train_station') delete village.objects[o.id];
-    expect(ensureTransport(village)).toBe(true);
-    expect(Object.values(village.objects).filter((o) => o.kind === 'train_station')).toHaveLength(1);
-  });
-
-  it('the bus takes you home and back for 5 kr, but only to places you know', () => {
-    const { world, p, village } = toVillage();
-    // from the city: home is on the list, the unknown city is not
-    const dests = transportDestinations(p, 'bus');
-    expect(dests.map((d) => d.key)).toEqual(['farm']);
-    expect(dests[0]!.price).toBe(5);
-    // you have to stand by the stop
-    standAt(world, p, 10, 10);
-    expect(toasts(ride(world, p.id, 'bus', 'farm', ctx()))).toContain('Gå fram till hållplatsen först.');
-    standAt(world, p, CITY_BUS_STOP.x, CITY_BUS_STOP.y + 1);
-    const ch = ride(world, p.id, 'bus', 'farm', ctx());
-    expect(ch[0]).toMatchObject({ t: 'ride', via: 'bus', to: p.id });
-    expect(p.area).toBe('farm');
-    expect(p.coins).toBe(95);
-    expect(Math.floor(p.x / TILE)).toBe(FARM_BUS_STOP.x);
-    expect(Math.floor(p.y / TILE)).toBe(FARM_BUS_STOP.y + 1);
-    expect(p.stats?.rides).toBe(1);
-    expect(p.achievements).toContain('trip_1');
-    // and back to the city (visited), not to an unknown one
-    const farmDests = transportDestinations(p, 'bus');
-    expect(farmDests.map((d) => d.key)).toEqual(['a:1,0']);
-    expect(ride(world, p.id, 'bus', 'a:4,0', ctx()).some((c) => c.t === 'ride')).toBe(false);
-    ride(world, p.id, 'bus', 'a:1,0', ctx());
-    expect(p.area).toBe('a:1,0');
-    expect(Math.floor(p.y / TILE)).toBe(CITY_BUS_STOP.y + 1);
-    expect(areaOf(world, p)).toBe(village);
-    // broke: no ride
-    p.coins = 2;
-    standAt(world, p, CITY_BUS_STOP.x, CITY_BUS_STOP.y + 1);
-    expect(toasts(ride(world, p.id, 'bus', 'farm', ctx()))).toContain('Inte tillräckligt med kr');
-    expect(p.area).toBe('a:1,0');
-  });
-
-  it('the train also goes to one unknown city, which counts as visited on arrival', () => {
-    const { world, p } = toVillage();
-    const unknown = nearestUnknownCity(p.visited!)!;
-    expect(unknown).toBeTruthy();
-    expect(unknown).not.toBe('a:1,0');
-    const dests = transportDestinations(p, 'train');
-    expect(dests.find((d) => d.unknown)?.key).toBe(unknown);
-    expect(dests.find((d) => d.unknown)?.name).toBe('Okänd köping');
-    expect(dests.find((d) => d.unknown)?.price).toBe(15);
-    // bus never lists it
-    expect(transportDestinations(p, 'bus').some((d) => d.key === unknown)).toBe(false);
-    // the station is the boarding point for trains
-    standAt(world, p, CITY_BUS_STOP.x, CITY_BUS_STOP.y + 1);
-    expect(toasts(ride(world, p.id, 'train', unknown, ctx()))).toContain('Gå fram till hållplatsen först.');
-    standAt(world, p, CITY_STATION.x + 1, CITY_STATION.y + 2);
-    const ch = ride(world, p.id, 'train', unknown, ctx());
-    expect(ch.some((c) => c.t === 'ride' && c.via === 'train')).toBe(true);
-    expect(p.area).toBe(unknown);
-    expect(p.coins).toBe(85);
-    expect(p.visited).toContain(unknown);
-    expect(p.stats?.train_rides).toBe(1);
-    const city = areaOf(world, p);
-    expect(city.biome).toBe('by');
-    expect(Object.values(city.objects).some((o) => o.kind === 'train_station')).toBe(true);
-    expect(isSolidForPlayer(city, Math.floor(p.x / TILE), Math.floor(p.y / TILE))).toBe(false);
-    // next unknown city is a different one now
-    expect(nearestUnknownCity(p.visited!)).not.toBe(unknown);
-    expect(() => JSON.stringify(ch)).not.toThrow();
-  });
-});
 
 describe('staden', () => {
   const tileOfPx = (v: number) => Math.floor(v / TILE);
@@ -2320,46 +669,6 @@ describe('staden', () => {
         expect(objectAt(city, w.x, w.y)).toBeUndefined();
         expect(['road', 'crossing']).not.toContain(T[tileIndex(city, w.x, w.y)]);
       }
-  });
-
-  it('traffic drives along the streets, stops and honks for a player in the way, and cannot be walked into', () => {
-    const { world, p } = setup();
-    standAt(world, p, 63, 32);
-    travel(world, p.id, 'e');
-    const city = areaOf(world, p);
-    expect(city.biome).toBe('by');
-    const car = Object.values(city.animals).find((a) => a.species === 'car')!;
-    const start = { x: car.x, y: car.y };
-    let now = 1_000_000;
-    const step = () => {
-      now += 100;
-      return tick(world, 100, { ...ctx(), now });
-    };
-    for (let i = 0; i < 40; i++) step();
-    expect(Math.hypot(car.x - start.x, car.y - start.y)).toBeGreaterThan(TILE);
-    expect(car.moving).toBe(true);
-    expect(['road', 'crossing']).toContain(city.terrain[tileIndex(city, tileOfPx(car.x), tileOfPx(car.y))]);
-    // stand right in front of it: it stops, and after a while it honks (kindly)
-    const [dx, dy] = DIRS[car.facing]!;
-    p.x = car.x + dx * TILE * 1.3;
-    p.y = car.y + dy * TILE * 1.3;
-    const before = { x: car.x, y: car.y };
-    let honked = false;
-    for (let i = 0; i < 30; i++) if (step().some((c) => c.t === 'fx' && c.kind === 'honk')) honked = true;
-    expect(car.x).toBe(before.x);
-    expect(car.y).toBe(before.y);
-    expect(car.moving).toBe(false);
-    expect(honked).toBe(true);
-    expect(isSolidForPlayer(city, tileOfPx(car.x), tileOfPx(car.y))).toBe(true);
-    // tapping a car just makes it honk; nothing to feed or pet
-    const ch = performAction(city, p.id, tileOfPx(car.x), tileOfPx(car.y), ctx());
-    expect(toasts(ch).some((t) => t.includes('Gnägg'))).toBe(true);
-    expect(car.petted).toBe(false);
-    // out of the way again: it drives on
-    p.x = 8 * TILE;
-    p.y = 8 * TILE;
-    for (let i = 0; i < 20; i++) step();
-    expect(Math.hypot(car.x - before.x, car.y - before.y)).toBeGreaterThan(TILE / 2);
   });
 
   it('is dressed as a Norse market town, and a city saved before that gets dressed once, still walkable', () => {
@@ -2437,44 +746,7 @@ describe('sort and quick stack', () => {
     expect(out.some((c) => c.t === 'player')).toBe(true);
   });
 
-  it('sortSlots on a chest needs proximity and a real chest', () => {
-    const { world, p } = setup();
-    const chest = placeChest(world, p);
-    chest.items![5] = { item: 'carrot', count: 1 };
-    chest.items![9] = { item: 'carrot', count: 2 };
-    const out = sortSlots(world, p.id, chest.id);
-    expect(chest.items![0]).toEqual({ item: 'carrot', count: 3 });
-    expect(out.some((c) => c.t === 'object' && c.id === chest.id)).toBe(true);
-    chest.items![20] = { item: 'carrot', count: 1 };
-    standAt(world, p, 40, 40);
-    expect(sortSlots(world, p.id, chest.id)).toEqual([]);
-    expect(chest.items![20]).not.toBeNull();
-    standAt(world, p, 20, 20);
-    expect(sortSlots(world, p.id, 999999)).toEqual([]);
-    const house = Object.values(world.objects).find((o) => o.kind === 'house')!;
-    expect(sortSlots(world, p.id, house.id)).toEqual([]);
-  });
 
-  it('quickStackToChest moves matching backpack items and toasts', () => {
-    const { world, p } = setup();
-    const chest = placeChest(world, p);
-    chest.items![0] = { item: 'carrot', count: 5 };
-    for (let i = 8; i < 32; i++) p.inventory[i] = null;
-    p.inventory[10] = { item: 'carrot', count: 4 };
-    p.inventory[11] = { item: 'potato', count: 2 };
-    p.inventory[1] = { item: 'carrot', count: 7 };
-    const out = quickStackToChest(world, p.id, chest.id);
-    expect(chest.items![0]).toEqual({ item: 'carrot', count: 9 });
-    expect(p.inventory[10]).toBeNull();
-    expect(p.inventory[11]).toEqual({ item: 'potato', count: 2 });
-    expect(p.inventory[1]).toEqual({ item: 'carrot', count: 7 });
-    expect(toasts(out)).toContain('4 saker lades i kistan');
-    expect(out.some((c) => c.t === 'object')).toBe(true);
-    expect(out.some((c) => c.t === 'player')).toBe(true);
-    expect(toasts(quickStackToChest(world, p.id, chest.id))).toContain('Inget i ryggsäcken passar i kistan');
-    standAt(world, p, 40, 40);
-    expect(quickStackToChest(world, p.id, chest.id)).toEqual([]);
-  });
 
   it('sortSlots keeps the held backpack stack selected', () => {
     const { world, p } = setup();
@@ -2495,38 +767,85 @@ describe('sort and quick stack', () => {
     expect(p.inventory[p.selected]?.item).toBe('carrot');
   });
 
-  it('sort with nothing to change returns only the toast', () => {
-    const { world, p } = setup();
-    for (let i = 8; i < 32; i++) p.inventory[i] = null;
-    p.inventory[8] = { item: 'hoe', count: 1 };
-    expect(sortSlots(world, p.id).map((c) => c.t)).toEqual(['toast']);
-    const chest = placeChest(world, p);
-    chest.items![0] = { item: 'carrot', count: 3 };
-    expect(sortSlots(world, p.id, chest.id).map((c) => c.t)).toEqual(['toast']);
+
+
+});
+
+describe('the lobby (Gården)', () => {
+  const fronts = (world: WorldState) =>
+    Object.values(world.objects)
+      .filter((o) => ['fardport', 'yggdrasil', 'saga_stone', 'kennel', 'wardrobe', 'house'].includes(o.kind))
+      .map((o) => ({ kind: o.kind, x: o.x + Math.floor((objectDef(o.kind).w - 1) / 2), y: o.y + objectDef(o.kind).h }));
+
+  it('has the arch, the shoot, Kämpastenen, the kennel, the wardrobe and the house, and everything is reachable from the spawn', () => {
+    const world = generateWorld(1);
+    const seen = reachableFrom(world, SPAWN);
+    const kinds = new Set(fronts(world).map((f) => f.kind));
+    for (const k of ['fardport', 'yggdrasil', 'saga_stone', 'kennel', 'wardrobe', 'house']) expect(kinds.has(k)).toBe(true);
+    for (const f of fronts(world)) expect(seen[tileIndex(world, f.x, f.y)], `${f.kind} at ${f.x},${f.y}`).toBe(1);
+    // Völvan and Stina can be walked up to
+    for (const id of ['sigrun', 'stina']) {
+      const n = NPCS[id]!;
+      expect(seen[tileIndex(world, n.x, n.y + 1)], id).toBe(1);
+    }
+    // the door of the house works
+    expect(seen[tileIndex(world, 10, 9)]).toBe(1);
   });
 
-  it('quickStackToChest leaves the held backpack slot alone and uses the singular text', () => {
+  it('has no fields, animals, shop, sell box, cave or bus, and a new player has nothing in the bag', () => {
     const { world, p } = setup();
-    const chest = placeChest(world, p);
-    chest.items![0] = { item: 'carrot', count: 5 };
-    for (let i = 8; i < 32; i++) p.inventory[i] = null;
-    p.inventory[10] = { item: 'carrot', count: 1 };
-    p.inventory[12] = { item: 'carrot', count: 4 };
-    p.selected = 12;
-    const out = quickStackToChest(world, p.id, chest.id);
-    expect(p.inventory[12]).toEqual({ item: 'carrot', count: 4 });
-    expect(p.inventory[10]).toBeNull();
-    expect(chest.items![0]).toEqual({ item: 'carrot', count: 6 });
-    expect(toasts(out)).toContain('1 sak lades i kistan');
+    expect(Object.keys(world.crops)).toHaveLength(0);
+    expect(Object.keys(world.animals)).toHaveLength(0);
+    for (const o of Object.values(world.objects)) expect(['mailbox', 'sellbox', 'start_chest', 'start_bench', 'cave', 'bus_stop']).not.toContain(o.kind);
+    expect(p.inventory.filter(Boolean)).toHaveLength(0);
+    expect(Object.values(NPCS).map((n) => n.id).sort()).toEqual(['sigrun', 'stina']);
   });
 
-  it('quickStackToChest with nothing moved returns only the toast', () => {
+  it('cannot be changed: no chopping, digging, planting or building, whatever is held', () => {
     const { world, p } = setup();
-    const chest = placeChest(world, p);
-    for (let i = 8; i < 32; i++) p.inventory[i] = null;
-    p.inventory[10] = { item: 'potato', count: 2 };
-    const out = quickStackToChest(world, p.id, chest.id);
-    expect(out.map((c) => c.t)).toEqual(['toast']);
-    expect(toasts(out)).toContain('Inget i ryggsäcken passar i kistan');
+    for (const tool of ['axe', 'hoe', 'hammer', 'pick', 'fence', 'carrot_seed']) {
+      addItem(p.inventory, tool, 1);
+      p.selected = p.inventory.findIndex((s) => s?.item === tool);
+      standAt(world, p, 20, 25);
+      clearTile(world, 21, 25);
+      const before = JSON.stringify([world.terrain.slice(0, 4096), Object.keys(world.objects).length, world.crops]);
+      for (const [tx, ty] of [[21, 25], [20, 26], [6, 18], [24, 14]] as const) {
+        p.x = (tx - 1) * TILE + TILE / 2;
+        p.y = ty * TILE + TILE / 2;
+        performAction(world, p.id, tx, ty, ctx());
+      }
+      expect(JSON.stringify([world.terrain.slice(0, 4096), Object.keys(world.objects).length, world.crops])).toBe(before);
+    }
+  });
+
+  it('is closed: nothing to travel to, no edge to cross', () => {
+    const world = generateWorld(1);
+    // (the functions that walked a player off a map's edge, jumped, or boarded a bus are gone)
+    for (const name of ['travel', 'teleport', 'ride', 'transportDestinations', 'flyRocket']) expect(name in shared).toBe(false);
+    const seen = reachableFrom(world, SPAWN);
+    for (let i = 0; i < seen.length; i++) {
+      const x = i % mapW(world);
+      const y = Math.floor(i / mapW(world));
+      if (seen[i]) expect(x >= 2 && y >= 2 && x <= mapW(world) - 3 && y <= mapH(world) - 3 && x <= 48 && y <= 36, `${x},${y}`).toBe(true);
+    }
+  });
+
+  it('gives one free first pet at the kennel, which follows its owner', () => {
+    const { world, p } = setup();
+    const k = Object.values(world.objects).find((o) => o.kind === 'kennel')!;
+    standAt(world, p, k.x, k.y + 2);
+    expect(adoptPet(world, p.id, 'cow', ctx())).toEqual([]);
+    const got = adoptPet(world, p.id, 'cat', ctx());
+    expect(got.some((c) => c.t === 'open' && c.ui === 'nameAnimal')).toBe(true);
+    const pet = Object.values(world.animals)[0]!;
+    expect([pet.species, pet.owner]).toEqual(['cat', p.id]);
+    expect(isPetAnimal(pet)).toBe(true);
+    // once only
+    expect(Object.values(adoptPet(world, p.id, 'dog', ctx())).some((c) => c.t === 'toast' && c.text === T.kennelOnce)).toBe(true);
+    expect(Object.values(world.animals)).toHaveLength(1);
+    // it follows
+    standAt(world, p, 30, 25);
+    for (let i = 0; i < 400; i++) tick(world, 50, ctx());
+    expect(Math.hypot(pet.x - p.x, pet.y - p.y)).toBeLessThan(2 * TILE);
   });
 });

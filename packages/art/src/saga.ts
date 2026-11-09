@@ -1856,6 +1856,72 @@ function bifrostArch(f: number): Px {
   return p;
 }
 
+
+// ---------------------------------------------------------------------------
+// The färdport in the lobby: the great arch every run starts under
+// ---------------------------------------------------------------------------
+
+const ARCHSTONE = pal('#4a4752', '#6f6c78', '#948f9c', '#b9b4c0', '#dedae6');
+const PORTGOLD = { outer: '#c0701a', mid: '#f0b030', core: '#fff0a0', light: '#ffe488' };
+
+/** A grand stone arch carved with runes, its doorway full of swirling golden light (two frames). */
+function fardportArch(f: number): Px {
+  const p = new Px(48, 56);
+  const g = PORTGOLD;
+  // steps and a stone footing
+  p.rect(0, 50, 48, 6, ARCHSTONE.b).rect(0, 50, 48, 1, ARCHSTONE.l2).rect(2, 53, 44, 1, ARCHSTONE.d).rect(0, 55, 48, 1, ARCHSTONE.d2);
+  for (const x of [8, 16, 24, 32, 40]) p.rect(x, 51, 1, 4, ARCHSTONE.d);
+  // two pillars and the round arch over them, built of blocks
+  paint(p, 3, 2, 42, 50, (x, y) => {
+    const dx = x + 0.5 - 24;
+    const dy = y + 0.5 - 22;
+    const r = dy < 0 ? Math.hypot(dx, dy) : Math.abs(dx);
+    if (r < 9.5 || r > 19) return null;
+    // block seams: rings of stones, each course offset
+    const course = Math.floor((r - 9.5) / 4.75);
+    const along = dy < 0 ? Math.atan2(dy, dx) * 10 : (y + course * 3) * 0.5;
+    const seam = Math.floor(along + course * 2.5) % 3 === 0 && Math.round(along * 4) % 4 === 0;
+    if (seam || Math.abs(r - 14.25) > 4.7) return ARCHSTONE.d;
+    const nx = (r - 14.25) / 4.75;
+    return tone(ARCHSTONE, 0.45 * light(dx < 0 ? -Math.abs(nx) : Math.abs(nx), dy < 0 ? -0.3 : 0.1, 0.8) + 0.5 + 0.3 * grain(x, y, 311));
+  });
+  // the keystone, with a gold sun on it
+  p.rect(21, 1, 6, 8, ARCHSTONE.l).rect(21, 1, 6, 1, ARCHSTONE.l2).rect(21, 8, 6, 1, ARCHSTONE.d).rect(21, 1, 1, 8, ARCHSTONE.l2).rect(26, 1, 1, 8, ARCHSTONE.d);
+  p.circle(24, 5, 2, '#f0b030').px(24, 5, '#fff0a0').px(24, 2, '#f0b030').px(24, 8, '#f0b030').px(21, 5, '#f0b030').px(27, 5, '#f0b030');
+  // runes on the pillars
+  const rune = (x: number, y: number, k: number) => {
+    const c = f && k % 2 ? '#fff0a0' : '#f0b030';
+    p.rect(x, y, 1, 4, c);
+    if (k % 3 === 0) p.px(x + 1, y + 1, c).px(x + 1, y + 3, c);
+    else if (k % 3 === 1) p.px(x - 1, y + 1, c).px(x + 1, y + 2, c);
+    else p.px(x + 1, y, c).px(x - 1, y + 3, c);
+  };
+  [0, 1, 2].forEach((k) => {
+    rune(6, 28 + k * 7, k);
+    rune(41, 28 + k * 7, k + 1);
+  });
+  // the doorway: golden light rising from the ground, in soft arcs that shift a step each frame
+  paint(p, 14, 12, 20, 40, (x, y) => {
+    const dx = x + 0.5 - 24;
+    const dy = y + 0.5 - 22;
+    if (Math.abs(dx) >= 9.5 || (dy < 0 && Math.hypot(dx, dy) >= 9.5)) return null;
+    const r = Math.hypot(dx * 0.7, y + 0.5 - 60);
+    const band = ((Math.floor((r + f * 1.6) / 2.6) % 3) + 3) % 3;
+    const fade = (y - 12) / 38;
+    if (fade < 0.25 && (x + y) % 2 === 0) return g.outer;
+    return band === 0 ? g.core : band === 1 ? g.mid : g.light;
+  });
+  for (const [x, y] of (f ? [[19, 22], [28, 32], [23, 42]] : [[27, 20], [20, 35], [25, 45]]) as [number, number][]) p.px(x, y, '#ffffff');
+  // moss at the foot
+  for (const [x, y] of [[4, 49], [5, 49], [6, 48], [41, 49], [42, 48], [43, 49]] as const) p.px(x, y, '#4a8a3a');
+  p.outline(OUTLINE);
+  halo(p, 24, 40, 14, g.light, f ? 0.3 : 0.24);
+  halo(p, 24, 5, 7, g.light, 0.3);
+  twinkle(p, f ? 3 : 44, f ? 10 : 6, '#fff3b0');
+  twinkle(p, f ? 43 : 4, f ? 36 : 40, '#ffffff');
+  return p;
+}
+
 const PORTALS = [barrow, iceGate, forgeDoor, helGate, mineDoor, seaTemple, alvTree, fenrisCleft, bifrostArch];
 const sagaPortal = (look: number, f: number): Px => PORTALS[look % PORTALS.length]!(f);
 
@@ -3752,6 +3818,75 @@ export function sagaIcons(): Record<string, Px> {
 
 // ---------------------------------------------------------------------------
 
+
+// ---------------------------------------------------------------------------
+// The väg-runor of a run: a round rune stone flat on the floor of the exit room, one for each stop the next row leads to.
+// Its picture is the stop it leads to (variant 0 a flock: crossed swords, 1 a Vilosten: a heart, 2 the Mellanboss: a horned
+// helm, 3 the boss: a crown) in that stop's colour; two frames pulse. It is 32 px wide, as wide as the circle you stand in to vote.
+// ---------------------------------------------------------------------------
+
+const EXIT_COL = [
+  { d: '#8a3a12', b: '#ff9a3c', l: '#ffe2a8' },
+  { d: '#14744a', b: '#4fe39a', l: '#d4ffe8' },
+  { d: '#5a2290', b: '#c07cff', l: '#f2dcff' },
+  { d: '#8a6208', b: '#ffd23f', l: '#fff6b8' },
+];
+const EXIT_SIGN: string[][] = [
+  [],
+  ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'],
+  ['#.....#', '##...##', '.#####.', '#######', '##.#.##', '.#.#.#.'],
+  ['#..#..#', '##.#.##', '#######', '#######', '#######'],
+];
+const big = (p: Px, x: number, y: number, rows: string[], c: string): Px => {
+  rows.forEach((row, j) => [...row].forEach((ch, i) => ch === '#' && p.rect(x + i * 2, y + j * 2, 2, 2, c)));
+  return p;
+};
+
+function runExit(kind: number, f: number): Px {
+  const p = new Px(32, 32);
+  const c = EXIT_COL[kind % 4]!;
+  const cx = 16;
+  const cy = 16.5;
+  // the stone disc (a little flattened, we look down at it from the south), a lit ring of runes, a lighter middle
+  paint(p, 0, 2, 32, 29, (x, y) => {
+    const dx = (x + 0.5 - cx) / 15.6;
+    const dy = (y + 0.5 - cy) / 13.6;
+    const r = dx * dx + dy * dy;
+    if (r > 1) return null;
+    if (r > 0.9) return c.d;
+    if (r > 0.8) return f ? c.l : c.b;
+    if (r > 0.74) return c.d;
+    if (r > 0.42) return tone(STONE, light(dx, dy, 0.8) + 0.18 * grain(x, y, 31 + kind) - 0.15);
+    return tone(STONE, light(dx, dy, 0.7) + 0.12 * grain(x, y, 37 + kind) + 0.12);
+  });
+  // eight little runes round the ring
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + 0.2;
+    const x = Math.round(cx + Math.cos(a) * 11.2) - 1;
+    const y = Math.round(cy + Math.sin(a) * 9.8) - 2;
+    rune(p, x, y, i + kind, (i + f) % 2 ? c.l : c.b);
+  }
+  // the picture of the stop it leads to
+  if (kind === 0) {
+    for (const [dx, dy] of [[0, 1], [0, 0]] as const) {
+      const col = dy ? c.d : c.l;
+      p.line(10 + dx, 12 + dy, 22 + dx, 24 + dy, col).line(11 + dx, 12 + dy, 22 + dx, 23 + dy, col);
+      p.line(22 + dx, 12 + dy, 10 + dx, 24 + dy, col).line(21 + dx, 12 + dy, 10 + dx, 23 + dy, col);
+    }
+    p.rect(9, 11, 3, 2, c.b).rect(20, 11, 3, 2, c.b).rect(9, 23, 3, 2, c.b).rect(20, 23, 3, 2, c.b);
+  } else {
+    const sign = EXIT_SIGN[kind]!;
+    big(p, 9, 11, sign, c.d);
+    big(p, 9, 10, sign, c.l);
+  }
+  p.outline(OUTLINE);
+  glowOn(p, cx, cy, 15, c.b, f ? 0.2 : 0.1);
+  halo(p, cx, cy, 16, c.b, f ? 0.32 : 0.2);
+  if (f) twinkle(p, 6, 8, c.l, '#ffffff');
+  else twinkle(p, 26, 24, c.l, '#ffffff');
+  return p;
+}
+
 /** How many looks the dungeons' walls, gates, torches, ways out and arches come in (one per dungeon). */
 export const SAGA_LOOKS = 9;
 const LOOKS = SAGA_LOOKS;
@@ -3766,6 +3901,7 @@ export function drawSaga(set: SetArt): void {
   set('saga_chest', n(3, sagaChest), -4, -4);
   set('saga_portal', n(LOOKS * 2, (i) => sagaPortal(i % LOOKS, Math.floor(i / LOOKS))), 0, -24);
   set('saga_stone', n(4, kampasten), -4, -20, true);
+  set('fardport', n(2, fardportArch), 0, -24, true);
   set('saga_coffin', n(3, coffin), 0, -4);
   set('saga_bones', n(3, boneHeap));
   set('saga_candles', n(6, (i) => candles(i % 3, Math.floor(i / 3))), 0, -4);
@@ -3777,6 +3913,8 @@ export function drawSaga(set: SetArt): void {
   set('saga_brazier', n(6, (i) => brazier(i % 3, Math.floor(i / 3))), 0, -10);
   set('saga_lavacrack', n(6, (i) => lavaCrack(i % 3, Math.floor(i / 3))));
   set('solruna', n(2, solruna), 0, -8, true);
+  // the väg-runor of a run: the stop each leads to in its variant, then the same four a step on
+  set('run_exit', n(8, (i) => runExit(i % 4, Math.floor(i / 4))), -8, -8);
   set('yggdrasil', n(2, yggdrasil), -4, -16, true);
   // the second act: the puzzle rooms' rune plates, then each new dungeon's things (three of each, picked at random)
   set('saga_plate', n(4, (i) => sagaPlate(i % 2 === 1, Math.floor(i / 2))));
@@ -3809,6 +3947,6 @@ export function drawSaga(set: SetArt): void {
 }
 
 /** Per kind, how many looks its frames hold before the same looks come again a step on (flames, glows). */
-export const SAGA_STEPPED: Record<string, number> = { saga_torch: LOOKS, saga_rest: 2, saga_portal: LOOKS, saga_candles: 3, saga_icecrystal: 3, saga_brazier: 3, saga_lavacrack: 3,
+export const SAGA_STEPPED: Record<string, number> = { saga_torch: LOOKS, saga_rest: 2, run_exit: 4, saga_portal: LOOKS, saga_candles: 3, saga_icecrystal: 3, saga_brazier: 3, saga_lavacrack: 3,
   saga_plate: 2, saga_ghostlight: 3, saga_goldpile: 3, saga_minelamp: 3, saga_seaweed: 3, saga_pearl: 3, saga_glowshroom: 3, saga_fairylight: 3, saga_rainbowshard: 3, saga_starlamp: 3,
 };

@@ -23,12 +23,10 @@ import {
   devUnlockChapters,
   equipGear,
   noticeLandmarks,
-  setHero,
   shownHeld,
   drinkPotion,
   isSagaKey,
   isRunKey,
-  jumpTo,
   rejoinRun,
   leaveRun,
   runOf,
@@ -44,38 +42,27 @@ import {
   DEFAULT_MAX_PLAYERS,
   NPCS,
   TICK_HZ,
+  adoptPet,
   applyMove,
   areaOf,
-  buy,
-  completeQuest,
-  cook,
-  craft,
   createPlayer,
-  dropItem,
   emote,
-  honk,
   equip,
   getArea,
   isSeason,
-  leaveCave,
   mulberry32,
   nameAnimal,
-  paint,
   newDay,
   npcState,
   performAction,
   seasonForDate,
   selectSlot,
-  sell,
   setOnline,
   swapSlots,
   sortSlots,
   quickStackToChest,
   tagArea,
-  teleport,
-  ride,
   tick,
-  travel,
   type AnimalSnap,
   type NpcSnap,
   type Appearance,
@@ -138,9 +125,6 @@ export interface GameOptions {
   /** The highest run level (0..4) a character may play (the parent page's setting; default: all levels). */
   levelCap?: (playerId: string) => number;
 }
-
-/** How long an offline player may stay in the cave before being carried out. */
-const DUNGEON_GRACE_MS = 90_000;
 
 export class Game {
   world!: WorldState;
@@ -230,7 +214,6 @@ export class Game {
       players.push(snap);
     }
     const animals: AnimalSnap[] = Object.values(this.world.animals).map((a) => ({ id: a.id, x: a.x, y: a.y, facing: a.facing, moving: a.moving }));
-    if (this.world.dungeon) for (const a of Object.values(this.world.dungeon.animals)) animals.push({ id: a.id, x: a.x, y: a.y, facing: a.facing, moving: a.moving, area: 'dungeon' });
     for (const [k, area] of Object.entries(this.world.areas ?? {})) {
       if (!Object.values(area.players).some((p) => p.online)) continue;
       for (const a of Object.values(area.animals)) animals.push({ id: a.id, x: a.x, y: a.y, facing: a.facing, moving: a.moving, area: k });
@@ -410,16 +393,6 @@ export class Game {
         if (p) p.lastPlayed = Date.now();
         this.pending.push(...setOnline(this.world, c.playerId, false));
         this.dispatchPending();
-        // A flaky tablet connection must not throw you out of the cave: wait a while before carrying you out
-        if (p?.area === 'dungeon') {
-          const id = c.playerId;
-          setTimeout(() => {
-            const q = this.world.players[id];
-            if (!q || q.online || q.area !== 'dungeon') return;
-            this.pending.push(...leaveCave(this.world, id, false));
-            this.dispatchPending();
-          }, DUNGEON_GRACE_MS);
-        }
       }
     }
   }
@@ -449,14 +422,7 @@ export class Game {
       client.link.send({ t: 'welcome', you: p.id, world: { ...this.world, areas: undefined, dungeon: undefined }, season: this.season(), now: Date.now(), tick: this.tickCount, biomes });
       // voice after the welcome: the client starts its voice window over on a welcome, so a state sent before it was lost
       this.voice.online(msg.playerId, client.ip ?? 'local', !!client.guest);
-      if (p.area === 'dungeon') {
-        // back in the cave after a dropped connection (the cave may have been cleared meanwhile)
-        const d = this.world.dungeon;
-        if (d) {
-          d.players[p.id] = p;
-          client.link.send({ t: 'changes', changes: [{ t: 'areaData', to: p.id, key: 'dungeon', world: d }] });
-        } else this.pending.push(...leaveCave(this.world, p.id, false));
-      } else if (isSagaKey(p.area)) {
+      if (isSagaKey(p.area)) {
         // back in a dungeon: up at its last rest stone (it may have started over meanwhile); in a run: the same, or home if it is over
         this.pending.push(...(isRunKey(p.area) ? rejoinRun(this.world, p.id) : rejoinSaga(this.world, p.id)));
       } else if (p.area !== 'farm') {
@@ -486,16 +452,6 @@ export class Game {
       case 'act':
         changes = tagArea(performAction(w, pid, Math.floor(msg.tx), Math.floor(msg.ty), this.ctx()), areaK);
         break;
-      case 'travel':
-        changes = travel(this.world, pid, msg.dir);
-        if (changes.length) this.store.noteArea?.(me.area);
-        break;
-      case 'teleport':
-        changes = teleport(this.world, pid, String(msg.to ?? ''));
-        break;
-      case 'ride':
-        changes = ride(this.world, pid, msg.via, String(msg.to ?? ''), this.ctx());
-        break;
       case 'select':
         changes = selectSlot(w, pid, msg.slot);
         break;
@@ -518,38 +474,17 @@ export class Game {
           changes = [];
         }
         break;
-      case 'craft':
-        changes = craft(w, pid, msg.recipe);
-        break;
-      case 'cook':
-        changes = cook(w, pid, msg.recipe);
-        break;
-      case 'buy':
-        changes = buy(w, pid, msg.item, msg.qty, this.ctx());
-        break;
-      case 'sell':
-        changes = sell(w, pid, msg.slot, msg.qty);
-        break;
       case 'equip':
         changes = equip(w, pid, msg.slot, msg.item);
         break;
       case 'emote':
         changes = emote(w, pid, msg.id, this.ctx());
         break;
-      case 'honk':
-        changes = tagArea(honk(w, pid), areaK);
-        break;
-      case 'drop':
-        changes = dropItem(w, pid, msg.slot, msg.qty);
-        break;
       case 'nameAnimal':
         changes = tagArea(nameAnimal(w, pid, msg.id, String(msg.name ?? '')), areaK);
         break;
-      case 'paint':
-        changes = paint(w, pid, String(msg.pixels ?? ''));
-        break;
-      case 'quest':
-        changes = completeQuest(w, pid, String(msg.id ?? ''));
+      case 'pet':
+        if (msg.a === 'adopt') changes = tagArea(adoptPet(this.world, pid, String(msg.species ?? ''), this.ctx()), areaK);
         break;
       case 'pets':
         changes = callPets(this.world, pid, msg.cmd, this.ctx());
@@ -565,7 +500,6 @@ export class Game {
         else if (msg.a === 'chapter') changes = sagaChapter(this.world, pid);
         else if (msg.a === 'quest') changes = sagaQuestAct(this.world, pid, String(msg.id ?? ''));
         else if (msg.a === 'equip') changes = equipGear(this.world, pid, String(msg.slot ?? ''), typeof msg.item === 'string' ? msg.item : null);
-        else if (msg.a === 'hero') changes = setHero(this.world, pid, msg.on === true);
         else if (msg.a === 'craft') changes = craftGear(this.world, pid, String(msg.item ?? ''));
         break;
       case 'house':
@@ -581,9 +515,6 @@ export class Game {
           changes = tagArea(setStandLook(w, pid, msg.obj, typeof msg.piece === 'string' ? msg.piece : null, msg.way), areaK);
           if (changes.length) this.store.noteArea?.(me.area);
         } else changes = equipLook(me, msg.slot, typeof msg.piece === 'string' ? msg.piece : null, msg.way, msg.cls);
-        break;
-      case 'jump':
-        changes = jumpTo(this.world, pid, String(msg.to ?? ''));
         break;
       case 'run':
       case 'seed':

@@ -167,7 +167,7 @@ export function initGamepad(opts: {
     // in your own house Select is Möblera, else the book
     if (hit(B.Back)) {
       if (inOwnHouse()) hud.toggleFurnish();
-      else menus.toggle('book');
+      else document.dispatchEvent(new Event('lilla:journal'));
     }
   }
 

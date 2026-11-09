@@ -1,5 +1,4 @@
 import { NPCS, objectDef } from './data.ts';
-import { ensureFarmBusStop, ensureFarmExits } from './biomes.ts';
 import { mulberry32, randInt } from './rng.ts';
 import type { MapSize, Terrain, WorldObject, WorldState } from './types.ts';
 import { MAP_H, MAP_W, key } from './types.ts';
@@ -13,7 +12,7 @@ export const inBounds = (m: MapSize, x: number, y: number): boolean => x >= 0 &&
 export const tileIndex = (m: MapSize, x: number, y: number): number => y * mapW(m) + x;
 
 /** The spot new characters appear at (tile coords). */
-export const SPAWN = { x: 15, y: 11 };
+export const SPAWN = { x: 26, y: 21 };
 
 /** Add an object to the world, registering its footprint. Returns null if blocked. */
 export function addObject(
@@ -70,43 +69,6 @@ export function rebuildOccupancy(world: WorldState): void {
 export const HOUSE_DOOR = { x: 10, y: 8 };
 export const isHouseDoor = (tx: number, ty: number): boolean => tx === HOUSE_DOOR.x && ty === HOUSE_DOOR.y;
 
-/** Places the cave mouth in the rocky east and keeps the tiles in front of it free. Idempotent. */
-export function ensureCave(world: WorldState): boolean {
-  const x = 57;
-  const y = 12;
-  const exists = Object.values(world.objects).some((o) => o.kind === 'cave');
-  for (let dy = -1; dy <= 3; dy++)
-    for (let dx = -1; dx <= 2; dx++) {
-      const tx = x + dx;
-      const ty = y + dy;
-      if (!inBounds(world, tx, ty)) continue;
-      const o = objectAt(world, tx, ty);
-      if (o && o.kind !== 'cave') removeObject(world, o.id);
-      if (world.terrain[tileIndex(world, tx, ty)] === 'water') world.terrain[tileIndex(world, tx, ty)] = 'grass';
-      if (dy >= 2) world.terrain[tileIndex(world, tx, ty)] = 'path_dirt';
-    }
-  if (exists) return false;
-  addObject(world, 'cave', x, y);
-  return true;
-}
-
-/** Clears the tiles the villagers stand on (and one around) so they are reachable. Idempotent. */
-export function ensureVillagers(world: WorldState): void {
-  for (const n of Object.values(NPCS)) {
-    if (n.area && n.area !== 'farm') continue;
-    for (const w of [n, ...n.routine])
-    for (let dy = -1; dy <= 1; dy++)
-      for (let dx = -1; dx <= 1; dx++) {
-        const x = w.x + dx;
-        const y = w.y + dy;
-        if (!inBounds(world, x, y)) continue;
-        const o = objectAt(world, x, y);
-        if (o && objectDef(o.kind).solid && !objectDef(o.kind).houses && o.kind !== 'house') removeObject(world, o.id);
-        if (world.terrain[tileIndex(world, x, y)] === 'water') world.terrain[tileIndex(world, x, y)] = 'sand';
-      }
-  }
-}
-
 /** A blank map of grass; any size other than 64×64 is written on the map. */
 export function emptyWorld(w = MAP_W, h = MAP_H): WorldState {
   const world: WorldState = {
@@ -132,7 +94,25 @@ export function emptyWorld(w = MAP_W, h = MAP_H): WorldState {
   return world;
 }
 
-/** Builds the handmade farm map. Deterministic for a given seed. */
+
+/** Where things stand in the lobby ("Gården"), all in tile coordinates. */
+export const LOBBY = {
+  /** The playable yard; everything outside it is forest. */
+  x0: 3,
+  y0: 3,
+  x1: 46,
+  y1: 33,
+  plaza: { x: 26, y: 18, r: 6 },
+  arch: { x: 25, y: 11 },
+  shoot: { x: 31, y: 12 },
+  volva: { x: 21, y: 15 },
+  stone: { x: 22, y: 15 },
+  smith: { x: 37, y: 17 },
+  kennel: { x: 18, y: 21 },
+  wardrobe: { x: 7, y: 9 },
+};
+
+/** Builds the lobby: a Norse homestead where everyone meets between runs. Deterministic for a given seed. */
 export function generateWorld(seed = 1337): WorldState {
   const world = emptyWorld();
   const rnd = mulberry32(seed);
@@ -140,78 +120,123 @@ export function generateWorld(seed = 1337): WorldState {
   const set = (x: number, y: number, t: Terrain) => {
     if (inBounds(world, x, y)) T[tileIndex(world, x, y)] = t;
   };
-
-  // Pond (ellipse) with sand ring
-  const pond = { cx: 44, cy: 40, rx: 6, ry: 4 };
-  for (let y = 0; y < MAP_H; y++)
-    for (let x = 0; x < MAP_W; x++) {
-      const dx = (x + 0.5 - pond.cx - 0.5) / pond.rx;
-      const dy = (y + 0.5 - pond.cy - 0.5) / pond.ry;
-      const d = dx * dx + dy * dy;
-      if (d <= 1) set(x, y, 'water');
-      else if (d <= 1.6) set(x, y, 'sand');
+  const L = LOBBY;
+  const inYard = (x: number, y: number) => x >= L.x0 && x <= L.x1 && y >= L.y0 && y <= L.y1;
+  /** A path `w` tiles wide between two points (straight, horizontal or vertical). */
+  const line = (x0: number, y0: number, x1: number, y1: number, t: Terrain, w = 2) => {
+    const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+    for (let i = 0; i <= n; i++) {
+      const x = Math.round(x0 + ((x1 - x0) * i) / (n || 1));
+      const y = Math.round(y0 + ((y1 - y0) * i) / (n || 1));
+      for (let k = 0; k < w; k++) set(y0 === y1 ? x : x + k, y0 === y1 ? y + k : y, t);
     }
-
-  // Farmhouse and fixtures
-  addObject(world, 'house', 8, 5);
-  addObject(world, 'wardrobe', 7, 9);
-  addObject(world, 'start_chest', 13, 7);
-  addObject(world, 'start_bench', 13, 8);
-  addObject(world, 'mailbox', 15, 6);
-  addObject(world, 'sellbox', 15, 8);
-  // Path from the door
-  for (let y = 9; y <= 14; y++) set(10, y, 'path_dirt');
-  for (let x = 10; x <= 16; x++) set(x, 11, 'path_dirt');
-  for (let x = 6; x <= 14; x++) set(x, 9, 'path_stone');
-
-  const isOpenArea = (x: number, y: number) => x >= 4 && x <= 40 && y >= 4 && y <= 46;
-  const nearHouse = (x: number, y: number) => x >= 5 && x <= 18 && y >= 3 && y <= 14;
-
-  // Forest border and patches
-  const tryTree = (x: number, y: number, kind?: string) => {
-    if (!inBounds(world, x, y) || nearHouse(x, y)) return;
-    if (T[tileIndex(world, x, y)] !== 'grass') return;
-    const k = kind ?? (rnd() < 0.3 ? 'tree_pine' : rnd() < 0.15 ? 'tree_apple' : 'tree');
-    addObject(world, k, x, y);
   };
+
+  // Pond in the south-east, with a sand ring
+  const pond = { cx: 39, cy: 28, rx: 5, ry: 3 };
+  for (let y = L.y0; y <= L.y1; y++)
+    for (let x = L.x0; x <= L.x1; x++) {
+      const d = ((x - pond.cx) / pond.rx) ** 2 + ((y - pond.cy) / pond.ry) ** 2;
+      if (d <= 1) set(x, y, 'water');
+      else if (d <= 1.7) set(x, y, 'sand');
+    }
+
+  // The plaza: round, stone, with a dirt rim
+  const P = L.plaza;
+  for (let y = P.y - P.r - 2; y <= P.y + P.r + 2; y++)
+    for (let x = P.x - P.r - 2; x <= P.x + P.r + 2; x++) {
+      const d = Math.hypot(x - P.x, (y - P.y) * 1.15);
+      if (d <= P.r) set(x, y, 'path_stone');
+      else if (d <= P.r + 1.2) set(x, y, 'path_dirt');
+    }
+  // paths: house door -> plaza, plaza -> smithy, plaza -> pond
+  line(10, 9, 10, 15, 'path_dirt');
+  line(10, 15, 21, 15, 'path_dirt', 2);
+  line(32, 18, 36, 18, 'path_dirt', 2);
+  line(26, 24, 26, 30, 'path_dirt');
+  for (let x = 6; x <= 14; x++) set(x, 9, 'path_stone');
+  for (let y = 15; y <= 19; y++) for (let x = 33; x <= 40; x++) set(x, y, 'path_stone');
+
+  // The farmhouse (its door is the way to your own house)
+  addObject(world, 'house', 8, 5);
+  addObject(world, 'wardrobe', L.wardrobe.x, L.wardrobe.y);
+  // The färdport arch, with the Yggdrasil shoot beside it
+  addObject(world, 'fardport', L.arch.x, L.arch.y);
+  addObject(world, 'yggdrasil', L.shoot.x, L.shoot.y);
+  // a stone terrace under the arch, with a brazier on each side
+  for (let y = L.arch.y - 1; y <= L.arch.y + 3; y++) for (let x = L.arch.x - 4; x <= L.arch.x + 8; x++) set(x, y, 'path_stone');
+  addObject(world, 'saga_brazier', L.arch.x - 2, L.arch.y + 1);
+  addObject(world, 'saga_brazier', L.arch.x + 4, L.arch.y + 1);
+  // Kämpastenen beside Völvan Sigrun
+  addObject(world, 'saga_stone', L.stone.x, L.stone.y);
+  addObject(world, 'runestone', L.volva.x - 2, L.volva.y - 3, { variant: 1 });
+  // Smedjan: a hut, an anvil, a fire
+  const S = L.smith;
+  addObject(world, 'house_small', S.x - 2, S.y - 5, { variant: 1 });
+  addObject(world, 'saga_anvil', S.x + 1, S.y - 1);
+  addObject(world, 'saga_brazier', S.x - 3, S.y - 1);
+  addObject(world, 'barrel_stack', S.x + 3, S.y - 2);
+  // the kennel: pick your first pet
+  addObject(world, 'kennel', L.kennel.x, L.kennel.y);
+
+  // Banners, lamps and benches
+  for (const [dx, dy, v] of [[-6, -3, 0], [6, -3, 1], [-5, 4, 2], [5, 4, 0], [0, 7, 1]] as const) addObject(world, 'banner_pole', P.x + dx, P.y + dy, { variant: v });
+  for (const [x, y] of [[21, 13], [20, 19], [32, 21], [23, 24], [10, 14], [15, 14], [36, 20], [26, 28]] as const) addObject(world, 'street_lamp', x, y);
+  for (const [x, y] of [[24, 24], [28, 24], [35, 26]] as const) addObject(world, 'bench', x, y);
+  addObject(world, 'hay_cart', 14, 18);
+  addObject(world, 'barrel_stack', 8, 11);
+
+  // Signs with pictures (variant = picture): arch, tree, home, wardrobe, anvil, scroll, paw
+  const signs: [number, number, number][] = [
+    [24, 14, 0], // the färdport
+    [33, 14, 1], // the sagaträd
+    [12, 10, 2], // home
+    [9, 10, 3], // wardrobe
+    [32, 16, 4], // Smedjan
+    [20, 16, 5], // Völvan
+    [19, 22, 6], // the kennel
+  ];
+  for (const [x, y, v] of signs) addObject(world, 'lobby_sign', x, y, { variant: v });
+
+  // Trees in clumps and along the yard's edge; flowers, tufts and a few stones
+  const clumps: [number, number][] = [[6, 18], [7, 27], [14, 29], [20, 30], [31, 6], [38, 7], [43, 14], [44, 22], [12, 23], [43, 31], [17, 8]];
+  for (let y = L.y0; y <= L.y1; y++)
+    for (let x = L.x0; x <= L.x1; x++) {
+      if (T[tileIndex(world, x, y)] !== 'grass' || objectAt(world, x, y)) continue;
+      const nearHouse = x >= 6 && x <= 14 && y >= 3 && y <= 10;
+      const edge = Math.min(x - L.x0, L.x1 - x, y - L.y0, L.y1 - y);
+      const clump = clumps.some(([a, b]) => Math.hypot(a - x, b - y) < 3.2) && rnd() < 0.55;
+      if (!nearHouse && (edge <= 1 || clump)) addObject(world, rnd() < 0.4 ? 'tree_pine' : rnd() < 0.2 ? 'tree_apple' : 'tree', x, y);
+      else if (rnd() < 0.06) addObject(world, 'grass_tuft', x, y, { variant: randInt(rnd, 0, 2) });
+      else if (rnd() < 0.05) addObject(world, 'flower', x, y, { variant: randInt(rnd, 0, 3) });
+      else if (rnd() < 0.012) addObject(world, 'rock_small', x, y);
+    }
+
+  // Forest all round the yard (the rest of the map): nobody can leave
   for (let y = 0; y < MAP_H; y++)
     for (let x = 0; x < MAP_W; x++) {
-      const edge = Math.min(x, y, MAP_W - 1 - x, MAP_H - 1 - y);
-      if (edge <= 1) tryTree(x, y);
-      else if (edge <= 3 && rnd() < 0.6) tryTree(x, y);
-      else if ((x >= 48 || y >= 50) && rnd() < 0.35) tryTree(x, y);
-      else if (!isOpenArea(x, y) && rnd() < 0.08) tryTree(x, y);
+      if (inYard(x, y) || objectAt(world, x, y)) continue;
+      const outside = Math.max(L.x0 - x, x - L.x1, L.y0 - y, y - L.y1);
+      if (outside <= 11) addObject(world, rnd() < 0.45 ? 'tree_pine' : 'tree', x, y);
+      else set(x, y, 'rock');
     }
-
-  // Rocks: a rocky patch to the right, plus scattered
-  for (let i = 0; i < 70; i++) {
-    const x = randInt(rnd, 46, 60);
-    const y = randInt(rnd, 6, 34);
-    if (T[tileIndex(world, x, y)] === 'grass' && !objectAt(world, x, y))
-      addObject(world, rnd() < 0.5 ? 'rock' : 'rock_small', x, y);
-  }
-  for (let i = 0; i < 25; i++) {
-    const x = randInt(rnd, 4, 60);
-    const y = randInt(rnd, 4, 60);
-    if (nearHouse(x, y)) continue;
-    if (T[tileIndex(world, x, y)] === 'grass' && !objectAt(world, x, y)) addObject(world, 'rock_small', x, y);
-  }
-
-  ensureVillagers(world);
-  ensureCave(world);
-  ensureFarmExits(world);
-  ensureFarmBusStop(world);
-
-  // Grass tufts, flowers, bushes everywhere
-  for (let y = 2; y < MAP_H - 2; y++)
-    for (let x = 2; x < MAP_W - 2; x++) {
-      if (T[tileIndex(world, x, y)] !== 'grass' || objectAt(world, x, y)) continue;
-      if (nearHouse(x, y) && rnd() < 0.9) continue;
-      const r = rnd();
-      if (r < 0.07) addObject(world, 'grass_tuft', x, y, { variant: randInt(rnd, 0, 2) });
-      else if (r < 0.1) addObject(world, 'flower', x, y, { variant: randInt(rnd, 0, 3) });
-      else if (r < 0.115 && !isOpenArea(x, y)) addObject(world, 'bush', x, y);
-    }
-
+  ensureNpcSpots(world);
   return world;
+}
+
+/** Clears the tiles the lobby's villagers stand on (and one around) so they are reachable. Idempotent. */
+export function ensureNpcSpots(world: WorldState): void {
+  for (const n of Object.values(NPCS)) {
+    if (n.area && n.area !== 'farm') continue;
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++) {
+        const x = n.x + dx;
+        const y = n.y + dy;
+        if (!inBounds(world, x, y)) continue;
+        const o = objectAt(world, x, y);
+        const d = o ? objectDef(o.kind) : undefined;
+        if (o && d && d.solid && !d.interact && !d.houses && o.kind !== 'house' && o.kind !== 'house_small') removeObject(world, o.id);
+        if (world.terrain[tileIndex(world, x, y)] === 'water') world.terrain[tileIndex(world, x, y)] = 'sand';
+      }
+  }
 }
