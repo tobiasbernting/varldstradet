@@ -3812,7 +3812,7 @@ export function sagaIcons(): Record<string, Px> {
   for (const id of Object.keys(KEEPSAKES)) out[id] = keepsakeIcon(id);
   out.styrkedryck = potionIcon(true);
   // Smedjan: its materials and Stina's starter set
-  for (const id of ['monsteressens', 'drakfjall', 'jarnsvard', 'jarnyxa', 'ekstav', 'jaktbage', 'traskold', 'stenamulett']) out[id] = forgeIcon(id);
+  for (const id of ['jarnsvard', 'jarnyxa', 'ekstav', 'jaktbage', 'traskold', 'stenamulett']) out[id] = forgeIcon(id);
   return out;
 }
 

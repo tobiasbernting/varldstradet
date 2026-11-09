@@ -17,7 +17,10 @@ import {
   objectAt,
   performAction,
   pickUpFurniture,
+  devGrantLooks,
   setOnline,
+  setStandLook,
+  standLook,
   tick,
   type Change,
   type PlayerState,
@@ -229,5 +232,40 @@ describe('boss trophies', () => {
     performAction(house, a.id, 9, 8, ctx());
     expect(stand.data).toBeUndefined();
     expect(a.inventory.some((s) => s?.item === 'runsvard')).toBe(true);
+  });
+
+  it('a gear stand can show a look from the collection: pressing it opens the wardrobe, the owner picks, a guest only looks', () => {
+    const { farm, a, b } = lobby();
+    enterHouse(farm, a.id);
+    const house = farm.areas![homeKey(a.id)]!;
+    addItem(a.inventory, 'gear_stand', 1);
+    a.selected = a.inventory.findIndex((s) => s?.item === 'gear_stand');
+    standIn(a, 8, 8);
+    performAction(house, a.id, 9, 8, ctx());
+    const stand = objectAt(house, 9, 8)!;
+    a.selected = a.inventory.findIndex((s) => s === null);
+    // nothing in the collection yet: the stand just says so
+    expect(performAction(house, a.id, 9, 8, ctx()).some((c) => c.t === 'open')).toBe(false);
+    devGrantLooks(a, 'draugvakt', 3, false, false);
+    const asked = performAction(house, a.id, 9, 8, ctx());
+    expect(asked.some((c) => c.t === 'open' && c.ui === 'looks' && c.id === stand.id)).toBe(true);
+    // the owner picks one (it stays in the collection: nothing is taken out of a bag) at the tier it is now
+    house.players[a.id] ??= a;
+    const put = setStandLook(house, a.id, stand.id, 'draugvakt_hat', undefined);
+    expect(put.some((c) => c.t === 'object')).toBe(true);
+    expect(stand.data).toBe('look:draugvakt_hat|3|');
+    expect(standLook(stand.data)?.tier).toBe(3);
+    expect(a.saga!.looks!.draugvakt_hat).toEqual({ tier: 3 });
+    // a look not owned is refused; an empty piece clears the stand
+    expect(setStandLook(house, a.id, stand.id, 'frostbrost_hat', undefined)).toEqual([]);
+    expect(stand.data).toBe('look:draugvakt_hat|3|');
+    // a guest cannot change it, and pressing it does not open the wardrobe for them
+    b.area = a.area;
+    house.players[b.id] = b;
+    devGrantLooks(b, 'draugvakt', 1, false, false);
+    expect(setStandLook(house, b.id, stand.id, 'draugvakt_hat', undefined)).toEqual([]);
+    expect(performAction(house, b.id, 9, 8, ctx()).some((c) => c.t === 'open')).toBe(false);
+    setStandLook(house, a.id, stand.id, null, undefined);
+    expect(stand.data).toBeUndefined();
   });
 });

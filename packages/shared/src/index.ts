@@ -25,6 +25,7 @@ export * from './chat.ts';
 export * from './voice.ts';
 export * from './dialogue.ts';
 export * from './saga.ts';
+export * from './looks.ts';
 export * from './sagamap.ts';
 export * from './sagasim.ts';
 export * from './run.ts';

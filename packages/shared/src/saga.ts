@@ -5,6 +5,7 @@
 // Data only: the rules live in sagasim.ts, the maps are built by sagamap.ts.
 import { PETS } from './pets.ts';
 import type { Outfit, PlayerState, Terrain } from './types.ts';
+import type { LookOwn, LookWear } from './looks.ts';
 
 // ---------------------------------------------------------------------------
 // Classes and spells
@@ -995,6 +996,7 @@ export const previousDungeon = (id: DungeonId): DungeonId | null => DUNGEON_IDS[
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 export const RARITY_COLORS: Record<Rarity, string> = { common: '#ffffff', uncommon: '#1eff00', rare: '#0070dd', epic: '#a335ee', legendary: '#ff8000' };
+export const RARITY_ORDER: readonly Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 export const RARITY_NAMES: Record<Rarity, string> = { common: 'Vanlig', uncommon: 'Ovanlig', rare: 'Sällsynt', epic: 'Episk', legendary: 'Legendarisk' };
 
 /** What a boss's chest gives each player (once a day per player). */
@@ -1132,12 +1134,7 @@ export interface SagaItemDef {
   /** Weapons: the farm tool it works as, and its glow (a colour, or 'rainbow' for one that shifts through them all). */
   tool?: 'sword' | 'axe' | 'hammer' | 'bow';
   glow?: string;
-  /**
-   * Gear: what it adds while equipped. power: a fraction more damage and healing; hp: health on top of the class's;
-   * armor: a fraction of every hit taken away (all pieces together at most ARMOR_CAP).
-   */
-  stats?: { power?: number; hp?: number; armor?: number };
-  /** Gear: the classes it suits best ("Passar: …"); it gives a little more power to them, but anyone may use it. */
+  /** Gear: the classes it suits best ("Passar: …"). Gear is only for show: it never changes damage, healing or health. */
   classes?: ClassId[];
   /** Clothes: drawing style and colour. */
   style?: string;
@@ -1207,22 +1204,22 @@ export const SAGA_ITEMS: SagaItemDef[] = [
   { id: 'bifrostbage', name: 'Bifrostbågen', rarity: 'legendary', kind: 'weapon', tool: 'bow', glow: '#ffb0f0', classes: ['magiker'], text: 'Varje pil lämnar en liten regnbåge efter sig.' },
   { id: 'heimdallshorn', name: 'Heimdalls horn', rarity: 'legendary', kind: 'weapon', tool: 'hammer', glow: 'rainbow', classes: ['helare'], text: 'När det blåses hörs det i alla nio världar.' },
   // offhands: a shield, a book or a quiver in the other hand
-  { id: 'offhand_helskold', name: 'Helsköld', rarity: 'uncommon', kind: 'offhand', stats: { armor: 0.06 }, text: 'En rund sköld, kall som en vinternatt.' },
-  { id: 'offhand_runbok', name: 'Runboken', rarity: 'rare', kind: 'offhand', stats: { power: 0.06 }, classes: ['helare', 'magiker'], text: 'Full av runor. Några av dem kittlar.' },
-  { id: 'offhand_dvargskold', name: 'Dvärgsköld', rarity: 'rare', kind: 'offhand', stats: { armor: 0.1 }, classes: ['vaktare'], text: 'Smidd av dvärgar, så den håller för vad som helst.' },
-  { id: 'offhand_koger', name: 'Snäckkogret', rarity: 'rare', kind: 'offhand', stats: { power: 0.06 }, classes: ['magiker', 'helare'], text: 'Ett koger av snäckskal som aldrig blir tomt.' },
-  { id: 'offhand_perlemorskold', name: 'Pärlemorskölden', rarity: 'epic', kind: 'offhand', stats: { armor: 0.12, hp: 15 }, text: 'Den skimrar i alla regnbågens färger.' },
-  { id: 'offhand_alvlykta', name: 'Alvlyktan', rarity: 'epic', kind: 'offhand', stats: { power: 0.08, hp: 10 }, text: 'En liten lykta med en alv inuti. Ibland vinkar hon.' },
-  { id: 'offhand_tyrshandske', name: 'Tyrs handske', rarity: 'legendary', kind: 'offhand', stats: { armor: 0.14, power: 0.04 }, text: 'Guden Tyrs järnhandske. Den är lite för stor, men det gör inget.' },
-  { id: 'offhand_lokesmask', name: 'Lokes mask', rarity: 'legendary', kind: 'offhand', stats: { power: 0.1, hp: 10 }, text: 'En mask som ler. Ibland blinkar den åt dig.' },
+  { id: 'offhand_helskold', name: 'Helsköld', rarity: 'uncommon', kind: 'offhand', text: 'En rund sköld, kall som en vinternatt.' },
+  { id: 'offhand_runbok', name: 'Runboken', rarity: 'rare', kind: 'offhand', classes: ['helare', 'magiker'], text: 'Full av runor. Några av dem kittlar.' },
+  { id: 'offhand_dvargskold', name: 'Dvärgsköld', rarity: 'rare', kind: 'offhand', classes: ['vaktare'], text: 'Smidd av dvärgar, så den håller för vad som helst.' },
+  { id: 'offhand_koger', name: 'Snäckkogret', rarity: 'rare', kind: 'offhand', classes: ['magiker', 'helare'], text: 'Ett koger av snäckskal som aldrig blir tomt.' },
+  { id: 'offhand_perlemorskold', name: 'Pärlemorskölden', rarity: 'epic', kind: 'offhand', text: 'Den skimrar i alla regnbågens färger.' },
+  { id: 'offhand_alvlykta', name: 'Alvlyktan', rarity: 'epic', kind: 'offhand', text: 'En liten lykta med en alv inuti. Ibland vinkar hon.' },
+  { id: 'offhand_tyrshandske', name: 'Tyrs handske', rarity: 'legendary', kind: 'offhand', text: 'Guden Tyrs järnhandske. Den är lite för stor, men det gör inget.' },
+  { id: 'offhand_lokesmask', name: 'Lokes mask', rarity: 'legendary', kind: 'offhand', text: 'En mask som ler. Ibland blinkar den åt dig.' },
   // amulets
-  { id: 'amulet_vegvisir', name: 'Vegvisir', rarity: 'uncommon', kind: 'amulet', stats: { hp: 10 }, text: 'En runa som visar vägen hem, var du än är.' },
-  { id: 'amulet_helring', name: 'Hels ring', rarity: 'rare', kind: 'amulet', stats: { hp: 20 }, text: 'En ring av svart sten. Den är alltid lite kall.' },
-  { id: 'amulet_andvaranaut', name: 'Andvaranaut', rarity: 'epic', kind: 'amulet', stats: { power: 0.08 }, text: 'Fafners ring. Den vill gärna ha mer guld.' },
-  { id: 'amulet_perla', name: 'Havets pärla', rarity: 'epic', kind: 'amulet', stats: { hp: 25, armor: 0.04 }, text: 'Håll den mot örat, så hör du havet.' },
-  { id: 'amulet_alvsten', name: 'Alvstenen', rarity: 'epic', kind: 'amulet', stats: { power: 0.06, hp: 15 }, text: 'En sten som lyser som en liten stjärna.' },
-  { id: 'amulet_gleipnir', name: 'Gleipner', rarity: 'legendary', kind: 'amulet', stats: { armor: 0.1, hp: 20 }, text: 'Bandet som höll Fenrisulven, gjort av kattens steg och fiskens andetag.' },
-  { id: 'amulet_brisingamen', name: 'Brisingamen', rarity: 'legendary', kind: 'amulet', stats: { power: 0.1, hp: 20 }, text: 'Gudinnan Frejas halsband. Det glittrar som tusen solar.' },
+  { id: 'amulet_vegvisir', name: 'Vegvisir', rarity: 'uncommon', kind: 'amulet', text: 'En runa som visar vägen hem, var du än är.' },
+  { id: 'amulet_helring', name: 'Hels ring', rarity: 'rare', kind: 'amulet', text: 'En ring av svart sten. Den är alltid lite kall.' },
+  { id: 'amulet_andvaranaut', name: 'Andvaranaut', rarity: 'epic', kind: 'amulet', text: 'Fafners ring. Den vill gärna ha mer guld.' },
+  { id: 'amulet_perla', name: 'Havets pärla', rarity: 'epic', kind: 'amulet', text: 'Håll den mot örat, så hör du havet.' },
+  { id: 'amulet_alvsten', name: 'Alvstenen', rarity: 'epic', kind: 'amulet', text: 'En sten som lyser som en liten stjärna.' },
+  { id: 'amulet_gleipnir', name: 'Gleipner', rarity: 'legendary', kind: 'amulet', text: 'Bandet som höll Fenrisulven, gjort av kattens steg och fiskens andetag.' },
+  { id: 'amulet_brisingamen', name: 'Brisingamen', rarity: 'legendary', kind: 'amulet', text: 'Gudinnan Frejas halsband. Det glittrar som tusen solar.' },
   // Act II clothes
   { id: 'hat_helhjalm', name: 'Helhjälm', rarity: 'rare', kind: 'hat', style: 'nasal', color: '#7f8f88', text: 'En gråblek hjälm från Helheim.' },
   { id: 'shirt_helrustning', name: 'Helrustning', rarity: 'rare', kind: 'shirt', style: 'chainmail', color: '#5f7068', text: 'Rustning som lyser svagt grönt i mörkret.' },
@@ -1267,25 +1264,32 @@ export const SAGA_ITEMS: SagaItemDef[] = [
   { id: 'pet_lyktfe', name: 'Lyktfén', rarity: 'rare', kind: 'pet', species: 'alvljus_fe', levelReward: 5, text: 'En liten fe med en lykta, som lyser upp vägen åt dig.' },
   { id: 'shirt_glodmantel', name: 'Glödmanteln', rarity: 'rare', kind: 'shirt', style: 'cloak', color: '#8a3a2a', glow: '#ff8a3a', levelReward: 6, text: 'En mantel med en kant som glöder som kol.' },
   { id: 'hat_stjarnkrona', name: 'Stjärnkronan', rarity: 'epic', kind: 'hat', style: 'crown', color: '#cfe6ff', glow: '#9ad8ff', levelReward: 8, text: 'En krona av stjärnljus. Den tindrar när du går.' },
-  { id: 'amulet_hjaltemarke', name: 'Hjältemärket', rarity: 'epic', kind: 'amulet', stats: { hp: 10 }, levelReward: 9, text: 'Ett märke av silver som bara riktiga hjältar får bära.' },
+  { id: 'amulet_hjaltemarke', name: 'Hjältemärket', rarity: 'epic', kind: 'amulet', levelReward: 9, text: 'Ett märke av silver som bara riktiga hjältar får bära.' },
   { id: 'shirt_stjarnmantel', name: 'Stjärnmanteln', rarity: 'epic', kind: 'shirt', style: 'cloak', color: '#2a2a5a', glow: '#b8a8ff', levelReward: 10, text: 'En mantel lika mörk som natthimlen, full av små lysande stjärnor.' },
   { id: 'hat_norrskenshjalm', name: 'Norrskenshjälmen', rarity: 'epic', kind: 'hat', style: 'valkyrie', color: '#dfeeff', glow: '#5fd38d', levelReward: 12, text: 'En vingad hjälm som skimrar grönt som norrskenet.' },
   { id: 'mount_ljushjort', name: 'Ljushjorten', rarity: 'legendary', kind: 'mount', species: 'ljushjort', levelReward: 15, text: 'En blekt vitblå hjort vars horn lyser som månsken.' },
   { id: 'shirt_eldmantel', name: 'Eldmanteln', rarity: 'legendary', kind: 'shirt', style: 'cloak', color: '#5a1a10', glow: '#ff6a3a', levelReward: 16, text: 'En mantel som fladdrar som lågor, men aldrig bränns.' },
   { id: 'hat_solkrona', name: 'Solkronan', rarity: 'legendary', kind: 'hat', style: 'crown', color: '#ffe27a', glow: '#ffe27a', levelReward: 18, text: 'En krona av guld som lyser som solen själv.' },
-  { id: 'amulet_yggdrasil', name: 'Yggdrasils löv', rarity: 'legendary', kind: 'amulet', stats: { hp: 20 }, levelReward: 19, text: 'Ett löv från Världsträdet. Det är grönt året runt.' },
+  { id: 'amulet_yggdrasil', name: 'Yggdrasils löv', rarity: 'legendary', kind: 'amulet', levelReward: 19, text: 'Ett löv från Världsträdet. Det är grönt året runt.' },
   { id: 'shirt_bifrostmantel', name: 'Bifrostmanteln', rarity: 'legendary', kind: 'shirt', style: 'cloak', color: '#f0f0ff', glow: 'rainbow', levelReward: 20, text: 'En mantel vävd av regnbågsbron. Den skimrar i alla färger.' },
-  // Round 4, Smedjan: what Smed-Stina forges with, and the starter set she makes (once each per hero, FORGE_CRAFTS)
-  { id: 'monsteressens', name: 'Monsteressens', rarity: 'uncommon', kind: 'material', glow: '#b06cff', text: 'En virvlande lila droppe som monstren i fängelsehålorna lämnar efter sig. Smed-Stina smider med den.' },
-  { id: 'drakfjall', name: 'Drakfjäll', rarity: 'rare', kind: 'material', glow: '#ff8a3a', text: 'Ett rödgyllene fjäll från en mäktig boss. Det hårdaste Smed-Stina vet.' },
+  // the starter set (plain gear: the bots and the hired companion wear it; it is not for sale any more)
   { id: 'jarnsvard', name: 'Järnsvärd', rarity: 'uncommon', kind: 'weapon', tool: 'sword', glow: '#d8dee6', text: 'Ett stadigt svärd av järn, smitt av Smed-Stina.' },
   { id: 'jarnyxa', name: 'Järnyxa', rarity: 'uncommon', kind: 'weapon', tool: 'axe', glow: '#d8dee6', text: 'En yxa av järn som biter lika bra i ved som i monster.' },
   { id: 'ekstav', name: 'Ekstav', rarity: 'uncommon', kind: 'weapon', tool: 'hammer', glow: '#b9e08a', text: 'En stav av ek med guldbeslag. Den känns varm i handen.' },
   { id: 'jaktbage', name: 'Jaktbåge', rarity: 'uncommon', kind: 'weapon', tool: 'bow', glow: '#e8c890', text: 'En enkel båge av trä och snöre, men den skjuter rakt.' },
-  { id: 'traskold', name: 'Träsköld', rarity: 'uncommon', kind: 'offhand', stats: { armor: 0.04 }, text: 'En rund sköld av trä med en kant av guld.' },
-  { id: 'stenamulett', name: 'Stenamulett', rarity: 'uncommon', kind: 'amulet', stats: { hp: 8 }, text: 'En slät sten med en kristall i, på ett läderband.' },
+  { id: 'traskold', name: 'Träsköld', rarity: 'uncommon', kind: 'offhand', text: 'En rund sköld av trä med en kant av guld.' },
+  { id: 'stenamulett', name: 'Stenamulett', rarity: 'uncommon', kind: 'amulet', text: 'En slät sten med en kristall i, på ett läderband.' },
 ];
 export const sagaItem = (id: string): SagaItemDef | undefined => SAGA_ITEMS.find((i) => i.id === id);
+
+// Weapons, shields and amulets no longer come out of a chest as items: cool gear is a look (looks.ts), earned by completing a dungeon.
+// (Hats and shirts still do: they go to the clothes wardrobe.)
+const LOOK_ONLY_KINDS = new Set(['weapon', 'offhand', 'amulet']);
+const isLookOnly = (item: string): boolean => LOOK_ONLY_KINDS.has(SAGA_ITEMS.find((i) => i.id === item)?.kind ?? '');
+for (const t of [...Object.values(SAGA_LOOT), ...Object.values(SAGA_TREASURE)]) {
+  t.gear = t.gear.filter((g) => !isLookOnly(g.item));
+  if (t.rare) t.rare = t.rare.filter((g) => !isLookOnly(g.item));
+}
 
 // ---------------------------------------------------------------------------
 // The saga: Völvan Sigrun's chapters
@@ -1460,8 +1464,6 @@ export const SAGA_PORTAL = { w: 3, h: 2 };
 /** The tile in front of a dungeon's arch (where you come out again). */
 export const portalFront = (p: { x: number; y: number }): { x: number; y: number } => ({ x: p.x + 1, y: p.y + 2 });
 
-/** Better weapons hit harder: the equipped one counts (in saves from before gear, the best one in the bag). */
-export const RARITY_POWER: Record<Rarity, number> = { common: 1, uncommon: 1.05, rare: 1.1, epic: 1.2, legendary: 1.3 };
 
 // ---------------------------------------------------------------------------
 // Gear and hero levels (Act II): a weapon, an offhand and an amulet, and Hjältenivå 1–20
@@ -1476,14 +1478,19 @@ export const gearSlotOf = (itemId: string): GearSlot | null => {
   return k === 'weapon' || k === 'offhand' || k === 'amulet' ? k : null;
 };
 
-/** Every hero level above the first gives this much more power and health (+28.5 % at level 20). */
+/**
+ * What a hero level still gives: every level above the first adds this much damage, healing and health (+28.5 % at level 20).
+ * Gear gives nothing of the kind: it is only for show (looks.ts).
+ */
 export const LEVEL_BONUS = 0.015;
-/** The most gear, class fit and levels together may multiply damage and healing by (the family plays together). */
-export const POWER_CAP = 2.0;
-/** All the gear's armor together takes away at most this much of a hit. */
-export const ARMOR_CAP = 0.4;
-/** A piece that suits your class gives this much more power. */
-export const CLASS_FIT = 1.05;
+/**
+ * The flat base every hero fights with, in place of what gear used to add. It is exactly what the starter set gave (an uncommon
+ * weapon: x1.05 damage and healing, a wooden shield: 4 % less damage taken, a stone amulet: +8 health), so the bots' measured
+ * minutes (GAME2.md section 5.6) stay as they were. Change it here and nowhere else.
+ */
+export const BASE_POWER = 1.05;
+export const BASE_ARMOR = 0.04;
+export const BASE_HP = 8;
 /** The experience needed to be at each level (index = level - 1). */
 export const XP_LEVELS: readonly number[] = [0, 60, 150, 280, 450, 660, 910, 1200, 1530, 1900, 2310, 2760, 3250, 3780, 4350, 4960, 5610, 6300, 7030, 7800];
 export const MAX_LEVEL = XP_LEVELS.length;
@@ -1537,12 +1544,13 @@ export const levelSpan = (xp: number): { level: number; from: number; next: numb
   return { level, from: XP_LEVELS[level - 1]!, next: XP_LEVELS[level] ?? null };
 };
 
-export interface GearStats {
+/** What a hero fights with: the flat base and the hero level, never the gear. */
+export interface FightStats {
   /** Damage and healing multiplier. */
   power: number;
   /** Health added to the class's. */
   hp: number;
-  /** Fraction of every hit taken away (0..ARMOR_CAP). */
+  /** Fraction of every hit taken away. */
   armor: number;
 }
 
@@ -1552,95 +1560,20 @@ export function gearOf(p: PlayerState): Partial<Record<GearSlot, string>> {
   let best: SagaItemDef | undefined;
   for (const s of p.inventory) {
     const d = s ? sagaItem(s.item) : undefined;
-    if (d?.kind === 'weapon' && (!best || RARITY_POWER[d.rarity] > RARITY_POWER[best.rarity])) best = d;
+    if (d?.kind === 'weapon' && (!best || RARITY_ORDER.indexOf(d.rarity) > RARITY_ORDER.indexOf(best.rarity))) best = d;
   }
   return best ? { weapon: best.id } : {};
 }
 
-/** What a player's gear and level give them in a fight (forged pieces count with their forge level). */
-export function gearStats(p: PlayerState): GearStats {
-  const gear = gearOf(p);
-  const cls = p.saga?.cls;
-  const weapon = gear.weapon ? sagaItem(gear.weapon) : undefined;
-  let power = 0;
-  let hp = 0;
-  let armor = 0;
-  let fits = false;
-  for (const slot of GEAR_SLOTS) {
-    const d = gear[slot] ? sagaItem(gear[slot]!) : undefined;
-    if (!d) continue;
-    const st = forgeStats(d.id, forgeLevel(p.saga, d.id));
-    power += st.power;
-    hp += st.hp;
-    armor += st.armor;
-    if (cls && d.classes?.includes(cls)) fits = true;
-  }
-  const lvl = 1 + LEVEL_BONUS * (heroLevel(p.saga) - 1);
-  // capped, so a parent at level 20 in a legendary set is never much more than one and a half kids
-  return { power: Math.min(POWER_CAP, (weapon ? RARITY_POWER[weapon.rarity] : 1) * (1 + power) * (fits ? CLASS_FIT : 1) * lvl), hp, armor: Math.min(ARMOR_CAP, armor) };
+/** What a hero's level gives in a fight, on top of the flat base. */
+export const levelMul = (p: PlayerState): number => 1 + LEVEL_BONUS * (heroLevel(p.saga) - 1);
+/** What a player fights with (the hero level on a flat base; gear does not count). */
+export function fightStats(p: PlayerState): FightStats {
+  return { power: BASE_POWER * levelMul(p), hp: BASE_HP, armor: BASE_ARMOR };
 }
 
-// ---------------------------------------------------------------------------
-// Round 4: Smedjan. Smed-Stina in Köpingen forges a piece of gear up to +5 (per player and piece) and makes a
-// starter set once for each hero. Materials come from the world, the landmarks and the dungeons' replays.
-// ---------------------------------------------------------------------------
-
-/** The highest forge level. */
-export const FORGE_MAX = 5;
-/** What forging one level up costs: materials, a choice of rare things (any mix of `anyOf.items`), and coins. */
-export interface ForgeCost {
-  items: [item: string, count: number][];
-  anyOf?: { items: string[]; count: number };
-  kr: number;
-}
-/** The cost of reaching each forge level (index = the level reached, 1..FORGE_MAX). */
-export const FORGE_COSTS: Record<number, ForgeCost> = {
-  1: { items: [['stone', 6], ['gold', 3]], kr: 40 },
-  2: { items: [['crystal', 4], ['gold', 2]], kr: 80 },
-  3: { items: [], anyOf: { items: ['fire_crystal', 'fairy_dust', 'frostros', 'alvdagg', 'obsidian', 'star_crystal'], count: 2 }, kr: 150 },
-  4: { items: [['monsteressens', 4]], kr: 250 },
-  5: { items: [['drakfjall', 2], ['monsteressens', 4]], kr: 400 },
-};
-/** The starter set Stina makes (each once per hero): coins and materials. */
-export const FORGE_CRAFTS: Record<string, { items: [item: string, count: number][]; kr: number }> = {
-  jarnsvard: { items: [['stone', 8], ['gold', 4]], kr: 60 },
-  jarnyxa: { items: [['stone', 8], ['gold', 4]], kr: 60 },
-  ekstav: { items: [['wood', 6], ['gold', 4]], kr: 60 },
-  jaktbage: { items: [['wood', 6], ['fiber', 4], ['gold', 2]], kr: 60 },
-  traskold: { items: [['wood', 8], ['gold', 2]], kr: 60 },
-  stenamulett: { items: [['stone', 6], ['crystal', 1]], kr: 60 },
-};
-/** The smith who forges. */
-export const SMITH_ID = 'stina';
-/** Dungeon monsters (not a boss's helpers) leave a Monsteressens with this chance, in the bag of whoever beat them. */
-export const ESSENS_CHANCE = 0.15;
-/** A player's forge level of a piece (0: not forged). */
-export const forgeLevel = (prog: SagaProgress | undefined, itemId: string): number => Math.max(0, Math.min(FORGE_MAX, prog?.forge?.[itemId] ?? 0));
-
-/**
- * What a piece of gear adds at a forge level (its own stats, plus per level: a weapon +0.06 power; an offhand +0.02
- * armor if it has armor and +0.03 power if it has power; an amulet +8 health, and +0.02 power if it has power).
- * Pure: the forge window shows the before and after with it.
- */
-export function forgeStats(itemId: string, level: number): GearStats {
-  const d = sagaItem(itemId);
-  const base = d?.stats ?? {};
-  const st: GearStats = { power: base.power ?? 0, hp: base.hp ?? 0, armor: base.armor ?? 0 };
-  const n = Math.max(0, Math.min(FORGE_MAX, Math.floor(level)));
-  if (!d || !n) return st;
-  if (d.kind === 'weapon') st.power += 0.06 * n;
-  else if (d.kind === 'offhand') {
-    if (base.armor) st.armor += 0.02 * n;
-    if (base.power) st.power += 0.03 * n;
-  } else if (d.kind === 'amulet') {
-    st.hp += 8 * n;
-    if (base.power) st.power += 0.02 * n;
-  }
-  return st;
-}
-
-/** A fighter's full health: the class's, the gear's on top, and a little more for every level. */
-export const fighterMax = (p: PlayerState, cls: ClassId): number => Math.round((CLASSES[cls].hp + gearStats(p).hp) * (1 + LEVEL_BONUS * (heroLevel(p.saga) - 1)));
+/** A fighter's full health: the class's and the flat base, and a little more for every level. */
+export const fighterMax = (p: PlayerState, cls: ClassId): number => Math.round((CLASSES[cls].hp + BASE_HP) * levelMul(p));
 
 // ---------------------------------------------------------------------------
 // The villagers' quests: two for each dungeon, once Völvan has told its chapter
@@ -1949,8 +1882,13 @@ export interface SagaProgress {
   /** Upptäcktsboken: the landmarks found (ids), and the ones seen on a map (`<area>:<id>`, see seenKey). */
   discovered?: string[];
   seen?: string[];
-  /** Smedjan: each piece's forge level (item id -> 1..FORGE_MAX). */
-  forge?: Record<string, number>;
+  /** Looks: the collection (piece id -> shine tier), what each class wears, the dungeons' completions, the colourways unlocked (`<dungeon>:<way>`). */
+  looks?: Record<string, LookOwn>;
+  lookWear?: Partial<Record<ClassId, LookWear>>;
+  lookClears?: Record<string, number>;
+  lookWays?: string[];
+  /** The class last dressed in the wardrobe, for a hero without a class yet. */
+  lookCls?: ClassId;
   /** The game day each boss's (or mid-boss's) full chest was last taken (species -> day); later the same day: the replay chest. */
   chestDay?: Record<string, number>;
 }

@@ -684,7 +684,7 @@ function tickRiding(world: WorldState, out: Change[]): void {
 function interactObject(world: WorldState, p: PlayerState, obj: WorldObject, _held: ItemStack | null, _ctx: SimCtx, out: Change[]): void {
   switch (objectDef(obj.kind).interact) {
     case 'wardrobe':
-      out.push({ t: 'open', to: p.id, ui: 'wardrobe' });
+      out.push({ t: 'open', to: p.id, ui: 'looks' });
       return;
     case 'fardport':
       out.push(...openFardport(world, p));

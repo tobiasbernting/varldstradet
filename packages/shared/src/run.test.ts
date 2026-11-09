@@ -2086,14 +2086,13 @@ describe('the clock, the wipe and the end', () => {
     placeIn(solo.world, c, lab.run.key, lab.inst.start.x, lab.inst.start.y, 'up', []);
     const coins = c.coins;
     const bag = JSON.stringify(c.inventory);
-    // an essence roll that always succeeds goes to the one who struck the blow, unless it is the companion
+    // a kill by the companion gives its bag nothing
     const sure = { ...solo.ctx(), rnd: () => 0 };
     const mob = spawnSagaMob(lab.world.areas![lab.run.key]!, lab.inst, 'skelett', c.x + TILE, c.y, 'mob', -1);
     lab.inst.mobs[mob.id]!.hp = 1;
     lab.inst.mobs[mob.id]!.state = 'fight';
     castSpell(solo.world, c.id, 'ljuspil', mob.id, sure);
     expect(lab.inst.mobs[mob.id]).toBeUndefined();
-    expect(c.inventory.some((s) => s?.item === 'monsteressens')).toBe(false);
     castSpell(solo.world, h.id, 'eldboll', lab.inst.boss, solo.ctx());
     expect(lab.inst.bossDown).toBe(true);
     const seeds = readRun(h).seeds;
@@ -2121,6 +2120,8 @@ describe('the clock, the wipe and the end', () => {
     expect(readRun(b).seeds).toBe(before[1]! + RUN_SEEDS.bossFirst);
     // a run's win leaves every member the boss's trophy, at the run's level
     for (const p of [a, b]) expect(p.inventory.filter((x) => x?.item.startsWith('trophy_') && x.data === String(RUN_LEVEL_MEDEL))).toHaveLength(1);
+    // ...and one look of the dungeon's set, and a loot window change that shows it
+    for (const p of [a, b]) expect(Object.keys(p.saga!.looks ?? {})).toHaveLength(1);
   });
 
   it('a win is a win once: the clock passing 30:00 or a wipe tick after the boss fell shows no nudge and counts no timeout or wipe', () => {

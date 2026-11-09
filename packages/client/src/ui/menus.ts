@@ -18,6 +18,7 @@ import {
   RECIPES,
   SPECIES_NAMES,
   T,
+  LOOK_T,
   fmt,
   itemName,
   filterOf,
@@ -67,7 +68,6 @@ import {
   SFX,
 } from '../sound.ts';
 import {
-  FORGE_NPC,
   hasSagaQuests,
   sagaQuestRows,
 } from './saga.ts';
@@ -118,9 +118,14 @@ export class Menus {
     bus.on('open', (c) => {
       if (c.ui === 'nameAnimal') this.open('nameAnimal', c.id);
       else if (c.ui === 'kennel') this.open('kennel');
-      else if (c.ui === 'saga' || c.ui === 'sagaClass') return; // the saga's own windows (ui/saga.ts)
+      else if (c.ui === 'saga' || c.ui === 'sagaClass' || c.ui === 'looks') return; // the saga's own windows (ui/saga.ts)
       else if (c.ui === 'seed' || c.ui === 'run') return; // the run's windows (ui/run.ts)
       else if (c.ui === 'npc') {
+        // Smed-Stina has lost her forge: she sends you to the wardrobe's sets (unless a saga quest of hers is waiting)
+        if (c.npc === 'stina' && !hasSagaQuests('stina')) {
+          document.dispatchEvent(new Event('lilla:sets'));
+          return;
+        }
         this.npcId = c.npc ?? null;
         this.open('npc');
       } else if (c.ui === 'wardrobe') this.open('wardrobe');
@@ -540,7 +545,13 @@ export class Menus {
     body.append(h('div', { class: 'npc-talk' }, h('img', { class: 'portrait', src: portraitUrl(npc.appearance, npc.outfit, 4) }), h('div', { class: 'bubble-text' }, greeting)));
     const chat = h('button', null, '💬 Prata!');
     onTap(chat, () => this.say(npc.id, 'start', ''));
-    body.append(h('div', { class: 'npc-actions' }, chat, this.forgeButton(npc.id)));
+    const sets = npc.id === 'stina' ? h('button', { class: 'alt' }, `👕 ${LOOK_T.title}`) : null;
+    if (sets)
+      onTap(sets, () => {
+        this.close();
+        document.dispatchEvent(new Event('lilla:sets'));
+      });
+    body.append(h('div', { class: 'npc-actions' }, chat, sets));
     // the saga's quests (ui/saga.ts)
     if (saga) body.append(sagaQuestRows(npc.id));
   }
@@ -580,8 +591,7 @@ export class Menus {
       opts.append(b);
     }
     body.append(opts);
-    const forge = this.forgeButton(npcId);
-    if (hasQuests || forge) {
+    if (hasQuests) {
       let back: HTMLElement | null = null;
       if (hasQuests) {
         back = h('button', { class: 'alt' }, '📜 Uppdrag');
@@ -591,19 +601,8 @@ export class Menus {
           this.rerender();
         });
       }
-      body.append(h('div', { class: 'npc-actions', style: { marginTop: 'calc(2 * var(--u))' } }, back, forge));
+      body.append(h('div', { class: 'npc-actions', style: { marginTop: 'calc(2 * var(--u))' } }, back));
     }
-  }
-
-  /** Smed-Stina's forge (ui/saga.ts): a button in her window, for everyone (anyone can own gear). */
-  private forgeButton(npcId: string): HTMLElement | null {
-    if (npcId !== FORGE_NPC) return null;
-    const b = h('button', { class: 'forge-btn' }, T.forgeBtn);
-    onTap(b, () => {
-      this.close();
-      document.dispatchEvent(new CustomEvent('lilla:forge'));
-    });
-    return b;
   }
 
   // ---- help ----
