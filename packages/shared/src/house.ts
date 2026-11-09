@@ -5,10 +5,10 @@ import { AREA_GEN } from './biomes.ts';
 import { HOUSE_DOOR, addObject, emptyWorld, objectAt, removeObject } from './map.ts';
 import { ITEMS, NORSE_DECOR, TROPHY_LEVELS, TROPHY_PREFIX } from './data.ts';
 import { DUNGEONS, sagaItem } from './saga.ts';
-import { LOOK_T, hasLooks, lookPiece, standData, standLook } from './looks.ts';
+import { hasLooks, lookPiece, standData, standLook } from './looks.ts';
 import { HOUSE_ROOM, HOUSE_EXIT, HOUSE_H, HOUSE_W, homeKey, isHomeKey, ownerOfHome } from './homekeys.ts';
 import { TILE } from './types.ts';
-import { HOUSE_T, T, TROPHY_LEVEL_NAMES, fmt, houseTitle, itemName } from './sv.ts';
+import { HOUSE_T, LOOK_T, T, TROPHY_LEVEL_NAMES, fmt, houseTitle, itemName } from './sv.ts';
 import { REACH, farmOf, fx, getArea, giveItems, giveStack, placeIn, playerChange, tileOf, toast } from './sim.ts';
 import type { Change } from './protocol.ts';
 import type { ItemStack, PlayerState, WorldObject, WorldState } from './types.ts';
@@ -229,7 +229,7 @@ export function setStandLook(world: WorldState, playerId: string, objId: number,
   if (data === null) delete obj.data;
   else obj.data = data;
   const name = pieceId ? (lookPiece(pieceId)?.name ?? '') : '';
-  return [{ t: 'object', id: obj.id, obj }, ...(pieceId ? [toast(p.id, fmt(LOOK_T.standPut, { item: name }))] : [])];
+  return [{ t: 'object', id: obj.id, obj }, ...(pieceId ? [toast(p.id, fmt(LOOK_T.toastStand, { item: name }))] : [])];
 }
 
 // ---------------------------------------------------------------------------

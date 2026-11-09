@@ -5,9 +5,10 @@
 import type { ClassId, DungeonId, SagaProgress } from './saga.ts';
 import type { PlayerState } from './types.ts';
 import { CLASS_IDS, DUNGEONS, DUNGEON_IDS, newSagaProgress } from './saga.ts';
-import { fmt } from './sv.ts';
+import { LOOK_TEXT, LOOK_TIER_NAMES, LOOK_TITLE_TEXT, fmt } from './sv.ts';
 import type { Change } from './protocol.ts';
 import { playerChange } from './sim.ts';
+import { mulberry32 } from './rng.ts';
 
 export type LookSlot = 'hat' | 'shoulders' | 'shirt' | 'cloak' | 'weapon' | 'offhand' | 'amulet';
 /** The slots in the order the wardrobe shows them (head to hand). */
@@ -31,6 +32,51 @@ export interface FxSpec {
   fx: FxId;
   at: FxAnchor;
 }
+
+/**
+ * How a particle effect moves (pixels and seconds): how often it comes, how long it lives, its drift (vx, vy, gravity gy), size, opacity,
+ * blending (`add`: a light, else a dark or solid thing) and where its colour comes from in the set's palette. The effects that are
+ * not particles (lightning, glitter, runepulse, aurora) are drawn from the clock and have no row.
+ */
+export interface FxKind {
+  rate: number;
+  life: number;
+  vx: number;
+  vy: number;
+  gy?: number;
+  size: [number, number];
+  alpha: number;
+  add: boolean;
+  sway?: number;
+  tall?: boolean;
+  color: 'glow' | 'light' | 'main' | 'accent' | 'dark';
+}
+export const FX_KINDS: Partial<Record<FxId, FxKind>> = {
+  embers: { rate: 5, life: 0.75, vx: 3, vy: -15, size: [1, 1], alpha: 0.95, add: true, sway: 2, color: 'glow' },
+  smoke: { rate: 2.4, life: 1.15, vx: 3, vy: -7, size: [2, 4], alpha: 0.42, add: false, sway: 1.5, color: 'light' },
+  frost: { rate: 3, life: 1.05, vx: 4, vy: 5, size: [2, 2], alpha: 0.7, add: true, sway: 2, color: 'light' },
+  dripping: { rate: 2.2, life: 0.8, vx: 0, vy: 2, gy: 40, size: [1, 2], alpha: 0.9, add: true, tall: true, color: 'glow' },
+  leaves: { rate: 1.8, life: 1.5, vx: 0, vy: 7, size: [2, 2], alpha: 0.9, add: false, sway: 6, color: 'main' },
+  tendrils: { rate: 2, life: 1.1, vx: 2, vy: -10, size: [1, 1], alpha: 0.85, add: false, sway: 4, color: 'light' },
+  trail: { rate: 4, life: 0.5, vx: 0, vy: 0, size: [2, 2], alpha: 0.6, add: true, color: 'glow' },
+};
+/** The effects drawn from the clock (arcs, glints, glows, bands) rather than thrown as particles. */
+export const FX_PROCEDURAL: ReadonlySet<FxId> = new Set<FxId>(['lightning', 'glitter', 'runepulse', 'aurora']);
+
+/** What each effect is called, for the wardrobe's explanation. */
+export const FX_NAMES: Record<FxId, string> = {
+  embers: 'gnistor',
+  smoke: 'rök',
+  frost: 'frostdimma',
+  lightning: 'blixtar',
+  glitter: 'glitter',
+  runepulse: 'pulserande sken',
+  dripping: 'ljusdroppar',
+  trail: 'ett spökspår',
+  leaves: 'löv och fjädrar',
+  tendrils: 'skuggor',
+  aurora: 'norrsken',
+};
 
 /** The colours a set is drawn in (a colourway swaps them). */
 export interface LookPal {
@@ -77,188 +123,188 @@ export interface LookSet {
   pieces: LookPiece[];
 }
 
-const piece = (set: string, slot: LookSlot, name: string, text: string, fx: [FxSpec, FxSpec?], shape?: WeaponShape): LookPiece => ({ id: `${set}_${slot}`, set, slot, name, text, fx, ...(shape ? { shape } : {}) });
+const piece = (set: string, slot: LookSlot, fx: [FxSpec, FxSpec?], shape?: WeaponShape): LookPiece => ({ id: `${set}_${slot}`, set, slot, name: LOOK_TEXT[`${set}_${slot}`]!.name, text: LOOK_TEXT[`${set}_${slot}`]!.text!, fx, ...(shape ? { shape } : {}) });
 const F = (fx: FxId, at: FxAnchor): FxSpec => ({ fx, at });
 
 export const LOOK_SETS: LookSet[] = [
   {
     id: 'draugvakt',
-    name: 'Draugkungens vakt',
+    name: LOOK_TEXT.draugvakt!.name,
     dungeon: 'draug',
     cls: 'vaktare',
     pal: { main: '#7d8f84', dark: '#4a5a52', light: '#aebfb2', trim: '#d8c070', glow: '#9cff8a', accent: '#e8ffd8' },
     aura: 'ring',
     ways: {
-      svar: { name: 'Gravnatt', pal: { main: '#4a5d8a', dark: '#2a3858', light: '#8aa0d0', trim: '#e0e0f0', glow: '#8ab8ff' } },
-      extrem: { name: 'Benvit', pal: { main: '#d8d0b8', dark: '#9a9078', light: '#f4efe0', trim: '#c84a3a', glow: '#ff8a6a' } },
+      svar: { name: LOOK_TEXT.draugvakt!.svar!, pal: { main: '#4a5d8a', dark: '#2a3858', light: '#8aa0d0', trim: '#e0e0f0', glow: '#8ab8ff' } },
+      extrem: { name: LOOK_TEXT.draugvakt!.extrem!, pal: { main: '#d8d0b8', dark: '#9a9078', light: '#f4efe0', trim: '#c84a3a', glow: '#ff8a6a' } },
     },
     pieces: [
-      piece('draugvakt', 'hat', 'Vaktens benkrona', 'En grågrön krona av gammalt järn. En kall grön låga svävar över den.', [F('smoke', 'head'), F('glitter', 'head')]),
-      piece('draugvakt', 'shirt', 'Vaktens brynja', 'Ringar av grönskimrande järn från Draugkryptan.', [F('smoke', 'chest'), F('dripping', 'chest')]),
-      piece('draugvakt', 'offhand', 'Vaktens sköld', 'En sköld som aldrig släpper taget om dig.', [F('smoke', 'hand'), F('runepulse', 'hand')]),
-      piece('draugvakt', 'weapon', 'Vaktens svärd', 'Ett svärd som lyser blekgrönt i mörkret.', [F('smoke', 'tip'), F('glitter', 'tip')], 'sword'),
+      piece('draugvakt', 'hat', [F('smoke', 'head'), F('glitter', 'head')]),
+      piece('draugvakt', 'shirt', [F('smoke', 'chest'), F('dripping', 'chest')]),
+      piece('draugvakt', 'offhand', [F('smoke', 'hand'), F('runepulse', 'hand')]),
+      piece('draugvakt', 'weapon', [F('smoke', 'tip'), F('glitter', 'tip')], 'sword'),
     ],
   },
   {
     id: 'frostbrost',
-    name: 'Frostväktarens bröst',
+    name: LOOK_TEXT.frostbrost!.name,
     dungeon: 'frost',
     cls: 'vaktare',
     pal: { main: '#8ec8e8', dark: '#4a7ea8', light: '#dff4ff', trim: '#ffffff', glow: '#a8e8ff', accent: '#ffffff' },
     aura: 'ring',
     ways: {
-      svar: { name: 'Skymningsis', pal: { main: '#5a6a9a', dark: '#323e68', light: '#a8b4e0', trim: '#d8c8ff', glow: '#b8a8ff' } },
-      extrem: { name: 'Gröna isen', pal: { main: '#9ad8b8', dark: '#4a8a78', light: '#e0fff0', trim: '#ffd8a0', glow: '#80ffd0' } },
+      svar: { name: LOOK_TEXT.frostbrost!.svar!, pal: { main: '#5a6a9a', dark: '#323e68', light: '#a8b4e0', trim: '#d8c8ff', glow: '#b8a8ff' } },
+      extrem: { name: LOOK_TEXT.frostbrost!.extrem!, pal: { main: '#9ad8b8', dark: '#4a8a78', light: '#e0fff0', trim: '#ffd8a0', glow: '#80ffd0' } },
     },
     pieces: [
-      piece('frostbrost', 'hat', 'Frostvaktens hjälm', 'En isblå hjälm. Det yr lite snö runt den.', [F('frost', 'head'), F('glitter', 'head')]),
-      piece('frostbrost', 'shirt', 'Frostbröstet', 'Rustning av isplåt som aldrig blir kall mot dig.', [F('frost', 'chest'), F('runepulse', 'chest')]),
-      piece('frostbrost', 'shoulders', 'Kristallaxlarna', 'Två stora iskristaller på axlarna.', [F('glitter', 'shoulders'), F('frost', 'shoulders')]),
-      piece('frostbrost', 'offhand', 'Frostskölden', 'Kanten på skölden ryker av kall dimma.', [F('frost', 'hand'), F('glitter', 'hand')]),
+      piece('frostbrost', 'hat', [F('frost', 'head'), F('glitter', 'head')]),
+      piece('frostbrost', 'shirt', [F('frost', 'chest'), F('runepulse', 'chest')]),
+      piece('frostbrost', 'shoulders', [F('glitter', 'shoulders'), F('frost', 'shoulders')]),
+      piece('frostbrost', 'offhand', [F('frost', 'hand'), F('glitter', 'hand')]),
     ],
   },
   {
     id: 'volvaljus',
-    name: 'Völvans ljus',
+    name: LOOK_TEXT.volvaljus!.name,
     dungeon: 'alv',
     cls: 'helare',
     pal: { main: '#5fa86a', dark: '#2f6a3e', light: '#9fe0a0', trim: '#e8d27a', glow: '#fff0a0', accent: '#ffffff' },
     aura: 'ring',
     ways: {
-      svar: { name: 'Rosenlund', pal: { main: '#d89aa8', dark: '#9a5a6e', light: '#ffd0dc', trim: '#fff0f0', glow: '#ffb8d0' } },
-      extrem: { name: 'Höstlund', pal: { main: '#e0a848', dark: '#9a6a26', light: '#ffe090', trim: '#8a3a1e', glow: '#ffa84a' } },
+      svar: { name: LOOK_TEXT.volvaljus!.svar!, pal: { main: '#d89aa8', dark: '#9a5a6e', light: '#ffd0dc', trim: '#fff0f0', glow: '#ffb8d0' } },
+      extrem: { name: LOOK_TEXT.volvaljus!.extrem!, pal: { main: '#e0a848', dark: '#9a6a26', light: '#ffe090', trim: '#8a3a1e', glow: '#ffa84a' } },
     },
     pieces: [
-      piece('volvaljus', 'hat', 'Ljuskransen', 'En krans av löv som lyser av sig själv.', [F('dripping', 'head'), F('leaves', 'head')]),
-      piece('volvaljus', 'shirt', 'Ljusdräkten', 'En grön dräkt. Små ljusdroppar rinner av den.', [F('dripping', 'chest'), F('runepulse', 'chest')]),
-      piece('volvaljus', 'cloak', 'Lövmanteln', 'En mantel av levande löv som fladdrar när du går.', [F('leaves', 'back'), F('dripping', 'back')]),
-      piece('volvaljus', 'weapon', 'Ljusstaven', 'En stav med en lysande stjärna i toppen.', [F('dripping', 'tip'), F('glitter', 'tip')], 'staff'),
+      piece('volvaljus', 'hat', [F('dripping', 'head'), F('leaves', 'head')]),
+      piece('volvaljus', 'shirt', [F('dripping', 'chest'), F('runepulse', 'chest')]),
+      piece('volvaljus', 'cloak', [F('leaves', 'back'), F('dripping', 'back')]),
+      piece('volvaljus', 'weapon', [F('dripping', 'tip'), F('glitter', 'tip')], 'staff'),
     ],
   },
   {
     id: 'havsvolva',
-    name: 'Havets völva',
+    name: LOOK_TEXT.havsvolva!.name,
     dungeon: 'orm',
     cls: 'helare',
     pal: { main: '#3aa8a8', dark: '#1e6a78', light: '#8ae8e0', trim: '#f4f0e6', glow: '#a8fff0', accent: '#ffffff' },
     aura: 'ring',
     ways: {
-      svar: { name: 'Djuphav', pal: { main: '#4a60c8', dark: '#2a3a8a', light: '#9ab0ff', trim: '#d8e4ff', glow: '#9ab8ff' } },
-      extrem: { name: 'Korallrev', pal: { main: '#e0708a', dark: '#9a3a52', light: '#ffb8c8', trim: '#fff0e0', glow: '#ffa0b8' } },
+      svar: { name: LOOK_TEXT.havsvolva!.svar!, pal: { main: '#4a60c8', dark: '#2a3a8a', light: '#9ab0ff', trim: '#d8e4ff', glow: '#9ab8ff' } },
+      extrem: { name: LOOK_TEXT.havsvolva!.extrem!, pal: { main: '#e0708a', dark: '#9a3a52', light: '#ffb8c8', trim: '#fff0e0', glow: '#ffa0b8' } },
     },
     pieces: [
-      piece('havsvolva', 'hat', 'Pärlkronan', 'En krona av snäckor med en pärla som pulserar.', [F('runepulse', 'head'), F('glitter', 'head')]),
-      piece('havsvolva', 'shirt', 'Havsdräkten', 'En dräkt som skimrar som vågor.', [F('runepulse', 'chest'), F('glitter', 'chest')]),
-      piece('havsvolva', 'amulet', 'Vågamuletten', 'Håll den mot örat, så hör du havet.', [F('glitter', 'chest'), F('runepulse', 'chest')]),
-      piece('havsvolva', 'weapon', 'Vågstaven', 'En stav med en pärla som lyser som månen på vattnet.', [F('runepulse', 'tip'), F('glitter', 'tip')], 'staff'),
+      piece('havsvolva', 'hat', [F('runepulse', 'head'), F('glitter', 'head')]),
+      piece('havsvolva', 'shirt', [F('runepulse', 'chest'), F('glitter', 'chest')]),
+      piece('havsvolva', 'amulet', [F('glitter', 'chest'), F('runepulse', 'chest')]),
+      piece('havsvolva', 'weapon', [F('runepulse', 'tip'), F('glitter', 'tip')], 'staff'),
     ],
   },
   {
     id: 'bjornbarsark',
-    name: 'Björnbärsärken',
+    name: LOOK_TEXT.bjornbarsark!.name,
     dungeon: 'fenrir',
     cls: 'krigare',
     pal: { main: '#8a6a50', dark: '#5a4030', light: '#b8946a', trim: '#d0c8b8', glow: '#a8c8ff', accent: '#e8f0ff' },
     aura: 'trail',
     ways: {
-      svar: { name: 'Gråulv', pal: { main: '#7a8088', dark: '#4a5058', light: '#b0b8c0', trim: '#e8ecf0', glow: '#c0d0ff' } },
-      extrem: { name: 'Vitulv', pal: { main: '#e0e4ec', dark: '#9aa4b4', light: '#ffffff', trim: '#6a8ac8', glow: '#a8d8ff' } },
+      svar: { name: LOOK_TEXT.bjornbarsark!.svar!, pal: { main: '#7a8088', dark: '#4a5058', light: '#b0b8c0', trim: '#e8ecf0', glow: '#c0d0ff' } },
+      extrem: { name: LOOK_TEXT.bjornbarsark!.extrem!, pal: { main: '#e0e4ec', dark: '#9aa4b4', light: '#ffffff', trim: '#6a8ac8', glow: '#a8d8ff' } },
     },
     pieces: [
-      piece('bjornbarsark', 'hat', 'Bärsärkshuvan', 'En huva med ulvöron. Ögonen glöder.', [F('smoke', 'head'), F('glitter', 'head')]),
-      piece('bjornbarsark', 'shirt', 'Bärsärkspälsen', 'En tjock päls som doftar skog.', [F('trail', 'back'), F('smoke', 'chest')]),
-      piece('bjornbarsark', 'shoulders', 'Pälsaxlarna', 'Stora lurviga axlar. Ingen vill brottas med dig.', [F('smoke', 'shoulders'), F('trail', 'back')]),
-      piece('bjornbarsark', 'weapon', 'Bärsärkyxan', 'En yxa som en spöklik ulv följer efter.', [F('trail', 'tip'), F('smoke', 'tip')], 'axe'),
+      piece('bjornbarsark', 'hat', [F('smoke', 'head'), F('glitter', 'head')]),
+      piece('bjornbarsark', 'shirt', [F('trail', 'back'), F('smoke', 'chest')]),
+      piece('bjornbarsark', 'shoulders', [F('smoke', 'shoulders'), F('trail', 'back')]),
+      piece('bjornbarsark', 'weapon', [F('trail', 'tip'), F('smoke', 'tip')], 'axe'),
     ],
   },
   {
     id: 'smedensglod',
-    name: 'Smedens glöd',
+    name: LOOK_TEXT.smedensglod!.name,
     dungeon: 'surt',
     cls: 'krigare',
     pal: { main: '#3a3640', dark: '#1e1c24', light: '#6a6470', trim: '#ff9a3a', glow: '#ffb84a', accent: '#fff0a0' },
     aura: 'ring',
     ways: {
-      svar: { name: 'Rostglöd', pal: { main: '#6a2a20', dark: '#3a1410', light: '#a85a48', trim: '#ffcf6a', glow: '#ff8a4a' } },
-      extrem: { name: 'Blåglöd', pal: { main: '#2a4a6a', dark: '#14263a', light: '#5a88b0', trim: '#6ad8ff', glow: '#6ad8ff' } },
+      svar: { name: LOOK_TEXT.smedensglod!.svar!, pal: { main: '#6a2a20', dark: '#3a1410', light: '#a85a48', trim: '#ffcf6a', glow: '#ff8a4a' } },
+      extrem: { name: LOOK_TEXT.smedensglod!.extrem!, pal: { main: '#2a4a6a', dark: '#14263a', light: '#5a88b0', trim: '#6ad8ff', glow: '#6ad8ff' } },
     },
     pieces: [
-      piece('smedensglod', 'hat', 'Glödhjälmen', 'En svart hjälm med glöd i ögonspringorna.', [F('embers', 'head'), F('smoke', 'head')]),
-      piece('smedensglod', 'shirt', 'Glödrustningen', 'Svart järn med glödande sprickor.', [F('embers', 'chest'), F('smoke', 'chest')]),
-      piece('smedensglod', 'shoulders', 'Glödaxlarna', 'Axelplåtar som ryker och gnistrar.', [F('smoke', 'shoulders'), F('embers', 'shoulders')]),
-      piece('smedensglod', 'weapon', 'Glödhammaren', 'En smedshammare som aldrig kallnar.', [F('embers', 'tip'), F('smoke', 'tip')], 'hammer'),
+      piece('smedensglod', 'hat', [F('embers', 'head'), F('smoke', 'head')]),
+      piece('smedensglod', 'shirt', [F('embers', 'chest'), F('smoke', 'chest')]),
+      piece('smedensglod', 'shoulders', [F('smoke', 'shoulders'), F('embers', 'shoulders')]),
+      piece('smedensglod', 'weapon', [F('embers', 'tip'), F('smoke', 'tip')], 'hammer'),
     ],
   },
   {
     id: 'askmagiker',
-    name: 'Åskmagikern',
+    name: LOOK_TEXT.askmagiker!.name,
     dungeon: 'dvarg',
     cls: 'magiker',
     pal: { main: '#6a3ab8', dark: '#3a1e80', light: '#a878f0', trim: '#ffd84a', glow: '#c8f0ff', accent: '#ffffff' },
     aura: 'ring',
     ways: {
-      svar: { name: 'Stormblå', pal: { main: '#1e6aa8', dark: '#0e3a6a', light: '#6ab0e8', trim: '#e8f4ff', glow: '#a0e0ff' } },
-      extrem: { name: 'Silverblixt', pal: { main: '#e0e0f0', dark: '#8a8aa8', light: '#ffffff', trim: '#6a3ab8', glow: '#e8d8ff' } },
+      svar: { name: LOOK_TEXT.askmagiker!.svar!, pal: { main: '#1e6aa8', dark: '#0e3a6a', light: '#6ab0e8', trim: '#e8f4ff', glow: '#a0e0ff' } },
+      extrem: { name: LOOK_TEXT.askmagiker!.extrem!, pal: { main: '#e0e0f0', dark: '#8a8aa8', light: '#ffffff', trim: '#6a3ab8', glow: '#e8d8ff' } },
     },
     pieces: [
-      piece('askmagiker', 'hat', 'Åskhatten', 'En spetsig hatt där blixtar hoppar mellan spetsen och brättet.', [F('lightning', 'head'), F('glitter', 'head')]),
-      piece('askmagiker', 'shirt', 'Åskkåpan', 'En lila kåpa. Det knastrar när du rör dig.', [F('lightning', 'chest'), F('glitter', 'chest')]),
-      piece('askmagiker', 'amulet', 'Åskamuletten', 'En liten blixt i en bärnstenskula.', [F('lightning', 'chest'), F('glitter', 'chest')]),
-      piece('askmagiker', 'weapon', 'Åskstaven', 'Blixtar slår från toppen på staven.', [F('lightning', 'tip'), F('glitter', 'tip')], 'staff'),
+      piece('askmagiker', 'hat', [F('lightning', 'head'), F('glitter', 'head')]),
+      piece('askmagiker', 'shirt', [F('lightning', 'chest'), F('glitter', 'chest')]),
+      piece('askmagiker', 'amulet', [F('lightning', 'chest'), F('glitter', 'chest')]),
+      piece('askmagiker', 'weapon', [F('lightning', 'tip'), F('glitter', 'tip')], 'staff'),
     ],
   },
   {
     id: 'skuggornas',
-    name: 'Skuggornas hatt',
+    name: LOOK_TEXT.skuggornas!.name,
     dungeon: 'hel',
     cls: 'magiker',
     pal: { main: '#3a2a58', dark: '#1a1030', light: '#6a58a0', trim: '#d8d0c0', glow: '#b87aff', accent: '#e8d8ff' },
     aura: 'trail',
     ways: {
-      svar: { name: 'Blågrön skugga', pal: { main: '#2a4a48', dark: '#142828', light: '#5a9a90', trim: '#d0f0e8', glow: '#6affd8' } },
-      extrem: { name: 'Blodskugga', pal: { main: '#5a1a2a', dark: '#2e0c14', light: '#a04a5a', trim: '#f0d8d0', glow: '#ff6a7a' } },
+      svar: { name: LOOK_TEXT.skuggornas!.svar!, pal: { main: '#2a4a48', dark: '#142828', light: '#5a9a90', trim: '#d0f0e8', glow: '#6affd8' } },
+      extrem: { name: LOOK_TEXT.skuggornas!.extrem!, pal: { main: '#5a1a2a', dark: '#2e0c14', light: '#a04a5a', trim: '#f0d8d0', glow: '#ff6a7a' } },
     },
     pieces: [
-      piece('skuggornas', 'hat', 'Skuggornas hatt', 'En mörk hatt som suger åt sig ljuset.', [F('tendrils', 'head'), F('smoke', 'head')]),
-      piece('skuggornas', 'shirt', 'Skuggkåpan', 'Kåpan har ingen botten. Det syns inte var den slutar.', [F('tendrils', 'chest'), F('smoke', 'chest')]),
-      piece('skuggornas', 'cloak', 'Skuggmanteln', 'En mantel av skuggor som ringlar sig bakom dig.', [F('tendrils', 'back'), F('smoke', 'back')]),
-      piece('skuggornas', 'weapon', 'Skuggstaven', 'Mörka trådar slingrar sig runt toppen.', [F('tendrils', 'tip'), F('smoke', 'tip')], 'staff'),
+      piece('skuggornas', 'hat', [F('tendrils', 'head'), F('smoke', 'head')]),
+      piece('skuggornas', 'shirt', [F('tendrils', 'chest'), F('smoke', 'chest')]),
+      piece('skuggornas', 'cloak', [F('tendrils', 'back'), F('smoke', 'back')]),
+      piece('skuggornas', 'weapon', [F('tendrils', 'tip'), F('smoke', 'tip')], 'staff'),
     ],
   },
   {
     id: 'lokeslek',
-    name: 'Lokes lek',
+    name: LOOK_TEXT.lokeslek!.name,
     dungeon: 'loke',
     cls: null,
     pal: { main: '#2eaa5a', dark: '#9a2a3a', light: '#7affb0', trim: '#ffd84a', glow: '#ff7ad8', accent: '#ffffff' },
     aura: 'trail',
     ways: {
-      svar: { name: 'Lila lek', pal: { main: '#7a2ab8', dark: '#2a8a6a', light: '#c08af0', trim: '#fff0a0', glow: '#7affe0' } },
-      extrem: { name: 'Guld och svart', pal: { main: '#ffd84a', dark: '#2a2a30', light: '#fff0a0', trim: '#2a2a30', glow: '#ffffff' } },
+      svar: { name: LOOK_TEXT.lokeslek!.svar!, pal: { main: '#7a2ab8', dark: '#2a8a6a', light: '#c08af0', trim: '#fff0a0', glow: '#7affe0' } },
+      extrem: { name: LOOK_TEXT.lokeslek!.extrem!, pal: { main: '#ffd84a', dark: '#2a2a30', light: '#fff0a0', trim: '#2a2a30', glow: '#ffffff' } },
     },
     pieces: [
-      piece('lokeslek', 'hat', 'Busmössan', 'Två horn, ett grönt och ett rött. Det skimrar åt alla håll.', [F('aurora', 'head'), F('glitter', 'head')]),
-      piece('lokeslek', 'cloak', 'Dubbelmanteln', 'Grön på ena sidan och röd på andra. Vilken är den riktiga?', [F('aurora', 'back'), F('trail', 'back')]),
-      piece('lokeslek', 'offhand', 'Skrattmasken', 'En mask som ler. Ibland blinkar den åt dig.', [F('aurora', 'hand'), F('glitter', 'hand')]),
-      piece('lokeslek', 'amulet', 'Busringen', 'En ring som byter färg när ingen tittar.', [F('aurora', 'chest'), F('glitter', 'chest')]),
+      piece('lokeslek', 'hat', [F('aurora', 'head'), F('glitter', 'head')]),
+      piece('lokeslek', 'cloak', [F('aurora', 'back'), F('trail', 'back')]),
+      piece('lokeslek', 'offhand', [F('aurora', 'hand'), F('glitter', 'hand')]),
+      piece('lokeslek', 'amulet', [F('aurora', 'chest'), F('glitter', 'chest')]),
     ],
   },
   {
     id: 'huginmunin',
-    name: 'Hugin och Munin',
+    name: LOOK_TEXT.huginmunin!.name,
     dungeon: 'hel',
     cls: null,
     pal: { main: '#2a2a38', dark: '#14121a', light: '#58587a', trim: '#8a8aa8', glow: '#c8c8ff', accent: '#ffffff' },
     aura: 'ring',
     ways: {
-      svar: { name: 'Brun korp', pal: { main: '#5a3a28', dark: '#2e1a10', light: '#a07050', trim: '#e0c8a0', glow: '#ffd8a0' } },
-      extrem: { name: 'Vit korp', pal: { main: '#e8e8f0', dark: '#9a9ab0', light: '#ffffff', trim: '#2a2a38', glow: '#c8d8ff' } },
+      svar: { name: LOOK_TEXT.huginmunin!.svar!, pal: { main: '#5a3a28', dark: '#2e1a10', light: '#a07050', trim: '#e0c8a0', glow: '#ffd8a0' } },
+      extrem: { name: LOOK_TEXT.huginmunin!.extrem!, pal: { main: '#e8e8f0', dark: '#9a9ab0', light: '#ffffff', trim: '#2a2a38', glow: '#c8d8ff' } },
     },
     pieces: [
-      piece('huginmunin', 'hat', 'Korphatten', 'En bredbrättad hatt med en korpfjäder.', [F('leaves', 'head'), F('glitter', 'head')]),
-      piece('huginmunin', 'shoulders', 'Fjäderaxlarna', 'Svarta fjädrar på axlarna. Några faller av.', [F('leaves', 'shoulders'), F('smoke', 'shoulders')]),
-      piece('huginmunin', 'cloak', 'Korpmanteln', 'En mantel som fladdrar som vingar.', [F('leaves', 'back'), F('smoke', 'back')]),
-      piece('huginmunin', 'amulet', 'Korpamuletten', 'En liten korp av svart sten. Den viskar ibland.', [F('glitter', 'chest'), F('runepulse', 'chest')]),
+      piece('huginmunin', 'hat', [F('leaves', 'head'), F('glitter', 'head')]),
+      piece('huginmunin', 'shoulders', [F('leaves', 'shoulders'), F('smoke', 'shoulders')]),
+      piece('huginmunin', 'cloak', [F('leaves', 'back'), F('smoke', 'back')]),
+      piece('huginmunin', 'amulet', [F('glitter', 'chest'), F('runepulse', 'chest')]),
     ],
   },
 ];
@@ -268,12 +314,12 @@ export interface SignatureWeapon extends LookPiece {
   dungeon: DungeonId;
   pal: LookPal;
 }
-const sig = (name: string, dungeon: DungeonId, shape: WeaponShape, title: string, text: string, pal: LookPal, fx: [FxSpec, FxSpec?]): SignatureWeapon => ({ id: `sig_${name}`, set: `sig_${name}`, slot: 'weapon', name: title, text, shape, fx, dungeon, pal });
+const sig = (name: string, dungeon: DungeonId, shape: WeaponShape, pal: LookPal, fx: [FxSpec, FxSpec?]): SignatureWeapon => ({ id: `sig_${name}`, set: `sig_${name}`, slot: 'weapon', name: LOOK_TEXT[`sig_${name}`]!.name, text: LOOK_TEXT[`sig_${name}`]!.text!, shape, fx, dungeon, pal });
 export const SIGNATURE_WEAPONS: SignatureWeapon[] = [
-  sig('mjolner', 'dvarg', 'hammer', 'Mjölner', 'Tors hammare. Det knastrar av blixtar om den.', { main: '#8a90a0', dark: '#4a5060', light: '#d0d8e8', trim: '#ffd84a', glow: '#9ad8ff', accent: '#ffffff' }, [F('lightning', 'tip'), F('glitter', 'tip')]),
-  sig('gungner', 'hel', 'spear', 'Gungner', 'Odens spjut, som alltid träffar. Det lämnar ett gyllene streck.', { main: '#c8a848', dark: '#7a6020', light: '#fff0a0', trim: '#ffe27a', glow: '#ffe27a', accent: '#ffffff' }, [F('glitter', 'tip'), F('trail', 'tip')]),
-  sig('frostbett', 'frost', 'sword', 'Frostbett', 'Ett svärd av evig is som aldrig smälter.', { main: '#a8e0f8', dark: '#4a88b0', light: '#f0fcff', trim: '#ffffff', glow: '#a8e8ff', accent: '#ffffff' }, [F('frost', 'tip'), F('glitter', 'tip')]),
-  sig('surtsvard', 'surt', 'sword', 'Surts eldsvärd', 'Eldjättens eget svärd. Det brinner, men aldrig i din hand.', { main: '#d85a2a', dark: '#7a2410', light: '#ffd07a', trim: '#ffcf6a', glow: '#ff9a3a', accent: '#fff0a0' }, [F('embers', 'tip'), F('smoke', 'tip')]),
+  sig('mjolner', 'dvarg', 'hammer', { main: '#8a90a0', dark: '#4a5060', light: '#d0d8e8', trim: '#ffd84a', glow: '#9ad8ff', accent: '#ffffff' }, [F('lightning', 'tip'), F('glitter', 'tip')]),
+  sig('gungner', 'hel', 'spear', { main: '#c8a848', dark: '#7a6020', light: '#fff0a0', trim: '#ffe27a', glow: '#ffe27a', accent: '#ffffff' }, [F('glitter', 'tip'), F('trail', 'tip')]),
+  sig('frostbett', 'frost', 'sword', { main: '#a8e0f8', dark: '#4a88b0', light: '#f0fcff', trim: '#ffffff', glow: '#a8e8ff', accent: '#ffffff' }, [F('frost', 'tip'), F('glitter', 'tip')]),
+  sig('surtsvard', 'surt', 'sword', { main: '#d85a2a', dark: '#7a2410', light: '#ffd07a', trim: '#ffcf6a', glow: '#ff9a3a', accent: '#fff0a0' }, [F('embers', 'tip'), F('smoke', 'tip')]),
 ];
 
 export const ALL_PIECES: LookPiece[] = [...LOOK_SETS.flatMap((s) => s.pieces), ...SIGNATURE_WEAPONS];
@@ -305,17 +351,7 @@ export const SIGNATURE_CHANCE = 0.1;
 /** The difficulty levels (run levels 3 and 4) that unlock a colourway and a title. */
 export const WAY_LEVELS: Record<WayId, number> = { svar: 3, extrem: 4 };
 
-export const LOOK_TITLES: Record<DungeonId, Record<WayId, string>> = {
-  draug: { svar: 'Kryptans mästare', extrem: 'Draugkungens skräck' },
-  frost: { svar: 'Isens mästare', extrem: 'Frostjättens bane' },
-  surt: { svar: 'Eldens mästare', extrem: 'Surts bane' },
-  hel: { svar: 'Helheims mästare', extrem: 'Hels bane' },
-  dvarg: { svar: 'Gruvans mästare', extrem: 'Fafners bane' },
-  orm: { svar: 'Havets mästare', extrem: 'Ormens bane' },
-  alv: { svar: 'Lundens mästare', extrem: 'Nattmarans bane' },
-  fenrir: { svar: 'Klyftans mästare', extrem: 'Ulvens bane' },
-  loke: { svar: 'Bifrosts mästare', extrem: 'Lokes bane' },
-};
+export const LOOK_TITLES: Record<DungeonId, Record<WayId, string>> = Object.fromEntries(Object.entries(LOOK_TITLE_TEXT).map(([d, [svar, extrem]]) => [d, { svar, extrem }])) as Record<DungeonId, Record<WayId, string>>;
 
 // ---------------------------------------------------------------------------
 // The collection, what is worn, and how it is drawn
@@ -383,8 +419,8 @@ export function decodeLook(code: string | undefined): DecodedLook | null {
 }
 
 /** The outfit's look codes for a player (what is drawn): worn looks of the current class. */
-export function looksOutfit(prog: SagaProgress | undefined): Partial<Record<LookSlot, string>> | undefined {
-  const wear = wearOf(prog, wearClass(prog));
+export function looksOutfit(prog: SagaProgress | undefined, cls: ClassId | undefined = wearClass(prog)): Partial<Record<LookSlot, string>> | undefined {
+  const wear = wearOf(prog, cls);
   const out: Partial<Record<LookSlot, string>> = {};
   for (const slot of LOOK_SLOTS) {
     const w = wear[slot];
@@ -435,6 +471,16 @@ export interface LookReward {
 export const setComplete = (prog: SagaProgress | undefined, set: LookSet): boolean => set.pieces.every((p) => tierOf(prog, p.id) >= LOOK_TIER_MAX);
 /** How many shine steps a set has in all (pieces owned count 1, each tier above counts 1) and the most it can have. */
 export const setProgress = (prog: SagaProgress | undefined, set: LookSet): { have: number; max: number } => ({ have: set.pieces.reduce((n, p) => n + tierOf(prog, p.id), 0), max: set.pieces.length * LOOK_TIER_MAX });
+
+/**
+ * The dice of a player's looks: seeded by who they are, the dungeon and how many times they have cleared it, so rolling them never
+ * moves the sim's own dice (a run's seeds, a chest's loot) and the same clears always give the same looks.
+ */
+export function lookRng(p: PlayerState, dungeon: DungeonId): () => number {
+  let h = 2166136261;
+  for (const ch of `${p.id}|${dungeon}|${p.saga?.lookClears?.[dungeon] ?? 0}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return mulberry32(h >>> 0);
+}
 
 /** Picks one entry of a list with the random function. */
 const pick = <T>(list: T[], rnd: () => number): T => list[Math.min(list.length - 1, Math.floor(rnd() * list.length))]!;
@@ -504,18 +550,6 @@ export function awardLooks(p: PlayerState, dungeon: DungeonId, level: number, rn
 // Wearing
 // ---------------------------------------------------------------------------
 
-export const LOOK_T = {
-  worn: '{item} är på!',
-  off: 'Du tog av dig {item}.',
-  notYours: 'Du har inte den än.',
-  notYourClass: '{item} är för {cls}.',
-  noSlot: 'Den passar inte där.',
-  wayNone: 'Du har inte den färgen än.',
-  standPut: '{item} står på stället.',
-  standEmpty: 'Du har inga coola saker att ställa upp än. Klara en färd!',
-  dropNew: 'Ny!',
-  dropUp: 'Skinar mer!',
-};
 
 /** Puts a look on (piece `null`: takes the slot's piece off) for a class (default: the hero's own). Free, instant, anywhere. */
 export function equipLook(p: PlayerState, slot: unknown, pieceId: string | null, way: unknown, cls: unknown): Change[] {
@@ -582,7 +616,5 @@ export function devGrantLooks(p: PlayerState, setId: string | undefined, tier: n
   return [playerChange(p)];
 }
 
-/** "Brynja (Glödande)": a look's name and its shine, for a toast. */
+/** "Vaktens benkrona (Glödande)": a look's name and its shine, for a toast. */
 export const lookLabel = (pieceId: string, tier: number): string => fmt('{name} ({tier})', { name: lookPiece(pieceId)?.name ?? pieceId, tier: LOOK_TIER_NAMES[Math.max(1, Math.min(LOOK_TIER_MAX, tier)) - 1]! });
-export const LOOK_TIER_NAMES: readonly string[] = ['Vanlig', 'Kantad', 'Glödande', 'Gnistrande', 'Strålande'];
-export const LOOK_TIER_HINTS: readonly string[] = ['Enkel och slät.', 'Med fin kant av metall.', 'Den lyser av sig själv.', 'Gnistor och rök följer den.', 'Full effekt, med sken runt dig!'];

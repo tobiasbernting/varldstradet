@@ -8,7 +8,7 @@ import { ANIMALS, ITEMS, NPCS, VILLAGE_KEY, objectDef } from './data.ts';
 import { MAX_HEARTS } from './dungeon.ts';
 import { isIndoorKey } from './bath.ts';
 import { awardTrophy } from './house.ts';
-import { awardLooks, syncLooks } from './looks.ts';
+import { awardLooks, lookRng, syncLooks } from './looks.ts';
 import { RUN_LEVEL_MEDEL } from './run.ts';
 import { addItem, countItem, removeItem } from './inventory.ts';
 import { addObject, inBounds, mapH, mapW, objectAt, removeObject, tileIndex } from './map.ts';
@@ -1194,7 +1194,7 @@ function mobDown(h: Here, m: SagaMob, by: string, ctx: SimCtx, out: Change[]): v
       if (!h.inst.run) {
         // (a run's trophies and looks come with its win, at its level)
         awardTrophy(h.farm, p, d.boss, RUN_LEVEL_MEDEL, out);
-        awardLooks(p, h.inst.id, RUN_LEVEL_MEDEL, ctx.rnd, out);
+        awardLooks(p, h.inst.id, RUN_LEVEL_MEDEL, lookRng(p, h.inst.id), out);
       }
       out.push({ t: 'banner', to: p.id, area: h.key, text: fmt(T.sagaBossDown, { boss: boss.name }), sub: fmt(T.sagaCleared, { dungeon: d.name }), kind: 'cleared' });
     }

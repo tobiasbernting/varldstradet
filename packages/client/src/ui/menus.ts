@@ -64,7 +64,7 @@ import { slotEl } from './hud.js';
 import { PaintBoard } from './paint.ts';
 import { stackIconUrl } from '@art/painting.ts';
 import { SFX } from '../sound.ts';
-import { FORGE_NPC, hasSagaQuests, landmarkMarks, sagaQuestRows } from './saga.ts';
+import { hasSagaQuests, landmarkMarks, sagaQuestRows } from './saga.ts';
 
 export type MenuKind = 'inventory' | 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'emotes' | 'nameAnimal' | 'help' | 'npc' | 'cook' | 'book' | 'map' | 'paint' | 'pizzeria' | 'travel' | 'houses';
 
@@ -130,7 +130,7 @@ export class Menus {
       if (c.ui === 'chest') this.open('chest', c.id);
       else if (c.ui === 'travel') this.open('travel', c.id);
       else if (c.ui === 'nameAnimal') this.open('nameAnimal', c.id);
-      else if (c.ui === 'saga' || c.ui === 'sagaClass') return; // the saga's own windows (ui/saga.ts)
+      else if (c.ui === 'saga' || c.ui === 'sagaClass' || c.ui === 'looks') return; // the saga's own windows (ui/saga.ts)
       else if (c.ui === 'seed' || c.ui === 'run') return; // windows the server can open that this client has no UI for yet
       else if (c.ui === 'npc') {
         this.npcId = c.npc ?? null;
@@ -842,7 +842,7 @@ export class Menus {
     body.append(talk);
     const chat = h('button', null, '💬 Prata!');
     onTap(chat, () => this.say(npc.id, 'start', ''));
-    body.append(h('div', { class: 'npc-actions' }, chat, this.forgeButton(npc.id)));
+    body.append(h('div', { class: 'npc-actions' }, chat));
     // the saga's quests (ui/saga.ts)
     if (saga) body.append(sagaQuestRows(npc.id));
     const rows = h('div', { class: 'rows' });
@@ -903,8 +903,7 @@ export class Menus {
       opts.append(b);
     }
     body.append(opts);
-    const forge = this.forgeButton(npcId);
-    if (hasQuests || forge) {
+    if (hasQuests) {
       let back: HTMLElement | null = null;
       if (hasQuests) {
         back = h('button', { class: 'alt' }, '📜 Uppdrag');
@@ -914,19 +913,8 @@ export class Menus {
           this.rerender();
         });
       }
-      body.append(h('div', { class: 'npc-actions', style: { marginTop: 'calc(2 * var(--u))' } }, back, forge));
+      body.append(h('div', { class: 'npc-actions', style: { marginTop: 'calc(2 * var(--u))' } }, back));
     }
-  }
-
-  /** Smed-Stina's forge (ui/saga.ts): a button in her window, for everyone (anyone can own gear). */
-  private forgeButton(npcId: string): HTMLElement | null {
-    if (npcId !== FORGE_NPC) return null;
-    const b = h('button', { class: 'forge-btn' }, T.forgeBtn);
-    onTap(b, () => {
-      this.close();
-      document.dispatchEvent(new CustomEvent('lilla:forge'));
-    });
-    return b;
   }
 
   // ---- help ----

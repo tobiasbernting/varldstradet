@@ -6,7 +6,7 @@
 // The run lives in memory only (like a dungeon): it is never saved, what players earn is paid out at once.
 import { ANIMALS, objectDef } from './data.ts';
 import { awardTrophy } from './house.ts';
-import { awardLooks } from './looks.ts';
+import { awardLooks, lookRng } from './looks.ts';
 import { addItem, countItem, removeItem } from './inventory.ts';
 import { addObject, mapH, mapW, objectAt, removeObject, tileIndex } from './map.ts';
 import type { Change } from './protocol.ts';
@@ -1120,7 +1120,7 @@ function victory(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
       bump(p, CLEARED_STAT[boss], 1, out);
     }
     awardTrophy(farm, p, boss, run.level, out);
-    awardLooks(p, boss, run.level, ctx.rnd, out);
+    awardLooks(p, boss, run.level, lookRng(p, boss), out);
     const s = runSaveOf(p);
     s.wins++;
     s.clears[boss] = (s.clears[boss] ?? 0) + 1;

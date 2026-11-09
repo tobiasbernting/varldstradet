@@ -1,0 +1,369 @@
+/* Garderoben (ui/looks.ts). Sizes are real pixels, not the HUD's virtual ones: every target at least 48 px, text at least 16 px. */
+.saga-panel.gear {
+  width: min(94vw, 900px);
+  max-width: none;
+}
+.looks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 16px;
+  line-height: 1.35;
+  min-height: 0;
+}
+.looks button {
+  font-size: 16px;
+  min-height: 48px;
+  min-width: 48px;
+  padding: 6px 12px;
+  width: auto;
+  height: auto;
+  cursor: pointer;
+}
+.looks button:focus-visible,
+.looks button.pad-focus {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px var(--ink, #2b2419);
+}
+.looks .hint,
+.looks .intro,
+.looks .empty {
+  margin: 4px 0;
+  font-size: 16px;
+}
+.looks-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+.looks-classes,
+.looks-pages {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.looks-classes .cls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: color-mix(in srgb, var(--c, #888) 55%, #1c1812);
+}
+.looks-classes .cls .em {
+  font-size: 22px;
+}
+.looks-classes .cls.on,
+.looks-pages .pg.on,
+.fx-set .fx.on,
+.ways .way.on {
+  background: #f2c33a;
+  color: #2b2419;
+  border-color: #fff;
+  box-shadow: 0 0 0 3px #fff, 0 2px 0 3px var(--ink, #2b2419);
+}
+.looks-cols {
+  display: grid;
+  grid-template-columns: minmax(250px, 310px) 1fr;
+  gap: 10px;
+  min-height: 0;
+  max-height: min(56vh, 400px);
+}
+.looks-left,
+.looks-right {
+  text-align: left;
+  overflow: auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+.looks-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 4px;
+}
+.looks-left .who {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.looks-left .who .portrait {
+  width: 64px;
+  height: 128px;
+  image-rendering: pixelated;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 8px;
+}
+.looks-left .who .name {
+  display: flex;
+  flex-direction: column;
+  font-size: 18px;
+}
+.look-detail {
+  background: rgba(0, 0, 0, 0.22);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.look-detail .top {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.look-detail .top canvas,
+.look-detail .top .pic.big {
+  flex: none;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  width: 96px;
+  height: 96px;
+  image-rendering: pixelated;
+}
+.look-detail .who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.look-detail .nm {
+  font-size: 18px;
+}
+.look-detail .tx,
+.look-detail .meta {
+  font-size: 16px;
+}
+.look-detail .lines {
+  margin: 0;
+  padding: 0 0 0 18px;
+  font-size: 16px;
+}
+.look-detail .lines li {
+  margin: 2px 0;
+}
+.look-detail .lines .shine {
+  font-weight: 800;
+  color: #ffe9a8;
+}
+.ways {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ways .way {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+.ways .way.off {
+  opacity: 0.75;
+  border-style: dashed;
+}
+.ways .sw {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  display: inline-block;
+}
+.ways .sw.plain {
+  background: repeating-linear-gradient(45deg, #888, #888 4px, #ccc 4px, #ccc 8px);
+}
+.wear-btn {
+  background: #3fa45a;
+}
+.fx-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fx-set {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.fx-set .fx {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.slot-sec {
+  margin-bottom: 8px;
+}
+.slot-sec h3 {
+  margin: 4px 0;
+  font-size: 18px;
+}
+.slot-sec h3 small {
+  font-weight: 600;
+  font-size: 16px;
+}
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-start;
+  align-items: stretch;
+}
+.look-card {
+  flex: 0 1 auto;
+  justify-content: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 170px;
+  min-height: 64px;
+  text-align: left;
+  background: #4a3d2a;
+  border: 3px solid #1c1812;
+}
+.look-card .pic {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+}
+.look-card .col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.look-card .nm {
+  font-size: 16px;
+  line-height: 1.15;
+}
+.look-card .stars {
+  font-size: 16px;
+  color: #ffe9a8;
+}
+.look-card .stars.none,
+.look-card .state {
+  font-size: 16px;
+  color: #fff;
+}
+.look-card .state {
+  font-weight: 800;
+}
+.look-card.worn {
+  background: #2f6a3c;
+  border-color: #fff;
+  box-shadow: 0 0 0 3px #3fd070;
+}
+.look-card.locked {
+  background: #3a3530;
+  border-style: dashed;
+  border-color: #9a8f7a;
+}
+.look-card.locked .pic {
+  filter: grayscale(1) brightness(0.7);
+}
+.look-card.sel:not(.worn) {
+  border-color: #f2c33a;
+  box-shadow: 0 0 0 3px #f2c33a;
+}
+.slot-sec .meter {
+  position: relative;
+  height: 26px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.slot-sec .meter i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: repeating-linear-gradient(45deg, #3fa45a, #3fa45a 8px, #2f8a48 8px, #2f8a48 16px);
+}
+.slot-sec .meter span {
+  position: relative;
+  display: block;
+  text-align: center;
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 800;
+  text-shadow: 0 1px 0 #000;
+}
+.looks.stand .cards {
+  max-height: 50vh;
+  overflow: auto;
+}
+/* the loot window */
+.loot-look {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 3px solid #f2c33a;
+  font-size: 16px;
+}
+.loot-look canvas {
+  flex: none;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 8px;
+}
+.loot-look .col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.loot-look .nm {
+  font-size: 20px;
+}
+.loot-look .stars {
+  color: #ffe9a8;
+  font-weight: 800;
+}
+.loot-look .wear-btn {
+  min-height: 48px;
+  font-size: 16px;
+  width: auto;
+  height: auto;
+  margin-top: 4px;
+}
+@media (max-width: 760px) {
+  .looks-cols {
+    grid-template-columns: 1fr;
+    max-height: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .look-card,
+  .looks button {
+    transition: none;
+  }
+}
+/* the window's own frame: the book's tabs and the close button, up to the same rules */
+.saga-panel.gear .tabs button,
+.saga-panel.gear h2 button.close {
+  min-height: 48px;
+  min-width: 48px;
+  width: auto;
+  height: auto;
+  font-size: 16px;
+  padding: 6px 12px;
+}
+.saga-panel.gear h2 button.close {
+  font-size: 20px;
+  padding: 6px 14px;
+}
+.saga-panel.gear button:focus-visible,
+.saga-panel.gear button.pad-focus {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px var(--ink, #2b2419);
+}

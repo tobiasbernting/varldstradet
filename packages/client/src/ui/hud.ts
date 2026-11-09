@@ -1,5 +1,5 @@
 // HUD: top chips, hotbar, toasts, touch controls.
-import { CLASSES, HOTBAR_SIZE, HOUSE_T, MAX_HEARTS, SPELLS, T, WATERING_CAN_CHARGES, areaName, fmt, houseTitle, isBathKey, isHomeKey, isSagaKey, itemName, ownerOfHome, placeEmoji, placeName, stackName, type ItemStack } from '@lilla-garden/shared';
+import { CLASSES, HOTBAR_SIZE, hasLooks, HOUSE_T, MAX_HEARTS, SPELLS, T, WATERING_CAN_CHARGES, areaName, fmt, houseTitle, isBathKey, isHomeKey, isSagaKey, itemName, ownerOfHome, placeEmoji, placeName, stackName, type ItemStack } from '@lilla-garden/shared';
 import { Minimap } from './minimap.ts';
 import { getArt } from '@art/textures.ts';
 import { stackIconUrl } from '@art/painting.ts';
@@ -82,7 +82,7 @@ export class Hud {
     this.heroBtn = this.roundBtn('🧑‍🌾', () => this.toggleHero());
     this.heroBtn.classList.add('hero-btn');
     // the gear window lives with the saga's windows (ui/saga.ts)
-    this.gearBtn = this.roundBtn('⚔️', () => document.dispatchEvent(new Event('lilla:gear')));
+    this.gearBtn = this.roundBtn('👕', () => document.dispatchEvent(new Event('lilla:gear')));
     this.gearBtn.classList.add('gear-btn');
     this.gearBtn.title = T.sagaGearBtn;
     this.furnishBtn = this.roundBtn('🪑', () => this.toggleFurnish());
@@ -166,7 +166,7 @@ export class Hud {
     const hero = !!cls && !!me?.saga?.hero;
     document.body.classList.toggle('hero-mode', hero);
     this.heroBtn.hidden = !cls || isSagaKey(me?.area);
-    this.gearBtn.hidden = !cls;
+    this.gearBtn.hidden = !cls && !hasLooks(me?.saga);
     const face = hero ? cls!.emoji : '🧑‍🌾';
     if (this.heroBtn.textContent !== face) this.heroBtn.textContent = face;
     this.heroBtn.classList.toggle('on', hero);

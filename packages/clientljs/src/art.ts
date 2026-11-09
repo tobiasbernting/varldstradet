@@ -1,8 +1,8 @@
 // Every picture the view draws, packed into the atlas: the 2D game's generated art plus a few soft shapes of our own
 // for light, weather and effects.
-import type { Appearance, Outfit } from '@lilla-garden/shared';
+import { decodeLook, type Appearance, type Outfit } from '@lilla-garden/shared';
 import { animalSheet, ANIMAL_SIZE } from '@art/animals.ts';
-import { CHAR_H, CHAR_W, drawCharacterSheet, lookKey, lookOf } from '@art/characters.ts';
+import { CHAR_H, CHAR_W, drawCharacterSheet, lookIcon, lookKey, lookOf } from '@art/characters.ts';
 import { paintingPx } from '@art/painting.ts';
 import { getArt } from '@art/textures.ts';
 import { atlas, whole, type Picture, type Sprite } from './atlas.ts';
@@ -257,6 +257,20 @@ export function characterSprites(appearance: Appearance, outfit: Outfit): Sprite
   if (!s) {
     s = atlas.addFrames(drawCharacterSheet(look), CHAR_W, CHAR_H, 9);
     characters.set(key, s);
+    atlas.flush();
+  }
+  return s;
+}
+
+const lookSprites = new Map<string, Sprite>();
+/** A look's 16x16 picture (a weapon's own drawing, the others on a plain mannequin) as a sprite, packed on first use. */
+export function lookSprite(code: string): Sprite | undefined {
+  let s = lookSprites.get(code);
+  if (!s) {
+    const d = decodeLook(code);
+    if (!d) return undefined;
+    s = atlas.add(whole(lookIcon(d).canvas));
+    lookSprites.set(code, s);
     atlas.flush();
   }
   return s;
