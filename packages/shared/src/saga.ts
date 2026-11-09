@@ -1282,6 +1282,15 @@ export const SAGA_ITEMS: SagaItemDef[] = [
 ];
 export const sagaItem = (id: string): SagaItemDef | undefined => SAGA_ITEMS.find((i) => i.id === id);
 
+// Weapons, shields and amulets no longer come out of a chest as items: cool gear is a look (looks.ts), earned by completing a dungeon.
+// (Hats and shirts still do: they go to the clothes wardrobe.)
+const LOOK_ONLY_KINDS = new Set(['weapon', 'offhand', 'amulet']);
+const isLookOnly = (item: string): boolean => LOOK_ONLY_KINDS.has(SAGA_ITEMS.find((i) => i.id === item)?.kind ?? '');
+for (const t of [...Object.values(SAGA_LOOT), ...Object.values(SAGA_TREASURE)]) {
+  t.gear = t.gear.filter((g) => !isLookOnly(g.item));
+  if (t.rare) t.rare = t.rare.filter((g) => !isLookOnly(g.item));
+}
+
 // ---------------------------------------------------------------------------
 // The saga: Völvan Sigrun's chapters
 // ---------------------------------------------------------------------------

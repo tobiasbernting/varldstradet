@@ -59,6 +59,7 @@ import {
   fieldKey,
   fighterMax,
   fightStats,
+  sagaItem,
   BASE_POWER,
   BASE_ARMOR,
   BASE_HP,
@@ -860,32 +861,23 @@ describe('Lokes list: puzzles and loot', () => {
     }
   });
 
-  it('a chest gives offhands and amulets once each, and each player opens it once', () => {
+  it('a chest gives no weapons, offhands or amulets any more (those are looks, earned by completing a dungeon), and each player opens it once', () => {
     const { world, players } = family();
     const p = players[0]!;
     const d = inside(world, p, 'krigare', 'hel');
     const inst = d.saga!;
-    p.saga!.found = ['shirt_helrustning', 'garmklo'];
     const tx = Math.floor(p.x / TILE) + 1;
     const ty = Math.floor(p.y / TILE);
     const chest = addObject(d, 'saga_chest', tx, ty, { variant: 1 })!;
-    let got = false;
-    for (let seed = 1; seed < 60 && !got; seed++) {
+    let opened = 0;
+    for (let seed = 1; seed < 40; seed++) {
       delete inst.looted[chest.id];
       delete p.saga!.chestDay;
       const ch = performAction(d, p.id, tx, ty, ctx(seed));
-      got = ch.some((c) => c.t === 'loot' && c.items.some((it) => it.item === 'offhand_helskold'));
+      for (const c of ch) if (c.t === 'loot') for (const it of c.items) expect(['weapon', 'offhand', 'amulet'], it.item).not.toContain(sagaItem(it.item)?.kind);
+      if (ch.some((c) => c.t === 'loot')) opened++;
     }
-    expect(got).toBe(true);
-    expect(p.saga!.found).toContain('offhand_helskold');
-    expect(p.inventory.some((s) => s?.item === 'offhand_helskold')).toBe(true);
-    // all the chest's gear is found: potions instead
-    for (let seed = 1; seed < 20; seed++) {
-      delete inst.looted[chest.id];
-      delete p.saga!.chestDay;
-      const ch = performAction(d, p.id, tx, ty, ctx(seed));
-      expect(ch.some((c) => c.t === 'loot' && c.items.some((it) => it.item === 'offhand_helskold' || it.item === 'garmklo'))).toBe(false);
-    }
+    expect(opened).toBeGreaterThan(30);
     expect(performAction(d, p.id, tx, ty, ctx(3)).some((c) => c.t === 'loot')).toBe(false);
   });
 });
