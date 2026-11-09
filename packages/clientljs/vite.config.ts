@@ -1,0 +1,58 @@
+import { fileURLToPath } from 'node:url';
+import basicSsl from '@vitejs/plugin-basic-ssl';
+import { defineConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
+
+// VITE_HTTPS=1: the dev server over https with a self-signed certificate (accept the warning once per device).
+// Browsers only hand out microphones on https, so this is how röstprat is tried on a tablet over the LAN.
+const https = process.env.VITE_HTTPS === '1';
+
+export default defineConfig({
+  // The HUD, menus, networking, sounds and pixel art (packages/art) come from packages/client; the view is LittleJS
+  resolve: {
+    alias: {
+      '@v1': fileURLToPath(new URL('../client/src', import.meta.url)),
+      '@art': fileURLToPath(new URL('../art/src', import.meta.url)),
+    },
+  },
+  server: {
+    host: true,
+    port: 5173,
+    proxy: {
+      '/api': 'http://localhost:8080',
+      '/admin': 'http://localhost:8080',
+      '/access': 'http://localhost:8080',
+      '/join': 'http://localhost:8080',
+      '/health': 'http://localhost:8080',
+      '/ws': { target: 'ws://localhost:8080', ws: true },
+    },
+  },
+  build: { target: 'es2022', sourcemap: false, chunkSizeWarningLimit: 1500 },
+  plugins: [
+    ...(https ? [basicSsl()] : []),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['icon.svg'],
+      manifest: {
+        name: 'Sagan om Världsträdet',
+        short_name: 'Sagan om Världsträdet',
+        description: 'Ett familjespel: gård och saga',
+        lang: 'sv',
+        start_url: '/',
+        display: 'fullscreen',
+        orientation: 'landscape',
+        background_color: '#2a3d1f',
+        theme_color: '#2a3d1f',
+        icons: [
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png,webmanifest}'],
+        navigateFallbackDenylist: [/^\/admin/, /^\/api/, /^\/ws/, /^\/health/, /^\/access/, /^\/join/],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+      },
+    }),
+  ],
+});

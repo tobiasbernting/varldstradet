@@ -92,7 +92,7 @@ export const DEVICE_COOKIE = 'lg_device';
 export const PARENT_COOKIE = 'lg_parent';
 
 /**
- * A native client (the Godot game) has no cookie jar: it sends the same device token as `Authorization: Bearer
+ * A native client has no cookie jar: it sends the same device token as `Authorization: Bearer
  * <token>` instead. Returns the token, or null when the header is missing or is not a bearer.
  */
 export function bearerToken(header: string | string[] | undefined): string | null {

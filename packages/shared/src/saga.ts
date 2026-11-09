@@ -2103,8 +2103,12 @@ export const noBuffs = (): RunBuffs => ({ power: 0, spell: {}, cd: 0, spellCd: {
 /** A zone's link to its run. */
 export interface SagaRunLink {
   run: string;
-  /** 0..2 the zones, 3 the boss. */
-  zone: number;
+  /** The stop (its id in the route), its row (1..10) and kind. */
+  node: number;
+  row: number;
+  kind: 'flock' | 'mini' | 'rest' | 'boss';
+  /** The väg-runor on the floor, once the stop is cleared (tiles): what a bot walks onto to choose the way on. */
+  exits?: { x: number; y: number; node: number; kind: 'flock' | 'mini' | 'rest' | 'boss' }[];
   /** Shown when you walk in. */
   name: string;
   intro: string;

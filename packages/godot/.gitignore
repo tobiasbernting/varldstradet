@@ -1,6 +1,0 @@
-# Godot's import cache and editor state
-.godot/
-# exports (CI writes them to the repository root's build/)
-build/
-# whole art packs fetched by tools/fetch-assets.sh (only the used files are committed under assets/)
-downloads/

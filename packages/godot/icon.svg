@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
-  <!-- Yggdrasil, the shoot on the farm: drawn by hand for this project (no licence to track) -->
-  <rect width="128" height="128" rx="24" fill="#1f3a2a"/>
-  <path d="M64 112 V60" stroke="#8a5a2b" stroke-width="10" stroke-linecap="round"/>
-  <circle cx="64" cy="48" r="30" fill="#4caf50"/>
-  <circle cx="44" cy="60" r="18" fill="#43a047"/>
-  <circle cx="84" cy="60" r="18" fill="#43a047"/>
-  <circle cx="64" cy="34" r="16" fill="#66bb6a"/>
-</svg>

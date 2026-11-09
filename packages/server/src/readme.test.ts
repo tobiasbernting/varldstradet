@@ -28,8 +28,8 @@ describe('README', () => {
   });
 
   it('catches a broken link that has a title', () => {
-    const missing = imageLinks('![x](packages/godot/docs/no-such-picture.png "A title")').filter((t) => !existsSync(resolve(root, t)));
-    expect(missing).toEqual(['packages/godot/docs/no-such-picture.png']);
+    const missing = imageLinks('![x](docs/no-such-picture.png "A title")').filter((t) => !existsSync(resolve(root, t)));
+    expect(missing).toEqual(['docs/no-such-picture.png']);
   });
 
   it('links only to pictures that exist', () => {

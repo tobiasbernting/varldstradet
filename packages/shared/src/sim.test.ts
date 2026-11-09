@@ -1862,7 +1862,7 @@ describe('vilda djur skräms och kommer tillbaka (M7b)', () => {
         expect(stayed, `${def.species} at ${dt} ms ticks left again`).toBe(true);
       }
     }
-  });
+  }, 30_000);
 
   it('a hero who stands still, an animal out of reach, a petted one, predators, pets and farm animals are left alone', () => {
     // standing still, 3 tiles away

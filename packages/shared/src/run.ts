@@ -1,10 +1,11 @@
-// Runs (färdar): the data of GAME.md. A run is three zones and a boss in at most 30 minutes; between the zones the
-// party votes on a runa (a boon); sagafrön earned are planted at the Yggdrasil shoot as the sagaträd; the farm
-// feeds the run with färdkost and companions. Data only: the zones are built by runmap.ts, the rules are runsim.ts
-// (which reuses sagasim.ts for every fight rule). Swedish names and texts are in sv.ts (RUN_NAMES, RUN_TEXT).
+// Runs (färdar): the data of GAME.md and GAME2.md. A run is one dungeon (a chapter) as a route of ten rows of stops in
+// about 30 minutes; after a fight the party votes on a runa (a boon) and then walks onto one of up to three väg-runor
+// to choose the next stop; sagafrön earned are planted at the Yggdrasil shoot as the sagaträd; the farm feeds the run with
+// färdkost and companions. Data only: the route and its stops are built by runmap.ts, the rules are runsim.ts (which
+// reuses sagasim.ts for every fight rule). Swedish names and texts are in sv.ts (RUN_NAMES, RUN_TEXT).
 import type { ClassId, DungeonId, RunBuffs } from './saga.ts';
 import { noBuffs } from './saga.ts';
-import type { Terrain, WeatherKind } from './types.ts';
+import type { WeatherKind } from './types.ts';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -18,9 +19,20 @@ import type { Terrain, WeatherKind } from './types.ts';
 export const RUN_MAX_MS = 30 * 60_000;
 export const RUN_WARN_MS = 25 * 60_000;
 export const RUN_NUDGE_MS = 10 * 60_000;
-export const ZONES_PER_RUN = 3;
 /** The vote on a runa ends after this long at the latest. */
 export const RUN_PICK_MS = 20_000;
+/** The route (GAME2.md section 2): ten rows of stops, the mid-boss on row 5, the boss on row 10; wings of rows 1–4, 5–8 and 9–10. */
+export const ROUTE_ROWS = 10;
+export const ROUTE_MINI_ROW = 5;
+export const ROUTE_REST_ROW = 9;
+/** The vote on the way on ends this long after the first player stepped onto a rune (all online humans on a rune ends it at once). */
+export const ROUTE_VOTE_MS = 20_000;
+/** A player's step onto a rune counts as a vote after standing on it this long (so walking over one on the way to another is no vote). */
+export const ROUTE_DWELL_MS = 1_000;
+/** How far from the middle of a väg-runa (tiles) a player counts as standing on it. */
+export const ROUTE_DISC_RADIUS = 1.0;
+/** A Vilosten gives this fraction of everyone's health back when the party arrives, and gets up all who had fallen. */
+export const VILOSTEN_HEAL = 0.4;
 /** After the boss falls: time to open the chest, then everyone is carried home. */
 export const RUN_VICTORY_MS = 90_000;
 /** Family members this close to the arch (tiles) come along when it is used. */
@@ -49,16 +61,34 @@ export const parseRunLevel = (v: unknown): RunLevel | null => (v === undefined ?
 export const LATT = { hp: 0.6, dmg: 0.5, warn: 1.4, seeds: 0.5, bossMoves: 2 } as const;
 /**
  * The Sagoandan (GAME2.md section 4.5): free "everyone gets up" on a wipe, so the run does not end. How many a run starts
- * with, by level; on Lätt one more comes after each zone cleared (the count is what the star on the HUD shows). A
+ * with, by level; on Lätt one more comes after each stop (up to SAGOANDAN_LATT_MAX; the count is what the star on the HUD shows). A
  * Lätt wipe with none left still gets everyone up, for free: it never ends the run.
  */
 export const SAGOANDAN = { [RUN_LEVEL_LATT]: 3, [RUN_LEVEL_VANLIG]: 1 } as const;
+/** On Lätt a stop cleared brings one more Sagoande, but never more than this many at a time (the route has ten stops, the star must stay readable). */
+export const SAGOANDAN_LATT_MAX = 5;
 /** Monster health, damage and warning multipliers for a level (the zone's own are multiplied by these). */
 export const levelMuls = (level: RunLevel): { hp: number; dmg: number; warn: number; seeds: number } =>
   level === RUN_LEVEL_LATT ? { hp: LATT.hp, dmg: LATT.dmg, warn: LATT.warn, seeds: LATT.seeds } : { hp: 1, dmg: 1, warn: 1, seeds: 1 };
 
-/** Sagafrön for what happens in a run (GAME.md section 3). */
-export const RUN_SEEDS = { pack: 1, zone: 4, chest: 2, guard: 3, bossFirst: 20, bossReplay: 12 } as const;
+/**
+ * The rule of both votes of a run (the cards, the way on): a strict majority of the voters ends it at once (`majority`),
+ * everyone having voted ends it, and so does the clock (`late`). Returns the options that share the most votes (several: a tie
+ * for the caller to break; none: nobody voted, on the clock), or null while the vote goes on.
+ */
+export function tally(counts: readonly number[], voters: number, opts: { late: boolean; majority: boolean }): number[] | null {
+  const total = counts.reduce((a, b) => a + b, 0);
+  if (opts.majority) {
+    const m = counts.findIndex((n) => n > voters / 2);
+    if (m >= 0) return [m];
+  }
+  if (!opts.late && !(voters > 0 && total >= voters)) return null;
+  const top = Math.max(0, ...counts);
+  return top > 0 ? counts.flatMap((n, i) => (n === top ? [i] : [])) : [];
+}
+
+/** Sagafrön for what happens in a run (GAME2.md section 6): a pack 1, a stop cleared 3 (`zone`: the name is kept), the mid-boss 5 (`guard`), the boss 20 (12 on a replay). */
+export const RUN_SEEDS = { pack: 1, zone: 3, chest: 2, guard: 5, bossFirst: 20, bossReplay: 12 } as const;
 /** More sagafrön for each modifier. */
 export const MODIFIER_SEEDS = 0.15;
 
@@ -287,7 +317,7 @@ export interface RunSave {
   earned: number;
   /** The nodes planted (SEED_TREE ids). */
   tree: string[];
-  /** Runs started, won, ended by a wipe, runs that went past the 30-minute mark (`timeouts`: the name is kept so old saves load unchanged), and zones cleared. */
+  /** Runs started, won, ended by a wipe, runs that went past the 30-minute mark (`timeouts`: the name is kept so old saves load unchanged), and stops cleared (a Flock or the Mellanboss; `zones`, the name kept too). */
   runs: number;
   wins: number;
   wipes: number;
@@ -341,14 +371,14 @@ export const SMITHY_EFFECT: RunEffect = { power: 0.04 };
 export const HERB_EFFECT: RunEffect = { potions: 2, potion: 0.1 };
 
 // ---------------------------------------------------------------------------
-// Zone templates
+// Room layouts (the seven biome templates of v1: a Flock is built from four of their rooms; their ground, monsters and weather are gone: a run has the chapter's own look)
 // ---------------------------------------------------------------------------
 
 export type RunBiome = 'skog' | 'trask' | 'berg' | 'strand' | 'svamp' | 'is' | 'vulkan';
 export const RUN_BIOMES: readonly RunBiome[] = ['skog', 'trask', 'berg', 'strand', 'svamp', 'is', 'vulkan'];
 export const isRunBiome = (s: unknown): s is RunBiome => typeof s === 'string' && (RUN_BIOMES as readonly string[]).includes(s);
 
-/** start, two rooms of packs, a rest stone, the exit (behind the gate) and a side room with a guarded chest. */
+/** start, two rooms of packs, a rest stone, the exit (behind the gate) and a side room with a guarded chest. A Flock uses start, the two pack rooms and the exit. */
 export type ZoneRole = 'start' | 'pack' | 'rest' | 'exit' | 'side';
 
 export interface ZoneRoom {
@@ -361,21 +391,10 @@ export interface ZoneRoom {
 
 export interface ZoneTemplate {
   biome: RunBiome;
-  /** The dungeon whose arch stands in this biome: its treasure table and its look. */
-  theme: DungeonId;
-  /** Wall look (a `saga_wall` variant), the ground, what is outside the rooms, the light and the decor objects. */
-  wall: number;
-  floor: Terrain;
-  solid: Terrain;
-  ambient: [number, number, number];
-  decor: string[];
-  /** Six rooms in the order start, pack, pack, rest, exit, side. Rooms 1 and 5 may be dropped (4–6 rooms). */
+  /** Six rooms in the order start, pack, pack, rest, exit, side. A Flock uses start, the two rooms of packs and the exit. */
   rooms: [ZoneRoom, ZoneRoom, ZoneRoom, ZoneRoom, ZoneRoom, ZoneRoom];
   /** Corridors as [parent, child]; the exit is always a child (the gate stands in its corridor). */
   links: [number, number][];
-  /** The biome's monsters in three strengths (species in SAGA_MOBS). */
-  mobs: { small: string[]; medium: string[]; big: string[] };
-  weather: WeatherKind[];
 }
 
 const room = (x: number, y: number, w: number, h: number, role: ZoneRole): ZoneRoom => ({ x, y, w, h, role });
@@ -383,115 +402,82 @@ const room = (x: number, y: number, w: number, h: number, role: ZoneRole): ZoneR
 export const ZONE_TEMPLATES: Record<RunBiome, ZoneTemplate> = {
   skog: {
     biome: 'skog',
-    theme: 'draug',
-    wall: 6,
-    floor: 'grass',
-    solid: 'rock',
-    ambient: [0.42, 0.55, 0.42],
-    decor: ['saga_fairylight', 'saga_cobweb', 'saga_bones', 'saga_urn'],
     // a zigzag west to east
     rooms: [room(3, 27, 10, 10, 'start'), room(18, 21, 12, 12, 'pack'), room(35, 26, 13, 12, 'pack'), room(52, 12, 9, 9, 'rest'), room(50, 42, 11, 11, 'exit'), room(36, 6, 12, 10, 'side')],
     links: [[0, 1], [1, 2], [2, 3], [2, 5], [2, 4]],
-    mobs: { small: ['gravrotta'], medium: ['skelett', 'draugbage', 'ulv'], big: ['rimtroll'] },
-    weather: ['sun', 'cloudy', 'rain', 'fog', 'wind'],
   },
   trask: {
     biome: 'trask',
-    theme: 'hel',
-    wall: 3,
-    floor: 'mud',
-    solid: 'rock',
-    ambient: [0.4, 0.55, 0.5],
-    decor: ['saga_gravestone', 'saga_skullpile', 'saga_ghostlight', 'saga_deadtree'],
     // a descent from the top, a side bog in the west
     rooms: [room(26, 3, 11, 9, 'start'), room(6, 16, 13, 12, 'pack'), room(30, 20, 14, 11, 'pack'), room(49, 14, 10, 10, 'rest'), room(28, 47, 12, 11, 'exit'), room(6, 40, 12, 11, 'side')],
     links: [[0, 1], [1, 2], [2, 3], [1, 5], [2, 4]],
-    mobs: { small: ['benspindel'], medium: ['helhund', 'gengangare'], big: ['gengangare'] },
-    weather: ['fog', 'rain', 'cloudy'],
   },
   berg: {
     biome: 'berg',
-    theme: 'dvarg',
-    wall: 4,
-    floor: 'gravel',
-    solid: 'rock',
-    ambient: [0.6, 0.5, 0.35],
-    decor: ['saga_minecart', 'saga_goldpile', 'saga_dwarfstatue', 'saga_minelamp'],
     // a climb from the bottom left to the top right
     rooms: [room(3, 50, 10, 10, 'start'), room(17, 42, 12, 11, 'pack'), room(31, 31, 13, 11, 'pack'), room(22, 17, 9, 9, 'rest'), room(48, 6, 12, 11, 'exit'), room(48, 34, 11, 12, 'side')],
     links: [[0, 1], [1, 2], [2, 3], [2, 5], [2, 4]],
-    mobs: { small: ['guldbagge'], medium: ['gruvtroll'], big: ['stengolem'] },
-    weather: ['wind', 'cloudy', 'sun', 'hail'],
   },
   strand: {
     biome: 'strand',
-    theme: 'orm',
-    wall: 5,
-    floor: 'sand',
-    solid: 'water',
-    ambient: [0.35, 0.55, 0.7],
-    decor: ['saga_coral', 'saga_anchor', 'saga_seaweed', 'saga_pearl'],
     // along the shore; the rest stone and the exit on the far side of the bay
     rooms: [room(3, 40, 10, 10, 'start'), room(17, 44, 12, 11, 'pack'), room(33, 40, 13, 12, 'pack'), room(33, 18, 10, 9, 'rest'), room(50, 14, 11, 11, 'exit'), room(50, 40, 10, 12, 'side')],
     links: [[0, 1], [1, 2], [2, 3], [3, 4], [2, 5]],
-    mobs: { small: ['manet'], medium: ['sjodraug'], big: ['jattekrabba'] },
-    weather: ['sun', 'wind', 'rain', 'storm'],
   },
   svamp: {
     biome: 'svamp',
-    theme: 'alv',
-    wall: 6,
-    floor: 'moss',
-    solid: 'rock',
-    ambient: [0.45, 0.4, 0.65],
-    decor: ['saga_glowshroom', 'saga_fairylight', 'saga_cobweb', 'saga_elfstatue'],
     // a cluster around a glade
     rooms: [room(4, 4, 10, 10, 'start'), room(20, 6, 12, 12, 'pack'), room(38, 10, 13, 12, 'pack'), room(22, 28, 9, 9, 'rest'), room(46, 44, 13, 11, 'exit'), room(4, 30, 11, 12, 'side')],
     links: [[0, 1], [1, 2], [1, 3], [2, 4], [3, 5]],
-    mobs: { small: ['skuggalv'], medium: ['jattespindel'], big: ['svampvakt'] },
-    weather: ['fog', 'cloudy', 'rain'],
   },
   is: {
     biome: 'is',
-    theme: 'frost',
-    wall: 1,
-    floor: 'snow',
-    solid: 'rock',
-    ambient: [0.55, 0.65, 0.85],
-    decor: ['saga_icecrystal', 'saga_frozenpillar', 'saga_icecrystal', 'saga_snowdrift'],
     // a spiral that ends high up
     rooms: [room(3, 48, 10, 10, 'start'), room(18, 48, 12, 11, 'pack'), room(36, 44, 13, 12, 'pack'), room(50, 26, 9, 9, 'rest'), room(28, 6, 14, 11, 'exit'), room(6, 24, 12, 12, 'side')],
     links: [[0, 1], [1, 2], [2, 3], [3, 4], [1, 5]],
-    mobs: { small: ['isande'], medium: ['isvarg'], big: ['frosttroll'] },
-    weather: ['snow', 'wind', 'fog', 'hail'],
   },
   vulkan: {
     biome: 'vulkan',
-    theme: 'surt',
-    wall: 2,
-    floor: 'ash',
-    solid: 'basalt',
-    ambient: [0.75, 0.42, 0.3],
-    decor: ['saga_anvil', 'saga_brazier', 'saga_lavacrack', 'saga_brazier'],
     // two roads round a lava lake that meet at the rest stone
     rooms: [room(4, 26, 10, 11, 'start'), room(20, 10, 12, 11, 'pack'), room(20, 40, 12, 12, 'pack'), room(38, 26, 9, 10, 'rest'), room(50, 8, 11, 12, 'exit'), room(50, 42, 11, 11, 'side')],
     links: [[0, 1], [0, 2], [1, 3], [3, 4], [2, 5]],
-    mobs: { small: ['eldimp'], medium: ['eldhund'], big: ['lavagolem'] },
-    weather: ['wind', 'cloudy', 'sun'],
   },
 };
 
-/** The boss zone: start, a pack room, a rest stone, (the guard, with the modifier `vakten`) and the hall. */
-export const BOSS_ZONE = {
+/**
+ * The fixed layouts of the other stops (GAME2.md section 2.3). The dungeon's own mid-boss and boss halls give the sizes of the
+ * halls (`mini`, `hall`); the rest is here. A Vilosten is start, the stone's room and the exit room; the Mellanboss stop is start,
+ * a room of packs, the hall and the exit room behind it; the boss stop is start, a room of packs and the hall.
+ */
+export const REST_STOP = {
+  start: { x: 4, y: 26, w: 11, h: 11 },
+  rest: { x: 24, y: 27, w: 10, h: 10 },
+  exit: { x: 43, y: 26, w: 12, h: 11 },
+};
+export const MINI_STOP = {
   start: { x: 3, y: 46, w: 10, h: 10 },
   pack: { x: 18, y: 44, w: 12, h: 12 },
-  rest: { x: 36, y: 48, w: 9, h: 9 },
+  /** Where the dungeon's mid-boss hall goes (its own width and height). */
+  hall: { x: 33, y: 24 },
+  exit: { x: 50, y: 5, w: 11, h: 11 },
+};
+export const BOSS_STOP = {
+  start: { x: 3, y: 46, w: 10, h: 10 },
+  pack: { x: 18, y: 44, w: 12, h: 12 },
+  /** The guard (the replay modifier `vakten`): the mid-boss in a room before the hall. */
   guard: { x: 36, y: 22, w: 13, h: 13 },
   hall: { x: 4, y: 4, w: 24, h: 22 },
 };
 
-/** Health of a zone's monsters by zone (0..2): the later zones are tougher. Tuned by the bots. */
-export const ZONE_HP: readonly number[] = [1.35, 1.5, 1.7];
+/** The route's kinds of stop (GAME2.md section 2.1; the others come in R4 and R5). */
+export type NodeKind = 'flock' | 'mini' | 'rest' | 'boss';
+export const NODE_KINDS: readonly NodeKind[] = ['flock', 'mini', 'rest', 'boss'];
+
+/** Which wing (0: rows 1–4, 1: rows 5–8, 2: rows 9–10) a row is in. */
+export const wingOf = (row: number): number => (row <= 4 ? 0 : row <= 8 ? 1 : 2);
+
+/** Health of a stop's monsters by wing (GAME2.md section 5.3): the later wings are tougher. Tuned by the bots. */
+export const WING_HP: readonly number[] = [1.6, 1.75, 1.95];
 
 /** One human alone (with the hired companion, who counts as a fighter for the monsters' health): monsters tolerate this much less. */
 export const SOLO_MERCY = 0.75;
@@ -507,30 +493,71 @@ export function companionClass(classes: ClassId[]): ClassId | null {
   return null;
 }
 
-/** Packs per room (and members), by zone. Tuned by the bots (run.test.ts), see GAME.md. */
-export const ZONE_PACKS = [
-  { a: [2, 2], b: [3, 3], size: [3, 4], big: 0 },
-  { a: [2, 3], b: [3, 3], size: [3, 4], big: 0 },
-  { a: [3, 3], b: [3, 3], size: [3, 4], big: 1 },
+/**
+ * Packs per room (and members) by wing: a Flock has two rooms of packs (`a` the first, `b` the second), the Mellanboss stop and
+ * the boss stop one room each (`mini`, `boss`). `big` is the number of big monsters per room. Tuned by the bots (run.test.ts), see GAME2.md.
+ */
+export const FLOCK_PACKS = [
+  { a: [3, 3], b: [3, 3], size: [4, 5], big: 0 },
+  { a: [3, 3], b: [3, 3], size: [4, 5], big: 1 },
 ] as const;
+export const MINI_PACKS = { count: [3, 3], size: [3, 4] } as const;
+export const BOSS_PACKS = { count: [3, 3], size: [3, 4] } as const;
+/**
+ * Lätt's packs (GAME2.md section 5.3 wants a child through the route in about 20-28 minutes): fewer, smaller packs in a Flock and in the
+ * rooms before the mid-boss and the boss, on top of the softer monsters. The same shape as above.
+ */
+export const LATT_FLOCK_PACKS = [
+  { a: [2, 2], b: [2, 3], size: [3, 4], big: 0 },
+  { a: [2, 3], b: [3, 3], size: [3, 4], big: 1 },
+] as const;
+export const LATT_MINI_PACKS = { count: [2, 2], size: [3, 4] } as const;
+export const LATT_BOSS_PACKS = { count: [2, 2], size: [3, 3] } as const;
 
 // ---------------------------------------------------------------------------
 // What the clients are told (protocol.ts carries these)
 // ---------------------------------------------------------------------------
 
 export type RunOutcome = 'win' | 'wipe' | 'leave';
-export type RunPhase = 'zone' | 'pick' | 'victory' | 'ended';
+/** `stop` the party is in a stop (fighting, resting), `pick` the vote on a runa, `route` the vote on the way on (walk onto a rune). */
+export type RunPhase = 'stop' | 'pick' | 'route' | 'victory' | 'ended';
+
+/** A stop of the route as the clients draw it: its row (1..10), lane, kind and the stops of the next row it leads to. */
+export interface RouteNodeSnap {
+  id: number;
+  row: number;
+  lane: number;
+  /** How many lanes this row has (to place the dot). */
+  lanes: number;
+  kind: NodeKind;
+  next: number[];
+}
+
+/** A väg-runa on the floor of the exit room: where it is (tile), the stop it leads to and who stands on it. */
+export interface RouteChoiceSnap {
+  node: number;
+  kind: NodeKind;
+  x: number;
+  y: number;
+  /** The humans standing on it (player ids). */
+  on: string[];
+}
 
 /** The run as the arch window, the HUD and the road picture need it. */
 export interface RunSnap {
   id: string;
   phase: RunPhase;
-  /** The map now: 0..2 the zones, 3 the boss's. */
-  zone: number;
+  /** The stop now (its id in `route`), its row (1..10) and kind. */
+  node: number;
+  row: number;
+  kind: NodeKind;
+  /** The stops walked through so far, in order (the last is the one now). */
+  path: number[];
+  /** The whole route (the HUD's rail and the map overlay). */
+  route: RouteNodeSnap[];
   /** The area key of the map now. */
   area: string;
-  /** The biome of each of the three zones (null for the boss). */
-  biomes: (RunBiome | null)[];
+  /** The chapter's dungeon (its boss, its look). */
   boss: DungeonId;
   weather: WeatherKind;
   modifiers: string[];
@@ -538,6 +565,11 @@ export interface RunSnap {
   elapsed: number;
   max: number;
   party: { id: string; name: string; bot?: true }[];
+  /** The Stigfinnare: the player who breaks a tie on the way on (a compass over their head), rotating each row. */
+  finder: string | null;
+  /** While the way on is being chosen: the runes and who stands on them, and the time left (ms; -1 until someone has stepped on one). */
+  choices?: RouteChoiceSnap[];
+  routeLeft?: number;
   /** The level (0 Lätt, 1 Vanlig), the Sagoandans left (the star on the HUD) and how many have been used so far. */
   level: RunLevel;
   spirit: number;
@@ -549,8 +581,8 @@ export interface RunSnap {
 
 /** The three cards being voted on. */
 export interface RunOfferSnap {
-  /** The map the party just left (the pick comes after it). */
-  zone: number;
+  /** The stop the party just cleared (the pick comes after it). */
+  node: number;
   cards: string[];
   /** Player id -> index of the card they tapped. */
   votes: Record<string, number>;
