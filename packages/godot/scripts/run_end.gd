@@ -12,6 +12,8 @@ var _icon: Label
 var _title: Label
 var _rows: VBoxContainer
 var _runor: HBoxContainer
+var _route_caption: Label
+var _route: HBoxContainer ## the route taken: the picture of each stop walked, in order
 var _left := 0.0
 
 
@@ -56,6 +58,15 @@ func _ready() -> void:
 	_rows = VBoxContainer.new()
 	_rows.add_theme_constant_override("separation", 4)
 	col.add_child(_rows)
+	_route_caption = Label.new()
+	_route_caption.add_theme_font_size_override("font_size", 18)
+	_route_caption.add_theme_color_override("font_color", Color(1, 1, 1, 0.7))
+	_route_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(_route_caption)
+	_route = HBoxContainer.new()
+	_route.alignment = BoxContainer.ALIGNMENT_CENTER
+	_route.add_theme_constant_override("separation", 4)
+	col.add_child(_route)
 	_runor = HBoxContainer.new()
 	_runor.alignment = BoxContainer.ALIGNMENT_CENTER
 	_runor.add_theme_constant_override("separation", 6)
@@ -77,8 +88,27 @@ func _show(summary: Dictionary) -> void:
 		c.queue_free()
 	_row("⏱  " + Strings.t("runEndedTime"), RunHud.format_time(float(summary.get("ms", 0))))
 	_row("🌱  " + Strings.t("runEndedSeeds"), "+%d" % int(summary.get("seeds", 0)))
-	_row("🗺  " + Strings.t("runEndedZones"), "%d / 3" % mini(3, int(summary.get("zones", 0))))
+	_row("🗺  " + Strings.t("runEndedStops"), "%d" % int(summary.get("zones", 0)))
 	_row("🌟  " + Strings.t("runEndedSpirit"), "%d" % int(summary.get("spirit_used", 0)))
+	# the route taken: a picture for each stop, the way the HUD's rail shows it
+	for c in _route.get_children():
+		_route.remove_child(c)
+		c.queue_free()
+	var path: Array = summary.get("path", [])
+	_route_caption.visible = not path.is_empty()
+	_route_caption.text = Strings.t("runEndedRoute")
+	for i in range(path.size()):
+		var st := Label.new()
+		st.text = Data.stop_icon(str(path[i]))
+		st.add_theme_font_size_override("font_size", 30)
+		st.tooltip_text = str(Data.stop_kind(str(path[i])).get("word", ""))
+		_route.add_child(st)
+		if i < path.size() - 1:
+			var arrow := Label.new()
+			arrow.text = "›"
+			arrow.add_theme_font_size_override("font_size", 22)
+			arrow.modulate = Color(1, 1, 1, 0.5)
+			_route.add_child(arrow)
 	for c in _runor.get_children():
 		_runor.remove_child(c)
 		c.queue_free()

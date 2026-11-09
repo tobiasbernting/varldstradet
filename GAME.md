@@ -6,12 +6,19 @@ it describes are built in `packages/shared/src/run.ts`, `runmap.ts`, `runsim.ts`
 falling costs nothing. Where a number is written here it is the number in the code; the ones the bots tuned are marked
 *(tuned)* and explained in the pull request.
 
+> **Since R3 (2026-11-07) a run is one dungeon as a route of ten rows, not three zones and a boss.** `GAME2.md` (sections 2, 5.6 and 8) is the design
+> and the numbers of that; this file's sections 1.1 and 1.2 describe the v1 chain of three biomes, kept as the history of where the stop
+> layouts come from: the seven biome templates are now only **room layouts** of a Flock (`ZONE_TEMPLATES` has `rooms` and `links` and nothing else),
+> the look is the chapter's own, `ZONE_HP` became `WING_HP`, `ZONE_PACKS` became `FLOCK_PACKS`, `generateRun` has a `route` and a plan for every stop,
+> `buildZone` is `buildStop`, and the pick is followed by a walk onto a väg-runa. The rest of this file (the runor, sagafrön, the farm's gifts, the
+> sagaträd, the soft 30 minutes, the wipe) holds as written.
+
 **Decisions in one place (change any of these and say so):**
 
 | Question | Decision |
 | --- | --- |
-| Length | Three zones and a boss, about **30 minutes** as a soft target on the server's clock: nudges at 25:00 and 30:00 and every 10 minutes after, never a forced end (owner, 2026-11-06: "should not be a hard cap, we can adjust later"). |
-| Zones | One of seven biomes each, never repeating in a run. 4–6 rooms, one rest stone, an exit. |
+| Length | *(v1: three zones and a boss; since R3 a ten-row route)* about **30 minutes** as a soft target on the server's clock: nudges at 25:00 and 30:00 and every 10 minutes after, never a forced end (owner, 2026-11-06: "should not be a hard cap, we can adjust later"). |
+| Zones | *(v1; since R3 see the note above)* One of seven biomes each, never repeating in a run. 4–6 rooms, one rest stone, an exit. |
 | Runor pick | The party gets **one offer of three cards** and **votes**; a strict majority wins at once, otherwise the most votes after 20 s, ties go to the card voted first. |
 | Sagafrön | Paid to every party member the moment they are earned, so nothing can be lost. Planted at the Yggdrasil shoot. |
 | Party | 1–4. A fourth player needs a **långhus** (longhouse) built on the farm. The hired companion (Hirdmannen) does **not**: one or two players get it from the start (owner, 2026-11-07: "it was hard soloing"). |

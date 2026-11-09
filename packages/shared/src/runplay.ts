@@ -23,7 +23,7 @@ export interface Party {
 }
 
 /** A farm with the arch, and `classes.length` heroes of `level` in the starter set standing in front of it. */
-export function makeParty(classes: ClassId[], opts: { level?: number; style?: BotStyle; seed?: number; longhall?: boolean } = {}): Party {
+export function makeParty(classes: ClassId[], opts: { level?: number; style?: BotStyle; seed?: number; longhall?: boolean; lane?: 'safe' | 'random' } = {}): Party {
   const world = generateWorld(opts.seed ?? 7);
   ensureRunPlaces(world);
   if (opts.longhall) {
@@ -43,7 +43,7 @@ export function makeParty(classes: ClassId[], opts: { level?: number; style?: Bo
     p.x = (front.x + (i % 3) - 1) * TILE + TILE / 2;
     p.y = (front.y + 1 + Math.floor(i / 3)) * TILE + TILE / 2;
     party.players.push(p);
-    party.minds.set(p.id, newMind(opts.style ?? 'careful', mulberry32(100 + i)));
+    party.minds.set(p.id, newMind(opts.style ?? 'careful', mulberry32(100 + i), opts.lane));
   });
   return party;
 }
@@ -52,6 +52,7 @@ export interface Played {
   outcome: string;
   ms: number;
   changes: Change[];
+  /** Run time (ms) when each new stop was entered. */
   zoneMs: number[];
   /** When the boss fell (ms of run time), if it did. */
   winMs?: number;
@@ -86,9 +87,9 @@ export function playRun(party: Party, start: StartOptions = {}, limitMs = 40 * 6
   for (let t = 0; t < limitMs; t += 50) {
     step(party, true, out);
     at = run.elapsed;
-    if (run.zone !== lastZone) {
+    if (run.node !== lastZone) {
       zoneMs.push(at);
-      lastZone = run.zone;
+      lastZone = run.node;
     }
     if (run.phase === 'ended') break;
   }

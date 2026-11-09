@@ -1,8 +1,8 @@
 class_name RunHud
 extends CanvasLayer
-## The run's HUD (M5c, GAME.md sections 1 and 8): the clock drawn against the 30 minutes the run is tuned to (a soft target:
-## past it the clock keeps counting in a warmer colour, never a "time's up"), the zone n of 3 and the boss as dots, and the runor
-## taken as small pictures. The party's hearts are the dungeon HUD's party list (the hired Hirdmannen is in it), and the server's
+## The run's HUD (M5c, GAME.md sections 1 and 8; the route rail is GAME2.md section 2): the clock drawn against the 30 minutes the run
+## is tuned to (a soft target: past it the clock keeps counting in a warmer colour, never a "time's up"), the route rail (a dot with
+## a picture for each of the ten rows: the stops walked, the one now, the fixed ones to come), and the runor taken as small pictures. The party's hearts are the dungeon HUD's party list (the hired Hirdmannen is in it), and the server's
 ## banners ("Snart dags att gå hem", the zone's name, the pick result) arrive as banner changes the HUD already shows.
 
 const COOL := Color("7fe0c8")
@@ -16,6 +16,8 @@ var _max: Label
 var _bar: ProgressBar
 var _fill: StyleBoxFlat
 var _zone: Label
+var _rail: HBoxContainer ## the route rail: one label for each row
+var _rail_key := ""
 var _runor: HBoxContainer
 var _spirit_row: HBoxContainer
 var _star: Label
@@ -24,7 +26,6 @@ var _spirit_shown := -1
 var _level_shown := -1
 var _runor_key := ""
 var _shown_sec := -1
-var _zone_shown := -1
 
 
 func _ready() -> void:
@@ -32,7 +33,7 @@ func _ready() -> void:
 	_panel = PanelContainer.new()
 	_panel.anchor_left = 1.0
 	_panel.anchor_right = 1.0
-	_panel.offset_left = -250
+	_panel.offset_left = -290
 	_panel.offset_right = -16
 	_panel.offset_top = 40
 	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -76,8 +77,18 @@ func _ready() -> void:
 	_bar.add_theme_stylebox_override("background", bg)
 	_bar.add_theme_stylebox_override("fill", _fill)
 	col.add_child(_bar)
+	_rail = HBoxContainer.new()
+	_rail.add_theme_constant_override("separation", 2)
+	col.add_child(_rail)
+	for i in range(int(Data.run_const("rows", 10.0))):
+		var l := Label.new()
+		l.custom_minimum_size = Vector2(20, 0)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_rail.add_child(l)
 	_zone = Label.new()
-	_zone.add_theme_font_size_override("font_size", 18)
+	_zone.add_theme_font_size_override("font_size", 16)
+	_zone.modulate = Color(1, 1, 1, 0.85)
 	col.add_child(_zone)
 	# the Sagoandan: a star with how many are left (a free "everyone gets up" when the party falls), and Lätt as a word beside it
 	_spirit_row = HBoxContainer.new()
@@ -101,7 +112,7 @@ func _process(_delta: float) -> void:
 	visible = live
 	if not live:
 		_shown_sec = -1
-		_zone_shown = -1
+		_rail_key = ""
 		_runor_key = ""
 		_spirit_shown = -1
 		_level_shown = -1
@@ -123,15 +134,7 @@ func _process(_delta: float) -> void:
 		_clock.add_theme_color_override("font_color", colour)
 		_fill.bg_color = colour
 		_bar.value = minf(1.0, elapsed / max_ms)
-	var zone := int(run.get("zone", 0))
-	if zone != _zone_shown:
-		_zone_shown = zone
-		var dots: Array = []
-		for i in range(3):
-			dots.append("◉" if i == zone else ("●" if i < zone else "○"))
-		dots.append("👑" if zone == 3 else "♔")
-		var label := Strings.t("runBossZone") if zone >= 3 else Strings.t("runZone", {"n": zone + 1})
-		_zone.text = "%s   %s" % [" ".join(dots), label]
+	_update_rail(run)
 	var spirit := int(run.get("spirit", 0))
 	var level := int(run.get("level", 1))
 	if spirit != _spirit_shown or level != _level_shown:
@@ -155,6 +158,49 @@ func _process(_delta: float) -> void:
 			l.add_theme_font_size_override("font_size", 24)
 			l.tooltip_text = str(Data.runa(str(id)).get("name", id))
 			_runor.add_child(l)
+
+
+## The rail: for each row of the route a picture (the stop walked there; the fixed ones to come: the mid-boss, the last rest, the
+## boss; a dot for the rest), the row we are on lit and larger, and "Steg 3 av 10 · Första vingen" under it.
+func _update_rail(run: Dictionary) -> void:
+	var row := int(run.get("row", 1))
+	var path: Array = run.get("path", [])
+	var key := "%d|%s|%s" % [row, str(path), str(run.get("phase", ""))]
+	if key == _rail_key:
+		return
+	_rail_key = key
+	var kinds_by_id := {}
+	for n in run.get("route", []):
+		if n is Dictionary:
+			kinds_by_id[int(n.get("id", -1))] = n
+	var fixed := {int(Data.run_const("miniRow", 5.0)): "mini", int(Data.run_const("restRow", 9.0)): "rest", int(Data.run_const("rows", 10.0)): "boss"}
+	for i in range(_rail.get_child_count()):
+		var l: Label = _rail.get_child(i)
+		var r := i + 1
+		var kind := ""
+		if r <= path.size():
+			var node: Variant = kinds_by_id.get(int(path[r - 1]))
+			kind = str(node.get("kind", "")) if node is Dictionary else ""
+		elif fixed.has(r):
+			kind = fixed[r]
+		l.text = Data.stop_icon(kind) if kind != "" else "·"
+		l.add_theme_font_size_override("font_size", 22 if r == row else 16)
+		l.modulate = Color("f2c33a") if r == row else (Color(1, 1, 1, 1) if r < row else Color(1, 1, 1, 0.5))
+		l.tooltip_text = str(Data.stop_kind(kind).get("word", "")) if kind != "" else ""
+	var label := Strings.t("runStepBoss") if row >= int(Data.run_const("rows", 10.0)) else Strings.t("runStep", {"n": row})
+	var wings: Array = Data.run.get("wings", [])
+	var wing := Data.wing_of(row)
+	_zone.text = "%s · %s   [%s]" % [label, str(wings[wing]) if wing < wings.size() else "", "R"]
+	_zone.tooltip_text = Strings.t("runMapTitle")
+
+
+## What the rail shows now, as the pictures in a row (the run pair bot reads it to see that the route reached the HUD).
+func rail_text() -> String:
+	var parts: Array = []
+	if _rail != null:
+		for l in _rail.get_children():
+			parts.append((l as Label).text)
+	return " ".join(parts)
 
 
 ## The star swells for a moment when a Sagoandan is used (or one more comes).

@@ -102,7 +102,6 @@ import {
   RUNOR,
   SEED_TREE,
   MODIFIERS,
-  ZONE_TEMPLATES,
   FARDKOST,
   TREE_STAGES,
   RUNA_NAMES,
@@ -111,8 +110,16 @@ import {
   TREE_TEXT,
   MODIFIER_NAMES,
   MODIFIER_TEXT,
-  ZONE_NAMES,
-  ZONE_INTROS,
+  STOP_NAMES,
+  STOP_WORDS,
+  WING_NAMES,
+  NODE_KINDS,
+  ROUTE_ROWS,
+  ROUTE_MINI_ROW,
+  ROUTE_REST_ROW,
+  ROUTE_DWELL_MS,
+  ROUTE_VOTE_MS,
+  ROUTE_DISC_RADIUS,
   FOOD_TEXT,
   BRANCH_NAMES,
   RUN_SEEDS,
@@ -124,7 +131,6 @@ import {
   RUN_PARTY_MAX,
   RUN_PARTY_MAX_LONGHALL,
   RUNA_CARDS,
-  ZONES_PER_RUN,
   MODIFIER_SEEDS,
   RUN_T,
   COMPANION_NAME,
@@ -257,8 +263,10 @@ const filters = INVENTORY_FILTERS.map((f) => ({ id: f.id, emoji: f.emoji, catego
 
 /** Runs (M5b, GAME.md): the runor with their pictures, names and one-line texts (the three big cards), the sagaträd, the
  * modifiers, the dishes, the zones' looks and the run's numbers. The effects are the server's business; the client shows names. */
+/** The pictures of the stops on the route (an emoji each, as the runor have). */
+const STOP_ICONS: Record<string, string> = { flock: '⚔️', mini: '🛡️', rest: '⛺', boss: '👑' };
 const run = {
-  constants: { maxMs: RUN_MAX_MS, warnMs: RUN_WARN_MS, pickMs: RUN_PICK_MS, victoryMs: RUN_VICTORY_MS, joinRadius: RUN_JOIN_RADIUS, partyMax: RUN_PARTY_MAX, partyMaxLonghall: RUN_PARTY_MAX_LONGHALL, cards: RUNA_CARDS, zones: ZONES_PER_RUN, modifierSeeds: MODIFIER_SEEDS },
+  constants: { maxMs: RUN_MAX_MS, warnMs: RUN_WARN_MS, pickMs: RUN_PICK_MS, victoryMs: RUN_VICTORY_MS, joinRadius: RUN_JOIN_RADIUS, partyMax: RUN_PARTY_MAX, partyMaxLonghall: RUN_PARTY_MAX_LONGHALL, cards: RUNA_CARDS, rows: ROUTE_ROWS, miniRow: ROUTE_MINI_ROW, restRow: ROUTE_REST_ROW, routeVoteMs: ROUTE_VOTE_MS, routeDwellMs: ROUTE_DWELL_MS, discRadius: ROUTE_DISC_RADIUS, modifierSeeds: MODIFIER_SEEDS },
   seeds: RUN_SEEDS,
   runor: RUNOR.map((r) => ({ id: r.id, ...(r.cls ? { cls: r.cls } : {}), icon: r.icon, name: RUNA_NAMES[r.id], text: RUNA_TEXT[r.id] })),
   tree: SEED_TREE.map((n) => ({ id: n.id, branch: n.branch, cost: n.cost, ...(n.needs ? { needs: n.needs } : {}), name: TREE_NAMES[n.id], text: TREE_TEXT[n.id] })),
@@ -266,7 +274,9 @@ const run = {
   branches: BRANCH_NAMES,
   modifiers: MODIFIERS.map((m) => ({ id: m.id, name: MODIFIER_NAMES[m.id], text: MODIFIER_TEXT[m.id] })),
   food: Object.keys(FARDKOST).map((id) => ({ id, text: FOOD_TEXT[id] })),
-  zones: Object.values(ZONE_TEMPLATES).map((t) => ({ biome: t.biome, name: ZONE_NAMES[t.biome], intro: ZONE_INTROS[t.biome], floor: t.floor, solid: t.solid, wall: t.wall, ambient: t.ambient, decor: t.decor, weather: t.weather })),
+  /** The kinds of stop on the route (the rail and the map): the picture, the name on the banner and the short word. */
+  stops: NODE_KINDS.map((k) => ({ id: k, name: STOP_NAMES[k], word: STOP_WORDS[k], icon: STOP_ICONS[k] })),
+  wings: WING_NAMES,
   companion: COMPANION_NAME,
   texts: { ...RUN_T },
 };

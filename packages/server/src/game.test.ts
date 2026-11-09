@@ -389,7 +389,7 @@ describe('runs over the socket', () => {
     expect(run.runor).toEqual([]);
     hb({ t: 'run', a: 'pick', card: 1 });
     expect(run.runor).toEqual(['p_kraft']);
-    expect(run.zone).toBe(1);
+    expect(run.phase).toBe('route');
     expect(changesOf(la).some((c) => c.t === 'banner' && c.text.includes('Sagans kraft'))).toBe(true);
     void inst;
     // Bo's connection drops: he is still in the run; he comes back into the zone

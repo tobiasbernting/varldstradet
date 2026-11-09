@@ -48,9 +48,9 @@ var season := "none"
 var weather: Variant = null ## the server's WeatherState {kind, since, until, prev?} or null
 var server_offset_ms := 0.0 ## this clock minus the server's
 var last_now := 0.0 ## the server's clock on the latest `state` (the bot keys its health samples by it)
-var run: Variant = null ## the RunSnap {id, phase, zone, area, biomes, boss, weather, modifiers, elapsed, max, party, runor, earned}, or null
+var run: Variant = null ## the RunSnap {id, phase, node, row, kind, path, route, area, boss, weather, modifiers, elapsed, max, party, finder, choices?, routeLeft?, level, spirit, runor, earned}, or null
 var run_at := 0 ## Time.get_ticks_msec() when `run` arrived (its clock, elapsed, runs on between messages)
-var offer: Variant = null ## the RunOfferSnap {zone, cards, votes, left, rerolls}, or null
+var offer: Variant = null ## the RunOfferSnap {node, cards, votes, left, rerolls}, or null
 var offer_at := 0
 var ended: Variant = null ## {outcome, ms, seeds, zones, runor} of the run I was in last
 var fardkost_items: Array = [] ## the dishes I have chosen to bring (item ids)
@@ -469,7 +469,7 @@ func _run_change(c: Dictionary) -> void:
 			offer_changed.emit()
 		"ended":
 			if str(c.get("to", "")) == me:
-				ended = {"outcome": str(c.get("outcome", "leave")), "ms": float(c.get("ms", 0)), "seeds": int(c.get("seeds", 0)), "zones": int(c.get("zones", 0)), "runor": c.get("runor", []), "level": int(c.get("level", 1)), "spirit_used": int(c.get("spiritUsed", 0))}
+				ended = {"outcome": str(c.get("outcome", "leave")), "ms": float(c.get("ms", 0)), "seeds": int(c.get("seeds", 0)), "zones": int(c.get("zones", 0)), "runor": c.get("runor", []), "level": int(c.get("level", 1)), "spirit_used": int(c.get("spiritUsed", 0)), "path": c.get("path", [])}
 				run_ended.emit(ended)
 
 

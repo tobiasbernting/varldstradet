@@ -5,9 +5,12 @@ extends Bot
 ## starter weapon (the development message), walks across the farm to the färdport and uses it - the arch window opens - and then:
 ##   --role=lead    waits for the other bot to stand at the arch (45 s at most), presses "Starta färden"
 ##   --role=follow  presses "Följ med" when it sees the run (it is taken along if it stands within 6 tiles when the lead starts)
-## In a zone it fights every pack (bot.gd), walks to the exit and uses it, votes on the first card of the pick, and goes on. The
-## report says which zones it entered, the exits it used, the picks it voted on and the runor taken. Without `--full` it is done
-## when it has entered the second zone (what the CI can afford); with `--full` it plays on to the boss and home.
+## In a stop it fights every pack (bot.gd), votes on the first card of the pick, and chooses the way on by walking onto a väg-runa
+## (GAME2.md section 2): `--lane=rest` (the default) takes a Vilosten whenever one is offered, the quick way through a wing,
+## `--lane=safe` one only when the party is hurt, `--lane=random` any. The Mellanboss and the boss it walks up to and fights. The
+## report says which rows and kinds of stop it entered, the runes it took, the picks it voted on, the runor taken, what the HUD's
+## rail and the map showed. Without `--full` it is done when it has entered row 5, the Mellanboss's (the first wing walked: what the
+## CI can afford; `--rows=N` another row); with `--full` it plays on to the boss and home.
 ## `--shots=dir` (needs a window): pictures of the arch window, a zone, the cards, the end summary and the tree window.
 ##
 ##   godot --headless --path packages/godot -- --runbot --route=run --server=http://localhost:8080 --name=Bot-Ask --role=lead \
@@ -18,10 +21,16 @@ var role := "lead"
 var level := -1 ## --level=0|1: the difficulty the lead picks at the arch window (-1: leave the window's own choice, Vanlig)
 var full := false
 var shots_dir := ""
-var _zones: Array = []
-var _exited: Dictionary = {} ## zone -> true once the run reached the pick (the server let me through)
-var _pressed: Dictionary = {} ## zone -> true once I pressed a card
-var _confirmed: Dictionary = {} ## zone -> true once the server's offer showed my vote
+var lane := "rest" ## --lane=rest|safe|random: how the way on is chosen
+var stop_row := 5 ## --rows=N: the row whose stop ends the bot's run (not --full)
+var _rows: Array = [] ## the rows of the stops entered
+var _kinds: Array = [] ## and their kinds
+var _exited: Dictionary = {} ## node -> true once the run reached the route vote (the server let me through)
+var _pressed: Dictionary = {} ## node -> true once I pressed a card
+var _confirmed: Dictionary = {} ## node -> true once the server's offer showed my vote
+var _runes_taken := 0
+var _map_checked := false
+var _runes_shot := false
 var _beat := 5.0
 var _rest_t := 0.0
 var _wipes := 0
@@ -66,12 +75,25 @@ func _ready() -> void:
 				get_tree().quit(2)
 				return
 			level = int(lv)
+		elif arg.begins_with("--lane="):
+			lane = arg.substr(7)
+			if not ["rest", "safe", "random"].has(lane):
+				push_error("--lane needs rest, safe or random (got '%s')" % lane)
+				get_tree().quit(2)
+				return
+		elif arg.begins_with("--rows="):
+			var rv := arg.substr(7)
+			if not rv.is_valid_int() or int(rv) < 2 or int(rv) > 10:
+				push_error("--rows needs a whole number from 2 to 10 (got '%s')" % rv)
+				get_tree().quit(2)
+				return
+			stop_row = int(rv)
 		elif arg == "--full":
 			full = true
 		elif arg.begins_with("--shots="):
 			shots_dir = arg.substr(8)
 	super._ready()
-	_report["run"] = {"role": role, "zones": [], "exits": 0, "presses": 0, "picks": 0, "runor": [], "started": false, "joined": false, "ended": null, "boss_down": false, "seeds": 0}
+	_report["run"] = {"role": role, "rows": [], "kinds": [], "exits": 0, "presses": 0, "picks": 0, "runor": [], "started": false, "joined": false, "ended": null, "boss_down": false, "seeds": 0}
 	world.model.run_ended.connect(_on_run_ended)
 	world.model.toast.connect(func(text: String) -> void:
 		if text.contains("har fallit"):
@@ -81,9 +103,11 @@ func _ready() -> void:
 var _forgive_until := 0.0 ## local ms until which a monster's health may rise: a fall sends the monsters home, and they mend on the way
 
 ## A monster sent home by the server (the party fell, or one was dragged past its leash while the other lay down) is at full health
-## again, and mends on its way there: that is the server's word, for 10 s after a fall. Any other rise is still a client error.
+## again: that is the server's word (a rise to 85 % or more, or any rise for 10 s after a fall). Any other rise is still a client error.
 func _rose(where: String, id: Variant, from: float, to: float) -> void:
-	if to >= 0.999 or Time.get_ticks_msec() < _forgive_until:
+	# (a route has more and wider fights, so more packs are dragged past their leash: the monster is at full health at home, and the
+	# first hit it takes when it is pulled again shows as 85-99 %)
+	if to >= 0.85 or Time.get_ticks_msec() < _forgive_until:
 		_log("monster %s is home again (%s)" % [str(id), where])
 		return
 	super._rose(where, id, from, to)
@@ -156,9 +180,9 @@ func _rb_tick(delta: float) -> void:
 		_beat = 10.0
 		var f := m.my_fighter()
 		var alive := _pack_alive() if not _pack_ids.is_empty() else -1
-		_log("tick %.0f s: phase %s, area %s, tile %s, hp %s, pack %s alive %d, target %s, %d fps, driven %s frozen %s speed %.1f, packs beaten %d, zones %s" % [
+		_log("tick %.0f s: phase %s, area %s, tile %s, hp %s, pack %s alive %d, target %s, %d fps, driven %s frozen %s speed %.1f, packs beaten %d, rows %s" % [
 			_t, _phase, m.my_area_key(), str(_my_tile()), str(f), str(_pack_ids), alive, str(world.combat.live_target()), Engine.get_frames_per_second(),
-			str(world.hero.driven), str(world.hero.frozen), world.hero.speed_mul, _packs_done, str(_zones)])
+			str(world.hero.driven), str(world.hero.frozen), world.hero.speed_mul, _packs_done, str(_rows)])
 	# the starter weapon (once the class took), then wear it
 	if not _kit_sent and Gear.cls_of(m.my_player()) != "":
 		_kit_sent = true
@@ -205,30 +229,30 @@ func _rb_tick(delta: float) -> void:
 	# the pick: press the real first card (the button a player would press) and count the vote when the server's offer shows it
 	if m.offer is Dictionary and world.run_pick.is_open():
 		_vote_t += delta
-		var zone := int(m.offer.get("zone", 0))
+		var node := int(m.offer.get("node", 0))
 		var mine: Variant = m.offer.get("votes", {}).get(m.me)
-		if mine != null and int(mine) == 0 and not _confirmed.has(zone):
-			_confirmed[zone] = true
+		if mine != null and int(mine) == 0 and not _confirmed.has(node):
+			_confirmed[node] = true
 			_report["run"]["picks"] = int(_report["run"]["picks"]) + 1
-			_log("the server shows my vote on card 0 after zone %d" % zone)
-		if _vote_t > 0.9 and not _cards_shot and not _confirmed.has(zone):
+			_log("the server shows my vote on card 0 at stop %d" % node)
+		if _vote_t > 0.9 and not _cards_shot and not _confirmed.has(node):
 			_cards_shot = true
 			_shot("m5c-cards", 0.0)
-		if _vote_t > 1.6 and not _confirmed.has(zone) and fmod(_vote_t, 2.0) < delta and not world.run_pick.buttons.is_empty():
-			_log("pressing card 0 after zone %d" % zone)
-			_pressed[zone] = true
+		if _vote_t > 1.6 and not _confirmed.has(node) and fmod(_vote_t, 2.0) < delta and not world.run_pick.buttons.is_empty():
+			_log("pressing card 0 at stop %d" % node)
+			_pressed[node] = true
 			(world.run_pick.buttons[0] as Button).pressed.emit()
 	else:
 		_vote_t = 0.0
 		# the last voter's press settles the pick at once, so the offer never shows that vote: it counts when the run went on to the
-		# next map after I pressed (a lone vote would not have settled it before the time ran out)
-		for zone in _pressed.keys():
-			if not _confirmed.has(zone) and m.run is Dictionary and int(m.run.get("zone", 0)) > int(zone):
-				_confirmed[zone] = true
+		# way on (or the next stop) after I pressed (a lone vote would not have settled it before the time ran out)
+		for node in _pressed.keys():
+			if not _confirmed.has(node) and m.run is Dictionary and (str(m.run.get("phase", "")) == "route" or int(m.run.get("node", 0)) != int(node)):
+				_confirmed[node] = true
 				_report["run"]["picks"] = int(_report["run"]["picks"]) + 1
-				_log("the pick after zone %d went through after my press" % int(zone))
-	if m.run is Dictionary and str(m.run.get("phase", "")) == "pick" and not _exited.has(int(m.run.get("zone", 0))):
-		_exited[int(m.run.get("zone", 0))] = true
+				_log("the pick at stop %d went through after my press" % int(node))
+	if m.run is Dictionary and str(m.run.get("phase", "")) == "route" and not _exited.has(int(m.run.get("node", 0))):
+		_exited[int(m.run.get("node", 0))] = true
 		_report["run"]["exits"] = int(_report["run"]["exits"]) + 1
 	if m.run is Dictionary:
 		_report["run"]["runor"] = m.run.get("runor", [])
@@ -237,6 +261,11 @@ func _rb_tick(delta: float) -> void:
 		_report["run"]["spirit"] = int(m.run.get("spirit", 0))
 		if world.run_hud != null and world.run_hud.visible:
 			_report["run"]["hud_spirit"] = world.run_hud.spirit_text()
+			_report["run"]["hud_rail"] = world.run_hud.rail_text()
+		# the map of the route, opened once the way is known (the key does the same): the bot reports how many stops it drew
+		if not _map_checked and world.route_view != null and m.in_run() and (m.run.get("route", []) as Array).size() > 0 and _t - _started_at > 3.0:
+			_map_checked = true
+			_check_map()
 		if str(m.run.get("phase", "")) == "victory" and not _leave_sent:
 			_report["run"]["boss_down"] = true
 			_leave_sent = true
@@ -249,7 +278,10 @@ func _rb_tick(delta: float) -> void:
 			_phase = "plan" # (another pack joined the fight: resting under its claws is how a pair wipes)
 		elif _rest_t > 25.0 or (_rest_t > 1.0 and _party_rested()):
 			_phase = "plan"
-	# walking to the exit
+	# waiting for the runes to come out (the cards are voted first), then walking onto one
+	if _phase == "rb_runes":
+		_rest_t += delta
+		_choose_rune()
 	if _phase == "rb_exit":
 		_walk_to_exit(delta)
 
@@ -287,16 +319,25 @@ func _route_plan() -> void:
 
 func _enter_zone() -> void:
 	var key := world.model.my_area_key()
-	var zi := Data.zone_index(key)
-	if not _zones.has(zi):
-		_zones.append(zi)
-		_report["run"]["zones"] = _zones.duplicate()
-		_log("in zone %d (%s)" % [zi, key])
-		if shots_dir != "" and zi == 0:
+	var node := Data.stop_node(key)
+	var info := _stop_info(node)
+	if info.is_empty():
+		return # (the run's snapshot has not come yet: asked again next frame)
+	var row := int(info.get("row", 1))
+	if not _rows.has(row):
+		_rows.append(row)
+		_kinds.append(str(info.get("kind", "")))
+		_report["run"]["rows"] = _rows.duplicate()
+		_report["run"]["kinds"] = _kinds.duplicate()
+		_log("in stop %d, row %d (%s) %s" % [node, row, str(info.get("kind", "")), key])
+		if shots_dir != "" and row == 1:
 			_shot("m5c-zone", 7.0)
+		if row > 1:
+			_runes_taken += 1
+			_report["run"]["runes"] = _runes_taken
 	_report["area"] = key
 	_to_exit = false
-	if zi >= 1 and not full:
+	if row >= stop_row and not full:
 		if shots_dir != "":
 			_pictures_after()
 		else:
@@ -308,41 +349,99 @@ func _enter_zone() -> void:
 	world.hero.drive = Vector2.ZERO
 
 
-## All packs here are down: on to the exit, or (the boss's map) to the boss.
+## Opens the route map for a moment and reports what it drew.
+func _check_map() -> void:
+	world.route_view.set_map_open(true)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_report["run"]["map"] = world.route_view.map_summary()
+	_shot("route-map", 0.1)
+	await get_tree().process_frame
+	world.route_view.set_map_open(false)
+
+
+## The route's record of stop `node` ({id, row, lane, lanes, kind, next}), or {} before the run's snapshot has come.
+func _stop_info(node: int) -> Dictionary:
+	if not (world.model.run is Dictionary):
+		return {}
+	for n in world.model.run.get("route", []):
+		if n is Dictionary and int(n.get("id", -1)) == node:
+			return n
+	return {}
+
+
+## All packs here are down: the Mellanboss or the boss to fight if this stop has one, else the väg-runor (when they are out).
 func _no_pack_left() -> void:
 	var m := world.model
 	var key := m.my_area_key()
 	var w: Dictionary = m.areas.get(key, {})
 	var inst: Dictionary = w.get("saga", {})
-	if Data.zone_index(key) == 3:
-		var boss_id := int(inst.get("boss", -1))
-		var boss: Variant = w.get("animals", {}).get(str(boss_id))
-		if boss is Dictionary:
-			_pack_ids = [boss_id]
-			_path = _path_to(_my_tile(), _tile_of(float(boss.get("x", 0)), float(boss.get("y", 0))), _distance_field(_my_tile()))
+	var kind := str(_stop_info(Data.stop_node(key)).get("kind", ""))
+	if kind == "boss" or kind == "mini":
+		var big_id := int(inst.get("boss" if kind == "boss" else "mini", -1))
+		var big: Variant = w.get("animals", {}).get(str(big_id))
+		if big is Dictionary:
+			_pack_ids = [big_id]
+			_path = _path_to(_my_tile(), _tile_of(float(big.get("x", 0)), float(big.get("y", 0))), _distance_field(_my_tile()))
 			_phase = "walk"
 			world.hero.driven = true
-			_log("to the boss")
+			_log("to the %s" % ("boss" if kind == "boss" else "Mellanboss"))
 			return
-		# the boss is down: the run says victory and the bot leaves (see _rb_tick)
-		_phase = "rb_wait"
+		if kind == "boss":
+			# the boss is down: the run says victory and the bot leaves (see _rb_tick)
+			_phase = "rb_wait"
+			return
+	_rest_t = 0.0
+	_phase = "rb_runes"
+	world.hero.driven = true
+	world.hero.drive = Vector2.ZERO
+
+
+## The runes are out when the pick is over: choose one by the lane, walk onto it.
+func _choose_rune() -> void:
+	var m := world.model
+	if not (m.run is Dictionary) or str(m.run.get("phase", "")) != "route":
 		return
+	var key := m.my_area_key()
+	var w: Dictionary = m.areas.get(key, {})
+	var runes: Array = []
 	for o in w.get("objects", {}).values():
 		if o is Dictionary and str(o.get("kind", "")) == "run_exit":
-			_exit_tile = Vector2i(int(o.get("x", 0)), int(o.get("y", 0)))
-			_path = _path_to(_my_tile(), _exit_tile, _distance_field(_my_tile()))
-			_replans = 0
-			_phase = "rb_exit"
-			_to_exit = true
-			_exit_t = 0.0
-			world.hero.driven = true
-			_log("to the exit: %d steps" % _path.size())
-			return
-	_error("no run_exit in %s" % key)
-	_finish()
+			runes.append(o)
+	if runes.is_empty():
+		return
+	var kind := str(_stop_info(Data.stop_node(key)).get("kind", ""))
+	# (a Vilosten is for resting: stay at the stone until the party is well, then go)
+	if kind == "rest" and not _party_rested() and _rest_t < 30.0:
+		return
+	var pick: Dictionary = runes[0]
+	var rest_at := -1
+	var fight_at := -1
+	for i in range(runes.size()):
+		if int(runes[i].get("variant", 0)) == 1 and rest_at < 0:
+			rest_at = i
+		elif int(runes[i].get("variant", 0)) != 1 and fight_at < 0:
+			fight_at = i
+	match lane:
+		"rest":
+			pick = runes[rest_at if rest_at >= 0 else 0]
+		"safe":
+			pick = runes[rest_at if (rest_at >= 0 and not _party_rested()) or fight_at < 0 else fight_at]
+		_:
+			pick = runes[randi() % runes.size()]
+	_exit_tile = Vector2i(int(pick.get("x", 0)), int(pick.get("y", 0)))
+	_path = _path_to(_my_tile(), _exit_tile, _distance_field(_my_tile()))
+	_replans = 0
+	_phase = "rb_exit"
+	_to_exit = true
+	_exit_t = 0.0
+	_log("to a väg-runa (%s) at %s: %d steps" % ["Vilosten" if int(pick.get("variant", 0)) == 1 else "stop", str(_exit_tile), _path.size()])
 
 
 func _walk_to_exit(delta: float) -> void:
+	if shots_dir != "" and not _runes_shot and _path.size() <= 3:
+		_runes_shot = true
+		_shot("route-runes", 0.4)
 	var tile := Data.tile()
 	var me := Vector2(world.hero.px, world.hero.py)
 	if not _path.is_empty():
@@ -367,7 +466,7 @@ func _walk_to_exit(delta: float) -> void:
 				_finish()
 		return
 	_replans = 0
-	# standing on the rune disc: use it every second and a half until the server lets us through (the gate opens when the packs are down)
+	# standing on the väg-runa: use it every second and a half until the vote is done (a press counts at once; staying counts after a moment)
 	_exit_t -= delta
 	if _exit_t <= 0.0:
 		_exit_t = 1.5

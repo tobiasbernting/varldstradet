@@ -13841,14 +13841,19 @@
       "partyMax": 3,
       "partyMaxLonghall": 4,
       "cards": 3,
-      "zones": 3,
+      "rows": 10,
+      "miniRow": 5,
+      "restRow": 9,
+      "routeVoteMs": 20000,
+      "routeDwellMs": 1000,
+      "discRadius": 1,
       "modifierSeeds": 0.15
     },
     "seeds": {
       "pack": 1,
-      "zone": 4,
+      "zone": 3,
       "chest": 2,
-      "guard": 3,
+      "guard": 5,
       "bossFirst": 20,
       "bossReplay": 12
     },
@@ -14346,184 +14351,40 @@
         "text": "Trollformler +6 %"
       }
     ],
-    "zones": [
+    "stops": [
       {
-        "biome": "skog",
-        "name": "Skogsstigen",
-        "intro": "Träden står tätt och något prasslar bakom stammarna.",
-        "floor": "grass",
-        "solid": "rock",
-        "wall": 6,
-        "ambient": [
-          0.42,
-          0.55,
-          0.42
-        ],
-        "decor": [
-          "saga_fairylight",
-          "saga_cobweb",
-          "saga_bones",
-          "saga_urn"
-        ],
-        "weather": [
-          "sun",
-          "cloudy",
-          "rain",
-          "fog",
-          "wind"
-        ]
+        "id": "flock",
+        "name": "Ett flock",
+        "word": "Flock",
+        "icon": "⚔️"
       },
       {
-        "biome": "trask",
-        "name": "Kärret",
-        "intro": "Det bubblar i kärret, och dimman ligger tung.",
-        "floor": "mud",
-        "solid": "rock",
-        "wall": 3,
-        "ambient": [
-          0.4,
-          0.55,
-          0.5
-        ],
-        "decor": [
-          "saga_gravestone",
-          "saga_skullpile",
-          "saga_ghostlight",
-          "saga_deadtree"
-        ],
-        "weather": [
-          "fog",
-          "rain",
-          "cloudy"
-        ]
+        "id": "mini",
+        "name": "Mellanbossen",
+        "word": "Mellanboss",
+        "icon": "🛡️"
       },
       {
-        "biome": "berg",
-        "name": "Bergspasset",
-        "intro": "Stigen slingrar sig uppåt och stenarna ekar.",
-        "floor": "gravel",
-        "solid": "rock",
-        "wall": 4,
-        "ambient": [
-          0.6,
-          0.5,
-          0.35
-        ],
-        "decor": [
-          "saga_minecart",
-          "saga_goldpile",
-          "saga_dwarfstatue",
-          "saga_minelamp"
-        ],
-        "weather": [
-          "wind",
-          "cloudy",
-          "sun",
-          "hail"
-        ]
+        "id": "rest",
+        "name": "Vilosten",
+        "word": "Vilosten",
+        "icon": "⛺"
       },
       {
-        "biome": "strand",
-        "name": "Stranden",
-        "intro": "Vågorna slår mot stranden. Något rör sig i vattnet.",
-        "floor": "sand",
-        "solid": "water",
-        "wall": 5,
-        "ambient": [
-          0.35,
-          0.55,
-          0.7
-        ],
-        "decor": [
-          "saga_coral",
-          "saga_anchor",
-          "saga_seaweed",
-          "saga_pearl"
-        ],
-        "weather": [
-          "sun",
-          "wind",
-          "rain",
-          "storm"
-        ]
-      },
-      {
-        "biome": "svamp",
-        "name": "Svampskogen",
-        "intro": "Svamparna lyser svagt i det gröna mörkret.",
-        "floor": "moss",
-        "solid": "rock",
-        "wall": 6,
-        "ambient": [
-          0.45,
-          0.4,
-          0.65
-        ],
-        "decor": [
-          "saga_glowshroom",
-          "saga_fairylight",
-          "saga_cobweb",
-          "saga_elfstatue"
-        ],
-        "weather": [
-          "fog",
-          "cloudy",
-          "rain"
-        ]
-      },
-      {
-        "biome": "is",
-        "name": "Isfjället",
-        "intro": "Isvinden viner. Snön knarrar under fötterna.",
-        "floor": "snow",
-        "solid": "rock",
-        "wall": 1,
-        "ambient": [
-          0.55,
-          0.65,
-          0.85
-        ],
-        "decor": [
-          "saga_icecrystal",
-          "saga_frozenpillar",
-          "saga_icecrystal",
-          "saga_snowdrift"
-        ],
-        "weather": [
-          "snow",
-          "wind",
-          "fog",
-          "hail"
-        ]
-      },
-      {
-        "biome": "vulkan",
-        "name": "Lavastigen",
-        "intro": "Marken är varm och lavan lyser i sprickorna.",
-        "floor": "ash",
-        "solid": "basalt",
-        "wall": 2,
-        "ambient": [
-          0.75,
-          0.42,
-          0.3
-        ],
-        "decor": [
-          "saga_anvil",
-          "saga_brazier",
-          "saga_lavacrack",
-          "saga_brazier"
-        ],
-        "weather": [
-          "wind",
-          "cloudy",
-          "sun"
-        ]
+        "id": "boss",
+        "name": "Bossen",
+        "word": "Boss",
+        "icon": "👑"
       }
+    ],
+    "wings": [
+      "Första vingen",
+      "Andra vingen",
+      "Hallen"
     ],
     "companion": "Hirdmannen",
     "texts": {
-      "started": "Färden börjar! Tre zoner och en boss.",
+      "started": "Färden börjar! Tio steg till bossen.",
       "needPort": "Gå fram till färdporten först.",
       "already": "Det pågår redan en färd. Hänga på?",
       "joined": "{name} hänger på!",
@@ -14535,8 +14396,12 @@
       "picked": "Ni fick {runa}!",
       "voted": "{name} röstade.",
       "zoneClear": "Vägen vidare är öppen!",
-      "zoneClearSub": "Gå till porten där borta.",
-      "exitShut": "Besegra alla flockar först.",
+      "zoneClearSub": "Välj en runa, sen en väg.",
+      "exitShut": "Vägrunorna lyser upp när stoppet är klart.",
+      "routeTitle": "Välj väg!",
+      "routeSub": "Gå ut på en vägruna. Fler på samma vinner; lika går Stigfinnaren efter.",
+      "restHeal": "Vilostenen läker er.",
+      "badDungeon": "Den färden kan ni inte ge er ut på än.",
       "warn": "Snart dags att gå hem",
       "warnSub": "Ta det lugnt. Ni får behålla allt ni hittat.",
       "late": "Dags att gå hem?",

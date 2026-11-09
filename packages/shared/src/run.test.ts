@@ -2,7 +2,26 @@
 // the wipe, joining, the companion, the sagaträd, the farm's objects, saves) and whole runs played by bot parties.
 import { describe, expect, it } from 'vitest';
 import {
-  BOSS_ZONE,
+  BOSS_STOP,
+  MINI_STOP,
+  REST_STOP,
+  NODE_KINDS,
+  ROUTE_ROWS,
+  ROUTE_MINI_ROW,
+  ROUTE_REST_ROW,
+  ROUTE_DWELL_MS,
+  ROUTE_VOTE_MS,
+  ROUTE_DISC_RADIUS,
+  NODE_KIND_CODE,
+  VILOSTEN_HEAL,
+  WING_HP,
+  wingOf,
+  tally,
+  generateRoute,
+  routeSnap,
+  dungeonMobs,
+  finderOf,
+  runnableDungeons,
   CLASSES,
   CLASS_IDS,
   DUNGEONS,
@@ -43,9 +62,9 @@ import {
   XP_LEVELS,
   equipGear,
   fighterMax,
-  ZONE_INTROS,
-  ZONE_NAMES,
   ZONE_TEMPLATES,
+  STOP_NAMES,
+  STOP_WORDS,
   FARDKOST,
   FOOD_TEXT,
   MODIFIER_NAMES,
@@ -55,10 +74,11 @@ import {
   applyMove,
   archFrontOf,
   buffsOf,
-  buildZone,
+  buildStop,
   castSpell,
   chapterBoss,
   chooseFardkost,
+  enterStop,
   endRun,
   ensureRunPlaces,
   fardportOf,
@@ -95,6 +115,7 @@ import {
   type Change,
   type ClassId,
   type DungeonId,
+  type NodeKind,
   type RunEffect,
   type WorldState,
 } from './index.ts';
@@ -124,104 +145,216 @@ function reach(w: WorldState, from: { x: number; y: number }): Set<string> {
 const near = (seen: Set<string>, t: { x: number; y: number }): boolean => [0, 1, -1].some((dx) => [0, 1, -1].some((dy) => seen.has(`${t.x + dx},${t.y + dy}`)));
 const tileOfMob = (a: { x: number; y: number }): { x: number; y: number } => ({ x: Math.floor(a.x / TILE), y: Math.floor(a.y / TILE) });
 
-describe('the generator', () => {
-  it('makes 200 seeded runs, each walkable from the arch (start) to the boss with every rest stone reachable', { timeout: 120_000 }, () => {
-    let rooms4 = 0;
-    let rooms6 = 0;
-    for (let seed = 1; seed <= 200; seed++) {
-      const boss = DUNGEON_IDS[seed % DUNGEON_IDS.length]!;
-      const plan = generateRun(seed, { boss, replay: seed % 3 === 0, clears: 1 + (seed % 3) });
-      expect(plan.zones).toHaveLength(4);
-      // three different biomes, then the boss
-      const biomes = plan.zones.slice(0, 3).map((z) => z.biome);
-      expect(new Set(biomes).size).toBe(3);
-      expect(plan.zones[3]!.kind).toBe('boss');
-      for (const z of plan.zones) {
-        const w = buildZone(plan, z.index, `saga:test${seed}z${z.index}`);
-        const inst = w.saga!;
-        if (z.kind === 'zone') {
-          expect(z.def.rooms.length).toBeGreaterThanOrEqual(4);
-          expect(z.def.rooms.length).toBeLessThanOrEqual(6);
-          if (z.def.rooms.length === 4) rooms4++;
-          if (z.def.rooms.length === 6) rooms6++;
-        }
-        expect(inst.rests).toHaveLength(1);
-        // the gate shuts the way on until it opens: the exit (or the boss) is out of reach, everything before it is not
-        const before = reach(w, inst.start);
-        const goal = z.kind === 'zone' ? inst.exit : tileOfMob(w.animals[inst.boss]!);
-        expect(near(before, goal)).toBe(false);
-        expect(near(before, inst.rests[0]!)).toBe(true);
-        expect(inst.gate.length).toBeGreaterThanOrEqual(2);
-        for (const g of inst.gate) {
-          const o = objectAt(w, g.x, g.y)!;
-          delete w.occupancy[`${g.x},${g.y}`];
-          delete w.objects[o.id];
-        }
-        const after = reach(w, inst.start);
-        expect(near(after, goal)).toBe(true);
-        expect(near(after, inst.rests[0]!)).toBe(true);
-        for (const m of Object.values(inst.mobs)) expect(after.has(`${Math.floor(m.home.x / TILE)},${Math.floor(m.home.y / TILE)}`)).toBe(true);
-        for (const o of Object.values(w.objects)) if (o.kind === 'saga_chest') expect(near(after, o)).toBe(true);
-        if (z.kind === 'zone') expect(objectAt(w, inst.exit.x, inst.exit.y)?.kind).toBe('run_exit');
-        // no stray dungeon exit in a zone: a run is left with `leave`
-        expect(Object.values(w.objects).some((o) => o.kind === 'saga_exit')).toBe(false);
+/** The stops on one path through the route from the start, the way a seed chooses (a different lane in each row). */
+function pathOf(plan: ReturnType<typeof generateRun>, seed: number): number[] {
+  const rnd = mulberry32(seed);
+  const out = [0];
+  for (let n = plan.route.nodes[0]!; n.next.length; ) {
+    n = plan.route.nodes[n.next[Math.floor(rnd() * n.next.length)]!]!;
+    out.push(n.id);
+  }
+  return out;
+}
+
+/** Checks one built stop: walkable from the start, its gate shutting the way on until it opens, everything reachable after. */
+function checkStop(plan: ReturnType<typeof generateRun>, node: number, key: string): void {
+  const z = plan.stops[node]!;
+  const w = buildStop(plan, node, key);
+  const inst = w.saga!;
+  const why = `seed ${plan.seed} ${plan.boss} node ${node} (${z.kind})`;
+  expect(z.def.id, why).toBe(plan.boss);
+  // the chapter's own look
+  const d = DUNGEONS[plan.boss];
+  expect(z.def.floor).toBe(d.floor);
+  expect(z.def.wall).toBe(d.wall);
+  expect(z.def.ambient).toEqual(d.ambient);
+  expect(z.def.decor).toEqual(d.decor);
+  const before = reach(w, inst.start);
+  const goal = z.kind === 'boss' ? tileOfMob(w.animals[inst.boss]!) : inst.exit;
+  expect(inst.rests, why).toHaveLength(z.kind === 'rest' ? 1 : 0);
+  if (z.kind === 'rest') {
+    expect(inst.gate, why).toHaveLength(0);
+    expect(near(before, goal), why).toBe(true);
+    expect(near(before, inst.rests[0]!), why).toBe(true);
+  } else {
+    // the gate shuts the way on until it opens: the exit room (or the boss) is out of reach, everything before it is not
+    expect(near(before, goal), why).toBe(false);
+    expect(inst.gate.length, why).toBeGreaterThanOrEqual(2);
+    for (const g of inst.gate) {
+      const o = objectAt(w, g.x, g.y)!;
+      delete w.occupancy[`${g.x},${g.y}`];
+      delete w.objects[o.id];
+    }
+  }
+  const after = reach(w, inst.start);
+  expect(near(after, goal), why).toBe(true);
+  for (const m of Object.values(inst.mobs)) expect(after.has(`${Math.floor(m.home.x / TILE)},${Math.floor(m.home.y / TILE)}`), why).toBe(true);
+  // no stray dungeon exit in a stop (a run is left with `leave`), and no väg-runor until the stop is cleared
+  expect(Object.values(w.objects).some((o) => o.kind === 'saga_exit' || o.kind === 'run_exit'), why).toBe(false);
+  expect(inst.mini !== 0, why).toBe(z.kind === 'mini' || z.def.rooms.some((r) => r.kind === 'mini'));
+  expect(inst.boss !== 0, why).toBe(z.kind === 'boss');
+  expect(z.def.rooms.filter((r) => r.kind === 'start')).toHaveLength(1);
+}
+
+describe('the route generator (generateRoute)', () => {
+  it('makes 300 seeded routes for every dungeon: ten rows, the fixed rows, every stop reachable and leading to the boss, a Vilosten in each wing', () => {
+    for (let seed = 1; seed <= 300; seed++) {
+      const dungeon = DUNGEON_IDS[seed % DUNGEON_IDS.length]!;
+      const route = generateRoute(seed, { dungeon, level: seed % 2 === 0 ? 0 : 1 });
+      const why = `seed ${seed} ${dungeon}`;
+      expect(route.dungeon).toBe(dungeon);
+      route.nodes.forEach((n, i) => expect(n.id, why).toBe(i));
+      const rows = Array.from({ length: ROUTE_ROWS }, (_, r) => route.nodes.filter((n) => n.row === r + 1));
+      expect(rows.every((r) => r.length >= 1 && r.length <= 3), why).toBe(true);
+      // the fixed rows: a Flock first, the Mellanboss on 5, the last rest on 9 and the Boss on 10
+      expect(rows[0]!.map((n) => n.kind)).toEqual(['flock']);
+      expect(rows[ROUTE_MINI_ROW - 1]!.map((n) => n.kind)).toEqual(['mini']);
+      expect(rows[ROUTE_REST_ROW - 1]!.map((n) => n.kind)).toEqual(['rest']);
+      expect(rows[ROUTE_ROWS - 1]!.map((n) => n.kind)).toEqual(['boss']);
+      // the others have two or three lanes; rows 4 and 8 have exactly one Vilosten (the safe lane), rows 3 and 7 none
+      for (const r of [2, 3, 4, 6, 7, 8]) expect(rows[r - 1]!.length, `${why} row ${r}`).toBeGreaterThanOrEqual(2);
+      for (const r of [4, 8]) expect(rows[r - 1]!.filter((n) => n.kind === 'rest'), `${why} row ${r}`).toHaveLength(1);
+      for (const r of [3, 7]) expect(rows[r - 1]!.some((n) => n.kind === 'rest'), `${why} row ${r}`).toBe(false);
+      for (const n of route.nodes) {
+        expect(NODE_KINDS).toContain(n.kind);
+        expect(n.lanes).toBe(rows[n.row - 1]!.length);
+        if (n.row < ROUTE_ROWS) {
+          expect(n.next.length, `${why} node ${n.id}`).toBeGreaterThanOrEqual(1);
+          for (const m of n.next) expect(route.nodes[m]!.row).toBe(n.row + 1);
+        } else expect(n.next).toEqual([]);
+        if (n.row > 1) expect(route.nodes.some((q) => q.next.includes(n.id)), `${why} node ${n.id} has a way in`).toBe(true);
+      }
+      // every stop is reachable from the start and leads on to the boss; the same walking backwards
+      const from = new Set([0]);
+      for (const n of route.nodes) if (from.has(n.id)) for (const m of n.next) from.add(m);
+      expect(from.size, why).toBe(route.nodes.length);
+      const last = route.nodes.length - 1;
+      const to = new Set([last]);
+      for (const n of [...route.nodes].reverse()) if (n.next.some((m) => to.has(m))) to.add(n.id);
+      expect(to.size, why).toBe(route.nodes.length);
+      // a Vilosten in each wing, and the safe lane of rows 4 and 8 can be walked to from every stop of the row before
+      for (const [lo, hi] of [[1, 4], [5, 8], [9, 10]] as const) expect(route.nodes.some((n) => n.row >= lo && n.row <= hi && n.kind === 'rest' && from.has(n.id)), `${why} wing ${lo}`).toBe(true);
+      for (const r of [4, 8]) {
+        const safe = rows[r - 1]!.find((n) => n.kind === 'rest')!;
+        for (const n of rows[r - 2]!) expect(n.next, `${why} row ${r - 1} node ${n.id}`).toContain(safe.id);
       }
     }
-    // the shorter and longer layouts both come up
-    expect(rooms4).toBeGreaterThan(0);
-    expect(rooms6).toBeGreaterThan(0);
   });
 
-  it('is deterministic from the seed, and different seeds give different runs', () => {
-    const a = generateRun(42, { boss: 'hel' });
-    const b = generateRun(42, { boss: 'hel' });
-    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
-    const worldA = buildZone(a, 1, 'saga:x');
-    const worldB = buildZone(b, 1, 'saga:x');
-    expect(JSON.stringify(worldA.terrain)).toBe(JSON.stringify(worldB.terrain));
-    const chains = new Set(Array.from({ length: 30 }, (_, i) => generateRun(i + 1, { boss: 'hel' }).zones.slice(0, 3).map((z) => z.biome).join('>')));
-    expect(chains.size).toBeGreaterThan(10);
+  it('is deterministic from the seed, and different seeds give different routes; the level does not change the map', () => {
+    const a = generateRoute(42, { dungeon: 'hel', level: 1 });
+    expect(JSON.stringify(generateRoute(42, { dungeon: 'hel', level: 1 }))).toBe(JSON.stringify(a));
+    expect(generateRoute(42, { dungeon: 'hel', level: 0 }).nodes).toEqual(a.nodes);
+    const shapes = new Set(Array.from({ length: 30 }, (_, i) => generateRoute(i + 1, { dungeon: 'hel', level: 1 }).nodes.map((n) => n.kind[0]! + n.next.join('')).join('|')));
+    expect(shapes.size).toBeGreaterThan(20);
+    const planA = generateRun(42, { boss: 'hel' });
+    const planB = generateRun(42, { boss: 'hel' });
+    expect(JSON.stringify(planA)).toBe(JSON.stringify(planB));
+    expect(JSON.stringify(buildStop(planA, 1, 'saga:x').terrain)).toBe(JSON.stringify(buildStop(planB, 1, 'saga:x').terrain));
+    expect(routeSnap(a)).toHaveLength(a.nodes.length);
   });
 
-  it('uses every biome, and each zone is the biome of its template: floor, monsters and the weather', () => {
+  it('builds the stops: 100 seeded runs, each on a path through the route, walkable from the start with the gate and the rest stone where they should be', { timeout: 120_000 }, async () => {
+    for (let seed = 1; seed <= 100; seed++) {
+      // (let the test runner report in now and then: a worker that never does gets a timeout from the runner on a busy machine)
+      if (seed % 10 === 0) await new Promise((r) => setImmediate(r));
+      const boss = DUNGEON_IDS[seed % DUNGEON_IDS.length]!;
+      const plan = generateRun(seed, { boss, replay: seed % 3 === 0, clears: 1 + (seed % 3) });
+      expect(plan.stops).toHaveLength(plan.route.nodes.length);
+      // a path of ten stops, one of each fixed kind on it
+      const path = pathOf(plan, seed);
+      expect(path).toHaveLength(ROUTE_ROWS);
+      for (const id of path) checkStop(plan, id, `saga:test${seed}z${id}`);
+    }
+  });
+
+  it('builds every stop of nine routes, one per dungeon', { timeout: 120_000 }, async () => {
+    for (const [i, boss] of DUNGEON_IDS.entries()) {
+      await new Promise((r) => setImmediate(r));
+      const plan = generateRun(100 + i, { boss });
+      for (const n of plan.route.nodes) checkStop(plan, n.id, `saga:all${i}z${n.id}`);
+    }
+  });
+
+  it('lays a Flock out in the rooms of one of the seven biome templates, in the chapter’s own look and with its monsters', () => {
     const used = new Set<string>();
-    for (let seed = 1; seed < 60; seed++) {
-      const plan = generateRun(seed, { boss: 'draug' });
-      for (const z of plan.zones.slice(0, 3)) {
-        const t = ZONE_TEMPLATES[z.biome!];
-        used.add(z.biome!);
-        expect(z.def.floor).toBe(t.floor);
-        expect(t.weather).toContain(z.weather);
-        expect(z.name).toBe(ZONE_NAMES[z.biome!]);
-        const species = new Set([...t.mobs.small, ...t.mobs.medium, ...t.mobs.big]);
-        for (const r of z.def.rooms) for (const pk of r.packs ?? []) for (const m of pk) expect(species.has(m)).toBe(true);
+    for (let seed = 1; seed < 80; seed++) {
+      const boss = DUNGEON_IDS[seed % DUNGEON_IDS.length]!;
+      const plan = generateRun(seed, { boss });
+      const mobs = dungeonMobs(boss);
+      const species = new Set([...mobs.small, ...mobs.medium, ...mobs.big]);
+      expect([...species].every((m) => (DUNGEONS[boss].rooms.flatMap((r) => r.packs ?? []).flat() as string[]).includes(m))).toBe(true);
+      for (const z of plan.stops) {
+        for (const r of z.def.rooms) for (const pk of r.packs ?? []) for (const m of pk) expect(species.has(m), `${boss} ${z.kind}: ${m}`).toBe(true);
+        if (z.kind !== 'flock') continue;
+        const t = ZONE_TEMPLATES[z.layout!];
+        used.add(z.layout!);
+        // start, two rooms of packs, the exit room: the template's rooms (mirrored or not), the rest stone and the side room left out
+        expect(z.def.rooms.map((r) => r.kind)).toEqual(['start', 'pack', 'pack', 'pack']);
+        const sizes = z.def.rooms.map((r) => `${r.w}x${r.h}`);
+        expect(sizes).toEqual([t.rooms[0], t.rooms[1], t.rooms[2], t.rooms[4]].map((r) => `${r.w}x${r.h}`));
+        expect(z.def.rooms[3]!.gated).toBe(true);
+        expect(z.def.rooms[3]!.packs).toBeUndefined();
       }
     }
     expect([...used].sort()).toEqual([...RUN_BIOMES].sort());
-    for (const b of RUN_BIOMES) expect(ZONE_INTROS[b]).toBeTruthy();
   });
 
-  it('keeps every template inside the map with the rooms apart, and the exit behind the gate', () => {
-    for (const t of Object.values(ZONE_TEMPLATES)) {
-      expect(t.rooms.map((r) => r.role)).toEqual(['start', 'pack', 'pack', 'rest', 'exit', 'side']);
-      t.rooms.forEach((a, i) => {
-        expect(a.x).toBeGreaterThanOrEqual(3);
-        expect(a.y).toBeGreaterThanOrEqual(3);
-        expect(a.x + a.w).toBeLessThanOrEqual(61);
-        expect(a.y + a.h).toBeLessThanOrEqual(61);
-        t.rooms.forEach((b, j) => {
+  it('gives every kind of stop its sizes: a Flock of two rooms of packs by wing, the Mellanboss in the dungeon’s own hall, the boss’s hall behind a gate', () => {
+    for (const boss of DUNGEON_IDS) {
+      const plan = generateRun(7, { boss });
+      const d = DUNGEONS[boss];
+      const mini = plan.stops.find((z) => z.kind === 'mini')!;
+      const hall = mini.def.rooms.find((r) => r.kind === 'mini')!;
+      const own = d.rooms.find((r) => r.kind === 'mini')!;
+      expect([hall.w, hall.h]).toEqual([own.w, own.h]);
+      expect(mini.gate).toBe('mini');
+      expect(mini.required).toEqual([]);
+      expect(mini.def.rooms.at(-1)!.gated).toBe(true);
+      const last = plan.stops.at(-1)!;
+      expect(last.kind).toBe('boss');
+      expect(last.def.rooms.at(-1)!.kind).toBe('boss');
+      expect(last.def.rooms.at(-1)!.gated).toBe(true);
+      expect(last.gate).toBe('packs');
+      expect(last.required.length).toBe(last.def.rooms.flatMap((r) => r.packs ?? []).length);
+      const rest = plan.stops.find((z) => z.kind === 'rest')!;
+      expect(rest.def.rooms.map((r) => r.kind)).toEqual(['start', 'rest', 'pack']);
+      expect(rest.required).toEqual([]);
+      // the later wings are tougher
+      const flocks = plan.stops.filter((z) => z.kind === 'flock');
+      for (const z of flocks) expect(z.hpMul).toBe(WING_HP[wingOf(z.row)]);
+      expect(WING_HP[0]).toBeLessThan(WING_HP[1]!);
+    }
+  });
+
+  it('keeps every template and fixed layout inside the map with the rooms apart, and the exit room last', () => {
+    const apartAll = (rooms: { x: number; y: number; w: number; h: number }[], name: string): void => {
+      rooms.forEach((a, i) => {
+        expect(a.x, name).toBeGreaterThanOrEqual(3);
+        expect(a.y, name).toBeGreaterThanOrEqual(3);
+        expect(a.x + a.w, name).toBeLessThanOrEqual(61);
+        expect(a.y + a.h, name).toBeLessThanOrEqual(61);
+        rooms.forEach((b, j) => {
           if (j <= i) return;
           const apart = a.x + a.w + 2 <= b.x || b.x + b.w + 2 <= a.x || a.y + a.h + 2 <= b.y || b.y + b.h + 2 <= a.y;
-          expect(apart, `${t.biome}: rooms ${i} and ${j}`).toBe(true);
+          expect(apart, `${name}: rooms ${i} and ${j}`).toBe(true);
         });
       });
+    };
+    for (const t of Object.values(ZONE_TEMPLATES)) {
+      expect(t.rooms.map((r) => r.role)).toEqual(['start', 'pack', 'pack', 'rest', 'exit', 'side']);
+      apartAll(t.rooms, t.biome);
       expect(t.links.some(([, c]) => c === 4)).toBe(true);
       for (const [p, c] of t.links) expect(p).not.toBe(c);
     }
-    for (const r of [BOSS_ZONE.start, BOSS_ZONE.pack, BOSS_ZONE.rest, BOSS_ZONE.guard, BOSS_ZONE.hall]) {
-      expect(r.x).toBeGreaterThanOrEqual(3);
-      expect(r.x + r.w).toBeLessThanOrEqual(61);
-      expect(r.y + r.h).toBeLessThanOrEqual(61);
+    apartAll(Object.values(REST_STOP), 'rest stop');
+    for (const boss of DUNGEON_IDS) {
+      const d = DUNGEONS[boss];
+      const mini = d.rooms.find((r) => r.kind === 'mini')!;
+      const hall = d.rooms.find((r) => r.kind === 'boss')!;
+      apartAll([MINI_STOP.start, MINI_STOP.pack, { ...MINI_STOP.hall, w: mini.w, h: mini.h }, MINI_STOP.exit], `mini stop ${boss}`);
+      apartAll([BOSS_STOP.start, BOSS_STOP.pack, { ...BOSS_STOP.hall, w: Math.min(hall.w, BOSS_STOP.hall.w), h: Math.min(hall.h, BOSS_STOP.hall.h) }], `boss stop ${boss}`);
+      apartAll([BOSS_STOP.start, BOSS_STOP.pack, BOSS_STOP.guard], 'boss stop guard');
     }
   });
 
@@ -240,17 +373,18 @@ describe('the generator', () => {
     const replays = [1, 2, 3, 4].map((clears) => generateRun(5, { boss: 'draug', replay: true, clears }));
     expect(replays.map((r) => r.modifiers.length)).toEqual([1, 2, 3, 3]);
     for (const r of replays) expect(r.moves).toBeUndefined();
-    // each modifier does what it says on the plan
+    // each modifier does what it says on the plan (node 0 is the first Flock, the last node the boss)
     const w = (id: string) => generateRun(9, { boss: 'draug', modifiers: [id] });
-    expect(w('segare').zones[0]!.hpMul).toBeCloseTo(generateRun(9, { boss: 'draug' }).zones[0]!.hpMul * 1.25);
-    expect(w('harda').zones[0]!.dmgMul).toBe(1.2);
-    expect(w('snabba').zones[0]!.sight).toBe(1.4);
-    expect(w('dimma').zones[0]!.leash).toBe(6);
-    expect(w('dimma').zones[0]!.weather).toBe('fog');
-    expect(w('vakten').zones[3]!.def.rooms.some((r) => r.kind === 'mini')).toBe(true);
     const plain = generateRun(9, { boss: 'draug' });
+    expect(w('segare').stops[0]!.hpMul).toBeCloseTo(plain.stops[0]!.hpMul * 1.25);
+    expect(w('harda').stops[0]!.dmgMul).toBe(1.2);
+    expect(w('snabba').stops[0]!.sight).toBe(1.4);
+    expect(w('dimma').stops[0]!.leash).toBe(6);
+    expect(w('dimma').stops[0]!.weather).toBe('fog');
+    expect(w('vakten').stops.at(-1)!.def.rooms.some((r) => r.kind === 'mini')).toBe(true);
+    expect(plain.stops.at(-1)!.def.rooms.some((r) => r.kind === 'mini')).toBe(false);
     const more = w('fler');
-    const count = (p: typeof plain) => p.zones[1]!.def.rooms.flatMap((r) => r.packs ?? []).reduce((n, pk) => n + pk.length, 0);
+    const count = (p: typeof plain) => p.stops[0]!.def.rooms.flatMap((r) => r.packs ?? []).reduce((n, pk) => n + pk.length, 0);
     expect(count(more)).toBeGreaterThan(count(plain));
   });
 });
@@ -299,7 +433,10 @@ describe('the data', () => {
       expect(MODIFIER_TEXT[m.id]).toBeTruthy();
     }
     for (const d of Object.keys(FARDKOST)) expect(FOOD_TEXT[d], d).toBeTruthy();
-    for (const b of RUN_BIOMES) expect(ZONE_NAMES[b]).toBeTruthy();
+    for (const k of NODE_KINDS) {
+      expect(STOP_NAMES[k]).toBeTruthy();
+      expect(STOP_WORDS[k]).toBeTruthy();
+    }
   });
 
   it('adds effects up, and turns the combat part into buffs that start at zero', () => {
@@ -534,7 +671,10 @@ describe('every effect', () => {
     expect(regen({ regen: 0.5 })).toBeGreaterThan(regen({}) * 1.3);
     const rest = (e: RunEffect): number => {
       const l = lab(e);
-      const r = l.inst.rests[0]!;
+      // (a Flock has no rest stone of its own: the lab puts one in the start room, as a Vilosten has)
+      const r = { x: l.inst.start.x + 3, y: l.inst.start.y };
+      addObject(l.area, 'saga_rest', r.x, r.y);
+      l.inst.rests.push(r);
       l.p.x = px(r.x);
       l.p.y = px(r.y) + TILE;
       l.f.hp = 10;
@@ -742,8 +882,10 @@ describe('starting, joining and leaving', () => {
     expect(c.area).toBe('farm');
     expect(JSON.stringify(c.inventory)).toBe(bag);
     expect(run.party).not.toContain(c.id);
-    // a second time, after a rest stone has been lit: she appears there
-    const rest = area.saga!.rests[0]!;
+    // a second time, after a rest stone has been lit: she appears there (a Flock has none of its own: this one is put in the start room)
+    const rest = { x: area.saga!.start.x + 3, y: area.saga!.start.y };
+    addObject(area, 'saga_rest', rest.x, rest.y);
+    area.saga!.rests.push(rest);
     area.saga!.checkpoint = 0;
     joinRun(party.world, c.id, party.ctx());
     expect(Math.hypot(c.x - px(rest.x), c.y - px(rest.y))).toBeLessThan(3 * TILE);
@@ -778,7 +920,7 @@ describe('starting, joining and leaving', () => {
       startRun(party.world, party.players[0]!.id, { seed: 6, ...(opts.companion === false ? { companion: false } : {}) }, party.ctx());
       const run = runOf(party.world)!;
       const r = party.world.areas![run.key]!.saga!.run!;
-      return { mul: r.hpMul, boss: r.bossMul, plan: run.plan.zones[0]!.hpMul, bossPlan: run.plan.zones[0]!.bossMul, n: run.companions.length };
+      return { mul: r.hpMul, boss: r.bossMul, plan: run.plan.stops[0]!.hpMul, bossPlan: run.plan.stops[0]!.bossMul, n: run.companions.length };
     };
     // the farm has no longhouse, and a lone player still gets the Hirdmannen and the mercy
     for (const hired of [hp(['krigare'], {}), hp(['krigare'], { longhall: true })]) {
@@ -920,6 +1062,106 @@ describe('starting, joining and leaving', () => {
   });
 });
 
+describe('the run is one dungeon, chosen at the arch (GAME2.md section 2.4)', () => {
+  const cleared = (party: Party, ids: DungeonId[]): void => {
+    party.players[0]!.saga!.cleared = [...ids];
+  };
+
+  it('runnableDungeons: the ones cleared and the next in the saga’s order, nothing further', () => {
+    expect(runnableDungeons([])).toEqual(['draug']);
+    expect(runnableDungeons(['draug'])).toEqual(['draug', 'frost']);
+    expect(runnableDungeons(['draug', 'frost', 'surt'])).toEqual(['draug', 'frost', 'surt', 'hel']);
+    expect(runnableDungeons(['frost'])).toEqual(['draug', 'frost']);
+    expect(runnableDungeons([...DUNGEON_IDS])).toEqual([...DUNGEON_IDS]);
+  });
+
+  it('left out, the run is the player’s current chapter; the route, the look and the boss are that dungeon’s', () => {
+    for (const [done, want] of [[[], 'draug'], [['draug'], 'frost'], [['draug', 'frost', 'surt'], 'hel']] as [DungeonId[], DungeonId][]) {
+      const party = makeParty(['krigare']);
+      cleared(party, done);
+      startRun(party.world, party.players[0]!.id, { seed: 5 }, party.ctx());
+      const run = runOf(party.world)!;
+      expect(run.plan.boss).toBe(want);
+      expect(run.plan.replay).toBe(false);
+      expect(run.plan.route.dungeon).toBe(want);
+      const inst = party.world.areas![run.key]!.saga!;
+      expect(inst.id).toBe(want);
+      expect(DUNGEONS[want].floor).toBe(party.world.areas![run.key]!.terrain[party.world.areas![run.key]!.saga!.start.y * 64 + party.world.areas![run.key]!.saga!.start.x]);
+    }
+  });
+
+  it('a dungeon asked for: one cleared (a replay) or the next one is run; a later one, or anything else, is refused and nothing starts', () => {
+    const party = makeParty(['krigare']);
+    cleared(party, ['draug', 'frost']);
+    const id = party.players[0]!.id;
+    expect(listen(runMessage(party.world, id, { t: 'run', a: 'start', dungeon: 'loke' }, party.ctx()), RUN_T.badDungeon)).toBe(true);
+    expect(runOf(party.world)).toBeUndefined();
+    for (const bad of ['nope', 7, null, ['draug'], {}]) {
+      expect(listen(runMessage(party.world, id, { t: 'run', a: 'start', dungeon: bad }, party.ctx()), RUN_T.badDungeon)).toBe(true);
+      expect(runOf(party.world)).toBeUndefined();
+    }
+    // a cleared one: a replay (modifiers, every boss move) of that dungeon
+    runMessage(party.world, id, { t: 'run', a: 'start', dungeon: 'draug' }, party.ctx());
+    const run = runOf(party.world)!;
+    expect(run.plan.boss).toBe('draug');
+    expect(run.plan.replay).toBe(true);
+    expect(run.plan.modifiers.length).toBeGreaterThanOrEqual(1);
+    expect(run.plan.moves).toBeUndefined();
+    endRun(party.world, run, 'leave', party.ctx());
+    // the next one: a first run, with the saga's locked boss moves
+    runMessage(party.world, id, { t: 'run', a: 'start', dungeon: 'surt' }, party.ctx());
+    const next = runOf(party.world)!;
+    expect(next.plan.boss).toBe('surt');
+    expect(next.plan.replay).toBe(false);
+    expect(next.plan.moves).toBeDefined();
+  });
+
+  it('a first-time player can run only the first dungeon; clearing a dungeon in a run opens the next', () => {
+    const party = makeParty(['krigare']);
+    const id = party.players[0]!.id;
+    expect(listen(startRun(party.world, id, { dungeon: 'frost' }, party.ctx()), RUN_T.badDungeon)).toBe(true);
+    expect(runOf(party.world)).toBeUndefined();
+    startRun(party.world, id, { dungeon: 'draug', seed: 3 }, party.ctx());
+    const run = runOf(party.world)!;
+    expect(run.plan.boss).toBe('draug');
+    endRun(party.world, run, 'leave', party.ctx());
+    party.players[0]!.saga!.cleared.push('draug');
+    expect(startRun(party.world, id, { dungeon: 'frost', seed: 3 }, party.ctx()).length).toBeGreaterThan(0);
+    expect(runOf(party.world)!.plan.boss).toBe('frost');
+  });
+
+  it('a replay asked for without a dungeon is a cleared one at random, as before; the level is for the whole run, the route the same', () => {
+    const party = makeParty(['krigare']);
+    cleared(party, ['draug', 'frost']);
+    startRun(party.world, party.players[0]!.id, { seed: 11, replay: true }, party.ctx());
+    const a = runOf(party.world)!;
+    expect(['draug', 'frost']).toContain(a.plan.boss);
+    expect(a.plan.replay).toBe(true);
+    const p1 = generateRun(11, { boss: 'draug', level: 0 });
+    const p2 = generateRun(11, { boss: 'draug', level: 1 });
+    expect(p1.route.nodes).toEqual(p2.route.nodes);
+    expect(p1.route.level).toBe(0);
+    expect(p2.route.level).toBe(1);
+  });
+
+  it('the state names the run: the stop, its row and kind, the path walked, the whole route and who has the turn; the end tells the route taken', () => {
+    const party = makeParty(['krigare']);
+    const out = startRun(party.world, party.players[0]!.id, { seed: 5 }, party.ctx());
+    const run = runOf(party.world)!;
+    const snap = out.filter((c) => c.t === 'run' && c.ev === 'state' && c.run).map((c) => (c.t === 'run' && c.ev === 'state' ? c.run! : null)).at(-1)!;
+    expect(snap).toMatchObject({ node: 0, row: 1, kind: 'flock', path: [0], boss: 'draug', finder: party.players[0]!.id, phase: 'stop' });
+    expect(snap.route).toEqual(routeSnap(run.plan.route));
+    expect(snap.choices).toBeUndefined();
+    expect(JSON.stringify(snap)).not.toContain('"zone"');
+    // the end of a run lists the kinds of the stops walked
+    clearStop(party);
+    for (const p of party.players) pickRuna(party.world, p.id, 0, party.ctx());
+    takeRune(party);
+    const ended = endRun(party.world, run, 'leave', party.ctx()).find((c) => c.t === 'run' && c.ev === 'ended')!;
+    expect(ended.t === 'run' && ended.ev === 'ended' && ended.path).toEqual(['flock', run.plan.route.nodes[run.path[1]!]!.kind]);
+  });
+});
+
 describe('the farm feeds the run', () => {
   it('färdkost: the dishes in the bag are taken, in as many slots as the tree gives, and give their buffs', () => {
     const party = makeParty(['krigare']);
@@ -1004,29 +1246,48 @@ describe('the farm feeds the run', () => {
   });
 });
 
+/** Every pack of the stop the run is in falls (as if killed) and the run ticks until the stop is seen to be cleared. */
+function clearStop(party: Party): void {
+  const run = runOf(party.world)!;
+  const area = party.world.areas![run.key]!;
+  const inst = area.saga!;
+  for (const pk of inst.packs) {
+    pk.dead = true;
+    for (const id of pk.members) {
+      delete inst.mobs[id];
+      delete area.animals[id];
+    }
+  }
+  for (let i = 0; i < 6; i++) step(party, false, []);
+}
+
+/** Everyone in the run stands on the väg-runa to a stop of `kind` (the first of them) and stays: when the dwell has passed, the party is in the next stop. */
+function takeRune(party: Party, kind: NodeKind = 'flock'): void {
+  const run = runOf(party.world)!;
+  expect(run.phase).toBe('route');
+  const c = run.vote!.runes.findIndex((r) => r.kind === kind);
+  expect(c, `a rune to a ${kind}`).toBeGreaterThanOrEqual(0);
+  const r = run.vote!.runes[c]!;
+  for (const p of party.players) if (run.party.includes(p.id)) {
+    p.x = px(r.x);
+    p.y = px(r.y);
+  }
+  for (let t = 0; t < ROUTE_DWELL_MS + 300; t += 50) step(party, false, []);
+}
+
 describe('the vote on a runa', () => {
-  /** A party whose first zone is cleared and who stand at the exit, the vote on. */
+  /** A party whose first stop is cleared: the cards of a runa are out (the vote on). */
   function atTheVote(classes: ClassId[] = ['vaktare', 'helare', 'magiker'], longhall = false): Party {
     const party = makeParty(classes, { seed: 6, longhall });
     startRun(party.world, party.players[0]!.id, { seed: 6 }, party.ctx());
     const run = runOf(party.world)!;
     const inst = party.world.areas![run.key]!.saga!;
-    for (const pk of inst.packs) {
-      pk.dead = true;
-      for (const id of pk.members) {
-        delete inst.mobs[id];
-        delete party.world.areas![run.key]!.animals[id];
-      }
-    }
-    for (let i = 0; i < 6; i++) step(party, false, []);
+    expect(run.phase).toBe('stop');
+    expect(run.plan.stops[run.node]!.kind).toBe('flock');
+    clearStop(party);
     expect(inst.gateOpen).toBe(true);
-    const ex = inst.exit;
-    const a0 = party.players[0]!;
-    a0.x = px(ex.x);
-    a0.y = px(ex.y) + TILE;
-    const out = performAction(party.world.areas![run.key]!, a0.id, ex.x, ex.y, party.ctx());
-    expect(out.some((c) => c.t === 'run' && c.ev === 'offer' && c.offer?.cards.length === 3)).toBe(true);
     expect(run.phase).toBe('pick');
+    expect(run.offer!.cards).toHaveLength(3);
     return party;
   }
 
@@ -1045,17 +1306,22 @@ describe('the vote on a runa', () => {
     expect(cards.some((id) => RUNOR.find((x) => x.id === id)!.cls === 'krigare')).toBe(true);
   });
 
-  it('shuts the exit until the packs are down, and the sagafrön for the packs and the zone are paid', () => {
+  it('no väg-runor and no cards until the packs are down, and the sagafrön for the packs and the stop are paid', () => {
     const party = makeParty(['vaktare', 'helare', 'magiker'], { seed: 6 });
     startRun(party.world, party.players[0]!.id, { seed: 6 }, party.ctx());
     const run = runOf(party.world)!;
     const area = party.world.areas![run.key]!;
     const inst = area.saga!;
-    const ex = inst.exit;
-    party.players[0]!.x = px(ex.x);
-    party.players[0]!.y = px(ex.y) + TILE;
-    expect(listen(performAction(area, party.players[0]!.id, ex.x, ex.y, party.ctx()), RUN_T.exitShut)).toBe(true);
-    expect(run.phase).toBe('zone');
+    expect(run.phase).toBe('stop');
+    expect(Object.values(area.objects).some((o) => o.kind === 'run_exit')).toBe(false);
+    // (using a rune that is not there yet is told off)
+    const stray = inst.start;
+    addObject(area, 'run_exit', stray.x + 1, stray.y);
+    party.players[0]!.x = px(stray.x + 1);
+    party.players[0]!.y = px(stray.y) + TILE;
+    expect(listen(performAction(area, party.players[0]!.id, stray.x + 1, stray.y, party.ctx()), RUN_T.exitShut)).toBe(true);
+    delete area.objects[objectAt(area, stray.x + 1, stray.y)!.id];
+    delete area.occupancy[`${stray.x + 1},${stray.y}`];
     // two packs fall: a sagafrö each, to everyone
     for (const i of [0, 1]) {
       inst.packs[i]!.dead = true;
@@ -1066,23 +1332,20 @@ describe('the vote on a runa', () => {
     }
     step(party, false, []);
     for (const p of party.players) expect(readRun(p).seeds).toBe(2 * RUN_SEEDS.pack);
-    // every pack on the way: the gate opens and the zone pays four more, once
-    for (const pk of inst.packs) {
-      pk.dead = true;
-      for (const id of pk.members) {
-        delete inst.mobs[id];
-        delete area.animals[id];
-      }
-    }
-    for (let i = 0; i < 5; i++) step(party, false, []);
+    expect(run.phase).toBe('stop');
+    // every pack on the way: the gate opens, the stop pays three more, once, and the cards are out
+    clearStop(party);
     const required = inst.run!.required.length;
-    const side = inst.packs.length - required;
     expect(inst.gateOpen).toBe(true);
+    expect(run.phase).toBe('pick');
     for (const p of party.players) expect(readRun(p).seeds).toBe(inst.packs.length * RUN_SEEDS.pack + RUN_SEEDS.zone);
-    expect(side).toBeGreaterThanOrEqual(0);
+    expect(inst.packs.length).toBeGreaterThanOrEqual(required);
     expect(run.earned[party.players[0]!.id]).toBe(readRun(party.players[0]!).seeds);
     expect(readRun(party.players[0]!).earned).toBe(readRun(party.players[0]!).seeds);
+    expect(readRun(party.players[0]!).zones).toBe(1);
     for (const g of inst.gate) expect(objectAt(area, g.x, g.y)).toBeUndefined();
+    for (let i = 0; i < 10; i++) step(party, false, []);
+    for (const p of party.players) expect(readRun(p).seeds).toBe(inst.packs.length * RUN_SEEDS.pack + RUN_SEEDS.zone);
   });
 
   it('ends at once with a strict majority', () => {
@@ -1093,9 +1356,10 @@ describe('the vote on a runa', () => {
     pickRuna(party.world, a.id, 1, party.ctx());
     expect(run.phase).toBe('pick');
     pickRuna(party.world, b.id, 1, party.ctx());
-    expect(run.phase).toBe('zone');
-    expect(run.zone).toBe(1);
+    // the cards are done, the runes are out: the party chooses its way
+    expect(run.phase).toBe('route');
     expect(run.runor).toEqual([cards[1]]);
+    expect(run.offer).toBeUndefined();
     void c;
   });
 
@@ -1127,7 +1391,7 @@ describe('the vote on a runa', () => {
     const first = r2.offer!.cards[0]!;
     for (let t = 0; t < RUN_PICK_MS + 200; t += 50) step(quiet, false, []);
     expect(r2.runor).toEqual([first]);
-    expect(r2.zone).toBe(1);
+    expect(r2.phase).toBe('route');
   });
 
   it('a class runa reaches only that class, a party-wide one everybody, and the buffs follow into the next zone', () => {
@@ -1141,22 +1405,22 @@ describe('the vote on a runa', () => {
     expect(inst.run!.buffs[c.id]!.spell.eldboll).toBeCloseTo(0.3);
     expect(inst.run!.buffs[a.id]!.spell.eldboll).toBeUndefined();
     expect(inst.run!.buffs[b.id]!.spell.eldboll).toBeUndefined();
-    // the next vote: a party-wide hp runa
-    run.phase = 'zone';
-    inst.gateOpen = true;
-    a.x = px(inst.exit.x);
-    a.y = px(inst.exit.y) + TILE;
-    performAction(party.world.areas![run.key]!, a.id, inst.exit.x, inst.exit.y, party.ctx());
+    // the next vote: a party-wide hp runa, after the next stop
+    takeRune(party);
+    expect(run.path).toHaveLength(2);
+    clearStop(party);
     expect(run.phase).toBe('pick');
     run.offer!.cards = ['p_hjarta', 'p_kraft', 'p_fro'];
     for (const p of party.players) pickRuna(party.world, p.id, 0, party.ctx());
+    expect(run.runor).toEqual(['m_eld', 'p_hjarta']);
+    takeRune(party);
+    expect(run.path).toHaveLength(3);
     const next = party.world.areas![run.key]!.saga!;
     for (const p of party.players) expect(next.run!.buffs[p.id]!.hp).toBeCloseTo(0.1);
-    expect(run.runor).toEqual(['m_eld', 'p_hjarta']);
-    // and the fighters of the new zone have the health
+    expect(next.run!.buffs[c.id]!.spell.eldboll).toBeCloseTo(0.3);
+    // and the fighters of the new stop have the health
     for (let i = 0; i < 4; i++) step(party, false, []);
-    expect(next.fighters[a.id]!.max).toBe(Math.round((CLASSES.vaktare.hp + 0) * 0 + next.fighters[a.id]!.max));
-    expect(run.zone).toBe(2);
+    expect(next.fighters[a.id]!.max).toBeGreaterThan(fighterMax(a, 'vaktare'));
   });
 
   it('p_flaska hands out two potions, and p_fro raises every later payment by a quarter', () => {
@@ -1169,20 +1433,14 @@ describe('the vote on a runa', () => {
     pickRuna(party.world, p.id, 0, party.ctx());
     expect(potions()).toBe(before + 2);
     expect(run.base[p.id]!.potion ?? 0).toBe(0);
-    const inst = party.world.areas![run.key]!.saga!;
-    expect(inst.run!.buffs[p.id]!.potion).toBeCloseTo(0.15);
-    // p_fro: a pack is worth 1 and gives 1.25 (the quarter is carried, whole seeds are paid), a zone 4 → 5
+    expect(party.world.areas![run.key]!.saga!.run!.buffs[p.id]!.potion).toBeCloseTo(0.15);
+    // the next stop; p_fro: a pack is worth 1 and gives 1.25 (the quarter is carried, whole seeds are paid), a stop 3 → 3.75
+    takeRune(party);
+    expect(party.world.areas![run.key]!.saga!.run!.buffs[p.id]!.potion).toBeCloseTo(0.15);
     run.runor.push('p_fro');
     const seeds = readRun(p).seeds;
-    const area = party.world.areas![run.key]!;
-    for (const pk of inst.packs) {
-      pk.dead = true;
-      for (const id of pk.members) {
-        delete inst.mobs[id];
-        delete area.animals[id];
-      }
-    }
-    for (let i = 0; i < 4; i++) step(party, false, []);
+    const inst = party.world.areas![run.key]!.saga!;
+    clearStop(party);
     const gained = readRun(p).seeds - seeds;
     const n = inst.packs.length;
     expect(gained).toBe(Math.floor((n + RUN_SEEDS.zone) * 1.25 + 1e-9));
@@ -1225,7 +1483,7 @@ describe('the vote on a runa', () => {
     expect(rich.gained).toBeGreaterThanOrEqual(plain.gained + Math.floor(plain.gained * 0.5));
   });
 
-  it('a full bag: the potions of p_flaska land in the zone the player stands in, with the area on the change', () => {
+  it('a full bag: the potions of p_flaska land in the stop the player stands in, with the area on the change', () => {
     const party = atTheVote(['krigare']);
     const run = runOf(party.world)!;
     const p = party.players[0]!;
@@ -1234,7 +1492,7 @@ describe('the vote on a runa', () => {
     run.offer!.cards = ['p_flaska', 'p_fro', 'p_kraft'];
     const farmDrops = Object.keys(party.world.drops).length;
     const out = pickRuna(party.world, p.id, 0, party.ctx());
-    expect(run.zone).toBe(1);
+    expect(run.phase).toBe('route');
     const drop = out.find((c) => c.t === 'drop' && c.drop?.item === 'healing_potion');
     expect(drop).toBeTruthy();
     expect(drop!.t === 'drop' && drop!.area).toBe(run.key);
@@ -1253,6 +1511,312 @@ describe('the vote on a runa', () => {
     expect(run.offer!.cards).toHaveLength(3);
     for (const c of run.offer!.cards) expect(cards).not.toContain(c);
     expect(listen(rerollOffer(party.world, p.id, party.ctx()), RUN_T.noReroll)).toBe(true);
+  });
+});
+
+describe('the vote on the way on (GAME2.md section 2.2)', () => {
+  /** The cards are voted and done: the väg-runor are out and the party stands in the exit room. */
+  function atTheRoute(classes: ClassId[] = ['vaktare', 'helare', 'magiker'], opts: { companion?: boolean } = {}): Party {
+    const party = makeParty(classes, { seed: 6 });
+    startRun(party.world, party.players[0]!.id, { seed: 6, ...(opts.companion === false ? { companion: false } : {}) }, party.ctx());
+    const run = runOf(party.world)!;
+    clearStop(party);
+    for (const p of party.players) pickRuna(party.world, p.id, 0, party.ctx());
+    expect(run.phase).toBe('route');
+    return party;
+  }
+  const stand = (party: Party, p: import('./index.ts').PlayerState, c: number | null): void => {
+    const run = runOf(party.world)!;
+    if (c === null) {
+      const room = run.plan.stops[run.node]!.def.rooms[run.plan.stops[run.node]!.endRoom]!;
+      p.x = px(room.x);
+      p.y = px(room.y);
+    } else {
+      p.x = px(run.vote!.runes[c]!.x);
+      p.y = px(run.vote!.runes[c]!.y);
+    }
+  };
+  const wait = (party: Party, ms: number): void => {
+    for (let t = 0; t < ms; t += 50) step(party, false, []);
+  };
+
+  it('tally: a strict majority ends it at once, everyone having voted ends it, so does the clock; ties are the caller’s', () => {
+    expect(tally([1, 0, 0], 3, { late: false, majority: true })).toBeNull();
+    expect(tally([2, 0, 0], 3, { late: false, majority: true })).toEqual([0]);
+    expect(tally([2, 0, 0], 3, { late: false, majority: false })).toBeNull();
+    expect(tally([1, 1, 1], 3, { late: false, majority: true })).toEqual([0, 1, 2]);
+    expect(tally([1, 1, 0], 3, { late: false, majority: true })).toBeNull();
+    expect(tally([1, 1, 0], 3, { late: true, majority: false })).toEqual([0, 1]);
+    expect(tally([0, 0, 0], 3, { late: true, majority: false })).toEqual([]);
+    expect(tally([0, 0, 0], 0, { late: false, majority: false })).toBeNull();
+    expect(tally([1, 2], 3, { late: false, majority: true })).toEqual([1]);
+  });
+
+  it('the runes appear when the stop is cleared: one for each stop the next row leads to, with its picture, and the state tells who stands where', () => {
+    const party = atTheRoute();
+    const run = runOf(party.world)!;
+    const area = party.world.areas![run.key]!;
+    const next = run.plan.route.nodes[run.node]!.next;
+    expect(run.vote!.runes.map((r) => r.node)).toEqual(next);
+    expect(next.length).toBeGreaterThanOrEqual(2);
+    const room = run.plan.stops[run.node]!.def.rooms[run.plan.stops[run.node]!.endRoom]!;
+    for (const r of run.vote!.runes) {
+      const o = objectAt(area, r.x, r.y)!;
+      expect(o.kind).toBe('run_exit');
+      expect(o.variant).toBe(NODE_KIND_CODE[run.plan.route.nodes[r.node]!.kind]);
+      expect(r.x >= room.x && r.x < room.x + room.w && r.y >= room.y && r.y < room.y + room.h).toBe(true);
+    }
+    // the runes are far enough apart that one is never stood on for another
+    for (const a of run.vote!.runes) for (const b of run.vote!.runes) if (a !== b) expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThan(2 * ROUTE_DISC_RADIUS + 0.4);
+    const [a] = party.players as [import('./index.ts').PlayerState];
+    stand(party, a, 1);
+    const out: Change[] = [];
+    for (let i = 0; i < 4; i++) step(party, false, out);
+    const snap = out.filter((c) => c.t === 'run' && c.ev === 'state' && c.run).map((c) => (c.t === 'run' && c.ev === 'state' ? c.run : null)).at(-1)!;
+    expect(snap.phase).toBe('route');
+    expect(snap.choices!.map((c) => c.node)).toEqual(next);
+    expect(snap.choices![1]!.on).toEqual([a.id]);
+    expect(snap.choices![0]!.on).toEqual([]);
+    expect(snap.routeLeft).toBeGreaterThan(0);
+    expect(snap.routeLeft).toBeLessThanOrEqual(ROUTE_VOTE_MS);
+    expect(snap.route).toHaveLength(run.plan.route.nodes.length);
+    expect(snap.path).toEqual([0]);
+    expect(snap.finder).toBe(a.id);
+  });
+
+  it('all online humans on the same rune end it at once (after the short stay), and the party is in that stop', () => {
+    const party = atTheRoute();
+    const run = runOf(party.world)!;
+    const target = run.vote!.runes[1]!;
+    for (const p of party.players) stand(party, p, 1);
+    wait(party, ROUTE_DWELL_MS - 200);
+    expect(run.phase).toBe('route');
+    wait(party, 400);
+    expect(run.phase).toBe('stop');
+    expect(run.node).toBe(target.node);
+    expect(run.path).toEqual([0, target.node]);
+    for (const p of party.players) expect(p.area).toBe(run.key);
+    expect(run.vote).toBeUndefined();
+    expect(party.world.areas![run.key]!.saga!.run!.kind).toBe(run.plan.route.nodes[target.node]!.kind);
+  });
+
+  it('the most players win; walking over a rune on the way to another is no vote; a step off takes the vote back', () => {
+    const party = atTheRoute();
+    const run = runOf(party.world)!;
+    const [a, b, c] = party.players as [import('./index.ts').PlayerState, import('./index.ts').PlayerState, import('./index.ts').PlayerState];
+    const second = run.vote!.runes[1]!.node;
+    stand(party, a, 0);
+    stand(party, b, 1);
+    stand(party, c, 0);
+    // c only passes over rune 0 and goes on to stand on rune 1 (a and b stay): nobody has been on a rune long enough yet
+    wait(party, 400);
+    stand(party, c, 1);
+    wait(party, 400);
+    expect(run.phase).toBe('route');
+    // a steps off: b and c are two of three on rune 1, but a is not on a rune and the others have stayed: it waits for a
+    stand(party, a, null);
+    wait(party, ROUTE_DWELL_MS + 200);
+    expect(run.phase).toBe('route');
+    expect(run.vote!.on[a.id]).toBeUndefined();
+    // a comes to rune 1 as well: all three, so it ends
+    stand(party, a, 1);
+    wait(party, ROUTE_DWELL_MS + 200);
+    expect(run.node).toBe(second);
+  });
+
+  it('two against one: the most players win, the one on the other rune goes along', () => {
+    const party = atTheRoute();
+    const run = runOf(party.world)!;
+    const [a, b, c] = party.players as [import('./index.ts').PlayerState, import('./index.ts').PlayerState, import('./index.ts').PlayerState];
+    const first = run.vote!.runes[0]!.node;
+    stand(party, a, 1);
+    stand(party, b, 0);
+    stand(party, c, 0);
+    wait(party, ROUTE_DWELL_MS + 300);
+    expect(run.node).toBe(first);
+    for (const p of party.players) expect(p.area).toBe(run.key);
+  });
+
+  it('a tie goes to the Stigfinnare, who rotates each row and is told in the state', () => {
+    const party = atTheRoute(['vaktare', 'helare']);
+    const run = runOf(party.world)!;
+    const [a, b] = party.players as [import('./index.ts').PlayerState, import('./index.ts').PlayerState];
+    expect(finderOf(party.world, run)).toBe(a.id);
+    const second = run.vote!.runes[1]!.node;
+    stand(party, a, 1);
+    stand(party, b, 0);
+    wait(party, ROUTE_DWELL_MS + 300);
+    expect(run.node).toBe(second);
+    // the next row: b has the turn (the party goes straight to a Flock with two ways on: the map is the plan's)
+    expect(finderOf(party.world, run)).toBe(b.id);
+    const wide = run.plan.route.nodes.find((n) => n.kind === 'flock' && n.row >= 2 && n.next.length >= 2)!;
+    enterStop(party.world, run, wide.id, party.ctx());
+    clearStop(party);
+    for (const p of party.players) pickRuna(party.world, p.id, 0, party.ctx());
+    expect(run.phase).toBe('route');
+    const nodes = run.vote!.runes.map((r) => r.node);
+    expect(nodes).toEqual(wide.next);
+    stand(party, a, 0);
+    stand(party, b, 1);
+    wait(party, ROUTE_DWELL_MS + 300);
+    expect(run.node).toBe(nodes[1]);
+    // and round again: a
+    expect(finderOf(party.world, run)).toBe(a.id);
+  });
+
+  it('20 seconds after the first player stepped onto a rune the vote ends with those who stand on one; nobody on a rune: it waits', () => {
+    const party = atTheRoute();
+    const run = runOf(party.world)!;
+    const [a, b] = party.players as [import('./index.ts').PlayerState, import('./index.ts').PlayerState];
+    wait(party, ROUTE_VOTE_MS + 5_000);
+    expect(run.phase).toBe('route');
+    expect(run.vote!.first).toBeUndefined();
+    const third = run.vote!.runes[0]!.node;
+    stand(party, a, 0);
+    wait(party, 500);
+    expect(run.vote!.first).toBeDefined();
+    // b arrives a little later on another rune; c stays away. At 20 s after the first: one against one, a tie, a is the Stigfinnare
+    wait(party, 5_000);
+    stand(party, b, 1);
+    wait(party, ROUTE_VOTE_MS - 5_500 - 100);
+    expect(run.phase).toBe('route');
+    wait(party, 700);
+    expect(run.node).toBe(third);
+    for (const p of party.players) expect(p.area).toBe(run.key);
+  });
+
+  it('followers never vote, and someone offline does not hold the vote up', () => {
+    const party = atTheRoute(['krigare']);
+    const run = runOf(party.world)!;
+    const comp = party.world.players[run.companions[0]!]!;
+    const target = run.vote!.runes[0]!.node;
+    // the Hirdmannen stands on rune 1 as long as it likes: it is not counted
+    stand(party, comp, 1);
+    wait(party, ROUTE_VOTE_MS + 2_000);
+    expect(run.phase).toBe('route');
+    expect(run.vote!.on[comp.id]).toBeUndefined();
+    stand(party, party.players[0]!, 0);
+    wait(party, ROUTE_DWELL_MS + 300);
+    expect(run.node).toBe(target);
+    // offline: a pair, one of them has lost the connection
+    const duo = atTheRoute(['krigare', 'magiker'], { companion: false });
+    const r2 = runOf(duo.world)!;
+    duo.players[1]!.online = false;
+    stand(duo, duo.players[0]!, 1);
+    wait(duo, ROUTE_DWELL_MS + 300);
+    expect(r2.node).toBe(r2.path[1]);
+    expect(r2.path).toHaveLength(2);
+  });
+
+  it('using the rune (the action key) counts at once, for those who press rather than wait', () => {
+    const party = atTheRoute(['krigare']);
+    const run = runOf(party.world)!;
+    const a = party.players[0]!;
+    const r = run.vote!.runes[1]!;
+    stand(party, a, 1);
+    step(party, false, []);
+    expect(run.phase).toBe('route');
+    performAction(party.world.areas![run.key]!, a.id, r.x, r.y, party.ctx());
+    expect(run.node).toBe(r.node);
+  });
+
+  it('a friend who joins while the cards are out waits on the farm and is in the next stop; one who joins on the way is in the exit room', () => {
+    const party = makeParty(['vaktare', 'helare', 'krigare']);
+    const [a, , c] = party.players as [import('./index.ts').PlayerState, import('./index.ts').PlayerState, import('./index.ts').PlayerState];
+    placeIn(party.world, c, 'a:0,1', 5, 5, 'down', []);
+    startRun(party.world, a.id, { seed: 6 }, party.ctx());
+    const run = runOf(party.world)!;
+    clearStop(party);
+    expect(run.phase).toBe('pick');
+    const front = archFrontOf(party.world);
+    placeIn(party.world, c, 'farm', front.x, front.y, 'down', []);
+    joinRun(party.world, c.id, party.ctx());
+    expect(c.area).toBe('farm');
+    for (const p of party.players.slice(0, 2)) pickRuna(party.world, p.id, 0, party.ctx());
+    // the voters now are the two in the stop; c is not asked for
+    expect(run.phase).toBe('route');
+    expect(run.party).toContain(c.id);
+    for (const p of party.players.slice(0, 2)) stand(party, p, 0);
+    wait(party, ROUTE_DWELL_MS + 300);
+    expect(run.path).toHaveLength(2);
+    expect(c.area).toBe(run.key);
+  });
+
+  it('a Vilosten gives 40 % of everyone’s health and gets the fallen up; no cards, the runes are out at once', () => {
+    const party = makeParty(['vaktare', 'helare']);
+    startRun(party.world, party.players[0]!.id, { seed: 6, companion: false }, party.ctx());
+    const run = runOf(party.world)!;
+    clearStop(party);
+    for (const p of party.players) pickRuna(party.world, p.id, 0, party.ctx());
+    // put the party straight into a Vilosten of the plan (the map is the plan's; the way there is not what this is about)
+    const restNode = run.plan.route.nodes.find((n) => n.kind === 'rest' && n.row >= 2 && n.row <= 4)!;
+    expect(enterStop(party.world, run, restNode.id, party.ctx()).length).toBeGreaterThan(0);
+    const inst = party.world.areas![run.key]!.saga!;
+    const [a, b] = party.players as [import('./index.ts').PlayerState, import('./index.ts').PlayerState];
+    expect(run.plan.stops[run.node]!.kind).toBe('rest');
+    wait(party, 100);
+    // (the heal came at once, on the first tick: now they are hurt again, one of them down, and it does not come twice)
+    inst.fighters[a.id]!.hp = 20;
+    inst.fighters[b.id]!.hp = 0;
+    inst.fighters[b.id]!.down = party.now;
+    wait(party, 500);
+    expect(inst.fighters[a.id]!.hp).toBeLessThan(40);
+    expect(inst.fighters[b.id]!.down).toBeDefined();
+    // a new arrival (the stop entered anew) heals 40 % of the maximum, and gets the fallen up
+    inst.fighters[a.id]!.hp = 20;
+    run.paid.delete(`${run.node}:heal`);
+    wait(party, 50);
+    expect(Math.abs(inst.fighters[a.id]!.hp - Math.min(inst.fighters[a.id]!.max, 20 + Math.round(inst.fighters[a.id]!.max * VILOSTEN_HEAL)))).toBeLessThan(1);
+    expect(inst.fighters[b.id]!.down).toBeUndefined();
+    expect(Math.abs(inst.fighters[b.id]!.hp - Math.round(inst.fighters[b.id]!.max * VILOSTEN_HEAL))).toBeLessThan(1);
+    // no cards at a Vilosten; the runes are out at once; and it is no cleared fight: no sagafrön for the stop
+    expect(run.phase).toBe('route');
+    expect(run.offer).toBeUndefined();
+    expect(run.vote!.runes.length).toBeGreaterThanOrEqual(1);
+    expect(readRun(a).zones).toBe(1);
+  });
+});
+
+describe('the bots choose the way on (runbot.ts)', () => {
+  /** The route phase with one bot human (no Hirdmannen); returns the stop it walked to. */
+  function walkedTo(style: 'careful' | 'clumsy', hurt: boolean, rnd?: () => number): { node: number; kind: string; kinds: string[] } {
+    const party = makeParty(['krigare'], { seed: 6, style });
+    const me = party.players[0]!;
+    if (rnd) party.minds.get(me.id)!.rnd = rnd;
+    startRun(party.world, me.id, { seed: 6, companion: false }, party.ctx());
+    const run = runOf(party.world)!;
+    clearStop(party);
+    pickRuna(party.world, me.id, 0, party.ctx());
+    expect(run.phase).toBe('route');
+    const inst = party.world.areas![run.key]!.saga!;
+    const kinds = inst.run!.exits!.map((e) => e.kind);
+    expect(kinds.length).toBeGreaterThanOrEqual(2);
+    const hp = (): void => {
+      const f = inst.fighters[me.id]!;
+      f.hp = hurt ? Math.round(f.max * 0.4) : f.max;
+    };
+    // (it is only asked where to go: its health is held at what the test says while it walks)
+    for (let t = 0; t < 300_000 && run.phase === 'route'; t += 50) {
+      hp();
+      step(party, true, []);
+    }
+    expect(run.phase).toBe('stop');
+    return { node: run.node, kind: run.plan.route.nodes[run.node]!.kind, kinds };
+  }
+
+  it('the careful bot takes the safe lane: a Vilosten when it is hurt and there is one, else a fight', () => {
+    const hurt = walkedTo('careful', true);
+    const fine = walkedTo('careful', false);
+    expect(hurt.kinds).toEqual(fine.kinds);
+    expect(fine.kind).toBe('flock');
+    expect(hurt.kind).toBe(hurt.kinds.includes('rest') ? 'rest' : 'flock');
+  });
+
+  it('the clumsy bot takes a random lane, a different one for a different roll, and stops on its rune', () => {
+    const low = walkedTo('clumsy', false, () => 0.01);
+    const high = walkedTo('clumsy', false, () => 0.99);
+    expect(low.kinds).toEqual(high.kinds);
+    expect(low.node).not.toBe(high.node);
   });
 });
 
@@ -1340,7 +1904,7 @@ describe('the clock, the wipe and the end', () => {
     }
     // the world does not tick at all with nobody online (as always): the clock has not moved
     expect(run.elapsed).toBe(e);
-    expect(run.phase).toBe('zone');
+    expect(run.phase).toBe('stop');
   });
 
   it('a wipe ends the run after the pause: everyone at the farm with their bag, coins and sagafrön', () => {
@@ -1404,17 +1968,17 @@ describe('the clock, the wipe and the end', () => {
     const party = makeParty(['vaktare', 'helare', 'magiker'], { seed: 6 });
     startRun(party.world, party.players[0]!.id, { seed: 6 }, party.ctx());
     const run = runOf(party.world)!;
-    // straight to the boss's zone (the map is the plan's; the packs are not what this is about)
-    const bossPlan = run.plan.zones[3]!;
-    expect(bossPlan.kind).toBe('boss');
+    // straight to the boss's stop (the map is the plan's; the packs and the route are not what this is about)
+    const bossNode = run.plan.stops.length - 1;
+    expect(run.plan.stops[bossNode]!.kind).toBe('boss');
     const key = 'saga:runlab-boss';
-    const world = buildZone(run.plan, 3, key);
-    world.saga!.run = { ...party.world.areas![run.key]!.saga!.run!, zone: 3 };
+    const world = buildStop(run.plan, bossNode, key);
+    world.saga!.run = { ...party.world.areas![run.key]!.saga!.run!, node: bossNode, row: ROUTE_ROWS, kind: 'boss' };
     delete party.world.areas![run.key];
     party.world.areas![key] = world;
     getArea(party.world, key);
     run.key = key;
-    run.zone = 3;
+    run.node = bossNode;
     for (const p of party.players) placeIn(party.world, p, key, world.saga!.start.x, world.saga!.start.y, 'up', []);
     for (let i = 0; i < 4; i++) step(party, false, []);
     const inst = world.saga!;
@@ -1453,17 +2017,18 @@ describe('the clock, the wipe and the end', () => {
     for (const p of party.players) expect(p.area).toBe('farm');
   });
 
-  /** The party stands in the boss's zone (the plan's own map), the boss at one health. */
+  /** The party stands in the boss's stop (the plan's own map), the boss at one health. */
   function atTheBoss(party: Party): { run: NonNullable<ReturnType<typeof runOf>>; inst: NonNullable<WorldState['saga']>; world: WorldState; boss: { id: number } } {
     const run = runOf(party.world)!;
     const key = 'saga:runlab-boss';
-    const world = buildZone(run.plan, 3, key);
-    world.saga!.run = { ...party.world.areas![run.key]!.saga!.run!, zone: 3 };
+    const bossNode = run.plan.stops.length - 1;
+    const world = buildStop(run.plan, bossNode, key);
+    world.saga!.run = { ...party.world.areas![run.key]!.saga!.run!, node: bossNode, row: ROUTE_ROWS, kind: 'boss' };
     delete party.world.areas![run.key];
     party.world.areas![key] = world;
     getArea(party.world, key);
     run.key = key;
-    run.zone = 3;
+    run.node = bossNode;
     for (const p of [...party.players, ...run.companions.map((id) => party.world.players[id]!)]) if (p.online) placeIn(party.world, p, key, world.saga!.start.x, world.saga!.start.y, 'up', []);
     for (let i = 0; i < 4; i++) step(party, false, []);
     const inst = world.saga!;
@@ -1740,137 +2305,6 @@ describe('saves', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Whole runs, played by bots
-// ---------------------------------------------------------------------------
-
-describe('bot parties play whole runs', () => {
-  const FAMILIES: [string, ClassId[], boolean][] = [
-    ['en spelare + Hirdmannen', ['krigare'], false],
-    ['två spelare', ['vaktare', 'helare'], false],
-    ['tre spelare', ['vaktare', 'helare', 'magiker'], false],
-    ['fyra spelare', ['vaktare', 'helare', 'krigare', 'magiker'], true],
-  ];
-  const rows: string[] = [];
-  const SEEDS = [1, 2, 3];
-
-  for (const [label, classes, longhall] of FAMILIES) {
-    for (const style of ['careful', 'clumsy'] as const) {
-      it(`${label}, ${style}: finishes inside the cap (${SEEDS.length} runs)`, { timeout: 120_000 }, () => {
-        const mins: number[] = [];
-        const family: number[] = [];
-        let wins = 0;
-        for (const seed of SEEDS) {
-          const party = makeParty(classes, { style, seed, longhall: longhall || classes.length === 4, level: 3 });
-          const r = playRun(party, { seed });
-          // the tuning target: no party takes more than the 30 minutes to the boss, and nothing is ever stuck
-          expect(['win', 'wipe']).toContain(r.outcome);
-          expect(r.ms).toBeLessThan(RUN_MAX_MS);
-          if (r.outcome === 'win') {
-            wins++;
-            mins.push(r.winMs! / 60_000);
-            family.push((r.winMs! / 60_000) * 2.5);
-            for (const p of party.players) {
-              expect(readRun(p).wins).toBe(1);
-              expect(readRun(p).seeds).toBeGreaterThan(RUN_SEEDS.bossFirst);
-              expect(p.saga!.cleared).toContain('draug');
-              expect(p.area).toBe('farm');
-            }
-          }
-        }
-        if (style === 'careful') expect(wins).toBe(SEEDS.length);
-        else expect(wins).toBeGreaterThanOrEqual(2);
-        const avg = mins.reduce((a, b) => a + b, 0) / Math.max(1, mins.length);
-        rows.push(`${label.padEnd(24)} ${style.padEnd(8)} ${wins}/${SEEDS.length} wins   ${avg.toFixed(1).padStart(5)} min (min ${Math.min(...mins).toFixed(1)}, max ${Math.max(...mins).toFixed(1)})${style === 'careful' ? `   x2.5 (kids): ${(avg * 2.5).toFixed(0)} min` : ''}`);
-        void family;
-        // the boss falls inside the 30 minutes at the pace of the clumsy bot (the kids), and fast with the careful ones
-        expect(avg).toBeLessThan(style === 'careful' ? 15 : 28);
-        expect(avg).toBeGreaterThan(style === 'careful' ? 4 : 10);
-      });
-    }
-  }
-
-  // the quick win for solo play: the clumsy (kid-like) bot wins at least 70 % of its runs, on every class alone and in a pair without a healer, with no longhouse on the farm
-  const SOLO_SEEDS = Array.from({ length: 10 }, (_, i) => i + 1);
-  const SOLO: [string, ClassId[]][] = [
-    ['ensam väktare', ['vaktare']],
-    ['ensam helare', ['helare']],
-    ['ensam krigare', ['krigare']],
-    ['ensam magiker', ['magiker']],
-    ['krigare + magiker', ['krigare', 'magiker']],
-  ];
-  for (const [label, classes] of SOLO) {
-    it(`${label}, clumsy, no longhouse: wins at least 7 of ${SOLO_SEEDS.length} with the Hirdmannen, in 10-30 minutes`, { timeout: 120_000 }, async () => {
-      let wins = 0;
-      const mins: number[] = [];
-      for (const seed of SOLO_SEEDS) {
-        // let the test runner report in between: ten whole runs in a row would starve its worker
-        await new Promise((r) => setImmediate(r));
-        const party = makeParty(classes, { style: 'clumsy', seed, level: 3 });
-        const r = playRun(party, { seed });
-        expect(unlocksOf(party.world).longhall).toBe(false);
-        if (r.outcome === 'win') {
-          wins++;
-          mins.push(r.winMs! / 60_000);
-        }
-      }
-      const avg = mins.reduce((a, b) => a + b, 0) / Math.max(1, mins.length);
-      expect(wins).toBeGreaterThanOrEqual(7);
-      expect(avg).toBeGreaterThan(10);
-      expect(avg).toBeLessThan(30);
-    });
-  }
-
-  // Lätt (GAME2.md 5.3/5.4): the clumsy (kid-like) bot with the Hirdmannen wins at least 95 % of its runs, none of them ends on a wipe
-  const LATT_SEEDS = Array.from({ length: 12 }, (_, i) => i + 1);
-  const LATT_PARTIES: [string, ClassId[]][] = [...SOLO, ['väktare + helare', ['vaktare', 'helare']]];
-  for (const [label, classes] of LATT_PARTIES.slice(0, 5)) {
-    it(`${label}, clumsy, Lätt: wins at least 95 % of ${LATT_SEEDS.length} runs, none ends on a wipe, in 8-22 minutes`, { timeout: 120_000 }, async () => {
-      let wins = 0;
-      const mins: number[] = [];
-      for (const seed of LATT_SEEDS) {
-        await new Promise((r) => setImmediate(r));
-        const party = makeParty(classes, { style: 'clumsy', seed, level: 3 });
-        const r = playRun(party, { seed, level: 0 });
-        expect(r.outcome).not.toBe('wipe');
-        for (const p of party.players) expect(readRun(p).wipes).toBe(0);
-        if (r.outcome === 'win') {
-          wins++;
-          mins.push(r.winMs! / 60_000);
-        }
-      }
-      expect(wins / LATT_SEEDS.length).toBeGreaterThanOrEqual(0.95);
-      const avg = mins.reduce((a, b) => a + b, 0) / Math.max(1, mins.length);
-      expect(avg).toBeGreaterThan(8);
-      expect(avg).toBeLessThan(22);
-    });
-  }
-
-  it('prints the bot minutes per run', () => {
-    // eslint-disable-next-line no-console
-    console.log(`\nBot minutes until the boss falls (level 3, starter set, chapter 1):\n${rows.join('\n')}\n`);
-    expect(rows.length).toBe(FAMILIES.length * 2);
-  });
-
-  it('a run is different every time: three runs of one chapter have different chains, packs and runor offers', { timeout: 120_000 }, () => {
-    const chains = new Set<string>();
-    const offers = new Set<string>();
-    for (const seed of [11, 12, 13]) {
-      const party = makeParty(['vaktare', 'helare', 'magiker'], { seed });
-      const r = playRun(party, { seed });
-      expect(r.outcome).toBe('win');
-      const run = runOf(party.world);
-      void run;
-      const plan = generateRun(seed, { boss: 'draug' });
-      chains.add(plan.zones.slice(0, 3).map((z) => `${z.biome}${z.flipX ? 'x' : ''}${z.flipY ? 'y' : ''}${z.def.rooms.length}`).join('>'));
-      offers.add(JSON.stringify(offerRunor(mulberry32(seed), ['vaktare', 'helare', 'magiker'], [])));
-    }
-    expect(chains.size).toBe(3);
-    expect(offers.size).toBe(3);
-  });
-});
-
-
 describe('Lätt and the Sagoandan (GAME2.md 4.5 and 5.3)', () => {
   const wipeIt = (l: ReturnType<typeof lab>): Change[] => {
     for (const f of Object.values(l.inst.fighters)) {
@@ -1989,7 +2423,7 @@ describe('Lätt and the Sagoandan (GAME2.md 4.5 and 5.3)', () => {
     expect(mob.hp).toBe(mob.max);
     expect(l.run.spirit).toBe(0);
     expect(l.run.spiritUsed).toBe(1);
-    expect(l.run.phase).toBe('zone');
+    expect(l.run.phase).toBe('stop');
     // the next wipe is the end
     const out2 = wipeIt(l);
     expect(out2.some((c) => c.t === 'banner' && c.kind === 'wipe')).toBe(true);
@@ -1999,7 +2433,7 @@ describe('Lätt and the Sagoandan (GAME2.md 4.5 and 5.3)', () => {
     expect(ended && ended.t === 'run' && ended.ev === 'ended' ? [ended.level, ended.spiritUsed] : null).toEqual([1, 1]);
   });
 
-  it('Lätt: three Sagoandans, then a wipe still never ends the run (everyone is up, free); one more Sagoande after each zone', () => {
+  it('Lätt: three Sagoandans, then a wipe still never ends the run (everyone is up, free); one more Sagoande after each stop', () => {
     const l = lab({}, ['magiker', 'helare'], 0);
     expect(l.run.spirit).toBe(3);
     for (let n = 1; n <= 3; n++) {
@@ -2016,8 +2450,8 @@ describe('Lätt and the Sagoandan (GAME2.md 4.5 and 5.3)', () => {
       expect(out.some((c) => c.t === 'banner' && c.text === RUN_T.spiritFree)).toBe(true);
       for (const f of Object.values(l.inst.fighters)) expect(f.hp).toBe(f.max);
     }
-    expect(l.run.phase).toBe('zone');
-    // clearing a zone and voting brings the next one: a Sagoande more
+    expect(l.run.phase).toBe('stop');
+    // clearing a stop, voting on the runa and choosing the way brings the next stop: a Sagoande more
     for (const pk of l.inst.packs) {
       pk.dead = true;
       for (const id of pk.members) {
@@ -2027,13 +2461,10 @@ describe('Lätt and the Sagoandan (GAME2.md 4.5 and 5.3)', () => {
     }
     l.go(200);
     expect(l.inst.gateOpen).toBe(true);
-    const ex = l.inst.exit;
-    l.p.x = px(ex.x);
-    l.p.y = px(ex.y) + TILE;
-    performAction(l.area, l.p.id, ex.x, ex.y, l.ctx());
     expect(l.run.phase).toBe('pick');
     for (const q of l.party.players) pickRuna(l.party.world, q.id, 0, l.ctx());
-    expect(l.run.zone).toBe(1);
+    takeRune(l.party);
+    expect(l.run.path).toHaveLength(2);
     expect(l.run.spirit).toBe(1);
     expect(l.party.world.areas![l.run.key]!.saga!.run!.spirit).toBe(1);
   });
