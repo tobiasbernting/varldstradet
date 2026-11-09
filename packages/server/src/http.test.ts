@@ -72,7 +72,7 @@ describe('the gate', () => {
     const login = await post('/admin/login', { password: PW });
     expect(login.status).toBe(303);
     const parent = cookieFrom(login);
-    expect(parent).toMatch(/^lg_parent=/);
+    expect(parent).toMatch(/^vt_parent=/);
     expect((await get('/admin', parent)).status).toBe(200);
 
     // forms from other sites are refused
@@ -94,7 +94,7 @@ describe('the gate', () => {
     const joined = await post('/join', { code: token!, name: 'Annas iPad' });
     expect(joined.headers.get('location')).toBe('/access');
     const guest = cookieFrom(joined);
-    expect(guest).toMatch(/^lg_device=/);
+    expect(guest).toMatch(/^vt_device=/);
     expect(await (await get('/access', guest)).text()).toContain('måste godkänna');
     expect((await get('/api/players', guest)).status).toBe(403);
     expect(await openSocket(guest)).toEqual({ refused: 403 });
@@ -138,7 +138,7 @@ describe('the gate', () => {
     const parent = cookieFrom(await post('/admin/login', { password: PW }));
     const res = await post('/admin/access/this-device', { name: 'Barnens platta' }, parent);
     const device = cookieFrom(res);
-    expect(device).toMatch(/^lg_device=/);
+    expect(device).toMatch(/^vt_device=/);
     expect((await get('/api/players', device)).status).toBe(200);
     await post('/admin/logout', {}, parent);
     expect((await get('/admin', parent)).headers.get('location')).toBe('/admin/login');
@@ -317,7 +317,7 @@ describe('a native client (bearer token)', () => {
 
     // the parent page never takes a bearer: not a device's, not a parent session's
     expect((await api('/admin', { token: j.token })).headers.get('location')).toBe('/admin/login');
-    const session = parent.replace(/^lg_parent=/, '');
+    const session = parent.replace(/^vt_parent=/, '');
     expect((await api('/admin', { token: session })).headers.get('location')).toBe('/admin/login');
     expect((await api('/admin/skipday', { method: 'POST', token: session })).status).toBe(401);
     expect((await api('/admin/access/mode', { method: 'POST', token: session, body: { mode: 'closed' } })).status).toBe(401);
@@ -325,7 +325,7 @@ describe('a native client (bearer token)', () => {
 
     // the socket: bearer on the upgrade, no Origin; the header wins over a cookie
     expect(await socket({})).toEqual({ refused: 403 });
-    expect(await socket({ authorization: 'Bearer nope', cookie: `lg_device=${j.token}` })).toEqual({ refused: 403 });
+    expect(await socket({ authorization: 'Bearer nope', cookie: `vt_device=${j.token}` })).toEqual({ refused: 403 });
     expect(await socket({ authorization: `Bearer ${j.token}`, origin: 'https://evil.example' })).toEqual({ refused: 403 });
     const s = await socket({ authorization: `Bearer ${j.token}` });
     if (!('ws' in s)) throw new Error('refused');
