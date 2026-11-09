@@ -2318,3 +2318,9 @@ button.pick {
   color: #6a5a7a;
   text-shadow: none;
 }
+
+/* the loot window is the news: nothing else may print over its title */
+body:has(.saga-panel.loot) .run-note,
+body:has(.saga-panel.loot) .saga-yell {
+  display: none;
+}

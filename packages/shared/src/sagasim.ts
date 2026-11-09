@@ -1194,7 +1194,7 @@ function mobDown(h: Here, m: SagaMob, by: string, ctx: SimCtx, out: Change[]): v
       }
       names.push(p.name);
       if (!h.inst.run) awardTrophy(h.farm, p, d.boss, RUN_LEVEL_MEDEL, out); // (a run's trophies come with its win, at its level)
-      out.push({ t: 'banner', to: p.id, area: h.key, text: fmt(T.sagaBossDown, { boss: boss.name }), sub: fmt(T.sagaCleared, { dungeon: d.name }), kind: 'cleared' });
+      out.push({ t: 'banner', to: p.id, area: h.key, text: fmt(T.sagaBossDown, { boss: boss.name }), sub: h.inst.run ? RUN_T.winSub : fmt(T.sagaCleared, { dungeon: d.name }), kind: 'cleared' });
     }
     out.push(toast(null, fmt(T.sagaFamilyWin, { names: names.join(' och '), boss: boss.name })));
     // a run keeps its own records (the dungeon's best time is the dungeon's)
