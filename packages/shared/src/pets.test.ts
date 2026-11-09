@@ -422,6 +422,7 @@ describe('pets in a fight', () => {
 
   it('find (rav): adds a fraction to the sagafrön a run pays, while it is with its owner and not scared', () => {
     const l = lab('rav');
+    l.p.pets!.owned.rav!.since = Date.now();
     expect(petSeedBonus(l.party.world, l.p, 2)).toBe(0); // (found a moment ago: not digging yet)
     l.p.pets!.owned.rav!.since -= 120_000;
     expect(petSeedBonus(l.party.world, l.p, 2)).toBeCloseTo(PETS.rav!.trick.kind === 'find' ? PETS.rav!.trick.seeds : 0);
@@ -541,7 +542,8 @@ describe('pets in a fight', () => {
       return mob.max - mob.hp;
     };
     expect(bites(3)).toBeLessThan(bites(2));
-    expect(bites(4)).toBeLessThan(bites(3));
+    expect(bites(4)).toBeLessThanOrEqual(bites(3)); // (a bite is never under 1-2 damage, so the two hardest can tie)
+    expect(PET_LEVEL_MUL[4]!).toBeLessThan(PET_LEVEL_MUL[3]!);
   });
 
   it('the pet shows as an animal with a state the HUD can read, and that state is sent when it changes', () => {

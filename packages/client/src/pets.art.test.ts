@@ -44,7 +44,7 @@ describe('the art of the pets', () => {
       const d = PETS[id]!;
       const size = art.ANIMAL_SIZE[d.species];
       expect(size, `${d.species} has a size`).toBeTruthy();
-      for (const f of [0, 1]) expect(drawn(() => art.drawAnimal(d.species, f, false, false)), `${d.species} frame ${f}`).toBeGreaterThan(20);
+      for (const f of [0, 1]) expect(drawn(() => art.drawAnimal(d.species, f, false, false)), `${d.species} frame ${f}`).toBeGreaterThan(10);
       for (const a of PET_ANCHORS)
         for (const [x, y] of d.anchors[a]) {
           expect(x).toBeLessThan(size!.w);

@@ -314,7 +314,7 @@ export class RunUi {
     });
     document.addEventListener('focusin', (e) => {
       const t = own(e.target);
-      if (t && !this.quiet && (e.target as HTMLElement).matches?.(':focus-visible') && (this.modal?.contains(t) || this.bar.contains(t) || this.vote.contains(t) || this.runorStrip === t)) this.showInfo(t);
+      if (t && !this.quiet && (e.target as HTMLElement).matches?.(':focus-visible') && (this.modal?.contains(t) || this.bar.contains(t) || this.vote.contains(t) || this.runorStrip === t || t.classList.contains('pet-toggle'))) this.showInfo(t);
     });
     document.addEventListener('focusout', (e) => {
       if (this.infoFor && e.target === this.infoFor) this.hideInfo();

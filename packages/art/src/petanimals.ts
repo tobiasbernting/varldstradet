@@ -8,12 +8,26 @@ type Draw = (p: Px, f: number, v?: number) => void;
 const K = '#1e1a22';
 
 /** Legs that take turns: x of the back and the front leg on frame f. */
-const stride = (f: number, back: number, front: number, reach = 1): [number, number] => (f ? [back + reach, front - reach] : [back, front]);
+const stride = (f: number, back: number, front: number, reach = 2): [number, number] => (f ? [back + reach, front - reach] : [back, front]);
 
 /** A big friendly eye: dark, with a light in it. */
 const eye = (p: Px, x: number, y: number, c = K): void => {
   p.rect(x, y, 2, 2, c).px(x + 1, y, '#ffffff');
 };
+
+function pet_korp(p: Px, f: number): void {
+  // a raven: glossy blue-black, a thick beak, a bright eye, wings folded, hopping on thin legs
+  const c = pal('#0e0c18', '#1c1a30', '#2e2c4e', '#4a4878', '#7674a8');
+  const hop = f ? 1 : 0;
+  p.rect(8, 12 - hop, 1, 3 + hop, '#4a3a30').rect(12, 12 + hop - 1, 1, 3 - hop + 1, '#4a3a30'); // legs
+  p.rect(7, 14, 3, 1, '#4a3a30').rect(11, 14, 3, 1, '#4a3a30'); // feet
+  p.rect(0, 8, 5, 3, c.d).rect(0, 10, 4, 2, c.d2).rect(2, 9, 3, 1, c.b); // tail feathers
+  lump(p, 3, 3 - hop, 12, 9, c, 0.2, 251, 0.3); // the plump body
+  p.rect(4, 6 - hop, 8, 4, c.b).rect(5, 7 - hop, 6, 1, c.l).rect(5, 9 - hop, 7, 1, c.d).px(4, 9 - hop, c.d2); // a folded wing with feather lines
+  lump(p, 11, 0, 7, 7, c, 0.15, 252, 0.35); // the head
+  p.rect(16, 3, 4, 3, '#3a3a46').rect(16, 3, 4, 1, '#6a6a78').rect(17, 5, 3, 1, '#22222c'); // a thick beak
+  p.rect(14, 2, 2, 2, '#e8e8f4').px(15, 3, K); // an eye you can see
+}
 
 function pet_bear(p: Px, f: number): void {
   // a young brown bear: round, soft, with a tan muzzle and little round ears
@@ -57,22 +71,23 @@ function pet_wolf(p: Px, f: number): void {
 }
 
 function pet_lynx(p: Px, f: number): void {
-  // a young lynx: tufted ears, cheek ruffs, spots, a stubby black-tipped tail, big paws
-  const fur = pal('#6a4a28', '#8a6a3c', '#b08c58', '#cdae7c', '#e8d0a4');
+  // a young lynx: black-tipped tufted ears, a dark-striped face, white chest, bold spots, a stubby black-tipped tail, big paws
+  const fur = pal('#5a3a1c', '#7c5628', '#a87838', '#cc9c58', '#e8c488');
+  const white = '#f6ecd8';
   const [b, fr] = stride(f, 3, 11);
-  p.rect(b, 8, 3, 5, fur.d).rect(b + 3, 8, 2, 5, fur.b).rect(b - 1, 12, 4, 1, fur.l);
-  p.rect(fr - 2, 8, 2, 5, fur.d).rect(fr, 8, 3, 5, fur.b).rect(fr, 12, 4, 1, fur.l);
+  p.rect(b, 8, 3, 5, fur.d).rect(b + 3, 8, 2, 5, fur.b).rect(b - 1, 12, 4, 2, white);
+  p.rect(fr - 2, 8, 2, 5, fur.d).rect(fr, 8, 3, 5, fur.b).rect(fr, 12, 4, 2, white);
   lump(p, 1, 3, 12, 6, fur, 0.2, 221, 0.3);
-  p.rect(0, 5, 2, 3, fur.b).rect(0, 7, 2, 1, K); // short tail with a black tip
-  for (const [x, y] of [[4, 5], [7, 4], [9, 6], [5, 7], [11, 5]] as const) p.px(x, y, fur.d);
-  p.rect(5, 8, 6, 1, '#efe4cc'); // pale belly
+  p.rect(0, 4, 2, 3, fur.b).rect(0, 6, 2, 1, K); // short tail with a black tip
+  for (const [x, y] of [[3, 4], [6, 4], [9, 5], [4, 6], [7, 7], [11, 6]] as const) p.rect(x, y, 2, 1, fur.d2);
+  p.rect(4, 8, 6, 1, white); // pale belly
   lump(p, 10, 1, 8, 8, fur, 0.15, 222, 0.35);
-  p.rect(11, 0, 2, 3, fur.b).rect(11, 0, 1, 2, K).px(12, 1, '#d8909a'); // tufted ears
-  p.rect(15, 0, 2, 3, fur.d).rect(16, 0, 1, 2, K);
-  p.rect(10, 6, 2, 3, fur.l2).rect(16, 6, 2, 3, fur.l2); // cheek ruffs
-  p.rect(14, 5, 3, 3, '#efe4cc').px(16, 5, '#d8909a'); // muzzle and nose
-  eye(p, 13, 3, '#3a2a14');
-  p.px(13, 3, '#e8d050');
+  p.rect(11, 0, 2, 3, fur.b).px(11, 0, K).px(12, 0, K).px(12, 1, '#e8a0a8'); // tufted ears, black tips
+  p.rect(15, 0, 2, 3, fur.d).px(15, 0, K).px(16, 0, K);
+  p.rect(10, 6, 2, 3, white).rect(16, 6, 2, 3, white); // cheek ruffs
+  p.rect(10, 5, 2, 1, fur.d2).rect(10, 7, 1, 1, K); // dark face stripes
+  p.rect(14, 5, 3, 3, white).rect(16, 5, 1, 1, '#e87890').px(15, 7, K); // muzzle, nose and mouth
+  p.rect(12, 3, 3, 2, '#f0d84a').px(13, 3, K).px(13, 4, K); // a big yellow eye with a slit pupil
 }
 
 function pet_goat(p: Px, f: number): void {
@@ -112,9 +127,10 @@ function pet_fox(p: Px, f: number): void {
   eye(p, 13, 4);
 }
 
-export const PET_DRAW: Record<string, Draw> = { pet_bear, pet_wolf, pet_lynx, pet_goat, pet_fox };
+export const PET_DRAW: Record<string, Draw> = { pet_korp, pet_bear, pet_wolf, pet_lynx, pet_goat, pet_fox };
 
 export const PET_ANIMAL_SIZE: Record<string, { w: number; h: number }> = {
+  pet_korp: { w: 20, h: 15 },
   pet_bear: { w: 22, h: 17 },
   pet_wolf: { w: 20, h: 14 },
   pet_lynx: { w: 18, h: 13 },
@@ -123,4 +139,4 @@ export const PET_ANIMAL_SIZE: Record<string, { w: number; h: number }> = {
 };
 
 /** Where a tomteluva sits at Christmas (head centre x, top y). */
-export const PET_HAT_POS: Record<string, [number, number]> = { pet_bear: [17, 1], pet_wolf: [14, 0], pet_lynx: [14, 0], pet_goat: [13, 1], pet_fox: [14, -1] };
+export const PET_HAT_POS: Record<string, [number, number]> = { pet_korp: [14, -1], pet_bear: [17, 1], pet_wolf: [14, 0], pet_lynx: [14, 0], pet_goat: [13, 1], pet_fox: [14, -1] };

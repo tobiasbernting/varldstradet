@@ -123,14 +123,14 @@ export const PETS: Record<string, PetDef> = {
     blurb: 'Odens kloka fågel. Ser allt uppifrån.',
     trickText: 'Pekar ut ett monster så det tål mindre en stund.',
     howText: 'Kan ligga i Draugkungens kista.',
-    species: 'korp',
+    species: 'pet_korp',
     emoji: '🐦',
     role: 'utility',
     rarity: 'rare',
     courage: 35,
     source: { kind: 'drop', boss: 'draugkung', chance: 0.3 },
     trick: { kind: 'mark', bonus: 0.2, ms: 6000, cd: 9000, range: 8 },
-    anchors: A([15, 5], [12, 7], [8, 5], 0),
+    anchors: A([14, 3], [11, 6], [7, 5], 0),
   },
   bjorn: {
     id: 'bjorn',
@@ -200,7 +200,7 @@ export const petDef = (id: string | undefined): PetDef | undefined => (id ? PETS
 export const petOfSpecies = (species: string): PetDef | undefined => Object.values(PETS).find((d) => d.species === species);
 
 /** Pet strength by run level (0 Mycket lätt .. 4 Extrem): the hard levels get a smaller helper so they do not get easier. */
-export const PET_LEVEL_MUL: readonly number[] = [1, 1, 1, 0.7, 0.5];
+export const PET_LEVEL_MUL: readonly number[] = [1, 1, 1, 0.4, 0.25];
 export const petLevelMul = (level: number | undefined): number => PET_LEVEL_MUL[Math.max(0, Math.min(4, level ?? 2))] ?? 1;
 
 // ---- cosmetic gear for pets (prepared: one test item, no collection or drops yet) ----

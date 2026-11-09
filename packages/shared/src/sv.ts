@@ -359,6 +359,7 @@ export const SPECIES_NAMES: Record<string, string> = {
   pet_lynx: 'Lodjur',
   pet_goat: 'Get',
   pet_fox: 'Räv',
+  pet_korp: 'Korp',
   fenrisvalp: 'Fenrisvalp',
   sleipner: 'Sleipner',
   gullinbursti: 'Gullinbursti',

@@ -625,6 +625,7 @@ export const ANIMALS: Record<string, AnimalDef> = {
 for (const m of [...Object.values(SAGA_MOBS), ...Object.values(SAGA_BOSSES)]) ANIMALS[m.species] = { species: m.species, house: '', growDays: 0, speed: m.speed * TILE, saga: true };
 ANIMALS.korp = { species: 'korp', house: '', growDays: 0, speed: 72, pet: true };
 // The tame sprites of pets.ts (a young bear, wolf, lynx, goat kid and fox)
+ANIMALS.pet_korp = { species: 'pet_korp', house: '', growDays: 0, speed: 72, pet: true };
 ANIMALS.pet_bear = { species: 'pet_bear', house: '', growDays: 0, speed: 60, pet: true };
 ANIMALS.pet_wolf = { species: 'pet_wolf', house: '', growDays: 0, speed: 84, pet: true };
 ANIMALS.pet_lynx = { species: 'pet_lynx', house: '', growDays: 0, speed: 78, pet: true };
