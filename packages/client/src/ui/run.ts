@@ -48,7 +48,7 @@ import {
   type RunSnap,
   type TreeNode,
 } from '@lilla-garden/shared';
-import { CLASS_IDS } from '@lilla-garden/shared';
+import { CLASS_IDS, LOOK_T } from '@lilla-garden/shared';
 import { lookSummary } from './looks.ts';
 import { portraitUrl } from '@art/textures.ts';
 import { net } from '../net.ts';
@@ -773,7 +773,7 @@ export class RunUi {
       net.send({ t: 'run', a: 'start', level: this.level as RunLevel, dungeon: this.dungeon, ...(help && !this.companion ? { companion: false } : {}) });
     });
     // Garderoben (the looks of the class chosen above): a shortcut, since the looks are worn per class
-    const wardrobe = h('button', { class: 'alt wardrobe-btn', type: 'button' }, '👕 Garderoben');
+    const wardrobe = h('button', { class: 'alt wardrobe-btn', type: 'button' }, `👕 ${LOOK_T.title}`);
     this.tap(wardrobe, () => document.dispatchEvent(new Event('lilla:looks-arch')));
     body.append(h('div', { class: 'actions sticky' }, wardrobe, go));
     if (!cls) body.append(h('div', { class: 'hint' }, RUN_UI.noClass));

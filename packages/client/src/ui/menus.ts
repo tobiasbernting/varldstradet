@@ -18,6 +18,7 @@ import {
   RECIPES,
   SPECIES_NAMES,
   T,
+  LOOK_T,
   fmt,
   itemName,
   filterOf,
@@ -520,7 +521,13 @@ export class Menus {
     body.append(h('div', { class: 'npc-talk' }, h('img', { class: 'portrait', src: portraitUrl(npc.appearance, npc.outfit, 4) }), h('div', { class: 'bubble-text' }, greeting)));
     const chat = h('button', null, '💬 Prata!');
     onTap(chat, () => this.say(npc.id, 'start', ''));
-    body.append(h('div', { class: 'npc-actions' }, chat));
+    const sets = npc.id === 'stina' ? h('button', { class: 'alt' }, `👕 ${LOOK_T.title}`) : null;
+    if (sets)
+      onTap(sets, () => {
+        this.close();
+        document.dispatchEvent(new Event('lilla:sets'));
+      });
+    body.append(h('div', { class: 'npc-actions' }, chat, sets));
     // the saga's quests (ui/saga.ts)
     if (saga) body.append(sagaQuestRows(npc.id));
   }
