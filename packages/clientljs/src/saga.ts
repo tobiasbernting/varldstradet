@@ -11,6 +11,7 @@ import { FLAG, fightMode, flagsOf, isFoe, liveTarget, sagaSnap, setTarget, webbe
 import { SAGA_SFX, bossWindup } from '@v1/sagasfx.ts';
 import { activeWorld, bus, client, myPlayer, serverNow } from '@v1/state.ts';
 import { zoomPx } from '@v1/ui/hud.ts';
+import { calm, prefs } from '@v1/a11y.ts';
 import type { Sprites } from './art.ts';
 import type { Effects } from './fx.ts';
 import { clamp01, DrawQueue, drawSprite, easeOutBack, easeOutCubic, lerp, rgba } from './gfx.ts';
@@ -54,6 +55,9 @@ interface Floater {
 }
 
 const TAU = Math.PI * 2;
+/** The warning colour of a wind-up on the ground: red, or (colour-blind-safe) the orange of the Okabe-Ito palette, which keeps its light-
+ *  ness against dark floors and is not mixed up with green or brown; the stripes and the white edge carry the meaning in both. */
+const warnColour = (): [number, number, number] => (prefs().cb ? [0.9, 0.62, 0] : [0.85, 0.08, 0.06]);
 const W = (v: number): number => v / TILE;
 const P = (x: number, y: number): Vector2 => vec2(x / TILE, -y / TILE);
 const col = (r: number, g: number, b: number, a = 1): Color => rgb(r, g, b, Math.max(0, Math.min(1, a)));
@@ -1121,10 +1125,14 @@ export class SagaView {
       return;
     }
     const k = this.fill(z, now);
-    const blink = 0.5 + 0.5 * Math.sin(this.t * (6 + k * 18));
-    this.zoneShape(z, r, col(0.85, 0.08, 0.06, 0.22 + 0.1 * blink));
+    // blinking stays under 3 times a second, and stops when the screen is calm (the filling-up ring tells the time)
+    const blink = calm() ? 0.5 : 0.5 + 0.5 * Math.sin(this.t * (6 + k * 11));
+    const [fr, fg, fb] = warnColour();
+    this.zoneShape(z, r, col(fr, fg, fb, 0.22 + 0.1 * blink));
     // it fills up from the middle (from the boss for a cone) until it lands
-    this.zoneShape(z, r * k, col(0.95, 0.12, 0.05, 0.3 + 0.1 * k));
+    this.zoneShape(z, r * k, col(fr, fg, fb, 0.3 + 0.1 * k));
+    // stripes over the whole danger, so it reads without any colour at all
+    this.hatch(z, r, col(1, 1, 1, 0.55));
   }
 
   private drawZoneEdge(z: SagaZone, now: number): void {
@@ -1142,12 +1150,63 @@ export class SagaView {
       return;
     }
     const k = this.fill(z, now);
-    const blink = 0.55 + 0.45 * Math.sin(this.t * (6 + k * 18));
-    const c = col(1, 0.18, 0.1, 0.55 + 0.4 * blink);
-    if (z.shape === 'cone') this.coneOutline(z, r, W(1.2), c);
-    else if (z.shape === 'line') this.stripOutline(z.x, z.y, z.dir ?? 0, r, (z.w ?? 1.6) * TILE, W(1.2), c);
-    else this.ring(z.x, z.y, r, 1.2, c);
-    if (z.shape === 'circle') this.ring(z.x, z.y, r * k, 0.8, col(1, 0.35, 0.15, 0.85));
+    const blink = calm() ? 0.5 : 0.55 + 0.45 * Math.sin(this.t * (6 + k * 11));
+    const [fr, fg, fb] = warnColour();
+    // a dark line under a light one: the edge shows on any floor, in any colours
+    const dark = col(0.05, 0.03, 0.08, 0.9);
+    const c = prefs().cb ? col(1, 1, 1, 0.75 + 0.2 * blink) : col(Math.min(1, fr + 0.15), fg + 0.1, fb + 0.1, 0.55 + 0.4 * blink);
+    const edge = (w: number, cc: Color): void => {
+      if (z.shape === 'cone') this.coneOutline(z, r, W(w), cc);
+      else if (z.shape === 'line') this.stripOutline(z.x, z.y, z.dir ?? 0, r, (z.w ?? 1.6) * TILE, W(w), cc);
+      else this.ring(z.x, z.y, r, w, cc);
+    };
+    edge(2.6, dark);
+    edge(1.2, c);
+    if (z.shape === 'circle') {
+      this.ring(z.x, z.y, r * k, 1.6, dark);
+      this.ring(z.x, z.y, r * k, 0.8, col(1, 1, 1, 0.9));
+    }
+  }
+
+  /** Slanting stripes over a danger zone (the same for every colour setting): lines across the shape, slowly sliding unless calm. */
+  private hatch(z: SagaZone, r: number, c: Color): void {
+    if (r <= 2) return;
+    let pts: Vector2[];
+    if (z.shape === 'line') pts = this.stripPoints(z.x, z.y, z.dir ?? 0, r, (z.w ?? 1.6) * TILE);
+    else if (z.shape === 'cone') {
+      const dir = z.dir ?? 0;
+      const arc = ((z.arc ?? 90) * Math.PI) / 180;
+      pts = [P(z.x, z.y)];
+      for (let i = 0; i <= 14; i++) {
+        const a = dir - arc / 2 + (arc * i) / 14;
+        pts.push(P(z.x + Math.cos(a) * r, z.y + Math.sin(a) * r));
+      }
+    } else {
+      pts = [];
+      for (let i = 0; i < 32; i++) pts.push(P(z.x + Math.cos((i / 32) * TAU) * r, z.y + Math.sin((i / 32) * TAU) * r));
+    }
+    const gap = W(7);
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (const p of pts) {
+      lo = Math.min(lo, p.x + p.y);
+      hi = Math.max(hi, p.x + p.y);
+    }
+    const slide = calm() ? 0 : (this.t * 0.6) % 1;
+    for (let d = Math.ceil(lo / gap) * gap + slide * gap; d < hi; d += gap) {
+      // where the line x + y = d crosses the (convex) shape
+      const hit: Vector2[] = [];
+      for (let i = 0; i < pts.length; i++) {
+        const a = pts[i]!;
+        const b = pts[(i + 1) % pts.length]!;
+        const da = a.x + a.y - d;
+        const db = b.x + b.y - d;
+        if (da === db || da * db > 0) continue;
+        const u = da / (da - db);
+        hit.push(vec2(a.x + (b.x - a.x) * u, a.y + (b.y - a.y) * u));
+      }
+      if (hit.length >= 2) drawLine(hit[0]!, hit[hit.length - 1]!, W(0.9), c);
+    }
   }
 
   /** A pull getting ready: arrows all round the circle sliding in towards the boss, turning like water down a drain. */

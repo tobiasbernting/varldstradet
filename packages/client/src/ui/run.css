@@ -23,7 +23,7 @@ body.in-run .saga-tracker {
 .run-bar .line1 {
   display: flex;
   align-items: center;
-  gap: calc(2 * var(--u));
+  gap: max(8px, calc(2 * var(--u)));
   white-space: nowrap;
 }
 .run-bar .stop {
@@ -52,7 +52,7 @@ body.in-run .saga-tracker {
 }
 .run-bar .clockbox {
   display: inline-flex;
-  gap: calc(1 * var(--u));
+  gap: max(8px, calc(1 * var(--u)));
   font-variant-numeric: tabular-nums;
 }
 .run-bar.late .clockbox {
@@ -68,7 +68,7 @@ body.in-run .saga-tracker {
 }
 .run-bar .rail {
   display: flex;
-  gap: calc(1 * var(--u));
+  gap: max(8px, calc(1 * var(--u)));
   margin-top: calc(1 * var(--u));
 }
 .run-bar .dot {
@@ -145,7 +145,7 @@ body.in-run .saga-tracker {
 }
 .run-vote .choices {
   display: flex;
-  gap: calc(2 * var(--u));
+  gap: max(8px, calc(2 * var(--u)));
   justify-content: center;
   margin: calc(1 * var(--u)) 0;
 }
@@ -204,7 +204,7 @@ body.in-run .saga-tracker {
   width: calc(58 * var(--u));
   display: flex;
   flex-wrap: wrap;
-  gap: calc(0.6 * var(--u));
+  gap: max(8px, calc(0.6 * var(--u)));
   background: rgba(32, 22, 40, 0.7);
   border-radius: calc(2.5 * var(--u));
   padding: calc(1 * var(--u));
@@ -268,7 +268,7 @@ body.saga-bossfight .run-vote {
 }
 .run-panel .actions {
   display: flex;
-  gap: calc(2 * var(--u));
+  gap: max(8px, calc(2 * var(--u)));
   justify-content: center;
   align-items: center;
   margin-top: calc(2 * var(--u));
@@ -298,7 +298,7 @@ body.saga-bossfight .run-vote {
 }
 .run-panel .tiles {
   display: grid;
-  gap: calc(1.5 * var(--u));
+  gap: max(8px, calc(1.5 * var(--u)));
 }
 .run-panel .tiles.dungeons {
   grid-template-columns: repeat(3, 1fr);
@@ -313,7 +313,7 @@ body.saga-bossfight .run-vote {
   grid-template-columns: auto 1fr;
   grid-template-areas: 'ic nm' 'ic st';
   align-items: center;
-  column-gap: calc(1.5 * var(--u));
+  column-gap: max(8px, calc(1.5 * var(--u)));
   padding: calc(0.8 * var(--u)) calc(1.5 * var(--u));
   line-height: 1.1;
   text-align: left;
@@ -358,7 +358,7 @@ body.saga-bossfight .run-vote {
 }
 .run-panel .faces {
   display: flex;
-  gap: calc(2 * var(--u));
+  gap: max(8px, calc(2 * var(--u)));
   flex-wrap: wrap;
   justify-content: center;
 }
@@ -435,7 +435,7 @@ body.saga-bossfight .run-vote {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: calc(1 * var(--u));
+  gap: max(8px, calc(1 * var(--u)));
   text-align: center;
   line-height: 1.15;
 }
@@ -470,7 +470,7 @@ body.saga-bossfight .run-vote {
 .runa-card .votes {
   display: flex;
   flex-wrap: wrap;
-  gap: calc(1 * var(--u));
+  gap: max(8px, calc(1 * var(--u)));
   justify-content: center;
   min-height: calc(5 * var(--u));
 }
@@ -571,7 +571,7 @@ body.saga-bossfight .run-vote {
 .runor-list .row {
   display: flex;
   align-items: center;
-  gap: calc(2 * var(--u));
+  gap: max(8px, calc(2 * var(--u)));
   padding: calc(1 * var(--u)) 0;
   border-bottom: 1px solid var(--panel-dark);
 }
@@ -594,7 +594,7 @@ body.saga-bossfight .run-vote {
   flex-direction: column;
   align-items: center;
   font-size: max(var(--fs), calc(8 * var(--u) * var(--txt)));
-  gap: calc(0.5 * var(--u));
+  gap: max(8px, calc(0.5 * var(--u)));
   margin-bottom: calc(2 * var(--u));
 }
 .run-panel .outcome .big {
@@ -607,7 +607,7 @@ body.saga-bossfight .run-vote {
 .run-panel .stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: calc(2 * var(--u));
+  gap: max(8px, calc(2 * var(--u)));
 }
 .run-panel .stat {
   background: var(--panel-dark);
@@ -631,14 +631,14 @@ body.saga-bossfight .run-vote {
 }
 .run-panel .trail {
   display: flex;
-  gap: calc(2 * var(--u));
+  gap: max(8px, calc(2 * var(--u)));
   align-items: center;
   margin-top: calc(2 * var(--u));
   font-size: max(var(--fs), calc(6 * var(--u) * var(--txt)));
 }
 .run-panel .trail .path {
   display: flex;
-  gap: calc(1 * var(--u));
+  gap: max(8px, calc(1 * var(--u)));
   flex-wrap: wrap;
 }
 
@@ -651,12 +651,12 @@ body.saga-bossfight .run-vote {
 .treecols {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: calc(2 * var(--u));
+  gap: max(8px, calc(2 * var(--u)));
 }
 .treecol {
   display: flex;
   flex-direction: column;
-  gap: calc(1.2 * var(--u));
+  gap: max(8px, calc(1.2 * var(--u)));
 }
 .treecol .bh {
   font-weight: 900;
@@ -666,7 +666,7 @@ body.saga-bossfight .run-vote {
 .tnode {
   display: flex;
   align-items: center;
-  gap: calc(1.5 * var(--u));
+  gap: max(8px, calc(1.5 * var(--u)));
   background: #e8f2d6;
   color: var(--ink);
   font-size: max(var(--fs), calc(3.6 * var(--u) * var(--txt)));

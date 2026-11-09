@@ -27,9 +27,9 @@ body.saga-fight .hud-name {
   background: rgba(24, 18, 30, 0.9);
   border: 3px solid #0d0a12;
   border-radius: 16px;
-  --sw: 76px;
-  --sh: 88px;
-  --ah: 64px;
+  --sw: calc(76px * var(--txt));
+  --sh: calc(88px + 36px * (var(--txt) - 1));
+  --ah: calc(64px + 24px * (var(--txt) - 1));
 }
 body.touch .saga-bar {
   left: auto;
@@ -39,8 +39,34 @@ body.touch .saga-bar {
   display: grid;
   grid-template-columns: repeat(4, var(--sw));
   grid-auto-rows: auto;
-  --sw: 80px;
-  --sh: 92px;
+  --sw: calc(80px * var(--txt));
+  --sh: calc(92px + 36px * (var(--txt) - 1));
+}
+/* a phone held sideways (under 480 px high): the bar gets as small as 16 px words allow */
+@media (max-height: 480px) {
+  body.touch .saga-bar {
+    --sw: max(68px, calc(60px * var(--txt)));
+    --sh: calc(78px + 30px * (var(--txt) - 1));
+    --ah: calc(56px + 16px * (var(--txt) - 1));
+    gap: 8px;
+    padding: 6px;
+  }
+  body.touch .saga-spell .ic {
+    font-size: 26px;
+  }
+  body.touch .saga-spell .ic img {
+    width: 28px;
+    height: 28px;
+  }
+  body.touch .act-btn {
+    width: 80px;
+    height: 80px;
+    min-width: 80px;
+    min-height: 80px;
+  }
+  body.touch .saga-bar {
+    right: calc(max(12px, env(safe-area-inset-right)) + 92px);
+  }
 }
 body.touch .saga-bar .saga-spell:not(.potion):not(.aim):not(.explain) {
   grid-row: 2;
@@ -104,7 +130,7 @@ body:not(.touch) .saga-spell.aim {
   display: none;
 }
 .saga-spell .ic {
-  font-size: 34px;
+  font-size: calc(34px * var(--txt));
   line-height: 1;
   filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.6));
   pointer-events: none;
@@ -113,7 +139,7 @@ body:not(.touch) .saga-spell.aim {
 body.touch .saga-spell.potion .ic,
 body.touch .saga-spell.aim .ic,
 body.touch .saga-spell.explain .ic {
-  font-size: 26px;
+  font-size: calc(26px * var(--txt));
 }
 .saga-spell .ic img {
   width: 36px;
@@ -267,16 +293,14 @@ body.touch.dev-touch .saga-spell .key {
 }
 /* ("explain" lines come up as the shared info card, ui/info.ts) */
 .run-info.near-bar {
-  bottom: calc(var(--bar-h, 240px) + 20px);
+  /* (its height is set from the bar's place in ui/info.ts) */
+  max-width: calc(100vw - 32px);
 }
 body.touch .run-info.near-bar {
   left: auto;
   right: max(16px, env(safe-area-inset-right));
   transform: none;
   width: min(480px, calc(100vw - 32px));
-}
-body:not(.touch) .run-info.near-bar {
-  bottom: 120px;
 }
 
 /* ---- you and your target ---- */
@@ -300,7 +324,7 @@ body.saga-fight:not(.touch) .toasts {
 .saga-member {
   display: flex;
   align-items: center;
-  gap: calc(1.5 * var(--u));
+  gap: max(8px, calc(1.5 * var(--u)));
   background: rgba(24, 18, 30, 0.8);
   border: calc(0.75 * var(--u)) solid #0d0a12;
   border-left: calc(1.5 * var(--u)) solid var(--c, #ccc);
@@ -329,7 +353,7 @@ body.saga-fight:not(.touch) .toasts {
   overflow: hidden;
   text-overflow: ellipsis;
   display: flex;
-  gap: var(--u);
+  gap: max(8px, var(--u));
 }
 .saga-unit .nm .txt,
 .saga-member .nm .txt {
@@ -395,7 +419,7 @@ body.saga-fight:not(.touch) .toasts {
   top: calc(18 * var(--u));
   display: flex;
   flex-direction: column;
-  gap: calc(1 * var(--u));
+  gap: max(8px, calc(1 * var(--u)));
   width: calc(58 * var(--u));
 }
 .minimap:not([hidden]) ~ .saga-party {
@@ -440,7 +464,7 @@ body.touch .saga-boss {
 .saga-boss .top {
   display: flex;
   align-items: baseline;
-  gap: calc(1.5 * var(--u));
+  gap: max(8px, calc(1.5 * var(--u)));
   font-size: max(var(--fs), calc(4.4 * var(--u) * var(--txt)));
   white-space: nowrap;
 }
@@ -460,7 +484,7 @@ body.touch .saga-boss {
   color: #e8d8b8;
   display: flex;
   align-items: center;
-  gap: calc(0.8 * var(--u));
+  gap: max(8px, calc(0.8 * var(--u)));
 }
 .saga-boss .pips i {
   width: calc(2.2 * var(--u));
@@ -896,7 +920,7 @@ body.touch .saga-tracker {
 .saga-classes {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: calc(1.5 * var(--u));
+  gap: max(8px, calc(1.5 * var(--u)));
 }
 .saga-classes .cls {
   display: flex;
@@ -956,7 +980,7 @@ body.touch .saga-tracker {
 }
 .saga-classcard .tags {
   display: flex;
-  gap: calc(2 * var(--u));
+  gap: max(8px, calc(2 * var(--u)));
   font-size: max(var(--fs), calc(4 * var(--u) * var(--txt)));
   font-weight: 800;
 }
@@ -973,11 +997,11 @@ body.touch .saga-tracker {
 .saga-spells {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: calc(1.5 * var(--u));
+  gap: max(8px, calc(1.5 * var(--u)));
 }
 .saga-spells .sp {
   display: flex;
-  gap: calc(1.5 * var(--u));
+  gap: max(8px, calc(1.5 * var(--u)));
   align-items: flex-start;
   background: var(--panel-dark);
   border-radius: calc(2 * var(--u));
@@ -1004,7 +1028,7 @@ body.touch .saga-tracker {
 .q-act {
   display: flex;
   justify-content: flex-end;
-  gap: calc(2 * var(--u));
+  gap: max(8px, calc(2 * var(--u)));
   margin-top: calc(2 * var(--u));
 }
 button.gold {
@@ -1069,7 +1093,7 @@ button.pick {
 .saga-list {
   display: flex;
   flex-direction: column;
-  gap: var(--u);
+  gap: max(8px, var(--u));
 }
 .saga-list .row.done {
   opacity: 0.8;
@@ -1127,7 +1151,7 @@ button.pick {
 .saga-titles {
   display: flex;
   flex-wrap: wrap;
-  gap: calc(1.5 * var(--u));
+  gap: max(8px, calc(1.5 * var(--u)));
 }
 .saga-titles span {
   background: #2b2419;
@@ -1242,11 +1266,11 @@ button.pick {
 .saga-loot {
   display: flex;
   flex-direction: column;
-  gap: calc(1.5 * var(--u));
+  gap: max(8px, calc(1.5 * var(--u)));
 }
 .saga-loot .loot {
   display: flex;
-  gap: calc(2.5 * var(--u));
+  gap: max(8px, calc(2.5 * var(--u)));
   align-items: center;
   background: rgba(255, 255, 255, 0.06);
   border: calc(0.75 * var(--u)) solid var(--r, #888);
@@ -1425,7 +1449,7 @@ button.pick {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: calc(0.3 * var(--u));
+  gap: max(8px, calc(0.3 * var(--u)));
   font-size: max(var(--fs), calc(3.4 * var(--u) * var(--txt)));
 }
 .label[class*='saga-bar-'] > span:empty {
@@ -1554,7 +1578,7 @@ button.pick {
 }
 .saga-gear .hero {
   display: flex;
-  gap: calc(2 * var(--u));
+  gap: max(8px, calc(2 * var(--u)));
   background: #241c2e;
   color: #f4ead8;
   border: calc(0.75 * var(--u)) solid #0d0a12;
@@ -1575,7 +1599,7 @@ button.pick {
 .saga-gear .who {
   display: flex;
   flex-direction: column;
-  gap: calc(0.6 * var(--u));
+  gap: max(8px, calc(0.6 * var(--u)));
   min-width: 0;
   flex: 1;
   font-size: max(var(--fs), calc(3.8 * var(--u) * var(--txt)));
@@ -1607,7 +1631,7 @@ button.pick {
 .saga-gear .totals {
   display: flex;
   flex-direction: column;
-  gap: calc(0.3 * var(--u));
+  gap: max(8px, calc(0.3 * var(--u)));
   font-weight: 800;
 }
 .saga-gear .totals .pow {
@@ -1629,14 +1653,14 @@ button.pick {
 .saga-gear .slots {
   display: flex;
   flex-direction: column;
-  gap: calc(1.5 * var(--u));
+  gap: max(8px, calc(1.5 * var(--u)));
 }
 .saga-gear .gslot {
   position: relative;
   display: grid;
   grid-template-columns: calc(18 * var(--u)) 1fr;
   grid-template-rows: auto auto auto;
-  column-gap: calc(2 * var(--u));
+  column-gap: max(8px, calc(2 * var(--u)));
   align-items: center;
   min-height: calc(22 * var(--u));
   background: #1c1624;
@@ -1717,7 +1741,7 @@ button.pick {
   position: relative;
   display: flex;
   align-items: center;
-  gap: calc(2 * var(--u));
+  gap: max(8px, calc(2 * var(--u)));
   background: var(--panel-dark);
   border-radius: calc(3 * var(--u));
   padding: calc(1.5 * var(--u)) calc(2.5 * var(--u));
@@ -1749,12 +1773,12 @@ button.pick {
 .saga-gearbag {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(calc(84 * var(--u)), 1fr));
-  gap: calc(1.5 * var(--u));
+  gap: max(8px, calc(1.5 * var(--u)));
 }
 .saga-gearbag .gitem {
   position: relative;
   display: flex;
-  gap: calc(2 * var(--u));
+  gap: max(8px, calc(2 * var(--u)));
   align-items: center;
   min-height: calc(24 * var(--u));
   background: #1c1624;
@@ -1853,7 +1877,7 @@ button.pick {
 .saga-banner.level .sub.reward {
   display: inline-flex;
   align-items: center;
-  gap: calc(2 * var(--u));
+  gap: max(8px, calc(2 * var(--u)));
   color: #ffe98a;
   background: linear-gradient(rgba(60, 36, 8, 0.85), rgba(30, 18, 6, 0.85));
   border: calc(0.6 * var(--u)) solid #e8b84a;
@@ -1907,13 +1931,13 @@ button.pick {
 .saga-levels {
   display: flex;
   flex-direction: column;
-  gap: calc(1 * var(--u));
+  gap: max(8px, calc(1 * var(--u)));
   margin-top: calc(1.5 * var(--u));
 }
 .saga-levels .lv {
   display: flex;
   align-items: center;
-  gap: calc(2 * var(--u));
+  gap: max(8px, calc(2 * var(--u)));
   padding: calc(1 * var(--u)) calc(2 * var(--u));
   border-radius: calc(2 * var(--u));
   background: #e8e0cc;
@@ -1927,12 +1951,12 @@ button.pick {
 .saga-levels .lv .rws {
   display: flex;
   flex-wrap: wrap;
-  gap: calc(1 * var(--u)) calc(3 * var(--u));
+  gap: max(8px, calc(1 * var(--u))) calc(3 * var(--u));
 }
 .saga-levels .rw {
   display: inline-flex;
   align-items: center;
-  gap: calc(1 * var(--u));
+  gap: max(8px, calc(1 * var(--u)));
 }
 .saga-levels .rw img,
 .saga-levels .rw .em {
@@ -1992,7 +2016,7 @@ button.pick {
 .saga-finds {
   display: flex;
   flex-direction: column;
-  gap: calc(2 * var(--u));
+  gap: max(8px, calc(2 * var(--u)));
 }
 .saga-finds .biome {
   background: var(--panel-dark);
@@ -2006,7 +2030,7 @@ button.pick {
 .saga-finds .bhead {
   display: flex;
   align-items: center;
-  gap: calc(1.5 * var(--u));
+  gap: max(8px, calc(1.5 * var(--u)));
   font-size: max(var(--fs), calc(4.6 * var(--u) * var(--txt)));
   margin-bottom: calc(1 * var(--u));
 }
@@ -2021,11 +2045,11 @@ button.pick {
 .saga-finds .lms {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(calc(110 * var(--u)), 1fr));
-  gap: calc(1.5 * var(--u));
+  gap: max(8px, calc(1.5 * var(--u)));
 }
 .saga-finds .lm {
   display: flex;
-  gap: calc(2 * var(--u));
+  gap: max(8px, calc(2 * var(--u)));
   align-items: center;
   background: #1c1624;
   color: #f4ead8;
@@ -2126,7 +2150,7 @@ button.pick {
 .saga-dungeon .chests {
   display: flex;
   flex-wrap: wrap;
-  gap: calc(1 * var(--u)) calc(2 * var(--u));
+  gap: max(8px, calc(1 * var(--u))) max(8px, calc(2 * var(--u)));
   margin-top: calc(1 * var(--u));
   font-size: max(var(--fs), calc(3.6 * var(--u) * var(--txt)));
 }
@@ -2202,7 +2226,7 @@ button.pick {
 }
 .forge-intro {
   display: flex;
-  gap: calc(2 * var(--u));
+  gap: max(8px, calc(2 * var(--u)));
   align-items: center;
   margin-bottom: calc(2 * var(--u));
 }
@@ -2223,12 +2247,12 @@ button.pick {
 .forge-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(calc(130 * var(--u)), 1fr));
-  gap: calc(2 * var(--u));
+  gap: max(8px, calc(2 * var(--u)));
 }
 .forge-card {
   display: flex;
   flex-direction: column;
-  gap: calc(1.2 * var(--u));
+  gap: max(8px, calc(1.2 * var(--u)));
   background: #1c1624;
   color: #f4ead8;
   border: calc(0.9 * var(--u)) solid var(--r, #888);
@@ -2245,7 +2269,7 @@ button.pick {
 }
 .forge-card .top {
   display: flex;
-  gap: calc(2 * var(--u));
+  gap: max(8px, calc(2 * var(--u)));
   align-items: center;
 }
 .forge-card .pic {
@@ -2291,7 +2315,7 @@ button.pick {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: calc(1.5 * var(--u));
+  gap: max(8px, calc(1.5 * var(--u)));
   background: rgba(255, 255, 255, 0.06);
   border-radius: calc(2 * var(--u));
   padding: calc(1 * var(--u)) calc(2 * var(--u));
@@ -2310,12 +2334,12 @@ button.pick {
 .forge-cost {
   display: flex;
   flex-wrap: wrap;
-  gap: calc(1.2 * var(--u));
+  gap: max(8px, calc(1.2 * var(--u)));
 }
 .forge-cost .chip-cost {
   display: inline-flex;
   align-items: center;
-  gap: calc(1 * var(--u));
+  gap: max(8px, calc(1 * var(--u)));
   border-radius: calc(2 * var(--u));
   padding: calc(0.5 * var(--u)) calc(1.5 * var(--u));
   font-size: max(var(--fs), calc(3.8 * var(--u) * var(--txt)));

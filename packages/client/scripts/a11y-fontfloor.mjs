@@ -3,6 +3,7 @@
 //   font-size: max(16px, calc(4 * var(--u))) -> the same
 //   font-size: 14px                         ->  var(--fs)       (anything under 16 px)
 //   font-size: 20px                         ->  calc(20px * var(--txt))
+// Gaps under 8 px become 8 px (gap: max(8px, ...)).
 // --fs is 16px times the text size (ui/a11y.css, a11y.ts). Safe to run again: lines that already use --fs are left alone,
 // so after a merge it can be run once more over files other branches have added rules to:
 //   node packages/client/scripts/a11y-fontfloor.mjs
@@ -19,6 +20,29 @@ for (const f of files) {
   const out = before
     .split('\n')
     .map((line) => {
+      // gaps between things you touch: at least 8 px (the HUD's own unit is 3 px on a tablet)
+      const g = line.match(/^(\s*)((?:column-|row-)?gap):\s*(.+?);\s*$/);
+      if (g) {
+        if (/max\(/.test(g[3])) return line;
+        const parts = [];
+        let depth = 0;
+        let cur = '';
+        for (const ch of g[3]) {
+          if (ch === '(') depth++;
+          if (ch === ')') depth--;
+          if (ch === ' ' && depth === 0) {
+            if (cur) parts.push(cur);
+            cur = '';
+          } else cur += ch;
+        }
+        if (cur) parts.push(cur);
+        const out = parts.map((p) => {
+          const m = p.match(/^(?:var\(--u\)|calc\(\s*([\d.]+)\s*\*\s*var\(--u\)\s*\))$/);
+          return m && (m[1] === undefined || Number(m[1]) < 2.7) ? `max(8px, ${p})` : p;
+        });
+        const joined = out.join(' ');
+        return joined === g[3] ? line : `${g[1]}${g[2]}: ${joined};`;
+      }
       if (!/font-size:/.test(line) || /--fs|--txt/.test(line)) return line;
       let m = line.match(/font-size:\s*calc\(\s*([\d.]+)\s*\*\s*var\(--u\)\s*\)/);
       if (m) return line.replace(m[0], `font-size: max(var(--fs), calc(${m[1]} * var(--u) * var(--txt)))`);

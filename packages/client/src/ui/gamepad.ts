@@ -145,7 +145,8 @@ export function initGamepad(opts: {
     }
     // only while the pad moves you, so a touch run button isn't let go of
     if (moving) t.runHeld = down(B.LT) || down(B.L3) || (!fightMode() && down(B.B));
-    if (hit(B.Up)) menus.toggle('emotes');
+    // (in a fight up on the d-pad is the explain mode, see below; emotes are in the HUD)
+    if (hit(B.Up) && !fightMode()) menus.toggle('emotes');
     if (hit(B.Down)) hud.minimap.toggle();
     if (hit(B.Start)) menus.toggle('help');
 

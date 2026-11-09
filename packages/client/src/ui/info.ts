@@ -145,7 +145,10 @@ class InfoCards {
     const panel = document.querySelector('.modal .panel');
     const host = document.getElementById('ui')!;
     this.el.classList.toggle('in-panel', !!panel);
-    this.el.classList.toggle('near-bar', !panel && !!el.closest('.saga-bar'));
+    const bar = !panel ? el.closest('.saga-bar') : null;
+    this.el.classList.toggle('near-bar', !!bar);
+    // above the bar, wherever it is and however big it has grown
+    this.el.style.bottom = bar ? `${Math.max(8, window.innerHeight - bar.getBoundingClientRect().top + 12)}px` : '';
     if (panel) panel.insertBefore(this.el, panel.querySelector('.foot'));
     else if (this.el.parentElement !== host) host.append(this.el);
     this.el.hidden = false;

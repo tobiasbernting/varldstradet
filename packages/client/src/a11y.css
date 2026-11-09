@@ -325,9 +325,6 @@ body.touch:not(.saga-fight) .run-btn {
   color: #fff;
   box-shadow: 0 0 0 3px var(--ink);
 }
-.settings-panel .choices button[aria-pressed='true']::before {
-  content: '✔ ';
-}
 .settings-panel .note {
   font-weight: 600;
   padding: 4px 8px;
@@ -337,4 +334,151 @@ body.touch:not(.saga-fight) .run-btn {
   right: 12px;
   bottom: 12px;
   z-index: 5;
+}
+
+/* ---- health: a number, and a mark and stripes when it is low, so red and green are not all there is ---- */
+.saga-units .hp,
+.saga-party .hp,
+.saga-boss .hp {
+  height: max(22px, calc(4.5 * var(--u)));
+}
+.saga-boss .hp {
+  height: max(26px, calc(5.5 * var(--u)));
+}
+.saga-member .hp {
+  height: max(22px, calc(3.5 * var(--u)));
+}
+.hp span {
+  text-shadow: none !important;
+  background: rgba(0, 0, 0, 0.62);
+  padding: 0 6px;
+  border-radius: 8px;
+  inset: auto !important;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.hp.low i {
+  background-image: repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.38) 0 5px, transparent 5px 10px) !important;
+}
+.hp.low span::before {
+  content: '⚠ ';
+}
+.hp.mid i {
+  background-image: repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.25) 0 3px, transparent 3px 9px) !important;
+}
+
+/* ---- rarity: a border shape as well as a colour (the word is on the card) ---- */
+.rar-uncommon {
+  border-style: dashed !important;
+}
+.rar-rare {
+  border-style: double !important;
+  border-width: max(4px, 0.9 * var(--u)) !important;
+}
+.rar-epic {
+  border-style: dotted !important;
+  border-width: max(4px, 0.9 * var(--u)) !important;
+}
+.rar-legendary {
+  border-style: ridge !important;
+  border-width: max(5px, 1.2 * var(--u)) !important;
+}
+
+/* ---- colour pickers: big enough to hit, and the chosen one has a tick ---- */
+.swatch {
+  width: max(var(--tap), calc(9 * var(--u)));
+  height: max(var(--tap), calc(9 * var(--u)));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.swatches {
+  gap: 8px;
+}
+.swatch.on::after {
+  content: '✔';
+  font-size: 24px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow:
+    0 0 3px #000,
+    0 0 3px #000,
+    0 0 3px #000;
+}
+
+/* filter chips and search in the windows' toolbars */
+.toolbar button,
+.toolbar input,
+button.chip {
+  min-height: var(--tap);
+}
+.toolbar {
+  gap: 8px;
+}
+.round:focus-visible {
+  border-radius: 50%;
+}
+
+/* ---- colours that were too pale (found by scripts/a11y-audit.cjs) ---- */
+.hint,
+p.hint {
+  color: #3f3628;
+}
+.saga-levels .lv {
+  color: #4a4030;
+}
+.saga-levels .lv:not(.got) .rw img,
+.saga-levels .lv:not(.got) .rw .em {
+  filter: grayscale(1) opacity(0.7);
+}
+.saga-levels .lv.next {
+  color: #3f3628;
+}
+.run-panel .classcard .role {
+  background: rgba(0, 0, 0, 0.78);
+  border: 2px solid var(--c);
+}
+.run-bar .dot.next {
+  opacity: 1;
+  color: #fff;
+}
+.chip.level {
+  background: #2b2419;
+}
+.chip.level {
+  color: #fff;
+}
+.saga-levels .lv .n,
+.saga-levels .lv b {
+  text-shadow: none;
+}
+button.chip {
+  min-width: var(--tap);
+}
+.slot {
+  margin: 0;
+}
+.wardrobe-grid,
+.outfit-grid,
+.inv-grid,
+.grid {
+  gap: 8px;
+}
+.saga-units .hp,
+.saga-party .hp,
+.saga-boss .hp,
+.saga-member .hp {
+  height: max(22px, calc(14px + 8px * var(--txt)));
+}
+.saga-spell .lb {
+  letter-spacing: -0.2px;
+}
+@media (max-height: 480px) {
+  body.touch .act-btn .ic {
+    font-size: 28px;
+  }
 }

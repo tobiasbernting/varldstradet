@@ -63,7 +63,7 @@ export class SettingsUi {
     const choice = <V extends string | number>(key: string, label: string, text: string, options: [V, string][], value: V, set: (v: V) => void): void => {
       const group = h('div', { class: 'choices', role: 'group', 'aria-label': label });
       for (const [v, name] of options) {
-        const b = h('button', { type: 'button', 'data-key': `${key}-${v}`, 'aria-pressed': String(v === value) }, name);
+        const b = h('button', { type: 'button', 'data-key': `${key}-${v}`, 'aria-pressed': String(v === value) }, v === value ? `✔ ${name}` : name);
         onTap(b, () => {
           set(v);
           this.render();

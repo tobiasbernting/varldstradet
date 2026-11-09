@@ -1,7 +1,13 @@
 // Injected into the page by a11y-audit.cjs: measures every visible interactive element (size, gaps), the computed font size
 // of every visible text node and the contrast of its text against whatever is behind it (DOM backing, else a screenshot sample).
 (function () {
-  const INTERACTIVE = 'button, [role=button], [role=tab], [role=checkbox], [role=switch], [tabindex]:not([tabindex="-1"]), a[href], input, select, textarea, .saga-spell, .slot, .round, .chip, .swatch, .card';
+  const INTERACTIVE = 'button, [role=button], [role=tab], [role=checkbox], [role=switch], [tabindex]:not([tabindex="-1"]), a[href], input, select, textarea, .saga-spell, .slot, .round, .chip.level, button.chip, .swatch, .card';
+  // is something else (a window's dimming, a panel) on top of the element's middle?
+  const covered = (el, r) => {
+    const x = Math.min(innerWidth - 1, Math.max(0, r.left + r.width / 2)), y = Math.min(innerHeight - 1, Math.max(0, r.top + r.height / 2));
+    const top = document.elementFromPoint(x, y);
+    return !!top && top !== el && !el.contains(top) && !top.contains(el);
+  };
   const vis = (el) => {
     if (!el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) return false;
     const r = el.getBoundingClientRect();
@@ -9,6 +15,12 @@
     if (r.right <= 0 || r.bottom <= 0 || r.left >= innerWidth || r.top >= innerHeight) return false;
     for (let e = el; e && e !== document.body; e = e.parentElement) {
       const cs = getComputedStyle(e);
+      // scrolled or cut off by a parent that hides what overflows
+      if (e !== el && /(auto|scroll|hidden|clip)/.test(cs.overflowY + cs.overflowX)) {
+        const pr = e.getBoundingClientRect();
+        const cut = Math.min(r.bottom, pr.bottom) - Math.max(r.top, pr.top);
+        if (cut < Math.min(r.height, 24) * 0.6 || Math.min(r.right, pr.right) - Math.max(r.left, pr.left) < Math.min(r.width, 24) * 0.6) return false;
+      }
       if (cs.pointerEvents === 'none' && e === el) return false;
       if (cs.clip && cs.clip !== 'auto' && cs.position === 'absolute' && r.width <= 1) return false;
     }
@@ -50,7 +62,7 @@
   window.__a11y = function (opts) {
     const touch = !!opts.touch;
     const out = { targets: [], gaps: [], fonts: [], contrast: [], noName: [] };
-    const els = [...document.querySelectorAll(INTERACTIVE)].filter((e) => vis(e));
+    const els = [...document.querySelectorAll(INTERACTIVE)].filter((e) => vis(e) && !covered(e, e.getBoundingClientRect()));
     // keep the outermost interactive elements out of nested duplicates: an element inside another interactive one is not a target of its own
     const set = new Set(els);
     const outer = els.filter((e) => { for (let p = e.parentElement; p; p = p.parentElement) if (set.has(p) && !(p.matches('.card, .slot') && !e.matches('button'))) return false; return true; });
@@ -79,9 +91,13 @@
       const el = n.parentElement;
       if (!el || seen.has(el) || el.closest('script, style, canvas, svg, noscript')) continue;
       if (!vis(el)) continue;
-      const rg = document.createRange(); rg.selectNodeContents(n);
+      // the words only: a leading picture (an emoji keeps its own colours) is left out of the box that is sampled
+      const raw = n.nodeValue;
+      const lead = raw.match(/^[\s\p{Extended_Pictographic}\p{Emoji_Presentation}️‍]+/u);
+      const rg = document.createRange(); rg.setStart(n, lead ? lead[0].length : 0); rg.setEnd(n, raw.length);
       const rr = rg.getBoundingClientRect();
       if (rr.width < 2 || rr.height < 2) continue;
+      if (covered(el, rr)) continue;
       seen.add(el);
       const cs = getComputedStyle(el);
       const fs = parseFloat(cs.fontSize);

@@ -150,6 +150,9 @@ class Meter {
       this.fill.style.background = color;
     }
     if (this.label.textContent !== text) this.label.textContent = text;
+    // low health is a mark and stripes as well as red (see a11y.css)
+    this.el.classList.toggle('low', k > 0 && k <= 0.25);
+    this.el.classList.toggle('mid', k > 0.25 && k <= 0.5);
   }
 }
 
@@ -472,8 +475,13 @@ export class SagaUi {
     // no hotbar in a fight: the number keys are spells, even with the backpack open
     if (fightMode() && /^[1-8]$/.test(e.key)) {
       if (this.menus.isOpen()) return true;
-      if (e.key <= '4') castSlot(Number(e.key) - 1);
-      else if (e.key === '5') drinkPotion();
+      // (the spell bar decides: it goes off, or while the explain mode is on its card comes up)
+      if (e.key <= '5') document.dispatchEvent(new CustomEvent('lilla:spell', { detail: Number(e.key) - 1 }));
+      return true;
+    }
+    // ? is the explain mode (the ❔ button); then 1-5 read a spell instead of casting it
+    if (fightMode() && e.key === '?' && !this.menus.isOpen()) {
+      document.dispatchEvent(new Event('lilla:explain'));
       return true;
     }
     if (this.menus.isOpen()) return false;
@@ -486,11 +494,13 @@ export class SagaUi {
       return true;
     }
     if (!fightMode()) return false;
-    if (e.key === 'Tab') {
+    if (e.key === 'Tab' && !e.shiftKey && !(document.activeElement && document.activeElement !== document.body && document.activeElement.closest('#ui'))) {
+      // Tab is the next monster; once the focus is on a HUD button (Shift+Tab gets there) it moves the focus as usual
       e.preventDefault();
       cycleTarget();
-    } else if (e.key === 'Escape' && getTarget() !== null) setTarget(null);
-    else return false;
+    } else if (e.key === 'Escape' && document.activeElement && document.activeElement !== document.body && document.activeElement.closest('#ui')) (document.activeElement as HTMLElement).blur();
+    else if (e.key === 'Escape' && getTarget() !== null) setTarget(null);
+    else if (e.key !== 'Tab') return false;
     return true;
   }
 

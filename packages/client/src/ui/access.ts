@@ -2,6 +2,7 @@
 // it by hand: windows become dialogs (role, name, the focus goes in, stays in and comes back), round buttons and chips become real
 // buttons for the keyboard, every hover-only `title=` becomes an info card, and `announce()` says important things to screen
 // readers. It watches #ui, so windows and buttons the other parts of the game add later get the same treatment.
+import { A11Y_T } from '@lilla-garden/shared';
 import { cards } from './info.ts';
 import { h } from './dom.ts';
 
@@ -32,6 +33,7 @@ function makeButton(el: HTMLElement): void {
   if (el.matches('button, a[href], input, select, textarea') || el.dataset.a11y) return;
   el.dataset.a11y = '1';
   if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
+  if (el.matches('.slot') && !el.hasAttribute('aria-label') && !el.dataset.infoName) el.setAttribute('aria-label', A11Y_T.emptySlot);
   if (!el.hasAttribute('tabindex')) el.tabIndex = 0;
   el.addEventListener('keydown', (e) => {
     if (e.target !== el) return;

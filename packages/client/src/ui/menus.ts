@@ -1,5 +1,6 @@
 // All in-game menus as HTML overlays: ryggsäck, kista, gårdsbutik, sälj, snickra, garderob, emotes, namn.
 import {
+  A11Y_T,
   isVehicle,
   ANIMALS,
   isIndoorKey,
@@ -615,6 +616,10 @@ export class Menus {
       });
       tabs.append(b);
     }
+    // Inställningar (text size, colours, motion, reading aloud) are one tap away from the help
+    const settings = h('button', { class: 'alt' }, `⚙️ ${A11Y_T.settings}`);
+    onTap(settings, () => document.dispatchEvent(new Event('lilla:settings')));
+    tabs.append(settings);
     panel.insertBefore(tabs, body);
     const topic = topics.find((t) => t.id === this.helpTopic) ?? topics[0]!;
     if (topic.intro) body.append(h('p', { class: 'help-intro' }, topic.intro));

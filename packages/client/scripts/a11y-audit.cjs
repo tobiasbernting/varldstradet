@@ -12,6 +12,7 @@ const URL = arg('url', 'http://localhost:8110/');
 const OUT = arg('out', path.join(__dirname, '../../../.a11y-out'));
 const TAG = arg('tag', 'run');
 const ONLY = arg('only', '');
+const SCENES = arg('scenes', '').split(',').filter(Boolean);
 fs.mkdirSync(OUT, { recursive: true });
 const MEASURE = fs.readFileSync(path.join(__dirname, 'a11y-measure.js'), 'utf8');
 const VIEWPORTS = [
@@ -88,6 +89,7 @@ const lumOf = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12
 const ratioOf = (a, b) => { const x = lumOf(a), y = lumOf(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
 
 async function measure(page, v, label, res) {
+  if (SCENES.length && !SCENES.includes(label)) return;
   await page.evaluate(MEASURE);
   const d = await page.evaluate((o) => window.__a11y(o), { touch: v.touch });
   const textual = d.contrast.filter((c) => !/^[\p{Extended_Pictographic}\p{Emoji_Presentation}\s️‍\d]+$/u.test(c.text));

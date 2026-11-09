@@ -78,24 +78,25 @@ export class Picker {
       swatchesShirt.querySelectorAll('.swatch').forEach((el, i) => el.classList.toggle('on', STARTER_SHIRTS[i] === shirt));
       styleBtns.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.style === appearance.hairStyle));
     };
-    const swatches = (colors: string[], get: () => string, set: (c: string) => void) => {
-      const el = h('div', { class: 'swatches' });
-      for (const c of colors) {
-        const s = h('div', { class: `swatch${get() === c ? ' on' : ''}`, style: { background: c } });
+    const swatches = (colors: string[], get: () => string, set: (c: string) => void, label: string) => {
+      const el = h('div', { class: 'swatches', role: 'group', 'aria-label': label });
+      colors.forEach((c, i) => {
+        const s = h('div', { class: `swatch${get() === c ? ' on' : ''}`, style: { background: c }, 'aria-label': `${label} ${i + 1}` });
         onTap(s, () => {
           set(c);
           refresh();
         });
         el.append(s);
-      }
+      });
       return el;
     };
-    const swatchesSkin = swatches(SKIN_TONES, () => appearance.skin, (c) => (appearance.skin = c));
-    const swatchesHair = swatches(HAIR_COLORS, () => appearance.hair, (c) => (appearance.hair = c));
+    const swatchesSkin = swatches(SKIN_TONES, () => appearance.skin, (c) => (appearance.skin = c), T.skin);
+    const swatchesHair = swatches(HAIR_COLORS, () => appearance.hair, (c) => (appearance.hair = c), T.hair);
     const swatchesShirt = swatches(
       STARTER_SHIRTS.map((id) => ITEMS[id]!.clothing!.color),
       () => ITEMS[shirt]!.clothing!.color,
       (c) => (shirt = STARTER_SHIRTS.find((id) => ITEMS[id]!.clothing!.color === c) ?? shirt),
+      A11Y_T.shirt,
     );
     const styleBtns = h('div', { class: 'tabs' });
     for (const s of HAIR_STYLES) {
