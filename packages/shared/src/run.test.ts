@@ -59,8 +59,6 @@ import {
   SEED_TREE,
   TILE,
   adoptPet,
-  restorePets,
-  setOnline,
   TREE_NAMES,
   TREE_STAGES,
   TREE_TEXT,
@@ -2631,70 +2629,6 @@ describe('pets and runs', () => {
     endRun(party.world, run, 'leave', party.ctx());
     expect(p.area).toBe('farm');
     expect(dogs(party.world)).toHaveLength(1);
-  });
-
-  it('an owner who closed the tab mid-run gets the pet back at the end (the run map is thrown away), and a restart restores a pet that was away', () => {
-    const party = makeParty(['krigare'], { seed: 3 });
-    const p = party.players[0]!;
-    const k = Object.values(party.world.objects).find((o) => o.kind === 'kennel')!;
-    p.x = (k.x + 1) * TILE;
-    p.y = (k.y + 3) * TILE;
-    adoptPet(party.world, p.id, 'dog', party.ctx());
-    const front = archFrontOf(party.world);
-    p.x = (front.x + 0.5) * TILE;
-    p.y = (front.y + 0.5) * TILE;
-    startRun(party.world, p.id, { seed: 3 }, party.ctx());
-    const run = runOf(party.world)!;
-    const dogs = (w: WorldState) => Object.values(w.animals).filter((a) => a.owner === p.id && a.species === 'dog');
-    // the pet is kept on the owner too, as the run's map is never saved
-    expect(p.petsAway).toHaveLength(1);
-    // a restart now: the run is gone with its map, the owner is on the farm, the copy brings the pet back once
-    const restored = restorePets(party.world, p);
-    expect(restored).toHaveLength(1);
-    expect(dogs(party.world)).toHaveLength(1);
-    expect(p.petsAway).toBeUndefined();
-    expect(restorePets(party.world, p)).toHaveLength(0);
-    void run;
-  });
-
-  it('an offline owner’s pet is rescued from the run map when the run ends', () => {
-    const party = makeParty(['krigare'], { seed: 3 });
-    const p = party.players[0]!;
-    const k = Object.values(party.world.objects).find((o) => o.kind === 'kennel')!;
-    p.x = (k.x + 1) * TILE;
-    p.y = (k.y + 3) * TILE;
-    adoptPet(party.world, p.id, 'dog', party.ctx());
-    const front = archFrontOf(party.world);
-    p.x = (front.x + 0.5) * TILE;
-    p.y = (front.y + 0.5) * TILE;
-    startRun(party.world, p.id, { seed: 3 }, party.ctx());
-    const run = runOf(party.world)!;
-    setOnline(party.world, p.id, false);
-    endRun(party.world, run, 'leave', party.ctx());
-    expect(Object.values(party.world.animals).filter((a) => a.owner === p.id && a.species === 'dog')).toHaveLength(1);
-    expect(p.petsAway).toBeUndefined();
-  });
-});
-
-describe('a closed tab keeps its pet through the run’s next stops', () => {
-  it('an offline owner’s pet moves along to the next stop and comes home at the end', () => {
-    const party = makeParty(['krigare'], { seed: 3 });
-    const p = party.players[0]!;
-    const k = Object.values(party.world.objects).find((o) => o.kind === 'kennel')!;
-    p.x = (k.x + 1) * TILE;
-    p.y = (k.y + 3) * TILE;
-    adoptPet(party.world, p.id, 'dog', party.ctx());
-    const front = archFrontOf(party.world);
-    p.x = (front.x + 0.5) * TILE;
-    p.y = (front.y + 0.5) * TILE;
-    startRun(party.world, p.id, { seed: 3 }, party.ctx());
-    const run = runOf(party.world)!;
-    setOnline(party.world, p.id, false);
-    enterStop(party.world, run, run.plan.route.nodes[1]!.id ?? 1, party.ctx());
-    const inMap = Object.values(party.world.areas![p.area]!.animals).filter((a) => a.owner === p.id && a.species === 'dog');
-    expect(inMap).toHaveLength(1);
-    endRun(party.world, run, 'leave', party.ctx());
-    expect(Object.values(party.world.animals).filter((a) => a.owner === p.id && a.species === 'dog')).toHaveLength(1);
   });
 });
 

@@ -1134,45 +1134,12 @@ export function placeIn(world: WorldState, p: PlayerState, keyStr: string, tx: n
 /** Pets (and lasso-tamed animals) follow their owner from map to map; they get a fresh id in the new map. */
 function movePetsAlong(from: WorldState, to: WorldState, toKey: string, p: PlayerState, out: Change[]): void {
   if (to.area === 'dungeon') return;
-  if (isSagaKey(toKey)) delete p.petsAway;
   for (const a of Object.values(from.animals)) {
     // pets follow, and the dungeons' mounts when whistled for (but they wait outside a dungeon)
     const mount = !!ANIMALS[a.species]?.mount && !!a.follow && !isSagaKey(toKey) && !isIndoorKey(toKey);
     if (a.owner !== p.id || !(isPetAnimal(a) || mount) || a.stay || a.petKind) continue; // (a pets.ts pet is made anew on the new map: syncPet)
     moveAnimalAlong(from, to, toKey, a, p, out);
-    // a map that is not saved: keep a copy on the owner (back home it is dropped again)
-    if (isSagaKey(toKey) && isPetAnimal(a)) (p.petsAway ??= []).push({ ...a });
   }
-  if (!isSagaKey(toKey)) delete p.petsAway;
-}
-
-/** The pets of a player who is not online go along to the next map of a run (the one they leave is thrown away). */
-export function petsMove(from: WorldState, to: WorldState, toKey: string, p: PlayerState, out: Change[]): void {
-  if (from !== to) movePetsAlong(from, to, toKey, p, out);
-}
-
-/** A player who left a dungeon or run while not there (a closed tab): their pets come out of the map that is about to go, to the player's place on the farm. */
-export function petsHome(farm: WorldState, from: WorldState, p: PlayerState, out: Change[]): void {
-  if (from === farm) return;
-  movePetsAlong(from, farm, 'farm', p, out);
-}
-
-/** After a restart: the pets that were away in a map that was never saved come back to their owner on the farm (once). */
-export function restorePets(farm: WorldState, p: PlayerState): AnimalState[] {
-  const back: AnimalState[] = [];
-  for (const a of p.petsAway ?? []) {
-    if (Object.values(farm.animals).some((o) => o.owner === p.id && o.species === a.species && isPetAnimal(o))) continue;
-    const id = farm.nextId++;
-    const pet = { ...a, id, x: p.x, y: p.y + 3, moving: false };
-    delete pet.tx;
-    delete pet.ty;
-    delete pet.haunt;
-    delete pet.startled;
-    farm.animals[id] = pet;
-    back.push(pet);
-  }
-  delete p.petsAway;
-  return back;
 }
 
 /** Moves one animal into the player's new map (fresh id there) and tells both maps. */

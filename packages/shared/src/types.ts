@@ -296,8 +296,6 @@ export interface PlayerState {
   saga?: SagaProgress;
   /** Runs (M5b): sagafrön, the bought nodes of the sagaträd and run statistics. Optional: old saves load as they were. */
   run?: RunSave;
-  /** The pets that went into a dungeon or a run with their owner (those maps are never saved): a copy, so a restart cannot lose them. Cleared when they are home again. */
-  petsAway?: AnimalState[];
   /** When this character was last in the game (server clock, ms): set on connect and disconnect, shown on the parent page. */
   lastPlayed?: number;
   /** Boss trophies won: the highest difficulty level (0..4) each dungeon boss was beaten on. */
