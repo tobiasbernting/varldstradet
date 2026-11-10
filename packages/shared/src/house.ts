@@ -1,7 +1,6 @@
 // Everyone's own house: a small map of its own (an "area" keyed `house:<player id>`), made the first time anyone goes in,
 // saved with the other areas. The owner decorates it; visitors may walk and look. Also here: the boss trophies, and the
 // stand that shows a weapon, shield or amulet.
-import { AREA_GEN } from './biomes.ts';
 import { HOUSE_DOOR, addObject, emptyWorld, objectAt, removeObject } from './map.ts';
 import { ITEMS, NORSE_DECOR, TROPHY_LEVELS, TROPHY_PREFIX } from './data.ts';
 import { DUNGEONS, sagaItem } from './saga.ts';
@@ -36,7 +35,6 @@ export function generateHome(ownerId: string): WorldState {
   const world = emptyWorld(HOUSE_W, HOUSE_H);
   world.area = homeKey(ownerId);
   world.biome = 'house';
-  world.gen = AREA_GEN; // (nothing to upgrade: it is not an overworld map)
   world.terrain.fill('floor_wood');
   const R = HOUSE_ROOM;
   const windows = [R.x + 4, R.x + R.w - 5];

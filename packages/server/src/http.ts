@@ -7,7 +7,7 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import { MAX_PLAYERS_LIMIT, T, type ClientMsg, type ServerMsg } from '../../shared/src/index.ts';
 import { CLOSE_NO_ACCESS, type Game, type Link } from './game.ts';
 import { adminPage, charactersSection } from './admin.ts';
-import { DEVICE_COOKIE, PARENT_COOKIE, bearerToken, type Access, type AccessMode, type Device } from './access.ts';
+import { DEVICE_COOKIE, PARENT_COOKIE, type Access, type AccessMode, type Device } from './access.ts';
 import { COPY_SCRIPT, accessPage, accessSections, joinPage, loginPage } from './pages.ts';
 import { newTotpSecret } from './totp.ts';
 
@@ -134,9 +134,7 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
     (surface !== 'admin' && publicUrl?.protocol === 'https:') || (!!opts.trustProxy && req.headers['x-forwarded-proto'] === 'https');
   const origin = (req: http.IncomingMessage): string => publicUrl?.origin ?? `${secure(req) ? 'https' : 'http'}://${req.headers.host ?? 'localhost'}`;
   /**
-   * Requests that change something must come from our own pages (no cross-site forms or sockets). A native client
-   * (bearer token, no cookies, so nothing a cross-site page could ride on) sends no Origin at all and is let through
-   * without one; the browser rules stay as they are, and the parent page never takes a bearer.
+   * Requests that change something must come from our own pages (no cross-site forms or sockets).
    */
   const sameOrigin = (req: http.IncomingMessage, p: string): boolean => {
     const o = req.headers.origin;
@@ -151,7 +149,6 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
         return false;
       }
     }
-    if (!isAdminPath(p) && bearerToken(req.headers.authorization)) return true;
     return !site || site === 'same-origin' || site === 'none';
   };
   const cookie = (req: http.IncomingMessage, res: http.ServerResponse, name: string, value: string, maxAgeS: number, cookiePath = '/', surface: Surface = 'all'): void => {
@@ -159,12 +156,8 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
     const prev = res.getHeader('set-cookie');
     res.setHeader('set-cookie', [...(Array.isArray(prev) ? prev : prev ? [String(prev)] : []), c]);
   };
-  /** The device behind a request: the bearer header (a native client) if there is one, else the cookie. */
-  const deviceOf = (req: http.IncomingMessage): Device | null => {
-    if (!access) return null;
-    const bearer = bearerToken(req.headers.authorization);
-    return access.deviceFor(bearer ?? parseCookies(req.headers.cookie)[DEVICE_COOKIE]);
-  };
+  /** The device behind a request: the one its cookie names. */
+  const deviceOf = (req: http.IncomingMessage): Device | null => (access ? access.deviceFor(parseCookies(req.headers.cookie)[DEVICE_COOKIE]) : null);
 
   /** Closes connections that are no longer allowed (device removed or paused, world closed, outside play hours). */
   const enforce = (): void => {
@@ -257,35 +250,17 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
       let device: Device | null = null;
       if (access) {
         const cookies = parseCookies(req.headers.cookie);
-        // the parent page is cookie-only; everything else takes a native client's bearer token too
-        device = isAdminPath(p) ? access.deviceFor(cookies[DEVICE_COOKIE]) : deviceOf(req);
+        device = deviceOf(req);
         if (device) access.seen(device, ip);
 
         if (p === '/access' && access.gate(device) === 'ok') return redirect(res, '/');
         if (p === '/access') return html(res, 200, accessPage(access.gate(device), device, access, nonce, surface === 'all'));
-        if (p === '/api/me' || p === '/api/gate') {
+        if (p === '/api/me') {
           const gate = access.gate(device);
           return json(res, gate === 'ok' ? 200 : 403, {
             gate,
             ...(device ? { name: device.name, kind: device.kind, canCreate: access.mayCreate(device) && !game.full() } : {}),
-            // a native client has no gate page: it shows the play hours itself
-            ...(gate === 'hours' ? { hours: { from: access.settings.from, to: access.settings.to } } : {}),
           });
-        }
-        // A native client joins with the same code, limits and approval modes as /join, but gets the token in the
-        // answer instead of a cookie (and the 6-digit number to show while the parent approves it)
-        if (p === '/api/join' && req.method === 'POST') {
-          let body: { code?: unknown; name?: unknown };
-          try {
-            body = JSON.parse((await readBody(req, 4096)) || '{}') as typeof body;
-          } catch {
-            return json(res, 400, { error: 'json' });
-          }
-          if (!body || typeof body !== 'object') return json(res, 400, { error: 'json' });
-          const r = await access.redeem(String(body.code ?? ''), String(body.name ?? ''), ip, String(req.headers['user-agent'] ?? ''));
-          if ('error' in r) return json(res, r.error === 'limit' ? 429 : 403, { error: r.error });
-          const gate = access.gate(r.device);
-          return json(res, 200, { gate, token: r.token, name: r.device.name, kind: r.device.kind, ...(r.device.status === 'pending' ? { pending: r.device.code } : {}) });
         }
         if (p === '/join' && req.method === 'GET') {
           if (device && device.status === 'approved') return redirect(res, '/');
@@ -453,8 +428,7 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
       }
 
       // no access control (ACCESS=open): every device is in, a native client needs no token
-      if (p === '/api/me' || p === '/api/gate') return json(res, 200, { gate: 'ok', canCreate: !game.full() });
-      if (p === '/api/join' && req.method === 'POST') return json(res, 200, { gate: 'ok' });
+      if (p === '/api/me') return json(res, 200, { gate: 'ok', canCreate: !game.full() });
       if (p === '/api/players' && req.method === 'GET') {
         const all = game.playerSummaries();
         return json(res, 200, device && access ? access.visible(device, all) : all);
@@ -499,7 +473,7 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
   const admin = opts.separateAdmin ? http.createServer((req, res) => void handle(req, res, 'admin')) : null;
   admin?.on('upgrade', (_req, socket) => socket.destroy());
 
-  // The game socket: only for approved devices, from our own pages (or a native client with its bearer token)
+  // The game socket: only for approved devices, from our own pages
   const wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
   server.on('upgrade', (req, socket, head) => {
     const refuse = (status: string) => {

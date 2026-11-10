@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Access, bearerToken, withinHours, type AccessSettings } from './access.ts';
+import { Access, withinHours, type AccessSettings } from './access.ts';
 import { MemoryAccessStore, type AccessStore } from './db/accessStore.ts';
 import { newTotpSecret, totpCode, verifyTotp } from './totp.ts';
 
@@ -217,31 +217,6 @@ describe('Access', () => {
     // the same code does not work twice
     expect((await access.login(PW, code, 'c')).ok).toBe(false);
     expect(access.log.some((e) => e.event === 'login-failed')).toBe(true);
-  });
-});
-
-describe('bearer tokens (native clients)', () => {
-  it('reads the token out of an Authorization header and nothing else', () => {
-    expect(bearerToken('Bearer abc.DEF-123_xyz')).toBe('abc.DEF-123_xyz');
-    expect(bearerToken('bearer abc')).toBe('abc'); // the scheme is case-insensitive
-    expect(bearerToken('  Bearer   abc  ')).toBe('abc');
-    expect(bearerToken('Bearer')).toBeNull();
-    expect(bearerToken('Bearer ')).toBeNull();
-    expect(bearerToken('Bearer a b')).toBeNull(); // a token has no spaces
-    expect(bearerToken('Basic abc')).toBeNull();
-    expect(bearerToken(undefined)).toBeNull();
-    expect(bearerToken(['Bearer a', 'Bearer b'])).toBeNull();
-  });
-
-  it('is the same device token as the cookie flow: only its hash is stored, and it finds the device', async () => {
-    const { access } = make();
-    const { code } = await access.createInvite({ label: 'Godot', kind: 'family', hours: 24, newPlayers: 0 }, 'ip');
-    const r = await access.redeem(code, 'Pappas dator', 'ip', 'Godot');
-    if ('error' in r) throw new Error(r.error);
-    expect(r.token).toMatch(/^[A-Za-z0-9_-]{40,}$/);
-    expect(r.device.tokenHash).not.toContain(r.token);
-    expect(access.deviceFor(bearerToken(`Bearer ${r.token}`) ?? undefined)).toBe(r.device);
-    expect(access.deviceFor(bearerToken('Bearer wrong') ?? undefined)).toBeNull();
   });
 });
 

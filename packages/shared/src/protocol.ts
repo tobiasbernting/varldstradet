@@ -78,9 +78,8 @@ export type Change =
   /** Runs: the dishes this player has chosen to bring and how many they may bring. */
   | { t: 'fardkost'; to: string; items: string[]; slots: number };
 
-/** A slot in the player's own inventory (chest undefined) or in a chest object. */
+/** A slot in the player's own inventory. */
 export interface SlotRef {
-  chest?: number;
   slot: number;
 }
 
@@ -90,8 +89,7 @@ export type ClientMsg =
   | { t: 'act'; tx: number; ty: number }
   | { t: 'select'; slot: number }
   | { t: 'swap'; a: SlotRef; b: SlotRef }
-  | { t: 'sort'; chest?: number }
-  | { t: 'quickStack'; chest: number }
+  | { t: 'sort' }
   | { t: 'craft'; recipe: string }
   | { t: 'cook'; recipe: string }
   | { t: 'buy'; item: string; qty: number }
@@ -219,8 +217,7 @@ export interface AnimalSnap {
 }
 
 export type ServerMsg =
-  /** `biomes`: the biome of every explored map (for the world map). */
-  | { t: 'welcome'; you: string; world: WorldState; season: Season; now: number; tick: number; biomes?: Record<string, string> }
+  | { t: 'welcome'; you: string; world: WorldState; season: Season; now: number; tick: number }
   | { t: 'state'; timeMs: number; day: number; season: Season; players: PlayerSnap[]; animals: AnimalSnap[]; npcs: NpcSnap[]; now: number; weather?: WeatherState; saga?: Record<string, SagaSnap> }
   | { t: 'changes'; changes: Change[] }
   | { t: 'error'; text: string }

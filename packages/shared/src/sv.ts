@@ -1,5 +1,4 @@
 // All player-facing Swedish strings.
-import { LANDMARKS, landmarkKind } from './landmarks.ts';
 import { SAGA_BOSSES, SAGA_ITEMS, SAGA_MOBS } from './saga.ts';
 
 export const ITEM_NAMES: Record<string, string> = {
@@ -608,6 +607,7 @@ export const T = {
   fishingLost: 'Fisken simmade iväg…',
   needRod: 'Du behöver ett fiskespö för att fiska',
   enteredHouse: 'Välkommen in! Möblera som du vill.',
+  lobbyName: 'Hemma',
   enteredCave: 'Grottan är mörk och full av troll. Hitta skattkistan!',
   enteredBath: 'Välkommen till badstugan! Hoppa i poolen!',
   bathhouseName: 'Badstugan',
@@ -1328,8 +1328,6 @@ Object.assign(OBJECT_NAMES, {
   saga_starlamp: 'Stjärnlykta',
   saga_runepillar: 'Runpelare',
 });
-
-for (const d of Object.values(LANDMARKS)) OBJECT_NAMES[landmarkKind(d.id)] = d.name;
 
 /** A clear time as minutes and seconds ("12:05"), or hours too when it is long ("1:02:05"). */
 export const fmtDuration = (ms: number): string => {

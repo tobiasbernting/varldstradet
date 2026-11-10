@@ -1,9 +1,7 @@
 // All in-game menus as HTML overlays: ryggsäck, kista, gårdsbutik, sälj, snickra, garderob, emotes, namn.
 import {
   A11Y_T,
-  isVehicle,
   ANIMALS,
-  isIndoorKey,
   FILTER_NAMES,
   HELP,
   HOUSE_T,
@@ -33,7 +31,6 @@ import {
   PETS,
   PET_T,
   ownedPetIds,
-  localWeather,
   noWeatherHere,
   talkNode,
   type Talk,
@@ -313,10 +310,10 @@ export class Menus {
     return { kind, panel, body, search, chips, clearBtn, tabs, hint, coins };
   }
 
-  private sortButton(label: string, chest?: number): HTMLElement {
+  private sortButton(label: string): HTMLElement {
     const b = h('button', { class: 'alt', title: label }, `↕ ${label}`);
     onTap(b, () => {
-      net.send(chest === undefined ? { t: 'sort' } : { t: 'sort', chest });
+      net.send({ t: 'sort' });
       this.picked = null;
     });
     return b;
@@ -403,9 +400,8 @@ export class Menus {
   private renderInventory(f: SearchFrame): void {
     const { panel, body } = f;
     const me = myPlayer()!;
-    const world = client.world!;
-    const sameRef = (a: SlotRef, b: SlotRef) => a.slot === b.slot && a.chest === b.chest;
-    const stackAt = (ref: SlotRef): ItemStack | null | undefined => (ref.chest === undefined ? me.inventory : world.objects[ref.chest]?.items)?.[ref.slot];
+    const sameRef = (a: SlotRef, b: SlotRef) => a.slot === b.slot;
+    const stackAt = (ref: SlotRef): ItemStack | null | undefined => me.inventory[ref.slot];
     const filtering = this.hasFilter();
     const dims = (s: ItemStack | null) => filtering && !!s && !this.stackMatches(s.item);
     const tap = (ref: SlotRef) => {
@@ -422,15 +418,15 @@ export class Menus {
       this.rerender();
     };
     let anyMatch = false;
-    const grid = (inv: (ItemStack | null)[], chest: number | undefined, from: number, to: number, keys: boolean) => {
+    const grid = (inv: (ItemStack | null)[], from: number, to: number, keys: boolean) => {
       const g = h('div', { class: 'grid' });
       for (let i = from; i < to; i++) {
-        const ref: SlotRef = chest === undefined ? { slot: i } : { chest, slot: i };
+        const ref: SlotRef = { slot: i };
         const s = inv[i] ?? null;
         if (s && !dims(s)) anyMatch = true;
         g.append(
           slotEl(s, {
-            selected: chest === undefined && me.selected === i,
+            selected: me.selected === i,
             picked: !!this.picked && sameRef(this.picked, ref),
             dim: dims(s),
             key: keys ? String(i + 1) : undefined,
@@ -441,7 +437,7 @@ export class Menus {
       return g;
     };
     const hint = f.hint;
-    body.append(h('div', { class: 'hint' }, this.filter === 'all' ? T.inventory : `${T.inventory} · ${FILTER_NAMES[this.filter] ?? ''}`), grid(me.inventory, undefined, 0, HOTBAR_SIZE, true), grid(me.inventory, undefined, HOTBAR_SIZE, INVENTORY_SIZE, false));
+    body.append(h('div', { class: 'hint' }, this.filter === 'all' ? T.inventory : `${T.inventory} · ${FILTER_NAMES[this.filter] ?? ''}`), grid(me.inventory, 0, HOTBAR_SIZE, true), grid(me.inventory, HOTBAR_SIZE, INVENTORY_SIZE, false));
     if (filtering && !anyMatch) {
       hint.textContent = T.noMatch;
       panel.insertBefore(hint, body);
@@ -451,7 +447,7 @@ export class Menus {
     if (this.picked && picked) {
       actions.append(h('span', { class: 'picked-name' }, `${itemName(picked.item)}${picked.count > 1 ? ` × ${picked.count}` : ''}`));
     }
-    if (this.picked && picked && this.picked.chest === undefined) {
+    if (this.picked && picked) {
       const slot = this.picked.slot;
       const s = picked;
       const useBtn = h('button', null, fmt(T.hold, { item: itemName(s.item) }));
@@ -511,16 +507,6 @@ export class Menus {
 
   private renderEmotes(body: HTMLElement): void {
     const grid = h('div', { class: 'emotes' });
-    const me = myPlayer();
-    const ridden = me?.riding !== undefined ? activeWorld()?.animals[me.riding] : undefined;
-    if (ridden && isVehicle(ridden)) {
-      const b = h('button', { title: T.honk }, T.honk);
-      onTap(b, () => {
-        net.send({ t: 'honk' });
-        this.close();
-      });
-      grid.append(b);
-    }
     for (const e of T.emotes) {
       const b = h('button', { title: e }, EMOTE_GLYPH[e] ?? e);
       onTap(b, () => {
@@ -576,8 +562,8 @@ export class Menus {
     const pets: { name: string; species: string }[] = [];
     for (const w of [client.world, ...Object.values(client.areas)])
       for (const a of Object.values(w?.animals ?? {})) if (a.owner === me.id && isCallable(a) && a.name) pets.push({ name: a.name, species: a.species });
-    const outdoors = !noWeatherHere(me.area) && !isIndoorKey(me.area);
-    const weather = client.weather && outdoors ? localWeather(client.weather.kind, activeWorld()?.biome) : null;
+    const outdoors = !noWeatherHere(me.area) && !isHomeKey(me.area);
+    const weather = client.weather && outdoors ? client.weather.kind : null;
     this.talk = talkNode(npcId, node, { name: me.name, weather, dayFraction: client.timeMs / DAY_LENGTH_MS, season: client.season, pets, rnd: Math.random });
     this.said = said;
     SFX.talk();

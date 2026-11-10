@@ -10,8 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "import-save": "tsx src/importSaveCli.ts"
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
     "@lilla-garden/shared": "workspace:*",

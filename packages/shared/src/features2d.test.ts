@@ -7,14 +7,15 @@ import {
   RIDDLES,
   TILE,
   WEATHER_KINDS,
-  addAnimal,
+  dummyAnimal,
+  placeIn,
+  homeKey,
   addObject,
   callPets,
   cleanChat,
   createPlayer,
   generateWorld,
   key,
-  localWeather,
   mulberry32,
   nextWeather,
   setOnline,
@@ -22,6 +23,7 @@ import {
   talkNode,
   tick,
   tileIndex,
+  type AnimalState,
   type Change,
   type PlayerState,
   type SimCtx,
@@ -32,7 +34,13 @@ import {
   voicePeers,
   type VoiceState,
 } from './index.ts';
-import { teleport } from './testtravel.ts';
+
+/** A grown animal next to a house (tests only). */
+function addAnimal(world: WorldState, species: string, homeId: number, name?: string): AnimalState {
+  const a: AnimalState = { ...dummyAnimal, id: world.nextId++, species, homeId, name: name ?? '', named: !!name, age: 10 };
+  world.animals[a.id] = a;
+  return a;
+}
 
 const ctx = (now = 1_000_000): SimCtx => ({ season: 'none', rnd: mulberry32(7), now });
 
@@ -79,19 +87,18 @@ describe('pets: stay and whistle', () => {
     const cat = addAnimal(world, 'cat', 0, 'Misse');
     cat.owner = p.id;
     callPets(world, p.id, 'stay', ctx());
-    p.visited.push('a:1,0');
-    teleport(world, p.id, 'a:1,0');
-    expect(p.area).toBe('a:1,0');
+    placeIn(world, p, homeKey(p.id), 5, 5, 'down', []);
+    expect(p.area).toBe(homeKey(p.id));
     expect(world.animals[cat.id]?.species).toBe('cat'); // still home on the farm
     const out = callPets(world, p.id, 'come', ctx());
     expect(Object.values(world.animals).some((a) => a.species === 'cat')).toBe(false);
-    const village = world.areas!['a:1,0']!;
+    const village = world.areas![homeKey(p.id)]!;
     const moved = Object.values(village.animals).find((a) => a.species === 'cat' && a.owner === p.id);
     expect(moved?.name).toBe('Misse');
-    expect(out.some((c) => c.t === 'animal' && c.area === 'a:1,0' && c.animal?.name === 'Misse')).toBe(true);
+    expect(out.some((c) => c.t === 'animal' && c.area === homeKey(p.id) && c.animal?.name === 'Misse')).toBe(true);
     // and "stay" over there tells the village map, not the farm
     const stay = callPets(world, p.id, 'stay', ctx());
-    expect(stay.filter((c) => c.t === 'animal').every((c) => c.t === 'animal' && c.area === 'a:1,0')).toBe(true);
+    expect(stay.filter((c) => c.t === 'animal').every((c) => c.t === 'animal' && c.area === homeKey(p.id))).toBe(true);
     expect(moved?.stay).toBeDefined();
   });
 
@@ -130,25 +137,6 @@ describe('weather', () => {
     expect(summer).toBeLessThan(40);
     // a storm never jumps straight to sunshine
     for (let i = 0; i < 200; i++) expect(nextWeather('storm', 5, rnd)).not.toBe('sun');
-  });
-
-  it('looks different on the ice and in the desert', () => {
-    expect(localWeather('rain', 'is')).toBe('snow');
-    expect(localWeather('rain', 'oken')).toBe('wind');
-    expect(localWeather('rain', 'skog')).toBe('rain');
-  });
-
-  it('rain waters the fields and their crops', () => {
-    const { world } = setup();
-    world.terrain[tileIndex(world, 10, 30)] = 'soil';
-    world.crops[key(10, 30)] = { crop: 'carrot', stage: 0, progress: 0, watered: false };
-    setWeather(world, 'rain', ctx(), true);
-    tick(world, 50, ctx(1_000_000 + 2000));
-    expect(world.terrain[tileIndex(world, 10, 30)]).toBe('soil'); // just started
-    const out = tick(world, 50, ctx(1_000_000 + 10_000));
-    expect(world.terrain[tileIndex(world, 10, 30)]).toBe('soil_wet');
-    expect(world.crops[key(10, 30)]!.watered).toBe(true);
-    expect(out.some((c) => c.t === 'crop' && c.k === key(10, 30))).toBe(true);
   });
 
   it('tells the players outside when the weather turns', () => {

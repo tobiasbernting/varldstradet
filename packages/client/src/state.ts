@@ -74,7 +74,6 @@ export const client = {
   dungeon: null as WorldState | null,
   areas: {} as Record<string, WorldState>,
   /** The biome of every explored map (from the server at login, kept up to date as maps arrive). */
-  biomes: {} as Record<string, string>,
   me: '',
   season: 'none' as Season,
   /** server clock = Date.now() - offset */
@@ -151,11 +150,8 @@ export function applyChange(c: Change): void {
       // player records inside other maps are copies; use the farm's records
       for (const id of Object.keys(w.players)) if (farm.players[id]) w.players[id] = farm.players[id]!;
     }
-    if (c.key === 'dungeon') client.dungeon = w;
-    else if (w) {
-      client.areas[c.key] = w;
-      if (w.biome && c.key.startsWith('a:')) client.biomes[c.key] = w.biome;
-    } else delete client.areas[c.key];
+    if (w) client.areas[c.key] = w;
+    else delete client.areas[c.key];
     bus.emit('change', c);
     if (myPlayer()?.area === c.key && w) bus.emit('area', c.key);
     return;

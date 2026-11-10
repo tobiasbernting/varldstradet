@@ -1,5 +1,5 @@
 // HUD: top chips, hotbar, toasts, touch controls.
-import { A11Y_T, HOTBAR_SIZE, HOUSE_T, MAX_HEARTS, SPELLS, T, WATERING_CAN_CHARGES, areaName, fmt, houseTitle, isBathKey, isHomeKey, isSagaKey, itemName, ownerOfHome, placeEmoji, placeName, stackName, type ItemStack } from '@lilla-garden/shared';
+import { A11Y_T, HOTBAR_SIZE, HOUSE_T, MAX_HEARTS, SPELLS, T, WATERING_CAN_CHARGES, areaName, fmt, houseTitle, isHomeKey, isSagaKey, itemName, ownerOfHome, stackName, type ItemStack } from '@lilla-garden/shared';
 import { Minimap } from './minimap.ts';
 import { getArt } from '@art/textures.ts';
 import { stackIconUrl } from '@art/painting.ts';
@@ -222,17 +222,13 @@ export class Hud {
     // pizza power, or a berserker's rage in a dungeon
     if (me && me.boostUntil !== undefined && me.boostUntil > serverNow()) this.top.append(isSagaKey(me.area) ? h('div', { class: 'chip', title: SPELLS.raseri?.name }, '🔥💨') : h('div', { class: 'chip', title: T.pizzaPower }, '🍕💨'));
     // hearts: in the cave, when hurt, and always while walking the world as a hero
-    if (me && (me.area === 'dungeon' || me.hearts < MAX_HEARTS || (!!me.saga?.hero && !isSagaKey(me.area)))) this.top.append(h('div', { class: 'chip hearts' }, '❤️'.repeat(Math.max(0, me.hearts)) + '🖤'.repeat(Math.max(0, MAX_HEARTS - me.hearts))));
-    if (me && isBathKey(me.area)) this.top.append(h('div', { class: 'chip' }, `🏊 ${T.bathhouseName}`));
-    else if (me && isHomeKey(me.area)) {
+    if (me && me.hearts < MAX_HEARTS) this.top.append(h('div', { class: 'chip hearts' }, '❤️'.repeat(Math.max(0, me.hearts)) + '🖤'.repeat(Math.max(0, MAX_HEARTS - me.hearts))));
+    if (me && isHomeKey(me.area)) {
       // whose house this is
       const owner = client.world?.players[ownerOfHome(me.area)];
       this.top.append(h('div', { class: 'chip house' }, `🏠 ${owner && owner.id !== me.id ? houseTitle(owner.name) : HOUSE_T.myHouse}`));
     } else if (me && isSagaKey(me.area)) this.top.append(h('div', { class: 'chip' }, `⚔️ ${areaName(me.area)}`));
-    else if (me && me.area !== 'farm' && me.area !== 'dungeon') {
-      const b = client.areas[me.area]?.biome;
-      this.top.append(h('div', { class: 'chip' }, `${placeEmoji(b)} ${placeName(b)}`));
-    }
+
     if (client.season !== 'none') {
       const glyph = { halloween: '🎃', jul: '🎄', pask: '🐣', midsommar: '🌸', none: '' }[client.season];
       this.top.append(h('div', { class: 'chip' }, glyph));

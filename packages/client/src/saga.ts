@@ -22,7 +22,7 @@ import {
   countItem,
   heroLevel,
   isHostile,
-  isIndoorKey,
+  isHomeKey,
   isSagaKey,
   questState,
   readProgress,
@@ -43,7 +43,7 @@ export const inSaga = (): boolean => isSagaKey(myPlayer()?.area);
 export const heroOn = (p: PlayerState | undefined = myPlayer()): boolean => !!p?.saga?.hero && !!p.saga.cls;
 
 /** Out in the world (not the old dungeon, a saga dungeon or the bath house)? */
-const outdoors = (area: string | undefined): boolean => !!area && area !== 'dungeon' && !isSagaKey(area) && !isIndoorKey(area);
+const outdoors = (area: string | undefined): boolean => !!area && area !== 'dungeon' && !isSagaKey(area) && !isHomeKey(area);
 
 /** Fighting with spells: always in a saga dungeon, and out in the world while hero mode is on. */
 export const fightMode = (): boolean => {

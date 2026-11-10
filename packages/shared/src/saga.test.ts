@@ -1,7 +1,6 @@
 // Sagan om Världsträdet: the dungeon maps, classes and spells, monsters and bosses, loot, Völvan's
-// chapters, the villagers' quests and jumping to a family member.
+// chapters and the villagers' quests.
 import { describe, expect, it } from 'vitest';
-import { reachableFrom } from './worldgen.ts';
 import {
   CLASSES,
   DOWN_MS,
@@ -24,9 +23,6 @@ import {
   chooseClass,
   createPlayer,
   applyMove,
-  arrivalTile,
-  areaKey,
-  enterSaga,
   previousDungeon,
   tileIndex,
   generateSaga,
@@ -34,7 +30,7 @@ import {
   getArea,
   npcState,
   isSolidForPlayer,
-  jumpTo,
+  devEnterSaga,
   devSagaBest,
   mobDmgScale,
   objectAt,
@@ -53,9 +49,7 @@ import {
   XP_LEVELS,
   addObject,
   chapterDone,
-  ensureRoaming,
   equipGear,
-  fieldKey,
   fighterMax,
   fightStats,
   sagaItem,
@@ -66,7 +60,6 @@ import {
   openTileNear,
   placeIn,
   sagaSnapshot,
-  setHero,
   shownHeld,
   LEVEL_REWARDS,
   MAX_LEVEL,
@@ -77,7 +70,6 @@ import {
   auraOf,
   ensureLevelRewards,
   giveXp,
-  killXpOf,
   ITEMS,
   devKit,
   itemName,
@@ -89,7 +81,6 @@ import {
   type SimCtx,
   type WorldState,
 } from './index.ts';
-import { teleport } from './testtravel.ts';
 
 const px = (t: number): number => t * TILE + TILE / 2;
 let clock = 1_000_000;
@@ -135,10 +126,7 @@ function family(n = 1): { world: WorldState; players: PlayerState[] } {
 /** A family member with a class, inside a dungeon. */
 function inside(world: WorldState, p: PlayerState, cls: keyof typeof CLASSES, id: DungeonId = 'draug'): WorldState {
   p.saga = { cls, chapter: DUNGEONS[id].chapter, heard: true, cleared: DUNGEON_IDS.slice(0, DUNGEON_IDS.indexOf(id)), titles: [], quests: {}, done: [], found: [] };
-  const plan = DUNGEONS[id].portal;
-  const out = getArea(world, plan.area)!;
-  const arch = Object.values(out.objects).find((o) => o.kind === 'saga_portal' && (o.variant ?? 0) === DUNGEON_IDS.indexOf(id))!;
-  enterSaga(world, p, arch);
+  devEnterSaga(world, p.id, id);
   return world.areas![sagaKey(id)]!;
 }
 
@@ -184,19 +172,6 @@ describe('dungeon maps', () => {
     });
   }
 
-  it('puts each arch out in the world where you can walk to it, and Kämpastenen in the lobby', () => {
-    const { world } = family();
-    DUNGEON_IDS.forEach((id, variant) => {
-      const a = getArea(world, DUNGEONS[id].portal.area)!;
-      const arch = Object.values(a.objects).find((o) => o.kind === 'saga_portal' && (o.variant ?? 0) === variant)!;
-      expect(arch).toBeDefined();
-      const front = portalFront(arch);
-      expect(isSolidForPlayer(a, front.x, front.y)).toBe(false);
-      expect(reach(a, front).size).toBeGreaterThan(400);
-    });
-    // (Kämpastenen stands in the lobby, beside Völvan)
-    expect(objectAt(world, STONE_SPOT.x, STONE_SPOT.y)?.kind).toBe('saga_stone');
-  });
 });
 
 describe('inside a dungeon', () => {
@@ -212,72 +187,16 @@ describe('inside a dungeon', () => {
 });
 
 describe('classes and the way in', () => {
-  it('needs a class, and the dungeons in order', () => {
+  it('a class gives its clothes and its health in the dungeon', () => {
     const { world, players } = family();
     const p = players[0]!;
-    const forest = getArea(world, DUNGEONS.draug.portal.area)!;
-    const arch = Object.values(forest.objects).find((o) => o.kind === 'saga_portal')!;
-    expect(enterSaga(world, p, arch).some((c) => c.t === 'toast')).toBe(true);
-    expect(p.area).not.toBe(sagaKey('draug'));
     chooseClass(world, p.id, 'vaktare');
     expect(p.outfit.hat).toBe(CLASSES.vaktare.outfit.hat);
     expect(p.wardrobe).toContain(CLASSES.vaktare.outfit.shirt);
-    // the frost giant's castle is sealed until the crypt is cleared
-    const ice = getArea(world, DUNGEONS.frost.portal.area)!;
-    enterSaga(world, p, Object.values(ice.objects).find((o) => o.kind === 'saga_portal')!);
-    expect(p.area).toBe('farm');
-    enterSaga(world, p, arch);
+    const d = inside(world, p, 'vaktare');
     expect(p.area).toBe(sagaKey('draug'));
-    expect(world.areas![sagaKey('draug')]!.saga!.fighters[p.id]!.hp).toBe(CLASSES.vaktare.hp + BASE_HP);
+    expect(d.saga!.fighters[p.id]!.hp).toBe(CLASSES.vaktare.hp + BASE_HP);
   });
-});
-
-describe('every dungeon\'s arch', () => {
-  it('stands where the plan says, can be walked to from the farm, and goes into its own dungeon once the chapter before it is cleared', () => {
-    for (const id of DUNGEON_IDS) {
-      const { world, players } = family();
-      const p = players[0]!;
-      const plan = DUNGEONS[id].portal;
-      const out = getArea(world, plan.area)!;
-      const arch = Object.values(out.objects).find((o) => o.kind === 'saga_portal' && (o.variant ?? 0) === DUNGEON_IDS.indexOf(id));
-      expect(arch, `the arch of ${id} in ${plan.area}`).toBeDefined();
-      // on foot: from the map's entry to the tile in front of the arch, and every edge gap of the maps on the way is joined to the others
-      const c = /^a:(-?\d+),(-?\d+)$/.exec(plan.area)!;
-      const target = { x: Number(c[1]), y: Number(c[2]) };
-      const path: [number, number][] = [];
-      let x = 0;
-      let y = 0;
-      while (x !== target.x) path.push([(x += Math.sign(target.x - x)), y]);
-      while (y !== target.y) path.push([x, (y += Math.sign(target.y - y))]);
-      let prev: [number, number] = [0, 0];
-      for (const [ax, ay] of path) {
-        const a = getArea(world, areaKey(ax, ay))!;
-        const side = ax - prev[0] === 1 ? 'w' : ax - prev[0] === -1 ? 'e' : ay - prev[1] === 1 ? 'n' : 's';
-        const reach = reachableFrom(a, arrivalTile(a, side));
-        for (const d of ['n', 's', 'e', 'w'] as const) {
-          const t = arrivalTile(a, d);
-          expect(reach[tileIndex(a, t.x, t.y)], `${ax},${ay}: the ${d} gap joins the ${side} gap`).toBeTruthy();
-        }
-        if (ax === target.x && ay === target.y) {
-          const front = portalFront(arch!);
-          expect(reach[tileIndex(a, front.x, front.y)], `the front of ${id}'s arch`).toBeTruthy();
-        }
-        prev = [ax, ay];
-      }
-      // the rules of the way in: a class, then the chapter before it
-      const prevId = previousDungeon(id);
-      if (prevId) {
-        enterSaga(world, p, arch!);
-        expect(p.area).toBe('farm');
-        p.saga = { cls: 'krigare', chapter: DUNGEONS[id].chapter, heard: true, cleared: [], titles: [], quests: {}, done: [], found: [] };
-        enterSaga(world, p, arch!);
-        expect(p.area, `${id} is sealed until ${prevId} is cleared`).toBe('farm');
-        p.saga.cleared = DUNGEON_IDS.slice(0, DUNGEON_IDS.indexOf(id));
-      } else p.saga = { cls: 'krigare', chapter: 0, heard: true, cleared: [], titles: [], quests: {}, done: [], found: [] };
-      enterSaga(world, p, arch!);
-      expect(p.area).toBe(sagaKey(id));
-    }
-  }, 60_000);
 });
 
 describe('fighting', () => {
@@ -535,17 +454,6 @@ describe('the saga', () => {
     expect(p.inventory.some((s) => s?.item === 'solruna')).toBe(true);
   });
 
-  it('anyone can jump to a family member, even into their dungeon', () => {
-    const { world, players } = family(2);
-    const [a, b] = players as [PlayerState, PlayerState];
-    const d = inside(world, a, 'vaktare');
-    b.saga = { cls: 'helare', chapter: 0, heard: false, cleared: [], titles: [], quests: {}, done: [], found: [] };
-    jumpTo(world, b.id, a.id);
-    expect(b.area).toBe(sagaKey('draug'));
-    expect(d.saga!.fighters[b.id]).toBeDefined();
-    expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeLessThan(3 * TILE);
-  });
-
   it('the dev sagaBest records a best time through the real path: faster replaces, slower changes nothing', () => {
     const { world, players } = family(1);
     const p = players[0]!;
@@ -559,34 +467,6 @@ describe('the saga', () => {
     expect(devSagaBest(world, p.id, 'nope', 1)).toEqual([]);
   });
 
-  // The native client's family window greys "Hoppa till" out before the server would refuse (godot/scripts/family_window.gd, can_jump_to,
-  // which carries this same table in farm_bot_books.gd): each case here is a refusal of jumpTo or a jump that works.
-  it.each([
-    { name: 'offline', me: 'farm', them: 'farm', online: false, sleeping: false, cls: true, ok: false },
-    { name: 'asleep', me: 'farm', them: 'farm', online: true, sleeping: true, cls: true, ok: false },
-    { name: 'they are in the old cave', me: 'farm', them: 'dungeon', online: true, sleeping: false, cls: true, ok: false },
-    { name: 'I am in the old cave', me: 'dungeon', them: 'farm', online: true, sleeping: false, cls: true, ok: false },
-    { name: 'they are in a run', me: 'farm', them: 'saga:run1z0', online: true, sleeping: false, cls: true, ok: false },
-    { name: 'I am in a run', me: 'saga:run1z0', them: 'farm', online: true, sleeping: false, cls: true, ok: false },
-    { name: 'a dungeon and no class', me: 'farm', them: 'saga:draug', online: true, sleeping: false, cls: false, ok: false },
-    { name: 'a dungeon with a class', me: 'farm', them: 'saga:draug', online: true, sleeping: false, cls: true, ok: true },
-    { name: 'both on the farm', me: 'farm', them: 'farm', online: true, sleeping: false, cls: false, ok: true },
-  ])('jumpTo: $name -> ok $ok', ({ me, them, online, sleeping, cls, ok }) => {
-    const { world, players } = family(2);
-    const [a, b] = players as [PlayerState, PlayerState];
-    if (them === 'saga:draug') inside(world, a, 'vaktare');
-    else a.area = them;
-    b.area = me === 'dungeon' ? 'dungeon' : me.startsWith('saga:run') ? me : b.area;
-    if (them === 'dungeon' || them.startsWith('saga:run')) a.area = them;
-    a.online = online;
-    b.sleeping = sleeping;
-    b.saga = cls ? { cls: 'helare', chapter: 0, heard: false, cleared: [], titles: [], quests: {}, done: [], found: [] } : undefined;
-    const before = b.area;
-    const out = jumpTo(world, b.id, a.id);
-    const moved = b.area !== before || out.some((c) => c.t === 'toast' && c.text.includes('hoppade'));
-    expect(moved).toBe(ok);
-  });
-
   it('an empty dungeon starts over after a while', () => {
     const { world, players } = family(2);
     const p = players[0]!;
@@ -596,7 +476,7 @@ describe('the saga', () => {
     clock += SAGA_RESET_MS + 1000;
     run(world, 100);
     expect(world.areas![sagaKey('draug')]).toBeUndefined();
-    expect(p.area).toBe(DUNGEONS.draug.portal.area);
+    expect(p.area).toBe('farm');
   });
 });
 
@@ -917,50 +797,7 @@ describe('Lokes list: gear and levels', () => {
   });
 });
 
-describe('Lokes list: out in the world', () => {
-  /** A hero with chapter 4 told, standing on an open tile of a map out in the world, with no monsters about. */
-  function outdoors(cls: keyof typeof CLASSES, key: string, chapter = 4) {
-    // (players in a new world get the same ids, and spell cooldowns out in the world are kept by id)
-    clock += 30_000;
-    const { world, players } = family(2);
-    const p = players[0]!;
-    p.saga = { cls, chapter, heard: true, cleared: ['draug', 'frost', 'surt'], titles: [], quests: {}, done: [], found: [] };
-    const a = getArea(world, key)!;
-    const at = openTileNear(a, 32, 30);
-    placeIn(world, p, key, at.x, at.y, 'right', []);
-    const roamers = Object.values(a.animals).filter((x) => ANIMALS[x.species]?.mob);
-    for (const x of Object.values(a.animals)) if (ANIMALS[x.species]?.mob || ANIMALS[x.species]?.predator) delete a.animals[x.id];
-    return { world, p, a, roamers, friend: players[1]! };
-  }
-  /** Puts a monster right next to (east of) the player. */
-  const nextTo = (a: WorldState, p: PlayerState, m: AnimalState, tiles = 1): AnimalState => {
-    m.x = p.x + tiles * TILE;
-    m.y = p.y;
-    m.hp = ANIMALS[m.species]!.mob!.hp;
-    a.animals[m.id] = m;
-    return m;
-  };
-
-  it('the hero switch swaps the outfits and draws the weapon', () => {
-    const { world, p } = outdoors('krigare', 'a:0,-1');
-    p.outfit = { hat: 'hat_straw', shirt: 'shirt_red' };
-    p.saga!.gear = { weapon: 'draugyxa' };
-    expect(shownHeld(p)).not.toBe('draugyxa');
-    setHero(world, p.id, true);
-    expect(p.saga!.hero).toBe(true);
-    expect(p.outfit.hat).toBe(CLASSES.krigare.outfit.hat);
-    expect(shownHeld(p)).toBe('draugyxa');
-    p.outfit = { ...p.outfit, shirt: 'shirt_bjornfall' };
-    setHero(world, p.id, false);
-    expect(p.outfit).toEqual({ hat: 'hat_straw', shirt: 'shirt_red' });
-    setHero(world, p.id, true);
-    expect(p.outfit.shirt).toBe('shirt_bjornfall');
-    // no class, no hero
-    const q = createPlayer(world, 'Utan', { skin: '#f1c9a5', hair: '#2b2119', hairStyle: 'short' });
-    expect(setHero(world, q.id, true).some((c) => c.t === 'toast')).toBe(true);
-    expect(q.saga?.hero).toBeFalsy();
-  });
-
+describe('Lokes list: the ending', () => {
   it("the saga's ending: Loke's fall clears Bifrost, and handing in the last chapter pays, says the saga is won and ends it", () => {
     const { world, players } = family(1);
     const p = players[0]!;
@@ -1002,65 +839,15 @@ describe('Lokes list: out in the world', () => {
     expect(p.saga!.chapter).toBe(SAGA_CHAPTERS.length);
   });
 
-  it('a world boss leaves a treasure chest behind', () => {
-    const { world, p, a, roamers } = outdoors('magiker', 'a:2,0');
-    const boss = roamers.find((x) => x.species === 'bergatroll')!;
-    expect(boss).toBeDefined();
-    setHero(world, p.id, true);
-    nextTo(a, p, boss, 2);
-    boss.hp = 1;
-    const out = castSpell(world, p.id, 'eldboll', boss.id, ctx());
-    const chest = Object.values(a.objects).find((o) => o.kind === 'loot_chest' && o.loot === 'worldboss');
-    expect(chest).toBeDefined();
-    expect(p.stats.worldBoss).toBe(1);
-    expect(out.some((c) => c.t === 'toast' && c.to === null && c.text.includes('Bergatrollet'))).toBe(true);
-  });
-
 });
 
 describe('Saga III: hero levels for everyone', () => {
-  /** A family of three on a forest map, no class, holding swords; a monster can be put next to the first. */
+  /** A family of three, no class. */
   function forest() {
     clock += 30_000;
     const { world, players } = family(3);
-    const a = getArea(world, 'a:0,-1')!;
-    for (const x of Object.values(a.animals)) if (ANIMALS[x.species]?.mob || ANIMALS[x.species]?.predator) delete a.animals[x.id];
-    const at = openTileNear(a, 32, 30);
-    const [p, friend, far] = players as [PlayerState, PlayerState, PlayerState];
-    placeIn(world, p, 'a:0,-1', at.x, at.y, 'right', []);
-    placeIn(world, friend, 'a:0,-1', at.x, at.y + 1, 'up', []);
-    placeIn(world, far, 'a:0,-1', at.x, at.y, 'up', []);
-    far.y += 12 * TILE;
-    for (const q of players) {
-      addItem(q.inventory, 'sword', 1);
-      q.selected = q.inventory.findIndex((s) => s?.item === 'sword');
-    }
-    /** Puts a fresh monster of a species right east of the player and returns it. */
-    const monster = (species: string): AnimalState => {
-      const id = a.nextId++;
-      const def = ANIMALS[species]!;
-      const m: AnimalState = { id, species, name: species, x: p.x + TILE, y: p.y, facing: 'left', moving: false, hearts: 0, heartProgress: 0, fed: false, petted: false, brushed: false, hasProduct: false, named: true, age: 10, homeId: 0, waitMs: 0, hp: def.mob?.hp ?? def.predator!.hp, attackAt: 0 };
-      a.animals[id] = m;
-      return m;
-    };
-    const swing = (): Change[] => performAction(a, p.id, Math.floor(p.x / TILE) + 1, Math.floor(p.y / TILE), ctx());
-    return { world, a, p, friend, far, monster, swing };
+    return { world, p: players[0]! };
   }
-
-  it('the meadow gnome only notices you close up', () => {
-    const { world, a, p, monster } = forest();
-    const g = monster('angsvatte');
-    g.x = p.x + 4 * TILE;
-    // (standing still between wanders: it moves only if it comes for you)
-    g.waitMs = 60_000;
-    const x0 = g.x;
-    run(world, 500);
-    expect(g.x).toBe(x0);
-    g.x = p.x + 2.5 * TILE;
-    run(world, 500);
-    expect(g.x).toBeLessThan(p.x + 2.5 * TILE);
-    expect(a.animals[g.id]).toBeDefined();
-  });
 
   it('levels give glowing clothes, a pet, titles and an aura, once each', () => {
     const { p } = forest();

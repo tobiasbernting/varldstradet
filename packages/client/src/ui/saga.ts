@@ -15,7 +15,6 @@ import {
   FRIEND_KINDS,
   DUNGEONS,
   DUNGEON_IDS,
-  LANDMARKS,
   LEVEL_REWARDS,
   MAX_LEVEL,
   MAX_HEARTS,
@@ -34,13 +33,11 @@ import {
   chapterDone,
   combatDef,
   countItem,
-  fieldCount,
   fighterMax,
   fmt,
   gearOf,
   gearSlotOf,
   heroLevel,
-  isBathKey,
   isSagaKey,
   hasLooks,
   LOOK_T,
@@ -50,10 +47,7 @@ import {
   setsOf,
   wearableBy,
   itemName,
-  landmarkKind,
   levelSpan,
-  placeEmoji,
-  placeName,
   previousDungeon,
   questCount,
   questState,
@@ -244,16 +238,6 @@ function rewardParts(level: number): HTMLElement[] {
 // Upptäcktsboken: the landmarks of the wild maps
 // ---------------------------------------------------------------------------
 
-const lmPics = new Map<string, string>();
-/** A landmark's picture as it stands in the world (its first frame), for the journal. */
-function landmarkPic(id: string): HTMLElement {
-  let url = lmPics.get(id);
-  if (url === undefined) {
-    url = getArt().objects[landmarkKind(id)]?.frames[0]?.dataUrl() ?? '';
-    lmPics.set(id, url);
-  }
-  return url ? h('img', { src: url, alt: '', draggable: 'false' }) : h('span', { class: 'em' }, '🧭');
-}
 /** "4:07" from milliseconds. */
 const clock = (ms: number): string => {
   const sec = Math.max(0, Math.round(ms / 1000));
@@ -262,31 +246,7 @@ const clock = (ms: number): string => {
 
 /** Where someone is, for the family list. */
 function placeOf(area: string): string {
-  if (area === 'farm' || area === 'dungeon' || isBathKey(area)) return areaName(area);
-  if (isSagaKey(area)) return `⚔️ ${areaName(area)}`;
-  const biome = client.biomes[area] ?? client.areas[area]?.biome;
-  return `${placeEmoji(biome)} ${placeName(biome)}`;
-}
-
-/**
- * A chapter of Act II in its parts, for the tracker and the journal: the task out in the world ("🗡️ Jaga bort 6
- * mosspökar…: 2/6") and the dungeon. Empty for a chapter with only one part (its goal line says it all).
- */
-function chapterParts(index: number): { text: string; done: boolean }[] {
-  const ch = SAGA_CHAPTERS[index];
-  const prog = readProgress(myPlayer());
-  if (!ch?.field) return [];
-  const parts: { text: string; done: boolean }[] = [];
-  const n = Math.min(ch.field.count, index === prog.chapter ? fieldCount(prog) : ch.field.count);
-  const fieldDone = n >= ch.field.count;
-  parts.push({ text: fieldDone ? fmt(T.sagaFieldDone, { text: ch.field.text }) : `🗡️ ${fmt(T.sagaFieldProgress, { text: ch.field.text, n, count: ch.field.count })}`, done: fieldDone });
-  if (ch.dungeon) {
-    const d = DUNGEONS[ch.dungeon];
-    const done = prog.cleared.includes(ch.dungeon);
-    const boss = SAGA_BOSSES[d.boss]?.name ?? d.boss;
-    parts.push({ text: `${done ? '✅' : '⚔️'} ${fmt(T.sagaDungeonLine, { boss, dungeon: d.name })}`, done });
-  }
-  return parts;
+  return isSagaKey(area) ? `⚔️ ${areaName(area)}` : areaName(area);
 }
 
 // ---------------------------------------------------------------------------
@@ -905,9 +865,7 @@ export class SagaUi {
     this.bannerBusy = true;
     document.body.classList.add('saga-banner-on');
     const kind = c.kind ?? 'enter';
-    // a landmark found: its picture over the words, and a little longer to read its story
-    const lm = kind === 'reward' ? Object.keys(LANDMARKS).find((id) => c.text.includes(LANDMARKS[id]!.name)) : undefined;
-    const el = h('div', { class: `saga-banner ${kind}${lm ? ' landmark' : ''}` }, lm ? h('div', { class: 'lm-pic' }, landmarkPic(lm)) : null, h('div', { class: 'big' }, c.text), c.sub ? (kind === 'level' ? levelSub(c) : h('div', { class: 'sub' }, c.sub)) : null);
+    const el = h('div', { class: `saga-banner ${kind}` }, h('div', { class: 'big' }, c.text), c.sub ? (kind === 'level' ? levelSub(c) : h('div', { class: 'sub' }, c.sub)) : null);
     this.banners.append(el);
     if (kind === 'boss' || kind === 'cleared') {
       this.confetti(kind === 'cleared' ? 90 : 55, true);
@@ -925,7 +883,7 @@ export class SagaUi {
       this.sparkles(30);
     } else if (kind === 'rest') SAGA_SFX.calm();
     else SAGA_SFX.banner();
-    const ms = kind === 'cleared' || lm ? 5200 : kind === 'boss' || kind === 'reward' || kind === 'enter' || kind === 'chapter' || kind === 'level' ? 4300 : 3200;
+    const ms = kind === 'cleared' ? 5200 : kind === 'boss' || kind === 'reward' || kind === 'enter' || kind === 'chapter' || kind === 'level' ? 4300 : 3200;
     setTimeout(() => el.classList.add('out'), ms - 600);
     setTimeout(() => {
       el.remove();
@@ -1025,12 +983,8 @@ export class SagaUi {
     if (!this.trackerOpen) return;
     const ch = SAGA_CHAPTERS[prog.chapter];
     if (ch) {
-      const parts = prog.heard && !chapterDone(prog) ? chapterParts(prog.chapter) : [];
-      if (parts.length) for (const p of parts) this.tracker.append(h('div', { class: `line${p.done ? ' done' : ''}` }, p.text));
-      else {
-        const line = !prog.heard ? T.sagaVisitVolva : chapterDone(prog) ? T.sagaBackToVolva : ch.goal;
-        this.tracker.append(h('div', { class: `line${prog.heard && chapterDone(prog) ? ' done' : ''}` }, `${prog.heard ? '🎯' : '❗'} ${line}`));
-      }
+      const line = !prog.heard ? T.sagaVisitVolva : chapterDone(prog) ? T.sagaBackToVolva : ch.goal;
+      this.tracker.append(h('div', { class: `line${prog.heard && chapterDone(prog) ? ' done' : ''}` }, `${prog.heard ? '🎯' : '❗'} ${line}`));
     }
     for (const q of SAGA_QUESTS) {
       const st = questState(me, q);
@@ -1247,14 +1201,13 @@ export class SagaUi {
       if (i === ACT_TWO) chapters.append(h('div', { class: 'act' }, `🌀 ${T.sagaActTwo}`));
       const done = i < prog.chapter;
       const name = i === 0 ? ch.title : fmt(T.sagaChapter, { n: i, title: ch.title });
-      const parts = !done && prog.heard ? chapterParts(i) : [];
       const need = h('span', { class: 'need' }, done ? ch.done[0]! : prog.heard ? ch.goal : T.sagaVisitVolva);
       chapters.append(
         h(
           'div',
           { class: `row${done ? ' done' : ''}` },
           h('span', { class: 'badge' }, done ? '✅' : '📜'),
-          h('span', { class: 'name' }, name, h('br'), need, ...parts.map((p) => h('span', { class: `part${p.done ? ' done' : ''}` }, p.text))),
+          h('span', { class: 'name' }, name, h('br'), need),
           done ? null : h('span', { class: 'price' }, T.sagaChapterNow),
         ),
       );

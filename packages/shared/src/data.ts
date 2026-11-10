@@ -1,4 +1,3 @@
-import { LANDMARKS, landmarkKind } from './landmarks.ts';
 import { DUNGEONS, SAGA_BOSSES, SAGA_ITEMS, SAGA_MOBS, VOLVA_ID, VOLVA_SPOT } from './saga.ts';
 import { TILE, type Achievement, type AnimalDef, type CropDef, type ItemDef, type NpcDef, type ObjectDef, type RecipeDef } from './types.ts';
 
@@ -512,8 +511,6 @@ addO(O('saga_starlamp', { solid: false, breakWith: undefined, light: true }));
 addO(O('saga_runepillar', { breakWith: undefined }));
 // the Act II chapters' keepsakes for home (they all glow)
 for (const s of SAGA_ITEMS) if (s.kind === 'decor' && !OBJECTS[s.id]) built(s.id, { light: true });
-// Upptäcktsboken: the wild maps' landmarks, solid and touched to be found (3×3, a few 4×3)
-for (const d of Object.values(LANDMARKS)) addO(O(landmarkKind(d.id), { w: d.w ?? 3, h: 3, interact: 'landmark', breakWith: undefined, ...(d.light ? { light: true } : {}) }));
 built('coop', { w: 2, h: 2, houses: { species: 'hen', capacity: 4 } });
 built('hutch', { w: 1, h: 1, houses: { species: 'rabbit', capacity: 2 } });
 built('sheepfold', { w: 2, h: 2, houses: { species: 'sheep', capacity: 3 } });

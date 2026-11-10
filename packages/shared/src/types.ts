@@ -539,7 +539,6 @@ export interface WeatherState {
   /** Chosen on the parent page: lasts its time and then the random pattern takes over again. */
   forced?: boolean;
   /** When the rain last watered the fields. */
-  rainedAt?: number;
 }
 
 export const key = (x: number, y: number): string => `${x},${y}`;

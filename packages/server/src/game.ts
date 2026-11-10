@@ -20,7 +20,6 @@ import {
   devSagaBest,
   devUnlockChapters,
   equipGear,
-  noticeLandmarks,
   shownHeld,
   drinkPotion,
   isSagaKey,
@@ -67,7 +66,6 @@ import {
   setOnline,
   swapSlots,
   sortSlots,
-  quickStackToChest,
   tagArea,
   tick,
   type AnimalSnap,
@@ -201,11 +199,8 @@ export class Game {
     this.lastTick = now;
     this.tickCount++;
     const changes = tick(this.world, dt, this.ctx());
-    // once a second: the landmarks each player out in the world has come within sight of (for the world map)
-    if (this.tickCount % TICK_HZ === 0) {
-      changes.push(...noticeLandmarks(this.world));
-      changes.push(...this.syncLevelCaps());
-    }
+    // once a second: each player's parent-set level cap
+    if (this.tickCount % TICK_HZ === 0) changes.push(...this.syncLevelCaps());
     if (changes.length) this.pending.push(...changes);
     this.dispatchPending();
     if (++this.flushCounter % (TICK_HZ * 15) === 0 && 'markMoving' in this.store) {
@@ -353,7 +348,6 @@ export class Game {
       c.link.close(CLOSE_NO_ACCESS);
     }
     for (const a of Object.values(this.world.areas ?? {})) delete a.players[id];
-    if (this.world.dungeon) delete this.world.dungeon.players[id];
     delete this.world.players[id];
     this.chatLog = this.chatLog.filter((c) => c.from !== id);
     this.pending.push({ t: 'player', id, player: null });
@@ -444,9 +438,7 @@ export class Game {
         }
       }
       client.playerId = msg.playerId;
-      const biomes: Record<string, string> = {};
-      for (const [k, a] of Object.entries(this.world.areas ?? {})) if (k.startsWith('a:') && a.biome) biomes[k] = a.biome;
-      client.link.send({ t: 'welcome', you: p.id, world: { ...this.world, areas: undefined, dungeon: undefined }, season: this.season(), now: Date.now(), tick: this.tickCount, biomes });
+      client.link.send({ t: 'welcome', you: p.id, world: { ...this.world, areas: undefined }, season: this.season(), now: Date.now(), tick: this.tickCount });
       // voice after the welcome: the client starts its voice window over on a welcome, so a state sent before it was lost
       this.voice.online(msg.playerId, client.ip ?? 'local', !!client.guest);
       if (isSagaKey(p.area)) {
@@ -486,20 +478,7 @@ export class Game {
         changes = swapSlots(w, pid, msg.a, msg.b);
         break;
       case 'sort':
-        try {
-          changes = sortSlots(w, pid, typeof msg.chest === 'number' && Number.isFinite(msg.chest) ? Math.floor(msg.chest) : undefined);
-        } catch (e) {
-          console.error('sort failed', e);
-          changes = [];
-        }
-        break;
-      case 'quickStack':
-        try {
-          changes = typeof msg.chest === 'number' && Number.isFinite(msg.chest) ? quickStackToChest(w, pid, Math.floor(msg.chest)) : [];
-        } catch (e) {
-          console.error('quickStack failed', e);
-          changes = [];
-        }
+        changes = sortSlots(w, pid);
         break;
       case 'equip':
         changes = equip(w, pid, msg.slot, msg.item);
@@ -572,7 +551,6 @@ export class Game {
         break;
       case 'voice':
         this.voice.handle(pid, msg);
-        break;
         break;
       case 'chat': {
         const text = cleanChat(msg.text);

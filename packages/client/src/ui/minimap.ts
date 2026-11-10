@@ -1,5 +1,5 @@
 // A small map of the farm (or the cave) drawn on a canvas: terrain, trees, buildings and who is where.
-import { ANIMALS, DUNGEON_H, DUNGEON_W, MAP_H, MAP_W, NPCS, isSagaKey, isUnderground, mapH, mapW, objectDef, themeOfEntrance, tileIndex, type WorldState } from '@lilla-garden/shared';
+import { ANIMALS, MAP_H, MAP_W, NPCS, isSagaKey, mapH, mapW, objectDef, tileIndex, type WorldState } from '@lilla-garden/shared';
 import { activeWorld, bus, client, myArea, myPlayer } from '../state.ts';
 import { h } from './dom.ts';
 
@@ -88,11 +88,10 @@ export class Minimap {
     const ctx = this.base.getContext('2d')!;
     // a saga dungeon is a whole map, dark round its rooms like a cave
     const saga = isSagaKey(world.area);
-    const cave = isUnderground(world.area) || saga;
+    const cave = saga;
     this.lastKey = world.area ?? 'farm';
-    // two pixels a tile: a big wild map (96) draws finer in the same box
-    const w = world.cave?.w ?? (cave && !saga ? DUNGEON_W : mapW(world));
-    const hgt = world.cave?.h ?? (cave && !saga ? DUNGEON_H : mapH(world));
+    const w = mapW(world);
+    const hgt = mapH(world);
     this.base.width = w * 2;
     this.base.height = hgt * 2;
     this.canvas.width = w * 2;
@@ -102,7 +101,7 @@ export class Minimap {
     for (let y = 0; y < hgt; y++)
       for (let x = 0; x < w; x++) {
         const t = world.terrain[tileIndex(world, x, y)]!;
-        if (cave && (t === 'rock' || t === 'basalt' || (t === 'water' && world.area === 'dungeon'))) continue;
+        if (cave && (t === 'rock' || t === 'basalt')) continue;
         ctx.fillStyle = COLORS[t] ?? '#888';
         ctx.fillRect(x * 2, y * 2, 2, 2);
       }
@@ -110,8 +109,7 @@ export class Minimap {
       const def = objectDef(o.kind);
       let c: string | null = null;
       if (o.kind.startsWith('tree') || o.kind === 'bush' || o.kind === 'palm' || o.kind === 'cactus' || o.kind === 'jungle_tree' || o.kind.startsWith('giant_')) c = '#2f6e2a';
-      else if (themeOfEntrance(o) || o.kind === 'rocket' || o.kind === 'saga_portal') c = '#1b1a17';
-      else if (o.kind === 'loot_chest' || o.kind === 'dig_spot') c = '#f2d35a';
+            else if (o.kind === 'loot_chest' || o.kind === 'dig_spot') c = '#f2d35a';
       else if (o.kind.startsWith('rock') || o.kind === 'cave_rock' || o.kind === 'ore') c = '#7d7a73';
       else if (o.kind === 'house' || o.kind === 'house_small') c = '#b5413a';
       else if (o.kind === 'market' || o.kind === 'sellstall') c = '#ffffff';
@@ -146,7 +144,6 @@ export class Minimap {
       ctx.fillRect(Math.round(x / 8) - r / 2, Math.round(y / 8) - r / 2, r, r);
     };
     const area = myArea();
-    const cave = isUnderground(area);
     for (const def of Object.values(NPCS)) {
       if ((def.area ?? 'farm') !== area) continue;
       const n = client.snaps.npcs.get(def.id);
