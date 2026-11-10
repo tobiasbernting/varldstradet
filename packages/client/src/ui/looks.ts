@@ -19,6 +19,10 @@ import {
   LOOK_TIER_HINTS,
   LOOK_TIER_MAX,
   LOOK_TIER_NAMES,
+  PETS,
+  PET_ANCHORS,
+  PET_LOOK_SETS,
+  PET_T,
   SIGNATURE_AFTER,
   SIGNATURE_WEAPONS,
   WAY_IDS,
@@ -31,6 +35,7 @@ import {
   looksOutfit,
   lookPalOf,
   lookPiece,
+  ownedPetIds,
   ownsLook,
   setOfPiece,
   setProgress,
@@ -43,8 +48,10 @@ import {
   type ClassId,
   type LookPiece,
   type LookSlot,
+  type PetAnchor,
   type WayId,
 } from '@lilla-garden/shared';
+import { drawAnimal } from '@art/animals.ts';
 import { lookIcon } from '@art/characters.ts';
 import { portraitUrl } from '@art/textures.ts';
 import { FX_SETTINGS, effectiveFx, fxSetting, setFxSetting, type FxSetting } from '../fxprefs.ts';
@@ -57,7 +64,7 @@ import { lookPreview } from './looksfx2d.ts';
 import './looks.css';
 
 /** What the window remembers between openings. */
-const st: { cls: ClassId | null; sel: string | null; tab: 'wear' | 'set'; scroll: Record<string, number> } = { cls: null, sel: null, tab: 'wear', scroll: {} };
+const st: { cls: ClassId | null; sel: string | null; tab: 'wear' | 'set' | 'pet'; pet: string | null; scroll: Record<string, number> } = { cls: null, sel: null, tab: 'wear', pet: null, scroll: {} };
 
 const urls = new Map<string, string>();
 /** A look's picture as a data URL (cached by code). */
@@ -97,7 +104,7 @@ export interface LooksHost {
   /** A line from someone (Stina) shown on top. */
   note?: string | null;
   /** The tab to show first. */
-  tab?: 'wear' | 'set';
+  tab?: 'wear' | 'set' | 'pet';
 }
 
 /** The code of a piece as the player has it now (tier from the collection), in a way. */
@@ -234,6 +241,172 @@ function fxSettingRow(host: LooksHost): HTMLElement {
   return h('div', { class: 'fx-box' }, h('b', null, `${LOOK_T.fxTitle}:`), row, h('p', { class: 'hint' }, effectiveFx() === 'reduced' && fxSetting() === 'full' ? LOOK_T.fxCalm : LOOK_T.fxHint));
 }
 
+
+// ---------------------------------------------------------------------------
+// The "Djur" tab: dress the pets (pet gear is looks worn at an animal's head, neck or back)
+// ---------------------------------------------------------------------------
+
+const petDress = (me: NonNullable<ReturnType<typeof myPlayer>>, kind: string, anchor: PetAnchor) => me.pets?.dress?.[kind]?.[anchor];
+const petTierOf = (me: NonNullable<ReturnType<typeof myPlayer>>, piece: string): number => me.pets?.gear?.[piece]?.tier ?? 0;
+const petName = (me: NonNullable<ReturnType<typeof myPlayer>>, kind: string): string => me.pets?.owned[kind]?.name || PETS[kind]?.name || kind;
+const petAnchorOf = (id: string): PetAnchor | undefined => lookPiece(id)?.petSlot;
+
+/** The pet as it looks now, drawn from its table entry and what it wears, as a picture. */
+function petPicture(me: NonNullable<ReturnType<typeof myPlayer>>, kind: string, scale: number): HTMLElement {
+  const def = PETS[kind]!;
+  const wear: Partial<Record<PetAnchor, string>> = {};
+  for (const a of PET_ANCHORS) {
+    const w = petDress(me, kind, a);
+    const tier = w ? petTierOf(me, w.piece) : 0;
+    const dungeon = w ? dungeonOfPiece(w.piece) : undefined;
+    if (w && tier > 0) wear[a] = encodeLook(w.piece, tier, w.way && dungeon && hasWay(readProgress(me), dungeon, w.way) ? w.way : undefined);
+  }
+  const px = drawAnimal(def.species, 0, false, false, 0, wear);
+  return h('img', { class: 'pet-pic', src: px.dataUrl(), alt: petName(me, kind), draggable: 'false', style: { width: `${px.w * scale}px`, height: `${px.h * scale}px` } });
+}
+
+function petCard(host: LooksHost, me: NonNullable<ReturnType<typeof myPlayer>>, kind: string, piece: LookPiece): HTMLElement {
+  const tier = petTierOf(me, piece.id);
+  const have = tier > 0;
+  const anchor = piece.petSlot!;
+  const w = petDress(me, kind, anchor);
+  const worn = have && w?.piece === piece.id;
+  const code = encodeLook(piece.id, Math.max(1, tier), worn ? w?.way : undefined);
+  const b = h(
+    'button',
+    { class: `look-card${worn ? ' worn' : ''}${have ? '' : ' locked'}${st.sel === piece.id ? ' sel' : ''}`, type: 'button', 'aria-pressed': worn ? 'true' : 'false', 'aria-label': `${piece.name}. ${have ? fmt(LOOK_T.shine, { n: tier }) : LOOK_T.locked}${worn ? `. ${LOOK_T.worn}` : ''}` },
+    h('img', { class: 'pic', src: lookIconUrl(code), alt: '', draggable: 'false' }),
+    h('span', { class: 'col' }, h('b', { class: 'nm' }, piece.name), have ? h('span', { class: 'stars' }, `${stars(tier)} ${tier}/5`) : h('span', { class: 'stars none' }, LOOK_T.locked), worn ? h('span', { class: 'state' }, LOOK_T.worn) : null),
+  );
+  onTap(b, () => {
+    SFX.talk();
+    st.sel = piece.id;
+    if (have && !worn) net.send({ t: 'pet', a: 'wear', anchor, piece: piece.id, kind });
+    host.rerender();
+  });
+  return b;
+}
+
+function petDetail(me: NonNullable<ReturnType<typeof myPlayer>>, kind: string): HTMLElement {
+  const prog = readProgress(me);
+  const box = h('div', { class: 'look-detail', role: 'region', 'aria-live': 'polite' });
+  const id = st.sel;
+  const piece = id ? lookPiece(id) : undefined;
+  if (!piece || !id || !piece.petSlot) {
+    box.append(h('p', { class: 'hint' }, PET_T.gearTap));
+    return box;
+  }
+  const anchor = piece.petSlot;
+  const tier = petTierOf(me, id);
+  const dungeon = dungeonOfPiece(id);
+  const d = dungeon ? DUNGEONS[dungeon] : undefined;
+  const set = setOfPiece(id);
+  const dressed = petDress(me, kind, anchor);
+  const worn = tier > 0 && dressed?.piece === id;
+  const way = worn ? dressed?.way : undefined;
+  const code = encodeLook(id, Math.max(1, tier), way);
+  const top = h('div', { class: 'top' });
+  top.append(lookPreview(code, 4));
+  top.append(h('div', { class: 'who' }, h('b', { class: 'nm' }, piece.name), h('span', { class: 'tx' }, piece.text), h('span', { class: 'meta' }, `${PET_T.gearSlotEmoji[anchor]} ${PET_T.gearSlot[anchor]}`)));
+  box.append(top);
+  const lines = h('ul', { class: 'lines' });
+  if (d) lines.append(h('li', null, fmt(LOOK_T.from, { dungeon: d.name })));
+  if (tier === 0) lines.append(h('li', null, fmt(PET_T.gearGet, { dungeon: d?.name ?? '' })));
+  else {
+    lines.append(h('li', { class: 'shine' }, `${stars(tier)} ${LOOK_TIER_NAMES[tier - 1]} (${fmt(LOOK_T.shine, { n: tier })}). ${LOOK_TIER_HINTS[tier - 1]}`));
+    lines.append(h('li', null, tier >= LOOK_TIER_MAX ? LOOK_T.maxed : fmt(LOOK_T.raise, { dungeon: d?.name ?? '' })));
+  }
+  if (set) lines.append(h('li', null, `${fmt(PET_T.gearOf, { set: set.name })}. ${PET_T.gearAny}`));
+  const e1 = FX_NAMES[piece.fx[0].fx];
+  const e2 = piece.fx[1] ? FX_NAMES[piece.fx[1].fx] : null;
+  if (tier >= FX_FULL_TIER) lines.append(h('li', null, fmt(LOOK_T.effectNow, { fx: e2 ? `${e1}, ${e2}` : e1 })));
+  else if (tier >= FX_TIER) {
+    lines.append(h('li', null, fmt(LOOK_T.effectNow, { fx: e1 })));
+    if (e2) lines.append(h('li', null, fmt(LOOK_T.effectFull, { fx: e2 })));
+  } else {
+    lines.append(h('li', null, fmt(LOOK_T.effectNext, { fx: e1 })));
+    if (e2) lines.append(h('li', null, fmt(LOOK_T.effectFull, { fx: e2 })));
+  }
+  box.append(lines);
+  if (dungeon && tier > 0) {
+    const ways = h('div', { class: 'ways', role: 'group', 'aria-label': LOOK_T.ways });
+    const mk = (label: string, w: WayId | undefined, on: boolean, locked: boolean, pal?: ReturnType<typeof lookPalOf>): HTMLElement => {
+      const swatch = pal ? h('i', { class: 'sw', style: { background: pal.main, borderColor: pal.trim } }) : h('i', { class: 'sw plain' });
+      const b = h('button', { class: `way${on ? ' on' : ''}${locked ? ' off' : ''}`, type: 'button', 'aria-pressed': on ? 'true' : 'false', disabled: locked }, swatch, h('span', null, `${on ? '✓ ' : ''}${label}`));
+      onTap(b, () => {
+        if (locked) return;
+        SFX.talk();
+        net.send({ t: 'pet', a: 'wear', anchor, piece: id, ...(w ? { way: w } : {}), kind });
+      });
+      return b;
+    };
+    ways.append(mk(LOOK_T.wayPlain, undefined, !way, false));
+    for (const w of WAY_IDS) {
+      const own = hasWay(prog, dungeon, w);
+      const name = set?.ways[w].name ?? w;
+      ways.append(own ? mk(`${name} (${WAY_LEVEL[w]})`, w, way === w, false, lookPalOf(id, w)) : mk(fmt(LOOK_T.wayLocked, { dungeon: d?.name ?? '', level: WAY_LEVEL[w] }), w, false, true));
+    }
+    box.append(ways);
+  }
+  if (tier > 0) {
+    const b = h('button', { class: 'wear-btn', type: 'button' }, worn ? `✖ ${PET_T.takeOff}` : `✔ ${fmt(PET_T.put, { pet: petName(me, kind) })}`);
+    onTap(b, () => {
+      SFX.talk();
+      net.send({ t: 'pet', a: 'wear', anchor, piece: worn ? null : id, ...(way ? { way } : {}), kind });
+    });
+    box.append(b);
+  }
+  return box;
+}
+
+function renderPetTab(host: LooksHost, root: HTMLElement, me: NonNullable<ReturnType<typeof myPlayer>>): void {
+  const owned = ownedPetIds(me);
+  if (!owned.length) {
+    root.append(h('p', { class: 'empty' }, PET_T.gearNoPets));
+    return;
+  }
+  const kind = st.pet && owned.includes(st.pet) ? st.pet : me.pets?.active && owned.includes(me.pets.active) ? me.pets.active : owned[0]!;
+  // which pet is being dressed
+  const row = h('div', { class: 'looks-classes', role: 'group', 'aria-label': PET_T.gearDress });
+  for (const id of owned) {
+    const on = id === kind;
+    const b = h('button', { class: `cls${on ? ' on' : ''}`, type: 'button', 'aria-pressed': on ? 'true' : 'false' }, h('span', { class: 'em' }, PETS[id]!.emoji), h('span', null, `${on ? '✓ ' : ''}${petName(me, id)}`));
+    b.style.setProperty('--c', '#c8a060');
+    onTap(b, () => {
+      SFX.talk();
+      st.pet = id;
+      st.sel = null;
+      host.rerender();
+    });
+    row.append(b);
+  }
+  root.append(h('div', { class: 'looks-head' }, row));
+  const has = Object.keys(me.pets?.gear ?? {}).length > 0;
+  const left = h('div', { class: 'looks-left' });
+  left.append(h('div', { class: 'who' }, petPicture(me, kind, 8), h('div', { class: 'name' }, h('b', null, petName(me, kind)), h('span', null, PETS[kind]!.name))));
+  left.append(petDetail(me, kind), fxSettingRow(host));
+  const right = h('div', { class: 'looks-right' });
+  right.append(h('p', { class: 'hint' }, PET_T.gearIntro));
+  if (!has) right.append(h('p', { class: 'empty' }, PET_T.gearEmpty));
+  for (const anchor of PET_ANCHORS) {
+    const sec = h('section', { class: 'slot-sec' }, h('h3', null, h('span', { class: 'em' }, PET_T.gearSlotEmoji[anchor]), ` ${PET_T.gearSlot[anchor]}`));
+    const cards = h('div', { class: 'cards' });
+    const dressed = petDress(me, kind, anchor);
+    const none = h('button', { class: `look-card none${dressed ? '' : ' worn'}`, type: 'button', 'aria-pressed': dressed ? 'false' : 'true' }, h('span', { class: 'em pic' }, '🚫'), h('span', { class: 'col' }, h('b', { class: 'nm' }, PET_T.gearNone), dressed ? null : h('span', { class: 'state' }, LOOK_T.worn)));
+    onTap(none, () => {
+      SFX.talk();
+      net.send({ t: 'pet', a: 'wear', anchor, piece: null, kind });
+    });
+    cards.append(none);
+    const pieces = PET_LOOK_SETS.flatMap((s) => s.pieces).filter((p) => p.petSlot === anchor);
+    pieces.sort((a, b) => petTierOf(me, b.id) - petTierOf(me, a.id));
+    for (const p of pieces) cards.append(petCard(host, me, kind, p));
+    sec.append(cards);
+    right.append(sec);
+  }
+  root.append(h('div', { class: 'looks-cols' }, left, right));
+}
+
 /** The whole window's body (the class tabs, the tabs, the preview and the lists). */
 export function renderLooks(host: LooksHost, body: HTMLElement): void {
   const me = myPlayer();
@@ -259,7 +432,7 @@ export function renderLooks(host: LooksHost, body: HTMLElement): void {
     tabs.append(b);
   }
   const pages = h('div', { class: 'looks-pages', role: 'group' });
-  for (const [t, label] of [['wear', `👕 ${LOOK_T.tabWear}`], ['set', `🏆 ${LOOK_T.tabSet}`]] as const) {
+  for (const [t, label] of [['wear', `👕 ${LOOK_T.tabWear}`], ['set', `🏆 ${LOOK_T.tabSet}`], ['pet', `🐾 ${PET_T.gearTab}`]] as const) {
     const b = h('button', { class: `pg${st.tab === t ? ' on' : ''}`, type: 'button', 'aria-pressed': st.tab === t ? 'true' : 'false' }, label);
     onTap(b, () => {
       SFX.talk();
@@ -273,6 +446,12 @@ export function renderLooks(host: LooksHost, body: HTMLElement): void {
     const cb = h('button', { class: 'pg', type: 'button' }, '👖 Kläder');
     onTap(cb, () => host.clothes!());
     pages.append(cb);
+  }
+  if (st.tab === 'pet') {
+    root.append(h('div', { class: 'looks-head' }, pages));
+    renderPetTab(host, root, me);
+    body.append(root);
+    return;
   }
   root.append(h('div', { class: 'looks-head' }, tabs, pages));
 
@@ -371,7 +550,7 @@ export function lootLookCard(code: string, pieceId: string, lines: string[], onW
 }
 
 /** Sets the class the wardrobe dresses (the player's own, when it opens). */
-export function resetLooksWindow(selectPiece?: string, tab?: 'wear' | 'set'): void {
+export function resetLooksWindow(selectPiece?: string, tab?: 'wear' | 'set' | 'pet'): void {
   st.cls = null;
   if (tab) st.tab = tab;
   st.sel = selectPiece ?? null;
@@ -393,6 +572,11 @@ export function lookSummary(): HTMLElement | null {
     const p = lookPiece(d.piece);
     if (!p) continue;
     row.append(h('span', { class: 'chip' }, h('img', { src: lookIconUrl(encodeLook(d.piece, d.tier)), alt: '', draggable: 'false' }), h('span', null, `${p.name} ${stars(d.tier)}${d.isNew ? ` (${LOOK_T.lootNew.replace(': {name}', '')})` : ''}`)));
+  }
+  for (const d of looks.pet?.drops ?? []) {
+    const p = lookPiece(d.piece);
+    if (!p) continue;
+    row.append(h('span', { class: 'chip' }, h('img', { src: lookIconUrl(encodeLook(d.piece, d.tier)), alt: '', draggable: 'false' }), h('span', null, `🐾 ${p.name} ${stars(d.tier)}${d.isNew ? ` (${LOOK_T.lootNew.replace(': {name}', '')})` : ''}`)));
   }
   for (const t of looks.titles) row.append(h('span', { class: 'chip' }, `👑 ${t}`));
   if (looks.ways.length) row.append(h('span', { class: 'chip' }, `🎨 ${LOOK_T.ways}`));

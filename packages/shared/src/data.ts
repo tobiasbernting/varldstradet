@@ -624,6 +624,13 @@ export const ANIMALS: Record<string, AnimalDef> = {
 // Dungeon monsters and bosses (they fight by the rules in sagasim.ts), and the animals only dungeons give
 for (const m of [...Object.values(SAGA_MOBS), ...Object.values(SAGA_BOSSES)]) ANIMALS[m.species] = { species: m.species, house: '', growDays: 0, speed: m.speed * TILE, saga: true };
 ANIMALS.korp = { species: 'korp', house: '', growDays: 0, speed: 72, pet: true };
+// The tame sprites of pets.ts (a young bear, wolf, lynx, goat kid and fox)
+ANIMALS.pet_korp = { species: 'pet_korp', house: '', growDays: 0, speed: 72, pet: true };
+ANIMALS.pet_bear = { species: 'pet_bear', house: '', growDays: 0, speed: 60, pet: true };
+ANIMALS.pet_wolf = { species: 'pet_wolf', house: '', growDays: 0, speed: 84, pet: true };
+ANIMALS.pet_lynx = { species: 'pet_lynx', house: '', growDays: 0, speed: 78, pet: true };
+ANIMALS.pet_goat = { species: 'pet_goat', house: '', growDays: 0, speed: 66, pet: true };
+ANIMALS.pet_fox = { species: 'pet_fox', house: '', growDays: 0, speed: 76, pet: true };
 ANIMALS.fenrisvalp = { species: 'fenrisvalp', house: '', growDays: 0, speed: 70, pet: true };
 ANIMALS.sleipner = { species: 'sleipner', house: '', growDays: 0, speed: 30, mount: { speed: 1.75 } };
 ANIMALS.gullinbursti = { species: 'gullinbursti', house: '', growDays: 0, speed: 30, mount: { speed: 1.6 } };

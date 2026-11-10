@@ -79,6 +79,7 @@ import {
   ENRAGE,
 } from './saga.ts';
 import { runHooks } from './runhooks.ts';
+import { awardPetLooks, giveClearPets, petSoak, rollPetDrops, tickPets } from './petsim.ts';
 import { sagaCheckpoint, spawnSagaMob } from './sagamap.ts';
 import {
   ATTACK_GAP,
@@ -122,7 +123,7 @@ const EMPTY: SagaProgress = newSagaProgress();
 /** A player's saga for reading (clients): never changes the player. */
 export const readProgress = (p: PlayerState | undefined): SagaProgress => p?.saga ?? EMPTY;
 
-interface Here {
+export interface Here {
   farm: WorldState;
   area: WorldState;
   inst: SagaInstance;
@@ -137,7 +138,7 @@ function hereOf(world: WorldState, p: PlayerState): Here | null {
 }
 
 /** The players in a dungeon right now (online, with a class). */
-const partyOf = (h: Here): PlayerState[] => Object.values(h.area.players).filter((p) => p.online && p.area === h.key && !!h.inst.fighters[p.id]);
+export const partyOf = (h: Here): PlayerState[] => Object.values(h.area.players).filter((p) => p.online && p.area === h.key && !!h.inst.fighters[p.id]);
 /** What a run adds to this player in this map (all zeros in a dungeon and for anyone without runor). */
 const ZERO_BUFFS: RunBuffs = noBuffs();
 const buffsOf = (h: Here, id: string): RunBuffs => h.inst.run?.buffs[id] ?? ZERO_BUFFS;
@@ -150,8 +151,8 @@ const upright = (h: Here, p: PlayerState): boolean => {
   return !!f && f.down === undefined;
 };
 
-const hit = (h: Here, on: string | number, n: number, kind: 'dmg' | 'heal' | 'crit' | 'block' | 'stun' | 'kick' | 'miss'): Change => ({ t: 'hit', area: h.key, on, n: Math.round(n), kind });
-const spellFx = (h: Here | string, by: string | number, spell: string, from: { x: number; y: number }, to?: { x: number; y: number }, on?: string | number): Change => ({
+export const hit = (h: Here, on: string | number, n: number, kind: 'dmg' | 'heal' | 'crit' | 'block' | 'stun' | 'kick' | 'miss'): Change => ({ t: 'hit', area: h.key, on, n: Math.round(n), kind });
+export const spellFx = (h: Here | string, by: string | number, spell: string, from: { x: number; y: number }, to?: { x: number; y: number }, on?: string | number): Change => ({
   t: 'spell',
   area: typeof h === 'string' ? h : h.key,
   by,
@@ -686,6 +687,7 @@ function rollLoot(h: Here, p: PlayerState, table: SagaLoot, from: string, ctx: S
   }
   items.push({ item: pick.item, count: pick.item === 'healing_potion' ? 2 : 1 });
   for (const rare of table.rare ?? []) if (!prog.found.includes(rare.item) && ctx.rnd() < rare.chance * (h.inst.run?.lootRare ?? 1)) items.push({ item: rare.item, count: 1 });
+  for (const pet of rollPetDrops(h.farm, p, from, h.inst.run?.lootRare ?? 1, ctx.rnd, out)) items.push({ item: pet, count: 1 }); // (pets.ts: kept by the player, never twice)
   items.push(...extra);
   p.coins += coins;
   p.stars += table.stars;
@@ -784,7 +786,7 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
   if (f.down !== undefined || f.frozen !== undefined || now < f.gcd || now < (f.cd[spellId] ?? 0)) return [];
   const out: Change[] = [];
   const rb = buffsOf(h, p.id);
-  const gear = spellPower(p, f.strong, now) * (1 + rb.power + (rb.spell[spellId] ?? 0));
+  const gear = spellPower(p, f.strong, now) * (1 + rb.power + (rb.spell[spellId] ?? 0)) * (f.howl && now < f.howl.until ? 1 + f.howl.mul : 1);
   const power = (base: number): { n: number; crit: boolean } => {
     const crit = ctx.rnd() < CRIT_CHANCE + rb.crit;
     return { n: base * gear * (f.rage !== undefined && now < f.rage ? 1.5 : 1) * (crit ? 1.5 : 1), crit };
@@ -930,7 +932,7 @@ function healThreat(h: Here, by: string, amount: number): void {
 }
 
 /** A stun: a monster stands dazed; a boss is only stopped in a big attack that can be stopped. */
-function stun(h: Here, m: SagaMob, ms: number, now: number, out: Change[]): void {
+export function stun(h: Here, m: SagaMob, ms: number, now: number, out: Change[]): void {
   if (m.kind === 'boss' || m.kind === 'mini') {
     const move = m.cast ? SAGA_BOSSES[m.species]?.moves[m.cast.move] : undefined;
     if (!move?.interrupt) return;
@@ -950,7 +952,7 @@ const inFight = (h: Here): boolean => Object.values(h.inst.mobs).some((m) => m.s
 // Damage, healing, falling and getting up
 // ---------------------------------------------------------------------------
 
-function heal(h: Here, p: PlayerState, f: SagaFighter, amount: number, out: Change[], crit = false): void {
+export function heal(h: Here, p: PlayerState, f: SagaFighter, amount: number, out: Change[], crit = false): void {
   if (f.down !== undefined) return;
   const before = f.hp;
   f.hp = Math.min(f.max, f.hp + Math.round(amount));
@@ -975,6 +977,7 @@ function hurtFighter(h: Here, p: PlayerState, amount: number, by: SagaMob | null
   const rb = buffsOf(h, p.id);
   const armor = Math.min(0.6, fightStats(p).armor + rb.armor);
   let n = Math.max(1, Math.round(amount * mobDmgScale(partyOf(h).length) * (h.inst.run?.dmgMul ?? 1) * mobBoost(h, by) * (1 - armor) * (1 - Math.min(0.5, rb.taken)) * (f.wall !== undefined && now < f.wall ? 0.4 : 1)));
+  n = Math.max(1, petSoak(h, p, n, now, out)); // a guarding pet takes a share
   if (n >= f.hp && f.hp > f.max * 0.5 && n < f.max) n = f.hp - 1; // one hit from full health never knocks you down
   f.hp -= n;
   f.fightAt = now;
@@ -1041,10 +1044,10 @@ function pull(h: Here, m: SagaMob, by: string, now: number, out: Change[]): void
 }
 
 /** A monster loses health; at zero it is beaten. */
-function hurtMob(h: Here, m: SagaMob, by: string, amount: number, threatMul: number, crit: boolean, ctx: SimCtx, out: Change[]): void {
+export function hurtMob(h: Here, m: SagaMob, by: string, amount: number, threatMul: number, crit: boolean, ctx: SimCtx, out: Change[]): void {
   if (!h.inst.mobs[m.id] || m.state === 'home') return;
   if (m.state === 'idle') pull(h, m, by, ctx.now, out);
-  const n = Math.max(1, Math.round(amount));
+  const n = Math.max(1, Math.round(m.mark && ctx.now < m.mark.until ? amount * (1 + m.mark.bonus) : amount)); // (a korp's mark)
   m.hp -= n;
   if (m.kind !== 'ice') m.threat[by] = (m.threat[by] ?? 0) + n * threatMul;
   const f = h.inst.fighters[by];
@@ -1156,6 +1159,7 @@ function mobDown(h: Here, m: SagaMob, by: string, ctx: SimCtx, out: Change[]): v
       const prog = progressOf(p);
       if (!prog.cleared.includes(h.inst.id)) {
         prog.cleared.push(h.inst.id);
+        giveClearPets(h.farm, p, h.inst.id, out);
         bump(p, CLEARED_STAT[h.inst.id], 1, out);
       }
       names.push(p.name);
@@ -1163,6 +1167,7 @@ function mobDown(h: Here, m: SagaMob, by: string, ctx: SimCtx, out: Change[]): v
         // (a run's trophies and looks come with its win, at its level)
         awardTrophy(h.farm, p, d.boss, RUN_LEVEL_MEDEL, out);
         awardLooks(p, h.inst.id, RUN_LEVEL_MEDEL, lookRng(p, h.inst.id), out);
+        awardPetLooks(h.farm, p, h.inst.id, RUN_LEVEL_MEDEL, out);
       }
       out.push({ t: 'banner', to: p.id, area: h.key, text: fmt(T.sagaBossDown, { boss: boss.name }), sub: fmt(T.sagaCleared, { dungeon: d.name }), kind: 'cleared' });
     }
@@ -1762,6 +1767,8 @@ export function tickSaga(area: WorldState, key: string, dtMs: number, ctx: SimCt
   // monsters
   const fields = new Map<string, Int16Array>();
   for (const m of Object.values(inst.mobs)) tickMob(h, m, dtMs, ctx, fields, out);
+  // the pets (pets.ts) act after the monsters have moved
+  tickPets(h, dtMs, ctx, out);
   // burning ground
   for (const z of [...inst.zones]) {
     if (z.until === undefined || now < z.at) continue;

@@ -3,6 +3,7 @@
 // map of monster packs, rest stones, a gate, a mid-boss and a boss whose big attacks are telegraphed;
 // win loot in rarity colours. Völvan Sigrun in the city tells the saga, one chapter per dungeon.
 // Data only: the rules live in sagasim.ts, the maps are built by sagamap.ts.
+import { PETS } from './pets.ts';
 import type { Outfit, PlayerState, Terrain } from './types.ts';
 import type { LookOwn, LookWear } from './looks.ts';
 
@@ -1014,7 +1015,6 @@ export const SAGA_LOOT: Record<string, SagaLoot> = {
     coins: [60, 100],
     stars: 1,
     gear: [{ item: 'runsvard', weight: 3 }, { item: 'draugyxa', weight: 3 }, { item: 'volvastav', weight: 3 }, { item: 'hat_draugkrona', weight: 2 }, { item: 'shirt_ringbrynja', weight: 2 }],
-    rare: [{ item: 'pet_hugin', chance: 0.25 }],
   },
   isbjorn: { coins: [30, 50], stars: 0, gear: [{ item: 'shirt_bjornfall', weight: 3 }, { item: 'isyxa', weight: 2 }, { item: 'healing_potion', weight: 4 }] },
   rimturs: {
@@ -1147,6 +1147,8 @@ export interface SagaItemDef {
 }
 
 export const SAGA_ITEMS: SagaItemDef[] = [
+  // the pets of pets.ts that boss chests and clears give (shown in the loot window; they are kept in the player's pets, not the bag)
+  ...Object.values(PETS).filter((d) => d.source.kind !== 'kennel').map((d): SagaItemDef => ({ id: `petitem_${d.id}`, name: d.name, rarity: d.rarity === 'epic' ? 'epic' : 'rare', kind: 'pet', species: d.species, text: d.blurb })),
   // weapons: they glow, and work as the farm's tools too
   { id: 'runsvard', name: 'Runsvärd', rarity: 'rare', kind: 'weapon', tool: 'sword', glow: '#7fd8ff', text: 'Runorna på bladet lyser blått i mörkret.' },
   { id: 'draugyxa', name: 'Draugyxa', rarity: 'rare', kind: 'weapon', tool: 'axe', glow: '#9cff8a', text: 'En gammal stridsyxa som lyser spöklikt grön.' },
@@ -1917,6 +1919,8 @@ export interface SagaMob {
   target?: string;
   tauntBy?: string;
   tauntUntil?: number;
+  /** A korp has pointed it out: it takes this much more damage until then. */
+  mark?: { until: number; bonus: number };
   stunUntil?: number;
   slowUntil?: number;
   /** Stärkande: how many of its pack have fallen. */
@@ -1962,6 +1966,8 @@ export interface SagaFighter {
   potionAt?: number;
   /** A strength potion: more power until then. */
   strong?: number;
+  /** A varg's howl: this much more power for the whole party until then (pets.ts). */
+  howl?: { until: number; mul: number };
 }
 
 /** A boss's attack on its way down (shown on the ground), or burning ground that stays a while. */
@@ -2103,6 +2109,8 @@ export interface SagaRunLink {
   used?: number;
   /** The packs (indices in `packs`) that must fall before the gate to the exit room opens. */
   required: number[];
+  /** The run's level (0 Mycket lätt .. 4 Extrem): a pet helps less on the hard ones (pets.ts). */
+  level?: number;
 }
 
 /** Nobody inside for this long: the dungeon starts over (monsters back, chests closed). */

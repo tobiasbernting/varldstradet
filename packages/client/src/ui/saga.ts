@@ -55,6 +55,8 @@ import {
   previousDungeon,
   questCount,
   questState,
+  PETS,
+  PET_T,
   readProgress,
   sagaItem,
   type Change,
@@ -360,6 +362,8 @@ export class SagaUi {
   private targetFrame = new UnitView('saga-unit target');
   private party = h('div', { class: 'saga-party' });
   private partyRows = new Map<string, UnitView>();
+  /** The pets of the party (pets.ts): a small frame each with a state icon, after the party's rows. */
+  private petRows = new Map<number, HTMLElement>();
   private boss = h('div', { class: 'saga-boss' });
   private bossFor = -1;
   private bossMeter = new Meter();
@@ -409,6 +413,7 @@ export class SagaUi {
     // Smed-Stina's window (ui/menus.ts) opens the wardrobe on the sets tab with a line about collecting them
     document.addEventListener('lilla:sets', () => this.openLooks(null, { tab: 'set', note: LOOK_T.stinaLine }));
     document.addEventListener('lilla:looks-arch', () => this.openLooks());
+    document.addEventListener('lilla:pet-gear', () => this.openLooks(null, { tab: 'pet' })); // (the kennel's and the pet button's way in)
     bus.on('open', (c) => {
       if (c.ui === 'sagaClass') this.open('class');
       else if (c.ui === 'saga') this.open('volva');
@@ -724,6 +729,39 @@ export class SagaUi {
       row.set(c?.emoji ?? '🙂', name(id), snap!.f[id]!, c?.color ?? '#cccccc', false);
       row.el.classList.toggle('sel', t === id);
     });
+    this.renderPets(ids);
+  }
+
+  /** A pet in the party area: its picture, its name and what it is doing (helping, scared, hidden). Tap or long press: what it does. */
+  private renderPets(ids: string[]): void {
+    const w = activeWorld();
+    const pets = Object.values(w?.animals ?? {}).filter((a) => !!a.petKind && !!a.owner && ids.includes(a.owner) && !!PETS[a.petKind]);
+    for (const [id, el] of this.petRows)
+      if (!pets.some((a) => a.id === id)) {
+        el.remove();
+        this.petRows.delete(id);
+      }
+    for (const a of pets) {
+      const def = PETS[a.petKind!]!;
+      const st = a.pf?.st ?? 'help';
+      const icon = st === 'scared' ? '😨' : st === 'hidden' ? '🌿' : '🐾';
+      const state = st === 'scared' ? PET_T.stateScared : st === 'hidden' ? PET_T.stateHidden : PET_T.stateHelp;
+      let el = this.petRows.get(a.id);
+      if (!el) {
+        el = h('div', { class: 'saga-pet', role: 'group' }, h('span', { class: 'em' }), h('span', { class: 'nm' }), h('span', { class: 'st' }));
+        this.petRows.set(a.id, el);
+      }
+      if (el.parentElement !== this.party || el !== this.party.lastElementChild) this.party.append(el);
+      const [em, nm, stEl] = [el.children[0]!, el.children[1]!, el.children[2]!];
+      if (em.textContent !== def.emoji) em.textContent = def.emoji;
+      if (nm.textContent !== a.name) nm.textContent = a.name;
+      if (stEl.textContent !== icon) stEl.textContent = icon;
+      el.className = `saga-pet ${st}`;
+      el.dataset.infoIcon = def.emoji;
+      el.dataset.infoName = `${a.name} · ${PET_T[`role${def.role[0]!.toUpperCase()}${def.role.slice(1)}` as 'roleAttack']}`;
+      el.dataset.infoText = `${state}. ${def.trickText}`;
+      el.setAttribute('aria-label', `${a.name}: ${state}`);
+    }
   }
 
   // ---- the boss ----
@@ -940,7 +978,7 @@ export class SagaUi {
   // ---- windows ----
 
   /** Garderoben (the wardrobe of looks); `stand`: the gear stand in the house it is picking a look for. */
-  openLooks(stand: number | null = null, opts: { tab?: 'wear' | 'set'; note?: string } = {}): void {
+  openLooks(stand: number | null = null, opts: { tab?: 'wear' | 'set' | 'pet'; note?: string } = {}): void {
     this.close();
     this.standObj = stand;
     this.looksNote = opts.note ?? null;
@@ -1267,6 +1305,18 @@ export class SagaUi {
         const cls = prog.cls ?? prog.lookCls;
         const can = wearableBy(dr.piece, cls) && !!cls;
         rows.append(lootLookCard(encodeLook(dr.piece, dr.tier, way), dr.piece, lines, can ? () => net.send({ t: 'look', slot: piece.slot, piece: dr.piece, cls }) : null));
+      }
+      // pet gear from the same clear (a pet was along): each piece with its effect playing, and a button to put it on that pet
+      if (lk.pet) {
+        const pet = lk.pet;
+        for (const dr of pet.drops) {
+          const piece = lookPiece(dr.piece);
+          if (!piece?.petSlot) continue;
+          best = Math.max(best, 3);
+          const lines = [fmt(PET_T.lootPet, { pet: pet.name }), dr.isNew ? fmt(LOOK_T.lootNew, { name: piece.name }) : fmt(LOOK_T.lootMore, { name: piece.name }), fmt(LOOK_T.lootNow, { tier: LOOK_TIER_NAMES[dr.tier - 1]!, n: dr.tier })];
+          const anchor = piece.petSlot;
+          rows.append(lootLookCard(encodeLook(dr.piece, dr.tier), dr.piece, lines, () => net.send({ t: 'pet', a: 'wear', anchor, piece: dr.piece, kind: pet.kind })));
+        }
       }
       for (const w of lk.ways) {
         const dun = DUNGEONS[lk.dungeon as keyof typeof DUNGEONS];

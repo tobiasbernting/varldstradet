@@ -29,6 +29,9 @@ import {
   type SlotRef,
   DAY_LENGTH_MS,
   isCallable,
+  PETS,
+  PET_T,
+  ownedPetIds,
   localWeather,
   noWeatherHere,
   talkNode,
@@ -353,17 +356,44 @@ export class Menus {
   // ---- the kennel: one free first pet ----
 
   private renderKennel(body: HTMLElement): void {
-    body.append(h('p', { class: 'help-intro' }, T.kennelPick));
-    const row = h('div', { class: 'kennel-row' });
-    for (const [species, label, glyph] of [['dog', T.kennelDog, '🐶'], ['cat', T.kennelCat, '🐱']] as const) {
-      const card = h('button', { class: 'kennel-card' }, h('span', { class: 'em' }, glyph), h('b', null, label));
+    const me = myPlayer()!;
+    const owned = ownedPetIds(me);
+    const adopted = (me.stats.petAdopted ?? 0) > 0;
+    if (!adopted) {
+      body.append(h('p', { class: 'help-intro' }, T.kennelPick));
+      const row = h('div', { class: 'kennel-row' });
+      for (const [species, label, glyph] of [['dog', T.kennelDog, '🐶'], ['cat', T.kennelCat, '🐱']] as const) {
+        const card = h('button', { class: 'kennel-card' }, h('span', { class: 'em' }, glyph), h('b', null, label));
+        onTap(card, () => {
+          net.send({ t: 'pet', a: 'adopt', species });
+          this.close();
+        });
+        row.append(card);
+      }
+      body.append(row);
+    }
+    if (!owned.length) return;
+    // the pets you have: tap one to bring it along (one at a time; it is the one chosen at the färdport too)
+    body.append(h('p', { class: 'help-intro' }, adopted ? `${T.kennelOnce} ${PET_T.kennelSwap}` : PET_T.kennelSwap), h('div', { class: 'sect' }, `🐾 ${PET_T.kennelHave}`));
+    const row = h('div', { class: 'kennel-row pets' });
+    for (const id of owned) {
+      const d = PETS[id]!;
+      const mine = me.pets?.active === id;
+      const name = me.pets?.owned[id]?.name || d.name;
+      const card = h('button', { class: `kennel-card${mine ? ' sel' : ''}`, 'aria-pressed': String(mine), title: `${d.trickText}` }, h('span', { class: 'em' }, d.emoji), h('b', null, mine ? `✔ ${name}` : name), h('small', null, mine ? PET_T.chosen : PET_T.choose));
       onTap(card, () => {
-        net.send({ t: 'pet', a: 'adopt', species });
+        net.send({ t: 'pet', a: 'pick', id });
         this.close();
       });
       row.append(card);
     }
     body.append(row);
+    const gear = h('button', { class: 'gold', type: 'button', style: { minHeight: '48px', marginTop: '10px' } }, `🧣 ${PET_T.gearTitle}`);
+    onTap(gear, () => {
+      this.close();
+      document.dispatchEvent(new CustomEvent('lilla:pet-gear'));
+    });
+    body.append(gear);
   }
 
   // ---- inventory & chest (tap one slot, then another to move) ----

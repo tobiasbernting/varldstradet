@@ -18,6 +18,8 @@ import {
   STOP_WORDS,
   DUNGEON_H,
   DUNGEON_W,
+  PETS,
+  type LookSlot,
   facingTile,
   heldItem,
   HOUSE_ROOM,
@@ -673,8 +675,8 @@ export class View implements HudTarget {
 
   private putAnimal(a: AnimalState): void {
     const variant = (a.variant ?? 0) % (ANIMAL_VARIANTS[a.species] ?? 1);
-    const frames = animalSprites(a.species, isBaby(a), client.season === 'jul', variant);
-    const key = `${a.species}-${isBaby(a)}-${client.season === 'jul'}-${variant}`;
+    const frames = animalSprites(a.species, isBaby(a), client.season === 'jul', variant, a.wear);
+    const key = `${a.species}-${isBaby(a)}-${client.season === 'jul'}-${variant}${a.wear ? `-${JSON.stringify(a.wear)}` : ''}`;
     let actor = this.animals.get(a.id);
     if (!actor) {
       actor = this.newActor('animal', frames, key, a.x, a.y, this.makeLabel(a.name, 'animal'), a.species);
@@ -739,6 +741,7 @@ export class View implements HudTarget {
         break;
       }
       case 'spell': {
+        if (typeof c.by === 'number' && c.spell.startsWith('pet_')) this.petCue.set(c.by, c.spell);
         // a hero swings their weapon (or staff) with every spell, like the ✋ button
         if (typeof c.by !== 'string' || c.area !== this.area || c.spell.startsWith('cast_') || c.spell.startsWith('land_') || c.spell === 'potion') break;
         const a = this.players.get(c.by);
@@ -1606,6 +1609,69 @@ export class View implements HudTarget {
       const hop = rider ? 0 : this.hopOf(a);
       const w = s.w * (1 + a.squash * 0.6) * turnScale(a.flip);
       const h = s.h * (1 - a.squash * 0.6);
+      // a pet: a small bounce in its step, and in a fight a pose when it acts that reads at sprite size, by what it does:
+      // bite and ram lunge, pounce leaps, purr hops and floats a heart, guard rears up, howl lifts its nose, peck dips, dig dips and throws dirt
+      if (an.petKind) {
+        const bob = a.wasMoving && Math.floor(a.walk * 5) % 2 === 1 ? 1 : 0;
+        let dx = 0;
+        let dy = -bob;
+        let ang = 0;
+        let sw = w;
+        let sh = h;
+        let tint: ReturnType<typeof rgba> | undefined;
+        if (an.pf) {
+          const since = serverNow() - (an.pf.actAt ?? 0);
+          const act = since >= 0 && since < 650 ? Math.sin((since / 650) * Math.PI) : 0; // (a pose is held for about half a second so it can be seen)
+          const side = a.flip < 0 ? -1 : 1;
+          const cue = act > 0 ? this.petCue.get(id) : undefined;
+          switch (cue) {
+            case 'pet_pounce':
+              dx = side * act * 7;
+              dy -= act * 9;
+              ang = side * act * 0.5;
+              break;
+            case 'pet_purr':
+              dy -= act * 3;
+              this.petHeart(q, a.x - side * 1, a.y + 4 - hop - sh - 3 - act * 5, act);
+              break;
+            case 'pet_roar':
+              sw = w * (1 + 0.22 * act);
+              sh = h * (1 + 0.3 * act);
+              ang = -side * act * 0.35;
+              break;
+            case 'pet_howl':
+              ang = -side * act * 0.55;
+              dy -= act * 2;
+              break;
+            case 'pet_mark':
+              ang = side * act * 0.55;
+              dy += act;
+              break;
+            case 'pet_dig':
+              ang = side * act * 0.45;
+              dy += act;
+              dx = Math.sin(this.t * 50) * act * 0.7;
+              this.petDirt(q, a.x + side * 7, a.y + 4, act);
+              break;
+            case 'pet_ram':
+              dx = side * act * 6;
+              ang = side * act * 0.25;
+              break;
+            case undefined:
+              break;
+            default:
+              // pet_bite and anything new: a lunge
+              dx = side * act * 3;
+              dy -= act * 4;
+              ang = side * act * 0.32;
+          }
+          const shake = an.pf.st === 'scared' ? Math.sin(this.t * 45) * 0.9 : 0;
+          dx += shake;
+          tint = an.pf.st === 'hidden' ? alpha(0.4) : an.pf.st === 'scared' ? rgba(0.72, 0.82, 1, 1) : undefined;
+        }
+        q.push(a.y + 4, s, a.x + dx, a.y + 4 - hop - sh / 2 + dy, sw, sh, ang, tint);
+        continue;
+      }
       q.push(a.y + 4, s, a.x, a.y + 4 - hop - h / 2, w, h);
     }
     for (const r of this.roofs) if (r.alpha > 0.01 && inView(r.x, r.y, r.sprite.w, r.sprite.h)) q.push(r.depth, r.sprite, r.x + r.sprite.w / 2, r.y + r.sprite.h / 2, r.sprite.w, r.sprite.h, 0, alpha(r.alpha));
@@ -1704,6 +1770,24 @@ export class View implements HudTarget {
   }
 
   /** The players in sight that wear looks, for the effects (the others cost nothing). */
+  /** What a pet did last (its spell name), to pose it: set from the server's spell changes. */
+  private petCue = new Map<number, string>();
+
+  /** A little pixel heart that floats up from a purring pet. */
+  private petHeart(q: DrawQueue, x: number, y: number, k: number): void {
+    const cells: [number, number][] = [[0, 0], [2, 0], [-1, 1], [0, 1], [1, 1], [2, 1], [3, 1], [0, 2], [1, 2], [2, 2], [1, 3]];
+    const c = rgba(1, 0.42, 0.55, Math.min(1, k * 1.6));
+    for (const [cx, cy] of cells) q.push(9500, this.art.white, x + cx - 1, y + cy, 1, 1, 0, c);
+  }
+
+  /** Dirt thrown up where a fox digs. */
+  private petDirt(q: DrawQueue, x: number, y: number, k: number): void {
+    for (let i = 0; i < 4; i++) {
+      const u = (this.t * 9 + i * 0.37) % 1;
+      q.push(9500, this.art.white, x + (i - 1.5) * 2.2, y - 2 - Math.sin(u * Math.PI) * 6 * k, 1, 1, 0, rgba(0.55, 0.38, 0.2, k));
+    }
+  }
+
   private fxActors(world: WorldState): FxActor[] {
     const out: FxActor[] = [];
     const [vx, vy, vw, vh] = this.viewRect();
@@ -1712,6 +1796,26 @@ export class View implements HudTarget {
       if (!p || p.sleeping || !p.outfit.looks || this.sagaFx.pose(id) === 'down') continue;
       if (a.x < vx - 40 || a.x > vx + vw + 40 || a.y < vy - 50 || a.y > vy + vh + 40) continue;
       out.push({ id, x: a.x, y: a.y + 4 - this.rideInfo(p).lift, facing: p.facing, moving: p.moving, seed: a.seed, looks: p.outfit.looks });
+    }
+    // the pets' gear: each animal with something on is its own small actor (looksfx.ts gives it a smaller budget)
+    for (const [id, a] of this.animals) {
+      const an = world.animals[id];
+      if (!an?.petKind || !an.wear || a.x < vx - 40 || a.x > vx + vw + 40 || a.y < vy - 50 || a.y > vy + vh + 40) continue;
+      const def = PETS[an.petKind];
+      if (!def) continue;
+      const size = ANIMAL_SIZE[an.species] ?? { w: 16, h: 16 };
+      const f = a.wasMoving ? Math.floor(a.walk * 5) % 2 : 0;
+      const side = a.flip < 0 ? -1 : 1;
+      const hop = this.hopOf(a);
+      const at = (k: 'head' | 'neck' | 'back', dy: number): [number, number] => {
+        const [ax, ay] = def.anchors[k][f] ?? def.anchors[k][0]!;
+        return [a.x + side * (ax - size.w / 2), a.y + 4 - hop - size.h + ay + dy];
+      };
+      const looks: Partial<Record<LookSlot, string>> = {};
+      if (an.wear.head) looks.hat = an.wear.head;
+      if (an.wear.neck) looks.amulet = an.wear.neck;
+      if (an.wear.back) looks.cloak = an.wear.back;
+      out.push({ id: `pet${id}`, x: a.x, y: a.y + 4 - hop, facing: side < 0 ? 'left' : 'right', moving: a.wasMoving, seed: a.seed, looks, pet: { head: at('head', -2), chest: at('neck', 1), back: at('back', 0) } });
     }
     return out;
   }

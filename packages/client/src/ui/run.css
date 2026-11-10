@@ -303,6 +303,9 @@ body.saga-bossfight .run-vote {
 .run-panel .tiles.dungeons {
   grid-template-columns: repeat(3, 1fr);
 }
+.run-panel .tiles.pets {
+  grid-template-columns: repeat(auto-fit, minmax(calc(36 * var(--u)), 1fr));
+}
 .run-panel .tiles.levels {
   grid-template-columns: repeat(auto-fit, minmax(calc(34 * var(--u)), 1fr));
 }

@@ -14,6 +14,9 @@ import { drawSprite, rgba } from './gfx.ts';
 export const FX_PLAYER_CAP = 8;
 export const FX_PROCEDURAL_CAP = 4;
 export const FX_GLOBAL_CAP = 120;
+/** A pet's own, smaller budget (its gear never eats into its owner's): 3 live particles and 2 procedural effects, a small aura, no trail. */
+export const FX_PET_CAP = 3;
+export const FX_PET_PROCEDURAL_CAP = 2;
 
 const KINDS = FX_KINDS;
 const PROCEDURAL = FX_PROCEDURAL;
@@ -60,6 +63,8 @@ export interface FxActor {
   seed: number;
   /** The `piece|tier|way` codes worn (`outfit.looks`), or undefined. */
   looks: Partial<Record<LookSlot, string>> | undefined;
+  /** A pet (its gear, hat = head, amulet = neck, cloak = back): the world positions of its head, neck and back this frame. */
+  pet?: { head: [number, number]; chest: [number, number]; back: [number, number] };
 }
 
 interface Rig {
@@ -141,10 +146,10 @@ export class LooksFx {
     }
     // the procedural ones too have a budget: the effects themselves first, the soft glows after
     glows.sort((x, y) => Number(x.fx === 'runepulse') - Number(y.fx === 'runepulse'));
-    glows.length = Math.min(glows.length, FX_PROCEDURAL_CAP);
+    glows.length = Math.min(glows.length, a.pet ? FX_PET_PROCEDURAL_CAP : FX_PROCEDURAL_CAP);
     const top = decoded.find((d) => d.tier >= FX_FULL_TIER);
     const set = top ? top.piece.set : '';
-    const trail = top && (set === 'bjornbarsark' || set === 'skuggornas' || set === 'lokeslek' || set === 'sig_gungner');
+    const trail = !a.pet && top && (set === 'bjornbarsark' || set === 'skuggornas' || set === 'lokeslek' || set === 'sig_gungner');
     rig = { key, looks: decoded, emitters, glows, aura: top ? { kind: trail ? 'trail' : 'ring', pal: top.pal } : null, ghosts: rig?.ghosts ?? [], ghostNext: 0, lastX: a.x, lastY: a.y };
     this.rigs.set(a.id, rig);
     return rig;
@@ -152,6 +157,11 @@ export class LooksFx {
 
   /** Where on a figure standing at (x, y) an effect comes from. */
   private anchor(at: FxAnchor, a: FxActor, k: number): [number, number] {
+    if (a.pet) {
+      // a pet: the three points the view worked out from the animal's own table (head, neck, back), nothing on the feet or in a hand
+      const q = at === 'head' ? a.pet.head : at === 'back' ? a.pet.back : a.pet.chest;
+      return [q[0] + (k % 2 ? -1 : 1), q[1]];
+    }
     const sx = a.facing === 'left' ? -1 : 1;
     const side = a.facing === 'left' || a.facing === 'right';
     switch (at) {
@@ -256,7 +266,7 @@ export class LooksFx {
           e.next -= dt;
           if (e.next > 0) continue;
           e.next += (1 / kind.rate) * (1.3 + rig.emitters.length * 0.35) * (0.7 + Math.random() * 0.6);
-          if ((this.count.get(a.id) ?? 0) >= FX_PLAYER_CAP || this.live >= FX_GLOBAL_CAP) continue;
+          if ((this.count.get(a.id) ?? 0) >= (a.pet ? FX_PET_CAP : FX_PLAYER_CAP) || this.live >= FX_GLOBAL_CAP) continue;
           this.spawn(a, e, k++);
         }
         // a hero who stands still sparkles a little less than one who runs
@@ -330,7 +340,8 @@ export class LooksFx {
       case 'runepulse': {
         // the item's own light breathing on a 1.5 s sine
         const k = 0.5 + 0.5 * Math.sin((t / 1.5) * Math.PI * 2 + a.seed);
-        drawSprite(glow, x, y, 9 + 3 * k, 9 + 3 * k, 0, rgba(c[0], c[1], c[2], 0.12 + 0.16 * k));
+        const sz = a.pet ? 0.6 : 1;
+        drawSprite(glow, x, y, (9 + 3 * k) * sz, (9 + 3 * k) * sz, 0, rgba(c[0], c[1], c[2], 0.12 + 0.16 * k));
         break;
       }
       case 'glitter': {
@@ -339,8 +350,8 @@ export class LooksFx {
           const tw = Math.sin(t * 3.1 + i * 2.1 + a.seed * 3);
           if (tw < 0.55) continue;
           const [ax, ay] = this.anchor(g.at, a, i);
-          const ox = (noise(a.seed + i * 3.3) - 0.5) * 9;
-          const oy = (noise(a.seed + i * 7.9) - 0.5) * 7;
+          const ox = (noise(a.seed + i * 3.3) - 0.5) * (a.pet ? 4 : 9);
+          const oy = (noise(a.seed + i * 7.9) - 0.5) * (a.pet ? 3 : 7);
           const al = (tw - 0.55) / 0.45;
           const ac = rgbOf(i % 2 ? g.pal.accent : g.pal.glow);
           drawSprite(px, Math.round(ax + ox), Math.round(ay + oy), 1, 1, 0, rgba(ac[0], ac[1], ac[2], al));
@@ -412,10 +423,12 @@ export class LooksFx {
     let c = rgbOf(rig.aura.pal.glow);
     if (c[0] > 0.8 && c[1] < 0.72 && c[2] < 0.5) c = rgbOf(rig.aura.pal.accent);
     const k = 0.5 + 0.5 * Math.sin(t * 2 + a.seed);
-    drawSprite(glow, a.x, a.y + 1, 24, 8, 0, rgba(c[0], c[1], c[2], 0.16 + 0.1 * k));
-    for (let i = 0; i < 3; i++) {
-      const ang = t * 1.3 + (i / 3) * 6.28 + a.seed;
-      drawSprite(px, Math.round(a.x + Math.cos(ang) * 9), Math.round(a.y + 1 + Math.sin(ang) * 3), 1, 1, 0, rgba(1, 1, 1, 0.55 + 0.3 * Math.sin(t * 5 + i)));
+    // a pet's aura is a small ground glow with two glints
+    const sc = a.pet ? 0.55 : 1;
+    drawSprite(glow, a.x, a.y + 1, 24 * sc, 8 * sc, 0, rgba(c[0], c[1], c[2], 0.16 + 0.1 * k));
+    for (let i = 0; i < (a.pet ? 2 : 3); i++) {
+      const ang = t * 1.3 + (i / (a.pet ? 2 : 3)) * 6.28 + a.seed;
+      drawSprite(px, Math.round(a.x + Math.cos(ang) * 9 * sc), Math.round(a.y + 1 + Math.sin(ang) * 3 * sc), 1, 1, 0, rgba(1, 1, 1, 0.55 + 0.3 * Math.sin(t * 5 + i)));
     }
   }
 }
