@@ -1268,7 +1268,6 @@ export const SAGA_ITEMS: SagaItemDef[] = [
   { id: 'amulet_hjaltemarke', name: 'Hjältemärket', rarity: 'epic', kind: 'amulet', levelReward: 9, text: 'Ett märke av silver som bara riktiga hjältar får bära.' },
   { id: 'shirt_stjarnmantel', name: 'Stjärnmanteln', rarity: 'epic', kind: 'shirt', style: 'cloak', color: '#2a2a5a', glow: '#b8a8ff', levelReward: 10, text: 'En mantel lika mörk som natthimlen, full av små lysande stjärnor.' },
   { id: 'hat_norrskenshjalm', name: 'Norrskenshjälmen', rarity: 'epic', kind: 'hat', style: 'valkyrie', color: '#dfeeff', glow: '#5fd38d', levelReward: 12, text: 'En vingad hjälm som skimrar grönt som norrskenet.' },
-  { id: 'mount_ljushjort', name: 'Ljushjorten', rarity: 'legendary', kind: 'mount', species: 'ljushjort', levelReward: 15, text: 'En blekt vitblå hjort vars horn lyser som månsken.' },
   { id: 'shirt_eldmantel', name: 'Eldmanteln', rarity: 'legendary', kind: 'shirt', style: 'cloak', color: '#5a1a10', glow: '#ff6a3a', levelReward: 16, text: 'En mantel som fladdrar som lågor, men aldrig bränns.' },
   { id: 'hat_solkrona', name: 'Solkronan', rarity: 'legendary', kind: 'hat', style: 'crown', color: '#ffe27a', glow: '#ffe27a', levelReward: 18, text: 'En krona av guld som lyser som solen själv.' },
   { id: 'amulet_yggdrasil', name: 'Yggdrasils löv', rarity: 'legendary', kind: 'amulet', levelReward: 19, text: 'Ett löv från Världsträdet. Det är grönt året runt.' },
@@ -1480,10 +1479,11 @@ export const gearSlotOf = (itemId: string): GearSlot | null => {
 };
 
 /**
- * What a hero level still gives: every level above the first adds this much damage, healing and health (+28.5 % at level 20).
- * Gear gives nothing of the kind: it is only for show (looks.ts).
+ * Hero levels give no power at all (they are a sign of experience, with cosmetic rewards: LEVEL_REWARDS). Every hero fights as a
+ * level-3 hero used to (1 + 1.5 % per level above the first), because the whole game was tuned with level-3 heroes (the bot tests,
+ * GAME2.md section 5.6). This is the one place that number lives; change it here and nowhere else.
  */
-export const LEVEL_BONUS = 0.015;
+export const FLAT_LEVEL_MUL = 1 + 0.015 * 2;
 /**
  * The flat base every hero fights with, in place of what gear used to add. It is exactly what the starter set gave (an uncommon
  * weapon: x1.05 damage and healing, a wooden shield: 4 % less damage taken, a stone amulet: +8 health), so the bots' measured
@@ -1508,7 +1508,7 @@ export interface LevelReward {
   title?: string;
   aura?: 1 | 2;
 }
-/** Hero level rewards: looks, never power (the items are SAGA_ITEMS with `levelReward`). */
+/** Hero level rewards: looks, titles and house decor, never power (clothes and gear are SAGA_ITEMS with `levelReward`; decor is a Norse decor piece for the house). */
 export const LEVEL_REWARDS: Record<number, LevelReward> = {
   2: { item: 'shirt_vandrarmantel' },
   3: { title: 'Vandrare' },
@@ -1521,7 +1521,9 @@ export const LEVEL_REWARDS: Record<number, LevelReward> = {
   10: { item: 'shirt_stjarnmantel', aura: 1 },
   12: { item: 'hat_norrskenshjalm' },
   13: { title: 'Stor hjälte' },
-  15: { item: 'mount_ljushjort' },
+  11: { item: 'candle_stick' },
+  14: { item: 'viking_banner' },
+  15: { item: 'yggdrasil_sapling' },
   16: { item: 'shirt_eldmantel' },
   17: { title: 'Legend' },
   18: { item: 'hat_solkrona' },
@@ -1545,7 +1547,7 @@ export const levelSpan = (xp: number): { level: number; from: number; next: numb
   return { level, from: XP_LEVELS[level - 1]!, next: XP_LEVELS[level] ?? null };
 };
 
-/** What a hero fights with: the flat base and the hero level, never the gear. */
+/** What a hero fights with: the flat base, never the hero level or the gear. */
 export interface FightStats {
   /** Damage and healing multiplier. */
   power: number;
@@ -1566,15 +1568,13 @@ export function gearOf(p: PlayerState): Partial<Record<GearSlot, string>> {
   return best ? { weapon: best.id } : {};
 }
 
-/** What a hero's level gives in a fight, on top of the flat base. */
-export const levelMul = (p: PlayerState): number => 1 + LEVEL_BONUS * (heroLevel(p.saga) - 1);
-/** What a player fights with (the hero level on a flat base; gear does not count). */
-export function fightStats(p: PlayerState): FightStats {
-  return { power: BASE_POWER * levelMul(p), hp: BASE_HP, armor: BASE_ARMOR };
+/** What a player fights with: the same flat numbers for everyone (neither the hero level nor the gear counts). */
+export function fightStats(_p: PlayerState): FightStats {
+  return { power: BASE_POWER * FLAT_LEVEL_MUL, hp: BASE_HP, armor: BASE_ARMOR };
 }
 
-/** A fighter's full health: the class's and the flat base, and a little more for every level. */
-export const fighterMax = (p: PlayerState, cls: ClassId): number => Math.round((CLASSES[cls].hp + BASE_HP) * levelMul(p));
+/** A fighter's full health: the class's and the flat base, the same at every hero level. */
+export const fighterMax = (_p: PlayerState, cls: ClassId): number => Math.round((CLASSES[cls].hp + BASE_HP) * FLAT_LEVEL_MUL);
 
 // ---------------------------------------------------------------------------
 // The villagers' quests: two for each dungeon, once Völvan has told its chapter

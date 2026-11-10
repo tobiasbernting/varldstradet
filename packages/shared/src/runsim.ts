@@ -13,8 +13,6 @@ import type { Change } from './protocol.ts';
 import {
   CLASSES,
   DUNGEON_IDS,
-  XP_LEVELS,
-  heroLevel,
   isRunKey,
   newSagaProgress,
   type ClassId,
@@ -682,13 +680,11 @@ function hireCompanion(farm: WorldState, run: RunState, humansIn: PlayerState[],
   // one or two humans get the Hirdmannen, no longhouse needed (GAME.md section 6): the class the party lacks
   const cls = companionClass(humansIn.map((q) => q.saga?.cls).filter((x): x is ClassId => !!x));
   if (!cls) return;
-  const human = humansIn[0]!;
   const c = createPlayer(farm, COMPANION_NAME, { skin: '#c68642', hair: '#6b3e1d', hairStyle: 'short' });
   c.bot = true;
   c.online = true;
   const weapon: Record<ClassId, string> = { vaktare: 'jarnsvard', krigare: 'jarnyxa', helare: 'ekstav', magiker: 'ekstav' };
-  const level = heroLevel(human.saga);
-  c.saga = { ...newSagaProgress(), cls, heard: true, gear: { weapon: weapon[cls], offhand: 'traskold', amulet: 'stenamulett' }, xp: XP_LEVELS[Math.max(0, level - 1)] ?? 0 };
+  c.saga = { ...newSagaProgress(), cls, heard: true, gear: { weapon: weapon[cls], offhand: 'traskold', amulet: 'stenamulett' } };
   c.outfit = { ...c.outfit, hat: CLASSES[cls].outfit.hat, shirt: CLASSES[cls].outfit.shirt };
   addItem(c.inventory, 'healing_potion', 3);
   run.companions.push(c.id);
