@@ -619,8 +619,16 @@ input[type='text'] {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: safe center;
   gap: calc(3 * var(--u));
+  overflow-y: auto;
+  padding: calc(4 * var(--u)) 0 max(12px, calc(3 * var(--u)));
+}
+/* the Inställningar button follows the cards, so many characters never slide under it */
+.picker .settings-open {
+  position: static;
+  flex: none;
+  margin-top: max(8px, calc(2 * var(--u)));
 }
 .picker h1 {
   margin: 0;
