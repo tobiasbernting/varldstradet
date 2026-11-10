@@ -641,7 +641,7 @@ input[type='text'] {
 .picker {
   position: absolute;
   inset: 0;
-  background: linear-gradient(#78b35a, #4f8a31);
+  background: linear-gradient(#3f7a24, #2c5f18);
   display: flex;
   flex-direction: column;
   align-items: center;

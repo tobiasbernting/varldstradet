@@ -499,7 +499,7 @@ button.chip {
   }
   .hud-right {
     max-width: calc(100% - 270px);
-    gap: 6px;
+    gap: 8px;
   }
 }
 
@@ -528,4 +528,56 @@ button.chip {
 }
 .saga-pet {
   min-height: var(--tap);
+}
+
+/* ---- a phone held sideways (under 480 px high): nothing may touch or overlap (round 2 audit) ---- */
+@media (max-height: 480px) {
+  body.touch .saga-bar {
+    right: calc(max(16px, env(safe-area-inset-right)) + 104px);
+  }
+  .a11y-left body.touch .saga-bar {
+    right: auto;
+    left: calc(max(16px, env(safe-area-inset-left)) + 104px);
+  }
+  /* the hotbar becomes a strip that scrolls between the chat buttons on the left and the big buttons on the right */
+  body.touch .hotbar {
+    left: 176px;
+    right: 232px;
+    transform: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    justify-content: flex-start;
+  }
+  body.touch .hotbar .slot {
+    flex: none;
+  }
+  /* the party's frames flow into a second column instead of running over the chat buttons */
+  .saga-party {
+    bottom: 76px;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    width: auto;
+    max-width: 48%;
+  }
+  .saga-party > * {
+    width: calc(58 * var(--u));
+  }
+}
+.fx-set,
+.fx-set .fx {
+  gap: 8px !important;
+}
+.run-panel button.go {
+  background: #2f7a14;
+}
+button.pick:disabled {
+  opacity: 1;
+  background: #2f7a14;
+  color: #fff;
+}
+/* in a fight on a short screen the saga's chapter note would sit on the run button */
+@media (max-height: 480px) {
+  body.saga-fight .saga-tracker {
+    display: none;
+  }
 }

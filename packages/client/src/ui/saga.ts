@@ -408,6 +408,15 @@ export class SagaUi {
     this.units.append(this.meFrame.el, this.targetFrame.el);
     this.castBar.append(this.castFill, this.castName);
     hudRoot.append(this.party, this.units, this.boss, this.castBar, this.yellEl, this.bar, this.hint, this.tracker, this.down, this.banners);
+    // the tracker hangs under the HUD's round buttons, wherever they wrap to (on a short screen they take two rows)
+    const place = (): void => {
+      const hr = document.querySelector<HTMLElement>('.hud-right');
+      const root = this.tracker.offsetParent as HTMLElement | null;
+      if (!hr || !root) return;
+      this.tracker.style.top = `${Math.max(0, hr.getBoundingClientRect().bottom - root.getBoundingClientRect().top + 8)}px`;
+    };
+    window.addEventListener('resize', place);
+    window.setInterval(place, 700);
     onTap(this.tracker, () => {
       this.trackerOpen = !this.trackerOpen;
       this.renderTracker();
