@@ -41,6 +41,7 @@ import { SagaUi } from '@v1/ui/saga.ts';
 import { RunUi } from '@v1/ui/run.ts';
 import { SettingsUi } from '@v1/ui/settings.ts';
 import { initAccess } from '@v1/ui/access.ts';
+import { LogUi } from '@v1/ui/log.ts';
 import { initA11y, prefs } from '@v1/a11y.ts';
 import { initSound, isMuted, setMuted } from '@v1/sound.ts';
 import { Chat, SocialButtons, petCommand, petToggle, weatherChip } from '@v1/ui/social.ts';
@@ -101,15 +102,18 @@ const saga = new SagaUi(ui, hud.root, menus, social.el);
 const run = new RunUi(ui, hud.root);
 // Inställningar: text, colours, motion, buttons, reading aloud (also from the character picker)
 const settings = new SettingsUi(ui);
+// Logg: everything the game wrote on the screen (L, the HUD's 📜, the help)
+const log = new LogUi(ui, () => chat.open());
 /** Any window open: the world stops reading taps and keys. */
 function syncUiOpen(): void {
-  view.uiOpen = menus.isOpen() || saga.isOpen() || run.isOpen() || settings.isOpen();
+  view.uiOpen = menus.isOpen() || saga.isOpen() || run.isOpen() || settings.isOpen() || log.isOpen();
 }
 menus.onChange = syncUiOpen;
 saga.onChange = syncUiOpen;
 run.onChange = syncUiOpen;
 settings.onChange = syncUiOpen;
-initGamepad({ ui, target: () => (started ? view : null), menus, windows: [settings, menus, saga, run], hud });
+log.onChange = syncUiOpen;
+initGamepad({ ui, target: () => (started ? view : null), menus, windows: [log, settings, menus, saga, run], hud });
 initA11y();
 initAccess(ui);
 // a phone held upright is asked to turn, and may play anyway
@@ -150,6 +154,7 @@ window.addEventListener('keydown', (e) => {
   } else if (e.key === 'f' || e.key === 'F') menus.toggle('emotes');
   else if (e.key === 'h' || e.key === 'H' || e.key === '?') menus.toggle('help');
   else if (e.key === 'b' || e.key === 'B') document.dispatchEvent(new Event('vt:journal'));
+  else if (e.key === 'l' || e.key === 'L') document.dispatchEvent(new Event('vt:log'));
   else if (e.key === 'g' || e.key === 'G') hud.toggleFurnish();
   else if (e.key === 'm' || e.key === 'M') hud.minimap.toggle();
   else if (/^[1-8]$/.test(e.key)) hud.select(Number(e.key) - 1);

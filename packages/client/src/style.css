@@ -323,18 +323,7 @@ body:not(.touch) .act-btn {
   display: none;
 }
 
-/* ---- toasts ---- */
-.toasts {
-  position: absolute;
-  left: 50%;
-  bottom: calc(28 * var(--u));
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column-reverse;
-  gap: max(8px, var(--u));
-  align-items: center;
-  pointer-events: none !important;
-}
+/* ---- toasts (drawn in the message lane, ui/lane.css) ---- */
 .toast {
   background: var(--panel);
   border: var(--u) solid var(--ink);

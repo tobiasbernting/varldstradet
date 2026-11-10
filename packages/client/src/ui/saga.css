@@ -306,9 +306,6 @@ body.touch .saga-units {
   bottom: auto;
   top: calc(17 * var(--u));
 }
-body.saga-fight:not(.touch) .toasts {
-  bottom: calc(46 * var(--u));
-}
 .saga-unit,
 .saga-member {
   display: flex;

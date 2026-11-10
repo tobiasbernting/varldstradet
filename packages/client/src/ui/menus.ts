@@ -1,6 +1,7 @@
 // All in-game menus as HTML overlays: ryggsäck, kista, gårdsbutik, sälj, snickra, garderob, emotes, namn.
 import {
   A11Y_T,
+  LOG_T,
   FILTER_NAMES,
   HELP,
   HOUSE_T,
@@ -626,6 +627,9 @@ export class Menus {
     const settings = h('button', { class: 'alt' }, `⚙️ ${A11Y_T.settings}`);
     onTap(settings, () => document.dispatchEvent(new Event('vt:settings')));
     tabs.append(settings);
+    const logBtn = h('button', { class: 'alt' }, `📜 ${LOG_T.title}`);
+    onTap(logBtn, () => document.dispatchEvent(new Event('vt:log')));
+    tabs.append(logBtn);
     panel.insertBefore(tabs, body);
     const topic = topics.find((t) => t.id === this.helpTopic) ?? topics[0]!;
     if (topic.intro) body.append(h('p', { class: 'help-intro' }, topic.intro));
