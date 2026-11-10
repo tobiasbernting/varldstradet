@@ -450,7 +450,7 @@ Chosen at the arch and fixed for the run (`RUN_LEVELS` in `run.ts`; names, blurb
 | 0 Mycket lätt | ×0.4 | ×0.3 | ×1.8 | 5, +1, 5 | never ends the run | ×0.35 | ×0.6 / none | 0 |
 | 1 Lätt | ×0.6 | ×0.5 | ×1.4 | 3, +1, 5 | never ends the run | ×0.5 | ×1 / none | 0 |
 | 2 Medel | ×1 | ×1 | ×1 | 1 | ends the run after the one | ×1 | ×1 / none | 0 |
-| 3 Svår | ×1.65 | ×1.6 | ×0.8 | 1 | as Medel | ×1.5 | ×1.5 / +0.5 weight per rarity step | 1 |
+| 3 Svår | ×1.75 | ×1.6 | ×0.8 | 1 | as Medel | ×1.5 | ×1.5 / +0.5 weight per rarity step | 1 |
 | 4 Extrem | ×1.9 | ×1.6 | ×0.65 | none | the first wipe ends it | ×2 | ×2 / +1.0 weight per rarity step | 2 |
 
 "Hp" and "damage" multiply a monster's, a boss's and what a boss calls in. "Rare finds" multiplies the chance of a chest's rare
