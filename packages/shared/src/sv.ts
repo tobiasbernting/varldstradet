@@ -1571,9 +1571,9 @@ export const SET_NAMES: Record<string, [string, string]> = {
   eld: ['Glöden', 'Brasan'], is: ['Frostskalet', 'Glaciären'], aska: ['Gnistan', 'Åskstormen'], skold: ['Skyddet', 'Fästningen'], liv: ['Livsgnistan', 'Livets träd'], hugg: ['Skärpan', 'Mästarhugget'], tur: ['Lyckan', 'Guldregnet'], djur: ['Flocken', 'Vildmarken'],
 };
 export const SET_TEXT: Record<string, [string, string]> = {
-  eld: ['Trollformler +6 %', 'Trollformler +8 % och du läker 4 %'], is: ['Du tar 5 % mindre skada', 'Du tar 5 % mindre och laddar 5 % fortare'], aska: ['Trollformler laddar 6 % snabbare', '6 % snabbare och 6 % fler kritiska'],
-  skold: ['Skydd +5 %', 'Skydd +4 % och hälsa +8 %'], liv: ['Läkning +8 % och hälsa kommer fortare', 'Läkning +10 %, vila och väckning bättre'], hugg: ['Fler kritiska träffar +6 %', '+6 % kritiska och trollformler +6 %'],
-  tur: ['Kritiska +5 % och 20 % fler mynt', '25 % fler mynt och 10 % fler sagafrön'], djur: ['Hälsa +6 %', 'Hälsa +6 % och hälsan kommer fortare'],
+  eld: ['Trollformler +3 %', 'Trollformler +4 % och du läker 2 %'], is: ['Du tar 3 % mindre skada', 'Du tar 3 % mindre och laddar 3 % fortare'], aska: ['Trollformler laddar 3 % snabbare', '3 % snabbare och 3 % fler kritiska'],
+  skold: ['Skydd +3 %', 'Skydd +2 % och hälsa +5 %'], liv: ['Läkning +5 % och hälsa kommer fortare', 'Läkning +6 %, vila och väckning bättre'], hugg: ['Fler kritiska träffar +3 %', '+3 % kritiska och trollformler +3 %'],
+  tur: ['Kritiska +3 % och 20 % fler mynt', '25 % fler mynt och 10 % fler sagafrön'], djur: ['Hälsa +4 %', 'Hälsa +4 % och hälsan kommer fortare'],
 };
 
 export const TREE_NAMES: Record<string, string> = {

@@ -182,7 +182,7 @@ describe('runor v2: set bonuses and skärpa', () => {
     expect(two.power).toBeCloseTo(SET_BONUS.eld[0].power!);
     const four = setEffect(tagCounts(eld));
     expect(four.power!).toBeCloseTo(SET_BONUS.eld[0].power! + SET_BONUS.eld[1].power!);
-    expect(four.leech).toBeCloseTo(0.04);
+    expect(four.leech).toBeCloseTo(SET_BONUS.eld[1].leech!);
     // a runa with two tags counts for both
     const both = RUNOR.find((r) => r.tags.length === 2)!;
     const counts = tagCounts([{ id: both.id, up: 0 }]);

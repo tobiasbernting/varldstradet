@@ -459,7 +459,7 @@ export const isFlockLike = (k: NodeKind): boolean => k === 'flock' || k === 'eli
 export const wingOf = (row: number): number => (row <= 4 ? 0 : row <= 8 ? 1 : 2);
 
 /** Health of a stop's monsters by wing (GAME2.md section 5.3): the later wings are tougher. Tuned by the bots. */
-export const WING_HP: readonly number[] = [1.6, 1.75, 1.95];
+export const WING_HP: readonly number[] = [1.85, 2.3, 2.7];
 
 /** One human alone (with the hired companion, who counts as a fighter for the monsters' health): monsters tolerate this much less. */
 export const SOLO_MERCY = 0.75;

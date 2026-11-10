@@ -1766,8 +1766,8 @@ describe('the bots choose the way on (runbot.ts)', () => {
     const hurt = walkedTo('careful', true);
     const fine = walkedTo('careful', false);
     expect(hurt.kinds).toEqual(fine.kinds);
-    // a fine party goes where nothing hurts first (a Köpman, a Skatt, a Händelse), then a plain fight; a hurt one to the Vilosten
-    const order = ['shop', 'treasure', 'event', 'flock', 'mini', 'boss', 'elite'];
+    // a fine party goes to a plain fight first, then a Skatt, the Köpman or a Händelse (a Stark vakt last); a hurt one to the Vilosten
+    const order = ['flock', 'mini', 'boss', 'treasure', 'shop', 'event', 'elite'];
     expect(fine.kind).toBe(order.find((k) => fine.kinds.includes(k)));
     expect(hurt.kind).toBe(hurt.kinds.includes('rest') ? 'rest' : order.find((k) => hurt.kinds.includes(k)));
   });

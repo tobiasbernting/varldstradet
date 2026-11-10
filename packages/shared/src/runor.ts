@@ -144,14 +144,14 @@ export function tagCounts(held: readonly RunaHeld[], party: readonly string[] = 
 
 /** The set bonuses: two runor of a tag give the first, four the second as well (GAME2.md 3.1). Plain effects, so the tests' "every effect changes something" covers them. */
 export const SET_BONUS: Record<RunTag, [RunEffect, RunEffect]> = {
-  eld: [{ power: 0.06 }, { power: 0.08, leech: 0.04 }],
-  is: [{ taken: 0.05 }, { taken: 0.05, cd: 0.05 }],
-  aska: [{ cd: 0.06 }, { cd: 0.06, crit: 0.06 }],
-  skold: [{ armor: 0.05 }, { armor: 0.04, hp: 0.08 }],
-  liv: [{ heal: 0.08, regen: 0.3 }, { heal: 0.1, rest: 0.4, reviveHp: 0.15 }],
-  hugg: [{ crit: 0.06 }, { crit: 0.06, power: 0.06 }],
-  tur: [{ crit: 0.05, coins: 0.2 }, { coins: 0.25, seeds: 0.1 }],
-  djur: [{ hp: 0.06 }, { hp: 0.06, regen: 0.4 }],
+  eld: [{ power: 0.03 }, { power: 0.04, leech: 0.02 }],
+  is: [{ taken: 0.03 }, { taken: 0.03, cd: 0.03 }],
+  aska: [{ cd: 0.03 }, { cd: 0.03, crit: 0.03 }],
+  skold: [{ armor: 0.03 }, { armor: 0.02, hp: 0.05 }],
+  liv: [{ heal: 0.05, regen: 0.2 }, { heal: 0.06, rest: 0.3, reviveHp: 0.1 }],
+  hugg: [{ crit: 0.03 }, { crit: 0.03, power: 0.03 }],
+  tur: [{ crit: 0.03, coins: 0.2 }, { coins: 0.25, seeds: 0.1 }],
+  djur: [{ hp: 0.04 }, { hp: 0.04, regen: 0.3 }],
 };
 export const SET_STEPS: readonly [number, number] = [2, 4];
 
