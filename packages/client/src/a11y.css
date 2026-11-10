@@ -621,9 +621,11 @@ button.pick:disabled {
     flex: none;
   }
 }
-/* the party's frames flow into a second column rather than over the buttons at the bottom left */
-.saga-party {
-  bottom: 112px;
-  flex-wrap: wrap;
-  align-content: flex-start;
+/* the party's frames flow into a second column rather than over the buttons at the bottom left (on a short screen see above) */
+@media (min-height: 481px) {
+  .saga-party {
+    bottom: 112px;
+    flex-wrap: wrap;
+    align-content: flex-start;
+  }
 }
