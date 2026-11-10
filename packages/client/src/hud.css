@@ -1,0 +1,392 @@
+/* The HUD's size budget. Loaded after a11y.css, so what is here wins.
+
+   The aim: the HUD is about a quarter of the screen, never more than a third, and nothing in it overlaps anything else. The hero and
+   the middle of the screen stay free. What a screen needs is worked out from three things the player and the device decide:
+     - the shorter side of the window (vmin): a short, wide window gets small bars, a tall tablet gets big ones,
+     - the text size (--txt: 1, 1.25, 1.5): words never go under 16 px, and the buttons that carry them grow with the words,
+     - the HUD size (--hk: 0.85 / 1 / 1.2, "HUD-storlek" in Inställningar; a11y.ts): the buttons, frames and bars, not the words.
+   Whatever the size, a button is at least 48 by 48 px, spell buttons 66 px wide (the longest name, Förklara, at 16 px) and 12 px apart.
+   ui/hudfit.ts measures the pieces and sets --res-l and --res-r (the room between the two sides of the bottom), --left-stack and
+   --social-up, and the class `rows2` when the spells do not fit in one row. */
+
+:root {
+  --hk: 1;
+  --edge: 12px;
+  --res-l: 12px;
+  --res-r: 12px;
+  --left-stack: 200px;
+  --social-up: 84px;
+  /* the big touch buttons ("Slå", "Spring") */
+  --act: max(72px, min(calc(clamp(72px, 22vmin, 96px) * var(--hk)), 112px));
+  --runb: max(64px, calc(var(--act) * 0.82));
+}
+
+/* ---------------------------------------------------------------------------------------------------------- the spell bar */
+/* A button is as wide as its name needs at the chosen text size and as high as a picture over the name needs; on a roomy screen it
+   grows towards the old size (with the HUD size), on a short one it stays at the floor. The bar is ONE row when its pieces fit
+   between the two sides (hudfit.ts), otherwise two: the spells below, the potion, the aim and the explain button above them. */
+.saga-bar {
+  --sw: max(calc(66px * var(--txt)), min(calc(clamp(66px, 12vmin, 80px) * var(--hk)), 96px));
+  --sh: max(calc(34px + 17.6px * var(--txt)), min(calc(clamp(56px, 13vmin, 88px) * var(--hk)), 104px));
+  --ah: var(--sh);
+  --ic: clamp(24px, calc(var(--sh) - 14px - 17.6px * var(--txt)), calc(36px * var(--txt)));
+  gap: 12px;
+  padding: 6px;
+  border-radius: 14px;
+  width: max-content;
+  background: rgba(24, 18, 30, 0.88);
+}
+/* in the middle of what is left between the two sides; on a computer both sides are the same, so it is the middle of the screen */
+html body .saga-bar,
+html body.touch .saga-bar {
+  left: var(--res-l);
+  right: var(--res-r);
+  margin-inline: auto;
+  transform: none;
+  bottom: max(var(--edge), env(safe-area-inset-bottom));
+}
+html body.touch .saga-bar {
+  margin-inline: auto 0;
+}
+html.a11y-left body.touch .saga-bar {
+  margin-inline: 0 auto;
+}
+.saga-bar:empty,
+html body.touch .saga-bar:empty {
+  display: none;
+}
+.saga-bar .saga-spell {
+  flex: none;
+  width: var(--sw);
+  height: var(--sh);
+  min-height: 48px;
+  padding: 2px 2px 2px;
+  gap: 0;
+}
+.saga-bar .saga-spell .ic {
+  font-size: var(--ic);
+  line-height: 1;
+}
+.saga-bar .saga-spell .ic img {
+  width: var(--ic);
+  height: var(--ic);
+}
+.saga-bar .saga-spell .lb {
+  line-height: 1.1;
+}
+/* the potion's count in its top corner, not over its name */
+.saga-bar .saga-spell.potion::after {
+  top: 3px;
+  right: 3px;
+  bottom: auto;
+  line-height: 1.1;
+}
+body:not(.touch) .saga-bar .saga-spell.potion {
+  margin-left: 12px;
+}
+/* a touch screen: the bar is next to the big buttons, on the side of the thumb (the other side when "Knapparna till vänster" is on) */
+body.touch .saga-bar {
+  display: flex;
+  grid-template-columns: none;
+  --sw: max(calc(66px * var(--txt)), min(calc(clamp(66px, 12vmin, 80px) * var(--hk)), 96px));
+  --sh: max(calc(34px + 17.6px * var(--txt)), min(calc(clamp(56px, 13vmin, 88px) * var(--hk)), 104px));
+  --ah: var(--sh);
+  gap: 12px;
+  padding: 6px;
+}
+body.touch .saga-bar .saga-spell,
+body.touch .saga-bar .saga-spell.potion,
+body.touch .saga-bar .saga-spell.aim,
+body.touch .saga-bar .saga-spell.explain {
+  width: var(--sw);
+  height: var(--sh);
+  grid-row: auto;
+  grid-column: auto;
+  margin-left: 0;
+}
+body.touch .saga-bar .saga-spell .ic,
+body.touch .saga-bar .saga-spell.potion .ic,
+body.touch .saga-bar .saga-spell.aim .ic,
+body.touch .saga-bar .saga-spell.explain .ic {
+  font-size: var(--ic);
+}
+/* order in one row: explain, the four spells, the aim, the potion */
+.saga-bar .saga-spell.explain {
+  order: 0;
+}
+.saga-bar .saga-spell:not(.potion):not(.aim):not(.explain) {
+  order: 1;
+}
+.saga-bar .saga-spell.aim {
+  order: 2;
+}
+.saga-bar .saga-spell.potion {
+  order: 3;
+}
+/* two rows (a narrow screen): four spells on the bottom row, the other three above */
+.saga-bar.rows2,
+body.touch .saga-bar.rows2 {
+  display: grid;
+  grid-template-columns: repeat(4, var(--sw));
+  grid-auto-rows: var(--sh);
+  width: max-content;
+}
+.saga-bar.rows2 .saga-spell:not(.potion):not(.aim):not(.explain) {
+  grid-row: 2;
+}
+.saga-bar.rows2 .saga-spell.explain {
+  grid-row: 1;
+  grid-column: 1;
+}
+.saga-bar.rows2 .saga-spell.aim {
+  grid-row: 1;
+  grid-column: 3;
+}
+.saga-bar.rows2 .saga-spell.potion {
+  grid-row: 1;
+  grid-column: 4;
+  margin-left: 0;
+}
+/* (on a computer there is no aim button: the potion stays over the last spell) */
+body:not(.touch) .saga-bar.rows2 .saga-spell.explain {
+  grid-column: 1;
+}
+
+/* the hero's and the target's frames stand right over the middle of the bar */
+html body .saga-units,
+html body.touch .saga-units,
+html body.in-run.touch .saga-units {
+  left: var(--bar-cx, 50%);
+}
+
+/* ---------------------------------------------------------------------------------------------------------- the big touch buttons */
+body.touch .act-btn {
+  width: var(--act);
+  height: var(--act);
+  min-width: var(--act);
+  min-height: var(--act);
+  right: max(var(--edge), env(safe-area-inset-right));
+  bottom: max(var(--edge), env(safe-area-inset-bottom));
+}
+body.touch .act-btn .ic {
+  font-size: calc(var(--act) * 0.36);
+}
+body.touch .run-btn {
+  width: var(--runb);
+  height: var(--runb);
+  min-width: var(--runb);
+  min-height: var(--runb);
+  right: calc(max(var(--edge), env(safe-area-inset-right)) + (var(--act) - var(--runb)) / 2);
+  bottom: calc(max(var(--edge), env(safe-area-inset-bottom)) + var(--act) + 12px);
+}
+body.touch .run-btn .ic {
+  font-size: calc(var(--runb) * 0.36);
+}
+/* out of a fight "Spring" stands to the left of the big button instead of over it */
+body.touch:not(.saga-fight) .run-btn {
+  right: calc(max(var(--edge), env(safe-area-inset-right)) + var(--act) + 12px);
+  bottom: max(var(--edge), env(safe-area-inset-bottom));
+}
+html.a11y-left body.touch .act-btn {
+  right: auto;
+  left: max(var(--edge), env(safe-area-inset-left));
+}
+html.a11y-left body.touch .run-btn {
+  right: auto;
+  left: calc(max(var(--edge), env(safe-area-inset-left)) + (var(--act) - var(--runb)) / 2);
+}
+html.a11y-left body.touch:not(.saga-fight) .run-btn {
+  right: auto;
+  left: calc(max(var(--edge), env(safe-area-inset-left)) + var(--act) + 12px);
+}
+/* ---------------------------------------------------------------------------------------------------------- the lobby's hotbar */
+.hotbar {
+  left: var(--res-l);
+  right: var(--res-r);
+  width: max-content;
+  max-width: calc(100% - var(--res-l) - var(--res-r));
+  margin-inline: auto;
+  transform: none;
+  bottom: max(var(--edge), env(safe-area-inset-bottom));
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+body.touch .hotbar {
+  left: var(--res-l);
+  right: var(--res-r);
+}
+.hotbar .slot {
+  flex: none;
+}
+/* the name of what is held stands right over it */
+.hud-name {
+  left: 50%;
+  bottom: calc(max(var(--edge), env(safe-area-inset-bottom)) + 72px);
+}
+
+/* ---------------------------------------------------------------------------------------------------------- the bottom at one side */
+/* chat, the pet and "more" in one row (the rest behind "more"); on a roomy screen the whole row. The chip for the runor stands on it. */
+.social {
+  left: max(var(--edge), env(safe-area-inset-left));
+  bottom: max(var(--edge), env(safe-area-inset-bottom));
+  gap: 12px;
+  flex-wrap: nowrap;
+  width: auto;
+  row-gap: 12px;
+  column-gap: 12px;
+  align-items: flex-start;
+}
+.social.has-pet {
+  bottom: calc(max(var(--edge), env(safe-area-inset-bottom)) + 20px);
+}
+html.a11y-left body.touch .social {
+  left: auto;
+  right: max(var(--edge), env(safe-area-inset-right));
+}
+.social .more-btn {
+  display: none;
+  font-size: calc(28px * var(--txt));
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+}
+.social-more {
+  display: contents;
+}
+body.hud-compact .social .more-btn {
+  display: flex;
+}
+body.hud-compact .social .social-more {
+  display: none;
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 12px);
+  flex-direction: row;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 14px;
+  background: rgba(32, 22, 40, 0.94);
+  border: 2px solid #c8a95a;
+  z-index: 5;
+}
+body.hud-compact .social.open .social-more {
+  display: flex;
+}
+html.a11y-left body.touch.hud-compact .social .social-more {
+  left: auto;
+  right: 0;
+}
+.social .more-btn[aria-expanded='true'] {
+  background: #fff3c0;
+  outline: 3px solid #d9a52a;
+}
+/* the runor you hold: the icons on a roomy screen, one chip with the count on a small one */
+.run-runor {
+  left: max(var(--edge), env(safe-area-inset-left));
+  bottom: var(--social-up);
+  width: auto;
+  max-width: min(240px, 40vw);
+  min-height: 48px;
+  min-width: 48px;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(24px * var(--txt));
+}
+.run-runor .cnt {
+  display: none;
+  font-weight: 900;
+  font-size: max(var(--fs), calc(20px * var(--txt)));
+  line-height: 1;
+  white-space: nowrap;
+  padding: 0 6px;
+}
+body.hud-compact .run-runor .r {
+  display: none;
+}
+body.hud-compact .run-runor .cnt {
+  display: block;
+}
+html.a11y-left body.touch .run-runor {
+  left: auto;
+  right: max(var(--edge), env(safe-area-inset-right));
+}
+/* chat lines wait above both */
+.chat-log {
+  left: max(var(--edge), env(safe-area-inset-left));
+  bottom: var(--left-stack);
+}
+/* the party's frames: as many in a column as fit above what stands at the bottom left, the rest in a second column; the box is only
+   as big as the frames */
+.saga-party,
+body.in-run .saga-party,
+html body.in-run .saga-party,
+html body.in-run .minimap[hidden] ~ .saga-party,
+html body.in-run .minimap:not([hidden]) ~ .saga-party {
+  top: var(--party-top, 72px);
+  bottom: auto;
+  height: auto;
+  max-height: calc(100% - var(--party-top, 72px) - var(--left-stack));
+  width: auto;
+  max-width: 62%;
+  flex-wrap: wrap;
+  align-content: flex-start;
+}
+@media (max-height: 560px) {
+  html body.in-run .saga-party > * {
+    width: min(150px, 30vw);
+  }
+}
+
+/* ---------------------------------------------------------------------------------------------------------- titles in the lane */
+/* a card in the lane has a title of one size for every kind (the two big ones, a boss down and the run won, are a little bigger) */
+html body .msg-lane .saga-banner .big,
+html body .msg-lane .saga-banner.enter .big,
+html body .msg-lane .saga-banner.rest .big,
+html body .msg-lane .saga-banner.level .big {
+  font-size: max(calc(var(--fs) * 1.2), calc(21px * var(--txt)));
+  letter-spacing: 0;
+}
+html body .msg-lane .saga-banner.boss .big,
+html body .msg-lane .saga-banner.cleared .big {
+  font-size: max(calc(var(--fs) * 1.4), calc(30px * var(--txt)));
+}
+@media (max-height: 600px) {
+  html body .msg-lane .saga-banner.boss .big,
+  html body .msg-lane .saga-banner.cleared .big {
+    font-size: max(calc(var(--fs) * 1.25), calc(24px * var(--txt)));
+  }
+}
+/* the vote: the roads wrap under the title instead of running off the screen */
+.hud-center > .run-vote .choices {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.hud-center > .run-vote .choice {
+  flex: none;
+}
+
+/* ---------------------------------------------------------------------------------------------------------- a very short screen */
+/* Under 440 px high there is no room at the bottom left for the runor chip above the buttons without squeezing the party's frames, so it
+   stands under the menu button at the top right; the vote leaves out "no one here yet" under each road so it is one row of roads. */
+@media (max-height: 440px) {
+  .run-runor,
+  html.a11y-left body.touch .run-runor {
+    top: var(--hud-top, 72px);
+    bottom: auto;
+    left: auto;
+    right: max(var(--edge), env(safe-area-inset-right));
+  }
+  .hud-center > .run-vote .choice .who.empty {
+    display: none;
+  }
+  .saga-bar {
+    padding: 4px;
+    border-width: 2px;
+    border-radius: 12px;
+  }
+}
+/* the map hangs from under the top chips, in the lobby as in a run */
+html body .minimap {
+  top: var(--hud-top, 64px);
+}

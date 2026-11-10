@@ -92,7 +92,7 @@ import { activeWorld, bus, client, myPlayer, serverNow } from '../state.ts';
 import { clear, h, onTap } from './dom.ts';
 import { announce } from './access.ts';
 import { cards } from './info.ts';
-import { centerColumn, say, type LogKind } from './lane.ts';
+import { centerColumn, readMs, say, type LogKind } from './lane.ts';
 import { currentDevice } from '../a11y.ts';
 import type { Menus } from './menus.ts';
 import './saga.css';
@@ -385,7 +385,7 @@ export class SagaUi {
     // the family list sits with the chat button
     const fam = h('div', { class: 'round small', title: T.familyBtn }, '👪');
     onTap(fam, () => this.open('family'));
-    social.append(fam);
+    (social.querySelector('.social-more') ?? social).append(fam); // (behind the "more" button on a short screen)
 
     // the gear window: the HUD's ⚔️ button and the gamepad's Select ask for it
     document.addEventListener('vt:gear', () => {
@@ -866,6 +866,8 @@ export class SagaUi {
       ...(c.sub ? { sub: c.sub } : {}),
       log: !prompt,
       el,
+      // the two big cards (a boss down, the run won) leave sooner: they come when nothing is being fought, and a card is not left on the screen
+      ...(kind === 'boss' || kind === 'cleared' ? { ms: Math.min(readMs(c.text, c.sub), 5000) } : {}),
       onShow: () => this.bannerFx(c, kind),
     });
   }

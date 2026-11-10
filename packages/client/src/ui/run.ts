@@ -472,6 +472,10 @@ export class RunUi {
     this.runorStrip.hidden = !mine.length && !run.runor.length;
     for (const hd of mine) this.runorStrip.append(h('span', { class: `r rar-${runa(hd.id)?.rarity ?? 'vanlig'}`, title: runaName(hd.id) }, runa(hd.id)?.icon ?? '🔹'));
     for (const id of run.runor) this.runorStrip.append(h('span', { class: 'r party', title: `${RUN_UI.cardsAll}: ${runaName(id)}` }, runa(id)?.icon ?? '🔹'));
+    // on a short screen the strip is one chip with the count (hud.css); a tap opens the list
+    const n = mine.length + run.runor.length;
+    this.runorStrip.append(h('span', { class: 'cnt', 'aria-hidden': 'true' }, `🎴 ${n}`));
+    this.runorStrip.setAttribute('aria-label', `${RUN_UI.runorHeld}: ${n}`);
   }
 
   /** The vote on the way on: a card for each rune on the floor, what comes after it, who stands on it and the clock. */
@@ -518,7 +522,7 @@ export class RunUi {
       card.style.setProperty('--c', KIND_COLOR[c.kind]);
       card.append(h('span', { class: 'ic' }, KIND_ICON[c.kind]), h('span', { class: 'nm' }, STOP_WORDS[c.kind]));
       if (nx.length) card.append(h('span', { class: 'next', 'aria-hidden': 'true' }, `→ ${nx.map((k) => KIND_ICON[k]).join(' ')}`));
-      card.append(h('span', { class: 'who' }, who.length ? `🧍 ${who.join(', ')}` : `🧍 ${LOG_T.voteStand}`));
+      card.append(h('span', { class: `who${who.length ? '' : ' empty'}` }, who.length ? `🧍 ${who.join(', ')}` : `🧍 ${LOG_T.voteStand}`));
       if (same) card.append(h('span', { class: 'why' }, '='));
       else if (only.length) card.append(h('span', { class: 'why', 'aria-hidden': 'true' }, `★ ${only.map((k) => KIND_ICON[k]).join(' ')}`));
       const text = [
