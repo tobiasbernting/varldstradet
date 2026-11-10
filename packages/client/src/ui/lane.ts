@@ -308,7 +308,9 @@ function layout(): void {
     .filter(visible)
     .map((e) => e.getBoundingClientRect());
   lane.budget = 320;
-  lane.limit = visible(sbar) ? sbar.getBoundingClientRect().top : vh * 0.62;
+  const units = document.querySelector('.saga-units');
+  const lowest = Math.min(visible(sbar) ? sbar.getBoundingClientRect().top : vh * 0.62, visible(units) ? units.getBoundingClientRect().top : 9999);
+  lane.limit = lowest;
   lane.maxShown = vh < 520 ? 2 : 3;
   lane.pump();
 }

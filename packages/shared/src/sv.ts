@@ -639,7 +639,7 @@ export const HELP: HelpTopic[] = [
       { icon: 'emoji:❔', text: 'Vill du veta vad en knapp gör? Håll ner den en stund, eller tryck på Förklara och sedan på knappen. Då gör den ingenting.', only: 'touch' },
       { icon: 'emoji:⌨️', text: 'Gå med piltangenterna eller W A S D.', only: 'desktop' },
       { icon: 'emoji:⎵', text: 'Tryck E eller mellanslag för att prata med någon eller använda det framför dig. Du kan också klicka på en ruta bredvid dig.', only: 'desktop' },
-      { icon: 'emoji:🎒', text: 'Q öppnar ryggsäcken, F visar känslor, B eller J dagboken, H hjälpen och T chatten.', only: 'desktop' },
+      { icon: 'emoji:🎒', text: 'Q öppnar ryggsäcken, F visar känslor, B eller J dagboken, L loggen (allt som stått på skärmen), H hjälpen och T chatten.', only: 'desktop' },
       { icon: 'emoji:🏃', text: 'Håll in Shift för att springa.', only: 'desktop' },
       { icon: 'emoji:❔', text: 'Håll musen över en knapp, eller välj den med Tab och tryck ?, så får du läsa vad den gör.', only: 'desktop' },
       { icon: 'emoji:🎮', text: 'Med handkontroll: vänster spak går, X eller RT använder, B springer, Y öppnar ryggsäcken. I menyerna flyttar du med spaken, A väljer och B stänger. I en strid: R3 eller upp på styrkorset förklarar knapparna. Håll LT och tryck Start för att flytta mellan knapparna högst upp, B går tillbaka.' },
