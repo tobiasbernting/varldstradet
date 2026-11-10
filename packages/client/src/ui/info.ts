@@ -1,11 +1,13 @@
 // The info card: one card for everything that needs explaining without doing it. A thing is marked with `cards.info(el, icon,
 // name, text)`; then a long press (the length is a setting), keyboard focus, the gamepad's focus ring, hovering with a mouse, and
-// a tap while the "Förklara" mode is on all show the same big card (icon, name, one sentence, a speaker button). A press that
-// opened a card does not use the thing when it is let go. The card sits in the open window above its buttons, or floats in the
-// HUD (above the spell bar in a fight). Used by the run windows, the spell bar, the HUD's buttons and every `title=` there was.
+// a tap while the "Förklara" mode is on show the same card (icon, name, one sentence, a small speaker button). A mouse that only
+// rests on a thing gets a small tooltip instead (`.run-tip`, after HOVER_MS, never on something that already says its own name
+// and has nothing to add). A press that opened a card does not use the thing when it is let go. The card sits in the open window
+// above its buttons, or floats in the HUD beside the thing (above the bar for the things in a bar), never on top of it. Used by
+// the run windows, the spell bar, the HUD's buttons and every `title=` there was.
 import { A11Y_T, RUN_UI } from '@varldstradet/shared';
 import { prefs } from '../a11y.ts';
-import { clear, h, onTap } from './dom.ts';
+import { clear, h, onTap, tapGuard } from './dom.ts';
 import { canSpeak, speak } from './speech.ts';
 
 export interface Info {
@@ -16,8 +18,85 @@ export interface Info {
 
 type Listener = (on: boolean) => void;
 
+/** How long a mouse must rest on a thing before its tooltip comes up. */
+const HOVER_MS = 550;
+/** A mouse that moves less than this has not moved. */
+const HOVER_SLOP = 3;
+
+const norm = (s: string): string => s.replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}\u200d\ufe0f]/gu, '').replace(/\s+/g, ' ').trim().toLowerCase();
+
+/** Does the thing already show its name as text it has on it? (A tooltip saying the same is noise.) */
+function nameShown(el: HTMLElement): boolean {
+  const seen = norm(el.textContent ?? '');
+  const name = norm(el.dataset.infoName ?? '');
+  return seen.length > 0 && name.length > 0 && (name.includes(seen) || seen.includes(name));
+}
+
+/** Has the thing something to say on a hover, a focus or a pad ring? Text, or a picture with no visible name. */
+export function explains(el: HTMLElement): boolean {
+  return !!el.dataset.infoText || !nameShown(el);
+}
+
+const visible = (e: HTMLElement): boolean => e.offsetParent !== null || getComputedStyle(e).position === 'fixed';
+
+/**
+ * Puts `box` (already in the page, `position: fixed`) beside `anchor`: above by default, then below, right, left. A place counts
+ * when it is on the screen, not on the anchor, not on any other thing that explains itself (a neighbour in the same bar) and
+ * not under the pointer. When nothing fits cleanly the least covering place wins.
+ */
+function place(box: HTMLElement, el: HTMLElement, anchor: DOMRect, pointer: { x: number; y: number } | null, gap: number): void {
+  box.style.left = '0px';
+  box.style.top = '0px';
+  const b = box.getBoundingClientRect();
+  const vw = document.documentElement.clientWidth;
+  const vh = document.documentElement.clientHeight;
+  const m = 8;
+  const clampX = (x: number): number => Math.max(m, Math.min(vw - b.width - m, x));
+  const clampY = (y: number): number => Math.max(m, Math.min(vh - b.height - m, y));
+  // beside the bar, level with the thing itself
+  const own = el.getBoundingClientRect();
+  const cx = own.left + own.width / 2 - b.width / 2;
+  const cy = own.top + own.height / 2 - b.height / 2;
+  const cands: [number, number][] = [
+    [clampX(cx), anchor.top - gap - b.height],
+    [clampX(cx), anchor.bottom + gap],
+    [anchor.right + gap, clampY(cy)],
+    [anchor.left - gap - b.width, clampY(cy)],
+  ];
+  const others: DOMRect[] = [];
+  for (const o of document.querySelectorAll<HTMLElement>('[data-info-name]')) {
+    if (o === el || o.contains(el) || el.contains(o) || !visible(o)) continue;
+    const r = o.getBoundingClientRect();
+    if (r.width * r.height > vw * vh * 0.25 || r.width === 0) continue;
+    others.push(r);
+  }
+  const area = (x: number, y: number, r: DOMRect): number => Math.max(0, Math.min(x + b.width, r.right) - Math.max(x, r.left)) * Math.max(0, Math.min(y + b.height, r.bottom) - Math.max(y, r.top));
+  let best = cands[0]!;
+  let bestCost = Infinity;
+  for (const [x, y] of cands) {
+    const off = Math.max(0, m - x) + Math.max(0, m - y) + Math.max(0, x + b.width - (vw - m)) + Math.max(0, y + b.height - (vh - m));
+    let cost = off * 1000 + area(x, y, anchor) * 4 + area(x, y, own) * 4;
+    for (const r of others) cost += area(x, y, r);
+    if (pointer && pointer.x > x - 6 && pointer.x < x + b.width + 6 && pointer.y > y - 6 && pointer.y < y + b.height + 6) cost += 1e5;
+    if (cost < bestCost) {
+      bestCost = cost;
+      best = [x, y];
+    }
+    if (cost === 0) break;
+  }
+  box.style.left = `${Math.round(clampX(best[0]))}px`;
+  box.style.top = `${Math.round(clampY(best[1]))}px`;
+}
+
+/** A thing in a row of buttons keeps the whole row clear: the card goes above or beside the bar, not above the one button. */
+const BARS = '.hotbar, .saga-bar, .run-bar';
+
 class InfoCards {
   readonly el = h('div', { class: 'run-info', role: 'status', 'aria-live': 'polite' });
+  /** The mouse's small tooltip: no buttons, never catches the pointer, not read out (the thing has its own name). */
+  readonly tip = h('div', { class: 'run-tip', 'aria-hidden': 'true' });
+  private tipFor: HTMLElement | null = null;
+  private stopHover: (press?: boolean) => void = () => undefined;
   private forEl: HTMLElement | null = null;
   private on = false;
   private noTapUntil = 0;
@@ -133,6 +212,7 @@ class InfoCards {
   show(el: HTMLElement): void {
     if (!el.dataset.infoName) return;
     this.init();
+    this.stopHover();
     const name = el.dataset.infoName;
     const text = el.dataset.infoText ?? '';
     clear(this.el);
@@ -140,21 +220,44 @@ class InfoCards {
     const img = !el.dataset.infoIcon ? el.querySelector('img') : null;
     this.el.append(img ? h('span', { class: 'ic pic' }, img.cloneNode()) : h('span', { class: 'ic' }, el.dataset.infoIcon ?? ''), h('div', { class: 'tx' }, h('b', null, name), text ? h('span', null, text) : null));
     if (sp) this.el.append(sp);
-    this.el.append(h('span', { class: 'dismiss' }, RUN_UI.dismiss));
-    // in a window the card sits in the window above the buttons (it never covers one); in the HUD it floats
+    this.el.append(h('span', { class: 'dismiss', 'aria-hidden': 'true' }, '✕'));
+    // in a window the card sits in the window above the buttons (it never covers one); in the HUD it floats beside the thing
     const panel = document.querySelector('.modal .panel');
     const host = document.getElementById('ui')!;
     this.el.classList.toggle('in-panel', !!panel);
-    const bar = !panel ? el.closest('.saga-bar') : null;
-    this.el.classList.toggle('near-bar', !!bar);
-    // above the bar, wherever it is and however big it has grown
-    this.el.style.bottom = bar ? `${Math.max(8, window.innerHeight - bar.getBoundingClientRect().top + 12)}px` : '';
+    this.el.classList.toggle('float', !panel);
+    this.el.classList.toggle('near-bar', !panel && !!el.closest(BARS));
+    this.el.style.left = '';
+    this.el.style.top = '';
+    this.el.style.bottom = '';
     if (panel) panel.insertBefore(this.el, panel.querySelector('.foot'));
     else if (this.el.parentElement !== host) host.append(this.el);
     this.el.hidden = false;
     this.forEl = el;
+    if (!panel) place(this.el, el, (el.closest(BARS) ?? el).getBoundingClientRect(), null, 12);
     if (this.barMode) this.setMode(true, 10000);
     if (prefs().read) speak(`${name}. ${text}`);
+  }
+
+  /** The mouse's tooltip: small, beside the thing, only once the pointer has rested on it. */
+  private showTip(el: HTMLElement, pointer: { x: number; y: number }): void {
+    if (!el.dataset.infoName || !el.isConnected || !explains(el) || this.shown === el) return;
+    const name = el.dataset.infoName;
+    const text = el.dataset.infoText ?? '';
+    clear(this.tip);
+    // a thing that already says its name only needs its sentence
+    if (!text || !nameShown(el)) this.tip.append(h('b', null, name));
+    if (text) this.tip.append(h('span', null, text));
+    const host = document.getElementById('ui')!;
+    if (this.tip.parentElement !== host) host.append(this.tip);
+    this.tip.hidden = false;
+    this.tipFor = el;
+    place(this.tip, el, (el.closest(BARS) ?? el).getBoundingClientRect(), pointer, 10);
+  }
+
+  hideTip(): void {
+    this.tip.hidden = true;
+    this.tipFor = null;
   }
 
   hide(): void {
@@ -175,9 +278,10 @@ class InfoCards {
     this.forEl = null;
   }
 
+  /** A small speaker in the card's corner; there is none when the device has no Swedish voice. */
   private speaker(text: string): HTMLElement | null {
     if (!canSpeak()) return null;
-    const b = h('button', { class: 'speak', 'aria-label': A11Y_T.readAloud, type: 'button' }, `🔊 ${A11Y_T.readAloud}`);
+    const b = h('button', { class: 'speak', 'aria-label': A11Y_T.readAloud, type: 'button' }, '🔊');
     for (const ev of ['pointerdown', 'pointerup', 'click']) b.addEventListener(ev, (e) => e.stopPropagation());
     b.addEventListener('click', () => speak(text));
     return b;
@@ -187,9 +291,11 @@ class InfoCards {
   private init(): void {
     if (this.ready) return;
     this.ready = true;
+    tapGuard.suppressed = () => this.suppressed();
     const host = document.getElementById('ui')!;
     this.el.hidden = true;
-    host.append(this.el);
+    this.tip.hidden = true;
+    host.append(this.el, this.tip);
     onTap(this.el, () => this.hide());
     const own = (el: EventTarget | null): HTMLElement | null => (el as HTMLElement | null)?.closest?.<HTMLElement>('[data-info-name]') ?? null;
     let timer = 0;
@@ -197,14 +303,15 @@ class InfoCards {
       'pointerdown',
       (e) => {
         clearTimeout(timer);
+        // any press puts the tooltip away and starts the wait again (a click, a spell, a move with the mouse)
+        this.stopHover(e.pointerType !== 'touch');
         const t = own(e.target);
-        if (!t) {
-          if (!(e.target as HTMLElement).closest?.('.run-info')) {
-            this.hide();
-            if (this.barMode && !(e.target as HTMLElement).closest?.('.saga-bar')) this.setMode(false);
-          }
-          return;
+        // a press anywhere but on the card puts the card away (a long press on a thing then brings up its own)
+        if (!(e.target as HTMLElement).closest?.('.run-info')) {
+          this.hide();
+          if (this.barMode && !(e.target as HTMLElement).closest?.('.saga-bar')) this.setMode(false);
         }
+        if (!t) return;
         if (e.pointerType === 'mouse' && e.button !== 0) return;
         timer = window.setTimeout(() => {
           this.noTapUntil = performance.now() + 800;
@@ -233,20 +340,54 @@ class InfoCards {
     document.addEventListener('contextmenu', (e) => {
       if (own(e.target)) e.preventDefault();
     });
-    // a mouse hovering over a thing in the HUD or a window
-    document.addEventListener('pointerover', (e) => {
-      if (e.pointerType !== 'mouse') return;
+    // a mouse resting on a thing in the HUD or a window: a small tooltip after a short wait, never while a button is held
+    let hoverTimer = 0;
+    let hx = -99;
+    let hy = -99;
+    let hoverEl: HTMLElement | null = null;
+    /** After a press the same thing gets no tooltip until the pointer has left it and come back. */
+    let blocked: HTMLElement | null = null;
+    this.stopHover = (press = false): void => {
+      clearTimeout(hoverTimer);
+      hoverTimer = 0;
+      this.hideTip();
+      if (press) blocked = hoverEl;
+    };
+    document.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'touch') return;
       const t = own(e.target);
-      if (t && t !== this.forEl && !this.on) this.show(t);
+      if (t !== hoverEl) {
+        hoverEl = t;
+        blocked = null;
+      }
+      if (e.buttons !== 0) {
+        this.stopHover();
+        return;
+      }
+      if (!t || t === blocked || this.on || t === this.forEl || !explains(t)) {
+        this.stopHover();
+        return;
+      }
+      if (Math.hypot(e.clientX - hx, e.clientY - hy) < HOVER_SLOP && (this.tipFor === t || hoverTimer)) return;
+      hx = e.clientX;
+      hy = e.clientY;
+      // a pointer that moves puts the tooltip away and waits again: it is for a pointer that rests
+      this.stopHover();
+      const pointer = { x: e.clientX, y: e.clientY };
+      hoverTimer = window.setTimeout(() => {
+        hoverTimer = 0;
+        this.showTip(t, pointer);
+      }, HOVER_MS);
     });
     document.addEventListener('pointerout', (e) => {
-      if (e.pointerType !== 'mouse') return;
-      const t = own(e.target);
-      if (t && t === this.forEl && !(e.relatedTarget as HTMLElement | null)?.closest?.('.run-info') && !this.on) this.hide();
+      if (e.pointerType === 'touch') return;
+      if (own(e.relatedTarget) !== hoverEl) this.stopHover();
     });
+    for (const ev of ['keydown', 'wheel', 'blur']) window.addEventListener(ev, () => this.stopHover(), true);
+    document.documentElement.addEventListener('mouseleave', () => this.stopHover());
     document.addEventListener('focusin', (e) => {
       const t = own(e.target);
-      if (t && !this.quiet && (e.target as HTMLElement).matches?.(':focus-visible') && t.closest('.modal, .hud, .run-bar, .run-vote, .run-runor, .saga-bar, .pet-toggle')) this.show(t);
+      if (t && !this.quiet && explains(t) && (e.target as HTMLElement).matches?.(':focus-visible') && t.closest('.modal, .hud, .run-bar, .run-vote, .run-runor, .saga-bar, .pet-toggle')) this.show(t);
     });
     document.addEventListener('focusout', (e) => {
       if (this.forEl && e.target === this.forEl) this.hide();
@@ -258,7 +399,7 @@ class InfoCards {
         if (!t.dataset?.infoName) continue;
         const had = (m.oldValue ?? '').split(' ').includes('pad-focus');
         const has = t.classList.contains('pad-focus');
-        if (has && !had) this.show(t);
+        if (has && !had && explains(t)) this.show(t);
         else if (had && !has && this.forEl === t) this.hide();
       }
     }).observe(host, { attributes: true, attributeFilter: ['class'], attributeOldValue: true, subtree: true });

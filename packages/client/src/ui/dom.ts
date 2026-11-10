@@ -34,15 +34,20 @@ export const icon = (url: string, alt = ''): HTMLImageElement => h('img', { src:
 /** When the last tap was handled on pointerup, anywhere: the click a touch makes after it must not reach whatever the tap opened under the finger. */
 let lastTapAt = -1e9;
 
+/** Set by the info cards: true right after a long press put a card up, so the release that follows does not use the thing. */
+export const tapGuard = { suppressed: (): boolean => false };
+
 /** Fire on tap/click without the 300ms delay and without double firing (also not on a window's button that opened where the finger was). */
 export function onTap(el: HTMLElement, fn: (ev: Event) => void): void {
   el.addEventListener('pointerup', (ev) => {
     if (ev.button !== 0) return;
     lastTapAt = performance.now();
+    if (tapGuard.suppressed()) return;
     fn(ev);
   });
   el.addEventListener('click', (ev) => {
     if (performance.now() - lastTapAt < 500) return;
+    if (tapGuard.suppressed()) return;
     fn(ev);
   });
 }

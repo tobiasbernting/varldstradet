@@ -187,33 +187,90 @@ body.touch:not(.saga-fight) .run-btn {
   left: auto;
   right: 0;
 }
-.a11y-left body.touch .run-info.near-bar {
-  right: auto;
-  left: max(16px, env(safe-area-inset-left));
-}
 
-/* ---- the info card, a little bigger on a tablet, with its speaker ---- */
+/* ---- the info card: compact, beside the thing it explains, with a small speaker in its corner ---- */
 .run-info .ic.pic img {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   image-rendering: pixelated;
 }
 .run-info .speak {
   align-self: center;
-  font-size: var(--fs);
+  flex: none;
+  width: var(--tap);
+  height: var(--tap);
   min-height: var(--tap);
+  padding: 0;
+  font-size: 22px;
+  line-height: 1;
   white-space: nowrap;
   background: #2b7ad0;
+  border-radius: 12px;
 }
 .run-info .tx {
-  font-size: max(var(--fs), 18px);
+  font-size: max(var(--fs), 16px);
 }
 .run-info .dismiss {
+  position: absolute;
+  top: 4px;
+  right: 10px;
   font-size: var(--fs);
-  color: #e0d8f0;
+  line-height: 1;
+  color: #cfc4e0;
 }
 .run-info {
   z-index: 80;
+}
+/* in the HUD the card floats where ui/info.ts puts it (beside the thing, above a bar), and is a little smaller than it was */
+.run-info.float {
+  position: fixed;
+  transform: none;
+  bottom: auto;
+  width: min(440px, calc(100vw - 16px));
+  gap: 12px;
+  padding: 8px 36px 8px 12px;
+}
+.run-info.float .ic {
+  font-size: calc(32px * var(--txt));
+}
+.run-info.float .tx b {
+  font-size: calc(19px * var(--txt));
+}
+.run-info.in-panel {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  padding-right: 36px;
+}
+
+/* ---- the mouse's tooltip: small, after a wait, never in the way of a click ---- */
+.run-tip {
+  position: fixed;
+  z-index: 90;
+  max-width: min(280px, calc(100vw - 16px));
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  background: #1c1424;
+  color: #fff;
+  border: 2px solid #ffd86a;
+  border-radius: 10px;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
+  font-size: var(--fs);
+  line-height: 1.25;
+  pointer-events: none !important;
+  user-select: none;
+}
+.run-tip[hidden] {
+  display: none;
+}
+.run-tip b {
+  color: #ffe08a;
+}
+.a11y-contrast .run-tip {
+  background: #000;
+  border-color: #fff;
 }
 
 /* ---- text over the world sits on a plate ---- */
