@@ -138,6 +138,18 @@ async function scenarios(browser, v, res) {
   await page.waitForTimeout(500);
   if (await page.$('.modal')) await tag(page, 'class');
   await shut();
+  // pets: the HUD's pet buttons, the kennel (and "Klä djuret"), the wardrobe's pet tab
+  await page.send({ t: 'dev', a: 'pet', id: 'hund' });
+  await page.send({ t: 'dev', a: 'petgear', tier: 3 });
+  await page.waitForTimeout(1200);
+  await tag(page, 'lobby-pet');
+  await page.evaluate(() => window.lillaGarden.bus.emit('open', { ui: 'kennel' }));
+  await page.waitForTimeout(500);
+  if (await page.$('.modal')) await tag(page, 'kennel'); else console.log('no kennel window');
+  await page.evaluate(() => [...document.querySelectorAll('.modal button.gold')].find((b) => /Klä|grejer/.test(b.textContent))?.click());
+  await page.waitForTimeout(700);
+  if (await page.$('.modal')) await tag(page, 'pet-wardrobe'); else console.log('no pet wardrobe');
+  await shut();
   // the arch window and a run
   await walkTo(page, 26, 13);
   await page.send({ t: 'act', tx: 26, ty: 12 });
@@ -158,6 +170,7 @@ async function scenarios(browser, v, res) {
   page = await newPage(browser, v);
   await join(page);
   await create(page, 'Fajtare', 'magiker');
+  await page.send({ t: 'dev', a: 'pet', id: 'hund' });
   await page.send({ t: 'dev', a: 'saga', id: 'draug' });
   await page.waitForTimeout(3500);
   await tag(page, 'fight');

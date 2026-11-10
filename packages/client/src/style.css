@@ -1389,6 +1389,7 @@ body.touch .round.pet-btn i {
   font-size: max(var(--fs), calc(12 * var(--u) * var(--txt)));
 }
 .kennel-card.sel {
+  color: var(--ink);
   background: #fff3c0;
   outline: calc(1 * var(--u)) solid #d9a52a;
 }

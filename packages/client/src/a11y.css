@@ -540,8 +540,14 @@ button.chip {
     left: calc(max(16px, env(safe-area-inset-left)) + 104px);
   }
   /* the hotbar becomes a strip that scrolls between the chat buttons on the left and the big buttons on the right */
+  /* the buttons at the bottom left (chat, call, pet, stay, whistle, family) stack in two columns */
+  .social {
+    flex-wrap: wrap-reverse;
+    width: 112px;
+    row-gap: 24px;
+  }
   body.touch .hotbar {
-    left: 176px;
+    left: 136px;
     right: 232px;
     transform: none;
     overflow-x: auto;
@@ -552,8 +558,15 @@ button.chip {
     flex: none;
   }
   /* the party's frames flow into a second column instead of running over the chat buttons */
+  body.touch .saga-units {
+    top: 66px;
+  }
+  .saga-party,
+  .minimap[hidden] ~ .saga-party {
+    top: 64px;
+  }
   .saga-party {
-    bottom: 76px;
+    bottom: 190px;
     flex-wrap: wrap;
     align-content: flex-start;
     width: auto;
@@ -580,4 +593,16 @@ button.pick:disabled {
   body.saga-fight .saga-tracker {
     display: none;
   }
+}
+/* a focused thing under the sticky Starta bar scrolls clear of it */
+.run-panel,
+.run-panel .body {
+  scroll-padding-bottom: 96px;
+}
+/* the little words under the pet buttons are read on any ground */
+body.touch .round.pet-btn i {
+  background: rgba(43, 36, 25, 0.88);
+  border-radius: 6px;
+  padding: 0 6px;
+  text-shadow: none;
 }
