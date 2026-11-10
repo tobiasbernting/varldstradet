@@ -321,7 +321,7 @@ function layout(): void {
   column.style.setProperty('--lane-top', `${Math.round(top - origin.top)}px`);
   column.style.setProperty('--lane-left', `${Math.round(left - origin.left)}px`);
   column.style.setProperty('--lane-right', `${Math.round(origin.right - vw + right)}px`);
-  hudRects = ['.run-bar', '.minimap', '.saga-party', '.saga-units', '.saga-bar', '.hud-center > *', '.hud-right > *', '.social', '.hotbar', '.act-btn', '.run-btn']
+  hudRects = ['.run-bar', '.minimap', '.saga-party', '.saga-units', '.saga-bar', '.hud-center > *', '.hud-right > *', '.social', '.social-more', '.run-runor', '.hotbar', '.act-btn', '.run-btn']
     .flatMap((sel) => [...document.querySelectorAll(sel)])
     .filter(visible)
     .map((e) => e.getBoundingClientRect());
