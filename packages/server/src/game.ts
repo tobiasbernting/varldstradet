@@ -31,6 +31,7 @@ import {
   rejoinSaga,
   runMessage,
   devClearStop,
+  devRunNext,
   ensureRunPlaces,
   sagaChapter,
   sagaQuestAct,
@@ -557,6 +558,7 @@ export class Game {
         if (msg.a === 'saga') changes = devEnterSaga(this.world, pid, String(msg.id ?? ''));
         else if (msg.a === 'nextDay') this.skipDay();
         else if (msg.a === 'runclear') changes = devClearStop(this.world, pid);
+        else if (msg.a === 'runnext') changes = devRunNext(this.world, pid, String(msg.kind ?? ''), typeof msg.purse === 'number' ? msg.purse : undefined, this.ctx());
         else if (msg.a === 'unlock') changes = devUnlockChapters(this.world, pid);
         else if (msg.a === 'kit') changes = devKit(this.world, pid);
         else if (msg.a === 'warp') changes = devWarp(this.world, pid, Number(msg.x), Number(msg.y));

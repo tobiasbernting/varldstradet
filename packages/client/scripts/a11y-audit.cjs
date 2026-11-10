@@ -164,6 +164,19 @@ async function scenarios(browser, v, res) {
     await page.evaluate(() => document.querySelector('.run-panel .runa-card')?.click());
     await page.waitForTimeout(800);
     await tag(page, 'run-hud');
+    // the windows of the roguelike's depth, reached with the dev jump (DEV_TELEPORT): cards, the Köpman, a Händelse, a Vilosten, the path pick, the loot
+    const jump = async (label, msg, wait = 3500, after) => { await page.send(msg); await page.waitForTimeout(wait); if (after) await after(); await tag(page, label); };
+    await jump('run-cards', { t: 'dev', a: 'runclear' }, 7000);
+    await jump('run-shop', { t: 'dev', a: 'runnext', kind: 'shop', purse: 60 }, 7000);
+    await jump('run-shop-wares', { t: 'dev', a: 'runnext', kind: 'shop', purse: 60 }, 200, async () => { await page.evaluate(() => [...document.querySelectorAll('.shop-tabs button')][1]?.click()); await page.waitForTimeout(300); });
+    await jump('run-event', { t: 'dev', a: 'runnext', kind: 'event', purse: 20 });
+    await jump('run-rest', { t: 'dev', a: 'runnext', kind: 'rest' });
+    await page.send({ t: 'dev', a: 'runnext', kind: 'mini' });
+    await page.waitForTimeout(1500);
+    await jump('run-path', { t: 'dev', a: 'runclear' }, 7000);
+    await page.send({ t: 'dev', a: 'runnext', kind: 'boss' });
+    await page.waitForTimeout(2500);
+    await jump('run-loot', { t: 'dev', a: 'runclear' }, 7000);
   } else console.log('no arch window');
   await page.context().close();
   // a fight

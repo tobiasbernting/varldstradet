@@ -589,16 +589,10 @@ button.pick:disabled {
   padding: 0 6px;
   text-shadow: none;
 }
-/* a window's dimming covers the HUD's buttons too (the big hand, the spells, the chat buttons); banners and the info card stay above it */
+/* a window's dimming covers the HUD's buttons too (the big hand, the spells, the chat buttons); the info card stays above it; banners go under a window, so they never print over its words */
 .modal,
 .modal.run-modal {
   z-index: 70;
-}
-.saga-banners {
-  z-index: 75;
-}
-.saga-confetti {
-  z-index: 76;
 }
 
 /* a short or narrow screen: the buttons at the bottom left (chat, call, pet, stay, whistle, family) stack in two columns, and the hotbar
@@ -627,5 +621,62 @@ button.pick:disabled {
     bottom: 112px;
     flex-wrap: wrap;
     align-content: flex-start;
+  }
+}
+/* the Köpman's two shelves */
+.shop-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+.shop-tabs button.on {
+  background: #fff3c0;
+  outline: 3px solid #d9a52a;
+}
+.shop-pane[hidden] {
+  display: none;
+}
+/* the class and "whole party" badges on the runa cards: white words need a darker ground */
+.runa-card .for {
+  background: color-mix(in srgb, var(--c) 62%, #000);
+}
+
+/* a phone held sideways in a run: the bar is one scrolling row (no step rail, no level and seed chips: the map window has them), the party
+   and the target hang under it, and the second row of round buttons keeps the right edge */
+@media (max-height: 480px) {
+  :root {
+    --run-top: 132px;
+  }
+  body.in-run .run-bar {
+    width: calc(100vw - 16px - 176px);
+    top: 56px;
+  }
+  body.in-run .run-bar .line1 {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+  /* the three buttons come first so they are never scrolled away */
+  body.in-run .run-bar .line1 .round-btn {
+    order: -1;
+    flex: none;
+  }
+  body.in-run .run-bar .line1 > * {
+    flex-shrink: 0;
+  }
+  body.in-run .run-bar .rail,
+  body.in-run .run-bar .clockbar,
+  body.in-run .run-bar .chip-btn.level,
+  body.in-run .run-bar .chip-btn.seeds {
+    display: none;
+  }
+  body.in-run .saga-party,
+  body.in-run .minimap[hidden] ~ .saga-party {
+    top: var(--run-top);
+  }
+  body.in-run.touch .saga-units {
+    top: var(--run-top);
+  }
+  body.in-run .saga-unit.me {
+    display: none;
   }
 }

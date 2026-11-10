@@ -1662,3 +1662,14 @@ export function devClearStop(world: WorldState, playerId: string): Change[] {
   if (kind === 'boss') inst.bossDown = true;
   return out;
 }
+
+/** Development only: jump the run to the first stop of `kind` not yet walked (and give the party's purse `purse` silver), to see its windows quickly. */
+export function devRunNext(world: WorldState, playerId: string, kind: string, purse: number | undefined, ctx: SimCtx): Change[] {
+  const farm = farmOf(world);
+  const run = RUNS.get(farm);
+  if (!run || !run.party.includes(playerId)) return [];
+  const node = run.plan.stops.findIndex((z, i) => z.kind === kind && !run.path.includes(i));
+  if (purse !== undefined && Number.isFinite(purse)) run.purse = purse;
+  if (node < 0) return [];
+  return enterStop(farm, run, node, ctx);
+}
