@@ -140,6 +140,8 @@ export interface LaneItem {
   onShow?: () => void;
   /** The same key twice in a row replaces: a message that is already up is not shown again. */
   key?: string;
+  /** When it was asked for (set by the lane). */
+  queuedAt?: number;
 }
 
 interface Shown {
@@ -155,12 +157,19 @@ class Lane {
   budget = 260;
   /** The lowest the lane may reach (the spell bar's top, or the lower part of the screen). */
   limit = 9999;
+  /** How low a second message may reach (a short screen keeps the middle, where the hero is, free). */
+  soft = 9999;
   maxShown = 3;
   onCount: (n: number) => void = () => {};
 
   show(item: LaneItem): void {
+    item.queuedAt = Date.now();
     if (item.key && (this.shown.some((s) => s.item.key === item.key) || this.pending.some((p) => p.key === item.key))) return;
-    this.pending.push(item);
+    // a title card goes before the hints and notes that are waiting: it says what is happening now
+    const card = item.el.classList.contains('saga-banner');
+    const at = card ? this.pending.findIndex((p) => !p.el.classList.contains('saga-banner')) : -1;
+    if (at >= 0) this.pending.splice(at, 0, item);
+    else this.pending.push(item);
     this.pump();
   }
 
@@ -170,12 +179,21 @@ class Lane {
 
   /** Brings the next waiting messages up while there is room (one is always allowed: a lane that is empty shows it whatever its size). */
   pump(): void {
+    // what has waited too long is no news any more (the log has it)
+    const now = Date.now();
+    this.pending = this.pending.filter((p) => now - (p.queuedAt ?? now) < 20000);
     while (this.pending.length && this.shown.length < this.maxShown) {
       const item = this.pending[0]!;
       item.el.classList.add('measuring');
       this.root.append(item.el);
-      const room = Math.min(this.budget, this.limit - this.root.getBoundingClientRect().top - 4);
-      if (this.shown.length && this.root.offsetHeight > room) {
+      const top = this.root.getBoundingClientRect().top;
+      const room = Math.min(this.budget, this.limit - top - 4);
+      // a second message must also stay above the hero (soft); the first may go down to the pieces of the HUD (limit). One message is
+      // always allowed when nothing else is up and nothing stands above the lane. Otherwise what does not fit waits (a vote on a short
+      // screen leaves no room: the message comes when the vote is gone) and is dropped after 20 s (the log has it).
+      const alone = !this.shown.length && top - (this.root.parentElement?.getBoundingClientRect().top ?? 0) < 4;
+      const own = this.root.offsetHeight;
+      if (!alone && (own > room || (this.shown.length > 0 && own > this.soft - top - 4))) {
         item.el.remove();
         item.el.classList.remove('measuring');
         return;
@@ -288,7 +306,7 @@ function layout(): void {
   root0.setProperty('--party-top', `${Math.round(visible(map) ? map.getBoundingClientRect().bottom + 8 : top)}px`);
   let left = 8;
   let right = 8;
-  for (const sel of ['.minimap', '.saga-party', '.saga-tracker']) {
+  for (const sel of ['.minimap', '.saga-party', '.saga-tracker', '.act-btn', '.run-btn']) {
     const el = document.querySelector(sel);
     if (!visible(el)) continue;
     const r = el.getBoundingClientRect();
@@ -310,7 +328,10 @@ function layout(): void {
   lane.budget = 320;
   const units = document.querySelector('.saga-units');
   const lowest = Math.min(visible(sbar) ? sbar.getBoundingClientRect().top : vh * 0.62, visible(units) ? units.getBoundingClientRect().top : 9999);
-  lane.limit = lowest;
+  // the big touch buttons stand at the side: the lane stops above them too; and on a short screen it stops above the hero (the middle)
+  const side = ['.act-btn', '.run-btn'].map((s) => document.querySelector(s)).filter(visible).map((e) => e.getBoundingClientRect().top - 8);
+  lane.limit = Math.min(lowest, ...side);
+  lane.soft = vh < 700 ? vh * 0.42 : 9999;
   lane.maxShown = vh < 520 ? 2 : 3;
   lane.pump();
 }

@@ -24,7 +24,8 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  align-items: stretch;
+  /* a short message is a short box: only what is long is wide */
+  align-items: center;
   pointer-events: none !important;
 }
 .msg-lane:empty {
@@ -33,11 +34,12 @@
 
 .lane-item {
   box-sizing: border-box;
+  max-width: 100%;
   color: var(--ink, #2b2419);
-  background: var(--panel, #f6ebcd);
-  border: 3px solid var(--ink, #2b2419);
-  border-radius: 14px;
-  padding: 6px 14px;
+  background: rgba(246, 235, 205, 0.92);
+  border: 2px solid var(--ink, #2b2419);
+  border-radius: 12px;
+  padding: 4px 12px;
   font-weight: 800;
   font-size: max(var(--fs), calc(18px * var(--txt)));
   line-height: 1.2;
@@ -105,17 +107,22 @@
   color: #fff3b0;
 }
 
-/* the big banners, smaller: a card in the lane instead of letters across the screen */
+/* A banner is a card in the lane: the title and its line on ONE row when they fit (else two rows), never a tall box. Only the two
+   moments when nothing is being fought (a boss down, the run won) get the bigger card, and that one leaves again sooner. */
 .msg-lane .saga-banner.lane-item {
   position: static;
   transform: none;
   width: auto;
-  display: block;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 0 12px;
   text-align: center;
-  background: #241a30;
-  border: 3px solid #c8a95a;
+  background: rgba(36, 26, 48, 0.9);
+  border: 2px solid #c8a95a;
   color: #fff;
-  padding: 8px 16px 10px;
+  padding: 4px 14px 5px;
   animation: none;
 }
 .msg-lane .saga-banner.lane-item.in {
@@ -125,24 +132,29 @@
   transform: translateY(-6px);
 }
 .msg-lane .saga-banner .big {
-  font-size: max(calc(var(--fs) * 1.25), calc(28px * var(--txt)));
-  line-height: 1.1;
+  line-height: 1.15;
 }
-.msg-lane .saga-banner.boss .big,
-.msg-lane .saga-banner.cleared .big,
-.msg-lane .saga-banner.enter .big {
-  font-size: max(calc(var(--fs) * 1.4), calc(34px * var(--txt)));
+/* (the sizes of the titles are in hud.css: the saga's own rules for each kind are as specific as these) */
+.msg-lane .saga-banner.boss.lane-item,
+.msg-lane .saga-banner.cleared.lane-item {
+  display: block;
+  padding: 8px 18px 10px;
+  border-width: 3px;
 }
 .msg-lane .saga-banner .sub {
   display: block;
-  margin: 4px 0 0;
+  margin: 0;
   padding: 0;
   background: none;
   border-radius: 0;
   font-size: max(var(--fs), calc(18px * var(--txt)));
   font-weight: 700;
   color: #f1e8ff;
-  line-height: 1.25;
+  line-height: 1.2;
+}
+.msg-lane .saga-banner.boss .sub,
+.msg-lane .saga-banner.cleared .sub {
+  margin-top: 4px;
 }
 .msg-lane .saga-banner.level .sub.reward {
   display: flex;
@@ -277,13 +289,8 @@ html body.in-run.touch .saga-units {
   font-size: max(var(--fs), calc(16px * var(--txt)));
 }
 @media (max-height: 600px) {
-  .msg-lane .saga-banner .big,
-  .msg-lane .saga-banner.boss .big,
-  .msg-lane .saga-banner.cleared .big,
-  .msg-lane .saga-banner.enter .big {
-    font-size: max(var(--fs), calc(24px * var(--txt)));
-  }
-  .msg-lane .saga-banner.lane-item {
-    padding: 4px 12px 6px;
+  .msg-lane .saga-banner.boss.lane-item,
+  .msg-lane .saga-banner.cleared.lane-item {
+    padding: 5px 14px 7px;
   }
 }
