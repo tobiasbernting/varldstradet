@@ -899,6 +899,9 @@ function useRunExit(world: WorldState, p: PlayerState, obj: WorldObject, ctx: Si
 }
 runHooks.exit = useRunExit;
 
+/** Hacksilver earned: a half more on the two easiest levels, where the packs are smaller (a child's Köpman should have something to sell). */
+const silverFor = (run: RunState, n: number): number => Math.round(n * (run.level <= 1 ? 1.5 : 1));
+
 /** The stop is cleared: the cards of a runa after a fight (a Flock, the Mellanboss), and then the way on. */
 function stopCleared(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
   const z = run.plan.stops[run.node]!;
@@ -1444,7 +1447,7 @@ function watchStop(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
     if (pk.dead && !run.paid.has(k)) {
       run.paid.add(k);
       pay(farm, run, RUN_SEEDS.pack, out);
-      run.purse += packSilver(pk.members.length);
+      run.purse += silverFor(run, packSilver(pk.members.length));
     }
   });
   for (const [id, who] of Object.entries(inst.looted)) {
@@ -1458,7 +1461,7 @@ function watchStop(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
   if (inst.miniDown && !run.paid.has(`${run.node}:guard`)) {
     run.paid.add(`${run.node}:guard`);
     pay(farm, run, RUN_SEEDS.guard, out);
-    run.purse += SILVER.mini;
+    run.purse += silverFor(run, SILVER.mini);
   }
   // the gate opens when the packs that were in the way are down (a mid-boss opens its own, in sagasim.ts)
   if (!inst.gateOpen && z.gate === 'packs' && z.required.every((i) => inst.packs[i]?.dead)) {
@@ -1482,8 +1485,8 @@ function watchStop(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
         out.push(banner(p.id, run.key, RUN_T.zoneClear, RUN_T.zoneClearSub, 'cleared'));
       }
       pay(farm, run, z.kind === 'elite' ? RUN_SEEDS.zone * 2 : RUN_SEEDS.zone, out);
-      if (z.kind === 'elite') run.purse += SILVER.elite;
-      if (z.kind === 'treasure') run.purse += SILVER.treasure;
+      if (z.kind === 'elite') run.purse += silverFor(run, SILVER.elite);
+      if (z.kind === 'treasure') run.purse += silverFor(run, SILVER.treasure);
     }
     out.push(...stopCleared(farm, run, ctx));
     return out;

@@ -1377,6 +1377,7 @@ body.in-run.touch .saga-boss {
   padding: calc(2 * var(--u));
   text-align: center;
   background: #fffbea;
+  color: #3a3220;
   border: 3px solid var(--ink, #3a3220);
   border-radius: calc(3 * var(--u));
   cursor: pointer;
