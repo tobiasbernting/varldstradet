@@ -1,5 +1,5 @@
 // HUD: top chips, hotbar, toasts, touch controls.
-import { A11Y_T, HOTBAR_SIZE, HOUSE_T, MAX_HEARTS, SPELLS, T, areaName, fmt, houseTitle, isHomeKey, isSagaKey, ownerOfHome, stackName, type ItemStack } from '@varldstradet/shared';
+import { A11Y_T, HOTBAR_SIZE, HOUSE_T, MAX_HEARTS, SPELLS, T, areaName, fmt, houseTitle, isHomeKey, isSagaKey, itemText, ownerOfHome, stackName, type ItemStack } from '@varldstradet/shared';
 import { Minimap } from './minimap.ts';
 import { stackIconUrl } from '@art/stackicon.ts';
 import { net } from '../net.js';
@@ -24,7 +24,7 @@ export function slotEl(stack: ItemStack | null, opts: { selected?: boolean; pick
   if (stack) {
     el.append(icon(stackIconUrl(stack), stackName(stack)));
     el.dataset.infoName = stackName(stack);
-    el.dataset.infoText = '';
+    el.dataset.infoText = itemText(stack.item);
     el.setAttribute('aria-label', stackName(stack));
     if (stack.count > 1) el.append(h('span', { class: 'count' }, stack.count));
   }

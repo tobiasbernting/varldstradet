@@ -1134,6 +1134,60 @@ export const HOUSE_NAMES: Record<string, string> = {
   trophy_loke: 'Trofé: Loke',
 };
 
+/** One sentence for everything in the bag that is not a dungeon find (those carry their own text in saga.ts). */
+export const ITEM_TEXTS: Record<string, string> = {
+  fur: 'Mjuk päls. Den går att sälja.',
+  stone: 'En vanlig sten. Den går att sälja.',
+  mushroom: 'En svamp från skogen. Den går att sälja.',
+  shell: 'En snäcka. Lyssna, det susar hav i den!',
+  gold: 'Ett blankt guldmynt.',
+  gem: 'En glittrande ädelsten.',
+  glowshroom: 'En svamp som lyser i mörkret.',
+  fairy_dust: 'Glitter från älvorna. Det kittlar i näsan.',
+  obsidian: 'Svart vulkanglas, blankt som en spegel.',
+  crystal: 'En klar kristall som glimmar.',
+  fire_crystal: 'En kristall med en liten eld inuti.',
+  pearl: 'En blank, rund pärla från havet.',
+  old_coin: 'Ett mycket gammalt mynt.',
+  star_crystal: 'En kristall som lyser som en stjärna.',
+  bench: 'En bänk att sitta på. Sätt den i ditt hus.',
+  table: 'Ett bord till ditt hus.',
+  flowerbox: 'Blommor till ditt hus.',
+  bed: 'En säng till ditt hus.',
+  rug: 'En mjuk matta till ditt hus.',
+  chair: 'En stol till ditt hus.',
+  sofa: 'En soffa att mysa i, i ditt hus.',
+  bookshelf: 'En hylla full av böcker till ditt hus.',
+  lamp: 'En lampa som lyser upp ditt hus.',
+  plant: 'En grön växt till ditt hus.',
+  clock: 'En klocka till ditt hus. Tick tack!',
+  crystal_lamp: 'En lampa av kristall som lyser i ditt hus.',
+  mushroom_lamp: 'En svamp som lyser i ditt hus.',
+  wisp_jar: 'En burk med ett litet irrbloss i. Sätt den i ditt hus.',
+  dragon_egg: 'Ett drakägg! Sätt det i ditt hus.',
+  shirt_red: 'En röd tröja. Ta på den i garderoben.',
+  shirt_blue: 'En blå tröja. Ta på den i garderoben.',
+  shirt_green: 'En grön tröja. Ta på den i garderoben.',
+  shirt_yellow: 'En gul tröja. Ta på den i garderoben.',
+  pants_blue: 'Blå byxor. Ta på dem i garderoben.',
+  pants_brown: 'Bruna byxor. Ta på dem i garderoben.',
+  shoes_boots: 'Stövlar. Ta på dem i garderoben.',
+  gear_stand: 'Här kan du ställa fram dina bästa saker.',
+  viking_shield: 'En rund sköld att hänga i ditt hus.',
+  rune_stone: 'En sten med runor. Sätt den i ditt hus.',
+  weapon_rack: 'Här kan vapnen stå fint i ditt hus.',
+  drinking_horn: 'Ett horn att dricka ur. Sätt det i ditt hus.',
+  viking_banner: 'En banderoll till väggen i ditt hus.',
+  bear_rug: 'En björnfäll på golvet i ditt hus.',
+  mead_barrel: 'En tunna till ditt hus.',
+  candle_stick: 'En ljusstake som lyser mjukt i ditt hus.',
+  yggdrasil_sapling: 'En liten planta från Världsträdet.',
+  raven_perch: 'En pinne där en korp kan sitta.',
+};
+
+/** A boss trophy: "Trofé: Hel" gets the same sentence for all of them. */
+export const TROPHY_TEXT = 'Ett minne från en färd. Ju svårare färd, desto finare trofé. Sätt den i ditt hus.';
+
 /** The difficulty levels a trophy remembers (0..4), as the run screen calls them. */
 export const TROPHY_LEVEL_NAMES = ['Mycket lätt', 'Lätt', 'Medel', 'Svår', 'Extrem'] as const;
 
