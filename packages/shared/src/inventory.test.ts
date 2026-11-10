@@ -185,7 +185,7 @@ describe('filters and search', () => {
   it('every item belongs to a known filter', () => {
     const ids = INVENTORY_FILTERS.map((f) => f.id);
     expect(filterOf('hoe')).toBe('tools');
-    expect(filterOf('carrot_seed')).toBe('seeds');
+    expect(filterOf('carrot_seed')).toBe('other');
     expect(filterOf('carrot')).toBe('food');
     expect(ids).toContain(filterOf('chest'));
   });

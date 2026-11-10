@@ -537,7 +537,7 @@ export function lootLookCard(code: string, pieceId: string, lines: string[], onW
   for (const l of lines) col.append(h('span', { class: 'ln' }, l));
   if (d) col.append(h('span', { class: 'stars' }, `${stars(d.tier)} ${LOOK_TIER_NAMES[d.tier - 1]}`));
   if (onWear) {
-    const b = h('button', { class: 'wear-btn', type: 'button' }, `✔ ${LOOK_T.lootWear}`);
+    const b = h('button', { class: 'wear-btn', type: 'button', 'aria-label': `${LOOK_T.lootWear}: ${lookPiece(pieceId)?.name ?? ''}` }, `✔ ${LOOK_T.lootWear}`);
     onTap(b, () => {
       onWear();
       b.textContent = LOOK_T.lootWearing;

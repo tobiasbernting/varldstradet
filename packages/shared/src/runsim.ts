@@ -1662,3 +1662,23 @@ export function devClearStop(world: WorldState, playerId: string): Change[] {
   if (kind === 'boss') inst.bossDown = true;
   return out;
 }
+
+/** Development only: jump the run to the first stop of `kind` not yet walked (and give the party's purse `purse` silver), to see its windows quickly. */
+export function devRunNext(world: WorldState, playerId: string, kind: string, purse: number | undefined, ctx: SimCtx): Change[] {
+  const farm = farmOf(world);
+  const run = RUNS.get(farm);
+  if (!run || !run.party.includes(playerId)) return [];
+  let node = run.plan.stops.findIndex((z, i) => z.kind === kind && !run.path.includes(i));
+  if (purse !== undefined && Number.isFinite(purse)) run.purse = purse;
+  // a seed without such a stop: the first unwalked fight stop becomes one (development only)
+  if (node < 0 && kind !== 'boss' && kind !== 'mini') {
+    node = run.plan.stops.findIndex((z, i) => z.kind === 'flock' && !run.path.includes(i));
+    if (node >= 0) {
+      run.plan.stops[node]!.kind = kind as never;
+      const rn = run.plan.route.nodes[node];
+      if (rn) rn.kind = kind as never;
+    }
+  }
+  if (node < 0) return [];
+  return enterStop(farm, run, node, ctx);
+}

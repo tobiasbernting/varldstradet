@@ -1,0 +1,720 @@
+/* Accessibility layer. Loaded last (after the HUD's, the saga's, the run's and the looks' stylesheets), so these rules win.
+   --txt is the text size the player chose (1, 1.25, 1.5); --fs the smallest text there is: 16 px times that. The font-size rules
+   of the other stylesheets are made to use them by scripts/a11y-fontfloor.mjs. Sizes of things you touch are in real pixels
+   (the HUD's own unit, --u, is 3 px on a tablet and 2 px on a phone, which made buttons 30 px). */
+:root {
+  --txt: 1;
+  --fs: calc(16px * var(--txt));
+  --tap: 48px;
+  --tap-big: 56px;
+  --ring: #fff;
+  --ring-in: #1a56a8;
+}
+
+/* ---- seeing where you are: the keyboard's focus ring and the gamepad's, the same everywhere ---- */
+:focus {
+  outline: none;
+}
+:focus-visible,
+.pad-focus {
+  outline: 4px solid var(--ring) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 7px var(--ring-in) !important;
+  position: relative;
+  z-index: 2;
+}
+.saga-spell:focus-visible,
+.saga-spell.pad-focus {
+  overflow: visible;
+}
+.panel[tabindex='-1']:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.a11y-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---- things you touch: at least 48 px, the kids' main buttons and every close button 56 px ---- */
+button {
+  min-height: var(--tap);
+  min-width: var(--tap);
+}
+.round {
+  width: max(var(--tap-big), calc(14 * var(--u)));
+  height: max(var(--tap-big), calc(14 * var(--u)));
+  padding: 0;
+  color: var(--ink);
+}
+.round.small {
+  width: max(var(--tap), calc(10 * var(--u)));
+  height: max(var(--tap), calc(10 * var(--u)));
+}
+button.close,
+.panel button.close,
+.run-panel button.close {
+  width: var(--tap-big);
+  height: var(--tap-big);
+  min-width: var(--tap-big);
+  min-height: var(--tap-big);
+  font-size: max(var(--fs), 24px);
+}
+.chip.level,
+.saga-member,
+.chip-btn {
+  min-height: var(--tap);
+}
+.chip.level {
+  cursor: pointer;
+}
+.hud-right {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: calc(100% - 330px);
+  gap: 8px;
+}
+@media (max-width: 820px) {
+  .hud-right {
+    max-width: calc(100% - 200px);
+  }
+}
+.slot {
+  width: max(var(--tap), calc(18 * var(--u)));
+  height: max(var(--tap), calc(18 * var(--u)));
+}
+.slot img {
+  width: max(40px, calc(16 * var(--u)));
+  height: max(40px, calc(16 * var(--u)));
+}
+.slot .key {
+  color: #555;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 4px;
+  padding: 0 3px;
+  line-height: 1.1;
+  z-index: 1;
+}
+.slot .count {
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 6px;
+  padding: 0 4px;
+  line-height: 1.15;
+  text-shadow: none;
+}
+.hotbar {
+  gap: 8px;
+}
+
+/* ---- the big touch buttons: a picture and a word ---- */
+.act-btn,
+.run-btn {
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  color: #fff;
+  cursor: pointer;
+  touch-action: none;
+}
+.act-btn .ic,
+.run-btn .ic {
+  font-size: 34px;
+  line-height: 1;
+}
+.act-btn .lb,
+.run-btn .lb {
+  font-size: var(--fs);
+  font-weight: 900;
+  line-height: 1.1;
+  text-shadow: 0 2px 0 #000;
+}
+.act-btn .lb.hit {
+  display: none;
+}
+body.saga-fight .act-btn .lb.hit {
+  display: block;
+}
+body.saga-fight .act-btn .lb.use {
+  display: none;
+}
+body.touch .act-btn {
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  width: 96px;
+  height: 96px;
+  min-width: 96px;
+  min-height: 96px;
+  border-radius: 50%;
+}
+body.touch .run-btn {
+  right: max(24px, calc(env(safe-area-inset-right) + 8px));
+  bottom: calc(max(16px, env(safe-area-inset-bottom)) + 108px);
+  width: 76px;
+  height: 76px;
+  min-width: 76px;
+  min-height: 76px;
+}
+body.touch:not(.saga-fight) .run-btn {
+  right: calc(max(16px, env(safe-area-inset-right)) + 112px);
+  bottom: max(16px, env(safe-area-inset-bottom));
+}
+.joy-zone {
+  bottom: 120px;
+}
+
+/* ---- left-handed: the buttons on the left, the joystick on the right ---- */
+.a11y-left body.touch .act-btn {
+  right: auto;
+  left: max(16px, env(safe-area-inset-left));
+}
+.a11y-left body.touch .run-btn {
+  right: auto;
+  left: max(24px, calc(env(safe-area-inset-left) + 8px));
+}
+.a11y-left body.touch:not(.saga-fight) .run-btn {
+  left: calc(max(16px, env(safe-area-inset-left)) + 112px);
+}
+.a11y-left body.touch .saga-bar {
+  right: auto;
+  left: calc(max(16px, env(safe-area-inset-left)) + 112px);
+}
+.a11y-left .joy-zone {
+  left: auto;
+  right: 0;
+}
+.a11y-left body.touch .run-info.near-bar {
+  right: auto;
+  left: max(16px, env(safe-area-inset-left));
+}
+
+/* ---- the info card, a little bigger on a tablet, with its speaker ---- */
+.run-info .ic.pic img {
+  width: 44px;
+  height: 44px;
+  image-rendering: pixelated;
+}
+.run-info .speak {
+  align-self: center;
+  font-size: var(--fs);
+  min-height: var(--tap);
+  white-space: nowrap;
+  background: #2b7ad0;
+}
+.run-info .tx {
+  font-size: max(var(--fs), 18px);
+}
+.run-info .dismiss {
+  font-size: var(--fs);
+  color: #e0d8f0;
+}
+.run-info {
+  z-index: 80;
+}
+
+/* ---- text over the world sits on a plate ---- */
+.label {
+  background: rgba(16, 12, 22, 0.78);
+  padding: 0 6px;
+  border-radius: 8px;
+}
+.label.bubble {
+  background: #fff;
+}
+
+/* ---- high contrast: solid backs, thick light borders ---- */
+.a11y-contrast .saga-bar,
+.a11y-contrast .saga-unit,
+.a11y-contrast .saga-member,
+.a11y-contrast .saga-boss,
+.a11y-contrast .saga-cast,
+.a11y-contrast .saga-tracker,
+.a11y-contrast .saga-yell,
+.a11y-contrast .saga-down .box,
+.a11y-contrast .chip,
+.a11y-contrast .hotbar,
+.a11y-contrast .toast,
+.a11y-contrast .label:not(.bubble),
+.a11y-contrast .minimap {
+  background: #000 !important;
+  color: #fff !important;
+  border-color: #fff !important;
+}
+.a11y-contrast .panel,
+.a11y-contrast .run-panel {
+  background: #fff !important;
+  color: #000 !important;
+  border: 4px solid #000 !important;
+}
+.a11y-contrast .panel button:not(.close):not(.danger),
+.a11y-contrast .run-panel button:not(.close):not(.danger) {
+  background: #0b3d91 !important;
+  color: #fff !important;
+  border: 3px solid #000 !important;
+}
+.a11y-contrast .saga-spell {
+  border-color: #fff;
+  background: #000;
+}
+.a11y-contrast .run-info {
+  background: #000;
+  border-color: #fff;
+}
+
+/* ---- calm: nothing loops, nothing flashes (the system's choice at first, then the player's) ---- */
+.a11y-calm *,
+.a11y-calm *::before,
+.a11y-calm *::after {
+  animation-iteration-count: 1 !important;
+  animation-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+.a11y-calm .saga-spell.kick {
+  box-shadow: 0 0 0 4px #7fd8ff;
+}
+
+/* ---- the settings window ---- */
+.settings-panel {
+  width: min(640px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+}
+.settings-panel .body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.settings-panel h3 {
+  margin: 8px 0 0;
+  font-size: max(var(--fs), 20px);
+}
+.settings-panel .row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px;
+  background: var(--panel-dark);
+  border-radius: 12px;
+}
+.settings-panel .row .lbl {
+  flex: 1 1 200px;
+  display: flex;
+  flex-direction: column;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.settings-panel .row .lbl span {
+  font-weight: 600;
+}
+.settings-panel .choices {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.settings-panel .choices button {
+  background: var(--panel);
+  color: var(--ink);
+  min-width: 72px;
+}
+.settings-panel .choices button[aria-pressed='true'] {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 0 3px var(--ink);
+}
+.settings-panel .note {
+  font-weight: 600;
+  padding: 4px 8px;
+}
+.settings-open {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 5;
+}
+
+/* ---- health: a number, and a mark and stripes when it is low, so red and green are not all there is ---- */
+.saga-units .hp,
+.saga-party .hp,
+.saga-boss .hp {
+  height: max(22px, calc(4.5 * var(--u)));
+}
+.saga-boss .hp {
+  height: max(26px, calc(5.5 * var(--u)));
+}
+.saga-member .hp {
+  height: max(22px, calc(3.5 * var(--u)));
+}
+.hp span {
+  text-shadow: none !important;
+  background: rgba(0, 0, 0, 0.62);
+  padding: 0 6px;
+  border-radius: 8px;
+  inset: auto !important;
+  position: absolute;
+  top: 50% !important;
+  left: 50% !important;
+  width: auto !important;
+  height: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translate(-50%, -50%);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.hp.low i {
+  background-image: repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.38) 0 5px, transparent 5px 10px) !important;
+}
+.hp.low span::before {
+  content: '⚠ ';
+}
+.hp.mid i {
+  background-image: repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.25) 0 3px, transparent 3px 9px) !important;
+}
+
+/* ---- rarity: a border shape as well as a colour (the word is on the card) ---- */
+.rar-uncommon {
+  border-style: dashed !important;
+}
+.rar-rare {
+  border-style: double !important;
+  border-width: max(4px, 0.9 * var(--u)) !important;
+}
+.rar-epic {
+  border-style: dotted !important;
+  border-width: max(4px, 0.9 * var(--u)) !important;
+}
+.rar-legendary {
+  border-style: ridge !important;
+  border-width: max(5px, 1.2 * var(--u)) !important;
+}
+
+/* ---- colour pickers: big enough to hit, and the chosen one has a tick ---- */
+.swatch {
+  width: max(var(--tap), calc(9 * var(--u)));
+  height: max(var(--tap), calc(9 * var(--u)));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.swatches {
+  gap: 8px;
+}
+.swatch.on::after {
+  content: '✔';
+  font-size: 24px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow:
+    0 0 3px #000,
+    0 0 3px #000,
+    0 0 3px #000;
+}
+
+/* filter chips and search in the windows' toolbars */
+.toolbar button,
+.toolbar input,
+button.chip {
+  min-height: var(--tap);
+}
+.toolbar {
+  gap: 8px;
+}
+.round:focus-visible {
+  border-radius: 50%;
+}
+
+/* ---- colours that were too pale (found by scripts/a11y-audit.cjs) ---- */
+.hint,
+p.hint {
+  color: #3f3628;
+}
+.saga-levels .lv {
+  color: #4a4030;
+}
+.saga-levels .lv:not(.got) .rw img,
+.saga-levels .lv:not(.got) .rw .em {
+  filter: grayscale(1) opacity(0.7);
+}
+.saga-levels .lv.next {
+  color: #3f3628;
+}
+.run-panel .classcard .role {
+  background: rgba(0, 0, 0, 0.78);
+  border: 2px solid var(--c);
+}
+.run-bar .dot.next {
+  opacity: 1;
+  color: #fff;
+}
+.chip.level {
+  background: #2b2419;
+}
+.chip.level {
+  color: #fff;
+}
+.saga-levels .lv .n,
+.saga-levels .lv b {
+  text-shadow: none;
+}
+button.chip {
+  min-width: var(--tap);
+}
+.slot {
+  margin: 0;
+}
+.wardrobe-grid,
+.outfit-grid,
+.inv-grid,
+.grid {
+  gap: 8px;
+}
+.saga-units .hp,
+.saga-party .hp,
+.saga-boss .hp,
+.saga-member .hp {
+  height: max(22px, calc(14px + 8px * var(--txt)));
+}
+.saga-spell .lb {
+  letter-spacing: -0.2px;
+}
+@media (max-height: 480px) {
+  body.touch .act-btn .ic {
+    font-size: 28px;
+  }
+}
+
+@media (max-width: 820px) {
+  .hud-right {
+    max-width: calc(100% - 330px);
+  }
+}
+@media (max-width: 700px) {
+  .round {
+    width: var(--tap);
+    height: var(--tap);
+  }
+  .hud-right {
+    max-width: calc(100% - 270px);
+    gap: 8px;
+  }
+}
+
+/* the bag's rows must not be squeezed into each other when the window is short */
+.grid {
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: 8px;
+}
+.grid .slot {
+  flex: none;
+}
+.grid + .grid {
+  margin-top: 8px;
+}
+.role {
+  background: rgba(0, 0, 0, 0.78) !important;
+  color: #fff !important;
+}
+.saga-tracker .head,
+.saga-tracker .head span {
+  color: #ffe9a8;
+}
+.run-bar {
+  margin-top: 16px;
+}
+.saga-pet {
+  min-height: var(--tap);
+}
+
+/* ---- a phone held sideways (under 480 px high): nothing may touch or overlap (round 2 audit) ---- */
+@media (max-height: 480px) {
+  body.touch .saga-bar {
+    right: calc(max(16px, env(safe-area-inset-right)) + 104px);
+  }
+  .a11y-left body.touch .saga-bar {
+    right: auto;
+    left: calc(max(16px, env(safe-area-inset-left)) + 104px);
+  }
+  /* the hotbar becomes a strip that scrolls between the chat buttons on the left and the big buttons on the right */
+  /* the party's frames flow into a second column instead of running over the chat buttons */
+  body.touch .saga-units {
+    top: 66px;
+  }
+  .saga-party,
+  .minimap[hidden] ~ .saga-party {
+    top: 64px;
+  }
+  .saga-party {
+    bottom: 190px;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    width: auto;
+    max-width: 48%;
+  }
+  .saga-party > * {
+    width: calc(58 * var(--u));
+  }
+}
+.fx-set,
+.fx-set .fx {
+  gap: 8px !important;
+}
+.run-panel button.go {
+  background: #2f7a14;
+}
+button.pick:disabled {
+  opacity: 1;
+  background: #2f7a14;
+  color: #fff;
+}
+/* in a fight on a short screen the saga's chapter note would sit on the run button */
+@media (max-height: 480px) {
+  body.saga-fight .saga-tracker {
+    display: none;
+  }
+}
+/* a focused thing under the sticky Starta bar scrolls clear of it */
+.run-panel,
+.run-panel .body {
+  scroll-padding-bottom: 96px;
+}
+/* the little words under the pet buttons are read on any ground */
+.round.pet-btn i {
+  background: rgba(43, 36, 25, 0.88);
+  border-radius: 6px;
+  padding: 0 6px;
+  text-shadow: none;
+}
+/* a window's dimming covers the HUD's buttons too (the big hand, the spells, the chat buttons); the info card stays above it; banners go under a window, so they never print over its words */
+.modal,
+.modal.run-modal {
+  z-index: 70;
+}
+
+/* a short or narrow screen: the buttons at the bottom left (chat, call, pet, stay, whistle, family) stack in two columns, and the hotbar
+   becomes a strip that scrolls between them and the big buttons on the right */
+@media (max-height: 480px), (max-width: 820px) {
+  .social {
+    flex-wrap: wrap-reverse;
+    left: 14px;
+    width: 128px;
+    row-gap: 24px;
+    column-gap: 24px;
+  }
+  body.touch .hotbar {
+    left: 162px;
+    right: 232px;
+    transform: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    justify-content: flex-start;
+  }
+  body.touch .hotbar .slot {
+    flex: none;
+  }
+}
+/* the party's frames flow into a second column rather than over the buttons at the bottom left (on a short screen see above) */
+@media (min-height: 481px) {
+  .saga-party {
+    bottom: 112px;
+    flex-wrap: wrap;
+    align-content: flex-start;
+  }
+}
+/* the Köpman's two shelves */
+.shop-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+.shop-tabs button.on {
+  background: #fff3c0;
+  outline: 3px solid #d9a52a;
+}
+.shop-pane[hidden] {
+  display: none;
+}
+/* the class and "whole party" badges on the runa cards: white words need a darker ground */
+.runa-card .for {
+  background: color-mix(in srgb, var(--c) 62%, #000);
+}
+
+/* a phone held sideways in a run: the bar is one scrolling row (no step rail, no level and seed chips: the map window has them), the party
+   and the target hang under it, and the second row of round buttons keeps the right edge */
+@media (max-height: 480px) {
+  :root {
+    --run-top: 132px;
+  }
+  body.in-run .run-bar {
+    width: calc(100vw - 16px - 176px);
+    top: 56px;
+  }
+  body.in-run .run-bar .line1 {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+  /* the three buttons come first so they are never scrolled away */
+  body.in-run .run-bar .line1 .round-btn {
+    order: -1;
+    flex: none;
+  }
+  body.in-run .run-bar .line1 > * {
+    flex-shrink: 0;
+  }
+  body.in-run .run-bar .rail,
+  body.in-run .run-bar .clockbar,
+  body.in-run .run-bar .chip-btn.level,
+  body.in-run .run-bar .chip-btn.seeds {
+    display: none;
+  }
+  body.in-run .saga-party,
+  body.in-run .minimap[hidden] ~ .saga-party {
+    top: var(--run-top);
+  }
+  body.in-run.touch .saga-units {
+    top: var(--run-top);
+  }
+  body.in-run .saga-unit.me {
+    display: none;
+  }
+}
+
+/* the loot window with looks, pet gear and a trophy: two columns, and the OK button always in view, so every "Ta på" is a tap away */
+.saga-panel.loot {
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+}
+.saga-panel.loot .body {
+  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.saga-loot:has(.loot-look) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr));
+}
+.saga-panel.loot:has(.loot-look) {
+  width: min(96vw, 780px);
+}
+.saga-loot .loot-look canvas {
+  width: 88px;
+  height: 88px;
+  max-width: none;
+}
+.saga-panel.loot .q-act {
+  position: sticky;
+  bottom: 0;
+  background: #1c1624;
+  padding: 8px 0 0;
+  margin-top: 8px;
+  z-index: 2;
+}
+.saga-tracker {
+  background: rgba(24, 18, 30, 0.86);
+}

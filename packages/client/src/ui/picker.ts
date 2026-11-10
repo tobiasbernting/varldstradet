@@ -1,5 +1,5 @@
 // "Vem är du?" – character picker and creator.
-import { ITEMS, T, itemName, type Appearance, type PlayerSummary } from '@lilla-garden/shared';
+import { A11Y_T, ITEMS, T, itemName, type Appearance, type PlayerSummary } from '@lilla-garden/shared';
 import { HAIR_COLORS, HAIR_STYLES, SKIN_TONES } from '@art/characters.ts';
 import { portraitUrl } from '@art/textures.ts';
 import { toGate } from '../net.js';
@@ -59,7 +59,9 @@ export class Picker {
       onTap(add, () => this.renderCreator());
       cards.append(add);
     }
-    this.root.append(h('h1', null, T.title), h('h2', { style: { color: '#fff', margin: '0' } }, T.whoAreYou), cards);
+    const settings = h('button', { class: 'alt settings-open', type: 'button' }, `⚙️ ${A11Y_T.settings}`);
+    onTap(settings, () => document.dispatchEvent(new Event('lilla:settings')));
+    this.root.append(h('h1', null, T.title), h('h2', { style: { color: '#fff', margin: '0' } }, T.whoAreYou), cards, settings);
   }
 
   private renderCreator(): void {
@@ -76,24 +78,25 @@ export class Picker {
       swatchesShirt.querySelectorAll('.swatch').forEach((el, i) => el.classList.toggle('on', STARTER_SHIRTS[i] === shirt));
       styleBtns.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.style === appearance.hairStyle));
     };
-    const swatches = (colors: string[], get: () => string, set: (c: string) => void) => {
-      const el = h('div', { class: 'swatches' });
-      for (const c of colors) {
-        const s = h('div', { class: `swatch${get() === c ? ' on' : ''}`, style: { background: c } });
+    const swatches = (colors: string[], get: () => string, set: (c: string) => void, label: string) => {
+      const el = h('div', { class: 'swatches', role: 'group', 'aria-label': label });
+      colors.forEach((c, i) => {
+        const s = h('div', { class: `swatch${get() === c ? ' on' : ''}`, style: { background: c }, 'aria-label': `${label} ${i + 1}` });
         onTap(s, () => {
           set(c);
           refresh();
         });
         el.append(s);
-      }
+      });
       return el;
     };
-    const swatchesSkin = swatches(SKIN_TONES, () => appearance.skin, (c) => (appearance.skin = c));
-    const swatchesHair = swatches(HAIR_COLORS, () => appearance.hair, (c) => (appearance.hair = c));
+    const swatchesSkin = swatches(SKIN_TONES, () => appearance.skin, (c) => (appearance.skin = c), T.skin);
+    const swatchesHair = swatches(HAIR_COLORS, () => appearance.hair, (c) => (appearance.hair = c), T.hair);
     const swatchesShirt = swatches(
       STARTER_SHIRTS.map((id) => ITEMS[id]!.clothing!.color),
       () => ITEMS[shirt]!.clothing!.color,
       (c) => (shirt = STARTER_SHIRTS.find((id) => ITEMS[id]!.clothing!.color === c) ?? shirt),
+      A11Y_T.shirt,
     );
     const styleBtns = h('div', { class: 'tabs' });
     for (const s of HAIR_STYLES) {

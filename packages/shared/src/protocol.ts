@@ -167,6 +167,8 @@ export type ClientMsg =
    * wait for a crop to grow. The server answers `error` when the switch is off. */
   | { t: 'dev'; a: 'nextDay' }
   | { t: 'dev'; a: 'runclear' }
+  /** Development only: jump the run to the first unwalked stop of this kind ('shop', 'event', 'rest', 'mini', 'boss', ...) and set the purse. */
+  | { t: 'dev'; a: 'runnext'; kind: string; purse?: number }
   /** Development only (same switch): win dungeon boss `id`'s trophy at difficulty `level` (0..4), as a run's win would. */
   | { t: 'dev'; a: 'trophy'; id: string; level: number }
   /** Development only (same switch): one of every Norse decor piece, a gear stand and some gear, into the bag. */

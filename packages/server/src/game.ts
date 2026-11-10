@@ -31,6 +31,7 @@ import {
   rejoinSaga,
   runMessage,
   devClearStop,
+  devRunNext,
   ensureRunPlaces,
   sagaChapter,
   sagaQuestAct,
@@ -201,12 +202,32 @@ export class Game {
     this.tickCount++;
     const changes = tick(this.world, dt, this.ctx());
     // once a second: the landmarks each player out in the world has come within sight of (for the world map)
-    if (this.tickCount % TICK_HZ === 0) changes.push(...noticeLandmarks(this.world));
+    if (this.tickCount % TICK_HZ === 0) {
+      changes.push(...noticeLandmarks(this.world));
+      changes.push(...this.syncLevelCaps());
+    }
     if (changes.length) this.pending.push(...changes);
     this.dispatchPending();
     if (++this.flushCounter % (TICK_HZ * 15) === 0 && 'markMoving' in this.store) {
       (this.store as unknown as { markMoving(w: WorldState): void }).markMoving(this.world);
     }
+  }
+
+  /** Tells each player their parent's level cap (PlayerState.levelCap), so the arch window can mark what is too hard before Starta. */
+  private syncLevelCaps(): Change[] {
+    const fn = this.opts.levelCap;
+    if (!fn) return [];
+    const out: Change[] = [];
+    for (const p of Object.values(this.world.players)) {
+      if (!p.online) continue;
+      const c = fn(p.id);
+      const cap = c < 4 ? c : undefined;
+      if (p.levelCap === cap) continue;
+      if (cap === undefined) delete p.levelCap;
+      else p.levelCap = cap;
+      out.push({ t: 'player', id: p.id, player: p });
+    }
+    return out;
   }
 
   broadcastState(): void {
@@ -537,6 +558,7 @@ export class Game {
         if (msg.a === 'saga') changes = devEnterSaga(this.world, pid, String(msg.id ?? ''));
         else if (msg.a === 'nextDay') this.skipDay();
         else if (msg.a === 'runclear') changes = devClearStop(this.world, pid);
+        else if (msg.a === 'runnext') changes = devRunNext(this.world, pid, String(msg.kind ?? ''), typeof msg.purse === 'number' ? msg.purse : undefined, this.ctx());
         else if (msg.a === 'unlock') changes = devUnlockChapters(this.world, pid);
         else if (msg.a === 'kit') changes = devKit(this.world, pid);
         else if (msg.a === 'warp') changes = devWarp(this.world, pid, Number(msg.x), Number(msg.y));

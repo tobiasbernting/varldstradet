@@ -6,7 +6,8 @@
 // In a dungeon: X, Y, B and RB are spells 1–4, LB a potion, d-pad left/right the next monster, Select backpack,
 // LT/L3 runs.
 // Menus: stick/d-pad moves a highlight between buttons, A presses, B closes, right stick scrolls.
-import { castSlot, cycleTarget, drinkPotion, fightMode, inSaga } from '../saga.ts';
+import { cycleTarget, fightMode, inSaga } from '../saga.ts';
+import { setDevice } from '../a11y.ts';
 import { inOwnHouse, myPlayer } from '../state.ts';
 import { petToggle } from './social.ts';
 import type { Hud, HudTarget } from './hud.ts';
@@ -23,7 +24,7 @@ const B = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, Back: 8, Start: 
 const DEAD = 0.2;
 const NAV_DELAY = 380;
 const NAV_REPEAT = 130;
-const FOCUSABLE = 'button:not(:disabled), input, select, textarea, .slot, .swatch, .card, .worldmap .cell.known';
+const FOCUSABLE = 'button:not(:disabled), input, select, textarea, [role=button]:not([aria-disabled=true]), [tabindex="0"], .slot, .swatch, .card, .worldmap .cell.known';
 
 function dead(v: number): number {
   const a = Math.abs(v);
@@ -46,7 +47,11 @@ export function initGamepad(opts: {
   let moving = false;
   let focus: HTMLElement | null = null;
   let focusAt = { x: 0, y: 0 };
+  /** LT + Start: the focus ring walks over the HUD's own buttons (B or Start gives the controls back to play). */
+  let hudMode = false;
   let navDir = '';
+  let focusIndex = -1;
+  let lastRoot: HTMLElement | null = null;
   let navNext = 0;
   let last = performance.now();
 
@@ -60,6 +65,7 @@ export function initGamepad(opts: {
   function setActive(on: boolean): void {
     if (active === on) return;
     active = on;
+    if (on) setDevice('pad');
     if (!on) {
       stopPlaying();
       setFocus(null);
@@ -108,8 +114,12 @@ export function initGamepad(opts: {
     if (root) {
       stopPlaying();
       menuFrame(root, dt, now);
+    } else if (hudMode) {
+      stopPlaying();
+      menuFrame(ui.querySelector<HTMLElement>('.hud') ?? ui, dt, now);
     } else {
       setFocus(null);
+      lastRoot = null;
       playFrame();
     }
   }
@@ -144,16 +154,24 @@ export function initGamepad(opts: {
     }
     // only while the pad moves you, so a touch run button isn't let go of
     if (moving) t.runHeld = down(B.LT) || down(B.L3) || (!fightMode() && down(B.B));
-    if (hit(B.Up)) menus.toggle('emotes');
+    // (in a fight up on the d-pad is the explain mode, see below; emotes are in the HUD)
+    if (hit(B.Up) && !fightMode()) menus.toggle('emotes');
     if (hit(B.Down)) hud.minimap.toggle();
+    if (hit(B.Start) && down(B.LT)) {
+      hudMode = true;
+      return;
+    }
     if (hit(B.Start)) menus.toggle('help');
-    if (hit(B.R3)) petToggle(); // the pet in or out
+    // the pet in or out: the right stick (in a fight that is the explain mode, so there it is LT held + the right stick)
+    if (hit(B.R3) && (!fightMode() || down(B.LT))) petToggle();
 
     if (fightMode()) {
       // no hotbar in a fight (a dungeon, or hero mode out in the world): the face buttons are the spells, like the keys 1–4
       if (hit(B.A) || hit(B.RT)) t.act();
-      [B.X, B.Y, B.B, B.RB].forEach((b, i) => hit(b) && castSlot(i));
-      if (hit(B.LB)) drinkPotion();
+      // (the spell bar decides: a spell goes off, or its card comes up while the explain mode is on)
+      [B.X, B.Y, B.B, B.RB, B.LB].forEach((b, i) => hit(b) && document.dispatchEvent(new CustomEvent('lilla:spell', { detail: i })));
+      // R3 or up on the d-pad: the explain mode (the ? button)
+      if ((hit(B.R3) && !down(B.LT)) || hit(B.Up)) document.dispatchEvent(new Event('lilla:explain'));
       if (hit(B.Left) || hit(B.Right)) cycleTarget();
       // Select: the backpack in a dungeon, the gear window out in the world
       if (hit(B.Back)) {
@@ -203,8 +221,12 @@ export function initGamepad(opts: {
     // menus redraw themselves when the game state changes: keep the highlight where it was
     if (!focus || !focus.isConnected || !root.contains(focus)) {
       focus = null;
-      setFocus(nearest(list, focusAt) ?? null);
+      // a window that redrew itself (a toggle, a purchase): the thing in the same place in the list gets the ring back
+      const same = focusIndex >= 0 && root === lastRoot ? list[Math.min(focusIndex, list.length - 1)] : undefined;
+      setFocus(same ?? nearest(list, focusAt) ?? null);
     }
+    lastRoot = root;
+    focusIndex = focus ? list.indexOf(focus) : -1;
 
     const [lx, ly, , ry] = axes as [number, number, number, number];
     const dir =
@@ -226,7 +248,10 @@ export function initGamepad(opts: {
     const open = windows.find((w) => w.isOpen());
     if (hit(B.B) || hit(B.Start)) {
       if (open) open.close();
-      else root.querySelector<HTMLElement>('button.alt')?.click(); // the picker's "back"
+      else if (hudMode) {
+        hudMode = false;
+        setFocus(null);
+      } else root.querySelector<HTMLElement>('button.alt')?.click(); // the picker's "back"
     }
     if ((hit(B.Y) || hit(B.Back)) && open === menus) menus.close();
   }
@@ -263,7 +288,8 @@ export function initGamepad(opts: {
       const along = (c.x - from.x) * ux + (c.y - from.y) * uy;
       if (along < 4) continue;
       const across = Math.abs((c.x - from.x) * uy - (c.y - from.y) * ux);
-      const score = along + across * 2.5;
+      // a sticky bar at the foot of a window (Starta, the reroll) is always on screen: things scrolled out of view above it come first
+      const score = along + across * 2.5 + (e.closest('.sticky') && !focus.closest('.sticky') ? 4000 : 0);
       if (score < bestScore) {
         bestScore = score;
         best = e;

@@ -1,5 +1,6 @@
 // All in-game menus as HTML overlays: ryggsäck, kista, gårdsbutik, sälj, snickra, garderob, emotes, namn.
 import {
+  A11Y_T,
   isVehicle,
   ANIMALS,
   isIndoorKey,
@@ -161,7 +162,8 @@ export class Menus {
     if (kind === 'nameAnimal') this.animalId = id ?? null;
     this.modal = h('div', { class: 'modal' });
     this.modal.addEventListener('pointerdown', (e) => {
-      if (e.target === this.modal) this.close();
+      // only the plain windows close on a tap beside them (the wardrobe, kennel, houses, naming and talking hold choices)
+      if (e.target === this.modal && (this.kind === 'inventory' || this.kind === 'emotes' || this.kind === 'help')) this.close();
     });
     this.ui.append(this.modal);
     this.rerender();
@@ -254,7 +256,7 @@ export class Menus {
   }
 
   private searchInput(): HTMLInputElement {
-    const input = h('input', { type: 'text', class: 'search', placeholder: T.search, value: this.query, maxlength: '20', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search' });
+    const input = h('input', { type: 'text', class: 'search', placeholder: T.search, 'aria-label': T.search, value: this.query, maxlength: '20', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search' });
     // keep the game's and the global shortcuts' hands off typed characters (same as renderName).
     // keyup must still reach the game, or a key held while clicking here would never be released.
     input.addEventListener('keydown', (e) => {
@@ -645,6 +647,10 @@ export class Menus {
       });
       tabs.append(b);
     }
+    // Inställningar (text size, colours, motion, reading aloud) are one tap away from the help
+    const settings = h('button', { class: 'alt' }, `⚙️ ${A11Y_T.settings}`);
+    onTap(settings, () => document.dispatchEvent(new Event('lilla:settings')));
+    tabs.append(settings);
     panel.insertBefore(tabs, body);
     const topic = topics.find((t) => t.id === this.helpTopic) ?? topics[0]!;
     if (topic.intro) body.append(h('p', { class: 'help-intro' }, topic.intro));

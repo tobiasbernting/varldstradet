@@ -9,6 +9,8 @@ export interface ShopActions {
   buy(item: 'runa' | 'party' | 'potion' | 'spirit' | 'sharpen', slot?: number, id?: string): void;
 }
 
+/** Which shelf was open (kept while the window redraws after a purchase). */
+let shopTab: 'runor' | 'wares' = 'runor';
 const coin = (n: number): string => `🪙 ${n}`;
 
 /** A ware's price line: the coins, and in words when the purse cannot pay (never only a colour). */
@@ -41,9 +43,29 @@ export function renderShopWindow(host: PickHost, body: HTMLElement, run: RunSnap
     host.info(el, icon, name, `${text} ${fmt(RUN_UI.silver, { n: price })}.`);
     return el;
   };
-  // my runor
+  // two tabs so the whole shelf is one tap away on a tablet: the runor (mine and the party's) and the wares (potions, a Sagoande, skärpa)
+  const tabs = h('div', { class: 'shop-tabs', role: 'group' });
+  const runorPane = h('div', { class: 'shop-pane' });
+  const waresPane = h('div', { class: 'shop-pane' });
+  const tabRunor = h('button', { class: 'alt pg', type: 'button' }, `🎴 ${RUN_UI.shopTabRunor}`);
+  const tabWares = h('button', { class: 'alt pg', type: 'button' }, `🪙 ${RUN_UI.shopTabWares}`);
+  const show = (t: 'runor' | 'wares'): void => {
+    shopTab = t;
+    runorPane.hidden = t !== 'runor';
+    waresPane.hidden = t !== 'wares';
+    tabRunor.classList.toggle('on', t === 'runor');
+    tabWares.classList.toggle('on', t === 'wares');
+    tabRunor.setAttribute('aria-pressed', String(t === 'runor'));
+    tabWares.setAttribute('aria-pressed', String(t === 'wares'));
+  };
+  host.tap(tabRunor, () => show('runor'));
+  host.tap(tabWares, () => show('wares'));
+  host.info(tabRunor, '🎴', RUN_UI.shopTabRunor, RUN_UI.shopTabRunorText);
+  host.info(tabWares, '🪙', RUN_UI.shopTabWares, RUN_UI.shopTabWaresText);
+  tabs.append(tabRunor, tabWares);
+  body.append(tabs, runorPane, waresPane);
+  // my runor, and the whole party's, in one row
   const mine = shop.slots[me] ?? [];
-  body.append(h('div', { class: 'sect' }, `🎴 ${RUN_UI.yourRunor}`));
   const cards = h('div', { class: 'runa-cards shop-cards' });
   mine.forEach((s, i) => {
     const wrap = h('div', { class: 'shop-slot' });
@@ -52,30 +74,30 @@ export function renderShopWindow(host: PickHost, body: HTMLElement, run: RunSnap
     wrap.append(card, priceTag(s.price, run.purse, s.bought));
     cards.append(wrap);
   });
-  body.append(cards);
-  // for everyone
   const party = shop.party;
-  const items = h('div', { class: 'wares' });
   if (party) {
     const wrap = h('div', { class: 'shop-slot' });
     wrap.append(runaCard(host, 'button', { id: party.id, party: true }, () => act.buy('party')), priceTag(party.price, run.purse, party.bought));
-    body.append(h('div', { class: 'sect' }, `👪 ${RUN_UI.forParty}`), h('div', { class: 'runa-cards shop-cards' }, wrap));
+    cards.append(wrap);
   }
+  runorPane.append(h('div', { class: 'sect' }, `🎴 ${RUN_UI.yourRunor} · 👪 ${RUN_UI.forParty}`), cards);
+  const items = h('div', { class: 'wares' });
   items.append(ware('🧪', RUN_UI.itemPotion, RUN_UI.itemPotionText, 25, shop.potions <= 0, () => act.buy('potion'), shop.potions > 0 ? `× ${shop.potions}` : RUN_UI.leftSale));
   if (shop.spirit !== null) items.append(ware('🌟', RUN_UI.itemSpirit, RUN_UI.itemSpiritText, 150, shop.spirit === false, () => act.buy('spirit')));
-  body.append(h('div', { class: 'sect' }, `🪙 ${RUN_UI.shopOpen}`), items);
+  waresPane.append(h('div', { class: 'sect' }, `🪙 ${RUN_UI.shopOpen}`), items);
   // skärpa: one of my runor a step better
   const mineHeld = (run.hold[me] ?? []).filter((x) => canSharpen(x));
   if (mineHeld.length) {
-    body.append(h('div', { class: 'sect' }, `⚒️ ${RUN_UI.itemSharpen}`));
+    waresPane.append(h('div', { class: 'sect' }, `⚒️ ${RUN_UI.itemSharpen}`));
     const row = h('div', { class: 'runa-cards shop-cards' });
     for (const x of mineHeld) {
       const wrap = h('div', { class: 'shop-slot' });
       wrap.append(runaCard(host, 'button', { id: x.id, up: x.up, held: true }, () => act.buy('sharpen', undefined, x.id)), priceTag(50, run.purse, false));
       row.append(wrap);
     }
-    body.append(row);
+    waresPane.append(row);
   }
+  show(shopTab);
 }
 
 /** The Händelse: a picture, the story and the choices; everyone votes, the most votes wins and the clock picks the free choice. Returns the clock. */

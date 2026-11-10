@@ -304,6 +304,8 @@ export interface PlayerState {
   bot?: true;
   /** The pets this player owns, the one that comes along and whether it is out (pets.ts). Pets are stored here, not as animals on a map. */
   pets?: PetsSave;
+  /** The highest run level a parent lets this player start (0-4); absent when nothing is capped. Set by the server so the arch window can mark the tiles above it before Starta is pressed. */
+  levelCap?: number;
 }
 
 export interface Achievement {

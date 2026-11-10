@@ -57,9 +57,11 @@ export class Minimap {
     this.base.height = MAP_H * 2;
     this.el = h('div', { class: 'minimap', hidden: true }, this.canvas);
     try {
-      this.visible = localStorage.getItem('lilla-garden.minimap') !== '0';
+      const saved = localStorage.getItem('lilla-garden.minimap');
+      // a short screen (a phone held sideways) starts without the map, which would sit on the party's frames; the map button brings it
+      this.visible = saved === null ? window.innerHeight >= 480 : saved !== '0';
     } catch {
-      this.visible = true;
+      this.visible = window.innerHeight >= 480;
     }
     this.el.hidden = !this.visible;
     bus.on('change', (c) => {

@@ -1,5 +1,5 @@
 // HUD: top chips, hotbar, toasts, touch controls.
-import { HOTBAR_SIZE, HOUSE_T, MAX_HEARTS, SPELLS, T, WATERING_CAN_CHARGES, areaName, fmt, houseTitle, isBathKey, isHomeKey, isSagaKey, itemName, ownerOfHome, placeEmoji, placeName, stackName, type ItemStack } from '@lilla-garden/shared';
+import { A11Y_T, HOTBAR_SIZE, HOUSE_T, MAX_HEARTS, SPELLS, T, WATERING_CAN_CHARGES, areaName, fmt, houseTitle, isBathKey, isHomeKey, isSagaKey, itemName, ownerOfHome, placeEmoji, placeName, stackName, type ItemStack } from '@lilla-garden/shared';
 import { Minimap } from './minimap.ts';
 import { getArt } from '@art/textures.ts';
 import { stackIconUrl } from '@art/painting.ts';
@@ -8,6 +8,7 @@ import { bus, client, furnish, inOwnHouse, myPlayer, serverNow } from '../state.
 import { clear, h, icon, onTap } from './dom.js';
 import { isMuted, setMuted } from '../sound.ts';
 import { levelOf, showsLevel } from '../saga.ts';
+import { cards } from './info.ts';
 
 /** What the HUD drives on the game view (the 2D scene or the 3D view). */
 export interface HudTarget {
@@ -24,7 +25,9 @@ export function slotEl(stack: ItemStack | null, opts: { selected?: boolean; pick
   if (opts.key) el.append(h('span', { class: 'key' }, opts.key));
   if (stack) {
     el.append(icon(stackIconUrl(stack), stackName(stack)));
-    el.title = stackName(stack);
+    el.dataset.infoName = stackName(stack);
+    el.dataset.infoText = '';
+    el.setAttribute('aria-label', stackName(stack));
     if (stack.charges !== undefined) {
       el.append(h('div', { class: 'charges' }, h('i', { style: { width: `${(stack.charges / WATERING_CAN_CHARGES) * 100}%` } })));
     } else if (stack.count > 1) el.append(h('span', { class: 'count' }, stack.count));
@@ -66,8 +69,11 @@ export class Hud {
     this.joyKnob = h('i');
     this.joy = h('div', { class: 'joy' }, this.joyKnob);
     const zone = h('div', { class: 'joy-zone' }, this.joy);
-    const act = h('div', { class: 'act-btn' }, '✋');
-    const run = h('div', { class: 'run-btn' }, '🏃');
+    // the two big buttons on a touch screen: they have words too (in a fight "Slå", else "Använd")
+    const act = h('button', { class: 'act-btn', type: 'button', 'aria-label': `${A11Y_T.hit} / ${A11Y_T.use}` }, h('span', { class: 'ic' }, '✋'), h('span', { class: 'lb use' }, A11Y_T.use), h('span', { class: 'lb hit' }, A11Y_T.hit));
+    cards.info(act, '✋', `${A11Y_T.hit} / ${A11Y_T.use}`, A11Y_T.hitText);
+    cards.press(act, () => this.scene()?.act());
+    const run = h('button', { class: 'run-btn', type: 'button', 'aria-label': A11Y_T.run }, h('span', { class: 'ic' }, '🏃'), h('span', { class: 'lb' }, A11Y_T.run));
     const setRun = (v: boolean) => {
       const s = this.scene();
       if (s) s.runHeld = v;
@@ -78,23 +84,17 @@ export class Hud {
     });
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) run.addEventListener(ev, () => setRun(false));
     // the gear window lives with the saga's windows (ui/saga.ts)
-    this.gearBtn = this.roundBtn('👕', () => document.dispatchEvent(new Event('lilla:gear')));
+    this.gearBtn = this.roundBtn('👕', () => document.dispatchEvent(new Event('lilla:gear')), T.sagaGearBtn, A11Y_T.btnGear);
     this.gearBtn.classList.add('gear-btn');
-    this.gearBtn.title = T.sagaGearBtn;
-    this.furnishBtn = this.roundBtn('🪑', () => this.toggleFurnish());
+    this.furnishBtn = this.roundBtn('🪑', () => this.toggleFurnish(), HOUSE_T.furnish, A11Y_T.btnFurnish);
     this.furnishBtn.classList.add('furnish-btn');
-    this.furnishBtn.title = HOUSE_T.furnish;
     this.furnishBtn.hidden = true;
-    const right = h('div', { class: 'hud-right' }, this.furnishBtn, this.gearBtn, this.roundBtn('🎒', () => this.openMenu('inventory')), this.roundBtn('😊', () => this.openMenu('emotes')), this.roundBtn('📖', () => document.dispatchEvent(new Event('lilla:journal'))), this.roundBtn('🧭', () => this.minimap.toggle()), this.roundBtn('❓', () => this.openMenu('help')), this.muteBtn(), ...(matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches ? [] : [this.fullscreenBtn()]));
+    const right = h('div', { class: 'hud-right' }, this.furnishBtn, this.gearBtn, this.roundBtn('🎒', () => this.openMenu('inventory'), T.inventory, A11Y_T.btnBag), this.roundBtn('😊', () => this.openMenu('emotes'), A11Y_T.emotes, A11Y_T.btnEmotes), this.roundBtn('📖', () => document.dispatchEvent(new Event('lilla:journal')), T.sagaJournalTab, A11Y_T.btnJournal), this.roundBtn('🧭', () => this.minimap.toggle(), A11Y_T.map, A11Y_T.btnMap), this.roundBtn('❓', () => this.openMenu('help'), T.help, A11Y_T.btnHelp), this.roundBtn('⚙️', () => document.dispatchEvent(new Event('lilla:settings')), A11Y_T.settings, A11Y_T.settingsInfo), this.muteBtn(), ...(matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches ? [] : [this.fullscreenBtn()]));
     this.minimap = new Minimap();
     document.addEventListener('lilla:minimap', () => this.minimap.toggle());
     this.root.append(this.top, right, this.hotbar, this.heldName, this.toasts, zone, act, run, this.minimap.el);
     ui.append(this.root);
     this.setupJoystick(zone);
-    act.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      this.scene()?.act();
-    });
 
     bus.on('me', () => this.render());
     bus.on('area', () => {
@@ -109,8 +109,9 @@ export class Hud {
   }
 
   private fullscreenBtn(): HTMLElement {
-    const b = h('div', { class: 'round small', title: T.fullscreen }, '⛶');
-    onTap(b, () => {
+    const b = h('button', { class: 'round small', type: 'button' }, '⛶');
+    cards.info(b, '⛶', T.fullscreen, A11Y_T.btnFullscreen);
+    cards.tap(b, () => {
       const el = document.documentElement as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> };
       // iPhone Safari can't make a page fullscreen; a game started from the home screen fills the screen instead
       if (!el.requestFullscreen && !el.webkitRequestFullscreen) return this.toast(T.fullscreenIphone, 8000);
@@ -122,8 +123,9 @@ export class Hud {
   }
 
   private muteBtn(): HTMLElement {
-    const b = h('div', { class: 'round small' }, isMuted() ? '🔇' : '🔊');
-    onTap(b, () => {
+    const b = h('button', { class: 'round small', type: 'button' }, isMuted() ? '🔇' : '🔊');
+    cards.info(b, '🔊', A11Y_T.sound, A11Y_T.btnSound);
+    cards.tap(b, () => {
       setMuted(!isMuted());
       b.textContent = isMuted() ? '🔇' : '🔊';
       try {
@@ -135,9 +137,10 @@ export class Hud {
     return b;
   }
 
-  private roundBtn(label: string, fn: () => void): HTMLElement {
-    const b = h('div', { class: 'round' }, label);
-    onTap(b, fn);
+  private roundBtn(label: string, fn: () => void, name: string, text: string): HTMLElement {
+    const b = h('button', { class: 'round', type: 'button' }, label);
+    cards.info(b, label, name, text);
+    cards.tap(b, fn);
     return b;
   }
 
