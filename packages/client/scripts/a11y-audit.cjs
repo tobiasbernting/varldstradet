@@ -1,4 +1,5 @@
 // Accessibility audit of the running game (Playwright, headless Chromium). Not part of the test run: it needs a server.
+// Needs a server with a FRESH database and no run in progress (DEV_TELEPORT=1 ACCESS=open): a leftover run or many characters change the scenes.
 //   node packages/client/scripts/a11y-audit.cjs [--url http://localhost:8110/] [--out dir] [--tag after] [--only 1024x768]
 // For four viewports it plays to each screen (picker, lobby, bag, class window, journal, wardrobe, settings, fight HUD, arch
 // window, run stop with the cards, summary) and measures every visible interactive element (size, gap to the next), the computed
@@ -160,6 +161,15 @@ async function scenarios(browser, v, res) {
     await page.waitForTimeout(200);
     await page.evaluate(() => document.querySelector('.run-panel button.go')?.click());
     await page.waitForTimeout(3500);
+    // a run left over on the server (an earlier audit or walkthrough) turns the arch window into "Hänga på" and the run never starts:
+    // every later scene would then measure the arch window again. Say so instead of reporting numbers that mean nothing.
+    for (let i = 0; i < 10 && !(await me(page)).area.startsWith('saga:run'); i++) await page.waitForTimeout(1000);
+    if (!(await me(page)).area.startsWith('saga:run')) {
+      console.log('RUN DID NOT START (a run left over on the server? restart the server, with a fresh database): the run scenes are skipped');
+      res.__aborted = { targets: 0, small: 0, gap: 0, tiny: 0, noName: 0, contrast: 0, texts: 0, detail: {} };
+      await page.context().close();
+      return;
+    }
     await tag(page, 'run-offer');
     await page.evaluate(() => document.querySelector('.run-panel .runa-card')?.click());
     await page.waitForTimeout(800);
@@ -177,6 +187,9 @@ async function scenarios(browser, v, res) {
     await page.send({ t: 'dev', a: 'runnext', kind: 'boss' });
     await page.waitForTimeout(2500);
     await jump('run-loot', { t: 'dev', a: 'runclear' }, 7000);
+    // leave the run: one left over would turn the next viewport's arch window into "Hänga på" (it did, silently, at 640x360)
+    await page.send({ t: 'run', a: 'leave' });
+    await page.waitForTimeout(1500);
   } else console.log('no arch window');
   await page.context().close();
   // a fight
@@ -200,7 +213,9 @@ async function scenarios(browser, v, res) {
   }
   const sum = { small: 0, gap: 0, tiny: 0, noName: 0, contrast: 0 };
   for (const vp of Object.values(all)) for (const r of Object.values(vp)) for (const k of Object.keys(sum)) sum[k] += r[k];
-  console.log('TOTAL', JSON.stringify(sum));
+  const aborted = Object.entries(all).filter(([, vp]) => vp.__aborted).map(([k]) => k);
+  console.log('TOTAL', JSON.stringify(sum), aborted.length ? `INCOMPLETE: the run did not start at ${aborted.join(', ')}` : '');
+  if (aborted.length) process.exitCode = 1;
   fs.writeFileSync(path.join(OUT, `${TAG}.json`), JSON.stringify({ sum, all }, null, 1));
   await browser.close();
 })();
