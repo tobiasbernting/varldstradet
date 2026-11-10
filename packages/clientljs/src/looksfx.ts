@@ -134,7 +134,8 @@ export class LooksFx {
     const emitters: Emitter[] = [];
     const glows: Rig['glows'] = [];
     for (const d of decoded) {
-      const specs = d.tier >= FX_FULL_TIER ? [d.piece.fx[0], d.piece.fx[1]] : d.tier >= FX_TIER ? [d.piece.fx[0]] : [];
+      // (a pet's gear throws one small effect from tier 4 and never a second: tier 5 adds the ground glow instead)
+      const specs = a.pet ? (d.tier >= FX_TIER ? [d.piece.fx[0]] : []) : d.tier >= FX_FULL_TIER ? [d.piece.fx[0], d.piece.fx[1]] : d.tier >= FX_TIER ? [d.piece.fx[0]] : [];
       for (const s of specs) {
         if (!s) continue;
         if (PROCEDURAL.has(s.fx)) {
@@ -423,10 +424,11 @@ export class LooksFx {
     let c = rgbOf(rig.aura.pal.glow);
     if (c[0] > 0.8 && c[1] < 0.72 && c[2] < 0.5) c = rgbOf(rig.aura.pal.accent);
     const k = 0.5 + 0.5 * Math.sin(t * 2 + a.seed);
-    // a pet's aura is a small ground glow with two glints
+    // a pet's aura is a small soft ground glow
     const sc = a.pet ? 0.55 : 1;
     drawSprite(glow, a.x, a.y + 1, 24 * sc, 8 * sc, 0, rgba(c[0], c[1], c[2], 0.16 + 0.1 * k));
-    for (let i = 0; i < (a.pet ? 2 : 3); i++) {
+    // (a pet gets the soft glow only: no pixels circling it)
+    for (let i = 0; i < (a.pet ? 0 : 3); i++) {
       const ang = t * 1.3 + (i / (a.pet ? 2 : 3)) * 6.28 + a.seed;
       drawSprite(px, Math.round(a.x + Math.cos(ang) * 9 * sc), Math.round(a.y + 1 + Math.sin(ang) * 3 * sc), 1, 1, 0, rgba(1, 1, 1, 0.55 + 0.3 * Math.sin(t * 5 + i)));
     }

@@ -101,7 +101,7 @@ import {
   newRunSave,
   noBuffs,
   objectAt,
-  offerRunor,
+  giveParty,
   performAction,
   pickRuna,
   plantError,
@@ -181,10 +181,12 @@ function checkStop(plan: ReturnType<typeof generateRun>, node: number, key: stri
   const before = reach(w, inst.start);
   const goal = z.kind === 'boss' ? tileOfMob(w.animals[inst.boss]!) : inst.exit;
   expect(inst.rests, why).toHaveLength(z.kind === 'rest' ? 1 : 0);
-  if (z.kind === 'rest') {
+  if (z.kind === 'rest' || z.kind === 'shop' || z.kind === 'event') {
+    // a camp: no gate, no packs; a Vilosten has its stone
     expect(inst.gate, why).toHaveLength(0);
+    expect(inst.packs, why).toHaveLength(0);
     expect(near(before, goal), why).toBe(true);
-    expect(near(before, inst.rests[0]!), why).toBe(true);
+    if (z.kind === 'rest') expect(near(before, inst.rests[0]!), why).toBe(true);
   } else {
     // the gate shuts the way on until it opens: the exit room (or the boss) is out of reach, everything before it is not
     expect(near(before, goal), why).toBe(false);
@@ -241,6 +243,15 @@ describe('the route generator (generateRoute)', () => {
       const to = new Set([last]);
       for (const n of [...route.nodes].reverse()) if (n.next.some((m) => to.has(m))) to.add(n.id);
       expect(to.size, why).toBe(route.nodes.length);
+      // the other kinds (GAME2.md 2.1): a Köpman in each of the first two wings (so one is reachable on every route), a plain fight or a Vilosten
+      // in every row, a Stark vakt only from row 3 and not on the two easiest levels, never two Händelser in one row
+      for (const [lo, hi] of [[2, 4], [6, 8]] as const) expect(route.nodes.some((n) => n.row >= lo && n.row <= hi && n.kind === 'shop' && from.has(n.id)), `${why} Köpman rows ${lo}-${hi}`).toBe(true);
+      for (const r of [2, 3, 4, 6, 7, 8]) expect(rows[r - 1]!.some((n) => n.kind === 'flock' || n.kind === 'rest'), `${why} row ${r} has a fight or a rest`).toBe(true);
+      for (const r of rows) expect(r.filter((n) => n.kind === 'event').length).toBeLessThanOrEqual(1);
+      for (const n of route.nodes.filter((x) => x.kind === 'elite')) {
+        expect(n.row, why).toBeGreaterThanOrEqual(3);
+        expect(route.level, why).toBeGreaterThanOrEqual(2);
+      }
       // a Vilosten in each wing, and the safe lane of rows 4 and 8 can be walked to from every stop of the row before
       for (const [lo, hi] of [[1, 4], [5, 8], [9, 10]] as const) expect(route.nodes.some((n) => n.row >= lo && n.row <= hi && n.kind === 'rest' && from.has(n.id)), `${why} wing ${lo}`).toBe(true);
       for (const r of [4, 8]) {
@@ -405,7 +416,7 @@ describe('the route generator (generateRoute)', () => {
 describe('the data', () => {
   it('has at least 8 runor for each class and 6 for the whole party, each with a Swedish name, text and picture', () => {
     for (const c of CLASS_IDS) expect(RUNOR.filter((r) => r.cls === c).length).toBeGreaterThanOrEqual(8);
-    expect(RUNOR.filter((r) => !r.cls)).toHaveLength(6);
+    expect(RUNOR.filter((r) => !r.cls).length).toBeGreaterThanOrEqual(6);
     expect(new Set(RUNOR.map((r) => r.id)).size).toBe(RUNOR.length);
     for (const r of RUNOR) {
       expect(RUNA_NAMES[r.id], r.id).toBeTruthy();
@@ -459,21 +470,6 @@ describe('the data', () => {
     expect(b.power).toBeCloseTo(0.2);
     expect(b.spell.hugg).toBeCloseTo(0.4);
     expect(b.cd).toBe(0);
-  });
-
-  it('offers three cards: no repeats, a card for the classes present, party-wide ones for a solo hero, never one already taken', () => {
-    const rnd = mulberry32(3);
-    for (let i = 0; i < 100; i++) {
-      const cards = offerRunor(rnd, ['vaktare', 'helare', 'magiker'], []);
-      expect(cards).toHaveLength(3);
-      expect(new Set(cards).size).toBe(3);
-      const classes = cards.map((id) => RUNOR.find((r) => r.id === id)!.cls);
-      expect(classes.filter((c) => c).length).toBeGreaterThanOrEqual(2);
-      // nothing for a class that is not in the party
-      for (const c of classes) expect(c === undefined || ['vaktare', 'helare', 'magiker'].includes(c)).toBe(true);
-    }
-    const have = RUNOR.filter((r) => r.cls === 'krigare').slice(0, 7).map((r) => r.id);
-    for (let i = 0; i < 40; i++) for (const c of offerRunor(rnd, ['krigare'], have)) expect(have).not.toContain(c);
   });
 });
 
@@ -793,7 +789,7 @@ describe('every effect', () => {
   });
 
   it('every runa and node changes something: a combat number in the buffs or one of the run’s own', () => {
-    const meta = ['potions', 'seeds', 'reroll', 'slots', 'food', 'animal', 'companion', 'bossSeeds'];
+    const meta = ['potions', 'seeds', 'reroll', 'slots', 'food', 'animal', 'companion', 'bossSeeds', 'luck'];
     for (const e of [...RUNOR.map((r) => r.effect), ...SEED_TREE.map((n) => n.effect)]) {
       const b = buffsOf(e);
       const changed = JSON.stringify(b) !== JSON.stringify(noBuffs()) || Object.keys(e).some((k) => meta.includes(k));
@@ -1156,7 +1152,9 @@ describe('the run is one dungeon, chosen at the arch (GAME2.md section 2.4)', ()
     expect(a.plan.replay).toBe(true);
     const p1 = generateRun(11, { boss: 'draug', level: 1 });
     const p2 = generateRun(11, { boss: 'draug', level: 2 });
-    expect(p1.route.nodes).toEqual(p2.route.nodes);
+    // (the same map; a Stark vakt only comes on the levels from Medel up, where a fight is)
+    expect(p1.route.nodes.map((n) => n.next)).toEqual(p2.route.nodes.map((n) => n.next));
+    expect(p1.route.nodes.map((n) => (n.kind === 'elite' ? 'flock' : n.kind))).toEqual(p2.route.nodes.map((n) => (n.kind === 'elite' ? 'flock' : n.kind)));
     expect(p1.route.level).toBe(1);
     expect(p2.route.level).toBe(2);
   });
@@ -1304,23 +1302,18 @@ describe('the vote on a runa', () => {
     clearStop(party);
     expect(inst.gateOpen).toBe(true);
     expect(run.phase).toBe('pick');
-    expect(run.offer!.cards).toHaveLength(3);
+    for (const p of party.players) expect(run.offers[p.id]!.cards).toHaveLength(3);
     return party;
   }
 
-  it('a solo player with the hired companion sees their own class and the party-wide runor, not the companion’s', () => {
+  it('a solo player with the hired companion sees only cards of their own class; the companion takes none', () => {
     const party = atTheVote(['krigare'], true);
     const run = runOf(party.world)!;
     expect(run.companions).toHaveLength(1);
     const comp = party.world.players[run.companions[0]!]!;
     expect(comp.saga!.cls).toBe('helare');
-    const cards = run.offer!.cards;
-    expect(cards).toHaveLength(3);
-    for (const id of cards) {
-      const r = RUNOR.find((x) => x.id === id)!;
-      expect(r.cls === undefined || r.cls === 'krigare').toBe(true);
-    }
-    expect(cards.some((id) => RUNOR.find((x) => x.id === id)!.cls === 'krigare')).toBe(true);
+    expect(Object.keys(run.offers)).toEqual([party.players[0]!.id]);
+    for (const id of run.offers[party.players[0]!.id]!.cards) expect(RUNOR.find((x) => x.id === id)!.cls).toBe('krigare');
   });
 
   it('no väg-runor and no cards until the packs are down, and the sagafrön for the packs and the stop are paid', () => {
@@ -1365,73 +1358,22 @@ describe('the vote on a runa', () => {
     for (const p of party.players) expect(readRun(p).seeds).toBe(inst.packs.length * RUN_SEEDS.pack + RUN_SEEDS.zone);
   });
 
-  it('ends at once with a strict majority', () => {
+  it('a class runa reaches only that class, a party-wide one everybody, and the buffs follow into the next stop', () => {
     const party = atTheVote();
     const run = runOf(party.world)!;
     const [a, b, c] = party.players as [import('./index.ts').PlayerState, import('./index.ts').PlayerState, import('./index.ts').PlayerState];
-    const cards = [...run.offer!.cards];
-    pickRuna(party.world, a.id, 1, party.ctx());
-    expect(run.phase).toBe('pick');
-    pickRuna(party.world, b.id, 1, party.ctx());
-    // the cards are done, the runes are out: the party chooses its way
-    expect(run.phase).toBe('route');
-    expect(run.runor).toEqual([cards[1]]);
-    expect(run.offer).toBeUndefined();
-    void c;
-  });
-
-  it('with everyone voted and no majority, the most votes win and a tie goes to the card voted first', () => {
-    const party = atTheVote();
-    const run = runOf(party.world)!;
-    const [a, b, c] = party.players as [import('./index.ts').PlayerState, import('./index.ts').PlayerState, import('./index.ts').PlayerState];
-    const cards = [...run.offer!.cards];
-    pickRuna(party.world, b.id, 2, party.ctx());
-    pickRuna(party.world, a.id, 0, party.ctx());
-    pickRuna(party.world, c.id, 1, party.ctx());
-    expect(run.runor).toEqual([cards[2]]);
-  });
-
-  it('on the clock: the most votes, or the first card when nobody votes; a vote may be changed; bad votes are ignored', () => {
-    const party = atTheVote();
-    const run = runOf(party.world)!;
-    const [a] = party.players as [import('./index.ts').PlayerState];
-    const cards = [...run.offer!.cards];
-    expect(pickRuna(party.world, a.id, 7, party.ctx())).toEqual([]);
-    expect(pickRuna(party.world, a.id, -1, party.ctx())).toEqual([]);
-    pickRuna(party.world, a.id, 2, party.ctx());
-    pickRuna(party.world, a.id, 1, party.ctx());
-    expect(run.offer!.votes[a.id]).toBe(1);
-    for (let t = 0; t < RUN_PICK_MS + 200; t += 50) step(party, false, []);
-    expect(run.runor).toEqual([cards[1]]);
-    const quiet = atTheVote();
-    const r2 = runOf(quiet.world)!;
-    const first = r2.offer!.cards[0]!;
-    for (let t = 0; t < RUN_PICK_MS + 200; t += 50) step(quiet, false, []);
-    expect(r2.runor).toEqual([first]);
-    expect(r2.phase).toBe('route');
-  });
-
-  it('a class runa reaches only that class, a party-wide one everybody, and the buffs follow into the next zone', () => {
-    const party = atTheVote();
-    const run = runOf(party.world)!;
-    run.offer!.cards = ['m_eld', 'p_hjarta', 'k_yx'];
+    run.offers[c.id]!.cards = ['m_eld', 'm_kraft', 'm_tur'];
     for (const p of party.players) pickRuna(party.world, p.id, 0, party.ctx());
-    expect(run.runor).toEqual(['m_eld']);
+    expect(run.hold[c.id]).toEqual([{ id: 'm_eld', up: 0 }]);
     const inst = party.world.areas![run.key]!.saga!;
-    const [a, b, c] = party.players as [import('./index.ts').PlayerState, import('./index.ts').PlayerState, import('./index.ts').PlayerState];
     expect(inst.run!.buffs[c.id]!.spell.eldboll).toBeCloseTo(0.3);
     expect(inst.run!.buffs[a.id]!.spell.eldboll).toBeUndefined();
     expect(inst.run!.buffs[b.id]!.spell.eldboll).toBeUndefined();
-    // the next vote: a party-wide hp runa, after the next stop
+    // a party-wide runa (the Mellanboss, a boss, an event): everyone has it
+    giveParty(party.world, run, () => 0.5, 'vanlig', 'p_hjarta');
+    expect(run.runor).toEqual(['p_hjarta']);
     takeRune(party);
     expect(run.path).toHaveLength(2);
-    clearStop(party);
-    expect(run.phase).toBe('pick');
-    run.offer!.cards = ['p_hjarta', 'p_kraft', 'p_fro'];
-    for (const p of party.players) pickRuna(party.world, p.id, 0, party.ctx());
-    expect(run.runor).toEqual(['m_eld', 'p_hjarta']);
-    takeRune(party);
-    expect(run.path).toHaveLength(3);
     const next = party.world.areas![run.key]!.saga!;
     for (const p of party.players) expect(next.run!.buffs[p.id]!.hp).toBeCloseTo(0.1);
     expect(next.run!.buffs[c.id]!.spell.eldboll).toBeCloseTo(0.3);
@@ -1446,8 +1388,8 @@ describe('the vote on a runa', () => {
     const p = party.players[0]!;
     const potions = () => p.inventory.reduce((n, s) => n + (s?.item === 'healing_potion' ? s.count : 0), 0);
     const before = potions();
-    run.offer!.cards = ['p_flaska', 'p_fro', 'p_kraft'];
     pickRuna(party.world, p.id, 0, party.ctx());
+    giveParty(party.world, run, () => 0.5, 'vanlig', 'p_flaska');
     expect(potions()).toBe(before + 2);
     expect(run.base[p.id]!.potion ?? 0).toBe(0);
     expect(party.world.areas![run.key]!.saga!.run!.buffs[p.id]!.potion).toBeCloseTo(0.15);
@@ -1506,9 +1448,8 @@ describe('the vote on a runa', () => {
     const p = party.players[0]!;
     const ids = Object.keys(ITEMS).filter((k) => k !== 'healing_potion');
     p.inventory = p.inventory.map((_, i) => ({ item: ids[i]!, count: 1 }));
-    run.offer!.cards = ['p_flaska', 'p_fro', 'p_kraft'];
     const farmDrops = Object.keys(party.world.drops).length;
-    const out = pickRuna(party.world, p.id, 0, party.ctx());
+    const out = [...pickRuna(party.world, p.id, 0, party.ctx()), ...giveParty(party.world, run, () => 0.5, 'vanlig', 'p_flaska')];
     expect(run.phase).toBe('route');
     const drop = out.find((c) => c.t === 'drop' && c.drop?.item === 'healing_potion');
     expect(drop).toBeTruthy();
@@ -1523,10 +1464,10 @@ describe('the vote on a runa', () => {
     const p = party.players[0]!;
     expect(listen(rerollOffer(party.world, p.id, party.ctx()), RUN_T.noReroll)).toBe(true);
     runSaveOf(p).tree = ['g1', 'g3'];
-    const cards = [...run.offer!.cards];
+    const cards = [...run.offers[p.id]!.cards];
     expect(listen(rerollOffer(party.world, p.id, party.ctx()), RUN_T.reroll)).toBe(true);
-    expect(run.offer!.cards).toHaveLength(3);
-    for (const c of run.offer!.cards) expect(cards).not.toContain(c);
+    expect(run.offers[p.id]!.cards).toHaveLength(3);
+    for (const c of run.offers[p.id]!.cards) expect(cards).not.toContain(c);
     expect(listen(rerollOffer(party.world, p.id, party.ctx()), RUN_T.noReroll)).toBe(true);
   });
 });
@@ -1788,7 +1729,7 @@ describe('the vote on the way on (GAME2.md section 2.2)', () => {
     expect(Math.abs(inst.fighters[b.id]!.hp - Math.round(inst.fighters[b.id]!.max * VILOSTEN_HEAL))).toBeLessThan(1);
     // no cards at a Vilosten; the runes are out at once; and it is no cleared fight: no sagafrön for the stop
     expect(run.phase).toBe('route');
-    expect(run.offer).toBeUndefined();
+    expect(Object.keys(run.offers)).toHaveLength(0);
     expect(run.vote!.runes.length).toBeGreaterThanOrEqual(1);
     expect(readRun(a).zones).toBe(1);
   });
@@ -1825,8 +1766,10 @@ describe('the bots choose the way on (runbot.ts)', () => {
     const hurt = walkedTo('careful', true);
     const fine = walkedTo('careful', false);
     expect(hurt.kinds).toEqual(fine.kinds);
-    expect(fine.kind).toBe('flock');
-    expect(hurt.kind).toBe(hurt.kinds.includes('rest') ? 'rest' : 'flock');
+    // a fine party goes to a plain fight first, then a Skatt, the Köpman or a Händelse (a Stark vakt last); a hurt one to the Vilosten
+    const order = ['flock', 'mini', 'boss', 'treasure', 'shop', 'event', 'elite'];
+    expect(fine.kind).toBe(order.find((k) => fine.kinds.includes(k)));
+    expect(hurt.kind).toBe(hurt.kinds.includes('rest') ? 'rest' : order.find((k) => hurt.kinds.includes(k)));
   });
 
   it('the clumsy bot takes a random lane, a different one for a different roll, and stops on its rune', () => {
@@ -2241,8 +2184,8 @@ describe('the sagaträd', () => {
       const key = Object.keys(n.effect)[0]!;
       if (n.effect.potions) expect(a.inventory.reduce((s, x) => s + (x?.item === 'healing_potion' ? x.count : 0), 0)).toBe(3 + n.effect.potions);
       else if (key === 'slots') expect(foodSlots(a)).toBe(2);
-      else if (key === 'reroll') expect(runOf(party.world)!.rerolled).toBe(false);
-      else if (['food', 'animal', 'companion', 'bossSeeds', 'seeds'].includes(key)) expect((mine as Record<string, number>)[key] ?? 0).toBeGreaterThanOrEqual((none as Record<string, number>)[key] ?? 0);
+      else if (key === 'reroll') expect(runOf(party.world)!.rerolls[a.id] ?? 0).toBe(0);
+      else if (['food', 'animal', 'companion', 'bossSeeds', 'seeds', 'luck'].includes(key)) expect((mine as Record<string, number>)[key] ?? 0).toBeGreaterThanOrEqual((none as Record<string, number>)[key] ?? 0);
       else expect((built as unknown as Record<string, number>)[key]).toBeGreaterThan(0);
     }
   });

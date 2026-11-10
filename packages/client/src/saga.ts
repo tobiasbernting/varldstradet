@@ -35,7 +35,7 @@ import { net } from './net.ts';
 import { activeWorld, bus, client, myPlayer, serverNow } from './state.ts';
 
 /** The fighter flags in a snapshot. */
-export const FLAG = { down: 1, wall: 2, rage: 4, hot: 8, slow: 16, frozen: 32 } as const;
+export const FLAG = { down: 1, wall: 2, rage: 4, hot: 8, slow: 16, frozen: 32, shield: 64 } as const;
 
 export const inSaga = (): boolean => isSagaKey(myPlayer()?.area);
 

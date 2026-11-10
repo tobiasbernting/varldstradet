@@ -72,7 +72,7 @@ export type Change =
    */
   | { t: 'run'; ev: 'state'; to: string | null; run: RunSnap | null }
   | { t: 'run'; ev: 'offer'; to: string | null; offer: RunOfferSnap | null }
-  | { t: 'run'; ev: 'ended'; to: string; outcome: RunOutcome; ms: number; seeds: number; zones: number; runor: string[]; level?: RunLevel; spiritUsed?: number; path?: NodeKind[]; trophy?: string; trophyWhere?: string }
+  | { t: 'run'; ev: 'ended'; to: string; outcome: RunOutcome; ms: number; seeds: number; zones: number; runor: string[]; level?: RunLevel; spiritUsed?: number; path?: NodeKind[]; trophy?: string; trophyWhere?: string; silver?: number }
   /** Runs: one player's sagafrön, the nodes they have planted, and how grown the family's tree is (0..4). */
   | { t: 'seed'; ev: 'tree'; to: string; seeds: number; earned: number; tree: string[]; stage: number }
   /** Runs: the dishes this player has chosen to bring and how many they may bring. */
@@ -150,6 +150,11 @@ export type ClientMsg =
   | { t: 'run'; a: 'join' }
   | { t: 'run'; a: 'pick'; card: number }
   | { t: 'run'; a: 'reroll' }
+  | { t: 'run'; a: 'path'; id: string }
+  | { t: 'run'; a: 'sharpen'; id: string }
+  | { t: 'run'; a: 'rest' }
+  | { t: 'run'; a: 'buy'; item: 'runa' | 'party' | 'potion' | 'spirit' | 'sharpen'; slot?: number; id?: string }
+  | { t: 'run'; a: 'event'; choice: number }
   | { t: 'run'; a: 'leave' }
   | { t: 'run'; a: 'state' }
   /** The Yggdrasil shoot: plant a node of the sagaträd with sagafrön, or ask for the tree's state. */
@@ -161,6 +166,7 @@ export type ClientMsg =
   /** Development only (same switch): the day rolls over now, as the parent page's "skip day" does, so a check can
    * wait for a crop to grow. The server answers `error` when the switch is off. */
   | { t: 'dev'; a: 'nextDay' }
+  | { t: 'dev'; a: 'runclear' }
   /** Development only (same switch): win dungeon boss `id`'s trophy at difficulty `level` (0..4), as a run's win would. */
   | { t: 'dev'; a: 'trophy'; id: string; level: number }
   /** Development only (same switch): one of every Norse decor piece, a gear stand and some gear, into the bag. */

@@ -1150,3 +1150,302 @@ body.in-run.touch .saga-boss {
 /* the way-on vote stays above the banners and the confetti */
 .run-vote, .run-cards-btn, .run-note, .run-bar { z-index: 50; }
 .run-runor[hidden], .run-bar[hidden], .run-vote[hidden], .run-cards-btn[hidden], .run-note[hidden], .run-info[hidden] { display: none !important; }
+
+/* the choice of a path (väg) after the Mellanboss */
+.run-panel.path {
+  width: calc(290 * var(--u));
+}
+.path-card {
+  cursor: pointer;
+  min-height: 48px;
+}
+.path-card .path-spells {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: max(8px, calc(0.8 * var(--u)));
+  text-align: left;
+  width: 100%;
+}
+.path-card .path-spells li {
+  display: flex;
+  gap: max(8px, calc(1.5 * var(--u)));
+  align-items: flex-start;
+  font-size: max(var(--fs), calc(3.4 * var(--u) * var(--txt)));
+  font-weight: 700;
+  color: #4a4030;
+}
+.path-card .path-spells .si {
+  flex: none;
+}
+.path-card:focus-visible,
+.path-card.pad-focus {
+  outline: 4px solid #1b6fd1;
+  outline-offset: 2px;
+}
+.path-card.mine {
+  border-style: double;
+  border-width: 5px;
+}
+.path-who {
+  display: flex;
+  flex-wrap: wrap;
+  gap: max(8px, calc(2 * var(--u)));
+  justify-content: center;
+  margin-top: calc(2 * var(--u));
+  font-size: max(var(--fs), calc(3.6 * var(--u) * var(--txt)));
+  font-weight: 800;
+}
+.path-who .who {
+  background: #ece3c6;
+  border-radius: calc(2 * var(--u));
+  padding: 2px calc(2 * var(--u));
+}
+.path-who .who.done {
+  background: #d6ecbd;
+}
+.chip-btn.path {
+  min-height: 48px;
+}
+
+/* runor v2: rarity is a word, stars and a border pattern, never only a colour */
+.runa-card {
+  min-height: 48px;
+}
+.runa-card .rar {
+  font-size: max(var(--fs), calc(3.4 * var(--u) * var(--txt)));
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: #3a3220;
+}
+.runa-card.rar-vanlig {
+  border-style: solid;
+  border-width: 3px;
+  --c: #8a8470;
+}
+.runa-card.rar-ovanlig {
+  border-style: dashed;
+  border-width: 4px;
+  --c: #3f9a4f;
+}
+.runa-card.rar-sallsynt {
+  border-style: double;
+  border-width: 7px;
+  --c: #2f6fd1;
+}
+.runa-card.rar-legendarisk {
+  border-style: dotted;
+  border-width: 6px;
+  --c: #e0861a;
+  box-shadow: 0 0 calc(4 * var(--u)) #f6b64a, 0 calc(1.5 * var(--u)) 0 var(--ink);
+  background: #fff3d2;
+}
+.runa-card .tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: max(8px, calc(1 * var(--u)));
+  justify-content: center;
+}
+.runa-card .tag {
+  font-size: max(var(--fs), calc(3.4 * var(--u) * var(--txt)));
+  font-weight: 800;
+  background: #ece3c6;
+  border-radius: calc(2 * var(--u));
+  padding: 0 calc(1.6 * var(--u));
+}
+.runa-card .tag.hit {
+  background: #d6ecbd;
+  outline: 2px solid #4e9a2a;
+}
+.runa-card .set,
+.runa-card .fit {
+  font-size: max(var(--fs), calc(3.4 * var(--u) * var(--txt)));
+  font-weight: 800;
+  color: #2f5f1c;
+}
+.runa-card .chosen {
+  font-size: max(var(--fs), calc(3.6 * var(--u) * var(--txt)));
+  font-weight: 900;
+  color: #1c5f1c;
+}
+.runa-card:focus-visible,
+.runa-card.pad-focus {
+  outline: 4px solid #1b6fd1;
+  outline-offset: 2px;
+}
+.runa-card.compact {
+  flex-direction: row;
+  flex-wrap: wrap;
+  text-align: left;
+  align-items: center;
+}
+.runa-card.compact .ic {
+  font-size: calc(32px * var(--txt));
+}
+.runa-card.compact .tx {
+  flex-basis: 100%;
+}
+.runa-card.party {
+  background: #e8f1ff;
+}
+.runor-list2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: max(8px, calc(2 * var(--u)));
+  margin-top: calc(2 * var(--u));
+}
+.tagbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: max(8px, calc(2 * var(--u)));
+}
+.tagchip {
+  min-height: 48px;
+  font-size: max(var(--fs), calc(3.8 * var(--u) * var(--txt)));
+  font-weight: 800;
+  border-radius: calc(3 * var(--u));
+  background: #ece3c6;
+  color: var(--ink);
+}
+.tagchip.on {
+  background: #d6ecbd;
+  outline: 3px solid #4e9a2a;
+}
+.run-runor .r.party {
+  outline: 2px dotted #1b6fd1;
+  border-radius: 6px;
+}
+.run-runor .r.rar-ovanlig {
+  border-bottom: 3px dashed #3f9a4f;
+}
+.run-runor .r.rar-sallsynt {
+  border-bottom: 3px double #2f6fd1;
+}
+.run-runor .r.rar-legendarisk {
+  border-bottom: 3px dotted #e0861a;
+}
+
+/* the Köpman and the Händelse */
+.run-panel .purse-line {
+  display: inline-block;
+  font-size: max(calc(18px * var(--txt)), calc(4.4 * var(--u) * var(--txt)));
+  background: #fff3d2;
+  border: 3px solid #c8962a;
+  border-radius: calc(3 * var(--u));
+  padding: calc(1 * var(--u)) calc(3 * var(--u));
+  margin: calc(1 * var(--u)) 0;
+}
+.run-panel .sect {
+  font-size: max(calc(18px * var(--txt)), calc(4.2 * var(--u) * var(--txt)));
+  font-weight: 900;
+  margin: calc(2 * var(--u)) 0 calc(1 * var(--u));
+}
+.shop-slot {
+  display: flex;
+  flex-direction: column;
+  gap: max(8px, calc(1 * var(--u)));
+  align-items: stretch;
+}
+.price {
+  font-size: max(var(--fs), calc(3.8 * var(--u) * var(--txt)));
+  font-weight: 900;
+  text-align: center;
+  padding: calc(1 * var(--u)) calc(2 * var(--u));
+  background: #fff3d2;
+  border: 2px solid #c8962a;
+  border-radius: calc(2 * var(--u));
+}
+.price.poor {
+  border-style: dashed;
+  background: #eee;
+  color: #6a5a40;
+}
+.price.sold {
+  background: #d6ecbd;
+  border-color: #4e9a2a;
+}
+.wares {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(160px, 22vmin), 1fr));
+  gap: max(8px, calc(2 * var(--u)));
+}
+.ware,
+.event-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: max(8px, calc(1 * var(--u)));
+  min-height: 48px;
+  padding: calc(2 * var(--u));
+  text-align: center;
+  background: #fffbea;
+  color: #3a3220;
+  border: 3px solid var(--ink, #3a3220);
+  border-radius: calc(3 * var(--u));
+  cursor: pointer;
+}
+.ware .ic,
+.event-choice .ic {
+  font-size: max(var(--fs), calc(9 * var(--u) * var(--txt)));
+}
+.ware .nm,
+.event-choice .nm {
+  font-size: max(calc(18px * var(--txt)), calc(4.2 * var(--u) * var(--txt)));
+  font-weight: 900;
+}
+.ware .tx,
+.event-choice .tx {
+  font-size: max(var(--fs), calc(3.6 * var(--u) * var(--txt)));
+}
+.ware.sold {
+  opacity: 0.75;
+}
+.ware.poor,
+.event-choice.poor {
+  border-style: dashed;
+}
+.event-choice.mine {
+  background: #d6ecbd;
+  border-color: #2f7f1c;
+}
+.event-choice .key {
+  font-weight: 900;
+  font-size: max(var(--fs), calc(3.6 * var(--u) * var(--txt)));
+}
+.event-choice .votes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: max(8px, calc(1 * var(--u)));
+  justify-content: center;
+  font-size: max(var(--fs), calc(3.4 * var(--u) * var(--txt)));
+  font-weight: 800;
+}
+.event-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(200px, 26vmin), 1fr));
+  gap: max(8px, calc(2 * var(--u)));
+  margin: calc(2 * var(--u)) 0;
+}
+.event-pic {
+  font-size: max(var(--fs), calc(16 * var(--u) * var(--txt)));
+  text-align: center;
+  line-height: 1.1;
+}
+.ware:focus-visible,
+.event-choice:focus-visible,
+.ware.pad-focus,
+.event-choice.pad-focus {
+  outline: 4px solid #1b6fd1;
+  outline-offset: 2px;
+}
+.chip-btn.purse {
+  min-height: 48px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ware,
+  .event-choice {
+    transition: none;
+  }
+}
