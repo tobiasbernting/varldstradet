@@ -573,8 +573,8 @@ export const LATT_BOSS_PACKS = { count: [2, 2], size: [3, 3] } as const;
 // ---------------------------------------------------------------------------
 
 export type RunOutcome = 'win' | 'wipe' | 'leave';
-/** `stop` the party is in a stop (fighting, resting), `pick` the vote on a runa, `route` the vote on the way on (walk onto a rune). */
-export type RunPhase = 'stop' | 'pick' | 'route' | 'victory' | 'ended';
+/** `stop` the party is in a stop (fighting, resting), `path` everyone chooses their path after the Mellanboss, `pick` the vote on a runa, `route` the vote on the way on (walk onto a rune). */
+export type RunPhase = 'stop' | 'path' | 'pick' | 'route' | 'victory' | 'ended';
 
 /** A stop of the route as the clients draw it: its row (1..10), lane, kind and the stops of the next row it leads to. */
 export interface RouteNodeSnap {
@@ -631,6 +631,10 @@ export interface RunSnap {
   /** The runor taken so far, and the sagafrön each player has earned in this run. */
   runor: string[];
   earned: Record<string, number>;
+  /** The path (väg, paths.ts) each hero has chosen, by player id (none before the Mellanboss has fallen). */
+  paths: Record<string, string>;
+  /** While everyone chooses (phase `path`): time left (ms) and the players who have chosen. */
+  pick?: { kind: 'path'; left: number; done: string[] };
 }
 
 /** The three cards being voted on. */

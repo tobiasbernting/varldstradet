@@ -30,6 +30,8 @@ import {
   BRANCH_NAMES,
   TREE_TEXT,
   chapterBoss,
+  PATH_TEXT,
+  pathsOf,
   companionClass,
   fmt,
   fmtDuration,
@@ -52,7 +54,8 @@ import { CLASS_IDS, LOOK_T, PETS, PET_T, activePet, ownedPetIds } from '@lilla-g
 import { lookSummary } from './looks.ts';
 import { portraitUrl } from '@art/textures.ts';
 import { net } from '../net.ts';
-import { KIND_COLOR, KIND_ICON, myRun, offerLeft, routeLeft, runClient, runElapsed } from '../run.ts';
+import { KIND_COLOR, KIND_ICON, myRun, offerLeft, pickLeft, routeLeft, runClient, runElapsed } from '../run.ts';
+import { pathIcon, pathName, pathTimeText, renderPathWindow } from './runpick.ts';
 import { SFX } from '../sound.ts';
 import { bus, client, myPlayer } from '../state.ts';
 import { clear, h, onTap } from './dom.ts';
@@ -75,7 +78,7 @@ const BRANCH_ICON: Record<string, string> = { hjalte: '⚔️', gemenskap: '🤝
 const BRANCHES = ['hjalte', 'gemenskap', 'gard'] as const;
 const ROWS = 10;
 
-type Win = 'fard' | 'offer' | 'map' | 'tree' | 'summary' | 'runor' | 'leave';
+type Win = 'fard' | 'offer' | 'path' | 'map' | 'tree' | 'summary' | 'runor' | 'leave';
 
 const NS = 'http://www.w3.org/2000/svg';
 function svg<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number> = {}, text?: string): SVGElementTagNameMap[K] {
@@ -232,6 +235,11 @@ export class RunUi {
       else if (this.win === 'offer' && runClient.offer) {
         if (/^[1-3]$/.test(e.key)) this.pick(Number(e.key) - 1);
         else if (e.key === 'r' || e.key === 'R') this.reroll();
+      } else if (this.win === 'path' && /^[1-3]$/.test(e.key)) {
+        const cls = myPlayer()?.saga?.cls;
+        const list = cls ? pathsOf(cls) : [];
+        const path = list[Number(e.key) - 1];
+        if (path) this.choosePath(path.id);
       }
       return true;
     }
@@ -356,7 +364,11 @@ export class RunUi {
         this.leaving = false;
       }
       if (!run && was && !this.gotEnded && this.leaving) setTimeout(() => this.leaveSummary(), 600);
-      if (!run && this.win && ['offer', 'map', 'runor', 'leave'].includes(this.win)) this.close(true);
+      if (!run && this.win && ['offer', 'path', 'map', 'runor', 'leave'].includes(this.win)) this.close(true);
+      // everyone chooses a path after the Mellanboss: the window opens by itself and goes when the choosing is over
+      if (run?.phase === 'path' && this.win !== 'path') this.open('path');
+      else if (this.win === 'path' && run?.phase !== 'path') this.close(true);
+      else if (this.win === 'path') this.render();
       if (this.win === 'fard' || this.win === 'map') this.render();
       this.sync();
     } else if (c.ev === 'offer') {
@@ -395,7 +407,7 @@ export class RunUi {
     }
     this.renderBar(run);
     const cur = run.route.find((n) => n.id === run.node);
-    this.say(run.phase === 'route' ? RUN_UI.ann.vote : run.phase === 'pick' ? RUN_UI.ann.offer : fmt(RUN_UI.ann.stop, { name: cur ? (STOP_NAMES[cur.kind] ?? '') : '' }));
+    this.say(run.phase === 'route' ? RUN_UI.ann.vote : run.phase === 'pick' ? RUN_UI.ann.offer : run.phase === 'path' ? RUN_UI.ann.path : fmt(RUN_UI.ann.stop, { name: cur ? (STOP_NAMES[cur.kind] ?? '') : '' }));
     this.renderVote(run);
     this.renderRunor(run);
     const offer = runClient.offer;
@@ -433,6 +445,8 @@ export class RunUi {
     };
     const spirit = chip('spirit', `🌟 ${run.spirit}`, `${RUN_UI.spirits}: ${run.spirit}`, { icon: '🌟', name: RUN_UI.spirits, text: RUN_UI.infoSpirit });
     const seeds = chip('seeds', `🌱 ${mine}`, `${RUN_UI.seeds}: ${mine}`, { icon: '🌱', name: RUN_UI.seeds, text: RUN_UI.infoSeeds });
+    const myPath = run.paths[client.me];
+    const pathChip = myPath ? chip('path', `${pathIcon(myPath)} ${pathName(myPath)}`, `${RUN_UI.pathMine}: ${pathName(myPath)}`, { icon: pathIcon(myPath), name: `${RUN_UI.pathMine}: ${pathName(myPath)}`, text: PATH_TEXT[myPath] ?? '' }) : null;
     const level = chip('level', `${lvl.icon} ${lvl.name}`, `${RUN_UI.level}: ${lvl.name}`, { icon: lvl.icon, name: lvl.name, text: lvl.blurb });
     const clock = chip('clockbox', h('span', null, '⏱ ', this.clockEl), RUN_UI.time, { icon: '⏱', name: RUN_UI.time, text: RUN_UI.infoClock });
     const stopTxt = `${cur ? `${KIND_ICON[cur.kind]} ${STOP_WORDS[cur.kind]}` : ''} · ${fmt(RUN_UI.step, { n: run.row, max: ROWS })}`;
@@ -455,7 +469,7 @@ export class RunUi {
     this.tap(home, () => this.open('leave'));
     this.info(home, '🚪', RUN_UI.home, RUN_UI.infoHome);
     const affixes = run.modifiers.filter((m) => AFFIX_IDS.includes(m)).map((m) => chip('affix', `${ico(MODIFIER_ICON[m])} ${MODIFIER_NAMES[m] ?? m}`, MODIFIER_NAMES[m] ?? m, { icon: ico(MODIFIER_ICON[m]), name: MODIFIER_NAMES[m] ?? m, text: MODIFIER_TEXT[m] ?? '' }));
-    this.bar.append(h('div', { class: 'line1' }, stop, level, ...affixes, clock, spirit, seeds, ask, map, home), rail, h('div', { class: 'clockbar' }, this.clockFill));
+    this.bar.append(h('div', { class: 'line1' }, stop, level, pathChip, ...affixes, clock, spirit, seeds, ask, map, home), rail, h('div', { class: 'clockbar' }, this.clockFill));
     this.tickClock(run);
   }
 
@@ -509,6 +523,11 @@ export class RunUi {
       this.tickClock(run);
       this.updateVoteClock();
     }
+    if (this.win === 'path' && this.offerBars) {
+      const left = pickLeft();
+      this.offerBars.fill.style.width = `${Math.min(100, (left / runPickMs(myRun()?.level ?? 2)) * 100)}%`;
+      this.offerBars.text.textContent = pathTimeText(left);
+    }
     if (this.win === 'offer' && this.offerBars) {
       const o = runClient.offer;
       const left = offerLeft();
@@ -546,7 +565,7 @@ export class RunUi {
   /** Closes the window. The cards of a runa cannot be closed by a tap beside them (only `force`, when the vote is over). */
   close(force = false): void {
     if (!this.modal) return;
-    if (this.win === 'offer' && !force) return;
+    if ((this.win === 'offer' || this.win === 'path') && !force) return;
     this.modal.remove();
     this.modal = null;
     this.win = null;
@@ -582,6 +601,7 @@ export class RunUi {
     const titles: Record<Win, string> = {
       fard: `🌈 ${RUN_UI.fardport}`,
       offer: `🎴 ${RUN_UI.cardsTitle}`,
+      path: `✨ ${RUN_UI.pathTitle}`,
       map: `🗺️ ${RUN_UI.route}`,
       tree: `🌳 ${RUN_UI.treeTitle}`,
       summary: `📜 ${RUN_UI.summary}`,
@@ -590,8 +610,8 @@ export class RunUi {
     };
     const foot = h('div', { class: 'foot' });
     panel.setAttribute('aria-label', titles[this.win]);
-    const canExplain = ['fard', 'map', 'tree', 'runor'].includes(this.win);
-    panel.append(h('h2', null, titles[this.win], h('span', { class: 'spacer' }), canExplain ? explain : null, this.win === 'offer' ? null : closeBtn), ...(this.infoMode && canExplain ? [h('div', { class: 'explain-hint' }, RUN_UI.explainOn)] : []), body, foot);
+    const canExplain = ['fard', 'map', 'tree', 'runor', 'path'].includes(this.win);
+    panel.append(h('h2', null, titles[this.win], h('span', { class: 'spacer' }), canExplain ? explain : null, this.win === 'offer' || this.win === 'path' ? null : closeBtn), ...(this.infoMode && canExplain ? [h('div', { class: 'explain-hint' }, RUN_UI.explainOn)] : []), body, foot);
     this.modal.append(panel);
     switch (this.win) {
       case 'fard':
@@ -600,6 +620,12 @@ export class RunUi {
       case 'offer':
         this.renderOffer(body);
         break;
+      case 'path': {
+        const run = myRun();
+        if (run) this.offerBars = renderPathWindow({ tap: (el, fn) => this.tap(el, fn), info: (el, i, n, t) => this.info(el, i, n, t) }, body, run, client.me, me.saga?.cls, (id) => this.choosePath(id));
+        this.tick();
+        break;
+      }
       case 'map':
         this.renderMap(body);
         break;
@@ -840,6 +866,12 @@ export class RunUi {
 
   private pick(i: number): void {
     net.send({ t: 'run', a: 'pick', card: i });
+    SFX.talk();
+  }
+
+  private choosePath(id: string): void {
+    if (myRun()?.paths[client.me]) return;
+    net.send({ t: 'run', a: 'path', id });
     SFX.talk();
   }
 

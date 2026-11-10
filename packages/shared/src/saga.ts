@@ -1923,6 +1923,8 @@ export interface SagaMob {
   mark?: { until: number; bonus: number };
   stunUntil?: number;
   slowUntil?: number;
+  /** Burning (a path's Eld): damage a second until then, the next tick, and who lit it. */
+  burn?: { until: number; per: number; next: number; by: string };
   /** Stärkande: how many of its pack have fallen. */
   fallen?: number;
   atkAt: number;
@@ -1955,6 +1957,8 @@ export interface SagaFighter {
   wall?: number;
   rage?: number;
   slow?: number;
+  /** A shield from a path: points that take the damage first, until when. */
+  shield?: { hp: number; until: number };
   /** The healing ring: until when, and how much a second. */
   hot?: { until: number; per: number };
   /** Frozen in an ice block (its id): no walking or spells until it breaks. */
@@ -2059,9 +2063,57 @@ export interface RunBuffs {
   reviveHp: number;
   /** More coins from the chests of a run. */
   coins: number;
+  /** The hero's path (paths.ts): what it changes in each spell, and the traits that are not a spell's. Empty before a path is chosen. */
+  mods: Record<string, SpellMod>;
+  traits: PathTraits;
 }
 
-export const noBuffs = (): RunBuffs => ({ power: 0, spell: {}, cd: 0, spellCd: {}, hp: 0, armor: 0, taken: 0, heal: 0, potion: 0, regen: 0, rest: 0, threat: 0, leech: 0, crit: 0, down: 0, reviveHp: 0, coins: 0 });
+export const noBuffs = (): RunBuffs => ({ power: 0, spell: {}, cd: 0, spellCd: {}, hp: 0, armor: 0, taken: 0, heal: 0, potion: 0, regen: 0, rest: 0, threat: 0, leech: 0, crit: 0, down: 0, reviveHp: 0, coins: 0, mods: {}, traits: {} });
+
+/**
+ * What a path (väg, paths.ts) does to one spell, all optional. The spell system reads these generically, so a path is data: numbers
+ * (more power, shorter cooldown, longer reach, bigger area, longer duration) and added effects (burning, slowing, stunning, chain
+ * to a neighbour, a shield for the caster or the friends near, a heal over time on the healed).
+ */
+export interface SpellMod {
+  /** More power (a fraction), and flat power added to the base (a taunt that hurts, a revive that gives more health: percent points). */
+  power?: number;
+  base?: number;
+  /** A fraction off the cooldown (negative: slower). */
+  cd?: number;
+  /** Added reach, area (tiles) and duration (ms). */
+  range?: number;
+  radius?: number;
+  ms?: number;
+  /** Every monster hit burns: this fraction of the blow again, over `BURN_MS`. */
+  burn?: number;
+  /** Every monster hit is slowed this long more (ms), or stunned (a freeze). */
+  slow?: number;
+  stun?: number;
+  /** The blow also hits this many more monsters near the target for half. */
+  chain?: number;
+  /** A shield (a fraction of max health) for the caster on cast, or for each friend near. */
+  shield?: number;
+  partyShield?: number;
+  /** A friend healed or woken also gets a heal over time: this fraction of the heal, over 4 seconds. */
+  hot?: number;
+}
+
+/** The parts of a path that no single spell holds. */
+export interface PathTraits {
+  /** Berserk: below half health, this much more power and this much faster cooldowns (half of it). */
+  low?: number;
+  /** Friends within 7 tiles (and the hero) take this much less damage. */
+  aura?: number;
+  /** A monster that hits the hero takes this fraction of the damage back (of the blow before armor). */
+  thorns?: number;
+}
+
+/** Burning lasts this long (ms) and ticks once a second. */
+export const BURN_MS = 4000;
+/** A shield lasts this long (ms) and never grows past this fraction of max health. */
+export const SHIELD_MS = 8000;
+export const SHIELD_CAP = 0.5;
 
 /** A zone's link to its run. */
 export interface SagaRunLink {

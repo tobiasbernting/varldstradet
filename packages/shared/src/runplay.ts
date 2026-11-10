@@ -5,7 +5,8 @@ import { addItem } from './inventory.ts';
 import { mulberry32 } from './rng.ts';
 import { CLASSES, XP_LEVELS, newSagaProgress, type ClassId } from './saga.ts';
 import { newMind, botStep, type BotMind, type BotStyle } from './runbot.ts';
-import { ensureRunPlaces, fardportOf, archFrontOf, pickRuna, runOf, startRun, type StartOptions } from './runsim.ts';
+import { pathsOf } from './paths.ts';
+import { ensureRunPlaces, fardportOf, archFrontOf, choosePath, pickRuna, runOf, startRun, type StartOptions } from './runsim.ts';
 import { grantPet } from './petsim.ts';
 import { createPlayer, setOnline, tick, type SimCtx } from './sim.ts';
 import { generateWorld } from './map.ts';
@@ -68,8 +69,11 @@ export function step(party: Party, bots: boolean, out: Change[]): void {
   if (bots && run) {
     for (const p of party.players) {
       if (!run.party.includes(p.id)) continue;
-      if (run.phase === 'pick' && run.offer && !(p.id in run.offer.votes)) out.push(...pickRuna(party.world, p.id, Math.floor(party.rnd() * run.offer.cards.length), party.ctx()));
-      else if (run.phase !== 'pick') out.push(...botStep(party.world, p.id, party.minds.get(p.id)!, party.ctx(), 50));
+      if (run.phase === 'path' && !run.paths[p.id]) {
+        const list = pathsOf(p.saga!.cls!);
+        out.push(...choosePath(party.world, p.id, list[Math.floor(party.rnd() * list.length)]!.id, party.ctx()));
+      } else if (run.phase === 'pick' && run.offer && !(p.id in run.offer.votes)) out.push(...pickRuna(party.world, p.id, Math.floor(party.rnd() * run.offer.cards.length), party.ctx()));
+      else if (run.phase !== 'pick' && run.phase !== 'path') out.push(...botStep(party.world, p.id, party.minds.get(p.id)!, party.ctx(), 50));
     }
   }
   out.push(...tick(party.world, 50, party.ctx()));

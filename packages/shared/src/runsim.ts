@@ -77,8 +77,9 @@ import {
   type RunSave,
   type RunSnap,
 } from './run.ts';
+import { defaultPath, pathDef, pathsOf } from './paths.ts';
 import { buildStop, chapterBoss, generateRun, placeRunes, routeSnap, type RunPlan } from './runmap.ts';
-import { COMPANION_NAME, RUNA_NAMES, RUN_T, T, TREE_NAMES, fmt, fmtDuration, itemName } from './sv.ts';
+import { COMPANION_NAME, PATH_NAMES, RUNA_NAMES, RUN_T, T, TREE_NAMES, fmt, fmtDuration, itemName } from './sv.ts';
 import {
   farmOf,
   getArea,
@@ -134,6 +135,9 @@ export interface RunState {
   nudges: number;
   /** The runor taken so far. */
   runor: string[];
+  /** The path each hero has chosen (paths.ts), and while everyone chooses (phase `path`) when the clock ends it. */
+  paths: Record<string, string>;
+  pathUntil?: number;
   offer?: { cards: string[]; votes: Record<string, number>; order: string[]; until: number; from: number };
   rerolled: boolean;
   /** What each player brings from the farm (tree, dishes, animals, buildings): added up once at the start or on joining. */
@@ -350,6 +354,8 @@ export function effectFor(farm: WorldState, run: RunState, p: PlayerState): RunE
     const r = runa(id);
     if (r && (!r.cls || r.cls === cls)) addEffect(e, r.effect);
   }
+  const path = pathDef(run.paths[p.id]);
+  if (path && path.cls === cls) addEffect(e, path.effect);
   return e;
 }
 
@@ -358,7 +364,15 @@ function refresh(farm: WorldState, run: RunState): void {
   const inst = farm.areas?.[run.key]?.saga;
   if (!inst?.run) return;
   inst.run.buffs = {};
-  for (const p of members(farm, run)) inst.run.buffs[p.id] = buffsOf(effectFor(farm, run, p));
+  for (const p of members(farm, run)) {
+    const b = buffsOf(effectFor(farm, run, p));
+    const path = pathDef(run.paths[p.id]);
+    if (path && path.cls === p.saga?.cls) {
+      b.mods = path.mods;
+      b.traits = path.traits;
+    }
+    inst.run.buffs[p.id] = b;
+  }
 }
 
 /** Sagafrön to every human in the run (`n` before the bonuses of runor, the tree and modifiers). */
@@ -424,6 +438,8 @@ function snap(farm: WorldState, run: RunState): RunSnap {
     spiritUsed: run.spiritUsed,
     runor: [...run.runor],
     earned: { ...run.earned },
+    paths: { ...run.paths },
+    ...(run.phase === 'path' ? { pick: { kind: 'path' as const, left: Math.max(0, Math.round((run.pathUntil ?? run.elapsed) - run.elapsed)), done: Object.keys(run.paths).filter((id) => run.party.includes(id)) } } : {}),
   };
 }
 const stateChange = (farm: WorldState, run: RunState | undefined): Change => ({ t: 'run', ev: 'state', to: null, run: run ? snap(farm, run) : null });
@@ -579,6 +595,7 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
     warned: false,
     nudges: 0,
     runor: [],
+    paths: {},
     rerolled: false,
     base: {},
     food: {},
@@ -727,6 +744,7 @@ export function joinRun(world: WorldState, playerId: string, ctx: SimCtx): Chang
     bring(farm, run, p, undefined, out);
     runSaveOf(p).runs++;
   }
+  if (run.path.some((n) => run.plan.route.nodes[n]?.kind === 'mini') && run.phase !== 'path') assignPath(run, p, ctx);
   refresh(farm, run);
   for (const q of humans(farm, run)) if (q.id !== p.id) out.push(toast(q.id, fmt(RUN_T.joined, { name: p.name })));
   if (run.phase === 'pick') {
@@ -774,6 +792,7 @@ export function leaveRun(world: WorldState, playerId: string, ctx: SimCtx): Chan
   refresh(farm, run);
   out.push(stateChange(farm, run));
   if (run.phase === 'pick') out.push(...settleVote(farm, run, ctx, false));
+  if (run.phase === 'path') out.push(...settlePaths(farm, run, ctx, false));
   if (run.phase === 'route') out.push(...tickRoute(farm, run, ctx));
   return out;
 }
@@ -823,14 +842,71 @@ runHooks.exit = useRunExit;
 function stopCleared(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
   const z = run.plan.stops[run.node]!;
   const out: Change[] = [];
-  if (z.kind === 'flock' || z.kind === 'mini') {
-    run.phase = 'pick';
-    run.offer = makeOffer(farm, run, ctx, []);
-    for (const q of humans(farm, run)) out.push(banner(q.id, run.key, RUN_T.pickTitle, RUN_T.pickSub, 'reward'));
-    out.push(stateChange(farm, run), offerChange(farm, run));
-    return out;
-  }
+  // after the Mellanboss everyone chooses a path first (paths.ts), then the runor
+  if (z.kind === 'mini') return startPaths(farm, run, ctx);
+  if (z.kind === 'flock') return openCards(farm, run, ctx);
   return startRoute(farm, run);
+}
+
+/** The cards of a runa after a fight. */
+function openCards(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
+  const out: Change[] = [];
+  run.phase = 'pick';
+  run.offer = makeOffer(farm, run, ctx, []);
+  for (const q of humans(farm, run)) out.push(banner(q.id, run.key, RUN_T.pickTitle, RUN_T.pickSub, 'reward'));
+  out.push(stateChange(farm, run), offerChange(farm, run));
+  return out;
+}
+
+/** A path for a hero who has none (the clock ran out, a bot, a friend who joined late): a bot's by luck, a person's the class's first. */
+function assignPath(run: RunState, p: PlayerState, ctx: SimCtx): void {
+  const cls = p.saga?.cls;
+  if (!cls || run.paths[p.id]) return;
+  const list = pathsOf(cls);
+  run.paths[p.id] = (p.bot ? list[Math.floor(ctx.rnd() * list.length)] : undefined)?.id ?? defaultPath(cls).id;
+}
+
+/** The Mellanboss has fallen: every hero chooses one of their class's paths (the hired companions at once). */
+function startPaths(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
+  const out: Change[] = [];
+  run.phase = 'path';
+  run.pathUntil = run.elapsed + runPickMs(run.level);
+  for (const id of run.companions) {
+    const c = farm.players[id];
+    if (c) assignPath(run, c, ctx);
+  }
+  refresh(farm, run);
+  for (const q of humans(farm, run)) out.push(banner(q.id, run.key, RUN_T.pathTitle, RUN_T.pathSub, 'reward'));
+  out.push(stateChange(farm, run));
+  return out;
+}
+
+/** A hero chooses their path (once; after the Mellanboss). */
+export function choosePath(world: WorldState, playerId: string, id: string, ctx: SimCtx): Change[] {
+  const farm = farmOf(world);
+  const run = RUNS.get(farm);
+  const p = farm.players[playerId];
+  const path = pathDef(id);
+  if (!run || !p || run.phase !== 'path' || !run.party.includes(p.id) || !path || path.cls !== p.saga?.cls || run.paths[p.id]) return [];
+  run.paths[p.id] = path.id;
+  const out: Change[] = [];
+  for (const q of humans(farm, run)) if (q.id !== p.id) out.push(toast(q.id, fmt(RUN_T.pathChose, { name: p.name })));
+  refresh(farm, run);
+  out.push(stateChange(farm, run), ...settlePaths(farm, run, ctx, false));
+  return out;
+}
+
+/** All online heroes have chosen, or the clock ran out (`late`: the rest get the class's first path): on to the cards. */
+function settlePaths(farm: WorldState, run: RunState, ctx: SimCtx, late: boolean): Change[] {
+  if (run.phase !== 'path') return [];
+  const waiting = humans(farm, run).filter((q) => q.online && !run.paths[q.id]);
+  if (waiting.length && !late) return [];
+  for (const q of humans(farm, run)) assignPath(run, q, ctx);
+  delete run.pathUntil;
+  refresh(farm, run);
+  const out: Change[] = [];
+  for (const q of humans(farm, run)) out.push(toast(q.id, fmt(RUN_T.pathYours, { path: PATH_NAMES[run.paths[q.id] ?? ''] ?? '' })));
+  return [...out, ...openCards(farm, run, ctx)];
 }
 
 /** The väg-runor appear on the floor of the exit room, one for each stop the next row leads to. */
@@ -1007,7 +1083,10 @@ export function tickRuns(world: WorldState, dtMs: number, ctx: SimCtx): Change[]
     const mind = run.minds.get(id);
     if (mind) out.push(...botStep(farm, id, mind, ctx, dtMs));
   }
-  if (run.phase === 'pick') {
+  if (run.phase === 'path') {
+    if (run.pathUntil !== undefined && run.elapsed >= run.pathUntil) out.push(...settlePaths(farm, run, ctx, true));
+
+  } else if (run.phase === 'pick') {
     if (run.offer && run.elapsed >= run.offer.until) out.push(...settleVote(farm, run, ctx, true));
   } else {
     out.push(...watchStop(farm, run, ctx));
@@ -1209,6 +1288,8 @@ export function runMessage(world: WorldState, playerId: string, msg: { t: 'run' 
       return joinRun(farm, playerId, ctx);
     case 'pick':
       return pickRuna(farm, playerId, Math.floor(Number(msg.card)), ctx);
+    case 'path':
+      return choosePath(farm, playerId, String(msg.id ?? ''), ctx);
     case 'reroll':
       return rerollOffer(farm, playerId, ctx);
     case 'leave':
@@ -1218,4 +1299,27 @@ export function runMessage(world: WorldState, playerId: string, msg: { t: 'run' 
       return [stateChange(farm, run), ...(run ? [offerChange(farm, run)] : [])];
     }
   }
+}
+
+/**
+ * Development only (the server enables it with DEV_TELEPORT=1): the stop the run is in is cleared as if its monsters had fallen (a
+ * Mellanboss and a boss too), so a person can walk through the windows of a whole run without fighting for twenty minutes.
+ */
+export function devClearStop(world: WorldState, playerId: string): Change[] {
+  const farm = farmOf(world);
+  const run = RUNS.get(farm);
+  const area = run ? farm.areas?.[run.key] : undefined;
+  if (!run || !area?.saga || !run.party.includes(playerId)) return [];
+  const inst = area.saga;
+  const out: Change[] = [];
+  for (const pk of inst.packs) pk.dead = true;
+  for (const m of Object.values(inst.mobs)) {
+    delete inst.mobs[m.id];
+    delete area.animals[m.id];
+    out.push({ t: 'animal', id: m.id, animal: null, area: run.key });
+  }
+  const kind = run.plan.stops[run.node]!.kind;
+  if (kind === 'mini') inst.miniDown = true;
+  if (kind === 'boss') inst.bossDown = true;
+  return out;
 }

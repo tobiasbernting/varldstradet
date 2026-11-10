@@ -50,6 +50,13 @@ export const routeLeft = (): number => {
   if (!r || r.routeLeft === undefined) return -1;
   return r.routeLeft < 0 ? -1 : Math.max(0, r.routeLeft - (performance.now() - runClient.runAt));
 };
+/** Time left of everyone's choice of path (ms), or 0 when none is going on. */
+export const pickLeft = (): number => {
+  const r = runClient.run;
+  return r?.pick ? Math.max(0, r.pick.left - (performance.now() - runClient.runAt)) : 0;
+};
+/** The path (väg) a player chose in the run I am in (an id, or undefined). */
+export const pathOf = (id: string): string | undefined => myRun()?.paths[id];
 /** Time left of the vote on a runa (ms). */
 export const offerLeft = (): number => (runClient.offer ? Math.max(0, runClient.offer.left - (performance.now() - runClient.offerAt)) : 0);
 

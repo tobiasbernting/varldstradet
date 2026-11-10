@@ -150,6 +150,7 @@ export type ClientMsg =
   | { t: 'run'; a: 'join' }
   | { t: 'run'; a: 'pick'; card: number }
   | { t: 'run'; a: 'reroll' }
+  | { t: 'run'; a: 'path'; id: string }
   | { t: 'run'; a: 'leave' }
   | { t: 'run'; a: 'state' }
   /** The Yggdrasil shoot: plant a node of the sagaträd with sagafrön, or ask for the tree's state. */
@@ -161,6 +162,7 @@ export type ClientMsg =
   /** Development only (same switch): the day rolls over now, as the parent page's "skip day" does, so a check can
    * wait for a crop to grow. The server answers `error` when the switch is off. */
   | { t: 'dev'; a: 'nextDay' }
+  | { t: 'dev'; a: 'runclear' }
   /** Development only (same switch): win dungeon boss `id`'s trophy at difficulty `level` (0..4), as a run's win would. */
   | { t: 'dev'; a: 'trophy'; id: string; level: number }
   /** Development only (same switch): one of every Norse decor piece, a gear stand and some gear, into the bag. */

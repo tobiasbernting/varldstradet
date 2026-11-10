@@ -1618,6 +1618,10 @@ export const RUN_T = {
   spiritFreeSub: 'Ni reser er vid vilostenen och försöker igen.',
   spiritGained: 'En Sagoande till!',
   badLevel: 'Det svårighetsvalet finns inte.',
+  pathTitle: 'Välj din väg!',
+  pathSub: 'Din roll går vidare. Alla väljer själva.',
+  pathChose: '{name} valde sin väg.',
+  pathYours: 'Din väg: {path}',
   /** A parent capped the highest level a character may play (the parent page): who, and the level they may go up to. */
   capped: '{names} får inte spela {level} än. Välj lättare, eller be en förälder.',
   cappedYou: 'En förälder har satt att du får spela upp till {max}. Hoppa på en lättare färd!',
@@ -1639,6 +1643,31 @@ export const RUN_T = {
   ended: { win: 'Färden är klar', wipe: 'Alla föll', leave: 'Färden är slut' } as Record<string, string>,
 };
 export const runaName = (id: string): string => RUNA_NAMES[id] ?? id;
+
+/** Vägar (paths.ts): the name, one sentence and one line for each of the four spells (in the order of the class's spells). */
+export const PATH_NAMES: Record<string, string> = { eld: 'Eld', frost: 'Frost', aska: 'Åska', barsark: 'Bärsärk', vapen: 'Vapenmästare', murvakt: 'Murvakt', hamnare: 'Hämnare', ljus: 'Ljus', natur: 'Natur' };
+export const PATH_TEXT: Record<string, string> = {
+  eld: 'Eld som bränner kvar och större träffar.',
+  frost: 'Frysta fiender och skyddande is.',
+  aska: 'Blixtar som hoppar och snabba trollformler.',
+  barsark: 'Starkare och snabbare när du har ont.',
+  vapen: 'Stora träffar som stoppar och avbryter.',
+  murvakt: 'Skyddar alla runt dig mot skada.',
+  hamnare: 'Monstren som slår dig får det tillbaka.',
+  ljus: 'Stora läkningar och en snabbare väckning.',
+  natur: 'Läker hela tiden och snärjer med rankor.',
+};
+export const PATH_SPELLS: Record<string, [string, string, string, string]> = {
+  eld: ['Eldbollen brinner kvar.', 'Isspjutet bränner också.', 'Åskregnet blir större och brinner.', 'Blink laddar snabbare och hoppar längre.'],
+  frost: ['Eldbollen gör monstret långsamt.', 'Isspjutet fryser fast monstret och ger dig skydd.', 'Åskregnet saktar ner alla.', 'Blink ger dig ett isskal.'],
+  aska: ['Eldbollen hoppar till ett monster till och laddar snabbare.', 'Isspjutet hoppar till två till.', 'Åskregnet är större och laddar snabbare.', 'Blink laddar snabbt och hoppar långt.'],
+  barsark: ['Yxhugget är starkare och snabbare.', 'Stormsteget slår hårdare och laddar snabbare.', 'Virvelvinden når längre och slår hårdare.', 'Raseriet varar längre och laddar snabbare.'],
+  vapen: ['Yxhugget är mycket starkare, men långsammare.', 'Stormsteget stoppar länge och slår hårt.', 'Virvelvinden gör fienderna yra.', 'Raseriet är kortare men laddar mycket snabbare.'],
+  murvakt: ['Hugget är starkare och ger dig skydd.', 'Utmana! räcker längre och skyddar de nära.', 'Sköldslaget ger dig skydd.', 'Sköldmuren varar längre och skyddar alla nära.'],
+  hamnare: ['Hugget är mycket starkare.', 'Utmana! gör ont och når längre.', 'Sköldslaget slår hårt.', 'Sköldmuren laddar snabbare och varar längre.'],
+  ljus: ['Läkerunan läker mycket mer, men laddar långsammare.', 'Ljuspilen slår hårdare.', 'Läkekretsen är större och läker mer.', 'Väck upp! laddar snabbt, når långt och ger mer hälsa.'],
+  natur: ['Läkerunan läker lite mindre med en gång, och sen mer efteråt.', 'Ljuspilen snärjer monstret med rankor.', 'Läkekretsen varar längre och läker mer.', 'Väck upp! laddar snabbare och läker efteråt.'],
+};
 export const treeName = (id: string): string => TREE_NAMES[id] ?? id;
 
 /** The run's windows and HUD (ui/run.ts). Short words, every one with a picture next to it in the window. */
@@ -1731,7 +1760,16 @@ export const RUN_UI = {
   infoRunor: 'Dina runor. Tryck för att se alla.',
   infoRune: 'Gå ut på runan på golvet för att välja den vägen.',
   kinds: { flock: 'Här slåss ni mot ett flock monster.', mini: 'Här väntar vakten som håller halva vägen.', rest: 'Här får ni vila och bli läkta.', boss: 'Här väntar bossen. Vinner ni är färden klar!' } as Record<string, string>,
-  ann: { stop: 'Nytt steg: {name}', vote: 'Välj väg. Gå ut på en vägruna.', offer: 'Välj en runa bland tre kort.', ended: 'Färden är slut.' },
+  ann: { stop: 'Nytt steg: {name}', vote: 'Välj väg. Gå ut på en vägruna.', offer: 'Välj en runa bland tre kort.', ended: 'Färden är slut.', path: 'Välj din väg.' },
+  pathTitle: 'Välj din väg!',
+  pathIntro: 'Din roll går vidare. Vägen ändrar hur dina trollformler fungerar resten av färden.',
+  pathLeft: '{n} s kvar',
+  pathWaiting: 'Väntar på de andra…',
+  pathDone: 'Vald',
+  pathPick: 'Välj',
+  pathMine: 'Din väg',
+  pathNone: 'Ingen väg än',
+  pathReopen: 'Välj väg',
 };
 // ---------------------------------------------------------------------------
 // Hus: everyone's own house, Norse decor and boss trophies (house.ts)

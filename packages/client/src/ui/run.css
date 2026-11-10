@@ -1146,3 +1146,62 @@ body.in-run.touch .saga-boss {
 /* the way-on vote stays above the banners and the confetti */
 .run-vote, .run-cards-btn, .run-note, .run-bar { z-index: 50; }
 .run-runor[hidden], .run-bar[hidden], .run-vote[hidden], .run-cards-btn[hidden], .run-note[hidden], .run-info[hidden] { display: none !important; }
+
+/* the choice of a path (väg) after the Mellanboss */
+.run-panel.path {
+  width: calc(290 * var(--u));
+}
+.path-card {
+  cursor: pointer;
+  min-height: 48px;
+}
+.path-card .path-spells {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(0.8 * var(--u));
+  text-align: left;
+  width: 100%;
+}
+.path-card .path-spells li {
+  display: flex;
+  gap: calc(1.5 * var(--u));
+  align-items: flex-start;
+  font-size: max(16px, calc(3.4 * var(--u)));
+  font-weight: 700;
+  color: #4a4030;
+}
+.path-card .path-spells .si {
+  flex: none;
+}
+.path-card:focus-visible,
+.path-card.pad-focus {
+  outline: 4px solid #1b6fd1;
+  outline-offset: 2px;
+}
+.path-card.mine {
+  border-style: double;
+  border-width: 5px;
+}
+.path-who {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(2 * var(--u));
+  justify-content: center;
+  margin-top: calc(2 * var(--u));
+  font-size: max(16px, calc(3.6 * var(--u)));
+  font-weight: 800;
+}
+.path-who .who {
+  background: #ece3c6;
+  border-radius: calc(2 * var(--u));
+  padding: 2px calc(2 * var(--u));
+}
+.path-who .who.done {
+  background: #d6ecbd;
+}
+.chip-btn.path {
+  min-height: 48px;
+}

@@ -28,6 +28,7 @@ export * from './saga.ts';
 export * from './looks.ts';
 export * from './sagamap.ts';
 export * from './sagasim.ts';
+export * from './paths.ts';
 export * from './run.ts';
 export * from './runmap.ts';
 export * from './runbot.ts';
