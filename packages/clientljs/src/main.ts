@@ -47,6 +47,8 @@ import { initSound, isMuted, setMuted } from '@v1/sound.ts';
 import { Chat, SocialButtons, petCommand, petToggle, weatherChip } from '@v1/ui/social.ts';
 import { VoiceUi } from '@v1/ui/voice.ts';
 import '@v1/a11y.css';
+import '@v1/hud.css';
+import { initHudFit } from '@v1/ui/hudfit.ts';
 import { forceQuality, on } from './features.ts';
 import { initLighting } from './lighting.ts';
 import { View, VIEW_H, VIEW_W } from './view.ts';
@@ -115,6 +117,7 @@ settings.onChange = syncUiOpen;
 log.onChange = syncUiOpen;
 initGamepad({ ui, target: () => (started ? view : null), menus, windows: [log, settings, menus, saga, run], hud });
 initA11y();
+initHudFit();
 initAccess(ui);
 // a phone held upright is asked to turn, and may play anyway
 document.getElementById('rotate-text')!.textContent = A11Y_T.rotate;

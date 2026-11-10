@@ -1,6 +1,6 @@
 // 2D game: chat with everyone in the world, buttons that tell your pets to stay or whistle for them,
 // and the weather chip.
-import { CHAT_MAX_LEN, CHAT_PHRASES, PET_T, PETS, T, activePet, ownedPetIds, WEATHER_EMOJI, WEATHER_NAMES, isHomeKey, isCallable, noWeatherHere, type Change } from '@varldstradet/shared';
+import { A11Y_T, CHAT_MAX_LEN, CHAT_PHRASES, PET_T, PETS, T, activePet, ownedPetIds, WEATHER_EMOJI, WEATHER_NAMES, isHomeKey, isCallable, noWeatherHere, type Change } from '@varldstradet/shared';
 import { net } from '../net.js';
 import { bus, client, myPlayer } from '../state.js';
 import { SFX } from '../sound.ts';
@@ -128,6 +128,8 @@ export class SocialButtons {
   private pet: HTMLElement;
   private petIc = h('span', null, '🐾');
   private petTx = h('i', null, PET_T.btnIn);
+  private moreBtn: HTMLElement;
+  private pop: HTMLElement;
 
   constructor(root: HTMLElement, chat: Chat, voice?: VoiceUi) {
     const talk = h('div', { class: 'round small', title: 'Prata med alla (Enter eller T)' }, '💬');
@@ -144,7 +146,17 @@ export class SocialButtons {
         petToggle();
       }
     });
-    this.el = h('div', { class: 'social' }, talk, voice?.btn, this.pet, this.stay, this.come);
+    // on a short or narrow screen (hud.css) only chat, the pet and this button are in the row; the rest wait behind it, so the bottom left is
+    // one row of three buttons and not a block that runs into the other pieces
+    this.moreBtn = h('button', { class: 'round small more-btn', type: 'button', 'aria-label': A11Y_T.more, 'aria-expanded': 'false', 'data-info-icon': '⋯', 'data-info-name': A11Y_T.more, 'data-info-text': A11Y_T.moreInfo }, '⋯');
+    onTap(this.moreBtn, () => this.setMore(!this.el.classList.contains('open')));
+    this.pop = h('div', { class: 'social-more' }, voice?.btn, this.stay, this.come);
+    this.el = h('div', { class: 'social' }, talk, this.pet, this.moreBtn, this.pop);
+    // choosing one of them, or touching anything else, puts the row away again
+    this.pop.addEventListener('click', () => window.setTimeout(() => this.setMore(false), 0));
+    document.addEventListener('pointerdown', (e) => {
+      if (this.el.classList.contains('open') && !(e.target as HTMLElement).closest('.social')) this.setMore(false);
+    });
     root.append(this.el);
     const refresh = () => this.refresh();
     bus.on('change', (c) => {
@@ -156,6 +168,11 @@ export class SocialButtons {
     refresh();
   }
 
+  private setMore(open: boolean): void {
+    this.el.classList.toggle('open', open);
+    this.moreBtn.setAttribute('aria-expanded', String(open));
+  }
+
   private refresh(): void {
     const any = myCallables().length > 0;
     this.stay.style.display = any ? '' : 'none';
@@ -164,6 +181,7 @@ export class SocialButtons {
     const me = myPlayer();
     const owns = !!me && ownedPetIds(me).length > 0;
     this.pet.style.display = owns ? '' : 'none';
+    this.el.classList.toggle('has-pet', owns);
     if (!me || !owns) return;
     const def = activePet(me) ?? PETS[me.pets?.active ?? ''] ?? PETS[ownedPetIds(me)[0]!];
     const out = !activePet(me);
