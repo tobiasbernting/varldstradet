@@ -17,6 +17,7 @@ import {
   equipLook,
   devGrantLooks,
   devSagaBest,
+  devHeroLevel,
   devUnlockChapters,
   equipGear,
   shownHeld,
@@ -543,6 +544,7 @@ export class Game {
         else if (msg.a === 'petscare') changes = devPetScare(this.world, pid, this.ctx().now);
         else if (msg.a === 'petgear') changes = devPetGear(this.world, pid, Number(msg.tier ?? 5), typeof msg.set === 'string' ? msg.set : undefined);
         else if (msg.a === 'looks') changes = devGrantLooks(me, typeof msg.set === 'string' ? msg.set : undefined, Number(msg.tier ?? 5), msg.ways !== false, true, typeof msg.cls === 'string' ? msg.cls : undefined);
+        else if (msg.a === 'level') changes = devHeroLevel(this.world, pid, Number(msg.n));
         else if (msg.a === 'sagaBest') changes = devSagaBest(this.world, pid, String(msg.id ?? ''), Number(msg.ms));
         break;
       case 'voice':

@@ -5,6 +5,7 @@ import {
   ALL_PIECES,
   BASE_ARMOR,
   BASE_POWER,
+  FLAT_LEVEL_MUL,
   DUNGEON_IDS,
   LOOK_SETS,
   LOOK_SLOTS,
@@ -241,7 +242,7 @@ describe('wearing looks', () => {
     }
     expect(Object.keys(p.outfit.looks ?? {})).toHaveLength(4);
     expect(fightStats(p)).toEqual(bare.fs);
-    expect(fightStats(p)).toMatchObject({ power: BASE_POWER, armor: BASE_ARMOR });
+    expect(fightStats(p)).toMatchObject({ power: BASE_POWER * FLAT_LEVEL_MUL, armor: BASE_ARMOR });
     expect(fighterMax(p, 'magiker')).toBe(bare.max);
     // the pieces have no stat fields at all
     for (const x of ALL_PIECES) for (const k of ['stats', 'power', 'hp', 'armor']) expect(x, `${x.id}.${k}`).not.toHaveProperty(k);
