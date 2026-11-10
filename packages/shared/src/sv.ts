@@ -848,15 +848,15 @@ export const MODIFIER_TEXT: Record<string, string> = {
 };
 
 /** The kinds of stop on a route (DESIGN.md section 2.1): the name on the banner and the line under it, and the short word on the map. */
-export const STOP_NAMES: Record<string, string> = { flock: 'Ett flock', mini: 'Mellanbossen', rest: 'Vilosten', boss: 'Bossen', shop: 'Köpmannen', event: 'En händelse', treasure: 'Skattrummet', elite: 'Stark vakt' };
+export const STOP_NAMES: Record<string, string> = { flock: 'En flock', mini: 'Mellanbossen', rest: 'Vilosten', boss: 'Bossen', shop: 'Köpmannen', event: 'En händelse', treasure: 'Skattrummet', elite: 'Stark vakt' };
 export const STOP_WORDS: Record<string, string> = { flock: 'Flock', mini: 'Mellanboss', rest: 'Vilosten', boss: 'Boss', shop: 'Köpman', event: 'Händelse', treasure: 'Skatt', elite: 'Stark vakt' };
 export const STOP_INTROS: Record<string, string> = {
-  flock: 'Ett flock står i vägen. Slå ner dem alla!',
+  flock: 'En flock står i vägen. Slå ner dem alla!',
   mini: 'Här väntar vakten som håller halva vägen.',
   rest: 'En vilosten. Hämta andan innan ni går vidare.',
   shop: 'Köpmannen Bram har slagit läger. Köp något fint!',
   event: 'Något spännande händer här.',
-  treasure: 'Ett skatterum! En vakt står i vägen.',
+  treasure: 'Ett skattrum! En vakt står i vägen.',
   elite: 'En extra stark vakt. Det ger bäst belöning!',
 };
 export const COMPANION_NAME = 'Hirdmannen';
