@@ -355,8 +355,12 @@ body.touch:not(.saga-fight) .run-btn {
   border-radius: 8px;
   inset: auto !important;
   position: absolute;
-  top: 50%;
-  left: 50%;
+  top: 50% !important;
+  left: 50% !important;
+  width: auto !important;
+  height: auto !important;
+  right: auto !important;
+  bottom: auto !important;
   transform: translate(-50%, -50%);
   line-height: 1.1;
   white-space: nowrap;
@@ -481,4 +485,44 @@ button.chip {
   body.touch .act-btn .ic {
     font-size: 28px;
   }
+}
+
+@media (max-width: 820px) {
+  .hud-right {
+    max-width: calc(100% - 330px);
+  }
+}
+@media (max-width: 700px) {
+  .round {
+    width: var(--tap);
+    height: var(--tap);
+  }
+  .hud-right {
+    max-width: calc(100% - 270px);
+    gap: 6px;
+  }
+}
+
+/* the bag's rows must not be squeezed into each other when the window is short */
+.grid {
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: 8px;
+}
+.grid .slot {
+  flex: none;
+}
+.grid + .grid {
+  margin-top: 8px;
+}
+.role {
+  background: rgba(0, 0, 0, 0.78) !important;
+  color: #fff !important;
+}
+.saga-tracker .head,
+.saga-tracker .head span {
+  color: #ffe9a8;
+}
+.run-bar {
+  margin-top: 8px;
 }

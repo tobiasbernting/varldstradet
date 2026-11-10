@@ -147,7 +147,7 @@ export function initAccess(ui: HTMLElement): void {
     (e) => {
       if (e.key !== 'Tab') return;
       const modal = ui.querySelector<HTMLElement>('.modal');
-      if (!modal || modal.querySelector('.run-panel') || e.target instanceof HTMLInputElement && false) return;
+      if (!modal || modal.querySelector('.run-panel')) return;
       const list = focusables(modal);
       if (!list.length) return;
       const at = list.indexOf(document.activeElement as HTMLElement);

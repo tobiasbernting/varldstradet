@@ -41,7 +41,11 @@ export function speak(text: string): void {
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'sv-SE';
     const v = swedish();
-    if (v) u.voice = v;
+    try {
+      if (v) u.voice = v;
+    } catch {
+      /* the language alone will do */
+    }
     u.rate = 0.9;
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(u);
