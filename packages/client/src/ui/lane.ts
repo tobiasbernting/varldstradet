@@ -338,8 +338,9 @@ export interface SayOpts {
 
 /** What a toast is about, from its words (the server sends only text): a reward, a thing about the run, or just a message. */
 export function classifyToast(text: string, inRun: boolean): LogKind {
-  if (/sagafrön|silver|trofé|utseende|titel|gåva|fick |köpte|nytt djur|rustning|grejer/i.test(text)) return inRun && /köpte/i.test(text) ? 'run' : 'loot';
-  if (/nivå/i.test(text)) return 'level';
+  if (/^Bragd|^Nivå \d/i.test(text)) return 'level';
+  if (/sagafrön|silver|trofé|utseende|titel|gåva|fick |nytt djur|rustning|grejer|garderoben|väskan|huset|hänger i/i.test(text)) return 'loot';
+  if (/köpte/i.test(text)) return 'run';
   return inRun ? 'run' : 'system';
 }
 

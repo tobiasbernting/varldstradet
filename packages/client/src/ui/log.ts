@@ -190,14 +190,15 @@ export class LogUi {
 
   private row(l: LogLine): HTMLElement {
     const word = LOG_T.kinds[l.kind] ?? '';
-    const speakText = [l.who && !l.text.includes(l.who) ? `${l.who}: ` : '', l.text, l.sub ? `. ${l.sub}` : ''].join('');
+    const showWho = !!l.who && (l.kind === 'chat' || !l.text.includes(l.who));
+    const speakText = [showWho ? `${l.who}: ` : '', l.text, l.sub ? `. ${l.sub}` : ''].join('');
     const tag = h('span', { class: 'tag', title: undefined }, h('span', { class: 'ic', 'aria-hidden': 'true' }, l.icon || KIND_ICON[l.kind as LogKind]), h('span', { class: 'kw' }, word));
     const li = h(
       'li',
       { class: `log-line k-${l.kind}` },
       h('time', { class: 'tm', datetime: new Date(l.at).toISOString() }, clock(l.at)),
       tag,
-      h('span', { class: 'tx' }, l.who && !l.text.includes(l.who) ? h('b', { class: 'who' }, `${l.who}: `) : null, l.text, l.sub ? h('span', { class: 'sub' }, ` ${l.sub}`) : null),
+      h('span', { class: 'tx' }, showWho ? h('b', { class: 'who' }, `${l.who}: `) : null, l.text, l.sub ? h('span', { class: 'sub' }, ` ${l.sub}`) : null),
     );
     if (canSpeak()) {
       const sp = h('button', { type: 'button', class: 'speak', 'aria-label': `${LOG_T.read}: ${speakText}` }, '🔊');
