@@ -21,6 +21,7 @@ const VIEWPORTS = [
   { w: 768, h: 1024, touch: true },
   { w: 1280, h: 720, touch: false },
   { w: 640, h: 360, touch: true },
+  { w: 1000, h: 470, touch: false },
 ].filter((v) => !ONLY || `${v.w}x${v.h}` === ONLY);
 const MIN_TARGET = 48;
 const MIN_FONT = 16;
@@ -151,6 +152,15 @@ async function scenarios(browser, v, res) {
   await page.send({ t: 'dev', a: 'petgear', tier: 3 });
   await page.waitForTimeout(1200);
   await tag(page, 'lobby-pet');
+  // a short or narrow screen folds the less used round buttons behind one: open it and measure the row
+  if (await page.$('.more-btn')) {
+    if (await page.evaluate(() => { const b = document.querySelector('.more-btn'); return !!b && getComputedStyle(b).display !== 'none'; })) {
+      await page.evaluate(() => document.querySelector('.more-btn').click());
+      await page.waitForTimeout(300);
+      await tag(page, 'lobby-more');
+      await page.evaluate(() => document.querySelector('.more-btn').click());
+    }
+  }
   await page.evaluate(() => window.varldstradet.bus.emit('open', { ui: 'kennel' }));
   await page.waitForTimeout(500);
   if (await page.$('.modal')) await tag(page, 'kennel'); else console.log('no kennel window');
@@ -207,6 +217,11 @@ async function scenarios(browser, v, res) {
   await page.send({ t: 'dev', a: 'saga', id: 'draug' });
   await page.waitForTimeout(3500);
   await tag(page, 'fight');
+  if (await page.evaluate(() => { const b = document.querySelector('.more-btn'); return !!b && getComputedStyle(b).display !== 'none'; })) {
+    await page.evaluate(() => document.querySelector('.more-btn').click());
+    await page.waitForTimeout(300);
+    await tag(page, 'fight-more');
+  }
   await page.context().close();
 }
 

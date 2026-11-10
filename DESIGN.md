@@ -633,7 +633,8 @@ device (`varldstradet.a11y` in local storage) and applied as classes and CSS var
   is released. Spells are cast the same way, on release.
 - **Settings** ("Inställningar", the gear on the HUD): text size, strong contrast, effects (Alla / Mindre / Av), calm screen (no loops
   or flashes; follows the system's reduced-motion choice until the player chooses), screen shake, colour-blind-safe telegraphs, how long
-  to hold to read, left-handed buttons, reading aloud (the device's Swedish voice; hidden if there is none).
+  to hold to read, HUD size (Liten / Normal / Stor: the buttons, frames and bars, not the words; from the start it follows the screen), left-handed
+  buttons, reading aloud (the device's Swedish voice; hidden if there is none).
 - **Input.** Touch (stick on the left half, a big hand button, tap on a tile), keyboard (arrows or WASD, E or space, 1 to 5 for spells and
   the potion, Tab to aim, Q bag, F emotes, B or J the journal, H help, T chat, M map, G wardrobe), gamepad (Xbox, PlayStation and
   Switch layouts; the stick and d-pad move a highlight in menus, A selects, B closes). In a fight X, Y, B and RB are spells 1 to 4 and LB
@@ -647,6 +648,14 @@ device (`varldstradet.a11y` in local storage) and applied as classes and CSS var
   dot, the help window, the gamepad through the HUD ring or the help). The last 300 lines are kept in memory and sessionStorage, nothing on the
   server; chat lines are in it too (filters Alla / Händelser / Chatt). In a run the top of the screen is one row (the run bar; on a screen under
   500 px high the round buttons fold into one ☰ button), and world labels hide under HUD panels.
+- **The HUD's budget** (`hud.css`, `ui/hudfit.ts`; aim: about a quarter of the screen, a third at most, the middle and the hero free, nothing
+  over anything). Sizes come from the shorter side of the window, the text size (`--txt`) and the HUD size (`--hk` 0.85 / 1 / 1.2), never under
+  the floors: spell buttons 66 px wide (the word Förklara at 16 px) by 52 px, 12 px apart; round buttons 48 px; "Slå" and "Spring" 72 / 64 px.
+  The spell bar is one row when it fits between the two sides of the bottom (chat/pet/more and the runor chip at one, "Slå"/"Spring" at the
+  other, mirrored when left-handed), else two (four spells below, explain, aim and the potion above). `hudfit.ts` measures and sets `--res-l`,
+  `--res-r`, `--left-stack`. Under 1240 px wide or 620 px high only chat, the pet and a "⋯" button are shown at the bottom left and the rest
+  (call, stay, whistle, family) opens above it; the runor you hold are one chip with a count. The lane stops above the big buttons and the
+  spell bar; a second message stays above 42 % of a short screen; a message that does not fit waits (20 s at most).
 - **Colour is never the only signal.** Low health is a mark and stripes as well as red; telegraphs have a colour-blind variant with other
   colours and stripes; the cards have a star count as well as a border colour.
 

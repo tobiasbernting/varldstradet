@@ -306,7 +306,7 @@ function layout(): void {
   root0.setProperty('--party-top', `${Math.round(visible(map) ? map.getBoundingClientRect().bottom + 8 : top)}px`);
   let left = 8;
   let right = 8;
-  for (const sel of ['.minimap', '.saga-party', '.saga-tracker', '.act-btn', '.run-btn']) {
+  for (const sel of ['.minimap', '.saga-party', '.saga-tracker', '.act-btn', '.run-btn', '.run-runor']) {
     const el = document.querySelector(sel);
     if (!visible(el)) continue;
     const r = el.getBoundingClientRect();
