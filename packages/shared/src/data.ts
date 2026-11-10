@@ -409,8 +409,6 @@ export const NPC_LINES: Record<string, { morning: string[]; day: string[]; eveni
 
 const A = (id: string, stat: string, goal: number, stars: number, icon: string): Achievement => ({ id, stat, goal, stars, icon });
 export const ACHIEVEMENTS: Achievement[] = [
-  A('coins_500', 'earned', 500, 1, 'animal_hen'),
-  A('coins_3000', 'earned', 3000, 3, 'animal_cow'),
   A('ride_1', 'ride', 1, 1, 'animal_horse'),
   A('ride_25', 'ride', 25, 2, 'stall'),
   A('loot_5', 'loot', 5, 2, 'old_coin'),

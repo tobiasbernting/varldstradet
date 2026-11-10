@@ -12,7 +12,7 @@ import { RUN_LEVEL_MEDEL } from './run.ts';
 import { addItem, countItem, removeItem } from './inventory.ts';
 import { addObject, inBounds, mapH, mapW, objectAt, removeObject, tileIndex } from './map.ts';
 import type { Change } from './protocol.ts';
-import { randInt } from './rng.ts';
+
 import {
   CALM_MS,
   CLASSES,
@@ -355,9 +355,7 @@ export function sagaChapter(world: WorldState, playerId: string): Change[] {
   }
   if (!chapterDone(prog)) return [toast(p.id, ch.goal)];
   const r = ch.reward;
-  p.coins += r.coins;
   p.stars += r.stars;
-  bump(p, 'earned', r.coins, out);
   if (r.item) giveItems(farm, p, r.item, 1, out);
   if (r.title && !prog.titles.includes(r.title)) {
     prog.titles.push(r.title);
@@ -367,7 +365,7 @@ export function sagaChapter(world: WorldState, playerId: string): Change[] {
   prog.chapter++;
   prog.heard = false;
   giveXp(p, SAGA_XP.chapter, out);
-  out.push({ t: 'banner', to: p.id, kind: 'reward', text: fmt(T.sagaChapterDone, { title: ch.title }), sub: `+${r.coins} kr · +${r.stars} ⭐${r.item ? ` · ${itemName(r.item)}` : ''}` }, fxOn(p.area, tileOf(p.x), tileOf(p.y), 'sparkle'), playerChange(p));
+  out.push({ t: 'banner', to: p.id, kind: 'reward', text: fmt(T.sagaChapterDone, { title: ch.title }), sub: `+${r.stars} ⭐${r.item ? ` · ${itemName(r.item)}` : ''}` }, fxOn(p.area, tileOf(p.x), tileOf(p.y), 'sparkle'), playerChange(p));
   return out;
 }
 
@@ -400,9 +398,7 @@ export function sagaQuestAct(world: WorldState, playerId: string, questId: strin
   delete prog.quests[q.id];
   prog.done.push(q.id);
   const out: Change[] = [];
-  p.coins += q.reward.coins;
   p.stars += q.reward.stars;
-  bump(p, 'earned', q.reward.coins, out);
   if (q.reward.item) giveItems(farm, p, q.reward.item, q.reward.count ?? 1, out);
   bump(p, 'sagaQuests', 1, out);
   giveXp(p, SAGA_XP.quest, out);
@@ -505,15 +501,12 @@ function openChest(h: Here, p: PlayerState, chest: WorldObject, ctx: SimCtx): Ch
   return out;
 }
 
-/** The smaller chest of a boss already looted today: a third of the coins and a healing potion, no stars. */
+/** The smaller chest of a boss already looted today: a healing potion, no stars. */
 function replayChest(h: Here, p: PlayerState, table: SagaLoot, from: string, ctx: SimCtx, out: Change[]): void {
-  const coins = Math.floor(randInt(ctx.rnd, table.coins[0], table.coins[1]) / 3);
   const items = [{ item: 'healing_potion', count: 1 }];
-  p.coins += coins;
-  bump(p, 'earned', coins, out);
   for (const it of items) giveItems(h.area, p, it.item, it.count, out);
   bump(p, 'loot', 1, out);
-  out.push({ t: 'loot', to: p.id, from, items, coins, stars: 0, replay: true }, playerChange(p));
+  out.push({ t: 'loot', to: p.id, from, items, stars: 0, replay: true }, playerChange(p));
 }
 
 /** How many steps up from common a piece of gear is (a level's loot bonus adds weight per step). */
@@ -528,8 +521,6 @@ const unique = (id: string): boolean => {
 function rollLoot(h: Here, p: PlayerState, table: SagaLoot, from: string, ctx: SimCtx, out: Change[], extra: { item: string; count: number }[] = []): void {
   const prog = progressOf(p);
   const items: { item: string; count: number }[] = [];
-  const base = randInt(ctx.rnd, table.coins[0], table.coins[1]);
-  const coins = base + Math.round(base * buffsOf(h, p.id).coins);
   const fresh = table.gear.filter((g) => !unique(g.item) || !prog.found.includes(g.item));
   const pool = fresh.length ? fresh : table.gear;
   const total = pool.reduce((n, g) => n + g.weight, 0);
@@ -549,9 +540,7 @@ function rollLoot(h: Here, p: PlayerState, table: SagaLoot, from: string, ctx: S
   for (const rare of table.rare ?? []) if (!prog.found.includes(rare.item) && ctx.rnd() < rare.chance * (h.inst.run?.lootRare ?? 1)) items.push({ item: rare.item, count: 1 });
   for (const pet of rollPetDrops(h.farm, p, from, h.inst.run?.lootRare ?? 1, ctx.rnd, out)) items.push({ item: pet, count: 1 }); // (pets.ts: kept by the player, never twice)
   items.push(...extra);
-  p.coins += coins;
   p.stars += table.stars;
-  bump(p, 'earned', coins, out);
   for (const it of items) {
     if (unique(it.item) && prog.found.includes(it.item) && !fresh.length) {
       // everything here is found already: a potion instead of a second copy
@@ -564,7 +553,7 @@ function rollLoot(h: Here, p: PlayerState, table: SagaLoot, from: string, ctx: S
     } else giveItems(h.area, p, it.item, it.count, out);
   }
   bump(p, 'loot', 1, out);
-  out.push({ t: 'loot', to: p.id, from, items, coins, stars: table.stars }, playerChange(p));
+  out.push({ t: 'loot', to: p.id, from, items, stars: table.stars }, playerChange(p));
 }
 
 // ---------------------------------------------------------------------------

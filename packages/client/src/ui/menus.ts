@@ -82,7 +82,6 @@ interface SearchFrame {
   tabs: HTMLElement | null;
   /** "No match" line between toolbar and body (backpack/chest). */
   hint: HTMLElement;
-  coins: HTMLElement | null;
 }
 export class Menus {
   private modal: HTMLElement | null = null;
@@ -203,7 +202,7 @@ export class Menus {
     const body = h('div', { class: 'body' });
     const panel = h('div', { class: 'panel' }, head, body);
     if (SEARCH_KINDS.includes(this.kind)) {
-      this.frame = this.buildFrame(panel, head, body, null);
+      this.frame = this.buildFrame(panel, head, body);
       this.modal.append(panel);
       this.renderBody(true);
       return;
@@ -279,7 +278,7 @@ export class Menus {
     return b;
   }
 
-  private buildFrame(panel: HTMLElement, head: HTMLElement, body: HTMLElement, coins: HTMLElement | null): SearchFrame {
+  private buildFrame(panel: HTMLElement, head: HTMLElement, body: HTMLElement): SearchFrame {
     const kind = this.kind!;
     const search = this.searchInput();
     const chips = new Map<string, HTMLElement>();
@@ -303,7 +302,7 @@ export class Menus {
     const hint = h('div', { class: 'hint' });
     panel.insertBefore(h('div', { class: 'toolbar' }, search, ...chips.values(), clearBtn, this.sortButton(T.sort)), body);
     const tabs: HTMLElement | null = null;
-    return { kind, panel, body, search, chips, clearBtn, tabs, hint, coins };
+    return { kind, panel, body, search, chips, clearBtn, tabs, hint };
   }
 
   private sortButton(label: string): HTMLElement {
@@ -315,7 +314,7 @@ export class Menus {
     return b;
   }
 
-  /** Rebuild only what depends on state: coins, chip highlight, tabs, hint and body. The input is never touched. */
+  /** Rebuild only what depends on state: chip highlight, tabs, hint and body. The input is never touched. */
   private renderBody(resetScroll = false): void {
     const f = this.frame;
     const me = myPlayer();

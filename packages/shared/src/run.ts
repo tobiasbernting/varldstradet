@@ -131,7 +131,7 @@ export const MODIFIER_SEEDS = 0.15;
 /**
  * Additions as fractions. The first block is combat (it ends up in `RunBuffs` and is read by sagasim.ts), the second
  * block is the rest of the run: potions handed out, more sagafrön, a new offer, a second dish slot, stronger dishes and
- * animals, a stronger companion and more sagafrön for the boss. (`coins`, more coins from the run's chests, is combat's.)
+ * animals, a stronger companion and more sagafrön for the boss.
  */
 export interface RunEffect extends Partial<Omit<RunBuffs, 'spell' | 'spellCd' | 'mods' | 'traits'>> {
   spell?: Record<string, number>;
@@ -148,7 +148,7 @@ export interface RunEffect extends Partial<Omit<RunBuffs, 'spell' | 'spellCd' | 
   bossSeeds?: number;
 }
 
-const COMBAT_KEYS = ['power', 'cd', 'hp', 'armor', 'taken', 'heal', 'potion', 'regen', 'rest', 'threat', 'leech', 'crit', 'down', 'reviveHp', 'coins'] as const;
+const COMBAT_KEYS = ['power', 'cd', 'hp', 'armor', 'taken', 'heal', 'potion', 'regen', 'rest', 'threat', 'leech', 'crit', 'down', 'reviveHp'] as const;
 const META_KEYS = ['potions', 'seeds', 'reroll', 'companion', 'bossSeeds', 'luck'] as const;
 /** Every number an effect can carry (the tests make sure each one does something). */
 export const EFFECT_KEYS: readonly string[] = [...COMBAT_KEYS, ...META_KEYS, 'spell', 'spellCd', 'mods', 'traits'];
@@ -262,7 +262,7 @@ export const SEED_TREE: TreeNode[] = [
   { id: 'g5', branch: 'gemenskap', cost: 35, needs: 'g3', effect: { companion: 0.2 } },
   { id: 'g6', branch: 'gemenskap', cost: 40, needs: 'g4', effect: { seeds: 0.1 } },
   { id: 'f4', branch: 'gard', cost: 15, effect: { potions: 1 } },
-  { id: 'f5', branch: 'gard', cost: 35, needs: 'f4', effect: { coins: 0.25 } },
+  { id: 'f5', branch: 'gard', cost: 35, needs: 'f4', effect: { seeds: 0.15 } },
   { id: 'f6', branch: 'gard', cost: 50, needs: 'f5', effect: { bossSeeds: 5 } },
 ];
 export const treeNode = (id: string): TreeNode | undefined => SEED_TREE.find((n) => n.id === id);

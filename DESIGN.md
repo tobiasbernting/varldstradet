@@ -158,8 +158,8 @@ party. On the **first clear** of a chapter (not a replay), a boss with three or 
 attacks (never the first and never the interruptible one); a replay uses them all. On Mycket lätt and Lätt every boss and
 mid-boss uses only its first two attacks (`RUN_LEVELS[l].bossMoves`).
 
-The mid-boss and boss each have a chest. A boss's chest gives its full loot (coins, stars, an item, sometimes a pet or mount
-by chance) once per in-game day per player, and a smaller chest after that (a third of the coins and a potion).
+The mid-boss and boss each have a chest. A boss's chest gives its full loot (stars, an item, sometimes a pet or mount
+by chance) once per in-game day per player, and a smaller chest after that (a potion).
 Chest items that are gear do nothing in a fight.
 
 ### 2.5 Events (Händelser)
@@ -223,11 +223,11 @@ A **runa** is a boon that lasts for the run (`runor.ts`; names and one-sentence 
 | Sköld | "Skyddet": armor +3 % | "Fästningen": armor +2 %, health +5 % |
 | Liv | "Livsgnistan": healing +5 %, regeneration | "Livets träd": healing +6 %, quicker rest and revive |
 | Hugg | "Skärpan": crits +3 % | "Mästarhugget": crits +3 %, spells +3 % |
-| Tur | "Lyckan": crits +3 %, coins +20 % | "Guldregnet": coins +25 %, sagafrön +10 % |
+| Tur | "Lyckan": crits +3 %, sagafrön +10 % | "Guldregnet": sagafrön +25 % |
 | Djur | "Flocken": health +4 % | "Vildmarken": health +4 %, regeneration |
 
 - What a runa can do (`RunEffect` in `run.ts`): more spell power, a shorter cooldown, health, armor, less damage taken, healing,
-  regeneration, threat, life steal, crits, quicker revival, coins, and per-spell effects (`SpellMod`: burn, slow, stun, chain
+  regeneration, threat, life steal, crits, quicker revival, and per-spell effects (`SpellMod`: burn, slow, stun, chain
   to a neighbour, shields, heal over time, larger radius). Every number an effect can carry is covered by a test that it
   changes something.
 
@@ -482,7 +482,7 @@ visibly from the whole family's planted nodes: stages at 0, 3, 8, 14 and 24 node
 | --- | --- |
 | Hjälten | Starkare skott (`h1`, 10): spells +3 % · Tjockare skinn (`h2`, 12): health +5 % · Segerviljan (`h3`, 20): crits +4 % · Hård hud (`h4`, 25): armor +3 % · Heltens ande (`h5`, 30): healing potions heal 10 % more · Evig låga (`h6`, 45): cooldowns 4 % faster · Runlycka (`h7`, 40): rarer runa cards |
 | Gemenskapen | Starkare band (`g1`, 10): rest stones heal 25 % faster · Mjukt uppvaknande (`g2`, 15): fallen get up 20 % faster · Omval (`g3`, 30): one card reroll per run · Delad glädje (`g4`, 25): healing +8 % · Hirdens lön (`g5`, 35): the Hirdmannen is 20 % stronger · Frögåva (`g6`, 40): sagafrön +10 % |
-| Gården | Extra flaskor (`f4`, 15): one more potion at the start · Rikare kistor (`f5`, 35): coins from chests +25 % · Världsträdets rot (`f6`, 50): the boss gives 5 sagafrön more to the one who planted it |
+| Gården | Extra flaskor (`f4`, 15): one more potion at the start · Rikare frön (`f5`, 35, needs `f4`): sagafrön +15 % for the planter · Världsträdets rot (`f6`, 50): the boss gives 5 sagafrön more to the one who planted it |
 
 The tree adds breadth and small numbers; no node makes the run trivial.
 

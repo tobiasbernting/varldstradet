@@ -719,19 +719,6 @@ describe('every effect', () => {
     expect(leech({ leech: 0.5 })).toBeGreaterThan(5);
   });
 
-  it('coins: a chest of the run gives more coins', () => {
-    const coins = (e: RunEffect): number => {
-      const l = lab(e);
-      const c = addObject(l.area, 'saga_chest', Math.floor(l.p.x / TILE) + 1, Math.floor(l.p.y / TILE), { variant: 0 })!;
-      const before = l.p.coins;
-      l.rnd.v = 0.5;
-      performAction(l.area, l.p.id, c.x, c.y, l.ctx());
-      return l.p.coins - before;
-    };
-    expect(coins({})).toBeGreaterThan(0);
-    expect(coins({ coins: 0.25 })).toBeGreaterThan(coins({}));
-  });
-
   it('a run’s monsters’ health, damage, sight, leash and unlocked boss moves come from the plan', () => {
     const l = lab({});
     const { mob } = l.place('skelett', 3);
@@ -1690,7 +1677,6 @@ describe('the clock, the wipe and the end', () => {
     startRun(party.world, party.players[0]!.id, { seed: 6 }, party.ctx());
     const run = runOf(party.world)!;
     const [a, b] = party.players as [import('./index.ts').PlayerState, import('./index.ts').PlayerState];
-    a.coins = 321;
     runSaveOf(a).seeds = 17;
     const ticks = (ms: number): Change[] => {
       const out: Change[] = [];
@@ -1726,7 +1712,6 @@ describe('the clock, the wipe and the end', () => {
     run.elapsed = RUN_MAX_MS + 2 * RUN_NUDGE_MS - 100;
     expect(count(ticks(300), RUN_T.late)).toBe(2);
     expect(runOf(party.world)).toBe(run);
-    expect(a.coins).toBe(321);
     expect(readRun(a).seeds).toBe(17);
     // and a run that went past the mark still ends with its own outcome: here a player walks home, the other stays
     leaveRun(party.world, a.id, party.ctx());
@@ -1771,7 +1756,7 @@ describe('the clock, the wipe and the end', () => {
     expect(run.phase).toBe('stop');
   });
 
-  it('a wipe ends the run after the pause: everyone at the farm with their bag, coins and sagafrön', () => {
+  it('a wipe ends the run after the pause: everyone at the farm with their bag and sagafrön', () => {
     const party = makeParty(['vaktare', 'helare', 'magiker'], { seed: 6 });
     startRun(party.world, party.players[0]!.id, { seed: 6 }, party.ctx());
     const run = runOf(party.world)!;
@@ -1780,7 +1765,6 @@ describe('the clock, the wipe and the end', () => {
     run.spirit = 0;
     inst.run!.spirit = 0;
     for (const p of party.players) {
-      p.coins = 77;
       runSaveOf(p).seeds = 9;
       p.inventory[12] = { item: 'wood', count: 5 };
     }
@@ -1805,7 +1789,6 @@ describe('the clock, the wipe and the end', () => {
     expect(run.outcome).toBe('wipe');
     for (const p of party.players) {
       expect(p.area).toBe('farm');
-      expect(p.coins).toBe(77);
       expect(readRun(p).seeds).toBe(9);
       expect(readRun(p).wipes).toBe(1);
       expect(p.inventory[12]).toEqual({ item: 'wood', count: 5 });
@@ -1931,7 +1914,6 @@ describe('the clock, the wipe and the end', () => {
     const c = solo.world.players[lab.run.companions[0]!]!;
     expect(c.bot).toBe(true);
     placeIn(solo.world, c, lab.run.key, lab.inst.start.x, lab.inst.start.y, 'up', []);
-    const coins = c.coins;
     const bag = JSON.stringify(c.inventory);
     // a kill by the companion gives its bag nothing
     const sure = { ...solo.ctx(), rnd: () => 0 };
@@ -1948,7 +1930,6 @@ describe('the clock, the wipe and the end', () => {
     const chest = Object.values(lab.world.areas![lab.run.key]!.objects).find((o) => o.kind === 'saga_chest' && o.variant === 2)!;
     expect(performAction(lab.world.areas![lab.run.key]!, c.id, chest.x, chest.y, solo.ctx())).toEqual([]);
     expect(lab.inst.looted[chest.id] ?? []).not.toContain(c.id);
-    expect(c.coins).toBe(coins);
     expect(JSON.stringify(c.inventory)).toBe(bag);
     expect(readRun(c).seeds).toBe(0);
   });
@@ -1956,7 +1937,7 @@ describe('the clock, the wipe and the end', () => {
   it('f6 pays its five extra sagafrön to the planter only, not to the whole party', () => {
     const duo = makeParty(['magiker', 'vaktare'], { seed: 6 });
     const [a, b] = duo.players as [import('./index.ts').PlayerState, import('./index.ts').PlayerState];
-    runSaveOf(a).tree = ['f4', 'f5', 'f6'];
+    runSaveOf(a).tree = ['f6'];
     startRun(duo.world, a.id, { seed: 6 }, duo.ctx());
     const { inst } = atTheBoss(duo);
     const before = [readRun(a).seeds, readRun(b).seeds];
@@ -2093,7 +2074,7 @@ describe('the sagaträd', () => {
     }
   });
 
-  it('g5 makes the hired companion stronger, g6 and f6 pay more, and f5 more coins', () => {
+  it('g5 makes the hired companion stronger, g6, f5 and f6 pay more', () => {
     const party = makeParty(['krigare'], { seed: 5 });
     const p = party.players[0]!;
     runSaveOf(p).tree = ['g1', 'g3', 'g5'];
@@ -2109,7 +2090,7 @@ describe('the sagaträd', () => {
     startRun(six.world, six.players[0]!.id, { seed: 5 }, six.ctx());
     const r6 = runOf(six.world)!;
     expect(r6.base[six.players[0]!.id]!.bossSeeds).toBe(5);
-    expect(six.world.areas![r6.key]!.saga!.run!.buffs[six.players[0]!.id]!.coins).toBeCloseTo(0.25);
+    expect(r6.base[six.players[0]!.id]!.seeds).toBeCloseTo(0.15);
   });
 });
 

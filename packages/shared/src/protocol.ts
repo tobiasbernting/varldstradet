@@ -59,7 +59,7 @@ export type Change =
   | { t: 'banner'; to: string | null; area?: string; text: string; sub?: string; kind?: 'enter' | 'boss' | 'cleared' | 'chapter' | 'reward' | 'rest' | 'wipe' | 'level' }
   /** What a dungeon chest gave you (a loot window in rarity colours). */
   /** A chest's loot for one player; `replay` when it was the smaller replay chest (the full one was taken today). */
-  | { t: 'loot'; to: string; from: string; items: { item: string; count: number }[]; coins: number; stars: number; replay?: true; looks?: LootLooks }
+  | { t: 'loot'; to: string; from: string; items: { item: string; count: number }[]; stars: number; replay?: true; looks?: LootLooks }
   /** The family beat its best time through a dungeon (also on the farm WorldState's sagaBest). */
   | { t: 'sagaBest'; dungeon: DungeonId; best: SagaBest }
   /** Hero experience gained (anywhere): the client floats "+n xp" from where the player stood (pixels; area left out on the farm). */

@@ -586,7 +586,7 @@ export function awardLooks(p: PlayerState, dungeon: DungeonId, level: number, rn
   }
 
   syncLooks(p);
-  if (reward.drops.length || reward.ways.length) out.push({ t: 'loot', to: p.id, from: DUNGEONS[dungeon].name, items: [], coins: 0, stars: 0, looks: { drops: reward.drops, ways: reward.ways, titles: reward.titles, dungeon, level } });
+  if (reward.drops.length || reward.ways.length) out.push({ t: 'loot', to: p.id, from: DUNGEONS[dungeon].name, items: [], stars: 0, looks: { drops: reward.drops, ways: reward.ways, titles: reward.titles, dungeon, level } });
   out.push(playerChange(p));
   return reward;
 }

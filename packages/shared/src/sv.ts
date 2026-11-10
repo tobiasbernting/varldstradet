@@ -167,7 +167,6 @@ export const T = {
   voiceNeedsHttps: 'Röstprat fungerar bara på en säker adress (https).',
   wardrobe: 'Garderob',
   buy: 'Köp',
-  coins: 'kr',
   sort: 'Sortera',
   sorted: 'Sorterat!',
   search: 'Sök…',
@@ -403,8 +402,6 @@ export const T = {
 };
 
 export const ACHIEVEMENT_TEXT: Record<string, { title: string; text: string }> = {
-  coins_500: { title: 'Sparbössa', text: 'Tjäna 500 kr' },
-  coins_3000: { title: 'Rik bonde', text: 'Tjäna 3000 kr' },
   ride_1: { title: 'Första ridturen', text: 'Rid på en häst' },
   ride_25: { title: 'Hästkompis', text: 'Hoppa upp på din häst 25 gånger' },
   loot_5: { title: 'Skattletare', text: 'Öppna 5 skattkistor ute i världen' },
@@ -827,18 +824,18 @@ export const SET_NAMES: Record<string, [string, string]> = {
 export const SET_TEXT: Record<string, [string, string]> = {
   eld: ['Trollformler +3 %', 'Trollformler +4 % och du läker 2 %'], is: ['Du tar 3 % mindre skada', 'Du tar 3 % mindre och laddar 3 % fortare'], aska: ['Trollformler laddar 3 % snabbare', '3 % snabbare och 3 % fler kritiska'],
   skold: ['Skydd +3 %', 'Skydd +2 % och hälsa +5 %'], liv: ['Läkning +5 % och hälsa kommer fortare', 'Läkning +6 %, vila och väckning bättre'], hugg: ['Fler kritiska träffar +3 %', '+3 % kritiska och trollformler +3 %'],
-  tur: ['Kritiska +3 % och 20 % fler mynt', '25 % fler mynt och 10 % fler sagafrön'], djur: ['Hälsa +4 %', 'Hälsa +4 % och hälsan kommer fortare'],
+  tur: ['Kritiska +3 % och 10 % fler sagafrön', '25 % fler sagafrön'], djur: ['Hälsa +4 %', 'Hälsa +4 % och hälsan kommer fortare'],
 };
 
 export const TREE_NAMES: Record<string, string> = {
   h1: 'Starkare skott', h2: 'Tjockare skinn', h3: 'Segerviljan', h4: 'Hård hud', h5: 'Heltens ande', h6: 'Evig låga', h7: 'Runlycka',
   g1: 'Starkare band', g2: 'Mjukt uppvaknande', g3: 'Omval', g4: 'Delad glädje', g5: 'Hirdens lön', g6: 'Frögåva',
-  f4: 'Extra flaskor', f5: 'Rikare kistor', f6: 'Världsträdets rot',
+  f4: 'Extra flaskor', f5: 'Rikare frön', f6: 'Världsträdets rot',
 };
 export const TREE_TEXT: Record<string, string> = {
   h1: 'Trollformler +3 %', h2: 'Hälsa +5 %', h3: 'Fler kritiska träffar +4 %', h4: 'Skydd +3 %', h5: 'Läkedryck läker 10 % mer', h6: 'Trollformler laddar 4 % snabbare', h7: 'Fler sällsynta runor, +25 % tur',
   g1: 'Vilostenar läker 25 % fortare', g2: 'Fallna vaknar 20 % fortare', g3: 'Nya kort en gång per färd', g4: 'All läkning +8 %', g5: 'Hirdmannen är 20 % starkare', g6: 'Sagafrön +10 %',
-  f4: 'En läkedryck till i början', f5: 'Mynt ur kistor +25 %', f6: 'Bossen ger 5 sagafrön till',
+  f4: 'En läkedryck till i början', f5: 'Sagafrön +15 %', f6: 'Bossen ger 5 sagafrön till',
 };
 export const BRANCH_NAMES: Record<string, string> = { hjalte: 'Hjälten', gemenskap: 'Gemenskapen', gard: 'Gården' };
 

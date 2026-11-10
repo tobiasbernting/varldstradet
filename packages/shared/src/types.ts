@@ -31,7 +31,6 @@ export const HOTBAR_SIZE = 8;
 export const BACKPACK_SIZE = 24;
 export const INVENTORY_SIZE = HOTBAR_SIZE + BACKPACK_SIZE;
 export const MAX_STACK = 99;
-export const START_COINS = 150;
 
 export type Terrain =
   | 'grass'
@@ -226,7 +225,6 @@ export interface PlayerState {
   y: number;
   facing: Facing;
   moving: boolean;
-  coins: number;
   inventory: Inventory;
   selected: number;
   online: boolean;
@@ -298,7 +296,7 @@ export interface Quest {
   id: string;
   npc: string;
   want: { item: string; count: number };
-  reward: { coins: number; stars: number; item?: { item: string; count: number } };
+  reward: { stars: number; item?: { item: string; count: number } };
   /** Dialogue line (Swedish). */
   text: string;
   /** Fixed story quest (not replaced daily). */

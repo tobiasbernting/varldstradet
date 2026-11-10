@@ -149,7 +149,7 @@ export const SET_BONUS: Record<RunTag, [RunEffect, RunEffect]> = {
   skold: [{ armor: 0.03 }, { armor: 0.02, hp: 0.05 }],
   liv: [{ heal: 0.05, regen: 0.2 }, { heal: 0.06, rest: 0.3, reviveHp: 0.1 }],
   hugg: [{ crit: 0.03 }, { crit: 0.03, power: 0.03 }],
-  tur: [{ crit: 0.03, coins: 0.2 }, { coins: 0.25, seeds: 0.1 }],
+  tur: [{ crit: 0.03, seeds: 0.1 }, { seeds: 0.25 }],
   djur: [{ hp: 0.04 }, { hp: 0.04, regen: 0.3 }],
 };
 export const SET_STEPS: readonly [number, number] = [2, 4];

@@ -427,10 +427,10 @@ describe('the saga', () => {
     sagaChapter(world, p.id);
     expect(p.saga!.chapter).toBe(0);
     chooseClass(world, p.id, 'helare');
-    const coins = p.coins;
+    const stars = p.stars;
     sagaChapter(world, p.id);
     expect(p.saga!.chapter).toBe(1);
-    expect(p.coins).toBe(coins + SAGA_CHAPTERS[0]!.reward.coins);
+    expect(p.stars).toBe(stars + SAGA_CHAPTERS[0]!.reward.stars);
     // the crypt's chapter is told
     sagaChapter(world, p.id);
     expect(p.saga!.heard).toBe(true);
@@ -866,7 +866,7 @@ describe('Lokes list: the ending', () => {
     // ...the reward banner with the chapter's name and what was paid, the achievement's toast and a sparkle
     const banner = end.find((c) => c.t === 'banner' && c.kind === 'reward');
     expect(banner && banner.t === 'banner' && banner.text).toBe(fmt(T.sagaChapterDone, { title: SAGA_CHAPTERS[last]!.title }));
-    expect(banner && banner.t === 'banner' && banner.sub).toContain(`+${r.coins} kr`);
+    expect(banner && banner.t === 'banner' && banner.sub).toContain(`+${r.stars} ⭐`);
     expect(end.some((c) => c.t === 'toast' && c.text.startsWith('Bragd: Ragnaröks hjälte'))).toBe(true);
     expect(end.some((c) => c.t === 'fx' && c.kind === 'sparkle')).toBe(true);
     // after the last chapter Völvan has nothing more to tell: "the saga is over"
@@ -980,7 +980,6 @@ function atStina(cls: keyof typeof CLASSES = 'krigare') {
   p.area = 'farm';
   p.x = st.x;
   p.y = st.y + TILE;
-  p.coins = 0;
   return { world, p };
 }
 const give = (p: PlayerState, item: string, n: number): void => void addItem(p.inventory, item, n);
@@ -1052,16 +1051,14 @@ describe('the dungeons, again and again', () => {
     p.achievements.push('loot_5', 'loot_25');
     for (let seed = 1; seed < 8; seed++) {
       delete inst.looted[chest.id];
-      const before = { coins: p.coins, stars: p.stars };
+      const before = { stars: p.stars };
       const again = performAction(d, p.id, chest.x, chest.y, ctx(seed));
       const loot = again.find((c) => c.t === 'loot');
       if (!loot || loot.t !== 'loot') throw new Error('no loot');
       expect(loot.replay).toBe(true);
       expect(loot.stars).toBe(0);
-      expect(loot.coins).toBeLessThanOrEqual(Math.floor(SAGA_LOOT.draugkung!.coins[1] / 3));
-      expect(loot.coins).toBeGreaterThanOrEqual(Math.floor(SAGA_LOOT.draugkung!.coins[0] / 3));
       expect(loot.items.map((it) => it.item)).toEqual(['healing_potion']);
-      expect([p.stars, p.coins - before.coins]).toEqual([before.stars, loot.coins]);
+      expect(p.stars).toBe(before.stars);
     }
     // tomorrow: the full chest again
     world.day++;
@@ -1070,7 +1067,7 @@ describe('the dungeons, again and again', () => {
     expect(tomorrow && tomorrow.t === 'loot' && tomorrow.replay).toBeUndefined();
   });
 
-  it("the mid-boss's replay chest is a potion and coins; the side room's treasure is not counted", () => {
+  it("the mid-boss's replay chest is a potion; the side room's treasure is not counted", () => {
     const { world, players } = family();
     const p = players[0]!;
     const d = inside(world, p, 'krigare');

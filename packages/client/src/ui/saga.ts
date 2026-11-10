@@ -201,8 +201,8 @@ function levelSub(c: BannerChange): HTMLElement {
   const pic = r?.item ? itemIcon(r.item) : r?.title ? h('span', { class: 'em' }, '👑') : r?.aura ? h('span', { class: 'em' }, r.aura === 2 ? '🌈' : '✨') : null;
   return h('div', { class: 'sub reward' }, pic ? h('span', { class: 'pic' }, pic) : null, h('span', null, c.sub ?? ''));
 }
-const rewardText = (r: { coins: number; stars: number; item?: string; count?: number; title?: string }): string =>
-  [`+${r.coins} ${T.coins}`, `+${r.stars} ⭐`, r.item ? `${itemName(r.item)}${(r.count ?? 1) > 1 ? ` × ${r.count}` : ''}` : '', r.title ? `👑 ${r.title}` : ''].filter(Boolean).join(' · ');
+const rewardText = (r: { stars: number; item?: string; count?: number; title?: string }): string =>
+  [`+${r.stars} ⭐`, r.item ? `${itemName(r.item)}${(r.count ?? 1) > 1 ? ` × ${r.count}` : ''}` : '', r.title ? `👑 ${r.title}` : ''].filter(Boolean).join(' · ');
 
 /** The experience bar: how far into this level, and the experience needed for the next. */
 function xpMeter(xp: number): HTMLElement {
@@ -1336,7 +1336,7 @@ export class SagaUi {
       }
       for (const t of lk.titles) rows.append(h('div', { class: 'loot title' }, h('span', { class: 'pic' }, h('span', { class: 'em' }, '👑')), h('div', { class: 'col' }, h('b', { class: 'nm' }, fmt(LOOK_T.lootTitle, { title: t })))));
     }
-    if (c.coins > 0 || c.stars > 0) rows.append(h('div', { class: 'loot coins' }, h('span', { class: 'pic' }, h('span', { class: 'em' }, '🪙')), h('b', null, `+${c.coins} ${T.coins}`), c.stars ? h('b', { class: 'stars' }, `+${c.stars} ⭐`) : null));
+    if (c.stars > 0) rows.append(h('div', { class: 'loot coins' }, h('span', { class: 'pic' }, h('span', { class: 'em' }, '⭐')), h('b', { class: 'stars' }, `+${c.stars} ⭐`)));
     const rar = RARITY_ORDER[best]!;
     // the day's second (and later) chest from a boss: a plainer one, no rays and no fireworks
     const replay = !!c.replay;

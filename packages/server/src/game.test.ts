@@ -55,7 +55,6 @@ describe('Game', () => {
     expect(lb.msgs.some((m) => m.t === 'changes' && m.changes.some((c) => c.t === 'animal'))).toBe(true);
     // the farm's old messages do nothing any more: nothing is bought
     ha({ t: 'buy' as never, item: 'animal_cow', qty: 1 } as never);
-    expect(pa.coins).toBe(150);
 
     // A private toast only reaches its recipient
     lb.msgs.length = 0;

@@ -1435,7 +1435,7 @@ function victory(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
     const award = awardTrophy(farm, p, boss, run.level, out);
     if (award) {
       (run.trophies ??= {})[p.id] = award;
-      out.push({ t: 'loot', to: p.id, from: RUN_T.trophyFrom, items: [{ item: award.item, count: 1 }], coins: 0, stars: 0 });
+      out.push({ t: 'loot', to: p.id, from: RUN_T.trophyFrom, items: [{ item: award.item, count: 1 }], stars: 0 });
     }
     awardLooks(p, boss, run.level, lookRng(p, boss), out);
     awardPetLooks(farm, p, boss, run.level, out);
