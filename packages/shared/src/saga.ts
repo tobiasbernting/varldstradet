@@ -4,6 +4,7 @@
 // win loot in rarity colours. Völvan Sigrun in the city tells the saga, one chapter per dungeon.
 // Data only: the rules live in sagasim.ts, the maps are built by sagamap.ts.
 import { PETS } from './pets.ts';
+import type { NodeKind } from './run.ts';
 import type { Outfit, PlayerState, Terrain } from './types.ts';
 import type { LookOwn, LookWear } from './looks.ts';
 
@@ -2121,9 +2122,9 @@ export interface SagaRunLink {
   /** The stop (its id in the route), its row (1..10) and kind. */
   node: number;
   row: number;
-  kind: 'flock' | 'mini' | 'rest' | 'boss';
+  kind: NodeKind;
   /** The väg-runor on the floor, once the stop is cleared (tiles): what a bot walks onto to choose the way on. */
-  exits?: { x: number; y: number; node: number; kind: 'flock' | 'mini' | 'rest' | 'boss' }[];
+  exits?: { x: number; y: number; node: number; kind: NodeKind }[];
   /** Shown when you walk in. */
   name: string;
   intro: string;

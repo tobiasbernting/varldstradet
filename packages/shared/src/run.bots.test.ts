@@ -2,7 +2,7 @@
 // Draugkryptan to the boss. Kept apart from run.test.ts so the two run side by side on the CI (each is a minute or so of simulated runs);
 // run.solo.test.ts (Vanlig) and run.latt.test.ts (Lätt) have the one-hero tables.
 import { describe, expect, it } from 'vitest';
-import { DUNGEONS, DUNGEON_IDS, RUN_SEEDS, generateRun, mulberry32, offerRunor, readRun, runOf, type ClassId } from './index.ts';
+import { DUNGEONS, DUNGEON_IDS, RUN_SEEDS, generateRun, mulberry32, offerFor, readRun, runOf, type ClassId } from './index.ts';
 import { makeParty, playRun } from './runplay.ts';
 
 /** The longest a bot run may take (run time): the soft 30 minutes are a target, a route of ten stops may run past them with a clumsy party. */
@@ -75,7 +75,7 @@ describe('bot parties play whole runs', () => {
       const plan = generateRun(seed, { boss: 'draug' });
       routes.add(plan.route.nodes.map((n) => `${n.kind[0]}${n.next.join('.')}`).join('>'));
       stops.add(plan.stops.map((z) => `${z.kind[0]}${z.layout ?? ''}${z.flipX ? 'x' : ''}${z.flipY ? 'y' : ''}${z.def.rooms.length}`).join('>'));
-      offers.add(JSON.stringify(offerRunor(mulberry32(seed), ['vaktare', 'helare', 'magiker'], [])));
+      offers.add(JSON.stringify(offerFor(mulberry32(seed), { cls: 'magiker', source: 'flock', held: [] }).cards));
       void runOf;
     }
     expect(routes.size).toBe(3);

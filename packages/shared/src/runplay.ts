@@ -5,8 +5,9 @@ import { addItem } from './inventory.ts';
 import { mulberry32 } from './rng.ts';
 import { CLASSES, XP_LEVELS, newSagaProgress, type ClassId } from './saga.ts';
 import { newMind, botStep, type BotMind, type BotStyle } from './runbot.ts';
+import { eventDef } from './events.ts';
 import { pathsOf } from './paths.ts';
-import { ensureRunPlaces, fardportOf, archFrontOf, choosePath, pickRuna, runOf, startRun, type StartOptions } from './runsim.ts';
+import { ensureRunPlaces, fardportOf, archFrontOf, buyItem, choosePath, pickRuna, runOf, startRun, voteEvent, type StartOptions } from './runsim.ts';
 import { grantPet } from './petsim.ts';
 import { createPlayer, setOnline, tick, type SimCtx } from './sim.ts';
 import { generateWorld } from './map.ts';
@@ -63,17 +64,40 @@ export interface Played {
 }
 
 /** One 50 ms step: every bot thinks, the world ticks. */
+/** The stops where the bots have already shopped (a bot buys once at each Köpman). */
+const bought = new Set<string>();
+
 export function step(party: Party, bots: boolean, out: Change[]): void {
   party.now += 50;
   const run = runOf(party.world);
   if (bots && run) {
     for (const p of party.players) {
       if (!run.party.includes(p.id)) continue;
-      if (run.phase === 'path' && !run.paths[p.id]) {
-        const list = pathsOf(p.saga!.cls!);
-        out.push(...choosePath(party.world, p.id, list[Math.floor(party.rnd() * list.length)]!.id, party.ctx()));
-      } else if (run.phase === 'pick' && run.offer && !(p.id in run.offer.votes)) out.push(...pickRuna(party.world, p.id, Math.floor(party.rnd() * run.offer.cards.length), party.ctx()));
-      else if (run.phase !== 'pick' && run.phase !== 'path') out.push(...botStep(party.world, p.id, party.minds.get(p.id)!, party.ctx(), 50));
+      if (run.phase === 'path') {
+        if (!run.paths[p.id]) {
+          const list = pathsOf(p.saga!.cls!);
+          out.push(...choosePath(party.world, p.id, list[Math.floor(party.rnd() * list.length)]!.id, party.ctx()));
+        }
+      } else if (run.phase === 'pick') {
+        const o = run.offers[p.id];
+        if (o && o.picked === undefined && o.cards.length) out.push(...pickRuna(party.world, p.id, Math.floor(party.rnd() * o.cards.length), party.ctx()));
+      } else if (run.phase === 'event') {
+        // the bots vote for the first choice they can pay for, spread out by luck
+        const ev = run.event && eventDef(run.event.id);
+        if (ev && run.event && !(p.id in run.event.votes)) {
+          const ok = ev.choices.map((c, i) => ({ c, i })).filter((x) => (x.c.cost ?? 0) <= run.purse);
+          out.push(...voteEvent(party.world, p.id, ok[Math.floor(party.rnd() * ok.length)]?.i ?? 0, party.ctx()));
+        }
+      } else {
+        // at the Köpman a bot buys what it can: its dearest runa first, then a potion (once per stop)
+        if (run.shop && !bought.has(`${run.id}:${run.node}:${p.id}`) && run.plan.stops[run.node]!.kind === 'shop') {
+          bought.add(`${run.id}:${run.node}:${p.id}`);
+          const slots = [...(run.shop.slots[p.id] ?? [])].map((x, i) => ({ x, i })).reverse();
+          for (const { x, i } of slots) if (!x.bought) out.push(...buyItem(party.world, p.id, { item: 'runa', slot: i }, party.ctx()));
+          out.push(...buyItem(party.world, p.id, { item: 'potion' }, party.ctx()));
+        }
+        out.push(...botStep(party.world, p.id, party.minds.get(p.id)!, party.ctx(), 50));
+      }
     }
   }
   out.push(...tick(party.world, 50, party.ctx()));

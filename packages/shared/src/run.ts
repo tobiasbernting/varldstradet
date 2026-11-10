@@ -3,7 +3,7 @@
 // to choose the next stop; sagafrön earned are planted at the Yggdrasil shoot as the sagaträd; the farm feeds the run with
 // färdkost and companions. Data only: the route and its stops are built by runmap.ts, the rules are runsim.ts (which
 // reuses sagasim.ts for every fight rule). Swedish names and texts are in sv.ts (RUN_NAMES, RUN_TEXT).
-import type { ClassId, DungeonId, RunBuffs } from './saga.ts';
+import type { ClassId, DungeonId, PathTraits, RunBuffs, SpellMod } from './saga.ts';
 import { noBuffs } from './saga.ts';
 import type { WeatherKind } from './types.ts';
 
@@ -140,9 +140,14 @@ export const MODIFIER_SEEDS = 0.15;
  * block is the rest of the run: potions handed out, more sagafrön, a new offer, a second dish slot, stronger dishes and
  * animals, a stronger companion and more sagafrön for the boss. (`coins`, more coins from the run's chests, is combat's.)
  */
-export interface RunEffect extends Partial<Omit<RunBuffs, 'spell' | 'spellCd'>> {
+export interface RunEffect extends Partial<Omit<RunBuffs, 'spell' | 'spellCd' | 'mods' | 'traits'>> {
   spell?: Record<string, number>;
   spellCd?: Record<string, number>;
+  /** What a spell does more (SpellMod in saga.ts: burn, slow, chain, shields…), by spell id, and the traits of a path (thorns, aura, berserk). Numbers add up. */
+  mods?: Record<string, SpellMod>;
+  traits?: PathTraits;
+  /** Luckier offers of runor (the sagaträd): rarer cards come up more often. */
+  luck?: number;
   potions?: number;
   seeds?: number;
   reroll?: number;
@@ -154,9 +159,9 @@ export interface RunEffect extends Partial<Omit<RunBuffs, 'spell' | 'spellCd'>> 
 }
 
 const COMBAT_KEYS = ['power', 'cd', 'hp', 'armor', 'taken', 'heal', 'potion', 'regen', 'rest', 'threat', 'leech', 'crit', 'down', 'reviveHp', 'coins'] as const;
-const META_KEYS = ['potions', 'seeds', 'reroll', 'slots', 'food', 'animal', 'companion', 'bossSeeds'] as const;
+const META_KEYS = ['potions', 'seeds', 'reroll', 'slots', 'food', 'animal', 'companion', 'bossSeeds', 'luck'] as const;
 /** Every number an effect can carry (the tests make sure each one does something). */
-export const EFFECT_KEYS: readonly string[] = [...COMBAT_KEYS, ...META_KEYS, 'spell', 'spellCd'];
+export const EFFECT_KEYS: readonly string[] = [...COMBAT_KEYS, ...META_KEYS, 'spell', 'spellCd', 'mods', 'traits'];
 
 /** `into` += `e` × `mul`. */
 export function addEffect(into: RunEffect, e: RunEffect, mul = 1): RunEffect {
@@ -171,6 +176,15 @@ export function addEffect(into: RunEffect, e: RunEffect, mul = 1): RunEffect {
       m[id] = (m[id] ?? 0) + v * mul;
     }
   }
+  // a spell's added effects and a path's traits: every number adds
+  for (const [id, mod] of Object.entries(e.mods ?? {})) {
+    const m = ((into.mods ??= {})[id] ??= {});
+    for (const [k, v] of Object.entries(mod)) (m as Record<string, number>)[k] = ((m as Record<string, number>)[k] ?? 0) + (v as number) * mul;
+  }
+  for (const [k, v] of Object.entries(e.traits ?? {})) {
+    const t = (into.traits ??= {}) as Record<string, number>;
+    t[k] = (t[k] ?? 0) + (v as number) * mul;
+  }
   return into;
 }
 
@@ -180,100 +194,9 @@ export function buffsOf(e: RunEffect): RunBuffs {
   for (const k of COMBAT_KEYS) b[k] = (e as Record<string, number | undefined>)[k] ?? 0;
   b.spell = { ...(e.spell ?? {}) };
   b.spellCd = { ...(e.spellCd ?? {}) };
+  b.mods = Object.fromEntries(Object.entries(e.mods ?? {}).map(([id, m]) => [id, { ...m }]));
+  b.traits = { ...(e.traits ?? {}) };
   return b;
-}
-
-// ---------------------------------------------------------------------------
-// Runor
-// ---------------------------------------------------------------------------
-
-export interface RunaDef {
-  id: string;
-  /** Helps only this class (left out: the whole party). */
-  cls?: ClassId;
-  icon: string;
-  effect: RunEffect;
-}
-
-const rn = (id: string, cls: ClassId | undefined, icon: string, effect: RunEffect): RunaDef => ({ id, ...(cls ? { cls } : {}), icon, effect });
-
-export const RUNOR: RunaDef[] = [
-  // Väktare
-  rn('v_tjock', 'vaktare', '🛡️', { armor: 0.08 }),
-  rn('v_hugg', 'vaktare', '🗡️', { spell: { hugg: 0.25 } }),
-  rn('v_ropet', 'vaktare', '📣', { spellCd: { utmana: 0.3 } }),
-  rn('v_mur', 'vaktare', '🧱', { spellCd: { skoldmur: 0.25 } }),
-  rn('v_slag', 'vaktare', '💥', { spell: { skoldslag: 0.4 } }),
-  rn('v_hjarta', 'vaktare', '❤️', { hp: 0.15 }),
-  rn('v_trots', 'vaktare', '😤', { threat: 0.3 }),
-  rn('v_lugn', 'vaktare', '🌊', { taken: 0.1 }),
-  // Helare
-  rn('h_runa', 'helare', '💚', { spell: { lakerunan: 0.25 } }),
-  rn('h_ring', 'helare', '🌿', { spell: { lakekrets: 0.35 } }),
-  rn('h_pil', 'helare', '✨', { spell: { ljuspil: 0.4 } }),
-  rn('h_vack', 'helare', '🌅', { reviveHp: 0.25 }),
-  rn('h_snabb', 'helare', '⚡', { cd: 0.12 }),
-  rn('h_flod', 'helare', '💧', { heal: 0.15 }),
-  rn('h_ro', 'helare', '🍃', { regen: 0.5 }),
-  rn('h_skydd', 'helare', '🕊️', { armor: 0.06 }),
-  // Krigare
-  rn('k_yx', 'krigare', '🪓', { spell: { yxhugg: 0.3 } }),
-  rn('k_storm', 'krigare', '💨', { spellCd: { stormsteg: 0.35 } }),
-  rn('k_virvel', 'krigare', '🌪️', { spell: { virvelvind: 0.35 } }),
-  rn('k_raseri', 'krigare', '🔥', { spellCd: { raseri: 0.3 } }),
-  rn('k_glupsk', 'krigare', '🍖', { leech: 0.08 }),
-  rn('k_hjarta', 'krigare', '💪', { hp: 0.12 }),
-  rn('k_kraft', 'krigare', '⚔️', { power: 0.1 }),
-  rn('k_egg', 'krigare', '🎯', { crit: 0.1 }),
-  // Magiker
-  rn('m_eld', 'magiker', '☄️', { spell: { eldboll: 0.3 } }),
-  rn('m_is', 'magiker', '❄️', { spell: { isspjut: 0.35 } }),
-  rn('m_ask', 'magiker', '⚡', { spell: { askregn: 0.35 } }),
-  rn('m_blink', 'magiker', '🌀', { spellCd: { blink: 0.4 } }),
-  rn('m_snabb', 'magiker', '🪄', { cd: 0.12 }),
-  rn('m_kraft', 'magiker', '🔮', { power: 0.1 }),
-  rn('m_tur', 'magiker', '🍀', { crit: 0.12 }),
-  rn('m_skal', 'magiker', '🫧', { taken: 0.08 }),
-  // The whole party
-  rn('p_hjarta', undefined, '🧡', { hp: 0.1 }),
-  rn('p_vila', undefined, '🪨', { rest: 0.6 }),
-  rn('p_kraft', undefined, '🌟', { power: 0.08 }),
-  rn('p_flaska', undefined, '🧪', { potions: 2, potion: 0.15 }),
-  rn('p_vakna', undefined, '🌄', { down: 0.4 }),
-  rn('p_fro', undefined, '🌱', { seeds: 0.25 }),
-];
-
-export const runa = (id: string): RunaDef | undefined => RUNOR.find((r) => r.id === id);
-
-/**
- * Three cards for the party's vote: first one card each for up to two of the classes in the party (picked by the
- * random stream), then party-wide runor and the classes' runor to fill. `have` (runor already in the run) never come
- * again. Deterministic for a given `rnd`.
- */
-export function offerRunor(rnd: () => number, classes: readonly ClassId[], have: readonly string[], size = RUNA_CARDS): string[] {
-  const free = (r: RunaDef): boolean => !have.includes(r.id);
-  const present = [...new Set(classes)];
-  const shuffle = <T>(xs: T[]): T[] => {
-    const a = [...xs];
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(rnd() * (i + 1));
-      [a[i], a[j]] = [a[j]!, a[i]!];
-    }
-    return a;
-  };
-  const out: string[] = [];
-  for (const c of shuffle(present).slice(0, Math.min(2, size - 1))) {
-    const pick = shuffle(RUNOR.filter((r) => r.cls === c && free(r)))[0];
-    if (pick) out.push(pick.id);
-  }
-  const rest = shuffle(RUNOR.filter((r) => free(r) && !out.includes(r.id) && (!r.cls || present.includes(r.cls))));
-  // party-wide runor first, so a party never sees only one class's cards
-  rest.sort((a, b) => (a.cls ? 1 : 0) - (b.cls ? 1 : 0));
-  for (const r of rest) {
-    if (out.length >= size) break;
-    out.push(r.id);
-  }
-  return shuffle(out);
 }
 
 // ---------------------------------------------------------------------------
@@ -341,6 +264,7 @@ export const SEED_TREE: TreeNode[] = [
   { id: 'h4', branch: 'hjalte', cost: 25, needs: 'h2', effect: { armor: 0.03 } },
   { id: 'h5', branch: 'hjalte', cost: 30, needs: 'h3', effect: { potion: 0.1 } },
   { id: 'h6', branch: 'hjalte', cost: 45, needs: 'h4', effect: { cd: 0.04 } },
+  { id: 'h7', branch: 'hjalte', cost: 40, needs: 'h5', effect: { luck: 0.25 } },
   { id: 'g1', branch: 'gemenskap', cost: 10, effect: { rest: 0.25 } },
   { id: 'g2', branch: 'gemenskap', cost: 15, needs: 'g1', effect: { down: 0.2 } },
   { id: 'g3', branch: 'gemenskap', cost: 30, needs: 'g1', effect: { reroll: 1 } },
@@ -524,8 +448,12 @@ export const BOSS_STOP = {
 };
 
 /** The route's kinds of stop (GAME2.md section 2.1; the others come in R4 and R5). */
-export type NodeKind = 'flock' | 'mini' | 'rest' | 'boss';
-export const NODE_KINDS: readonly NodeKind[] = ['flock', 'mini', 'rest', 'boss'];
+export type NodeKind = 'flock' | 'mini' | 'rest' | 'boss' | 'shop' | 'event' | 'treasure' | 'elite';
+export const NODE_KINDS: readonly NodeKind[] = ['flock', 'mini', 'rest', 'boss', 'shop', 'event', 'treasure', 'elite'];
+/** The stops where nobody fights: a camp (the Köpman, a Händelse) and a Vilosten. */
+export const isCamp = (k: NodeKind): boolean => k === 'rest' || k === 'shop' || k === 'event';
+/** The stops that are a Flock's kind of fight: a Flock, a Stark vakt and a Skatt (a room of packs and then a gate). */
+export const isFlockLike = (k: NodeKind): boolean => k === 'flock' || k === 'elite' || k === 'treasure';
 
 /** Which wing (0: rows 1–4, 1: rows 5–8, 2: rows 9–10) a row is in. */
 export const wingOf = (row: number): number => (row <= 4 ? 0 : row <= 8 ? 1 : 2);
@@ -556,6 +484,10 @@ export const FLOCK_PACKS = [
   { a: [3, 3], b: [3, 3], size: [4, 5], big: 1 },
 ] as const;
 export const MINI_PACKS = { count: [3, 3], size: [3, 4] } as const;
+/** A Stark vakt: fewer but bigger packs, with big ones; tougher (`ELITE_HP`). A Skatt: one or two small packs guard it. */
+export const ELITE_PACKS = { a: [1, 2], b: [2, 2], size: [4, 5], big: 2 } as const;
+export const ELITE_HP = 1.25;
+export const TREASURE_PACKS = { a: [1, 1], b: [1, 2], size: [3, 4], big: 0 } as const;
 export const BOSS_PACKS = { count: [3, 3], size: [3, 4] } as const;
 /**
  * Lätt's packs (GAME2.md section 5.3 wants a child through the route in about 20-28 minutes): fewer, smaller packs in a Flock and in the
@@ -574,7 +506,7 @@ export const LATT_BOSS_PACKS = { count: [2, 2], size: [3, 3] } as const;
 
 export type RunOutcome = 'win' | 'wipe' | 'leave';
 /** `stop` the party is in a stop (fighting, resting), `path` everyone chooses their path after the Mellanboss, `pick` the vote on a runa, `route` the vote on the way on (walk onto a rune). */
-export type RunPhase = 'stop' | 'path' | 'pick' | 'route' | 'victory' | 'ended';
+export type RunPhase = 'stop' | 'path' | 'pick' | 'event' | 'route' | 'victory' | 'ended';
 
 /** A stop of the route as the clients draw it: its row (1..10), lane, kind and the stops of the next row it leads to. */
 export interface RouteNodeSnap {
@@ -633,18 +565,48 @@ export interface RunSnap {
   earned: Record<string, number>;
   /** The path (väg, paths.ts) each hero has chosen, by player id (none before the Mellanboss has fallen). */
   paths: Record<string, string>;
-  /** While everyone chooses (phase `path`): time left (ms) and the players who have chosen. */
-  pick?: { kind: 'path'; left: number; done: string[] };
+  /** Every hero's own runor and how sharp they are (skärpa); `runor` above are the party-wide ones, which help everyone. */
+  hold: Record<string, { id: string; up: number }[]>;
+  /** While everyone chooses (phase `path` or `pick`): time left (ms) and the players who have chosen. */
+  pick?: { kind: 'path' | 'runa'; left: number; done: string[] };
+  /** Färdkassan: the Hacksilver the party has (shown to all), what the Köpman sells while the party is at one, and the Händelse being voted on (phase `event`). */
+  purse: number;
+  shop?: ShopSnap;
+  event?: EventSnap;
+  /** At a Vilosten: the heroes who may still choose between Vila and skärpa. */
+  restChoice?: string[];
 }
 
-/** The three cards being voted on. */
+export interface ShopSlotSnap {
+  id: string;
+  rarity: string;
+  price: number;
+  bought: boolean;
+}
+/** The Köpman's wares: each hero's runor by player id, the gemensam runa, how many potions are left, and the Sagoandan (null: not sold here; true: for sale; false: bought). */
+export interface ShopSnap {
+  slots: Record<string, ShopSlotSnap[]>;
+  party: ShopSlotSnap | null;
+  potions: number;
+  spirit: boolean | null;
+}
+export interface EventSnap {
+  id: string;
+  choices: { id: string; cost: number }[];
+  votes: Record<string, number>;
+  left: number;
+}
+
+/** One hero's own three cards (sent to them alone): what they have tapped, where the cards come from, the clock and who has chosen. */
 export interface RunOfferSnap {
   /** The stop the party just cleared (the pick comes after it). */
   node: number;
   cards: string[];
-  /** Player id -> index of the card they tapped. */
-  votes: Record<string, number>;
-  /** Time left to vote (ms), and new offers the party may still ask for. */
+  /** The card tapped so far (it can be changed until everyone has chosen or the clock ends). */
+  picked?: number;
+  source: 'flock' | 'stark' | 'skatt' | 'mini' | 'shop';
+  /** Time left (ms), new offers this hero may still ask for, and the heroes who have chosen. */
   left: number;
   rerolls: number;
+  done: string[];
 }

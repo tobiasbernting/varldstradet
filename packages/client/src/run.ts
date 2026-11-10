@@ -4,8 +4,8 @@ import type { Change, NodeKind, RunOfferSnap, RunOutcome, RunSnap } from '@lilla
 import { bus, client } from './state.ts';
 
 /** The pictures of the stops of a route (the väg-runor on the floor carry the same ones) and their colours. */
-export const KIND_ICON: Record<NodeKind, string> = { flock: '⚔️', mini: '👹', rest: '💚', boss: '👑' };
-export const KIND_COLOR: Record<NodeKind, string> = { flock: '#ff9a3c', mini: '#c07cff', rest: '#4fe39a', boss: '#ffd23f' };
+export const KIND_ICON: Record<NodeKind, string> = { flock: '⚔️', mini: '👹', rest: '💚', boss: '👑', shop: '🪙', event: '❓', treasure: '💎', elite: '💀' };
+export const KIND_COLOR: Record<NodeKind, string> = { flock: '#ff9a3c', mini: '#c07cff', rest: '#4fe39a', boss: '#ffd23f', shop: '#ffd86b', event: '#6ec6ff', treasure: '#5ce0d8', elite: '#ff6a5a' };
 
 export interface RunEnded {
   outcome: RunOutcome;

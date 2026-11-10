@@ -55,7 +55,7 @@ import { lookSummary } from './looks.ts';
 import { portraitUrl } from '@art/textures.ts';
 import { net } from '../net.ts';
 import { KIND_COLOR, KIND_ICON, myRun, offerLeft, pickLeft, routeLeft, runClient, runElapsed } from '../run.ts';
-import { pathIcon, pathName, pathTimeText, renderPathWindow } from './runpick.ts';
+import { pathIcon, pathName, pathTimeText, renderHoldWindow, renderOfferWindow, renderPathWindow, renderRestWindow } from './runpick.ts';
 import { SFX } from '../sound.ts';
 import { bus, client, myPlayer } from '../state.ts';
 import { clear, h, onTap } from './dom.ts';
@@ -78,7 +78,7 @@ const BRANCH_ICON: Record<string, string> = { hjalte: '⚔️', gemenskap: '🤝
 const BRANCHES = ['hjalte', 'gemenskap', 'gard'] as const;
 const ROWS = 10;
 
-type Win = 'fard' | 'offer' | 'path' | 'map' | 'tree' | 'summary' | 'runor' | 'leave';
+type Win = 'fard' | 'offer' | 'path' | 'rest' | 'map' | 'tree' | 'summary' | 'runor' | 'leave';
 
 const NS = 'http://www.w3.org/2000/svg';
 function svg<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number> = {}, text?: string): SVGElementTagNameMap[K] {
@@ -364,7 +364,7 @@ export class RunUi {
         this.leaving = false;
       }
       if (!run && was && !this.gotEnded && this.leaving) setTimeout(() => this.leaveSummary(), 600);
-      if (!run && this.win && ['offer', 'path', 'map', 'runor', 'leave'].includes(this.win)) this.close(true);
+      if (!run && this.win && ['offer', 'path', 'rest', 'map', 'runor', 'leave'].includes(this.win)) this.close(true);
       // everyone chooses a path after the Mellanboss: the window opens by itself and goes when the choosing is over
       if (run?.phase === 'path' && this.win !== 'path') this.open('path');
       else if (this.win === 'path' && run?.phase !== 'path') this.close(true);
@@ -482,8 +482,10 @@ export class RunUi {
 
   private renderRunor(run: RunSnap): void {
     clear(this.runorStrip);
-    this.runorStrip.hidden = !run.runor.length;
-    for (const id of run.runor) this.runorStrip.append(h('span', { class: 'r', title: runaName(id) }, runa(id)?.icon ?? '🔹'));
+    const mine = run.hold[client.me] ?? [];
+    this.runorStrip.hidden = !mine.length && !run.runor.length;
+    for (const hd of mine) this.runorStrip.append(h('span', { class: `r rar-${runa(hd.id)?.rarity ?? 'vanlig'}`, title: runaName(hd.id) }, runa(hd.id)?.icon ?? '🔹'));
+    for (const id of run.runor) this.runorStrip.append(h('span', { class: 'r party', title: `${RUN_UI.cardsAll}: ${runaName(id)}` }, runa(id)?.icon ?? '🔹'));
   }
 
   /** The vote on the way on: a card for each rune on the floor, who stands on it and the clock. */
@@ -602,6 +604,7 @@ export class RunUi {
       fard: `🌈 ${RUN_UI.fardport}`,
       offer: `🎴 ${RUN_UI.cardsTitle}`,
       path: `✨ ${RUN_UI.pathTitle}`,
+      rest: `💚 ${STOP_NAMES.rest}`,
       map: `🗺️ ${RUN_UI.route}`,
       tree: `🌳 ${RUN_UI.treeTitle}`,
       summary: `📜 ${RUN_UI.summary}`,
@@ -610,7 +613,7 @@ export class RunUi {
     };
     const foot = h('div', { class: 'foot' });
     panel.setAttribute('aria-label', titles[this.win]);
-    const canExplain = ['fard', 'map', 'tree', 'runor', 'path'].includes(this.win);
+    const canExplain = ['fard', 'map', 'tree', 'runor', 'path', 'offer', 'rest'].includes(this.win);
     panel.append(h('h2', null, titles[this.win], h('span', { class: 'spacer' }), canExplain ? explain : null, this.win === 'offer' || this.win === 'path' ? null : closeBtn), ...(this.infoMode && canExplain ? [h('div', { class: 'explain-hint' }, RUN_UI.explainOn)] : []), body, foot);
     this.modal.append(panel);
     switch (this.win) {
@@ -626,6 +629,9 @@ export class RunUi {
         this.tick();
         break;
       }
+      case 'rest':
+        this.renderRest(body);
+        break;
       case 'map':
         this.renderMap(body);
         break;
@@ -883,40 +889,7 @@ export class RunUi {
     const o = runClient.offer;
     const run = myRun();
     if (!o || !run) return;
-    const names = new Map(run.party.map((p) => [p.id, p.name]));
-    const humans = run.party.filter((p) => !p.bot).length;
-    const mine = o.votes[client.me];
-    body.append(h('p', { class: 'intro' }, RUN_T.pickSub));
-    const cards = h('div', { class: 'runa-cards' });
-    o.cards.forEach((id, i) => {
-      const def = runa(id);
-      const who = Object.entries(o.votes)
-        .filter(([, c]) => c === i)
-        .map(([pid]) => names.get(pid) ?? '');
-      const cls = def?.cls ? CLASSES[def.cls] : null;
-      const card = h(
-        'button',
-        { class: `runa-card${mine === i ? ' mine' : ''}${who.length ? ' voted' : ''}`, style: cls ? { '--c': cls.color } : undefined },
-        h('span', { class: 'key' }, String(i + 1)),
-        h('span', { class: 'ic' }, def?.icon ?? '🔹'),
-        h('span', { class: 'nm' }, runaName(id)),
-        h('span', { class: 'tx' }, RUNA_TEXT[id] ?? ''),
-        h('span', { class: 'for' }, cls ? `${cls.emoji} ${cls.name}` : `👪 ${RUN_UI.cardsAll}`),
-        h('span', { class: 'votes' }, who.length ? who.map((n) => h('span', { class: 'v' }, n)) : h('span', { class: 'none' }, '·')),
-      );
-      this.tap(card, () => this.pick(i));
-      cards.append(card);
-    });
-    body.append(cards);
-    const fill = h('i');
-    const text = h('span');
-    this.offerBars = { fill, text };
-    const foot = h('div', { class: 'offer-foot sticky' }, h('div', { class: 'timer' }, fill), text);
-    const re = h('button', { class: 'alt', disabled: o.rerolls <= 0 }, `🎲 ${o.rerolls > 0 ? RUN_UI.cardsReroll : RUN_UI.cardsNoReroll}`);
-    this.tap(re, () => this.reroll());
-    foot.append(re);
-    body.append(foot);
-    if (mine !== undefined && humans > 1 && Object.keys(o.votes).length < humans) body.append(h('div', { class: 'hint' }, RUN_UI.cardsWaiting));
+    this.offerBars = renderOfferWindow({ tap: (el, fn) => this.tap(el, fn), info: (el, i, n, t) => this.info(el, i, n, t) }, body, run, o, client.me, myPlayer()?.saga?.cls, (i) => this.pick(i), () => this.reroll());
     this.tick();
   }
 
@@ -967,17 +940,15 @@ export class RunUi {
 
   private renderRunorList(body: HTMLElement): void {
     const run = myRun();
-    if (!run || !run.runor.length) {
-      body.append(h('p', { class: 'intro' }, RUN_UI.noRunor));
-      return;
-    }
-    const list = h('div', { class: 'runor-list' });
-    for (const id of run.runor) {
-      const def = runa(id);
-      const cls = def?.cls ? CLASSES[def.cls] : null;
-      list.append(h('div', { class: 'row' }, h('span', { class: 'ic' }, def?.icon ?? '🔹'), h('span', { class: 'nm' }, runaName(id)), h('span', { class: 'tx' }, RUNA_TEXT[id] ?? ''), h('span', { class: 'for' }, cls ? cls.emoji : '👪')));
-    }
-    body.append(list);
+    if (!run) return;
+    renderHoldWindow({ tap: (el, fn) => this.tap(el, fn), info: (el, i, n, t) => this.info(el, i, n, t) }, body, run, client.me);
+  }
+
+  /** The choice at a Vilosten: Vila or skärp a runa. */
+  private renderRest(body: HTMLElement): void {
+    const run = myRun();
+    if (!run) return;
+    renderRestWindow({ tap: (el, fn) => this.tap(el, fn), info: (el, i, n, t) => this.info(el, i, n, t) }, body, run, client.me, () => { net.send({ t: 'run', a: 'rest' }); SFX.talk(); }, (id) => { net.send({ t: 'run', a: 'sharpen', id }); SFX.talk(); });
   }
 
   // ---- going home early ----
