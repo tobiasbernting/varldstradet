@@ -2,6 +2,17 @@
 import { SAGA_BOSSES, SAGA_ITEMS, SAGA_MOBS } from './saga.ts';
 
 export const ITEM_NAMES: Record<string, string> = {
+  clock: 'Klocka',
+  sofa: 'Soffa',
+  plant: 'Krukväxt',
+  bookshelf: 'Bokhylla',
+  rug: 'Matta',
+  bench: 'Bänk',
+  dragon_egg: 'Drakägg',
+  crystal_lamp: 'Kristallampa',
+  mushroom_lamp: 'Svamplampa',
+  wisp_jar: 'Irrbloss i burk',
+  flowerbox: 'Blomlåda',
   bed: 'Säng',
   table: 'Bord',
   chair: 'Stol',

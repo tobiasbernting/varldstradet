@@ -2,6 +2,7 @@
 import { type Terrain } from '@lilla-garden/shared';
 import { Px, hash2, shade } from './px.js';
 import { drawSaga } from './saga.ts';
+import { crystalLamp, dragonEgg, mushroomLamp, wispJar } from './decor.ts';
 import { drawHouse } from './house.ts';
 import { addBiomeTerrain, edgeGroup } from './terrain2.ts';
 
@@ -590,6 +591,94 @@ const wardrobe = (): Px => {
 };
 const stump = (): Px => new Px(16, 16).ellipse(2, 6, 12, 8, WOOD_D).ellipse(3, 5, 10, 6, WOOD_L).ellipse(5, 6, 6, 3, WOOD).outline(OUTLINE);
 
+// Furniture and walls of the houses, and the decor the dungeons drop
+const bench = (): Px => new Px(16, 16).rect(0, 7, 16, 3, WOOD_L).rect(0, 10, 16, 1, WOOD_D).rect(2, 11, 2, 4, WOOD_D).rect(12, 11, 2, 4, WOOD_D).rect(0, 3, 16, 3, WOOD).outline(OUTLINE);
+const table = (): Px => new Px(16, 16).rect(0, 4, 16, 4, WOOD_L).rect(0, 8, 16, 1, WOOD_D).rect(1, 9, 2, 6, WOOD_D).rect(13, 9, 2, 6, WOOD_D).rect(6, 2, 4, 2, '#d8363a').outline(OUTLINE);
+const flowerbox = (): Px => {
+  const p = new Px(16, 16).rect(1, 9, 14, 6, WOOD).rect(1, 9, 14, 1, WOOD_L);
+  for (const [x, c] of [
+    [2, '#e8502a'],
+    [6, '#f5d94a'],
+    [10, '#e87ab8'],
+  ] as const)
+    p.rect(x + 1, 5, 1, 4, '#3f8a2e').rect(x, 4, 3, 1, c).rect(x + 1, 3, 1, 3, c);
+  return p.outline(OUTLINE);
+};
+const bed = (): Px => {
+  const p = new Px(16, 36).rect(1, 4, 14, 30, WOOD).rect(1, 4, 14, 2, WOOD_L).rect(2, 8, 12, 24, '#f4f0e6').rect(2, 8, 12, 6, '#ffffff').rect(2, 16, 12, 16, '#d9453b').rect(2, 16, 12, 1, '#ef7a6a');
+  for (let y = 19; y < 32; y += 4) p.rect(2, y, 12, 1, '#b5362c');
+  p.rect(1, 32, 14, 2, WOOD_D);
+  return p.outline(OUTLINE);
+};
+const rug = (): Px => {
+  const p = new Px(32, 32).rect(0, 0, 32, 32, '#b55a4a').rect(2, 2, 28, 28, '#d9736a').rect(5, 5, 22, 22, '#e8a898').rect(9, 9, 14, 14, '#d9736a');
+  for (let i = 0; i < 32; i += 4) p.rect(i, 0, 2, 1, '#f0c8b8').rect(i + 2, 31, 2, 1, '#f0c8b8');
+  return p;
+};
+const chair = (): Px => new Px(16, 20).rect(3, 2, 10, 2, WOOD_L).rect(3, 4, 10, 8, WOOD).rect(3, 11, 10, 3, WOOD_L).rect(3, 14, 2, 5, WOOD_D).rect(11, 14, 2, 5, WOOD_D).rect(4, 5, 8, 6, '#d9453b').outline(OUTLINE);
+const sofa = (): Px => new Px(32, 20).rect(1, 3, 30, 12, '#3b6fd9').rect(1, 3, 30, 1, '#6a95ea').rect(3, 7, 26, 6, '#5a8fe8').rect(1, 13, 30, 4, '#2f4c8a').rect(2, 17, 3, 2, WOOD_D).rect(27, 17, 3, 2, WOOD_D).rect(0, 5, 3, 12, '#3b6fd9').rect(29, 5, 3, 12, '#3b6fd9').outline(OUTLINE);
+const bookshelf = (): Px => {
+  const p = new Px(16, 24).rect(1, 0, 14, 24, WOOD_D).rect(2, 1, 12, 22, WOOD);
+  const cols = ['#d9453b', '#3b6fd9', '#3ba35b', '#e8c23a', '#8a4fd1', '#e87ab8'];
+  for (let shelf = 0; shelf < 3; shelf++) {
+    p.rect(2, 7 + shelf * 7, 12, 1, WOOD_D);
+    for (let i = 0; i < 5; i++) p.rect(3 + i * 2, 2 + shelf * 7 + (i % 2), 2, 5 - (i % 2), cols[(i + shelf) % cols.length]!);
+  }
+  return p.outline(OUTLINE);
+};
+const lamp = (): Px => new Px(16, 24).rect(7, 8, 2, 14, WOOD_D).rect(4, 20, 8, 2, WOOD_D).rect(3, 2, 10, 7, '#f5e04a').rect(4, 1, 8, 1, '#f5e04a').rect(3, 8, 10, 1, '#d9b53a').outline(OUTLINE);
+const plant = (): Px => new Px(16, 22).rect(4, 14, 8, 7, '#c0603a').rect(4, 14, 8, 1, '#e0805a').ellipse(2, 2, 12, 12, LEAF).ellipse(5, 0, 6, 6, LEAF_L).rect(7, 10, 2, 5, LEAF_D).outline(OUTLINE);
+const clock = (): Px => new Px(16, 16).circle(8, 8, 7, WOOD).circle(8, 8, 5, '#f4f0e6').rect(8, 4, 1, 4, OUTLINE).rect(8, 8, 3, 1, OUTLINE).px(8, 8, '#d9453b').outline(OUTLINE);
+const wallColor = (stone: boolean, colour: number): string => PAINT_COLORS[colour] || (stone ? STONE : WOOD);
+const wallFace = (p: Px, x: number, y: number, w: number, h: number, stone: boolean, col: string, painted: boolean) => {
+  const dark = shade(col, painted ? 0.82 : 0.72);
+  p.rect(x, y, w, h, col);
+  if (stone) {
+    for (let yy = y; yy < y + h; yy += 4) {
+      p.rect(x, yy, w, 1, dark);
+      for (let xx = x + (((yy - y) / 4) % 2 === 0 ? 0 : 4); xx < x + w; xx += 8) p.rect(xx, yy, 1, Math.min(4, y + h - yy), dark);
+    }
+  } else {
+    for (let xx = x + 1; xx < x + w; xx += 4) p.rect(xx, y, 1, h, dark);
+  }
+};
+const wallPiece = (stone: boolean, colour: number, mask: number): Px => {
+  const p = new Px(16, 24);
+  const col = wallColor(stone, colour);
+  const painted = colour > 0;
+  const cap = shade(col, 1.25);
+  const up = mask & 1;
+  const right = mask & 2;
+  const down = mask & 4;
+  const left = mask & 8;
+  const horizontal = left || right;
+  const vertical = up || down;
+  if (vertical) {
+    const y0 = up ? 0 : 6;
+    const y1 = down ? 24 : 22;
+    wallFace(p, 5, y0, 6, y1 - y0, stone, col, painted);
+    p.rect(5, y0, 6, 1, cap).rect(5, y0, 1, y1 - y0, cap);
+  }
+  if (horizontal || !vertical) {
+    const x0 = left ? 0 : vertical ? 5 : 3;
+    const x1 = right ? 16 : vertical ? 11 : 13;
+    wallFace(p, x0, 8, x1 - x0, 16, stone, col, painted);
+    p.rect(x0, 6, x1 - x0, 2, cap).rect(x0, 8, x1 - x0, 1, shade(col, 1.1));
+  }
+  return p.outline(OUTLINE);
+};
+const windowPiece = (colour: number, vertical: boolean): Px => {
+  const p = wallPiece(false, colour, vertical ? 5 : 10);
+  const frame = colour > 0 ? '#f4f2ec' : '#7a5230';
+  if (vertical) {
+    p.rect(6, 9, 4, 6, '#8fd0f0').rect(6, 12, 4, 1, frame).box(5, 8, 6, 8, frame);
+  } else {
+    p.rect(4, 11, 8, 8, '#8fd0f0').rect(7, 11, 2, 8, frame).rect(4, 14, 8, 1, frame).box(3, 10, 10, 10, frame);
+    p.rect(4, 20, 2, 2, '#e8502a').rect(10, 20, 2, 2, '#f5d94a');
+  }
+  return p;
+};
+
 export function drawObjects(): Record<string, ObjectArt> {
   const art: Record<string, ObjectArt> = {};
   const set = (kind: string, frames: Px[], ox = 0, oy = 0, animated = false) => (art[kind] = { frames, ox, oy, animated });
@@ -603,8 +692,6 @@ export function drawObjects(): Record<string, ObjectArt> {
   set('flower', [flower(0), flower(1), flower(2), flower(3)]);
   set('bush', [bush()]);
   set('wild_flower_mid', [flower(0, true), flower(1, true), flower(2, true)]);
-  // wall pieces: frame = colour * 16 + neighbour mask; windows: colour * 2 + vertical; doors: colour * 4 + vertical * 2 + open
-  const colours = PAINT_COLORS.map((_, i) => i);
   set('street_lamp', [streetLamp()], 0, -8);
   // the market town's dressing
   set('banner_pole', [0, 1, 2].map(bannerPole), 0, -24);
@@ -615,6 +702,24 @@ export function drawObjects(): Record<string, ObjectArt> {
   set('wardrobe', [wardrobe()], 0, -8);
   // Furniture
   set('door_out', [doorOut()]);
+  const colours = PAINT_COLORS.map((_, i) => i);
+  set('wall_wood', colours.flatMap((c) => Array.from({ length: 16 }, (_, m) => wallPiece(false, c, m))), 0, -8);
+  set('window', colours.flatMap((c) => [windowPiece(c, false), windowPiece(c, true)]), 0, -8);
+  set('bench', [bench()]);
+  set('table', [table()]);
+  set('flowerbox', [flowerbox()]);
+  set('bed', [bed()], 0, -4);
+  set('rug', [rug()]);
+  set('chair', [chair()], 0, -4);
+  set('sofa', [sofa()], 0, -4);
+  set('bookshelf', [bookshelf()], 0, -8);
+  set('lamp', [lamp()], 0, -8);
+  set('plant', [plant()], 0, -6);
+  set('clock', [clock()], 0, -6);
+  set('crystal_lamp', [crystalLamp()], 0, -8);
+  set('mushroom_lamp', [mushroomLamp()], 0, -8);
+  set('wisp_jar', [wispJar()], 0, -4);
+  set('dragon_egg', [dragonEgg()]);
   // Biome specials
   set('mushroom', [mushroom(0), mushroom(1)]);
   set('lobby_sign', [0, 1, 2, 3, 4, 5, 6].map(lobbySign), 0, -8);

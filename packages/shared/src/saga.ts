@@ -1108,7 +1108,7 @@ export const SAGA_TREASURE: Record<DungeonId, SagaLoot> = {
  * What the dungeons give for a house (house.ts): Norse decor, and the farm's own furniture and keepsakes, as a chance on top of a
  * chest's loot. Per dungeon: its last boss's chest (which a run's reward is too) and the treasure chest in its side room.
  */
-const HOUSE_LOOT: Record<DungeonId, { boss: [string, number][]; treasure: [string, number][] }> = {
+export const HOUSE_LOOT: Record<DungeonId, { boss: [string, number][]; treasure: [string, number][] }> = {
   draug: { boss: [['candle_stick', 0.35], ['viking_shield', 0.15]], treasure: [['rune_stone', 0.25], ['clock', 0.15]] },
   frost: { boss: [['bear_rug', 0.35], ['drinking_horn', 0.15]], treasure: [['sofa', 0.15], ['viking_banner', 0.15]] },
   surt: { boss: [['weapon_rack', 0.35], ['dragon_egg', 0.1]], treasure: [['viking_shield', 0.25], ['lamp', 0.15]] },

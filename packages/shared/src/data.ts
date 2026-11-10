@@ -54,11 +54,22 @@ const place = (id: string, extra: Partial<ItemDef> = {}) =>
   add(I(id, 'placeable', { places: id, ...extra }));
 // The run's buildings (M5b, GAME.md section 4): the forge house, the herb garden and the longhouse
 // Furniture (Möbler) – crafted or bought, usable inside the house and outside
-// The furniture a new house starts with (it can be picked up and put down again)
-place('bed');
-place('table');
-place('chair');
-place('lamp');
+// Furniture: a new house starts with a bed, a table, a chair and a lamp, and the dungeons drop the rest (HOUSE_LOOT)
+place('bench', { sell: 5 });
+place('table', { sell: 6 });
+place('flowerbox', { sell: 5 });
+place('bed', { sell: 15, buy: 120, tab: 'furniture' });
+place('rug', { sell: 5, buy: 40, tab: 'furniture' });
+place('chair', { sell: 3, buy: 25, tab: 'furniture' });
+place('sofa', { sell: 10, buy: 90, tab: 'furniture' });
+place('bookshelf', { sell: 8, buy: 70, tab: 'furniture' });
+place('lamp', { sell: 5, buy: 45, tab: 'furniture' });
+place('plant', { sell: 4, buy: 30, tab: 'furniture' });
+place('clock', { sell: 5, buy: 50, tab: 'furniture' });
+place('crystal_lamp', { sell: 60 });
+place('mushroom_lamp', { sell: 45 });
+place('wisp_jar', { sell: 30 });
+place('dragon_egg');
 // Season decorations
 // Souvenirs from the wider world (crafted from what you find, or found as they are)
 
@@ -156,11 +167,21 @@ const built = (kind: string, extra: Partial<ObjectDef> = {}) =>
 // A house's walls, windows and furniture (made by house.ts and the lobby, never built or broken by players)
 addO(O('wall_wood', { breakWith: undefined }));
 addO(O('window', { breakWith: undefined }));
-addO(O('bench', { breakWith: undefined }));
-addO(O('table', { breakWith: undefined }));
-addO(O('bed', { w: 1, h: 2, breakWith: undefined }));
-addO(O('chair', { breakWith: undefined }));
-addO(O('lamp', { light: true, breakWith: undefined }));
+built('bench');
+built('table');
+built('flowerbox');
+built('bed', { w: 1, h: 2 });
+built('rug', { w: 2, h: 2, solid: false, flat: true });
+built('chair');
+built('sofa', { w: 2, h: 1 });
+built('bookshelf');
+built('lamp', { light: true });
+built('plant');
+built('clock', { solid: false, flat: true });
+built('crystal_lamp', { light: true });
+built('mushroom_lamp', { light: true });
+built('wisp_jar', { light: true });
+built('dragon_egg');
 built('door_out', { solid: false, flat: true, breakWith: undefined, drops: [] });
 // Cave
 // The city: streets, blocks and stops (interaction with stops/stations lives with the travel feature)

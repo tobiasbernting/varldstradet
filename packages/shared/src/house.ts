@@ -138,7 +138,6 @@ function stackFor(obj: WorldObject): ItemStack | null {
   if (!it || it.places !== obj.kind) return null;
   const s: ItemStack = { item: obj.kind, count: 1 };
   if (isTrophyKind(obj.kind)) s.data = String(trophyLevelOf(obj.data));
-  else if (obj.kind === 'painting' && obj.data !== undefined) s.data = obj.data;
   return s;
 }
 

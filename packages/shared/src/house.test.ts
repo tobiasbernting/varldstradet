@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  HOUSE_LOOT,
+  ITEMS,
+  OBJECTS,
   HOUSE_DOOR,
   HOUSE_EXIT,
   HOUSE_ROOM,
@@ -267,5 +270,18 @@ describe('boss trophies', () => {
     expect(performAction(house, b.id, 9, 8, ctx()).some((c) => c.t === 'open')).toBe(false);
     setStandLook(house, a.id, stand.id, null, undefined);
     expect(stand.data).toBeUndefined();
+  });
+});
+
+describe('the decor the dungeons drop', () => {
+  it('every piece in HOUSE_LOOT is an item that places an object that exists, and so is every starter piece', () => {
+    const ids = new Set<string>(['bed', 'table', 'chair', 'lamp']);
+    for (const d of Object.values(HOUSE_LOOT)) for (const [id] of [...d.boss, ...d.treasure]) ids.add(id);
+    expect(ids.size).toBeGreaterThan(20);
+    for (const id of ids) {
+      const def = ITEMS[id];
+      expect(def?.places, id).toBe(id);
+      expect(OBJECTS[id], id).toBeDefined();
+    }
   });
 });
