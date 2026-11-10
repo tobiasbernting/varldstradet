@@ -331,7 +331,9 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
       // the safe lane: a Vilosten when someone is hurt (else a fight, on to the boss); the clumsy bot just picks one
       const rest = exits.findIndex((e) => e.kind === 'rest');
       const hurtParty = f.hp < f.max * 0.7 || friends.some((x) => x.ff.hp < x.ff.max * 0.6);
-      const fight = exits.findIndex((e) => e.kind !== 'rest');
+      // a plain Flock first (the loot), then a Skatt, the Köpman or a Händelse; a Stark vakt only when there is nothing else
+      const order = ['flock', 'mini', 'boss', 'treasure', 'shop', 'event', 'elite'];
+      const fight = exits.map((e, i) => ({ i, o: order.indexOf(e.kind) })).filter((x) => x.o >= 0).sort((p, q) => p.o - q.o)[0]?.i ?? -1;
       const at = mind.lane === 'safe' ? (rest >= 0 && (hurtParty || fight < 0) ? rest : Math.max(0, fight)) : Math.floor(mind.rnd() * exits.length);
       mind.rune = { key: inst.run.run + ':' + inst.run.node, at };
     }
