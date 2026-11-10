@@ -60,6 +60,9 @@ import {
   fightStats,
   sagaItem,
   BASE_POWER,
+  FLAT_LEVEL_MUL,
+  SPELLS,
+  xpLevel,
   BASE_ARMOR,
   BASE_HP,
   newDay,
@@ -89,6 +92,7 @@ import {
   type SimCtx,
   type WorldState,
 } from './index.ts';
+import { NORSE_DECOR } from './data.ts';
 import { teleport } from './testtravel.ts';
 
 const px = (t: number): number => t * TILE + TILE / 2;
@@ -228,7 +232,7 @@ describe('classes and the way in', () => {
     expect(p.area).toBe('farm');
     enterSaga(world, p, arch);
     expect(p.area).toBe(sagaKey('draug'));
-    expect(world.areas![sagaKey('draug')]!.saga!.fighters[p.id]!.hp).toBe(CLASSES.vaktare.hp + BASE_HP);
+    expect(world.areas![sagaKey('draug')]!.saga!.fighters[p.id]!.hp).toBe(Math.round((CLASSES.vaktare.hp + BASE_HP) * FLAT_LEVEL_MUL));
   });
 });
 
@@ -443,7 +447,7 @@ describe('fighting', () => {
     expect(inst.fighters[p.id]!.down).toBeDefined();
     run(world, WIPE_MS + 200);
     expect(inst.fighters[p.id]!.down).toBeUndefined();
-    expect(inst.fighters[p.id]!.hp).toBe(CLASSES.magiker.hp + BASE_HP);
+    expect(inst.fighters[p.id]!.hp).toBe(Math.round((CLASSES.magiker.hp + BASE_HP) * FLAT_LEVEL_MUL));
     const rest = inst.rests[0]!;
     expect(Math.hypot(p.x - px(rest.x), p.y - px(rest.y))).toBeLessThan(3 * TILE);
     expect(bm.state).not.toBe('fight');
@@ -466,7 +470,7 @@ describe('fighting', () => {
     inst.fighters[friend.id]!.down = clock;
     castSpell(world, healer.id, 'vackupp', undefined, ctx());
     expect(inst.fighters[friend.id]!.down).toBeUndefined();
-    expect(inst.fighters[friend.id]!.hp).toBe((CLASSES.krigare.hp + BASE_HP) / 2);
+    expect(inst.fighters[friend.id]!.hp).toBe(Math.round(Math.round((CLASSES.krigare.hp + BASE_HP) * FLAT_LEVEL_MUL) / 2));
   });
 });
 
@@ -859,7 +863,7 @@ describe('Lokes list: gear and levels', () => {
     // gear is only for show: an epic weapon, a shield and an amulet change nothing in a fight
     const st = fightStats(p);
     expect(st.armor).toBe(BASE_ARMOR);
-    expect(st.power).toBe(BASE_POWER);
+    expect(st.power).toBe(BASE_POWER * FLAT_LEVEL_MUL);
     const max = fighterMax(p, 'vaktare');
     equipGear(world, p.id, 'amulet', 'amulet_helring');
     expect(fighterMax(p, 'vaktare')).toBe(max);
@@ -896,11 +900,13 @@ describe('Lokes list: gear and levels', () => {
     expect(hits).toContain(Math.round(SAGA_BOSSES.hel!.dmg * mobDmgScale(1) * (1 - 0.14)));
   });
 
-  it('experience gives levels: a banner, a sparkle, more health', () => {
+  it('experience gives levels: a banner and a sparkle, and nothing that changes a fight', () => {
     const { world, players } = family();
     const p = players[0]!;
     const d = inside(world, p, 'krigare');
     const inst = d.saga!;
+    const max = inst.fighters[p.id]!.max;
+    const power = fightStats(p).power;
     p.saga!.xp = XP_LEVELS[1]! - SAGA_XP.mob;
     const m = Object.values(inst.mobs).find((x) => x.kind === 'mob')!;
     const a = d.animals[m.id]!;
@@ -910,10 +916,58 @@ describe('Lokes list: gear and levels', () => {
     m.hp = 1;
     const out = castSpell(world, p.id, 'yxhugg', m.id, ctx());
     expect(out.some((c) => c.t === 'banner' && c.kind === 'level' && c.text === 'Nivå 2!')).toBe(true);
+    expect(out.some((c) => c.t === 'banner' && c.kind === 'level' && c.sub?.includes('Vandrarmanteln'))).toBe(true);
     expect(p.saga!.level).toBe(2);
     expect(p.stats.sagaLevel).toBe(2);
-    expect(inst.fighters[p.id]!.max).toBe(Math.round((CLASSES.krigare.hp + BASE_HP) * 1.015));
-    expect(fightStats(p).power).toBeCloseTo(BASE_POWER * 1.015);
+    expect(inst.fighters[p.id]!.max).toBe(max);
+    expect(fightStats(p).power).toBe(power);
+  });
+
+  describe('hero levels give no power: level 1 and level 20 of a class fight identically', () => {
+    /** A hero of the class at the given experience, in the first dungeon beside a sturdy monster. */
+    function setup(cls: keyof typeof CLASSES, xp: number) {
+      const { world, players } = family();
+      const p = players[0]!;
+      const d = inside(world, p, cls);
+      p.saga!.xp = xp;
+      p.saga!.level = xpLevel(xp);
+      const inst = d.saga!;
+      const m = Object.values(inst.mobs).find((x) => x.kind === 'mob')!;
+      const a = d.animals[m.id]!;
+      p.x = a.x + TILE;
+      p.y = a.y;
+      run(world, 100);
+      m.hp = 5000;
+      return { world, p, inst, m };
+    }
+    for (const cls of Object.keys(CLASSES) as (keyof typeof CLASSES)[]) {
+      it(`${cls}: the same health, spells, cooldowns, damage and healing`, () => {
+        const lo = setup(cls, 0);
+        const hi = setup(cls, XP_LEVELS[19]!);
+        expect(xpLevel(lo.p.saga!.xp!)).toBe(1);
+        expect(xpLevel(hi.p.saga!.xp!)).toBe(20);
+        expect(fightStats(hi.p)).toEqual(fightStats(lo.p));
+        expect(fighterMax(hi.p, cls)).toBe(fighterMax(lo.p, cls));
+        expect(hi.inst.fighters[hi.p.id]!.max).toBe(lo.inst.fighters[lo.p.id]!.max);
+        expect(hi.inst.fighters[hi.p.id]!.max).toBe(Math.round((CLASSES[cls].hp + BASE_HP) * FLAT_LEVEL_MUL));
+        // all four spells from the start, with their own cooldowns
+        expect(CLASSES[cls].spells).toHaveLength(4);
+        for (const id of CLASSES[cls].spells) expect(SPELLS[id]!.cd).toBeGreaterThan(0);
+        // every spell of the class, cast the same way, does the same to the same monster (and heals the same)
+        for (const id of CLASSES[cls].spells) {
+          const fire = (h: ReturnType<typeof setup>) => {
+            const f = h.inst.fighters[h.p.id]!;
+            f.cd = {};
+            f.gcd = 0;
+            f.hp = Math.floor(f.max / 2);
+            h.m.hp = 5000;
+            const out = castSpell(h.world, h.p.id, id, h.m.id, ctx(9));
+            return { hits: out.filter((c) => c.t === 'hit').map((c) => (c.t === 'hit' ? c.n : 0)), hp: f.hp, mob: h.m.hp, cd: f.cd[id] === undefined ? undefined : f.cd[id]! - clock };
+          };
+          expect(fire(hi), id).toEqual(fire(lo));
+        }
+      });
+    }
   });
 });
 
@@ -1062,7 +1116,7 @@ describe('Saga III: hero levels for everyone', () => {
     expect(a.animals[g.id]).toBeDefined();
   });
 
-  it('levels give glowing clothes, a pet, titles and an aura, once each', () => {
+  it('levels give glowing clothes, a pet, decor, titles and an aura, once each', () => {
     const { p } = forest();
     let out: Change[] = [];
     giveXp(p, XP_LEVELS[1]!, out);
@@ -1128,14 +1182,19 @@ describe('Saga III: hero levels for everyone', () => {
     expect(q.saga).toBeUndefined();
   });
 
-  it('the rewards are never found in a chest, and level 20 gives only +28.5 %', () => {
+  it('the rewards are never found in a chest, and are looks or house decor, never power', () => {
     const rewards = new Set(Object.values(LEVEL_REWARDS).flatMap((r) => (r.item ? [r.item] : [])));
-    for (const r of rewards) expect(SAGA_ITEMS.find((i) => i.id === r)?.levelReward).toBeGreaterThan(1);
-    for (const t of [...Object.values(SAGA_LOOT), ...Object.values(SAGA_TREASURE)]) for (const g of [...t.gear, ...(t.rare ?? [])]) expect(rewards.has(g.item)).toBe(false);
+    for (const r of rewards) {
+      const gear = SAGA_ITEMS.find((i) => i.id === r);
+      if (gear) expect(gear.levelReward, r).toBeGreaterThan(1);
+      else expect(NORSE_DECOR as readonly string[], r).toContain(r);
+      expect(gear?.kind, r).not.toBe('mount');
+    }
+    for (const t of [...Object.values(SAGA_LOOT), ...Object.values(SAGA_TREASURE)]) for (const g of [...t.gear, ...(t.rare ?? [])]) expect(rewards.has(g.item) && !(NORSE_DECOR as readonly string[]).includes(g.item)).toBe(false);
     const { p } = forest();
     p.saga = { cls: 'krigare', chapter: 0, heard: false, cleared: [], titles: [], quests: {}, done: [], found: [], xp: XP_LEVELS[19]! };
-    expect(fightStats(p).power).toBeCloseTo(BASE_POWER * 1.285);
-    expect(fighterMax(p, 'krigare')).toBe(Math.round((CLASSES.krigare.hp + BASE_HP) * 1.285));
+    expect(fightStats(p).power).toBe(BASE_POWER * FLAT_LEVEL_MUL);
+    expect(fighterMax(p, 'krigare')).toBe(Math.round((CLASSES.krigare.hp + BASE_HP) * FLAT_LEVEL_MUL));
   });
 });
 
@@ -1177,9 +1236,9 @@ describe('Smedjan', () => {
     expect(p.saga).not.toHaveProperty('forge');
     // the flat base is what the starter set gave, so the bots' measured minutes stay as they were
     expect([BASE_POWER, BASE_ARMOR, BASE_HP]).toEqual([1.05, 0.04, 8]);
-    // level 20 alone is still +28.5 %
+    // level 20 gives nothing either
     p.saga!.xp = XP_LEVELS[19]!;
-    expect(fightStats(p).power).toBeCloseTo(BASE_POWER * 1.285);
+    expect(fightStats(p).power).toBe(bare.power);
   });
 
   it('Stina no longer forges or crafts, and the forge materials are gone from the game', () => {

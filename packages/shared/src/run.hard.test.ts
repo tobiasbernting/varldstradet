@@ -10,7 +10,7 @@ const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
 describe('careful pairs on the hard levels', () => {
   for (const [level, lo, hi] of [
-    [3, 8, 12],
+    [3, 8, 14],
     [4, 3, 6],
   ] as const) {
     it(`${T.runLevelName[level]} (level ${level}): krigare + magiker win between ${lo} and ${hi} of ${SEEDS.length}, and every run has its särdrag`, { timeout: 600_000 }, async () => {

@@ -342,10 +342,10 @@ human with the Hirdmannen, monster health is multiplied by 0.75 (`SOLO_MERCY`).
 
 Experience comes from monsters in a run (5 for a monster, 2 for a helper, 40 for a mid-boss, 100 for a boss; `SAGA_XP`), from a
 chapter told and from a villager's quest. Every party member gets the experience. Levels run from 1 to 20
-(`XP_LEVELS`: 60, 150, 280, ... 7800). **A level gives no power.** It gives something to look at (`LEVEL_REWARDS`): clothes to the
+(`XP_LEVELS`: 60, 150, 280, ... 7800). **A level gives no power:** every hero fights as a level-3 hero used to (`FLAT_LEVEL_MUL` in `saga.ts`), so a friend's new character is as strong as a veteran. It gives something to look at (`LEVEL_REWARDS`): clothes to the
 wardrobe at levels 2, 4, 6, 8, 10, 12, 16, 18 and 20 (Vandrarmanteln, Glödkransen, Glödmanteln, Stjärnkronan, Stjärnmanteln,
 Norrskenshjälmen, Eldmanteln, Solkronan, Bifrostmanteln), amulets at 9 and 19 (Hjältemärket, Yggdrasils löv), the pet Lyktfén at 5,
-the mount Ljushjorten at 15, titles at 3, 7, 13, 17 and 20 (Vandrare, Hjälte, Stor hjälte, Legend, Midgårds väktare), and a glow
+house decor at 11, 14 and 15 (Ljusstake, Vikingabaner, Yggdrasilsplanta), titles at 3, 7, 13, 17 and 20 (Vandrare, Hjälte, Stor hjälte, Legend, Midgårds väktare), and a glow
 around the hero from level 10 and a rainbow glow at 20 (`auraOf`).
 
 ### 4.5 The Sagoandan and wipes

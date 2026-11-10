@@ -32,6 +32,8 @@ import {
   fightStats,
   isGearSlot,
   xpLevel,
+  XP_LEVELS,
+  MAX_LEVEL,
   SAGA_BOSSES,
   SAGA_CHAPTERS,
   SAGA_LOOT,
@@ -177,7 +179,7 @@ const yell = (h: Here, species: string, text: string): Change => ({ t: 'yell', a
 // In and out
 // ---------------------------------------------------------------------------
 
-/** A fighter's full health: gear and level, and in a run the run's hp buff (bit-identical to `fighterMax` without one). */
+/** A fighter's full health: the class's, and in a run the run's hp buff (bit-identical to `fighterMax` without one). */
 function maxHealth(h: Here | undefined, p: PlayerState, cls: ClassId): number {
   const base = fighterMax(p, cls);
   const hp = h ? buffsOf(h, p.id).hp : 0;
@@ -715,7 +717,7 @@ function rollLoot(h: Here, p: PlayerState, table: SagaLoot, from: string, ctx: S
 // Spells
 // ---------------------------------------------------------------------------
 
-/** The gear and the hero's level make every spell stronger (and a strength potion, while it lasts). */
+/** Every hero's spells are equally strong (a strength potion adds to that, while it lasts). */
 const spellPower = (p: PlayerState, strongUntil: number | undefined, now: number): number => fightStats(p).power * (strongUntil !== undefined && now < strongUntil ? STRENGTH_MUL : 1);
 
 const CRIT_CHANCE = 0.12;
@@ -1292,6 +1294,16 @@ export function devSagaBest(world: WorldState, playerId: string, id: string, ms:
   if (!p || !isDungeonId(id) || !Number.isFinite(ms) || ms < 0) return [];
   const out: Change[] = [];
   recordBestTime(farm, id, [p.name], Math.round(ms), out);
+  return out;
+}
+
+/** Development only (`dev level`): gives the experience that makes the player hero level `level` (1..MAX_LEVEL), with the level-up banner and rewards. */
+export function devHeroLevel(world: WorldState, playerId: string, level: number): Change[] {
+  const p = farmOf(world).players[playerId];
+  if (!p || !Number.isFinite(level)) return [];
+  const goal = XP_LEVELS[Math.max(1, Math.min(MAX_LEVEL, Math.round(level))) - 1]!;
+  const out: Change[] = [];
+  giveXp(p, Math.max(1, goal - (p.saga?.xp ?? 0)), out);
   return out;
 }
 
@@ -2011,7 +2023,7 @@ export function ensureGear(p: PlayerState): boolean {
   return true;
 }
 
-/** A fighter's full health follows their gear and level (they keep what they gained or lost). */
+/** A fighter's full health: the class's (they keep what they gained or lost). */
 function refreshMax(p: PlayerState, f: SagaFighter, h?: Here): void {
   const max = maxHealth(h, p, f.cls);
   if (max === f.max) return;
@@ -2062,7 +2074,7 @@ export function equipGear(world: WorldState, playerId: string, slot: string, ite
 /**
  * Hero experience, for everyone (the saga record is made if there is none; spells still need a class). A floating
  * "+n xp" for the player, and at each new level a banner naming the level's reward, a sparkle, the reward itself
- * and a little more power and health.
+ * (levels give nothing that changes a fight).
  */
 export function giveXp(p: PlayerState, n: number, out: Change[], h?: Here): void {
   if (n <= 0) return;
@@ -2127,7 +2139,7 @@ export function ensureLevelRewards(p: PlayerState, out?: Change[]): boolean {
     } else if (addItem(p.inventory, r.item, 1) > 0) {
       out?.push(toast(p.id, fmt(T.sagaLevelBagFull, { item: itemName(r.item) })));
       continue;
-    } else out?.push(toast(p.id, fmt(T.sagaLevelToBag, { item: itemName(r.item) })));
+    } else out?.push(toast(p.id, fmt(ITEMS[r.item]?.category === 'placeable' ? T.sagaLevelToHouse : T.sagaLevelToBag, { item: itemName(r.item) })));
     prog.found.push(r.item);
     changed = true;
   }
