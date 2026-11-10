@@ -1470,7 +1470,6 @@ export const A11Y_T = {
 
 export const FILTER_NAMES: Record<string, string> = {
   tools: 'Verktyg',
-  seeds: 'Frön',
   food: 'Mat',
   materials: 'Material',
   build: 'Bygg & möbler',
@@ -1508,7 +1507,6 @@ export const HELP: HelpTopic[] = [
       { icon: 'fardport', text: 'Färdporten är den stora bågen. Gå fram till den och tryck på den för att ge er av på en färd. Ni kan vara flera tillsammans!' },
       { icon: 'yggdrasil', text: 'Världsträdets skott växer bredvid färdporten. Av det du hittar på färderna växer det.' },
       { icon: 'lobby_sign:6', text: 'Vid hundkojan får du välja ditt första djur, helt gratis: en hund eller en katt. Det följer med dig överallt.' },
-      { icon: 'lobby_sign:4', text: 'Smed-Stina vid smedjan gör dina vapen starkare.' },
       { icon: 'wardrobe', text: 'Garderoben står vid huset. Där byter du kläder.' },
       { icon: 'lobby_sign:2', text: 'Husdörren leder in till ditt eget hus.' },
     ],
@@ -1566,12 +1564,27 @@ export const HELP: HelpTopic[] = [
     ],
   },
   {
+    id: 'runs',
+    emoji: '🧭',
+    title: 'Färder',
+    intro: 'En färd är ett äventyr genom en fängelsehåla, i steg. Starta den vid färdporten.',
+    steps: [
+      { icon: 'fardport', text: 'Vid färdporten väljer du fängelsehåla, svårighet, roll och djur. Sedan trycker du på Starta!' },
+      { icon: 'emoji:💪', text: 'Det finns fem svårigheter: Mycket lätt, Lätt, Medel, Svår och Extrem. En förälder kan spärra de svåraste för dig. Då syns ett lås och vem det gäller.' },
+      { icon: 'emoji:🗺️', text: 'Efter varje strid väljer ni väg på kartan. Alla röstar, och den väg flest vill gå blir vägen.' },
+      { icon: 'emoji:🎴', text: 'Mellan striderna får du välja en runa. Den ger dig en kraft som håller i hela färden.' },
+      { icon: 'emoji:👻', text: 'Sagoandan hjälper er upp om alla faller, så färden inte tar slut direkt. Det finns bara några få gånger.' },
+      { icon: 'emoji:🐾', text: 'Ditt djur kan följa med på färden och hjälpa till. Välj det vid färdporten. Du kan ge det kläder i kojan.' },
+      { icon: 'wardrobe', text: 'I Garderoben byter du kläder, för dig och för djuret. Kläderna är bara för syns skull.' },
+    ],
+  },
+  {
     id: 'levels',
     emoji: '⭐',
     title: 'Hjältenivåer',
-    intro: 'Varje monster du besegrar ute i världen ger erfarenhet, och med erfarenheten stiger du i nivå. Du behöver ingen klass för att vara med.',
+    intro: 'Det du klarar på färderna ger erfarenhet, och med erfarenheten stiger du i nivå.',
     steps: [
-      { icon: 'emoji:⭐', text: 'Alla monster ger erfarenhet: slå dem med svärd, båge, bazooka eller besvärjelser, det spelar ingen roll. Vänner som står några rutor bort får lika mycket som du. Du behöver inte ha valt någon klass.' },
+      { icon: 'emoji:⭐', text: 'Monstren på färderna ger erfarenhet. Vänner som är med får lika mycket som du.' },
       { icon: 'offhand_runbok', text: 'Det finns 20 nivåer. Varje nivå ger 1,5 % mer kraft och hälsa. Coola saker och rustningar ger ingen kraft alls, så alla kan spela fängelsehålorna tillsammans, stora som små.' },
       { icon: 'shirt_vandrarmantel', text: 'Nivåerna ger saker att se ut som en hjälte i, ingen extra kraft. Nivå 2: Vandrarmanteln. Nivå 3: titeln Vandrare. Nivå 4: Glödkransen. Nivå 5: husdjuret Lyktfén.' },
       { icon: 'shirt_glodmantel', text: 'Nivå 6: Glödmanteln. Nivå 7: titeln Hjälte. Nivå 8: Stjärnkronan. Nivå 9: amuletten Hjältemärket.' },
@@ -1579,8 +1592,6 @@ export const HELP: HelpTopic[] = [
       { icon: 'mount_ljushjort', text: 'Nivå 15: riddjuret Ljushjorten. Nivå 16: Eldmanteln. Nivå 17: titeln Legend. Nivå 18: Solkronan. Nivå 19: amuletten Yggdrasils löv.' },
       { icon: 'shirt_bifrostmantel', text: 'Nivå 20: Bifrostmanteln, ett sken i regnbågens alla färger och titeln Midgårds väktare.' },
       { icon: 'hat_glodkrans', text: 'Kläder som glöder lyser mest när det är mörkt. Ta på dem i garderoben (nya hjältekläder hamnar där) och gå ut en kväll!' },
-      { icon: 'emoji:👾', text: 'Lätta monster finns överallt: Ängsvätten på ängen, Trollungar i skogen och bergen, Snötroll på isen, Sandande i öknen, Djungelimpar i djungeln, Benödlor i Dinodalen, Sockerspöken i Godislandet och Rymdkryp på månen. De går ner med några svärdsslag och släpper ibland något bra.' },
-      { icon: 'emoji:👻', text: 'Lokes tjänare från Sagan II, och björnar, vargar och lodjur, ger också erfarenhet, och mest av allt de stora jättemonstren. Och ingen förlorar något när man faller!' },
     ],
   },
   {
@@ -1604,7 +1615,7 @@ export const HELP: HelpTopic[] = [
     steps: [
       { icon: 'emoji:💬', text: 'Pratbubblan skriver till alla som spelar. Tryck Enter eller T på datorn. Färdiga ord finns att trycka på om du inte vill skriva.' },
       { icon: 'emoji:🗨️', text: 'Det du skriver syns i en bubbla över ditt huvud och i listan längst ner.' },
-      { icon: 'emoji:👵', text: 'Gå fram till Völvan eller Smed-Stina och tryck på dem. Tryck sedan på Prata! så berättar de skämt, gåtor och hemligheter.' },
+      { icon: 'emoji:👵', text: 'Gå fram till Völvan och tryck på dem. Tryck sedan på Prata! så berättar hon skämt, gåtor och hemligheter.' },
       { icon: 'emoji:✋', text: 'Stanna!-knappen gör att din hund, katt eller häst stannar där den är. Bra när du ska in i grottan eller jobba ifred. Tangent X.' },
       { icon: 'emoji:🎵', text: 'Vissla så kommer de springande och följer med dig igen, även från en annan karta. Tangent V.' },
       { icon: 'emoji:🌧️', text: 'Vädret ändrar sig hela tiden: sol, moln, regn, åska, snö och dimma. Uppe i hörnet ser du vilket väder det är.' },
@@ -1779,6 +1790,8 @@ export const RUN_UI = {
   inRun: 'Du är med i färden',
   step: 'Steg {n} av {max}',
   lockedHint: 'Klara förra färden först.',
+  cappedFor: 'Spärrad för {names}',
+  cappedHint: 'En förälder har spärrat den här svårigheten för {names}. Välj en lättare.',
   cleared: 'Klarad',
   noClass: 'Välj en roll först',
   nearGate: 'Gå närmare porten.',

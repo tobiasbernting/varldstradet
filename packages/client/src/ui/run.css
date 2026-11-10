@@ -349,6 +349,10 @@ body.saga-bossfight .run-vote {
   grid-template-areas: 'ic nm';
   justify-content: center;
 }
+.run-panel .tile.level.capped {
+  grid-template-areas: 'ic nm' 'ic st';
+  opacity: 0.6;
+}
 .run-panel .tile.level .nm {
   font-size: max(var(--fs), calc(5 * var(--u) * var(--txt)));
 }

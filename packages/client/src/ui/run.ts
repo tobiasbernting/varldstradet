@@ -569,7 +569,7 @@ export class RunUi {
   private archSig(): string {
     const a = atArch();
     const pets = a.me?.pets;
-    return `${a.near}:${a.party.map((p) => p.id).join(',')}:${a.extra.length}:${pets?.active ?? ''}:${pets?.out ? 1 : 0}:${Object.keys(pets?.owned ?? {}).join(',')}`;
+    return `${a.near}:${a.party.map((p) => p.id).join(',')}:${a.extra.length}:${pets?.active ?? ''}:${pets?.out ? 1 : 0}:${Object.keys(pets?.owned ?? {}).join(',')}:${a.party.map((p) => p.levelCap ?? '-').join('')}`;
   }
 
   private renderFard(body: HTMLElement): void {
@@ -583,6 +583,9 @@ export class RunUi {
     if (!this.dungeon || !open.includes(this.dungeon)) this.dungeon = next ?? open[0] ?? DUNGEON_IDS[0]!;
     const levels = RUN_LEVEL_IDS.filter((l) => parseRunLevel(l) !== null).map(levelInfo);
     if (!levels.some((l) => l.level === this.level)) this.level = RUN_LEVEL_DEFAULT;
+    // the level you stand on is never one a party member is capped below
+    const lowCap = Math.min(4, ...arch.party.map((p) => p.levelCap ?? 4));
+    if (this.level > lowCap) this.level = lowCap as RunLevel;
     const tree = runClient.tree;
     const running = runClient.run && runClient.run.phase !== 'ended' ? runClient.run : null;
 
@@ -638,9 +641,21 @@ export class RunUi {
     body.append(h('div', { class: 'sect' }, `💪 ${RUN_UI.howHard}`));
     const lv = h('div', { class: 'tiles levels' });
     for (const l of levels) {
-      const t = h('button', { class: `tile level${this.level === l.level ? ' sel' : ''}`, 'aria-pressed': String(this.level === l.level) }, h('span', { class: 'ic' }, l.icon), h('span', { class: 'nm' }, this.level === l.level ? `✔ ${l.name}` : l.name));
-      this.info(t, l.icon, l.name, l.blurb);
+      // a level above a party member's cap (set by a parent) is marked before Starta is pressed; a tap says why
+      const names = arch.party.filter((p) => p.levelCap !== undefined && l.level > p.levelCap).map((p) => (p.id === client.me ? RUN_UI.me : p.name)).join(', ');
+      const t = h(
+        'button',
+        { class: `tile level${this.level === l.level ? ' sel' : ''}${names ? ' capped' : ''}`, 'aria-pressed': String(this.level === l.level), 'aria-disabled': names ? 'true' : undefined },
+        h('span', { class: 'ic' }, names ? '🔒' : l.icon),
+        h('span', { class: 'nm' }, this.level === l.level ? `✔ ${l.name}` : l.name),
+        names ? h('span', { class: 'st' }, fmt(RUN_UI.cappedFor, { names })) : null,
+      );
+      this.info(t, names ? '🔒' : l.icon, l.name, names ? fmt(RUN_UI.cappedHint, { names }) : l.blurb);
       this.tap(t, () => {
+        if (names) {
+          this.hint(fmt(RUN_UI.cappedHint, { names }));
+          return;
+        }
         this.level = l.level;
         SFX.talk();
         this.render();

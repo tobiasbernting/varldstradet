@@ -200,12 +200,32 @@ export class Game {
     this.tickCount++;
     const changes = tick(this.world, dt, this.ctx());
     // once a second: the landmarks each player out in the world has come within sight of (for the world map)
-    if (this.tickCount % TICK_HZ === 0) changes.push(...noticeLandmarks(this.world));
+    if (this.tickCount % TICK_HZ === 0) {
+      changes.push(...noticeLandmarks(this.world));
+      changes.push(...this.syncLevelCaps());
+    }
     if (changes.length) this.pending.push(...changes);
     this.dispatchPending();
     if (++this.flushCounter % (TICK_HZ * 15) === 0 && 'markMoving' in this.store) {
       (this.store as unknown as { markMoving(w: WorldState): void }).markMoving(this.world);
     }
+  }
+
+  /** Tells each player their parent's level cap (PlayerState.levelCap), so the arch window can mark what is too hard before Starta. */
+  private syncLevelCaps(): Change[] {
+    const fn = this.opts.levelCap;
+    if (!fn) return [];
+    const out: Change[] = [];
+    for (const p of Object.values(this.world.players)) {
+      if (!p.online) continue;
+      const c = fn(p.id);
+      const cap = c < 4 ? c : undefined;
+      if (p.levelCap === cap) continue;
+      if (cap === undefined) delete p.levelCap;
+      else p.levelCap = cap;
+      out.push({ t: 'player', id: p.id, player: p });
+    }
+    return out;
   }
 
   broadcastState(): void {

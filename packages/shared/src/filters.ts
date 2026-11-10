@@ -10,11 +10,10 @@ export interface InventoryFilter {
 
 export const INVENTORY_FILTERS: InventoryFilter[] = [
   { id: 'tools', emoji: '🔧', categories: ['tool'] },
-  { id: 'seeds', emoji: '🌱', categories: ['seed'] },
   { id: 'food', emoji: '🥕', categories: ['crop', 'animal_product', 'fish', 'feed'] },
   { id: 'materials', emoji: '🪵', categories: ['material'] },
   { id: 'build', emoji: '🪑', categories: ['placeable', 'decor'] },
-  { id: 'other', emoji: '🎁', categories: ['clothing', 'animal'] },
+  { id: 'other', emoji: '🎁', categories: ['clothing', 'animal', 'seed'] },
 ];
 
 /** The filter an item belongs to ('other' if its category is unlisted). */
