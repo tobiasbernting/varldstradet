@@ -183,6 +183,8 @@ export type ClientMsg =
   | { t: 'dev'; a: 'kit' }
   /** Development only (same switch): record this time (ms) as the family's best through dungeon `id`, by me alone, for a check of the journal. */
   | { t: 'dev'; a: 'sagaBest'; id: string; ms: number }
+  /** Development only (same switch): become hero level `n` (1..20), as if the experience had been won. */
+  | { t: 'dev'; a: 'level'; n: number }
   /** Dev: give pets (`all` or a kind), and put the test gear (a red neckerchief) on the pet or take it off. */
   | { t: 'dev'; a: 'pet'; id: string }
   | { t: 'dev'; a: 'petgear'; tier?: number; set?: string }

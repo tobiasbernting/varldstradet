@@ -32,6 +32,8 @@ import {
   fightStats,
   isGearSlot,
   xpLevel,
+  XP_LEVELS,
+  MAX_LEVEL,
   SAGA_BOSSES,
   SAGA_CHAPTERS,
   SAGA_LOOT,
@@ -1292,6 +1294,16 @@ export function devSagaBest(world: WorldState, playerId: string, id: string, ms:
   if (!p || !isDungeonId(id) || !Number.isFinite(ms) || ms < 0) return [];
   const out: Change[] = [];
   recordBestTime(farm, id, [p.name], Math.round(ms), out);
+  return out;
+}
+
+/** Development only (`dev level`): gives the experience that makes the player hero level `level` (1..MAX_LEVEL), with the level-up banner and rewards. */
+export function devHeroLevel(world: WorldState, playerId: string, level: number): Change[] {
+  const p = farmOf(world).players[playerId];
+  if (!p || !Number.isFinite(level)) return [];
+  const goal = XP_LEVELS[Math.max(1, Math.min(MAX_LEVEL, Math.round(level))) - 1]!;
+  const out: Change[] = [];
+  giveXp(p, Math.max(1, goal - (p.saga?.xp ?? 0)), out);
   return out;
 }
 
