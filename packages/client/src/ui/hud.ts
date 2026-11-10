@@ -4,10 +4,14 @@ import { Minimap } from './minimap.ts';
 import { stackIconUrl } from '@art/stackicon.ts';
 import { net } from '../net.js';
 import { bus, client, furnish, inOwnHouse, myPlayer, serverNow } from '../state.js';
+import { LOG_T } from '@varldstradet/shared';
 import { clear, h, icon, onTap } from './dom.js';
 import { isMuted, setMuted } from '../sound.ts';
 import { levelOf, showsLevel } from '../saga.ts';
 import { cards } from './info.ts';
+import { centerColumn, classifyToast, say } from './lane.ts';
+import { createLogButton } from './log.ts';
+import { myRun } from '../run.ts';
 
 /** What the HUD drives on the game view (the 2D scene or the 3D view). */
 export interface HudTarget {
@@ -37,7 +41,6 @@ export class Hud {
   private top: HTMLElement;
   private hotbar: HTMLElement;
   private heldName: HTMLElement;
-  private toasts: HTMLElement;
   private joy: HTMLElement;
   private joyKnob: HTMLElement;
   /** Sagan om Världsträdet: the gear window. */
@@ -61,7 +64,6 @@ export class Hud {
     });
     this.hotbar = h('div', { class: 'hotbar' });
     this.heldName = h('div', { class: 'hud-name' });
-    this.toasts = h('div', { class: 'toasts' });
     this.joyKnob = h('i');
     this.joy = h('div', { class: 'joy' }, this.joyKnob);
     const zone = h('div', { class: 'joy-zone' }, this.joy);
@@ -85,10 +87,28 @@ export class Hud {
     this.furnishBtn = this.roundBtn('🪑', () => this.toggleFurnish(), HOUSE_T.furnish, A11Y_T.btnFurnish);
     this.furnishBtn.classList.add('furnish-btn');
     this.furnishBtn.hidden = true;
-    const right = h('div', { class: 'hud-right' }, this.furnishBtn, this.gearBtn, this.roundBtn('🎒', () => this.openMenu('inventory'), T.inventory, A11Y_T.btnBag), this.roundBtn('😊', () => this.openMenu('emotes'), A11Y_T.emotes, A11Y_T.btnEmotes), this.roundBtn('📖', () => document.dispatchEvent(new Event('vt:journal')), T.sagaJournalTab, A11Y_T.btnJournal), this.roundBtn('🧭', () => this.minimap.toggle(), A11Y_T.map, A11Y_T.btnMap), this.roundBtn('❓', () => this.openMenu('help'), T.help, A11Y_T.btnHelp), this.roundBtn('⚙️', () => document.dispatchEvent(new Event('vt:settings')), A11Y_T.settings, A11Y_T.settingsInfo), this.muteBtn(), ...(matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches ? [] : [this.fullscreenBtn()]));
+    const right = h('div', { class: 'hud-right' }, this.furnishBtn, this.gearBtn, this.roundBtn('🎒', () => this.openMenu('inventory'), T.inventory, A11Y_T.btnBag), this.roundBtn('😊', () => this.openMenu('emotes'), A11Y_T.emotes, A11Y_T.btnEmotes), this.roundBtn('📖', () => document.dispatchEvent(new Event('vt:journal')), T.sagaJournalTab, A11Y_T.btnJournal), createLogButton(), this.roundBtn('🧭', () => this.minimap.toggle(), A11Y_T.map, A11Y_T.btnMap), this.roundBtn('❓', () => this.openMenu('help'), T.help, A11Y_T.btnHelp), this.roundBtn('⚙️', () => document.dispatchEvent(new Event('vt:settings')), A11Y_T.settings, A11Y_T.settingsInfo), this.muteBtn(), ...(matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches ? [] : [this.fullscreenBtn()]));
+    // a short screen in a run: the round buttons fold into this one button (ui/run.css), so the top of the screen is one row
+    const menuBtn = h('button', { class: 'round hud-menu-btn', type: 'button', 'aria-label': LOG_T.menu, 'aria-expanded': 'false' }, '☰');
+    cards.info(menuBtn, '☰', LOG_T.menu, LOG_T.menuInfo);
+    cards.tap(menuBtn, () => {
+      const open = right.classList.toggle('open');
+      menuBtn.setAttribute('aria-expanded', String(open));
+    });
+    const closeMenu = (): void => {
+      right.classList.remove('open');
+      menuBtn.setAttribute('aria-expanded', 'false');
+    };
+    right.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('button, .round')) window.setTimeout(closeMenu, 0);
+    });
+    document.addEventListener('pointerdown', (e) => {
+      if (right.classList.contains('open') && !(e.target as HTMLElement).closest('.hud-right, .hud-menu-btn')) closeMenu();
+    });
     this.minimap = new Minimap();
     document.addEventListener('vt:minimap', () => this.minimap.toggle());
-    this.root.append(this.top, right, this.hotbar, this.heldName, this.toasts, zone, act, run, this.minimap.el);
+    this.root.append(this.top, right, menuBtn, this.hotbar, this.heldName, zone, act, run, this.minimap.el);
+    centerColumn(this.root);
     ui.append(this.root);
     this.setupJoystick(zone);
 
@@ -99,13 +119,13 @@ export class Hud {
     });
     bus.on('state', () => this.renderTop());
     bus.on('day', () => this.renderTop());
-    // long ones (how to let the microphone in) stay long enough to be read
-    bus.on('toast', (text) => this.toast(text, Math.max(3000, text.length * 70)));
+    // long ones (how to let the microphone in) stay long enough to be read: the lane times a message by its length
+    bus.on('toast', (text) => this.toast(text));
     this.render();
   }
 
   private fullscreenBtn(): HTMLElement {
-    const b = h('button', { class: 'round small', type: 'button' }, '⛶');
+    const b = h('button', { class: 'round small fs-btn', type: 'button' }, '⛶');
     cards.info(b, '⛶', T.fullscreen, A11Y_T.btnFullscreen);
     cards.tap(b, () => {
       const el = document.documentElement as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> };
@@ -140,11 +160,9 @@ export class Hud {
     return b;
   }
 
-  toast(text: string, ms = 3000): void {
-    const el = h('div', { class: 'toast' }, text);
-    this.toasts.append(el);
-    while (this.toasts.children.length > 3) this.toasts.firstChild?.remove();
-    setTimeout(() => el.remove(), ms);
+  /** A message in the lane (and the log). `ms` only to stay longer than the reading time. */
+  toast(text: string, ms = 0): void {
+    say(text, { kind: classifyToast(text, !!myRun()), ...(ms ? { ms: Math.max(ms, 3500) } : {}) });
   }
 
   /** The gear button: only with a class. */

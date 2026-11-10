@@ -1449,3 +1449,175 @@ body.in-run.touch .saga-boss {
     transition: none;
   }
 }
+
+/* ======================================================================================================
+   The run's HUD is ONE row at every width (the stop, the road, the chips, the three buttons), thin, and the pieces that sit
+   under it (the minimap, the party, the message lane and the vote) are placed from where it really ends (ui/lane.ts sets
+   --bar-top and --hud-top). Chips fold as the screen narrows: first their words, then the less important chips.
+   ====================================================================================================== */
+html body.in-run .run-bar {
+  top: var(--bar-top, 64px);
+  left: 8px;
+  right: auto;
+  margin: 0;
+  width: min(900px, calc(100vw - 16px));
+  padding: 4px 8px 7px;
+  position: absolute;
+  box-sizing: border-box;
+}
+html body.in-run .run-bar .line1 {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+html body.in-run .run-bar .line1 > * {
+  flex: none;
+}
+html body.in-run .run-bar .rail {
+  flex: 1 1 90px;
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  gap: 2px;
+}
+html body.in-run .run-bar .dot {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 32px;
+  font-size: calc(16px * var(--txt));
+  border-radius: 6px;
+  overflow: hidden;
+}
+html body.in-run .run-bar .chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  min-height: 48px;
+}
+html body.in-run .run-bar .chip-btn .ic {
+  line-height: 1;
+}
+html body.in-run .run-bar .chip-btn .st-s {
+  display: none;
+}
+html body.in-run .run-bar .clockbar {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 2px;
+  margin: 0;
+  height: 3px;
+}
+html body.in-run .run-bar .round-btn {
+  margin: 0;
+}
+html body.in-run .hud-center {
+  --keep: 1;
+}
+/* the wide screen has the bar beside the round buttons; under 1400 px it sits under them */
+@media (max-width: 1399px) {
+  html body.in-run .run-bar .chip-btn.level .lb,
+  html body.in-run .run-bar .chip-btn.path .lb,
+  html body.in-run .run-bar .chip-btn.affix .lb {
+    display: none;
+  }
+}
+@media (max-width: 1099px) {
+  html body.in-run .run-bar .chip-btn .st {
+    display: none;
+  }
+  html body.in-run .run-bar .chip-btn .st-s {
+    display: inline;
+  }
+  html body.in-run .run-bar .chip-btn.affix,
+  html body.in-run .run-bar .chip-btn.seeds {
+    display: none;
+  }
+}
+@media (max-width: 859px) {
+  html body.in-run .run-bar .chip-btn.level,
+  html body.in-run .run-bar .chip-btn.path {
+    display: none;
+  }
+}
+@media (max-width: 719px) {
+  html body.in-run .run-bar .rail {
+    display: none;
+  }
+  html body.in-run .run-bar .chip-btn.stop .lb {
+    display: none;
+  }
+}
+/* the round buttons in a run: one row on top (they scroll sideways when the screen is very narrow) */
+html body.in-run .hud-right {
+  max-width: calc(100vw - 16px);
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 4px 6px;
+  scrollbar-width: none;
+}
+html body.in-run .hud-right > * {
+  flex: none;
+}
+@media (max-width: 759px) {
+  html body.in-run .hud-right .fs-btn {
+    display: none;
+  }
+}
+/* a short screen: the round buttons fold into one menu button at the end of the bar's row, so the top is ONE row */
+.hud-menu-btn {
+  display: none;
+}
+@media (max-height: 500px) {
+  html body.in-run .hud-menu-btn {
+    display: flex;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 50;
+  }
+  html body.in-run .run-bar {
+    top: 8px;
+    width: calc(100vw - 16px - 64px);
+  }
+  html body.in-run .hud-right {
+    display: none;
+  }
+  html body.in-run .hud-right.open {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    overflow: visible;
+    position: absolute;
+    top: var(--hud-top, 70px);
+    right: 8px;
+    max-width: min(420px, calc(100vw - 16px));
+    padding: 8px;
+    background: rgba(32, 22, 40, 0.94);
+    border: 2px solid #c8a95a;
+    border-radius: 14px;
+    z-index: 60;
+    pointer-events: auto;
+  }
+}
+/* the minimap and the party: in a run they hang from the bottom of the bar, and the map shrinks with the screen */
+html body.in-run .minimap {
+  top: var(--hud-top, 140px);
+}
+html body.in-run .minimap canvas {
+  width: clamp(80px, 17vh, 150px);
+}
+html body.in-run .saga-party,
+html body.in-run .minimap[hidden] ~ .saga-party,
+html body.in-run .minimap:not([hidden]) ~ .saga-party {
+  top: var(--party-top, 150px);
+}
+@media (max-height: 560px) {
+  html body.in-run .saga-party > * {
+    width: min(150px, 30vw);
+  }
+}

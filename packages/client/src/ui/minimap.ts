@@ -59,9 +59,9 @@ export class Minimap {
     try {
       const saved = localStorage.getItem('varldstradet.minimap');
       // a short screen (a phone held sideways) starts without the map, which would sit on the party's frames; the map button brings it
-      this.visible = saved === null ? window.innerHeight >= 480 : saved !== '0';
+      this.visible = saved === null ? window.innerHeight >= 600 : saved !== '0';
     } catch {
-      this.visible = window.innerHeight >= 480;
+      this.visible = window.innerHeight >= 600;
     }
     this.el.hidden = !this.visible;
     bus.on('change', (c) => {

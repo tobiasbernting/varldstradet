@@ -134,6 +134,13 @@ async function scenarios(browser, v, res) {
   await page.waitForTimeout(400);
   if (await page.$('.settings-panel')) await tag(page, 'settings'); else console.log('no settings window');
   await shut();
+  // the log: some lines first (a pet toast and a chat line), then the window by its key
+  await page.send({ t: 'chat', text: 'Hej!' });
+  await page.send({ t: 'dev', a: 'pet', id: 'hund' });
+  await page.waitForTimeout(800);
+  await press('l');
+  if (await page.$('.log-modal')) await tag(page, 'log'); else console.log('no log window');
+  await shut();
   // the class window
   await page.evaluate(() => window.varldstradet.bus.emit('open', { ui: 'sagaClass' }));
   await page.waitForTimeout(500);

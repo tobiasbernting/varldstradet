@@ -6,6 +6,8 @@
 // Out in the world with hero mode on, the spell bar and your frame (hearts for health) and your target's come along,
 // and the gear window puts a weapon, an offhand and an amulet on the hero.
 import {
+  RUN_T,
+  LOG_T,
   A11Y_T,
   ATTACK_KINDS,
   BLOCK_SPECIES,
@@ -90,6 +92,7 @@ import { activeWorld, bus, client, myPlayer, serverNow } from '../state.ts';
 import { clear, h, onTap } from './dom.ts';
 import { announce } from './access.ts';
 import { cards } from './info.ts';
+import { centerColumn, say, type LogKind } from './lane.ts';
 import { currentDevice } from '../a11y.ts';
 import type { Menus } from './menus.ts';
 import './saga.css';
@@ -339,18 +342,15 @@ export class SagaUi {
   private castBar = h('div', { class: 'saga-cast' });
   private castFill = h('i');
   private castName = h('span', { class: 'nm' });
-  private yellEl = h('div', { class: 'saga-yell' });
-  private yellTimer = 0;
-  private banners = h('div', { class: 'saga-banners' });
-  private bannerQueue: BannerChange[] = [];
-  private bannerBusy = false;
+  /** Who was down at the last snapshot (the log writes a line when someone falls or gets up). */
+  private downIds = new Set<string>();
+  private downSeen = false;
   private down = h('div', { class: 'saga-down' });
   private downSince = 0;
   private wasDown = false;
   private wasFrozen = false;
   private tracker = h('div', { class: 'saga-tracker' });
   private trackerOpen = true;
-  private hint = h('div', { class: 'saga-hint' });
   /** The dungeon the aiming hint was shown for (it shows once when you come in). */
   private hintFor = '';
 
@@ -362,7 +362,9 @@ export class SagaUi {
   ) {
     this.units.append(this.meFrame.el, this.targetFrame.el);
     this.castBar.append(this.castFill, this.castName);
-    hudRoot.append(this.party, this.units, this.boss, this.castBar, this.yellEl, this.bar, this.hint, this.tracker, this.down, this.banners);
+    hudRoot.append(this.party, this.units, this.bar, this.tracker, this.down);
+    // the boss bar and the cast bar hang in the column under the message lane (ui/lane.ts)
+    centerColumn(hudRoot).prepend(this.boss, this.castBar);
     // the tracker hangs under the HUD's round buttons, wherever they wrap to (on a short screen they take two rows)
     const place = (): void => {
       const hr = document.querySelector<HTMLElement>('.hud-right');
@@ -478,10 +480,20 @@ export class SagaUi {
   private fromServer(c: Change): void {
     if (c.t === 'loot') {
       if (c.looks) rememberLooks(c.looks);
+      this.logLoot(c);
       this.loots.push(c);
       if (this.win !== 'loot') this.nextLoot();
     } else if (c.t === 'banner') this.banner(c);
     else if (c.t === 'yell') this.yell(c.name, c.text);
+  }
+
+  /** What a loot window hands out, as a line in the log (the window itself is a window, not a message). */
+  private logLoot(c: Extract<Change, { t: 'loot' }>): void {
+    const parts = c.items.map((it) => `${itemName(it.item)}${it.count > 1 ? ` × ${it.count}` : ''}`);
+    if (c.stars > 0) parts.push(fmt(LOG_T.lootStars, { n: c.stars }));
+    if (c.looks?.drops.length) parts.push(...c.looks.drops.map((d) => lookPiece(d.piece)?.name ?? LOG_T.lootLook));
+    if (!parts.length) return;
+    say(fmt(LOG_T.loot, { items: parts.join(', ') }), { kind: 'loot', show: false, announce: false });
   }
 
   /** In a fight or not: the spell bar instead of the hotbar, and the class's own buttons. */
@@ -502,7 +514,6 @@ export class SagaUi {
       this.wasDown = false;
       // out in the world: the aiming hint once when hero mode goes on
       if (!fight) {
-        this.hint.hidden = true;
         this.hintFor = '';
       } else if (this.hintFor !== 'hero') {
         this.hintFor = 'hero';
@@ -521,11 +532,7 @@ export class SagaUi {
   }
 
   private showHint(): void {
-    this.hint.hidden = false;
-    this.hint.textContent = document.body.classList.contains('touch') ? T.sagaTargetHintTouch : T.sagaTargetHint;
-    this.hint.classList.remove('fade');
-    void this.hint.offsetWidth;
-    this.hint.classList.add('fade');
+    say(document.body.classList.contains('touch') ? T.sagaTargetHintTouch : T.sagaTargetHint, { kind: 'system', icon: '🎯', cls: 'hint', log: false, announce: false, ms: 9000 });
   }
 
   // ---- the spell bar ----
@@ -722,6 +729,16 @@ export class SagaUi {
         this.partyRows.delete(id);
       }
     const t = liveTarget();
+    for (const id of ids) {
+      const isDown = !!(snap!.f[id]![2] & FLAG.down);
+      if (isDown !== this.downIds.has(id) && this.downSeen) {
+        say(fmt(isDown ? LOG_T.heroDown : LOG_T.heroUp, { name: name(id) }), { kind: 'hero', icon: isDown ? '💀' : '💪', who: name(id), show: false, announce: false });
+      }
+      if (isDown) this.downIds.add(id);
+      else this.downIds.delete(id);
+    }
+    if (!ids.length) this.downIds.clear();
+    this.downSeen = ids.length > 0;
     ids.forEach((id, i) => {
       let row = this.partyRows.get(id);
       if (!row) {
@@ -830,35 +847,30 @@ export class SagaUi {
   // ---- shouts, banners, fallen and frozen ----
 
   private yell(name: string, text: string): void {
-    clear(this.yellEl);
-    this.yellEl.append(h('b', null, `${name}:`), ` ${text}`);
-    this.yellEl.classList.remove('on');
-    void this.yellEl.offsetWidth;
-    this.yellEl.classList.add('on');
-    clearTimeout(this.yellTimer);
-    this.yellTimer = window.setTimeout(() => this.yellEl.classList.remove('on'), 5200);
-    SAGA_SFX.yell();
-    // and in the chat, so it can be read again
+    const el = h('div', { class: 'lane-item yell' }, h('span', { class: 'ic', 'aria-hidden': 'true' }, '📣'), h('span', { class: 'tx' }, h('b', null, `${name}: `), text));
+    say(text, { kind: 'yell', who: name, el, onShow: () => SAGA_SFX.yell() });
+    // (the shout is also sent as a chat line, so the chat can show it again: the log skips that copy)
     bus.emit('chat', { t: 'chat', from: '', name: `⚔️ ${name}`, text, at: Date.now() });
   }
 
+  /** A title banner: a card in the message lane, and a line in the log (a plain prompt like "Välj väg!" is only shown). */
   private banner(c: BannerChange): void {
-    this.bannerQueue.push(c);
-    if (!this.bannerBusy) this.nextBanner();
+    const kind = c.kind ?? 'enter';
+    const el = h('div', { class: `lane-item saga-banner ${kind}` }, h('div', { class: 'big' }, c.text), c.sub ? (kind === 'level' ? levelSub(c) : h('div', { class: 'sub' }, c.sub)) : null);
+    const prompt = [RUN_T.pickTitle, RUN_T.routeTitle, RUN_T.pathTitle, RUN_T.zoneClear].includes(c.text);
+    const logKind: LogKind = kind === 'level' ? 'level' : kind === 'enter' || kind === 'chapter' || kind === 'boss' ? 'story' : 'run';
+    const icon = { enter: '🏰', chapter: '📜', boss: '👑', cleared: '🏆', reward: '🎁', rest: '💚', wipe: '💀', level: '⭐' }[kind];
+    say(c.text, {
+      kind: logKind,
+      icon,
+      ...(c.sub ? { sub: c.sub } : {}),
+      log: !prompt,
+      el,
+      onShow: () => this.bannerFx(c, kind),
+    });
   }
 
-  private nextBanner(): void {
-    const c = this.bannerQueue.shift();
-    if (!c) {
-      this.bannerBusy = false;
-      document.body.classList.remove('saga-banner-on');
-      return;
-    }
-    this.bannerBusy = true;
-    document.body.classList.add('saga-banner-on');
-    const kind = c.kind ?? 'enter';
-    const el = h('div', { class: `saga-banner ${kind}` }, h('div', { class: 'big' }, c.text), c.sub ? (kind === 'level' ? levelSub(c) : h('div', { class: 'sub' }, c.sub)) : null);
-    this.banners.append(el);
+  private bannerFx(c: BannerChange, kind: string): void {
     if (kind === 'boss' || kind === 'cleared') {
       this.confetti(kind === 'cleared' ? 90 : 55, true);
       SAGA_SFX.fanfare(true);
@@ -875,12 +887,6 @@ export class SagaUi {
       this.sparkles(30);
     } else if (kind === 'rest') SAGA_SFX.calm();
     else SAGA_SFX.banner();
-    const ms = kind === 'cleared' ? 5200 : kind === 'boss' || kind === 'reward' || kind === 'enter' || kind === 'chapter' || kind === 'level' ? 4300 : 3200;
-    setTimeout(() => el.classList.add('out'), ms - 600);
-    setTimeout(() => {
-      el.remove();
-      this.nextBanner();
-    }, ms);
   }
 
   /** Golden sparkles drifting down (a puzzle solved). */

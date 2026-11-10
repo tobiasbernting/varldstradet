@@ -1370,3 +1370,63 @@ export const LOOK_T = {
   lootWear: 'Ta på nu',
   lootWearing: '✓ På',
 };
+
+// ---------------------------------------------------------------------------
+// Logg: everything the game wrote on the screen, to read again (client ui/lane.ts, ui/log.ts)
+// ---------------------------------------------------------------------------
+
+export const LOG_T = {
+  title: 'Logg',
+  btn: 'Logg',
+  btnInfo: 'Allt som stått på skärmen, så du kan läsa det igen. Tangent: L.',
+  menu: 'Meny',
+  menuInfo: 'Alla knappar: väska, kläder, hjälp och mer.',
+  newDot: 'Nytt i loggen',
+  empty: 'Inget har hänt än. Det som står på skärmen hamnar här.',
+  emptyChat: 'Ingen har pratat än.',
+  emptyEvents: 'Inga händelser än.',
+  filters: 'Visa',
+  all: 'Alla',
+  events: 'Händelser',
+  chat: 'Chatt',
+  newest: 'Till det nyaste',
+  say: 'Skriv',
+  sayInfo: 'Skriv något till alla i chatten.',
+  read: 'Läs upp',
+  hint: 'Pilar rullar. L eller Esc stänger.',
+  at: 'Klockan {time}',
+  who: 'Det gäller {name}',
+  // the kinds (a picture and a word each: colour is never the only sign)
+  kinds: {
+    system: 'Meddelande',
+    story: 'Saga',
+    yell: 'Skrik',
+    run: 'Färd',
+    loot: 'Belöning',
+    level: 'Nivå',
+    hero: 'Hjälte',
+    chat: 'Chatt',
+  } as Record<string, string>,
+  // lines the client writes itself from what it sees in the run
+  nextStop: 'Vägen ledde till {stop}. Steg {n} av {max}.',
+  gotRuna: '{name} fick {runa}.',
+  gotRunaAll: 'Hela laget fick {runa}.',
+  heroDown: '{name} föll.',
+  heroUp: '{name} reste sig.',
+  loot: 'Du fick {items}.',
+  lootStars: '{n} stjärnor',
+  lootLook: 'ett nytt utseende',
+  lootPet: 'grejer till djuret',
+  // the way-on vote (ui/run.ts)
+  voteSame: 'Samma väg: välj vilken ni vill.',
+  voteSameShort: '= Samma väg',
+  voteStand: 'Ingen här än',
+  voteStandInfo: 'Den här vägen. Ingen står på runan än.',
+  voteOn: 'Står här: {names}',
+  voteAfter: 'Sen: {stops}',
+  voteAfterNone: 'Sen är det slut på vägen.',
+  voteLater: 'Längre fram kan ni möta: {stops}',
+  voteOnly: 'Bara den här vägen leder till {stop}.',
+  voteSameInfo: 'De två vägarna ser likadana ut hela vägen. Välj vilken ni vill.',
+  voteDiffInfo: 'Titta på bilderna efter pilen: de visar vad som kommer efter.',
+};
