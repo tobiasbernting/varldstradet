@@ -93,6 +93,8 @@ import {
   titleOf,
   webbed,
 } from '../saga.ts';
+import { pathOf } from '../run.ts';
+import { pathIcon } from './runpick.ts';
 import { SAGA_SFX } from '../sagasfx.ts';
 import { lootLookCard, rememberLooks, renderLooks, resetLooksWindow } from './looks.ts';
 import { SFX } from '../sound.ts';
@@ -115,6 +117,7 @@ const FLAG_ICONS: [number, string][] = [
   [FLAG.rage, '🔥'],
   [FLAG.hot, '🌿'],
   [FLAG.slow, '🐌'],
+  [FLAG.shield, '🔰'],
 ];
 
 type Win = 'class' | 'volva' | 'journal' | 'family' | 'loot' | 'gear';
@@ -726,7 +729,7 @@ export class SagaUi {
       }
       if (this.party.children[i] !== row.el) this.party.insertBefore(row.el, this.party.children[i] ?? null);
       const c = classOf(client.world?.players[id]);
-      row.set(c?.emoji ?? '🙂', name(id), snap!.f[id]!, c?.color ?? '#cccccc', false);
+      row.set(pathOf(id) ? `${c?.emoji ?? ''}${pathIcon(pathOf(id))}` : (c?.emoji ?? '🙂'), name(id), snap!.f[id]!, c?.color ?? '#cccccc', false);
       row.el.classList.toggle('sel', t === id);
     });
     this.renderPets(ids);

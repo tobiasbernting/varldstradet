@@ -75,6 +75,10 @@ import {
   type LevelReward,
   type SagaBest,
   type RunBuffs,
+  type SpellMod,
+  BURN_MS,
+  SHIELD_CAP,
+  SHIELD_MS,
   SAGOANDAN_HP,
   ENRAGE,
 } from './saga.ts';
@@ -143,7 +147,7 @@ export const partyOf = (h: Here): PlayerState[] => Object.values(h.area.players)
 const ZERO_BUFFS: RunBuffs = noBuffs();
 const buffsOf = (h: Here, id: string): RunBuffs => h.inst.run?.buffs[id] ?? ZERO_BUFFS;
 /** Cooldown left after the run's reductions (never below 40 %). */
-const cdOf = (rb: RunBuffs, spellId: string, cd: number): number => cd * (1 - Math.min(0.6, rb.cd + (rb.spellCd[spellId] ?? 0)));
+const cdOf = (rb: RunBuffs, spellId: string, cd: number): number => cd * (1 - Math.max(-0.5, Math.min(0.6, rb.cd + (rb.spellCd[spellId] ?? 0) + (rb.mods[spellId]?.cd ?? 0))));
 
 
 const upright = (h: Here, p: PlayerState): boolean => {
@@ -786,18 +790,39 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
   if (f.down !== undefined || f.frozen !== undefined || now < f.gcd || now < (f.cd[spellId] ?? 0)) return [];
   const out: Change[] = [];
   const rb = buffsOf(h, p.id);
-  const gear = spellPower(p, f.strong, now) * (1 + rb.power + (rb.spell[spellId] ?? 0)) * (f.howl && now < f.howl.until ? 1 + f.howl.mul : 1);
+  // the hero's path (paths.ts): what it changes in this spell, and the berserk trait below half health
+  const mod: SpellMod = rb.mods[spellId] ?? {};
+  const berserk = rb.traits.low && f.hp < f.max * 0.5 ? rb.traits.low : 0;
+  const reach = sp.range + (mod.range ?? 0);
+  const radius = (sp.radius ?? 0) + (mod.radius ?? 0);
+  const gear = spellPower(p, f.strong, now) * (1 + rb.power + (rb.spell[spellId] ?? 0) + (mod.power ?? 0) + berserk) * (f.howl && now < f.howl.until ? 1 + f.howl.mul : 1);
   const power = (base: number): { n: number; crit: boolean } => {
     const crit = ctx.rnd() < CRIT_CHANCE + rb.crit;
     return { n: base * gear * (f.rage !== undefined && now < f.rage ? 1.5 : 1) * (crit ? 1.5 : 1), crit };
   };
   const raging = f.rage !== undefined && now < f.rage;
-  const strike = (m: SagaMob, base: number): void => {
+  const strike = (m: SagaMob, base: number, extras = true): void => {
     const pw = power(base);
     hurtMob(h, m, p.id, pw.n, (sp.threat ?? 1) * (1 + rb.threat), pw.crit, ctx, out);
     // a raging berserker heals a little from every blow
     if (raging) heal(h, p, f, pw.n * RAGE_LEECH, out);
     if (rb.leech) heal(h, p, f, pw.n * rb.leech, out);
+    // a path's added effects: burning, slowing, a freeze, and lightning that jumps on
+    const live = h.inst.mobs[m.id];
+    if (live && mod.burn) live.burn = { until: now + BURN_MS, per: (pw.n * mod.burn) / (BURN_MS / 1000), next: now + 1000, by: p.id };
+    if (live && mod.slow) live.slowUntil = Math.max(live.slowUntil ?? 0, now + mod.slow);
+    if (live && mod.stun) stun(h, live, mod.stun, now, out);
+    if (extras && mod.chain && live) {
+      const at = mobAt(live);
+      const near = mobsNear(h, at, 3)
+        .filter((o) => o.id !== m.id)
+        .sort((a, b) => dist(mobAt(a), at) - dist(mobAt(b), at))
+        .slice(0, mod.chain);
+      for (const o of near) {
+        out.push(spellFx(h, p.id, sp.id, at, mobAt(o), o.id));
+        strike(o, base * 0.4, false);
+      }
+    }
   };
   const mobAt = (m: SagaMob): { x: number; y: number } => h.area.animals[m.id] ?? m.home;
   const noTarget = (): Change[] => (opts.quiet ? [] : [toast(p.id, T.sagaNoTarget)]);
@@ -808,21 +833,21 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
     case 'bolt':
     case 'lance':
     case 'bash': {
-      const m = pickMob(h, p, f, sp.range, wantMob, sp.kind === 'bolt' || sp.kind === 'lance');
+      const m = pickMob(h, p, f, reach, wantMob, sp.kind === 'bolt' || sp.kind === 'lance');
       if (!m) return noTarget();
       f.target = m.id;
       out.push(spellFx(h, p.id, sp.id, p, mobAt(m), m.id));
       strike(m, sp.power);
       if (sp.kind === 'lance' && h.inst.mobs[m.id]) {
-        m.slowUntil = now + (sp.ms ?? 3000);
+        m.slowUntil = now + (sp.ms ?? 3000) + (mod.ms ?? 0);
         // the ice also stops a boss's big attack
         if (m.cast) stun(h, m, 0, now, out);
       }
-      if (sp.kind === 'bash' && h.inst.mobs[m.id]) stun(h, m, sp.ms ?? 1500, now, out);
+      if (sp.kind === 'bash' && h.inst.mobs[m.id]) stun(h, m, (sp.ms ?? 1500) + (mod.ms ?? 0), now, out);
       break;
     }
     case 'charge': {
-      const m = pickMob(h, p, f, sp.range, wantMob, true);
+      const m = pickMob(h, p, f, reach, wantMob, true);
       if (!m) return noTarget();
       f.target = m.id;
       const a = mobAt(m);
@@ -832,79 +857,83 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
       if (bodyFits(h.area, to.x, to.y)) warp(h, p, 0, 0, out, to);
       out.push(spellFx(h, p.id, sp.id, from, a, m.id));
       strike(m, sp.power);
-      if (h.inst.mobs[m.id]) stun(h, m, sp.ms ?? 1000, now, out);
+      if (h.inst.mobs[m.id]) stun(h, m, (sp.ms ?? 1000) + (mod.ms ?? 0), now, out);
       break;
     }
     case 'storm': {
-      const m = pickMob(h, p, f, sp.range, wantMob, true);
+      const m = pickMob(h, p, f, reach, wantMob, true);
       if (!m) return noTarget();
       f.target = m.id;
       const at = { ...mobAt(m) };
       out.push(spellFx(h, p.id, sp.id, p, at));
-      for (const o of mobsNear(h, at, sp.radius ?? 2)) strike(o, sp.power);
+      for (const o of mobsNear(h, at, radius || 2)) strike(o, sp.power, false);
       break;
     }
     case 'whirl': {
       out.push(spellFx(h, p.id, sp.id, p));
-      for (const o of mobsNear(h, p, sp.radius ?? 2)) strike(o, sp.power);
+      for (const o of mobsNear(h, p, radius || 2)) strike(o, sp.power, false);
       break;
     }
     case 'taunt': {
       out.push(spellFx(h, p.id, sp.id, p));
-      for (const m of mobsNear(h, p, sp.radius ?? 5)) {
+      for (const m of mobsNear(h, p, radius || 5)) {
         if (m.state === 'idle') pull(h, m, p.id, now, out);
         const top = Math.max(0, ...Object.values(m.threat));
         m.threat[p.id] = top * 1.2 + 20;
         m.tauntBy = p.id;
-        m.tauntUntil = now + (sp.ms ?? 4000);
+        m.tauntUntil = now + (sp.ms ?? 4000) + (mod.ms ?? 0);
         m.target = p.id;
+        // a taunt that hurts (the Hämnare)
+        if (mod.base) strike(m, mod.base, false);
       }
       break;
     }
     case 'heal': {
-      const q = pickFriend(h, p, sp.range, wantFriend, false);
+      const q = pickFriend(h, p, reach, wantFriend, false);
       if (!q) return [toast(p.id, T.sagaAllWell)];
       out.push(spellFx(h, p.id, sp.id, p, q, q.id));
       const pw = power(sp.power);
       heal(h, q, h.inst.fighters[q.id]!, pw.n * (1 + rb.heal), out, pw.crit);
       healThreat(h, p.id, pw.n);
+      if (mod.hot) giveHot(h.inst.fighters[q.id]!, now, (pw.n * (1 + rb.heal) * mod.hot) / 4);
       break;
     }
     case 'hot': {
       out.push(spellFx(h, p.id, sp.id, p));
-      const ms = sp.ms ?? 6000;
+      const ms = (sp.ms ?? 6000) + (mod.ms ?? 0);
       for (const q of partyOf(h)) {
         const qf = h.inst.fighters[q.id]!;
-        if (qf.down === undefined && dist(q, p) <= (sp.radius ?? 4)) qf.hot = { until: now + ms, per: (sp.power * gear * (1 + rb.heal)) / (ms / 1000) };
+        if (qf.down === undefined && dist(q, p) <= (radius || 4)) qf.hot = { until: now + ms, per: (sp.power * gear * (1 + rb.heal)) / (ms / 1000) };
       }
       healThreat(h, p.id, sp.power / 2);
       break;
     }
     case 'revive': {
-      const q = pickFriend(h, p, sp.range, wantFriend, true);
+      const q = pickFriend(h, p, reach, wantFriend, true);
       if (!q) return [toast(p.id, T.sagaNoneDown)];
       const qf = h.inst.fighters[q.id]!;
       delete qf.down;
-      qf.hp = Math.max(1, Math.round(qf.max * (sp.power / 100 + rb.reviveHp)));
+      qf.hp = Math.max(1, Math.round(qf.max * ((sp.power + (mod.base ?? 0)) / 100 + rb.reviveHp)));
+      if (mod.hot) giveHot(qf, now, (qf.hp * mod.hot) / 4);
       qf.fightAt = now;
       out.push(spellFx(h, p.id, sp.id, p, q, q.id), hit(h, q.id, qf.hp, 'heal'), playerChange(q));
       toEveryone(h, out, fmt(T.sagaUp, { name: q.name }));
       break;
     }
     case 'wall':
-      f.wall = now + (sp.ms ?? 6000);
+      f.wall = now + (sp.ms ?? 6000) + (mod.ms ?? 0);
       out.push(spellFx(h, p.id, sp.id, p));
       heal(h, p, f, f.max * WALL_HEAL, out);
       break;
     case 'rage':
-      f.rage = now + (sp.ms ?? 8000);
+      f.rage = now + Math.max(2000, (sp.ms ?? 8000) + (mod.ms ?? 0));
       p.boostUntil = f.rage;
       out.push(spellFx(h, p.id, sp.id, p), playerChange(p));
       break;
     case 'blink': {
       const dir = p.facing === 'left' ? [-1, 0] : p.facing === 'right' ? [1, 0] : p.facing === 'up' ? [0, -1] : [0, 1];
       let to = { x: p.x, y: p.y };
-      for (let s = 0.5; s <= sp.range; s += 0.5) {
+      for (let s = 0.5; s <= reach; s += 0.5) {
         const nx = p.x + dir[0]! * s * TILE;
         const ny = p.y + dir[1]! * s * TILE;
         // the whole body must fit (a spot whose middle is free but whose edge is in the wall would trap the player)
@@ -916,10 +945,29 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
       break;
     }
   }
+  // a path's shields: for the caster, and for the friends near
+  if (mod.shield) giveShield(f, mod.shield, now);
+  if (mod.partyShield)
+    for (const q of partyOf(h)) {
+      const qf = h.inst.fighters[q.id];
+      if (qf && qf.down === undefined && dist(q, p) <= 5) giveShield(qf, mod.partyShield, now);
+    }
   f.gcd = now + GCD_MS;
-  f.cd[spellId] = now + cdOf(rb, spellId, sp.cd);
+  // (berserk: half as much faster cooldowns below half health)
+  f.cd[spellId] = now + cdOf(rb, spellId, sp.cd) * (1 - berserk / 2);
   if (inFight(h)) f.fightAt = now;
   return out;
+}
+
+/** A shield of `frac` of the fighter's max health (never above SHIELD_CAP of it), for SHIELD_MS. */
+function giveShield(f: SagaFighter, frac: number, now: number): void {
+  const cap = f.max * SHIELD_CAP;
+  f.shield = { hp: Math.min(cap, (f.shield && now < f.shield.until ? f.shield.hp : 0) + f.max * frac), until: now + SHIELD_MS };
+}
+
+/** A heal over time from a path: the stronger of what the fighter has and this. */
+function giveHot(f: SagaFighter, now: number, per: number): void {
+  if (!f.hot || now >= f.hot.until || f.hot.per < per) f.hot = { until: now + 4000, per };
 }
 
 const mobsNear = (h: Here, at: { x: number; y: number }, r: number): SagaMob[] =>
@@ -970,6 +1018,28 @@ function mobBoost(h: Here, by: SagaMob | null): number {
   return n;
 }
 
+/** The most damage a friend's aura (the Murvakt path) takes off a hit on `p`: heroes within 7 tiles. */
+function auraAt(h: Here, p: PlayerState, now: number): number {
+  let best = 0;
+  for (const q of partyOf(h)) {
+    const a = buffsOf(h, q.id).traits.aura;
+    if (a && a > best && upright(h, q) && dist(q, p) <= 7) best = a;
+  }
+  void now;
+  return best;
+}
+
+/** The Hämnare path: the monster that hit takes some of the blow back. */
+function thorns(h: Here, p: PlayerState, amount: number, by: SagaMob | null, now: number, out: Change[]): void {
+  const t = buffsOf(h, p.id).traits.thorns;
+  if (!t || !by || !tickCtx || !h.inst.mobs[by.id]) return;
+  void now;
+  hurtMob(h, by, p.id, amount * t * (h.inst.run?.dmgMul ?? 1) + 1, 1, false, tickCtx, out);
+}
+
+/** The context of the tick being run (the thorns of a path need it to hurt a monster from inside a monster's blow). */
+let tickCtx: SimCtx | null = null;
+
 function hurtFighter(h: Here, p: PlayerState, amount: number, by: SagaMob | null, now: number, out: Change[]): void {
   const f = h.inst.fighters[p.id];
   // the ice that holds a frozen player keeps everything else out too
@@ -977,9 +1047,25 @@ function hurtFighter(h: Here, p: PlayerState, amount: number, by: SagaMob | null
   const rb = buffsOf(h, p.id);
   const armor = Math.min(0.6, fightStats(p).armor + rb.armor);
   let n = Math.max(1, Math.round(amount * mobDmgScale(partyOf(h).length) * (h.inst.run?.dmgMul ?? 1) * mobBoost(h, by) * (1 - armor) * (1 - Math.min(0.5, rb.taken)) * (f.wall !== undefined && now < f.wall ? 0.4 : 1)));
+  // a path's Murvakt: friends near the hero (and the hero) take less
+  const aura = auraAt(h, p, now);
+  if (aura) n = Math.max(1, Math.round(n * (1 - aura)));
   n = Math.max(1, petSoak(h, p, n, now, out)); // a guarding pet takes a share
+  // a path's shield takes the blow first
+  if (f.shield && now < f.shield.until && f.shield.hp > 0) {
+    const taken = Math.min(f.shield.hp, n);
+    f.shield.hp -= taken;
+    n -= taken;
+    if (taken > 0) out.push(hit(h, p.id, taken, 'block'));
+    if (n <= 0) {
+      f.fightAt = now;
+      thorns(h, p, amount, by, now, out);
+      return;
+    }
+  }
   if (n >= f.hp && f.hp > f.max * 0.5 && n < f.max) n = f.hp - 1; // one hit from full health never knocks you down
   f.hp -= n;
+  thorns(h, p, amount, by, now, out);
   f.fightAt = now;
   out.push(hit(h, p.id, n, f.wall !== undefined && now < f.wall ? 'block' : 'dmg'));
   if (f.hp > 0) return;
@@ -1706,7 +1792,18 @@ export function tickSaga(area: WorldState, key: string, dtMs: number, ctx: SimCt
   const farm = farmOf(area);
   const h: Here = { farm, area, inst, key };
   const now = ctx.now;
+  tickCtx = ctx;
   const party = partyOf(h);
+  // burning monsters (a path's Eld): a second's damage each second
+  for (const m of Object.values(inst.mobs)) {
+    if (!m.burn) continue;
+    if (now >= m.burn.until || m.state === 'home') delete m.burn;
+    else if (now >= m.burn.next) {
+      m.burn.next += 1000;
+      const by = m.burn.by;
+      hurtMob(h, m, by, m.burn.per, 0.5, false, ctx, out);
+    }
+  }
   // players who left (or lost their class) are out of the fight
   for (const id of Object.keys(inst.fighters)) {
     const p = farm.players[id];
@@ -1884,7 +1981,7 @@ export function sagaSnapshot(farm: WorldState, now: number): Record<string, Saga
     if (!inst || !Object.values(a.players).some((p) => p.online)) continue;
     const snap: SagaSnap = { f: {}, m: {} };
     for (const [id, f] of Object.entries(inst.fighters)) {
-      const flags = (f.down !== undefined ? 1 : 0) | (f.wall !== undefined && now < f.wall ? 2 : 0) | (f.rage !== undefined && now < f.rage ? 4 : 0) | (f.hot && now < f.hot.until ? 8 : 0) | (f.slow !== undefined && now < f.slow ? 16 : 0) | (f.frozen !== undefined ? 32 : 0);
+      const flags = (f.down !== undefined ? 1 : 0) | (f.wall !== undefined && now < f.wall ? 2 : 0) | (f.rage !== undefined && now < f.rage ? 4 : 0) | (f.hot && now < f.hot.until ? 8 : 0) | (f.slow !== undefined && now < f.slow ? 16 : 0) | (f.frozen !== undefined ? 32 : 0) | (f.shield && now < f.shield.until && f.shield.hp > 0 ? 64 : 0);
       snap.f[id] = [Math.ceil(f.hp), f.max, flags];
     }
     for (const m of Object.values(inst.mobs)) {

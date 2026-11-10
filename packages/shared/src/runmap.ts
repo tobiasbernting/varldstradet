@@ -29,6 +29,11 @@ import {
   RUN_BIOMES,
   WING_HP,
   ZONE_TEMPLATES,
+  ELITE_HP,
+  ELITE_PACKS,
+  TREASURE_PACKS,
+  isCamp,
+  isFlockLike,
   modifier,
   wingOf,
   type NodeKind,
@@ -86,7 +91,36 @@ export function generateRoute(seed: number, opts: { dungeon: DungeonId; level: R
     else if (row === ROUTE_ROWS) kinds[0] = 'boss';
     else if (SAFE_ROWS.has(row)) kinds[randInt(rnd, 0, lanes - 1)] = 'rest';
     else if ((row === 2 || row === 6) && rnd() < 0.3) kinds[randInt(rnd, 0, lanes - 1)] = 'rest';
+    // the free lanes are not all fights (GAME2.md 2.1): a Händelse, a Skatt, a Stark vakt (not before row 3 and not on the two easiest levels) or a Köpman
+    if (!SINGLE_ROWS.has(row))
+      kinds.forEach((k, lane) => {
+        if (k !== 'flock') return;
+        const roll = rnd() * 100;
+        const elite = row >= 3;
+        const wanted: NodeKind = roll < 18 ? 'event' : roll < 28 ? 'treasure' : roll < 40 ? (elite ? 'elite' : 'flock') : roll < 47 ? 'shop' : 'flock';
+        // never two Händelser in one row, and one lane of every row is a plain fight (the party can always choose to fight, and a row is never all surprises)
+        if (wanted === 'event' && kinds.includes('event')) return;
+        kinds[lane] = wanted;
+      });
+    // (one roll for the fix, used or not, so the map does not depend on the level)
+    const fixAt = rnd();
+    if (!SINGLE_ROWS.has(row) && !kinds.some((k) => k === 'flock' || k === 'rest')) kinds[Math.floor(fixAt * lanes)] = 'flock';
+    // (the two easiest levels have no Stark vakt: it is a plain Flock there, after everything else has been decided)
+    if (isEasy(opts.level)) kinds.forEach((k, i) => { if (k === 'elite') kinds[i] = 'flock'; });
     rows.push(kinds.map((kind, lane) => ({ id: id++, row, lane, lanes, kind, next: [] })));
+  }
+  // a Köpman on every route, in each of the first two wings (rows 2-4 and 6-8): the party can spend what it earns
+  for (const [lo, hi] of [[2, 4], [6, 8]] as const) {
+    const inWing = rows.slice(lo - 1, hi).flat();
+    const pickAt = rnd();
+    if (inWing.some((n) => n.kind === 'shop')) continue;
+    // a surprise lane makes way for it; else a fight lane in a row that keeps another fight or a Vilosten
+    // (a Stark vakt counts as a Flock here, so the map is the same on every level)
+    const fight = (k: NodeKind): boolean => k === 'flock' || k === 'elite';
+    const surprise = inWing.filter((n) => n.kind === 'event' || n.kind === 'treasure');
+    const free = inWing.filter((n) => fight(n.kind) && rows[n.row - 1]!.filter((m) => fight(m.kind) || m.kind === 'rest').length >= 2);
+    const from = surprise.length ? surprise : free;
+    from[Math.floor(pickAt * from.length)]!.kind = 'shop';
   }
   for (let r = 0; r + 1 < rows.length; r++) {
     const from = rows[r]!;
@@ -266,13 +300,15 @@ function planStop(seed: number, node: RouteNode, boss: DungeonId, mods: string[]
     rooms.push({ ...r, kind: 'pack', packs });
   };
   switch (node.kind) {
+    case 'elite':
+    case 'treasure':
     case 'flock': {
       // a layout of one of the seven biome templates: start, the two rooms of packs and the exit room (the rest stone and the side room go)
       const t = ZONE_TEMPLATES[pick(rnd, RUN_BIOMES)];
       layout = t.biome;
       const cut = dropRooms(t.rooms as ZoneRoom[], t.links, [3, 5]);
       const table = isEasy(level) ? LATT_FLOCK_PACKS : FLOCK_PACKS;
-      const spec = table[Math.min(wing, table.length - 1)]!;
+      const spec = node.kind === 'elite' ? ELITE_PACKS : node.kind === 'treasure' ? TREASURE_PACKS : table[Math.min(wing, table.length - 1)]!;
       let order = 0;
       cut.rooms.forEach((r, i) => {
         const f = at(r);
@@ -292,6 +328,14 @@ function planStop(seed: number, node: RouteNode, boss: DungeonId, mods: string[]
     }
     case 'rest': {
       rooms.push({ ...at(REST_STOP.start), kind: 'start' }, { ...at(REST_STOP.rest), kind: 'rest' }, { ...at(REST_STOP.exit), kind: 'pack' });
+      links = [[0, 1], [1, 2]];
+      endRoom = 2;
+      break;
+    }
+    case 'shop':
+    case 'event': {
+      // a camp: start, a glade in the middle (no stone, no packs) and the exit room; nobody fights here
+      rooms.push({ ...at(REST_STOP.start), kind: 'start' }, { ...at(REST_STOP.rest), kind: 'pack', packs: [] }, { ...at(REST_STOP.exit), kind: 'pack' });
       links = [[0, 1], [1, 2]];
       endRoom = 2;
       break;
@@ -346,7 +390,7 @@ function planStop(seed: number, node: RouteNode, boss: DungeonId, mods: string[]
     required,
     gate,
     endRoom,
-    hpMul: (WING_HP[wing] ?? 1) * mod.reduce((m, x) => m * (x.hpMul ?? 1) * (x.packHp ?? 1), 1),
+    hpMul: (WING_HP[wing] ?? 1) * (node.kind === 'elite' ? ELITE_HP : 1) * mod.reduce((m, x) => m * (x.hpMul ?? 1) * (x.packHp ?? 1), 1),
     dmgMul: mod.reduce((m, x) => m * (x.dmgMul ?? 1), 1),
     bossMul: (node.kind === 'boss' ? mod.reduce((m, x) => m * (x.hpMul ?? 1), 1) : 1) * (node.kind === 'boss' || node.kind === 'mini' ? mod.reduce((m, x) => m * (x.bossHp ?? 1), 1) : 1),
     ...(mod.some((m) => m.bossDmg) ? { bossDmg: mod.reduce((m, x) => m * (x.bossDmg ?? 1), 1) } : {}),
@@ -416,7 +460,7 @@ export function placeRunes(world: WorldState, z: StopPlan, route: RoutePlan, nex
 }
 
 /** The variant of a väg-runa object: which stop's picture it carries. */
-export const NODE_KIND_CODE: Record<NodeKind, number> = { flock: 0, rest: 1, mini: 2, boss: 3 };
+export const NODE_KIND_CODE: Record<NodeKind, number> = { flock: 0, rest: 1, mini: 2, boss: 3, shop: 4, event: 5, treasure: 6, elite: 7 };
 
 /** Where the boss waits, in pixels (for tests and the client). */
 export const bossSpot = (world: WorldState): { x: number; y: number } => {

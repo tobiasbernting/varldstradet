@@ -718,10 +718,10 @@ than ~60 s of new route tests), and the Godot workflow gains **one** short bot s
 3. **R3 — the route.** **Done (2026-11-07).** What was built and measured is section 5.6. `generateRoute` + `buildStop`; stops of kind Flock, Mellanboss, Boss, Vilosten only; the walk-onto-a-
    rune vote; the HUD rail. Keep the v1 zone templates as layouts. The bots walk the graph (`runbot.ts` learns "pick the lane
    with the safe icon / random lane"). 10 rows ~28 min target; tune row sizes.
-4. **R4 — runor v2.** Personal offers, rarities and tags, the card overlay, set bonuses, ~30 new runor (the combo tags come
+4. **R4 — runor v2.** **Done (2026-11-10): `runor.ts`, `ui/runpick.ts`; four rarities (the Episk and Sagorun tiers became *sällsynt*+*legendarisk*), personal cards by class and path, set bonuses of 2 and 4, skärpa at a Vilosten.** Personal offers, rarities and tags, the card overlay, set bonuses, ~30 new runor (the combo tags come
    later). Test: every runa still "changes something" (the existing `every effect` test), plus a distribution test of rarity
    weights.
-5. **R5 — Hacksilver and the Köpman, Händelser, Skatt, Stark vakt.** The other node kinds, ~10 events, the shop window;
+5. **R5 — Hacksilver and the Köpman, Händelser, Skatt, Stark vakt.** **Done (2026-11-10): `events.ts`, `ui/runshop.ts`; ten events, shop prices 40/60/90/160 per rarity, 25 per potion, 110 a gemensam runa, 150 a Sagoande, 50 skärpa; the later wings' monsters got tougher (`WING_HP` 1.85/2.3/2.7) to pay for the personal runor.** The other node kinds, ~10 events, the shop window;
    leftover → sagafrön.
 6. **R6 — dungeon craft.** Pack recipes with roles, the Besvärjare, särdrag of a Stark vakt, patrols, the threat arrow
    (`SagaSnap.m`). Bots learn "kill the caster first".

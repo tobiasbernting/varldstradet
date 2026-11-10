@@ -4,8 +4,8 @@ import type { Change, NodeKind, RunOfferSnap, RunOutcome, RunSnap } from '@lilla
 import { bus, client } from './state.ts';
 
 /** The pictures of the stops of a route (the väg-runor on the floor carry the same ones) and their colours. */
-export const KIND_ICON: Record<NodeKind, string> = { flock: '⚔️', mini: '👹', rest: '💚', boss: '👑' };
-export const KIND_COLOR: Record<NodeKind, string> = { flock: '#ff9a3c', mini: '#c07cff', rest: '#4fe39a', boss: '#ffd23f' };
+export const KIND_ICON: Record<NodeKind, string> = { flock: '⚔️', mini: '👹', rest: '💚', boss: '👑', shop: '🪙', event: '❓', treasure: '💎', elite: '💀' };
+export const KIND_COLOR: Record<NodeKind, string> = { flock: '#ff9a3c', mini: '#c07cff', rest: '#4fe39a', boss: '#ffd23f', shop: '#ffd86b', event: '#6ec6ff', treasure: '#5ce0d8', elite: '#ff6a5a' };
 
 export interface RunEnded {
   outcome: RunOutcome;
@@ -52,6 +52,13 @@ export const routeLeft = (): number => {
   if (!r || r.routeLeft === undefined) return -1;
   return r.routeLeft < 0 ? -1 : Math.max(0, r.routeLeft - (performance.now() - runClient.runAt));
 };
+/** Time left of everyone's choice of path (ms), or 0 when none is going on. */
+export const pickLeft = (): number => {
+  const r = runClient.run;
+  return r?.pick ? Math.max(0, r.pick.left - (performance.now() - runClient.runAt)) : 0;
+};
+/** The path (väg) a player chose in the run I am in (an id, or undefined). */
+export const pathOf = (id: string): string | undefined => myRun()?.paths[id];
 /** Time left of the vote on a runa (ms). */
 export const offerLeft = (): number => (runClient.offer ? Math.max(0, runClient.offer.left - (performance.now() - runClient.offerAt)) : 0);
 

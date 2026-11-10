@@ -331,16 +331,19 @@ describe('runs over the socket', () => {
     game.broadcastState();
     const state = [...la.msgs].reverse().find((m) => m.t === 'state');
     expect(state && state.t === 'state' && !!state.saga?.[run.key]).toBe(true);
-    // a vote: put the party at the vote, one card each
+    // the cards: put the party at them, each with their own three; each picks their own and the run goes on
     const inst = game.world.areas![run.key]!.saga!;
     run.phase = 'pick';
-    run.offer = { cards: ['p_hjarta', 'p_kraft', 'p_fro'], votes: {}, order: [], until: run.elapsed + 20_000, from: 0 };
+    run.offerFrom = 0;
+    run.offerUntil = run.elapsed + 20_000;
+    run.offers = { [a.id]: { cards: ['v_hugg', 'v_tjock', 'v_hjarta'], source: 'flock' }, [b.id]: { cards: ['h_runa', 'h_ring', 'h_pil'], source: 'flock' } };
     ha({ t: 'run', a: 'pick', card: 1 });
-    expect(run.runor).toEqual([]);
-    hb({ t: 'run', a: 'pick', card: 1 });
-    expect(run.runor).toEqual(['p_kraft']);
+    expect(run.hold[a.id]).toBeUndefined();
+    hb({ t: 'run', a: 'pick', card: 2 });
+    expect(run.hold[a.id]).toEqual([{ id: 'v_tjock', up: 0 }]);
+    expect(run.hold[b.id]).toEqual([{ id: 'h_pil', up: 0 }]);
     expect(run.phase).toBe('route');
-    expect(changesOf(la).some((c) => c.t === 'banner' && c.text.includes('Sagans kraft'))).toBe(true);
+    expect(changesOf(la).some((c) => c.t === 'banner' && c.text.includes('Tjock sköld'))).toBe(true);
     void inst;
     // Bo's connection drops: he is still in the run; he comes back into the zone
     game.disconnect(lb);

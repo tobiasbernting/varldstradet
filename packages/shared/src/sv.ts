@@ -1543,6 +1543,12 @@ export const RUNA_NAMES: Record<string, string> = {
   k_yx: 'Vässad yxa', k_storm: 'Stormigare steg', k_virvel: 'Vildare virvel', k_raseri: 'Längre raseri', k_glupsk: 'Glupsk yxa', k_hjarta: 'Bärsärkens hjärta', k_kraft: 'Bärsärkens kraft', k_egg: 'Skarp egg',
   m_eld: 'Hetare eld', m_is: 'Kallare is', m_ask: 'Åskmoln', m_blink: 'Kvickt hopp', m_snabb: 'Snabb magi', m_kraft: 'Runkraft', m_tur: 'Lyckoträff', m_skal: 'Magiskt skal',
   p_hjarta: 'Gemensamt hjärta', p_vila: 'Vilostenarnas sång', p_kraft: 'Sagans kraft', p_flaska: 'Fler flaskor', p_vakna: 'Snabb uppvaknande', p_fro: 'Frörikedom',
+  // runor v2
+  v_taggar: 'Taggig sköld', v_skyddar: 'Skyddande rop', v_skjuts: 'Krossande slag', v_eko: 'Ekande hugg', v_vakt: 'Murvaktens kåpa', v_titan: 'Titanens vilja',
+  h_ranka: 'Rankor', h_efter: 'Efterläkning', h_stjarna: 'Stjärnring', h_skal: 'Ljusskal', h_under: 'Underbar väckning', h_livsflod: 'Livets flod',
+  k_hammare: 'Hammarsteg', k_skar: 'Skärande virvel', k_eldyxa: 'Eldyxan', k_dubbel: 'Dubbelhugg', k_mod: 'Lejonmod', k_ragnarok: 'Ragnarök',
+  m_glod: 'Glöd', m_frost: 'Frostbrand', m_kedja: 'Kedjeeld', m_sprak: 'Åskspraket', m_isskal: 'Isskal', m_stormen: 'Stormens öga',
+  p_mod: 'Gemensamt mod', p_hast: 'Sagans fart', p_lycka: 'Tursamma', p_sang: 'Läkande sång', p_djur: 'Djurens kall', p_yggdrasil: 'Yggdrasils gåva',
 };
 export const RUNA_TEXT: Record<string, string> = {
   v_tjock: 'Skydd +8 %', v_hugg: 'Svärdshugg +25 %', v_ropet: 'Utmana laddar 30 % snabbare', v_mur: 'Sköldmur laddar 25 % snabbare', v_slag: 'Sköldslag +40 %', v_hjarta: 'Hälsa +15 %', v_trots: 'Monstren vill slåss med dig +30 %', v_lugn: 'Du tar 10 % mindre skada',
@@ -1550,15 +1556,33 @@ export const RUNA_TEXT: Record<string, string> = {
   k_yx: 'Yxhugg +30 %', k_storm: 'Stormsteg laddar 35 % snabbare', k_virvel: 'Virvelvind +35 %', k_raseri: 'Raseriet laddar 30 % snabbare', k_glupsk: 'Du läker 8 % av din skada', k_hjarta: 'Hälsa +12 %', k_kraft: 'Trollformler +10 %', k_egg: 'Fler kritiska träffar +10 %',
   m_eld: 'Eldboll +30 %', m_is: 'Isspjut +35 %', m_ask: 'Åskregn +35 %', m_blink: 'Blink laddar 40 % snabbare', m_snabb: 'Trollformler laddar 12 % snabbare', m_kraft: 'Trollformler +10 %', m_tur: 'Fler kritiska träffar +12 %', m_skal: 'Du tar 8 % mindre skada',
   p_hjarta: 'Allas hälsa +10 %', p_vila: 'Vilostenar läker 60 % fortare', p_kraft: 'Allas trollformler +8 %', p_flaska: '2 läkedrycker var, dryck +15 %', p_vakna: 'Fallna vaknar 40 % fortare', p_fro: 'Sagafrön +25 %',
+  v_taggar: 'Den som slår dig får 30 % tillbaka', v_skyddar: 'Utmana! ger de nära 6 % skydd', v_skjuts: 'Sköldslag +30 % och yr 0,8 s längre', v_eko: 'Hugget träffar 1 fiende till', v_vakt: 'Hälsa +8 %, skydd +3 %', v_titan: 'Sköldmur 4 s längre, skyddar alla',
+  h_ranka: 'Ljuspilen saktar ner i 2 s', h_efter: 'Läkerunan läker 50 % till efteråt', h_stjarna: 'Läkekretsen når 1 steg längre', h_skal: 'Läkekretsen ger alla 6 % skydd', h_under: 'Väck upp! 40 % snabbare, +25 % hälsa', h_livsflod: 'Läkekretsen +50 % och mycket större',
+  k_hammare: 'Stormsteg yr 0,6 s längre', k_skar: 'Virvelvind når 0,8 steg längre', k_eldyxa: 'Yxhugget bränner 60 % till', k_dubbel: 'Yxhugget träffar 1 fiende till', k_mod: 'Fler kritiska +6 %, hälsa +5 %', k_ragnarok: 'Raseriet 4 s längre, 50 % snabbare',
+  m_glod: 'Eldbollen bränner 50 % till', m_frost: 'Eldbollen saktar ner i 1,5 s', m_kedja: 'Eldbollen hoppar till 1 fiende till', m_sprak: 'Åskregn större och 25 % snabbare', m_isskal: 'Blink ger dig 12 % skydd', m_stormen: 'Åskregn +60 %, större och brinner',
+  p_mod: 'Allas skydd +4 %', p_hast: 'Allas trollformler laddar 6 % snabbare', p_lycka: 'Allas kritiska träffar +6 %', p_sang: 'All läkning +10 %', p_djur: 'Allas hälsa +6 % och 30 % mer läkning', p_yggdrasil: 'Allas hälsa +15 %, kraft +10 %',
+};
+/** Rarities (a word and a stars row on the card, and a border pattern: colour is never the only sign), tags, and the set bonuses of two and four runor of a tag. */
+export const RUNA_RARITY_NAMES: Record<string, string> = { vanlig: 'Vanlig', ovanlig: 'Ovanlig', sallsynt: 'Sällsynt', legendarisk: 'Legendarisk' };
+export const RUNA_RARITY_STARS: Record<string, string> = { vanlig: '★', ovanlig: '★★', sallsynt: '★★★', legendarisk: '★★★★' };
+export const TAG_NAMES: Record<string, string> = { eld: 'Eld', is: 'Is', aska: 'Åska', skold: 'Sköld', liv: 'Liv', hugg: 'Hugg', tur: 'Tur', djur: 'Djur' };
+export const TAG_ICON: Record<string, string> = { eld: '🔥', is: '❄️', aska: '⚡', skold: '🛡️', liv: '💚', hugg: '🪓', tur: '🍀', djur: '🐾' };
+export const SET_NAMES: Record<string, [string, string]> = {
+  eld: ['Glöden', 'Brasan'], is: ['Frostskalet', 'Glaciären'], aska: ['Gnistan', 'Åskstormen'], skold: ['Skyddet', 'Fästningen'], liv: ['Livsgnistan', 'Livets träd'], hugg: ['Skärpan', 'Mästarhugget'], tur: ['Lyckan', 'Guldregnet'], djur: ['Flocken', 'Vildmarken'],
+};
+export const SET_TEXT: Record<string, [string, string]> = {
+  eld: ['Trollformler +3 %', 'Trollformler +4 % och du läker 2 %'], is: ['Du tar 3 % mindre skada', 'Du tar 3 % mindre och laddar 3 % fortare'], aska: ['Trollformler laddar 3 % snabbare', '3 % snabbare och 3 % fler kritiska'],
+  skold: ['Skydd +3 %', 'Skydd +2 % och hälsa +5 %'], liv: ['Läkning +5 % och hälsa kommer fortare', 'Läkning +6 %, vila och väckning bättre'], hugg: ['Fler kritiska träffar +3 %', '+3 % kritiska och trollformler +3 %'],
+  tur: ['Kritiska +3 % och 20 % fler mynt', '25 % fler mynt och 10 % fler sagafrön'], djur: ['Hälsa +4 %', 'Hälsa +4 % och hälsan kommer fortare'],
 };
 
 export const TREE_NAMES: Record<string, string> = {
-  h1: 'Starkare skott', h2: 'Tjockare skinn', h3: 'Segerviljan', h4: 'Hård hud', h5: 'Heltens ande', h6: 'Evig låga',
+  h1: 'Starkare skott', h2: 'Tjockare skinn', h3: 'Segerviljan', h4: 'Hård hud', h5: 'Heltens ande', h6: 'Evig låga', h7: 'Runlycka',
   g1: 'Starkare band', g2: 'Mjukt uppvaknande', g3: 'Omval', g4: 'Delad glädje', g5: 'Hirdens lön', g6: 'Frögåva',
   f1: 'Större matsäck', f2: 'Gyllene skörd', f3: 'Djurens vänskap', f4: 'Extra flaskor', f5: 'Rikare kistor', f6: 'Världsträdets rot',
 };
 export const TREE_TEXT: Record<string, string> = {
-  h1: 'Trollformler +3 %', h2: 'Hälsa +5 %', h3: 'Fler kritiska träffar +4 %', h4: 'Skydd +3 %', h5: 'Läkedryck läker 10 % mer', h6: 'Trollformler laddar 4 % snabbare',
+  h1: 'Trollformler +3 %', h2: 'Hälsa +5 %', h3: 'Fler kritiska träffar +4 %', h4: 'Skydd +3 %', h5: 'Läkedryck läker 10 % mer', h6: 'Trollformler laddar 4 % snabbare', h7: 'Fler sällsynta runor, +25 % tur',
   g1: 'Vilostenar läker 25 % fortare', g2: 'Fallna vaknar 20 % fortare', g3: 'Nya kort en gång per färd', g4: 'All läkning +8 %', g5: 'Hirdmannen är 20 % starkare', g6: 'Sagafrön +10 %',
   f1: 'En färdkostplats till', f2: 'Färdkost 25 % starkare', f3: 'Djurens hjälp 50 % starkare', f4: 'En läkedryck till i början', f5: 'Mynt ur kistor +25 %', f6: 'Bossen ger 5 sagafrön till',
 };
@@ -1573,12 +1597,16 @@ export const MODIFIER_TEXT: Record<string, string> = {
 };
 
 /** The kinds of stop on a route (GAME2.md section 2.1): the name on the banner and the line under it, and the short word on the map. */
-export const STOP_NAMES: Record<string, string> = { flock: 'Ett flock', mini: 'Mellanbossen', rest: 'Vilosten', boss: 'Bossen' };
-export const STOP_WORDS: Record<string, string> = { flock: 'Flock', mini: 'Mellanboss', rest: 'Vilosten', boss: 'Boss' };
+export const STOP_NAMES: Record<string, string> = { flock: 'Ett flock', mini: 'Mellanbossen', rest: 'Vilosten', boss: 'Bossen', shop: 'Köpmannen', event: 'En händelse', treasure: 'Skattrummet', elite: 'Stark vakt' };
+export const STOP_WORDS: Record<string, string> = { flock: 'Flock', mini: 'Mellanboss', rest: 'Vilosten', boss: 'Boss', shop: 'Köpman', event: 'Händelse', treasure: 'Skatt', elite: 'Stark vakt' };
 export const STOP_INTROS: Record<string, string> = {
   flock: 'Ett flock står i vägen. Slå ner dem alla!',
   mini: 'Här väntar vakten som håller halva vägen.',
   rest: 'En vilosten. Hämta andan innan ni går vidare.',
+  shop: 'Köpmannen Bram har slagit läger. Köp något fint!',
+  event: 'Något spännande händer här.',
+  treasure: 'Ett skatterum! En vakt står i vägen.',
+  elite: 'En extra stark vakt. Det ger bäst belöning!',
 };
 export const WING_NAMES: readonly string[] = ['Första vingen', 'Andra vingen', 'Hallen'];
 /** What a dish does, in a line (the arch window). */
@@ -1588,6 +1616,33 @@ export const FOOD_TEXT: Record<string, string> = {
 };
 export const COMPANION_NAME = 'Hirdmannen';
 
+/** Händelser: the name, the story line, and for each choice a name and one sentence of what it gives. */
+export const EVENT_NAMES: Record<string, string> = { trollunge: 'Den hungriga trollungen', brunn: 'Önskebrunnen', kraka: 'Den vilsna kråkan', runsten: 'Runstenen som viskar', spoke: 'Spökets skatt', smedja: 'Gamla smedjan', lasning: 'Kistan med lås', skald: 'Den vandrande skalden', ande: 'Sagoanden', honung: 'Honungsträdet' };
+export const EVENT_TEXT: Record<string, string> = {
+  trollunge: 'En liten trollunge ser hungrig ut. Han tittar på er matsäck.',
+  brunn: 'En gammal brunn glittrar. Kasta ett mynt och önska!',
+  kraka: 'En kråka hoppar framför er och kraxar högt.',
+  runsten: 'En runsten viskar. Läs den vänstra eller den högra runan.',
+  spoke: 'Ett vänligt spöke vaktar en kista.',
+  smedja: 'Ett gammalt städ står kvar. Det är fortfarande varmt!',
+  lasning: 'En kista med ett stort lås. Hur ska ni öppna den?',
+  skald: 'En skald spelar en glad melodi.',
+  ande: 'En ljus ande svävar fram. Vad önskar ni er?',
+  honung: 'Ett stort träd är fullt av honung. En björn sover under det.',
+};
+export const EVENT_CHOICES: Record<string, Record<string, [string, string]>> = {
+  trollunge: { brod: ['Ge bröd', 'Hela laget får en sällsynt runa.'], smyg: ['Smyg förbi', 'Ni hittar 10 silver på marken.'] },
+  brunn: { mynt1: ['Kasta 10 silver', 'Hela laget får en vanlig runa.'], mynt3: ['Kasta 30 silver', 'Hela laget får en sällsynt runa.'], gavidare: ['Gå vidare', 'Ni hittar 5 silver vid brunnen.'] },
+  kraka: { folj: ['Följ kråkan', 'Den leder er till 30 silver.'], jaga: ['Jaga bort den', '10 silver, och alla läks lite.'] },
+  runsten: { vanster: ['Läs vänstra runan', 'Hela laget får en runa: liv eller sköld.'], hoger: ['Läs högra runan', 'Hela laget får en runa: åska eller tur.'] },
+  spoke: { kista: ['Öppna kistan', 'Alla får egna kort att välja bland.'], prata: ['Prata med spöket', 'Alla läks 25 % och får en dryck.'] },
+  smedja: { skarp: ['Skärp runor', 'Alla skärper en av sina runor.'], vapen: ['Vässa vapnen', 'Allas trollformler +6 % hela färden.'] },
+  lasning: { dyrk: ['Dyrka upp den', 'Alla får egna kort att välja bland.'], krossa: ['Slå sönder den', '25 silver ramlar ut.'] },
+  skald: { lyssna: ['Lyssna', 'Allas trollformler laddar 5 % snabbare.'], klappa: ['Klappa händerna', 'Skalden ger er 20 silver.'] },
+  ande: { skold: ['Sköldanden', 'Allas skydd +5 % hela färden.'], hjarta: ['Hjärtanden', 'Allas hälsa +8 % hela färden.'], spara: ['Spara anden', 'En Sagoande till som reser upp er.'] },
+  honung: { plocka: ['Plocka honung', 'Alla får 2 läkedrycker.'], bjorn: ['Klappa björnen', 'Alla läks helt.'] },
+};
+
 export const RUN_T = {
   started: 'Färden börjar! Tio steg till bossen.',
   needPort: 'Gå fram till färdporten först.',
@@ -1596,10 +1651,13 @@ export const RUN_T = {
   left: '{name} gick hem.',
   full: 'Färden är full. Ett långhus ger plats för en fjärde.',
   noRun: 'Det pågår ingen färd.',
-  pickTitle: 'Välj en runa!',
-  pickSub: 'Rösta på ett av tre kort.',
-  picked: 'Ni fick {runa}!',
-  voted: '{name} röstade.',
+  pickTitle: 'Välj din runa!',
+  pickSub: 'Alla väljer ett eget kort.',
+  picked: 'Du fick {runa}!',
+  partyGot: 'Hela laget fick {runa}!',
+  voted: '{name} har valt.',
+  sharpened: '{runa} blev vassare!',
+  noSharpen: 'Ingen runa att skärpa.',
   zoneClear: 'Vägen vidare är öppen!',
   zoneClearSub: 'Välj en runa, sen en väg.',
   exitShut: 'Vägrunorna lyser upp när stoppet är klart.',
@@ -1618,6 +1676,10 @@ export const RUN_T = {
   spiritFreeSub: 'Ni reser er vid vilostenen och försöker igen.',
   spiritGained: 'En Sagoande till!',
   badLevel: 'Det svårighetsvalet finns inte.',
+  pathTitle: 'Välj din väg!',
+  pathSub: 'Din roll går vidare. Alla väljer själva.',
+  pathChose: '{name} valde sin väg.',
+  pathYours: 'Din väg: {path}',
   /** A parent capped the highest level a character may play (the parent page): who, and the level they may go up to. */
   capped: '{names} får inte spela {level} än. Välj lättare, eller be en förälder.',
   cappedYou: 'En förälder har satt att du får spela upp till {max}. Hoppa på en lättare färd!',
@@ -1633,6 +1695,13 @@ export const RUN_T = {
   companion: '{name} följer med.',
   reroll: 'Nya kort!',
   noReroll: 'Inga omval kvar.',
+  silverGot: '+{n} silver',
+  shopNone: 'Det går inte att köpa det nu.',
+  spiritBought: 'En Sagoande till!',
+  potionBought: 'En läkedryck!',
+  eventBad: 'Det valet finns inte.',
+  eventTooPoor: 'Det är för lite silver till det valet.',
+  restMore: 'Du vilar lite extra.',
   food: 'Matsäck: {item}',
   foodNone: 'Du har ingen matsäck att ta med.',
   treeGrows: 'Yggdrasil växer!',
@@ -1640,6 +1709,31 @@ export const RUN_T = {
   ended: { win: 'Färden är klar', wipe: 'Alla föll', leave: 'Färden är slut' } as Record<string, string>,
 };
 export const runaName = (id: string): string => RUNA_NAMES[id] ?? id;
+
+/** Vägar (paths.ts): the name, one sentence and one line for each of the four spells (in the order of the class's spells). */
+export const PATH_NAMES: Record<string, string> = { eld: 'Eld', frost: 'Frost', aska: 'Åska', barsark: 'Bärsärk', vapen: 'Vapenmästare', murvakt: 'Murvakt', hamnare: 'Hämnare', ljus: 'Ljus', natur: 'Natur' };
+export const PATH_TEXT: Record<string, string> = {
+  eld: 'Eld som bränner kvar och större träffar.',
+  frost: 'Frysta fiender och skyddande is.',
+  aska: 'Blixtar som hoppar och snabba trollformler.',
+  barsark: 'Starkare och snabbare när du har ont.',
+  vapen: 'Stora träffar som stoppar och avbryter.',
+  murvakt: 'Skyddar alla runt dig mot skada.',
+  hamnare: 'Monstren som slår dig får det tillbaka.',
+  ljus: 'Stora läkningar och en snabbare väckning.',
+  natur: 'Läker hela tiden och snärjer med rankor.',
+};
+export const PATH_SPELLS: Record<string, [string, string, string, string]> = {
+  eld: ['Eldbollen brinner kvar.', 'Isspjutet bränner också.', 'Åskregnet blir större och brinner.', 'Blink laddar snabbare och hoppar längre.'],
+  frost: ['Eldbollen gör monstret långsamt.', 'Isspjutet fryser fast monstret och ger dig skydd.', 'Åskregnet saktar ner alla.', 'Blink ger dig ett isskal.'],
+  aska: ['Eldbollen hoppar till ett monster till och laddar snabbare.', 'Isspjutet hoppar till två till.', 'Åskregnet är större och laddar snabbare.', 'Blink laddar snabbt och hoppar långt.'],
+  barsark: ['Yxhugget är starkare och snabbare.', 'Stormsteget slår hårdare och laddar snabbare.', 'Virvelvinden når längre och slår hårdare.', 'Raseriet varar längre och laddar snabbare.'],
+  vapen: ['Yxhugget är mycket starkare, men långsammare.', 'Stormsteget stoppar länge och slår hårt.', 'Virvelvinden gör fienderna yra.', 'Raseriet är kortare men laddar mycket snabbare.'],
+  murvakt: ['Hugget är starkare och ger dig skydd.', 'Utmana! räcker längre och skyddar de nära.', 'Sköldslaget ger dig skydd.', 'Sköldmuren varar längre och skyddar alla nära.'],
+  hamnare: ['Hugget är mycket starkare.', 'Utmana! gör ont och når längre.', 'Sköldslaget slår hårt.', 'Sköldmuren laddar snabbare och varar längre.'],
+  ljus: ['Läkerunan läker mycket mer, men laddar långsammare.', 'Ljuspilen slår hårdare.', 'Läkekretsen är större och läker mer.', 'Väck upp! laddar snabbt, når långt och ger mer hälsa.'],
+  natur: ['Läkerunan läker lite mindre med en gång, och sen mer efteråt.', 'Ljuspilen snärjer monstret med rankor.', 'Läkekretsen varar längre och läker mer.', 'Väck upp! laddar snabbare och läker efteråt.'],
+};
 export const treeName = (id: string): string => TREE_NAMES[id] ?? id;
 
 /** The run's windows and HUD (ui/run.ts). Short words, every one with a picture next to it in the window. */
@@ -1733,8 +1827,56 @@ export const RUN_UI = {
   infoHome: 'Gå hem från färden. De andra kan fortsätta.',
   infoRunor: 'Dina runor. Tryck för att se alla.',
   infoRune: 'Gå ut på runan på golvet för att välja den vägen.',
-  kinds: { flock: 'Här slåss ni mot ett flock monster.', mini: 'Här väntar vakten som håller halva vägen.', rest: 'Här får ni vila och bli läkta.', boss: 'Här väntar bossen. Vinner ni är färden klar!' } as Record<string, string>,
-  ann: { stop: 'Nytt steg: {name}', vote: 'Välj väg. Gå ut på en vägruna.', offer: 'Välj en runa bland tre kort.', ended: 'Färden är slut.' },
+  kinds: { flock: 'Här slåss ni mot ett flock monster.', mini: 'Här väntar vakten som håller halva vägen.', rest: 'Här får ni vila och bli läkta.', boss: 'Här väntar bossen. Vinner ni är färden klar!', shop: 'Köpmannen säljer runor och drycker för silver.', event: 'Något händer här. Ni väljer ihop vad ni gör.', treasure: 'En vakt skyddar en skatt. Slå ner den och välj en runa!', elite: 'En extra stark vakt. Bäst belöning!' } as Record<string, string>,
+  // Hacksilver, the Köpman and the events
+  purse: 'Färdkassan',
+  infoPurse: 'Silver som laget har tjänat. Köpmannen tar emot det. Det som blir kvar blir sagafrön.',
+  shopTitle: 'Köpmannen Bram',
+  shopIntro: 'Köp med Färdkassan. Alla i laget får handla.',
+  shopOpen: 'Köpmannen',
+  buy: 'Köp',
+  bought: 'Köpt',
+  tooPoor: 'För lite silver',
+  silver: '{n} silver',
+  yourRunor: 'Runor till dig',
+  forParty: 'Till hela laget',
+  itemParty: 'Gemensam runa',
+  itemPartyText: 'En runa som hjälper alla i laget.',
+  itemPotion: 'Läkedryck',
+  itemPotionText: 'En läkedryck till din väska.',
+  itemSpirit: 'Sagoande',
+  itemSpiritText: 'En Sagoande till som reser upp alla om ni faller.',
+  itemSharpen: 'Skärp en runa',
+  itemSharpenText: 'Gör en av dina runor ett steg bättre.',
+  noSpirit: 'Inte här',
+  leftSale: 'Slutsålt',
+  boughtBy: '{name} köpte {item}.',
+  eventTitle: 'Något händer!',
+  eventIntro: 'Välj ihop vad ni gör. Alla röstar.',
+  eventNeeds: 'Behöver {n} silver',
+  eventFree: 'Gratis',
+  eventVotes: 'Röster',
+  eventDefault: 'Ingen fara: har ni inte valt tar vi det gratis valet.',
+  eventResult: 'Ni valde: {choice}',
+  eventWaiting: 'Väntar på de andra…',
+  restIntro: 'Här kan du vila ut eller göra en runa bättre. Du väljer en av dem.',
+  restMore: 'Vila lite extra',
+  restMoreText: 'Du får en fjärdedel mer hälsa tillbaka.',
+  sharpen: 'Skärp en runa',
+  noSharpen: 'Du har ingen runa att skärpa än.',
+  fitsPath: 'Passar din väg',
+  restReopen: 'Vilostenen',
+  convert: 'Silvret blev {n} sagafrön!',
+  ann: { stop: 'Nytt steg: {name}', vote: 'Välj väg. Gå ut på en vägruna.', offer: 'Välj en runa bland tre kort.', ended: 'Färden är slut.', path: 'Välj din väg.' },
+  pathTitle: 'Välj din väg!',
+  pathIntro: 'Din roll går vidare. Vägen ändrar hur dina trollformler fungerar resten av färden.',
+  pathLeft: '{n} s kvar',
+  pathWaiting: 'Väntar på de andra…',
+  pathDone: 'Vald',
+  pathPick: 'Välj',
+  pathMine: 'Din väg',
+  pathNone: 'Ingen väg än',
+  pathReopen: 'Välj väg',
 };
 // ---------------------------------------------------------------------------
 // Hus: everyone's own house, Norse decor and boss trophies (house.ts)
