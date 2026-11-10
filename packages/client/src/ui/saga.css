@@ -291,16 +291,6 @@ body.touch.dev-touch .saga-spell .key {
   }
 }
 /* ("explain" lines come up as the shared info card, ui/info.ts) */
-.run-info.near-bar {
-  /* (its height is set from the bar's place in ui/info.ts) */
-  max-width: calc(100vw - 32px);
-}
-body.touch .run-info.near-bar {
-  left: auto;
-  right: max(16px, env(safe-area-inset-right));
-  transform: none;
-  width: min(480px, calc(100vw - 32px));
-}
 
 /* ---- you and your target ---- */
 .saga-units {

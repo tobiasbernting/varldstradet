@@ -7,7 +7,7 @@ import { DUNGEONS, HOUSE_LOOT, sagaItem } from './saga.ts';
 import { hasLooks, lookPiece, standData, standLook } from './looks.ts';
 import { HOUSE_ROOM, HOUSE_EXIT, HOUSE_H, HOUSE_W, homeKey, isHomeKey, ownerOfHome } from './homekeys.ts';
 import { TILE } from './types.ts';
-import { HOUSE_T, LOOK_T, T, TROPHY_LEVEL_NAMES, fmt, houseTitle, itemName } from './sv.ts';
+import { HOUSE_T, ITEM_TEXTS, LOOK_T, T, TROPHY_LEVEL_NAMES, TROPHY_TEXT, fmt, houseTitle, itemName } from './sv.ts';
 import { REACH, farmOf, fx, getArea, giveItems, giveStack, placeIn, playerChange, tileOf, toast } from './sim.ts';
 import type { Change } from './protocol.ts';
 import type { ItemStack, PlayerState, WorldObject, WorldState } from './types.ts';
@@ -174,6 +174,9 @@ export function placedExtra(kind: string, data: string | undefined): Partial<Wor
 /** An item's name as a stack shows it: a trophy says the level it was won on. */
 export const stackName = (s: { item: string; data?: string }): string =>
   isTrophyKind(s.item) && s.data !== undefined ? `${itemName(s.item)} (${TROPHY_LEVEL_NAMES[trophyLevelOf(s.data)]})` : itemName(s.item);
+
+/** One kid-friendly sentence about an item: a dungeon find's own text, a trophy's, or the plain things'. Empty when there is none. */
+export const itemText = (id: string): string => sagaItem(id)?.text ?? (isTrophyKind(id) ? TROPHY_TEXT : (ITEM_TEXTS[id] ?? ''));
 
 // ---------------------------------------------------------------------------
 // The gear stand

@@ -1176,7 +1176,7 @@ export const SAGA_ITEMS: SagaItemDef[] = [
   { id: 'frostros', name: 'Frostros', rarity: 'common', kind: 'quest', text: 'En ros av is som aldrig smälter. Fru Lind vill ha den.' },
   { id: 'glodkol', name: 'Glödkol', rarity: 'common', kind: 'quest', text: 'Kol som glöder fast det är kallt. Bagar-Bo vill ha det till ugnen.' },
   // a drink that heals you in a fight
-  { id: 'healing_potion', name: 'Läkedryck', rarity: 'common', kind: 'potion', text: 'Dricks i en fängelsehåla: fyller på hälsan.' },
+  { id: 'healing_potion', name: 'Läkedryck', rarity: 'common', kind: 'potion', text: 'Dricks med 5 i en strid. Läker dig.' },
   // the saga's rewards for home
   { id: 'solruna', name: 'Solrunan', rarity: 'epic', kind: 'decor', glow: '#ffd23f', text: 'Runstenen som håller vintern borta. Den lyser som solen.' },
   { id: 'yggdrasil', name: 'Yggdrasils skott', rarity: 'legendary', kind: 'decor', glow: '#9cff8a', text: 'Ett litet skott av Världsträdet, som glittrar i mörkret.' },

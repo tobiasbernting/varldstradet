@@ -51,7 +51,8 @@ function titleToCard(el: HTMLElement): void {
   if (!title) return;
   el.removeAttribute('title');
   const own = (el.textContent ?? '').trim();
-  const long = title.length > 28 && own && own.length < title.length;
+  // a long title on a picture-only thing is its name ("Prata med alla"), not a sentence under a name that is only the picture
+  const long = title.length > 28 && own && own.length < title.length && !emojiOnly(own);
   const name = long ? own : title;
   const icon = emojiOnly(own) ? own : (own.match(/^\p{Extended_Pictographic}\S*/u)?.[0] ?? '');
   if (!el.getAttribute('aria-label') && (!own || emojiOnly(own))) el.setAttribute('aria-label', long ? `${name}. ${title}` : name);

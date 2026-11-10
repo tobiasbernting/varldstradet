@@ -1078,7 +1078,7 @@ body.in-run.touch .saga-boss {
 }
 
 .run-info.in-panel {
-  position: static;
+  position: relative;
   transform: none;
   width: auto;
   box-shadow: none;
