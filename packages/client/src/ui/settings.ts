@@ -1,5 +1,5 @@
 // "Inställningar": text size, strong contrast, effects, calm screen, shaking, colour-blind-safe warnings, how long to hold to read,
-// left-handed buttons and reading aloud. Opened from the HUD's ⚙️, the help window and the character picker (event 'lilla:settings').
+// left-handed buttons and reading aloud. Opened from the HUD's ⚙️, the help window and the character picker (event 'vt:settings').
 // Every change is applied at once and saved on the device (a11y.ts, fxprefs.ts). A window like the others: a dialog, Escape and the
 // gamepad's B close it, the focus comes back to what opened it.
 import { A11Y_T } from '@varldstradet/shared';
@@ -14,8 +14,8 @@ export class SettingsUi {
   private opener: HTMLElement | null = null;
 
   constructor(private ui: HTMLElement) {
-    document.addEventListener('lilla:settings', () => (this.modal ? this.close() : this.open()));
-    document.addEventListener('lilla:voices', () => this.modal && this.render());
+    document.addEventListener('vt:settings', () => (this.modal ? this.close() : this.open()));
+    document.addEventListener('vt:voices', () => this.modal && this.render());
     window.addEventListener(
       'keydown',
       (e) => {

@@ -789,7 +789,7 @@ export class RunUi {
     });
     // Garderoben (the looks of the class chosen above): a shortcut, since the looks are worn per class
     const wardrobe = h('button', { class: 'alt wardrobe-btn', type: 'button' }, `👕 ${LOOK_T.title}`);
-    this.tap(wardrobe, () => document.dispatchEvent(new Event('lilla:looks-arch')));
+    this.tap(wardrobe, () => document.dispatchEvent(new Event('vt:looks-arch')));
     body.append(h('div', { class: 'actions sticky' }, wardrobe, go));
     if (!cls) body.append(h('div', { class: 'hint' }, RUN_UI.noClass));
     else if (!arch.near) body.append(h('div', { class: 'hint' }, RUN_UI.nearGate));

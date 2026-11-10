@@ -31,7 +31,7 @@ async function newPage(browser, v, storage) {
   page.on('console', (m) => { if (m.type() === 'error') page.errs.push(m.text()); });
   page.on('pageerror', (e) => page.errs.push('PAGEERROR: ' + e.message));
   await page.addInitScript(() => { const W = window.WebSocket; window.WebSocket = function (...a) { const w = new W(...a); window.__ws = w; return w; }; window.WebSocket.prototype = W.prototype; for (const k of ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED']) window.WebSocket[k] = W[k]; });
-  await page.addInitScript((s) => { try { localStorage.setItem('lilla-garden.helpSeen', '1'); for (const [k, x] of Object.entries(s || {})) localStorage.setItem(k, x); } catch {} }, storage || {});
+  await page.addInitScript((s) => { try { localStorage.setItem('varldstradet.helpSeen', '1'); for (const [k, x] of Object.entries(s || {})) localStorage.setItem(k, x); } catch {} }, storage || {});
   page.send = (o) => page.evaluate((o) => window.__ws.send(JSON.stringify(o)), o);
   return page;
 }
@@ -47,7 +47,7 @@ async function create(page, name, cls) {
   for (let i = 0; i < 3; i++) { await page.keyboard.press('Escape'); await page.waitForTimeout(250); }
   if (cls) { await page.send({ t: 'saga', a: 'class', cls }); await page.waitForTimeout(500); }
 }
-const me = (page) => page.evaluate(() => { const c = window.lillaGarden.client; const p = c.world.players[c.me]; return { x: p.x, y: p.y, area: p.area }; });
+const me = (page) => page.evaluate(() => { const c = window.varldstradet.client; const p = c.world.players[c.me]; return { x: p.x, y: p.y, area: p.area }; });
 async function walkTo(page, tx, ty) {
   const m = await me(page);
   let x = m.x, y = m.y; const gx = (tx + 0.5) * 16, gy = (ty + 0.5) * 16;
@@ -129,12 +129,12 @@ async function scenarios(browser, v, res) {
     await shut();
   }
   // the settings window, when there is one
-  await page.evaluate(() => document.dispatchEvent(new Event('lilla:settings')));
+  await page.evaluate(() => document.dispatchEvent(new Event('vt:settings')));
   await page.waitForTimeout(400);
   if (await page.$('.settings-panel')) await tag(page, 'settings'); else console.log('no settings window');
   await shut();
   // the class window
-  await page.evaluate(() => window.lillaGarden.bus.emit('open', { ui: 'sagaClass' }));
+  await page.evaluate(() => window.varldstradet.bus.emit('open', { ui: 'sagaClass' }));
   await page.waitForTimeout(500);
   if (await page.$('.modal')) await tag(page, 'class');
   await shut();
@@ -143,7 +143,7 @@ async function scenarios(browser, v, res) {
   await page.send({ t: 'dev', a: 'petgear', tier: 3 });
   await page.waitForTimeout(1200);
   await tag(page, 'lobby-pet');
-  await page.evaluate(() => window.lillaGarden.bus.emit('open', { ui: 'kennel' }));
+  await page.evaluate(() => window.varldstradet.bus.emit('open', { ui: 'kennel' }));
   await page.waitForTimeout(500);
   if (await page.$('.modal')) await tag(page, 'kennel'); else console.log('no kennel window');
   await page.evaluate(() => [...document.querySelectorAll('.modal button.gold')].find((b) => /Klä|grejer/.test(b.textContent))?.click());

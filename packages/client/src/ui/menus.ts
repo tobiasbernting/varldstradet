@@ -115,7 +115,7 @@ export class Menus {
       else if (c.ui === 'npc') {
         // Smed-Stina has lost her forge: she sends you to the wardrobe's sets (unless a saga quest of hers is waiting)
         if (c.npc === 'stina' && !hasSagaQuests('stina')) {
-          document.dispatchEvent(new Event('lilla:sets'));
+          document.dispatchEvent(new Event('vt:sets'));
           return;
         }
         this.npcId = c.npc ?? null;
@@ -385,7 +385,7 @@ export class Menus {
     const gear = h('button', { class: 'gold', type: 'button', style: { minHeight: '48px', marginTop: '10px' } }, `🧣 ${PET_T.gearTitle}`);
     onTap(gear, () => {
       this.close();
-      document.dispatchEvent(new CustomEvent('lilla:pet-gear'));
+      document.dispatchEvent(new CustomEvent('vt:pet-gear'));
     });
     body.append(gear);
   }
@@ -538,7 +538,7 @@ export class Menus {
     if (sets)
       onTap(sets, () => {
         this.close();
-        document.dispatchEvent(new Event('lilla:sets'));
+        document.dispatchEvent(new Event('vt:sets'));
       });
     body.append(h('div', { class: 'npc-actions' }, chat, sets));
     // the saga's quests (ui/saga.ts)
@@ -624,7 +624,7 @@ export class Menus {
     }
     // Inställningar (text size, colours, motion, reading aloud) are one tap away from the help
     const settings = h('button', { class: 'alt' }, `⚙️ ${A11Y_T.settings}`);
-    onTap(settings, () => document.dispatchEvent(new Event('lilla:settings')));
+    onTap(settings, () => document.dispatchEvent(new Event('vt:settings')));
     tabs.append(settings);
     panel.insertBefore(tabs, body);
     const topic = topics.find((t) => t.id === this.helpTopic) ?? topics[0]!;

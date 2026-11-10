@@ -258,7 +258,7 @@ export function applyChange(c: Change): void {
 
 // ---- local preferences ----
 
-const LS_PLAYER = 'lilla-garden.player';
+const LS_PLAYER = 'varldstradet.player';
 export const rememberedPlayer = (): string | null => {
   try {
     return localStorage.getItem(LS_PLAYER);
@@ -275,7 +275,7 @@ export const rememberPlayer = (id: string | null): void => {
   }
 };
 
-const LS_HELP = 'lilla-garden.helpSeen';
+const LS_HELP = 'varldstradet.helpSeen';
 export const helpSeen = (): boolean => {
   try {
     return localStorage.getItem(LS_HELP) === '1';

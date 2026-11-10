@@ -59,7 +59,7 @@ export class Hud {
     this.top = h('div', { class: 'hud-top' });
     // the top row is drawn anew with every state: the level chip's tap (it opens the journal's level page) is caught here
     onTap(this.top, (ev) => {
-      if ((ev.target as HTMLElement | null)?.closest?.('.chip.level')) document.dispatchEvent(new Event('lilla:journal'));
+      if ((ev.target as HTMLElement | null)?.closest?.('.chip.level')) document.dispatchEvent(new Event('vt:journal'));
     });
     this.hotbar = h('div', { class: 'hotbar' });
     this.heldName = h('div', { class: 'hud-name' });
@@ -82,14 +82,14 @@ export class Hud {
     });
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) run.addEventListener(ev, () => setRun(false));
     // the gear window lives with the saga's windows (ui/saga.ts)
-    this.gearBtn = this.roundBtn('👕', () => document.dispatchEvent(new Event('lilla:gear')), T.sagaGearBtn, A11Y_T.btnGear);
+    this.gearBtn = this.roundBtn('👕', () => document.dispatchEvent(new Event('vt:gear')), T.sagaGearBtn, A11Y_T.btnGear);
     this.gearBtn.classList.add('gear-btn');
     this.furnishBtn = this.roundBtn('🪑', () => this.toggleFurnish(), HOUSE_T.furnish, A11Y_T.btnFurnish);
     this.furnishBtn.classList.add('furnish-btn');
     this.furnishBtn.hidden = true;
-    const right = h('div', { class: 'hud-right' }, this.furnishBtn, this.gearBtn, this.roundBtn('🎒', () => this.openMenu('inventory'), T.inventory, A11Y_T.btnBag), this.roundBtn('😊', () => this.openMenu('emotes'), A11Y_T.emotes, A11Y_T.btnEmotes), this.roundBtn('📖', () => document.dispatchEvent(new Event('lilla:journal')), T.sagaJournalTab, A11Y_T.btnJournal), this.roundBtn('🧭', () => this.minimap.toggle(), A11Y_T.map, A11Y_T.btnMap), this.roundBtn('❓', () => this.openMenu('help'), T.help, A11Y_T.btnHelp), this.roundBtn('⚙️', () => document.dispatchEvent(new Event('lilla:settings')), A11Y_T.settings, A11Y_T.settingsInfo), this.muteBtn(), ...(matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches ? [] : [this.fullscreenBtn()]));
+    const right = h('div', { class: 'hud-right' }, this.furnishBtn, this.gearBtn, this.roundBtn('🎒', () => this.openMenu('inventory'), T.inventory, A11Y_T.btnBag), this.roundBtn('😊', () => this.openMenu('emotes'), A11Y_T.emotes, A11Y_T.btnEmotes), this.roundBtn('📖', () => document.dispatchEvent(new Event('vt:journal')), T.sagaJournalTab, A11Y_T.btnJournal), this.roundBtn('🧭', () => this.minimap.toggle(), A11Y_T.map, A11Y_T.btnMap), this.roundBtn('❓', () => this.openMenu('help'), T.help, A11Y_T.btnHelp), this.roundBtn('⚙️', () => document.dispatchEvent(new Event('vt:settings')), A11Y_T.settings, A11Y_T.settingsInfo), this.muteBtn(), ...(matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches ? [] : [this.fullscreenBtn()]));
     this.minimap = new Minimap();
-    document.addEventListener('lilla:minimap', () => this.minimap.toggle());
+    document.addEventListener('vt:minimap', () => this.minimap.toggle());
     this.root.append(this.top, right, this.hotbar, this.heldName, this.toasts, zone, act, run, this.minimap.el);
     ui.append(this.root);
     this.setupJoystick(zone);
@@ -127,7 +127,7 @@ export class Hud {
       setMuted(!isMuted());
       b.textContent = isMuted() ? '🔇' : '🔊';
       try {
-        localStorage.setItem('lilla-garden.muted', isMuted() ? '1' : '0');
+        localStorage.setItem('varldstradet.muted', isMuted() ? '1' : '0');
       } catch {
         /* ignore */
       }

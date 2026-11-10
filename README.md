@@ -100,7 +100,7 @@ the game, `/api` and the WebSocket refuse browsers without an approved device co
 ## Dev helpers
 
 With `DEV_TELEPORT=1` the server accepts `dev` messages over the game socket. From the browser console of a running
-client: `lillaGarden.net.send({ t: 'dev', a: 'warp', x: 20, y: 20 })`. Without the variable the server answers with an
+client: `varldstradet.net.send({ t: 'dev', a: 'warp', x: 20, y: 20 })`. Without the variable the server answers with an
 `error`. The messages (`packages/shared/src/protocol.ts`, handled in `packages/server/src/game.ts`):
 
 | Message | Effect |

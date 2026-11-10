@@ -377,24 +377,24 @@ export class SagaUi {
       this.renderTracker();
     });
     // the gamepad's face buttons (ui/gamepad.ts): a spell, or its card while the explain mode is on
-    document.addEventListener('lilla:spell', (e) => this.padPress((e as CustomEvent<number>).detail));
-    document.addEventListener('lilla:explain', () => this.setExplain(!cards.mode));
-    document.addEventListener('lilla:device', () => this.refreshLabels());
+    document.addEventListener('vt:spell', (e) => this.padPress((e as CustomEvent<number>).detail));
+    document.addEventListener('vt:explain', () => this.setExplain(!cards.mode));
+    document.addEventListener('vt:device', () => this.refreshLabels());
     // the family list sits with the chat button
     const fam = h('div', { class: 'round small', title: T.familyBtn }, '👪');
     onTap(fam, () => this.open('family'));
     social.append(fam);
 
     // the gear window: the HUD's ⚔️ button and the gamepad's Select ask for it
-    document.addEventListener('lilla:gear', () => {
+    document.addEventListener('vt:gear', () => {
       this.openLooks();
     });
     // the journal's level page: the HUD's level chip asks for it
-    document.addEventListener('lilla:journal', () => this.open('journal'));
+    document.addEventListener('vt:journal', () => this.open('journal'));
     // Smed-Stina's window (ui/menus.ts) opens the wardrobe on the sets tab with a line about collecting them
-    document.addEventListener('lilla:sets', () => this.openLooks(null, { tab: 'set', note: LOOK_T.stinaLine }));
-    document.addEventListener('lilla:looks-arch', () => this.openLooks());
-    document.addEventListener('lilla:pet-gear', () => this.openLooks(null, { tab: 'pet' })); // (the kennel's and the pet button's way in)
+    document.addEventListener('vt:sets', () => this.openLooks(null, { tab: 'set', note: LOOK_T.stinaLine }));
+    document.addEventListener('vt:looks-arch', () => this.openLooks());
+    document.addEventListener('vt:pet-gear', () => this.openLooks(null, { tab: 'pet' })); // (the kennel's and the pet button's way in)
     bus.on('open', (c) => {
       if (c.ui === 'sagaClass') this.open('class');
       else if (c.ui === 'saga') this.open('volva');
@@ -445,12 +445,12 @@ export class SagaUi {
     if (fightMode() && /^[1-8]$/.test(e.key)) {
       if (this.menus.isOpen()) return true;
       // (the spell bar decides: it goes off, or while the explain mode is on its card comes up)
-      if (e.key <= '5') document.dispatchEvent(new CustomEvent('lilla:spell', { detail: Number(e.key) - 1 }));
+      if (e.key <= '5') document.dispatchEvent(new CustomEvent('vt:spell', { detail: Number(e.key) - 1 }));
       return true;
     }
     // ? is the explain mode (the ❔ button); then 1-5 read a spell instead of casting it
     if (fightMode() && e.key === '?' && !this.menus.isOpen()) {
-      document.dispatchEvent(new Event('lilla:explain'));
+      document.dispatchEvent(new Event('vt:explain'));
       return true;
     }
     if (this.menus.isOpen()) return false;

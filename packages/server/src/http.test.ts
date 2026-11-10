@@ -299,11 +299,11 @@ describe('ntfy', () => {
     });
     await new Promise<void>((r) => ntfy.listen(0, '127.0.0.1', r));
     try {
-      const notify = ntfyNotifier(`http://127.0.0.1:${(ntfy.address() as AddressInfo).port}/lilla-garden`, 'tk_secret');
+      const notify = ntfyNotifier(`http://127.0.0.1:${(ntfy.address() as AddressInfo).port}/varldstradet`, 'tk_secret');
       notify({ at: 0, event: 'mode', detail: 'not interesting', ip: 'x' });
       notify({ at: 0, event: 'join', detail: 'Kalles iPad kom in med koden för Kalle', ip: '1.2.3.4' });
       await vi.waitFor(() => expect(got).toHaveLength(1));
-      expect(got[0]).toMatchObject({ auth: 'Bearer tk_secret', topic: 'lilla-garden', title: 'Någon kom in i Världsträdet', message: 'Kalles iPad kom in med koden för Kalle\n1.2.3.4' });
+      expect(got[0]).toMatchObject({ auth: 'Bearer tk_secret', topic: 'varldstradet', title: 'Någon kom in i Världsträdet', message: 'Kalles iPad kom in med koden för Kalle\n1.2.3.4' });
     } finally {
       ntfy.close();
     }

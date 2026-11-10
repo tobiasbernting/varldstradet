@@ -18,7 +18,7 @@ function wire(): void {
   try {
     window.speechSynthesis?.addEventListener?.('voiceschanged', () => {
       load();
-      document.dispatchEvent(new CustomEvent('lilla:voices'));
+      document.dispatchEvent(new CustomEvent('vt:voices'));
     });
   } catch {
     /* no speech */

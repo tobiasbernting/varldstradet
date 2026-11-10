@@ -149,7 +149,7 @@ window.addEventListener('keydown', (e) => {
     menus.toggle('inventory');
   } else if (e.key === 'f' || e.key === 'F') menus.toggle('emotes');
   else if (e.key === 'h' || e.key === 'H' || e.key === '?') menus.toggle('help');
-  else if (e.key === 'b' || e.key === 'B') document.dispatchEvent(new Event('lilla:journal'));
+  else if (e.key === 'b' || e.key === 'B') document.dispatchEvent(new Event('vt:journal'));
   else if (e.key === 'g' || e.key === 'G') hud.toggleFurnish();
   else if (e.key === 'm' || e.key === 'M') hud.minimap.toggle();
   else if (/^[1-8]$/.test(e.key)) hud.select(Number(e.key) - 1);
@@ -170,7 +170,7 @@ setInputPreventDefault(false);
 setTouchInputEnable(false);
 const shakeDistance = (): number => (prefs().shake && !prefs().calm ? 0.35 : 0);
 setCameraShakeDistance(shakeDistance());
-document.addEventListener('lilla:prefs', () => setCameraShakeDistance(shakeDistance()));
+document.addEventListener('vt:prefs', () => setCameraShakeDistance(shakeDistance()));
 setCameraShakeAngle(0.004);
 setCameraShakeDecay(2.5);
 
@@ -256,7 +256,7 @@ const picker = new Picker(ui, (id) => {
 });
 void picker.show();
 
-(window as unknown as { lillaGarden: unknown }).lillaGarden = {
+(window as unknown as { varldstradet: unknown }).varldstradet = {
   client,
   bus,
   net,

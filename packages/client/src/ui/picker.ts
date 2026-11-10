@@ -60,7 +60,7 @@ export class Picker {
       cards.append(add);
     }
     const settings = h('button', { class: 'alt settings-open', type: 'button' }, `⚙️ ${A11Y_T.settings}`);
-    onTap(settings, () => document.dispatchEvent(new Event('lilla:settings')));
+    onTap(settings, () => document.dispatchEvent(new Event('vt:settings')));
     this.root.append(h('h1', null, T.title), h('h2', { style: { color: '#fff', margin: '0' } }, T.whoAreYou), cards, settings);
   }
 
