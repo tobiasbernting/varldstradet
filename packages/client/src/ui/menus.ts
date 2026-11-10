@@ -231,6 +231,8 @@ export class Menus {
         this.renderKennel(body);
         break;
     }
+    // (a window may close itself while it is drawn: the pet it names is gone)
+    if (!this.modal) return;
     this.modal.append(panel);
     if (scrollTop) body.scrollTop = scrollTop;
   }
