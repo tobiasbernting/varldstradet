@@ -1,9 +1,8 @@
 // Every picture the view draws, packed into the atlas: the 2D game's generated art plus a few soft shapes of our own
 // for light, weather and effects.
-import { decodeLook, type Appearance, type Outfit, type PetWear } from '@lilla-garden/shared';
+import { decodeLook, type Appearance, type Outfit, type PetWear } from '@varldstradet/shared';
 import { animalSheet, ANIMAL_SIZE } from '@art/animals.ts';
 import { CHAR_H, CHAR_W, drawCharacterSheet, lookIcon, lookKey, lookOf } from '@art/characters.ts';
-import { paintingPx } from '@art/painting.ts';
 import { getArt } from '@art/textures.ts';
 import { atlas, whole, type Picture, type Sprite } from './atlas.ts';
 import { panesOf } from './extras.ts';
@@ -30,7 +29,6 @@ export interface Pane {
 export interface Sprites {
   terrain: Sprite[];
   objects: Record<string, ObjectSprites>;
-  crops: Record<string, Sprite[]>;
   fx: Record<string, Sprite[]>;
   icons: Record<string, Sprite>;
   /** Soft white round glow (light halos, fireflies, sparkles). */
@@ -147,11 +145,6 @@ export function loadSprites(): Sprites {
       }
     objectAt[kind] = { start, n: o.frames.length, windows, panes };
   }
-  const cropAt: Record<string, [number, number]> = {};
-  for (const [crop, frames] of Object.entries(art.crops)) {
-    cropAt[crop] = [pics.length, frames.length];
-    for (const f of frames) pics.push(whole(f.canvas));
-  }
   const fxAt: Record<string, [number, number]> = {};
   for (const [name, frames] of Object.entries(art.fx)) {
     fxAt[name] = [pics.length, frames.length];
@@ -221,8 +214,6 @@ export function loadSprites(): Sprites {
       }),
     };
   }
-  const crops: Record<string, Sprite[]> = {};
-  for (const [crop, [s, n]] of Object.entries(cropAt)) crops[crop] = all.slice(s, s + n);
   const fx: Record<string, Sprite[]> = {};
   for (const [name, [s, n]] of Object.entries(fxAt)) fx[name] = all.slice(s, s + n);
   const icons: Record<string, Sprite> = {};
@@ -231,7 +222,6 @@ export function loadSprites(): Sprites {
   sprites = {
     terrain: all.slice(0, terrainPics.length),
     objects,
-    crops,
     fx,
     icons,
     glow: all[extra.glow]!,
@@ -286,19 +276,6 @@ export function animalSprites(species: string, baby: boolean, jul: boolean, vari
     const sheet = animalSheet(species, baby, jul, variant, wear);
     s = atlas.addFrames(sheet, size.w, size.h, 2);
     animals.set(key, s);
-    atlas.flush();
-  }
-  return s;
-}
-
-const paintings = new Map<string, Sprite>();
-/** A player's drawing in its frame. */
-export function paintingSprite(pixels: string): Sprite {
-  let s = paintings.get(pixels);
-  if (!s) {
-    const px = paintingPx(pixels);
-    s = atlas.add(whole(px.canvas));
-    paintings.set(pixels, s);
     atlas.flush();
   }
   return s;

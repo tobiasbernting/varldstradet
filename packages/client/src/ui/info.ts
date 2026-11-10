@@ -3,7 +3,7 @@
 // a tap while the "Förklara" mode is on all show the same big card (icon, name, one sentence, a speaker button). A press that
 // opened a card does not use the thing when it is let go. The card sits in the open window above its buttons, or floats in the
 // HUD (above the spell bar in a fight). Used by the run windows, the spell bar, the HUD's buttons and every `title=` there was.
-import { A11Y_T, RUN_UI } from '@lilla-garden/shared';
+import { A11Y_T, RUN_UI } from '@varldstradet/shared';
 import { prefs } from '../a11y.ts';
 import { clear, h, onTap } from './dom.ts';
 import { canSpeak, speak } from './speech.ts';

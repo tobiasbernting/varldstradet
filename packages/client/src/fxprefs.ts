@@ -25,7 +25,7 @@ export function setFxSetting(v: FxSetting): void {
   } catch {
     /* no storage */
   }
-  document.dispatchEvent(new CustomEvent('lilla:fx'));
+  document.dispatchEvent(new CustomEvent('vt:fx'));
 }
 
 /** What is drawn: the setting, with "full" cut to "reduced" when the system asks for reduced motion. */

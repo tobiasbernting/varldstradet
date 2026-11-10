@@ -22,7 +22,7 @@ import {
   countItem,
   heroLevel,
   isHostile,
-  isIndoorKey,
+  isHomeKey,
   isSagaKey,
   questState,
   readProgress,
@@ -30,7 +30,7 @@ import {
   type ClassDef,
   type PlayerState,
   type SagaSnap,
-} from '@lilla-garden/shared';
+} from '@varldstradet/shared';
 import { net } from './net.ts';
 import { activeWorld, bus, client, myPlayer, serverNow } from './state.ts';
 
@@ -43,7 +43,7 @@ export const inSaga = (): boolean => isSagaKey(myPlayer()?.area);
 export const heroOn = (p: PlayerState | undefined = myPlayer()): boolean => !!p?.saga?.hero && !!p.saga.cls;
 
 /** Out in the world (not the old dungeon, a saga dungeon or the bath house)? */
-const outdoors = (area: string | undefined): boolean => !!area && area !== 'dungeon' && !isSagaKey(area) && !isIndoorKey(area);
+const outdoors = (area: string | undefined): boolean => !!area && area !== 'dungeon' && !isSagaKey(area) && !isHomeKey(area);
 
 /** Fighting with spells: always in a saga dungeon, and out in the world while hero mode is on. */
 export const fightMode = (): boolean => {
@@ -109,7 +109,6 @@ export function blockOf(id: string): AnimalState | null {
 }
 /** Is a frozen friend held by a spider's web (not ice)? */
 export const webbed = (id: string): boolean => blockOf(id)?.species === 'spindelnat';
-export const isBossSpecies = (species: string): boolean => !!SAGA_BOSSES[species];
 
 // ---------------------------------------------------------------------------
 // The target: a monster (its animal id) or a friend (a player id)
@@ -332,9 +331,3 @@ export function sagaMarker(npcId: string): { text: string; cls: string } | null 
   if (busy) return { text: '?', cls: 'bubble marker saga busy' };
   return null;
 }
-
-/** Has this player started the saga (heard Völvan, or picked a class)? */
-export const sagaStarted = (p: PlayerState | undefined): boolean => {
-  const prog = readProgress(p);
-  return !!prog.cls || prog.heard || prog.chapter > 0;
-};

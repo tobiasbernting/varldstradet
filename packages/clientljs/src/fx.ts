@@ -1,7 +1,7 @@
 // Short animations: the server's effects (hearts, sparkles, splashes, wood chips, coins, hits, explosions, arrows,
 // lassos…) and this client's own touches (pickups flying to whoever took them, dust under running feet).
 import { cameraShake, drawLine, rgb, vec2 } from 'littlejsengine';
-import { TILE } from '@lilla-garden/shared';
+import { TILE } from '@varldstradet/shared';
 import type { Sprite } from './atlas.ts';
 import type { Sprites } from './art.ts';
 import { alpha, clamp01, DrawQueue, easeOutBack, easeOutCubic, lerp, rgba } from './gfx.ts';

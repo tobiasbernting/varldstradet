@@ -5,7 +5,7 @@
 import type { ClassId, DungeonId, SagaProgress } from './saga.ts';
 import type { PlayerState } from './types.ts';
 import { CLASS_IDS, DUNGEONS, DUNGEON_IDS, newSagaProgress } from './saga.ts';
-import { LOOK_TEXT, LOOK_TIER_NAMES, LOOK_TITLE_TEXT, fmt } from './sv.ts';
+import { LOOK_TEXT, LOOK_TITLE_TEXT } from './sv.ts';
 import type { Change } from './protocol.ts';
 import type { PetAnchor } from './pets.ts';
 import { playerChange } from './sim.ts';
@@ -16,8 +16,6 @@ export type LookSlot = 'hat' | 'shoulders' | 'shirt' | 'cloak' | 'weapon' | 'off
 export const LOOK_SLOTS: readonly LookSlot[] = ['hat', 'shoulders', 'shirt', 'cloak', 'weapon', 'offhand', 'amulet'];
 export const isLookSlot = (s: unknown): s is LookSlot => typeof s === 'string' && (LOOK_SLOTS as readonly string[]).includes(s);
 
-/** Shine tiers: 1 plain, 2 trimmed, 3 glowing, 4 one particle effect, 5 the full effect with an aura or a trail. */
-export const LOOK_TIERS = [1, 2, 3, 4, 5] as const;
 export const LOOK_TIER_MAX = 5;
 export type LookTier = 1 | 2 | 3 | 4 | 5;
 /** The tier at which a look starts to throw particles, and where it gets the full effect. */
@@ -26,7 +24,6 @@ export const FX_FULL_TIER = 5;
 
 /** The effect vocabulary of the client view (clientljs/src/looksfx.ts draws them). */
 export type FxId = 'embers' | 'smoke' | 'frost' | 'lightning' | 'glitter' | 'runepulse' | 'dripping' | 'trail' | 'leaves' | 'tendrils' | 'aurora';
-export const FX_IDS: readonly FxId[] = ['embers', 'smoke', 'frost', 'lightning', 'glitter', 'runepulse', 'dripping', 'trail', 'leaves', 'tendrils', 'aurora'];
 /** Where on the figure an effect comes from. */
 export type FxAnchor = 'tip' | 'head' | 'shoulders' | 'back' | 'feet' | 'chest' | 'hand';
 export interface FxSpec {
@@ -419,11 +416,6 @@ export const tierOf = (prog: SagaProgress | undefined, pieceId: string): number 
 export const ownsLook = (prog: SagaProgress | undefined, pieceId: string): boolean => tierOf(prog, pieceId) > 0;
 /** Has the player unlocked this colourway for this dungeon? */
 export const hasWay = (prog: SagaProgress | undefined, dungeon: DungeonId, way: WayId): boolean => !!prog?.lookWays?.includes(`${dungeon}:${way}`);
-/** The colourways of a piece's dungeon that a player has. */
-export const waysOf = (prog: SagaProgress | undefined, pieceId: string): WayId[] => {
-  const d = dungeonOfPiece(pieceId);
-  return d && !signatureOf(pieceId) ? WAY_IDS.filter((w) => hasWay(prog, d, w)) : [];
-};
 
 /** A piece's colours in a colourway (the set's own when the way is none). */
 export function lookPalOf(pieceId: string, way?: WayId): LookPal {
@@ -594,7 +586,7 @@ export function awardLooks(p: PlayerState, dungeon: DungeonId, level: number, rn
   }
 
   syncLooks(p);
-  if (reward.drops.length || reward.ways.length) out.push({ t: 'loot', to: p.id, from: DUNGEONS[dungeon].name, items: [], coins: 0, stars: 0, looks: { drops: reward.drops, ways: reward.ways, titles: reward.titles, dungeon, level } });
+  if (reward.drops.length || reward.ways.length) out.push({ t: 'loot', to: p.id, from: DUNGEONS[dungeon].name, items: [], stars: 0, looks: { drops: reward.drops, ways: reward.ways, titles: reward.titles, dungeon, level } });
   out.push(playerChange(p));
   return reward;
 }
@@ -602,7 +594,6 @@ export function awardLooks(p: PlayerState, dungeon: DungeonId, level: number, rn
 // ---------------------------------------------------------------------------
 // Wearing
 // ---------------------------------------------------------------------------
-
 
 /** Puts a look on (piece `null`: takes the slot's piece off) for a class (default: the hero's own). Free, instant, anywhere. */
 export function equipLook(p: PlayerState, slot: unknown, pieceId: string | null, way: unknown, cls: unknown): Change[] {
@@ -668,6 +659,3 @@ export function devGrantLooks(p: PlayerState, setId: string | undefined, tier: n
   syncLooks(p);
   return [playerChange(p)];
 }
-
-/** "Vaktens benkrona (Glödande)": a look's name and its shine, for a toast. */
-export const lookLabel = (pieceId: string, tier: number): string => fmt('{name} ({tier})', { name: lookPiece(pieceId)?.name ?? pieceId, tier: LOOK_TIER_NAMES[Math.max(1, Math.min(LOOK_TIER_MAX, tier)) - 1]! });

@@ -1,22 +1,16 @@
 // All in-game menus as HTML overlays: ryggsäck, kista, gårdsbutik, sälj, snickra, garderob, emotes, namn.
 import {
   A11Y_T,
-  isVehicle,
-  ANIMALS,
-  isIndoorKey,
   FILTER_NAMES,
   HELP,
   HOUSE_T,
-  homeKey,
   houseTitle,
   isHomeKey,
-  ownerOfHome,
   INVENTORY_FILTERS,
   NPCS,
   HOTBAR_SIZE,
   INVENTORY_SIZE,
   ITEMS,
-  RECIPES,
   SPECIES_NAMES,
   T,
   LOOK_T,
@@ -33,11 +27,10 @@ import {
   PETS,
   PET_T,
   ownedPetIds,
-  localWeather,
   noWeatherHere,
   talkNode,
   type Talk,
-} from '@lilla-garden/shared';
+} from '@varldstradet/shared';
 import {
   portraitUrl,
   getArt,
@@ -64,7 +57,6 @@ import {
   slotEl,
 } from './hud.js';
 
-
 import {
   SFX,
 } from '../sound.ts';
@@ -90,7 +82,6 @@ interface SearchFrame {
   tabs: HTMLElement | null;
   /** "No match" line between toolbar and body (backpack/chest). */
   hint: HTMLElement;
-  coins: HTMLElement | null;
 }
 export class Menus {
   private modal: HTMLElement | null = null;
@@ -124,13 +115,12 @@ export class Menus {
       else if (c.ui === 'npc') {
         // Smed-Stina has lost her forge: she sends you to the wardrobe's sets (unless a saga quest of hers is waiting)
         if (c.npc === 'stina' && !hasSagaQuests('stina')) {
-          document.dispatchEvent(new Event('lilla:sets'));
+          document.dispatchEvent(new Event('vt:sets'));
           return;
         }
         this.npcId = c.npc ?? null;
         this.open('npc');
-      } else if (c.ui === 'wardrobe') this.open('wardrobe');
-      else if (c.ui === 'houses') this.open('houses');
+      } else if (c.ui === 'houses') this.open('houses');
     });
     bus.on('connection', (s) => {
       if (s !== 'open') this.close();
@@ -212,7 +202,7 @@ export class Menus {
     const body = h('div', { class: 'body' });
     const panel = h('div', { class: 'panel' }, head, body);
     if (SEARCH_KINDS.includes(this.kind)) {
-      this.frame = this.buildFrame(panel, head, body, null);
+      this.frame = this.buildFrame(panel, body);
       this.modal.append(panel);
       this.renderBody(true);
       return;
@@ -240,6 +230,8 @@ export class Menus {
         this.renderKennel(body);
         break;
     }
+    // (a window may close itself while it is drawn: the pet it names is gone)
+    if (!this.modal) return;
     this.modal.append(panel);
     if (scrollTop) body.scrollTop = scrollTop;
   }
@@ -286,7 +278,7 @@ export class Menus {
     return b;
   }
 
-  private buildFrame(panel: HTMLElement, head: HTMLElement, body: HTMLElement, coins: HTMLElement | null): SearchFrame {
+  private buildFrame(panel: HTMLElement, body: HTMLElement): SearchFrame {
     const kind = this.kind!;
     const search = this.searchInput();
     const chips = new Map<string, HTMLElement>();
@@ -310,19 +302,19 @@ export class Menus {
     const hint = h('div', { class: 'hint' });
     panel.insertBefore(h('div', { class: 'toolbar' }, search, ...chips.values(), clearBtn, this.sortButton(T.sort)), body);
     const tabs: HTMLElement | null = null;
-    return { kind, panel, body, search, chips, clearBtn, tabs, hint, coins };
+    return { kind, panel, body, search, chips, clearBtn, tabs, hint };
   }
 
-  private sortButton(label: string, chest?: number): HTMLElement {
+  private sortButton(label: string): HTMLElement {
     const b = h('button', { class: 'alt', title: label }, `↕ ${label}`);
     onTap(b, () => {
-      net.send(chest === undefined ? { t: 'sort' } : { t: 'sort', chest });
+      net.send({ t: 'sort' });
       this.picked = null;
     });
     return b;
   }
 
-  /** Rebuild only what depends on state: coins, chip highlight, tabs, hint and body. The input is never touched. */
+  /** Rebuild only what depends on state: chip highlight, tabs, hint and body. The input is never touched. */
   private renderBody(resetScroll = false): void {
     const f = this.frame;
     const me = myPlayer();
@@ -393,7 +385,7 @@ export class Menus {
     const gear = h('button', { class: 'gold', type: 'button', style: { minHeight: '48px', marginTop: '10px' } }, `🧣 ${PET_T.gearTitle}`);
     onTap(gear, () => {
       this.close();
-      document.dispatchEvent(new CustomEvent('lilla:pet-gear'));
+      document.dispatchEvent(new CustomEvent('vt:pet-gear'));
     });
     body.append(gear);
   }
@@ -403,9 +395,8 @@ export class Menus {
   private renderInventory(f: SearchFrame): void {
     const { panel, body } = f;
     const me = myPlayer()!;
-    const world = client.world!;
-    const sameRef = (a: SlotRef, b: SlotRef) => a.slot === b.slot && a.chest === b.chest;
-    const stackAt = (ref: SlotRef): ItemStack | null | undefined => (ref.chest === undefined ? me.inventory : world.objects[ref.chest]?.items)?.[ref.slot];
+    const sameRef = (a: SlotRef, b: SlotRef) => a.slot === b.slot;
+    const stackAt = (ref: SlotRef): ItemStack | null | undefined => me.inventory[ref.slot];
     const filtering = this.hasFilter();
     const dims = (s: ItemStack | null) => filtering && !!s && !this.stackMatches(s.item);
     const tap = (ref: SlotRef) => {
@@ -422,15 +413,15 @@ export class Menus {
       this.rerender();
     };
     let anyMatch = false;
-    const grid = (inv: (ItemStack | null)[], chest: number | undefined, from: number, to: number, keys: boolean) => {
+    const grid = (inv: (ItemStack | null)[], from: number, to: number, keys: boolean) => {
       const g = h('div', { class: 'grid' });
       for (let i = from; i < to; i++) {
-        const ref: SlotRef = chest === undefined ? { slot: i } : { chest, slot: i };
+        const ref: SlotRef = { slot: i };
         const s = inv[i] ?? null;
         if (s && !dims(s)) anyMatch = true;
         g.append(
           slotEl(s, {
-            selected: chest === undefined && me.selected === i,
+            selected: me.selected === i,
             picked: !!this.picked && sameRef(this.picked, ref),
             dim: dims(s),
             key: keys ? String(i + 1) : undefined,
@@ -441,7 +432,7 @@ export class Menus {
       return g;
     };
     const hint = f.hint;
-    body.append(h('div', { class: 'hint' }, this.filter === 'all' ? T.inventory : `${T.inventory} · ${FILTER_NAMES[this.filter] ?? ''}`), grid(me.inventory, undefined, 0, HOTBAR_SIZE, true), grid(me.inventory, undefined, HOTBAR_SIZE, INVENTORY_SIZE, false));
+    body.append(h('div', { class: 'hint' }, this.filter === 'all' ? T.inventory : `${T.inventory} · ${FILTER_NAMES[this.filter] ?? ''}`), grid(me.inventory, 0, HOTBAR_SIZE, true), grid(me.inventory, HOTBAR_SIZE, INVENTORY_SIZE, false));
     if (filtering && !anyMatch) {
       hint.textContent = T.noMatch;
       panel.insertBefore(hint, body);
@@ -451,7 +442,7 @@ export class Menus {
     if (this.picked && picked) {
       actions.append(h('span', { class: 'picked-name' }, `${itemName(picked.item)}${picked.count > 1 ? ` × ${picked.count}` : ''}`));
     }
-    if (this.picked && picked && this.picked.chest === undefined) {
+    if (this.picked && picked) {
       const slot = this.picked.slot;
       const s = picked;
       const useBtn = h('button', null, fmt(T.hold, { item: itemName(s.item) }));
@@ -511,16 +502,6 @@ export class Menus {
 
   private renderEmotes(body: HTMLElement): void {
     const grid = h('div', { class: 'emotes' });
-    const me = myPlayer();
-    const ridden = me?.riding !== undefined ? activeWorld()?.animals[me.riding] : undefined;
-    if (ridden && isVehicle(ridden)) {
-      const b = h('button', { title: T.honk }, T.honk);
-      onTap(b, () => {
-        net.send({ t: 'honk' });
-        this.close();
-      });
-      grid.append(b);
-    }
     for (const e of T.emotes) {
       const b = h('button', { title: e }, EMOTE_GLYPH[e] ?? e);
       onTap(b, () => {
@@ -557,7 +538,7 @@ export class Menus {
     if (sets)
       onTap(sets, () => {
         this.close();
-        document.dispatchEvent(new Event('lilla:sets'));
+        document.dispatchEvent(new Event('vt:sets'));
       });
     body.append(h('div', { class: 'npc-actions' }, chat, sets));
     // the saga's quests (ui/saga.ts)
@@ -576,8 +557,8 @@ export class Menus {
     const pets: { name: string; species: string }[] = [];
     for (const w of [client.world, ...Object.values(client.areas)])
       for (const a of Object.values(w?.animals ?? {})) if (a.owner === me.id && isCallable(a) && a.name) pets.push({ name: a.name, species: a.species });
-    const outdoors = !noWeatherHere(me.area) && !isIndoorKey(me.area);
-    const weather = client.weather && outdoors ? localWeather(client.weather.kind, activeWorld()?.biome) : null;
+    const outdoors = !noWeatherHere(me.area) && !isHomeKey(me.area);
+    const weather = client.weather && outdoors ? client.weather.kind : null;
     this.talk = talkNode(npcId, node, { name: me.name, weather, dayFraction: client.timeMs / DAY_LENGTH_MS, season: client.season, pets, rnd: Math.random });
     this.said = said;
     SFX.talk();
@@ -618,13 +599,7 @@ export class Menus {
   private helpTopic = 'lobby';
 
   private helpText(text: string): string {
-    return text
-      .replace(/\{recipe:(\w+)\}/g, (_, id: string) => {
-        const r = RECIPES.find((x) => x.id === id);
-        return r ? r.in.map((i) => `${i.count} ${itemName(i.item).toLowerCase()}`).join(' + ') : id;
-      })
-      .replace(/\{price:(\w+)\}/g, (_, id: string) => `${ITEMS[id]?.buy ?? '?'} ${T.coins}`)
-      .replace(/\{name:(\w+)\}/g, (_, id: string) => itemName(id));
+    return text.replace(/\{name:(\w+)\}/g, (_, id: string) => itemName(id));
   }
 
   private helpIcon(ref: string | undefined): HTMLElement {
@@ -649,7 +624,7 @@ export class Menus {
     }
     // Inställningar (text size, colours, motion, reading aloud) are one tap away from the help
     const settings = h('button', { class: 'alt' }, `⚙️ ${A11Y_T.settings}`);
-    onTap(settings, () => document.dispatchEvent(new Event('lilla:settings')));
+    onTap(settings, () => document.dispatchEvent(new Event('vt:settings')));
     tabs.append(settings);
     panel.insertBefore(tabs, body);
     const topic = topics.find((t) => t.id === this.helpTopic) ?? topics[0]!;
@@ -661,23 +636,6 @@ export class Menus {
       list.append(h('li', null, this.helpIcon(step.icon), h('span', null, this.helpText(step.text))));
     }
     body.append(list);
-    if (topic.houses) {
-      const rows = h('div', { class: 'rows' });
-      for (const a of Object.values(ANIMALS)) {
-        const r = RECIPES.find((x) => x.id === a.house);
-        const animalItem = ITEMS[`animal_${a.species}`];
-        rows.append(
-          h(
-            'div',
-            { class: 'row' },
-            icon(getArt().iconUrl[a.house] ?? ''),
-            h('span', { class: 'name' }, `${itemName(a.house)} → ${SPECIES_NAMES[a.species] ?? a.species}`, h('br'), h('span', { class: 'need' }, r ? r.in.map((i) => `${i.count} ${itemName(i.item).toLowerCase()}`).join(' + ') : '')),
-            h('span', { class: 'price' }, `${animalItem?.buy ?? '?'} ${T.coins}`),
-          ),
-        );
-      }
-      body.append(h('p', { class: 'help-intro' }, 'Alla djurhus:'), rows);
-    }
   }
 
   // ---- animal name ----

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  HOUSE_LOOT,
+  ITEMS,
+  OBJECTS,
   HOUSE_DOOR,
   HOUSE_EXIT,
   HOUSE_ROOM,
@@ -135,9 +138,9 @@ describe('houses', () => {
     expect(performAction(house, b.id, chair.x, chair.y, ctx()).every((c) => c.t === 'toast')).toBe(true);
     expect(pickUpFurniture(house, b.id, chair.x, chair.y)).toEqual([]);
     expect(objectAt(house, chair.x, chair.y)?.kind).toBe('chair');
-    // with a hammer too
-    addItem(b.inventory, 'hammer', 1);
-    b.selected = b.inventory.findIndex((s) => s?.item === 'hammer');
+    // with a weapon in hand too
+    addItem(b.inventory, 'jarnsvard', 1);
+    b.selected = b.inventory.findIndex((s) => s?.item === 'jarnsvard');
     performAction(house, b.id, chair.x, chair.y, ctx());
     expect(objectAt(house, chair.x, chair.y)?.kind).toBe('chair');
     // the owner may
@@ -267,5 +270,18 @@ describe('boss trophies', () => {
     expect(performAction(house, b.id, 9, 8, ctx()).some((c) => c.t === 'open')).toBe(false);
     setStandLook(house, a.id, stand.id, null, undefined);
     expect(stand.data).toBeUndefined();
+  });
+});
+
+describe('the decor the dungeons drop', () => {
+  it('every piece in HOUSE_LOOT is an item that places an object that exists, and so is every starter piece', () => {
+    const ids = new Set<string>(['bed', 'table', 'chair', 'lamp']);
+    for (const d of Object.values(HOUSE_LOOT)) for (const [id] of [...d.boss, ...d.treasure]) ids.add(id);
+    expect(ids.size).toBeGreaterThan(20);
+    for (const id of ids) {
+      const def = ITEMS[id];
+      expect(def?.places, id).toBe(id);
+      expect(OBJECTS[id], id).toBeDefined();
+    }
   });
 });

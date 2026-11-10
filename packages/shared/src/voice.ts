@@ -8,7 +8,6 @@
 
 /** Who may use voice: nobody, family devices, or guests too. */
 export type VoicePolicy = 'off' | 'family' | 'open';
-export const VOICE_POLICIES: VoicePolicy[] = ['off', 'family', 'open'];
 
 export interface VoiceRoom {
   /** Opaque id (never the address it was made from). */

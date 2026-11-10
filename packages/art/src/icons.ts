@@ -1,5 +1,5 @@
 // 16x16 item icons for the hotbar and menus.
-import { ITEMS, type ItemDef } from '@lilla-garden/shared';
+import { ITEMS, type ItemDef } from '@varldstradet/shared';
 import { drawAnimal } from './animals.js';
 import { sagaIcons } from './saga.ts';
 import { drawCharacter, HEADROOM } from './characters.js';

@@ -1,14 +1,13 @@
 // Draws every picture once (terrain, objects, crops, effects, icons). Also exposes icon data URLs for the HTML UI.
-import type { Appearance, Outfit } from '@lilla-garden/shared';
+import type { Appearance, Outfit } from '@varldstradet/shared';
 import { lookOf, portrait } from './characters.js';
 import { drawIcons } from './icons.js';
 import type { Px } from './px.js';
-import { drawCrops, drawFx, drawObjects, drawTerrainTiles, type ObjectArt, type TerrainTiles } from './world.js';
+import { drawFx, drawObjects, drawTerrainTiles, type ObjectArt, type TerrainTiles } from './world.js';
 
 export interface Art {
   terrain: TerrainTiles;
   objects: Record<string, ObjectArt>;
-  crops: Record<string, Px[]>;
   fx: Record<string, Px[]>;
   icons: Record<string, Px>;
   iconUrl: Record<string, string>;
@@ -22,7 +21,7 @@ export function getArt(): Art {
   const icons = drawIcons(objects);
   const iconUrl: Record<string, string> = {};
   for (const [k, p] of Object.entries(icons)) iconUrl[k] = p.dataUrl();
-  art = { terrain: drawTerrainTiles(), objects, crops: drawCrops(), fx: drawFx(), icons, iconUrl };
+  art = { terrain: drawTerrainTiles(), objects, fx: drawFx(), icons, iconUrl };
   return art;
 }
 

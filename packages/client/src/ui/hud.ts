@@ -1,8 +1,7 @@
 // HUD: top chips, hotbar, toasts, touch controls.
-import { A11Y_T, HOTBAR_SIZE, HOUSE_T, MAX_HEARTS, SPELLS, T, WATERING_CAN_CHARGES, areaName, fmt, houseTitle, isBathKey, isHomeKey, isSagaKey, itemName, ownerOfHome, placeEmoji, placeName, stackName, type ItemStack } from '@lilla-garden/shared';
+import { A11Y_T, HOTBAR_SIZE, HOUSE_T, MAX_HEARTS, SPELLS, T, areaName, fmt, houseTitle, isHomeKey, isSagaKey, ownerOfHome, stackName, type ItemStack } from '@varldstradet/shared';
 import { Minimap } from './minimap.ts';
-import { getArt } from '@art/textures.ts';
-import { stackIconUrl } from '@art/painting.ts';
+import { stackIconUrl } from '@art/stackicon.ts';
 import { net } from '../net.js';
 import { bus, client, furnish, inOwnHouse, myPlayer, serverNow } from '../state.js';
 import { clear, h, icon, onTap } from './dom.js';
@@ -20,7 +19,6 @@ export interface HudTarget {
 }
 
 export function slotEl(stack: ItemStack | null, opts: { selected?: boolean; picked?: boolean; dim?: boolean; key?: string; onTap?: () => void } = {}): HTMLDivElement {
-  const art = getArt();
   const el = h('div', { class: `slot${opts.selected ? ' selected' : ''}${opts.picked ? ' picked' : ''}${opts.dim ? ' dim' : ''}` });
   if (opts.key) el.append(h('span', { class: 'key' }, opts.key));
   if (stack) {
@@ -28,9 +26,7 @@ export function slotEl(stack: ItemStack | null, opts: { selected?: boolean; pick
     el.dataset.infoName = stackName(stack);
     el.dataset.infoText = '';
     el.setAttribute('aria-label', stackName(stack));
-    if (stack.charges !== undefined) {
-      el.append(h('div', { class: 'charges' }, h('i', { style: { width: `${(stack.charges / WATERING_CAN_CHARGES) * 100}%` } })));
-    } else if (stack.count > 1) el.append(h('span', { class: 'count' }, stack.count));
+    if (stack.count > 1) el.append(h('span', { class: 'count' }, stack.count));
   }
   if (opts.onTap) onTap(el, opts.onTap);
   return el;
@@ -61,7 +57,7 @@ export class Hud {
     this.top = h('div', { class: 'hud-top' });
     // the top row is drawn anew with every state: the level chip's tap (it opens the journal's level page) is caught here
     onTap(this.top, (ev) => {
-      if ((ev.target as HTMLElement | null)?.closest?.('.chip.level')) document.dispatchEvent(new Event('lilla:journal'));
+      if ((ev.target as HTMLElement | null)?.closest?.('.chip.level')) document.dispatchEvent(new Event('vt:journal'));
     });
     this.hotbar = h('div', { class: 'hotbar' });
     this.heldName = h('div', { class: 'hud-name' });
@@ -84,14 +80,14 @@ export class Hud {
     });
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) run.addEventListener(ev, () => setRun(false));
     // the gear window lives with the saga's windows (ui/saga.ts)
-    this.gearBtn = this.roundBtn('👕', () => document.dispatchEvent(new Event('lilla:gear')), T.sagaGearBtn, A11Y_T.btnGear);
+    this.gearBtn = this.roundBtn('👕', () => document.dispatchEvent(new Event('vt:gear')), T.sagaGearBtn, A11Y_T.btnGear);
     this.gearBtn.classList.add('gear-btn');
     this.furnishBtn = this.roundBtn('🪑', () => this.toggleFurnish(), HOUSE_T.furnish, A11Y_T.btnFurnish);
     this.furnishBtn.classList.add('furnish-btn');
     this.furnishBtn.hidden = true;
-    const right = h('div', { class: 'hud-right' }, this.furnishBtn, this.gearBtn, this.roundBtn('🎒', () => this.openMenu('inventory'), T.inventory, A11Y_T.btnBag), this.roundBtn('😊', () => this.openMenu('emotes'), A11Y_T.emotes, A11Y_T.btnEmotes), this.roundBtn('📖', () => document.dispatchEvent(new Event('lilla:journal')), T.sagaJournalTab, A11Y_T.btnJournal), this.roundBtn('🧭', () => this.minimap.toggle(), A11Y_T.map, A11Y_T.btnMap), this.roundBtn('❓', () => this.openMenu('help'), T.help, A11Y_T.btnHelp), this.roundBtn('⚙️', () => document.dispatchEvent(new Event('lilla:settings')), A11Y_T.settings, A11Y_T.settingsInfo), this.muteBtn(), ...(matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches ? [] : [this.fullscreenBtn()]));
+    const right = h('div', { class: 'hud-right' }, this.furnishBtn, this.gearBtn, this.roundBtn('🎒', () => this.openMenu('inventory'), T.inventory, A11Y_T.btnBag), this.roundBtn('😊', () => this.openMenu('emotes'), A11Y_T.emotes, A11Y_T.btnEmotes), this.roundBtn('📖', () => document.dispatchEvent(new Event('vt:journal')), T.sagaJournalTab, A11Y_T.btnJournal), this.roundBtn('🧭', () => this.minimap.toggle(), A11Y_T.map, A11Y_T.btnMap), this.roundBtn('❓', () => this.openMenu('help'), T.help, A11Y_T.btnHelp), this.roundBtn('⚙️', () => document.dispatchEvent(new Event('vt:settings')), A11Y_T.settings, A11Y_T.settingsInfo), this.muteBtn(), ...(matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches ? [] : [this.fullscreenBtn()]));
     this.minimap = new Minimap();
-    document.addEventListener('lilla:minimap', () => this.minimap.toggle());
+    document.addEventListener('vt:minimap', () => this.minimap.toggle());
     this.root.append(this.top, right, this.hotbar, this.heldName, this.toasts, zone, act, run, this.minimap.el);
     ui.append(this.root);
     this.setupJoystick(zone);
@@ -129,7 +125,7 @@ export class Hud {
       setMuted(!isMuted());
       b.textContent = isMuted() ? '🔇' : '🔊';
       try {
-        localStorage.setItem('lilla-garden.muted', isMuted() ? '1' : '0');
+        localStorage.setItem('varldstradet.muted', isMuted() ? '1' : '0');
       } catch {
         /* ignore */
       }
@@ -153,7 +149,6 @@ export class Hud {
 
   /** The gear button: only with a class. */
   private renderHero(): void {
-    const me = myPlayer();
     this.gearBtn.hidden = false; // Garderoben: for everyone (looks are earned, but the wardrobe is always there)
   }
 
@@ -222,17 +217,13 @@ export class Hud {
     // pizza power, or a berserker's rage in a dungeon
     if (me && me.boostUntil !== undefined && me.boostUntil > serverNow()) this.top.append(isSagaKey(me.area) ? h('div', { class: 'chip', title: SPELLS.raseri?.name }, '🔥💨') : h('div', { class: 'chip', title: T.pizzaPower }, '🍕💨'));
     // hearts: in the cave, when hurt, and always while walking the world as a hero
-    if (me && (me.area === 'dungeon' || me.hearts < MAX_HEARTS || (!!me.saga?.hero && !isSagaKey(me.area)))) this.top.append(h('div', { class: 'chip hearts' }, '❤️'.repeat(Math.max(0, me.hearts)) + '🖤'.repeat(Math.max(0, MAX_HEARTS - me.hearts))));
-    if (me && isBathKey(me.area)) this.top.append(h('div', { class: 'chip' }, `🏊 ${T.bathhouseName}`));
-    else if (me && isHomeKey(me.area)) {
+    if (me && me.hearts < MAX_HEARTS) this.top.append(h('div', { class: 'chip hearts' }, '❤️'.repeat(Math.max(0, me.hearts)) + '🖤'.repeat(Math.max(0, MAX_HEARTS - me.hearts))));
+    if (me && isHomeKey(me.area)) {
       // whose house this is
       const owner = client.world?.players[ownerOfHome(me.area)];
       this.top.append(h('div', { class: 'chip house' }, `🏠 ${owner && owner.id !== me.id ? houseTitle(owner.name) : HOUSE_T.myHouse}`));
     } else if (me && isSagaKey(me.area)) this.top.append(h('div', { class: 'chip' }, `⚔️ ${areaName(me.area)}`));
-    else if (me && me.area !== 'farm' && me.area !== 'dungeon') {
-      const b = client.areas[me.area]?.biome;
-      this.top.append(h('div', { class: 'chip' }, `${placeEmoji(b)} ${placeName(b)}`));
-    }
+
     if (client.season !== 'none') {
       const glyph = { halloween: '🎃', jul: '🎄', pask: '🐣', midsommar: '🌸', none: '' }[client.season];
       this.top.append(h('div', { class: 'chip' }, glyph));

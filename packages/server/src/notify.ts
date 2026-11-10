@@ -19,13 +19,13 @@ const NOTES: Record<string, Note> = {
 };
 
 /**
- * `url` is the topic URL, e.g. http://ntfy.example.lan/lilla-garden. Messages are published as JSON to the server
+ * `url` is the topic URL, e.g. http://ntfy.example.lan/varldstradet. Messages are published as JSON to the server
  * root, so Swedish letters survive. Failures are logged, never thrown: the game must not wait for a phone.
  */
 export function ntfyNotifier(url: string, token?: string): (e: LogEntry) => void {
   const u = new URL(url);
   const topic = u.pathname.replace(/^\/+|\/+$/g, '');
-  if (!topic || topic.includes('/')) throw new Error(`NTFY_URL must be a topic URL like http://ntfy.example/lilla-garden, got ${url}`);
+  if (!topic || topic.includes('/')) throw new Error(`NTFY_URL must be a topic URL like http://ntfy.example/varldstradet, got ${url}`);
   const root = u.origin;
   return (e) => {
     const note = NOTES[e.event];

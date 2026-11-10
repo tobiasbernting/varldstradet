@@ -1,5 +1,5 @@
 {
-  "name": "@lilla-garden/server",
+  "name": "@varldstradet/server",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,11 +10,10 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "import-save": "tsx src/importSaveCli.ts"
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
-    "@lilla-garden/shared": "workspace:*",
+    "@varldstradet/shared": "workspace:*",
     "drizzle-orm": "^0.44.5",
     "postgres": "^3.4.7",
     "ws": "^8.18.3"

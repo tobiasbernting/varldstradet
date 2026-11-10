@@ -1,8 +1,8 @@
-// One hero (with the hired Hirdmannen) and a pair without a healer, played whole by the clumsy bot on Vanlig (GAME2.md sections 5.4 and
-// 5.6): the kids' proxy. The bot tables of the route are in GAME2.md; these keep them from slipping. Apart from run.test.ts so they run
+// One hero (with the hired Hirdmannen) and a pair without a healer, played whole by the clumsy bot on Vanlig (DESIGN.md sections 5.4 and
+// 5.6): the kids' proxy. The bot tables of the route are in DESIGN.md; these keep them from slipping. Apart from run.test.ts so they run
 // beside it on the CI (run.latt.test.ts has Lätt).
 import { describe, expect, it } from 'vitest';
-import { readRun, unlocksOf, type ClassId } from './index.ts';
+import { type ClassId } from './index.ts';
 import { makeParty, playRun } from './runplay.ts';
 
 const BOT_LIMIT = 60 * 60_000;
@@ -14,10 +14,10 @@ const SOLO: [string, ClassId[]][] = [
   ['krigare + magiker', ['krigare', 'magiker']],
 ];
 
-describe('the clumsy bot on Vanlig (the kids: GAME2.md 5.4 wants a win in at least 60 % of the runs)', () => {
+describe('the clumsy bot on Vanlig (the kids: DESIGN.md 5.4 wants a win in at least 60 % of the runs)', () => {
   const SEEDS = [1, 2, 3, 4, 5, 6];
   for (const [label, classes] of SOLO) {
-    it(`${label}, no longhouse: wins at least 5 of ${SEEDS.length} with the Hirdmannen (if it needs one), in 20-42 minutes`, { timeout: 120_000 }, async () => {
+    it(`${label}: wins at least 5 of ${SEEDS.length} with the Hirdmannen (if it needs one), in 20-42 minutes`, { timeout: 120_000 }, async () => {
       let wins = 0;
       const mins: number[] = [];
       for (const seed of SEEDS) {
@@ -25,7 +25,6 @@ describe('the clumsy bot on Vanlig (the kids: GAME2.md 5.4 wants a win in at lea
         await new Promise((r) => setImmediate(r));
         const party = makeParty(classes, { style: 'clumsy', seed, level: 3 });
         const r = playRun(party, { seed }, BOT_LIMIT);
-        expect(unlocksOf(party.world).longhall).toBe(false);
         expect(r.outcome).not.toBe('running');
         if (r.outcome === 'win') {
           wins++;

@@ -23,7 +23,7 @@ const list = (s: string | undefined): string[] =>
     .filter(Boolean);
 
 /** coturn's REST API logins: `expiry:name` signed with the shared secret. */
-export function turnRestCredential(secret: string, now: number, ttlS = TURN_TTL_S, name = 'lilla'): { username: string; credential: string } {
+export function turnRestCredential(secret: string, now: number, ttlS = TURN_TTL_S, name = 'vt'): { username: string; credential: string } {
   const username = `${Math.floor(now / 1000) + ttlS}:${name}`;
   const credential = crypto.createHmac('sha1', secret).update(username).digest('base64');
   return { username, credential };

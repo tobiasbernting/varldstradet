@@ -1,6 +1,5 @@
-import { LANDMARKS, landmarkKind } from './landmarks.ts';
 import { DUNGEONS, SAGA_BOSSES, SAGA_ITEMS, SAGA_MOBS, VOLVA_ID, VOLVA_SPOT } from './saga.ts';
-import { TILE, type Achievement, type AnimalDef, type CropDef, type ItemDef, type NpcDef, type ObjectDef, type RecipeDef } from './types.ts';
+import { TILE, type Achievement, type AnimalDef, type ItemDef, type NpcDef, type ObjectDef } from './types.ts';
 
 // ---------- Items ----------
 
@@ -20,152 +19,44 @@ export const ITEMS: Record<string, ItemDef> = {};
 const add = (d: ItemDef) => (ITEMS[d.id] = d);
 
 // Tools
-add(I('hoe', 'tool', { tool: 'hoe' }));
-add(I('can', 'tool', { tool: 'can' }));
-add(I('axe', 'tool', { tool: 'axe' }));
-add(I('pick', 'tool', { tool: 'pick' }));
-add(I('scythe', 'tool', { tool: 'scythe' }));
-add(I('hammer', 'tool', { tool: 'hammer' }));
-add(I('brush', 'tool', { tool: 'brush' }));
-add(I('rod', 'tool', { tool: 'rod' }));
-add(I('sword', 'tool', { tool: 'sword' }));
-add(I('shield', 'tool', { tool: 'shield' }));
-add(I('bow', 'tool', { tool: 'bow' }));
-add(I('bazooka', 'tool', { tool: 'bazooka' }));
-add(I('rocket', 'material', { sell: 3 }));
-add(I('lasso', 'tool', { tool: 'lasso' }));
 add(I('fur', 'material', { sell: 15 }));
 
-// Seeds + crops
-const crop = (id: string, buySeed: number, sellCrop: number) => {
-  add(I(`${id}_seed`, 'seed', { crop: id, buy: buySeed, tab: 'seeds', sell: Math.max(1, Math.floor(buySeed / 2)) }));
-  add(I(id, 'crop', { sell: sellCrop }));
-};
-crop('carrot', 10, 12);
-crop('potato', 12, 15);
-crop('strawberry', 30, 22);
-crop('tomato', 25, 20);
-crop('pumpkin', 40, 60);
-crop('sunflower', 20, 28);
-crop('wheat', 10, 10);
-
 // Materials
-add(I('wood', 'material', { sell: 2, buy: 5, tab: 'materials' }));
 add(I('stone', 'material', { sell: 2, buy: 5, tab: 'materials' }));
-add(I('dirt', 'material', { sell: 1 }));
-add(I('sand', 'material', { sell: 1 }));
-add(I('gravel', 'material', { sell: 1 }));
-add(I('coal', 'material', { sell: 4 }));
-add(I('fiber', 'material', { sell: 1 }));
-add(I('paper', 'material', { sell: 1, buy: 3, tab: 'materials' }));
-add(I('hay', 'feed', { sell: 1, buy: 4, tab: 'feed' }));
 // Found out in the world
 add(I('mushroom', 'crop', { sell: 12 }));
-add(I('honey', 'crop', { sell: 45 }));
-add(I('iceberry', 'crop', { sell: 18 }));
 add(I('shell', 'material', { sell: 8 }));
-add(I('cactus_fruit', 'crop', { sell: 16 }));
 // Cave loot
 add(I('gold', 'material', { sell: 10 }));
 add(I('gem', 'material', { sell: 150 }));
-add(I('heartberry', 'crop', { sell: 20 }));
 // The wider world: found in the new biomes, their caves and on the moon
-add(I('blueberry', 'crop', { sell: 6 }));
-add(I('cloudberry', 'crop', { sell: 30 }));
-add(I('banana', 'crop', { sell: 14, food: { boostMs: 20_000 } }));
 add(I('glowshroom', 'crop', { sell: 25 }));
 add(I('fairy_dust', 'material', { sell: 50 }));
 add(I('obsidian', 'material', { sell: 25 }));
 add(I('crystal', 'material', { sell: 40 }));
 add(I('fire_crystal', 'material', { sell: 80 }));
-add(I('fossil', 'material', { sell: 35 }));
 add(I('pearl', 'material', { sell: 90 }));
 add(I('old_coin', 'material', { sell: 60 }));
-add(I('scarab', 'material', { sell: 150 }));
-add(I('idol', 'material', { sell: 250 }));
-add(I('polkagris', 'crop', { sell: 8, food: { boostMs: 30_000 } }));
-add(I('lollipop', 'crop', { sell: 10, food: { boostMs: 30_000 } }));
-add(I('moon_rock', 'material', { sell: 30 }));
 add(I('star_crystal', 'material', { sell: 120 }));
-add(I('moon_cheese', 'crop', { sell: 40, food: { boostMs: 45_000 } }));
 
 // Animal products
-add(I('egg', 'animal_product', { sell: 15 }));
-add(I('milk', 'animal_product', { sell: 40 }));
-add(I('wool', 'animal_product', { sell: 50 }));
-add(I('truffle', 'animal_product', { sell: 60 }));
-add(I('egg_pask', 'animal_product', { sell: 25 }));
 
 // Dishes (cooked at the stove)
-add(I('pancakes', 'crop', { sell: 70 }));
-add(I('truffle_pasta', 'crop', { sell: 160 }));
-add(I('carrot_cake', 'crop', { sell: 60 }));
-add(I('pumpkin_pie', 'crop', { sell: 120 }));
-add(I('strawberry_jam', 'crop', { sell: 55 }));
-add(I('fish_soup', 'crop', { sell: 65 }));
-add(I('bread', 'crop', { sell: 30 }));
-add(I('cloudberry_jam', 'crop', { sell: 150 }));
-add(I('blueberry_pie', 'crop', { sell: 110 }));
 // Pizzeria menu (bought in the village, eaten for pizzapower)
-add(I('pizza', 'crop', { sell: 10, buy: 30, tab: 'pizzeria', food: { boostMs: 60_000 } }));
-add(I('pizza_kebab', 'crop', { sell: 12, buy: 40, tab: 'pizzeria', food: { boostMs: 60_000 } }));
-add(I('pizza_hawaii', 'crop', { sell: 11, buy: 35, tab: 'pizzeria', food: { boostMs: 60_000 } }));
-add(I('lemonade', 'crop', { sell: 3, buy: 10, tab: 'pizzeria', food: { boostMs: 20_000 } }));
 
 // Fish
-add(I('fish_roach', 'fish', { sell: 8 }));
-add(I('fish_perch', 'fish', { sell: 14 }));
-add(I('fish_pike', 'fish', { sell: 35 }));
-add(I('fish_gold', 'fish', { sell: 90 }));
 
 // Animals (catalogue)
-add(I('animal_hen', 'animal', { species: 'hen', buy: 150, tab: 'animals', stack: 1 }));
-add(I('animal_rabbit', 'animal', { species: 'rabbit', buy: 200, tab: 'animals', stack: 1 }));
-add(I('animal_sheep', 'animal', { species: 'sheep', buy: 400, tab: 'animals', stack: 1 }));
-add(I('animal_cow', 'animal', { species: 'cow', buy: 600, tab: 'animals', stack: 1 }));
-add(I('animal_horse', 'animal', { species: 'horse', buy: 500, tab: 'animals', stack: 1 }));
-add(I('animal_pig', 'animal', { species: 'pig', buy: 350, tab: 'animals', stack: 1 }));
-add(I('animal_dog', 'animal', { species: 'dog', buy: 250, tab: 'animals', stack: 1 }));
-add(I('animal_cat', 'animal', { species: 'cat', buy: 250, tab: 'animals', stack: 1 }));
 // Vehicles (bought like animals, parked next to you at once, driven like a horse)
-add(I('vehicle_motorcycle', 'animal', { species: 'motorcycle', buy: 800, tab: 'vehicles', stack: 1 }));
-add(I('vehicle_car_red', 'animal', { species: 'car', variant: 0, buy: 2500, tab: 'vehicles', stack: 1 }));
-add(I('vehicle_car_blue', 'animal', { species: 'car', variant: 1, buy: 2500, tab: 'vehicles', stack: 1 }));
-add(I('vehicle_car_yellow', 'animal', { species: 'car', variant: 2, buy: 2500, tab: 'vehicles', stack: 1 }));
 
 // Placeables (crafted or bought)
 const place = (id: string, extra: Partial<ItemDef> = {}) =>
   add(I(id, 'placeable', { places: id, ...extra }));
-place('fence', { sell: 2 });
-place('gate', { sell: 3 });
-place('path_stone', { sell: 1 });
-place('path_dirt', { sell: 1 });
-place('wall_wood', { sell: 2 });
-place('wall_stone', { sell: 3 });
-place('floor_wood', { sell: 1 });
-place('floor_stone', { sell: 1 });
-place('door', { sell: 4 });
-place('window', { sell: 3 });
-place('chest', { sell: 10 });
-place('trough', { sell: 5 });
-place('workbench', { sell: 10 });
-place('torch', { sell: 2 });
-place('scarecrow', { sell: 8 });
+// Furniture (Möbler) – crafted or bought, usable inside the house and outside
+// Furniture: a new house starts with a bed, a table, a chair and a lamp, and the dungeons drop the rest (HOUSE_LOOT)
 place('bench', { sell: 5 });
 place('table', { sell: 6 });
-place('coop', { sell: 20 });
-place('hutch', { sell: 15 });
-place('sheepfold', { sell: 30 });
-place('barn', { sell: 50 });
-place('stall', { sell: 60 });
-// The run's buildings (M5b, GAME.md section 4): the forge house, the herb garden and the longhouse
-place('smithy', { sell: 80 });
-place('herb_garden', { sell: 30 });
-place('longhall', { sell: 120 });
-place('pigsty', { sell: 25 });
 place('flowerbox', { sell: 5 });
-place('well', { sell: 20 });
-// Furniture (Möbler) – crafted or bought, usable inside the house and outside
 place('bed', { sell: 15, buy: 120, tab: 'furniture' });
 place('rug', { sell: 5, buy: 40, tab: 'furniture' });
 place('chair', { sell: 3, buy: 25, tab: 'furniture' });
@@ -173,28 +64,13 @@ place('sofa', { sell: 10, buy: 90, tab: 'furniture' });
 place('bookshelf', { sell: 8, buy: 70, tab: 'furniture' });
 place('lamp', { sell: 5, buy: 45, tab: 'furniture' });
 place('plant', { sell: 4, buy: 30, tab: 'furniture' });
-place('painting', { sell: 5, buy: 60, tab: 'furniture' });
-place('stove', { sell: 10, buy: 110, tab: 'furniture' });
 place('clock', { sell: 5, buy: 50, tab: 'furniture' });
-// Paint buckets (Måla): one bucket paints the farmhouse or a whole run of connected walls
-export const PAINT_NAMES = ['red', 'yellow', 'blue', 'green', 'white', 'pink'] as const;
-PAINT_NAMES.forEach((c, i) => add(I(`paint_${c}`, 'material', { paint: i + 1, buy: 25, sell: 5, tab: 'furniture' })));
-// Season decorations
-place('pumpkin_lantern', { buy: 30, tab: 'season', season: 'halloween', sell: 5 });
-place('ghost_flag', { buy: 25, tab: 'season', season: 'halloween', sell: 5 });
-place('xmas_tree', { buy: 80, tab: 'season', season: 'jul', sell: 10 });
-place('lights', { buy: 30, tab: 'season', season: 'jul', sell: 5 });
-place('snowman', { buy: 40, tab: 'season', season: 'jul', sell: 5 });
-place('easter_twigs', { buy: 30, tab: 'season', season: 'pask', sell: 5 });
-place('egg_basket', { buy: 25, tab: 'season', season: 'pask', sell: 5 });
-place('maypole', { buy: 80, tab: 'season', season: 'midsommar', sell: 10 });
-place('flower_wreath_decor', { buy: 20, tab: 'season', season: 'midsommar', sell: 5 });
-// Souvenirs from the wider world (crafted from what you find, or found as they are)
 place('crystal_lamp', { sell: 60 });
 place('mushroom_lamp', { sell: 45 });
-place('dino_skeleton', { sell: 120 });
 place('wisp_jar', { sell: 30 });
 place('dragon_egg');
+// Season decorations
+// Souvenirs from the wider world (crafted from what you find, or found as they are)
 
 // Clothing
 const cloth = (
@@ -209,62 +85,13 @@ cloth('shirt_red', 'shirt', 'plain', '#d9453b', 60);
 cloth('shirt_blue', 'shirt', 'plain', '#3b6fd9', 60);
 cloth('shirt_green', 'shirt', 'plain', '#3ba35b', 60);
 cloth('shirt_yellow', 'shirt', 'plain', '#e8c23a', 60);
-cloth('shirt_pink', 'shirt', 'plain', '#e87ab8', 60);
-cloth('shirt_purple', 'shirt', 'plain', '#8a4fd1', 60);
-cloth('shirt_stripes', 'shirt', 'stripes', '#3b6fd9', 90);
-cloth('shirt_overalls', 'shirt', 'overalls', '#3b5fa6', 120);
 // Dresses (worn in the shirt slot; they hide the pants)
-cloth('dress_pink', 'shirt', 'dress', '#e87ab8', 90);
-cloth('dress_blue', 'shirt', 'dress', '#5aa0e8', 90);
-cloth('dress_purple', 'shirt', 'dress', '#8a4fd1', 90);
-cloth('dress_mint', 'shirt', 'dress', '#5ac8a8', 90);
-cloth('dress_red_belt', 'shirt', 'dress_belt', '#d9453b', 110);
-cloth('dress_green_belt', 'shirt', 'dress_belt', '#3ba35b', 110);
-cloth('dress_yellow_flowers', 'shirt', 'dress_flowers', '#e8c23a', 120);
-cloth('dress_white_flowers', 'shirt', 'dress_flowers', '#f4f2ec', 120);
-cloth('dress_midsommar', 'shirt', 'dress_flowers', '#9ad0f0', 100, 'midsommar');
-cloth('dress_lucia', 'shirt', 'dress_belt', '#ffffff', 100, 'jul');
 cloth('pants_blue', 'pants', 'plain', '#2f4c8a', 50);
 cloth('pants_brown', 'pants', 'plain', '#7a5230', 50);
-cloth('pants_green', 'pants', 'plain', '#3f7a3a', 50);
-cloth('pants_red', 'pants', 'plain', '#a63838', 50);
-cloth('pants_skirt_pink', 'pants', 'skirt', '#e87ab8', 70);
-cloth('pants_skirt_blue', 'pants', 'skirt', '#5aa0e8', 70);
 cloth('shoes_boots', 'shoes', 'boots', '#3a3a3a', 40);
-cloth('shoes_rubber', 'shoes', 'boots', '#2e8a3a', 40);
-cloth('shoes_red', 'shoes', 'plain', '#c43a3a', 30);
-cloth('hat_straw', 'hat', 'straw', '#e0c060', 80);
-cloth('hat_cap_red', 'hat', 'cap', '#d9453b', 60);
-cloth('hat_cap_blue', 'hat', 'cap', '#3b6fd9', 60);
-cloth('hat_beanie', 'hat', 'beanie', '#8a4fd1', 60);
-cloth('hat_cowboy', 'hat', 'cowboy', '#8a5a2a', 120);
-cloth('hat_flowerwreath', 'hat', 'wreath', '#e8e0a0', 50, 'midsommar');
-cloth('hat_witch', 'hat', 'witch', '#2a1a3a', 90, 'halloween');
-cloth('shirt_ghost', 'shirt', 'ghost', '#f0f0f0', 90, 'halloween');
-cloth('hat_santa', 'hat', 'santa', '#d9453b', 80, 'jul');
-cloth('shirt_xmas', 'shirt', 'xmas', '#2e8a3a', 100, 'jul');
-cloth('hat_bunny', 'hat', 'bunny', '#f5e6e8', 70, 'pask');
-cloth('shirt_easter', 'shirt', 'plain', '#f5e04a', 70, 'pask');
-// Star rewards: bought with stars from quests and achievements
-const starCloth = (id: string, slot: 'hat' | 'shirt' | 'pants' | 'shoes', style: string, color: string, stars: number) =>
-  add(I(id, 'clothing', { clothing: { slot, style, color }, stars, tab: 'stars', stack: 1 }));
-starCloth('hat_party', 'hat', 'party', '#e87ab8', 5);
-starCloth('shirt_gold', 'shirt', 'plain', '#f2c230', 10);
-starCloth('hat_crown', 'hat', 'crown', '#f2d35a', 20);
-starCloth('shirt_star', 'shirt', 'star', '#3b3f8a', 30);
-starCloth('gown_gold', 'shirt', 'gown', '#f2c230', 15);
-starCloth('gown_blue', 'shirt', 'gown', '#3b6fd9', 15);
 // Cave treasure clothes (not for sale)
-add(I('hat_viking', 'clothing', { clothing: { slot: 'hat', style: 'viking', color: '#9d9a92' }, stack: 1 }));
-add(I('shirt_knight', 'clothing', { clothing: { slot: 'shirt', style: 'plain', color: '#b8bcc4' }, stack: 1 }));
 // Found in the caves and on the moon (not for sale)
 const found = (id: string, slot: 'hat' | 'shirt', style: string, color: string) => add(I(id, 'clothing', { clothing: { slot, style, color }, stack: 1 }));
-found('hat_pirate', 'hat', 'pirate', '#2b2622');
-found('hat_explorer', 'hat', 'explorer', '#d9c48f');
-found('hat_space', 'hat', 'space', '#e8eef5');
-found('shirt_space', 'shirt', 'space', '#eef1f5');
-found('hat_frog', 'hat', 'frog', '#5aae4a');
-found('hat_dino', 'hat', 'dino', '#4f9a3a');
 // Dungeons (Sagan om Världsträdet): glowing weapons that work as tools too, Norse clothes, the classes'
 // clothes, pets and mounts only the dungeons give, healing potions, what the villagers ask for, and the
 // saga's keepsakes for home
@@ -280,7 +107,6 @@ for (const s of SAGA_ITEMS) {
   else if (s.kind === 'material') add(I(s.id, 'material', { sell: s.rarity === 'rare' ? 20 : 5 }));
   else if (s.kind === 'decor') add(I(s.id, 'placeable', { places: s.id, stack: 1 }));
 }
-found('hat_ice_crown', 'hat', 'crown', '#bfe3f5');
 
 export const item = (id: string): ItemDef => {
   const d = ITEMS[id];
@@ -289,16 +115,6 @@ export const item = (id: string): ItemDef => {
 };
 
 // ---------- Crops ----------
-
-export const CROPS: Record<string, CropDef> = {
-  carrot: { id: 'carrot', seed: 'carrot_seed', produce: 'carrot', stages: [1, 1, 1], yield: [1, 2], seedsBack: [1, 2] },
-  potato: { id: 'potato', seed: 'potato_seed', produce: 'potato', stages: [1, 1, 1, 1], yield: [2, 3], seedsBack: [1, 2] },
-  strawberry: { id: 'strawberry', seed: 'strawberry_seed', produce: 'strawberry', stages: [1, 1, 1, 2], regrowTo: 2, yield: [1, 2], seedsBack: [0, 1] },
-  tomato: { id: 'tomato', seed: 'tomato_seed', produce: 'tomato', stages: [1, 1, 2, 1], regrowTo: 2, yield: [1, 3], seedsBack: [0, 1] },
-  pumpkin: { id: 'pumpkin', seed: 'pumpkin_seed', produce: 'pumpkin', stages: [1, 1, 1, 1, 1], yield: [1, 1], seedsBack: [1, 2] },
-  sunflower: { id: 'sunflower', seed: 'sunflower_seed', produce: 'sunflower', stages: [1, 1, 1, 1], yield: [1, 1], seedsBack: [2, 3] },
-  wheat: { id: 'wheat', seed: 'wheat_seed', produce: 'wheat', stages: [1, 1, 1], yield: [1, 2], seedsBack: [1, 2] },
-};
 
 // ---------- Objects ----------
 
@@ -324,135 +140,57 @@ addO(O('rock_small', { breakWith: 'pick', drops: [{ item: 'stone', min: 1, max: 
 addO(O('grass_tuft', { solid: false, flat: true, breakWith: 'scythe', drops: [{ item: 'fiber', min: 1, max: 2 }, { item: 'hay', min: 0, max: 1 }], regrowDays: 2 }));
 addO(O('bush', { breakWith: 'axe', drops: [{ item: 'fiber', min: 2, max: 3 }], regrowDays: 3 }));
 addO(O('flower', { solid: false, flat: true, breakWith: 'scythe', drops: [{ item: 'fiber', min: 1, max: 1 }], regrowDays: 3 }));
-addO(O('wild_pumpkin', { harvest: true, drops: [{ item: 'pumpkin', min: 1, max: 1 }] }));
 addO(O('wild_flower_mid', { solid: false, flat: true, harvest: true, drops: [{ item: 'fiber', min: 1, max: 1 }] }));
 // Biome specials
 addO(O('mushroom', { solid: false, flat: true, harvest: true, drops: [{ item: 'mushroom', min: 1, max: 2 }] }));
-addO(O('beehive', { harvest: true, drops: [{ item: 'honey', min: 1, max: 1 }] }));
-addO(O('iceberry', { solid: false, harvest: true, drops: [{ item: 'iceberry', min: 1, max: 3 }] }));
-addO(O('snowman_wild', { breakWith: undefined }));
-addO(O('ore', { breakWith: 'pick', drops: [{ item: 'stone', min: 1, max: 2 }, { item: 'gem', min: 0, max: 1 }] }));
-addO(O('palm', { breakWith: 'axe', drops: [{ item: 'wood', min: 2, max: 4 }] }));
-addO(O('shell', { solid: false, flat: true, harvest: true, drops: [{ item: 'shell', min: 1, max: 1 }] }));
-addO(O('cactus', { harvest: true, drops: [{ item: 'cactus_fruit', min: 1, max: 2 }] }));
-addO(O('signpost', { breakWith: undefined }));
 // The lobby: a signboard with a picture (variant) and the kennel where you pick your first pet
 addO(O('lobby_sign', { breakWith: undefined }));
 addO(O('kennel', { w: 2, h: 2, interact: 'kennel', breakWith: undefined }));
 // The wider world (2026-10-29). Skogen: blueberries. Träsket: cloudberries, reeds, dead trees and will-o'-the-wisps
-addO(O('blueberry_bush', { harvest: true, drops: [{ item: 'blueberry', min: 2, max: 4 }] }));
-addO(O('cloudberry', { solid: false, flat: true, harvest: true, drops: [{ item: 'cloudberry', min: 1, max: 2 }] }));
-addO(O('reed', { solid: false, breakWith: 'scythe', drops: [{ item: 'fiber', min: 1, max: 2 }] }));
-addO(O('dead_tree', { breakWith: 'axe', drops: [{ item: 'wood', min: 1, max: 3 }] }));
-addO(O('wisp', { solid: false, harvest: true, light: true, drops: [{ item: 'wisp_jar', min: 1, max: 1 }] }));
 // Djungeln
-addO(O('jungle_tree', { breakWith: 'axe', drops: [{ item: 'wood', min: 4, max: 6 }] }));
-addO(O('banana_plant', { harvest: true, drops: [{ item: 'banana', min: 1, max: 3 }] }));
-addO(O('jungle_flower', { solid: false, flat: true, breakWith: 'scythe', drops: [{ item: 'fiber', min: 1, max: 1 }] }));
-addO(O('ruin_pillar', { breakWith: undefined }));
 // Vulkanen
-addO(O('obsidian_rock', { breakWith: 'pick', drops: [{ item: 'obsidian', min: 1, max: 2 }, { item: 'stone', min: 0, max: 1 }] }));
-addO(O('fire_crystal', { breakWith: 'pick', light: true, drops: [{ item: 'fire_crystal', min: 1, max: 1 }] }));
-addO(O('steam_vent', { solid: false, flat: true, breakWith: undefined }));
 // Svampskogen
-addO(O('giant_mushroom', { breakWith: 'axe', drops: [{ item: 'fiber', min: 2, max: 3 }, { item: 'mushroom', min: 0, max: 2 }] }));
-addO(O('giant_glowshroom', { breakWith: 'axe', light: true, drops: [{ item: 'fiber', min: 2, max: 3 }, { item: 'glowshroom', min: 1, max: 2 }] }));
-addO(O('glowshroom', { solid: false, flat: true, harvest: true, light: true, drops: [{ item: 'glowshroom', min: 1, max: 2 }] }));
-addO(O('fairy_ring', { w: 2, h: 2, solid: false, flat: true, breakWith: undefined, interact: 'fairy', loot: 'fairy' }));
 // Dinodalen
-addO(O('fern', { solid: false, breakWith: 'scythe', drops: [{ item: 'fiber', min: 1, max: 2 }] }));
-addO(O('dino_bones', { w: 3, h: 2, breakWith: undefined }));
-addO(O('fossil_rock', { breakWith: 'pick', drops: [{ item: 'stone', min: 1, max: 1 }], loot: 'fossil_rock' }));
 // Godislandet
-addO(O('lollipop_tree', { harvest: true, drops: [{ item: 'lollipop', min: 1, max: 2 }] }));
-addO(O('candy_cane', { harvest: true, drops: [{ item: 'polkagris', min: 1, max: 2 }] }));
 // Buried treasure: an X in the sand, dug up with the hoe (the loot depends on the biome)
-addO(O('dig_spot', { solid: false, flat: true, breakWith: 'hoe', loot: 'dig' }));
 // Landmarks. Cave mouths, the temple, the pyramid and the gingerbread house lead into caves.
-addO(O('cave_mouth', { w: 2, h: 2, interact: 'grotto', breakWith: undefined }));
-addO(O('temple', { w: 4, h: 3, interact: 'grotto', breakWith: undefined }));
-addO(O('pyramid', { w: 6, h: 4, interact: 'grotto', breakWith: undefined }));
-addO(O('gingerbread_house', { w: 3, h: 3, interact: 'grotto', breakWith: undefined, light: true }));
-addO(O('volcano', { w: 6, h: 5, breakWith: undefined, light: true }));
-addO(O('shipwreck', { w: 4, h: 2, breakWith: undefined }));
 // Rymdbasen and the moon
-addO(O('rocket', { w: 2, h: 3, interact: 'rocket', breakWith: undefined, light: true }));
-addO(O('satellite_dish', { w: 2, h: 2, breakWith: undefined }));
-addO(O('ufo', { w: 3, h: 2, breakWith: undefined, light: true }));
-addO(O('flag_se', { breakWith: undefined }));
-addO(O('earth', { w: 4, h: 4, solid: false, flat: true, breakWith: undefined }));
-addO(O('crater', { w: 2, h: 2, solid: false, flat: true, breakWith: undefined }));
-addO(O('moon_rock', { breakWith: 'pick', drops: [{ item: 'moon_rock', min: 1, max: 2 }] }));
-addO(O('star_crystal', { breakWith: 'pick', light: true, drops: [{ item: 'star_crystal', min: 1, max: 1 }] }));
-addO(O('moon_cheese', { solid: false, harvest: true, drops: [{ item: 'moon_cheese', min: 1, max: 1 }] }));
 // Inside the caves
-addO(O('crystal', { breakWith: 'pick', light: true, drops: [{ item: 'crystal', min: 1, max: 2 }] }));
-addO(O('gold_vein', { breakWith: 'pick', drops: [{ item: 'gold', min: 1, max: 3 }, { item: 'stone', min: 0, max: 1 }] }));
-addO(O('gem_vein', { breakWith: 'pick', drops: [{ item: 'gem', min: 1, max: 1 }] }));
-addO(O('stalagmite', { breakWith: 'pick', drops: [{ item: 'stone', min: 1, max: 1 }] }));
-addO(O('loot_chest', { interact: 'loot', breakWith: undefined }));
-addO(O('barrel', { drops: [{ item: 'wood', min: 1, max: 2 }] }));
-addO(O('bones', { solid: false, flat: true, breakWith: undefined }));
 // Village
 addO(O('house_small', { w: 3, h: 3, breakWith: undefined }));
-addO(O('market', { w: 2, h: 2, interact: 'catalogue', breakWith: undefined }));
-addO(O('sellstall', { w: 2, h: 2, interact: 'sell', breakWith: undefined }));
-addO(O('pizzeria', { w: 3, h: 2, interact: 'pizzeria', breakWith: undefined, light: true }));
 addO(O('lantern', { solid: false, breakWith: undefined, light: true }));
-addO(O('town_well', { interact: 'water', breakWith: undefined }));
 
 // Built things (break -> same item back)
 const built = (kind: string, extra: Partial<ObjectDef> = {}) =>
   addO(O(kind, { drops: [{ item: kind, min: 1, max: 1 }], ...extra }));
-built('fence');
-built('gate', { solid: false });
-built('wall_wood');
-built('wall_stone');
-built('door', { solid: false });
-built('window');
-built('chest', { interact: 'chest' });
-built('trough', { interact: 'feed' });
-built('workbench', { interact: 'workbench' });
-built('torch', { solid: false, light: true });
-built('scarecrow');
+// A house's walls, windows and furniture (made by house.ts and the lobby, never built or broken by players)
+addO(O('wall_wood', { breakWith: undefined }));
+addO(O('window', { breakWith: undefined }));
 built('bench');
 built('table');
 built('flowerbox');
-built('well', { interact: 'water' });
-built('bed', { w: 1, h: 2, interact: 'sleep' });
+built('bed', { w: 1, h: 2 });
 built('rug', { w: 2, h: 2, solid: false, flat: true });
 built('chair');
 built('sofa', { w: 2, h: 1 });
 built('bookshelf');
 built('lamp', { light: true });
 built('plant');
-built('painting', { solid: false, flat: true, harvest: true });
-built('stove', { light: true, interact: 'cook' });
 built('clock', { solid: false, flat: true });
+built('crystal_lamp', { light: true });
+built('mushroom_lamp', { light: true });
+built('wisp_jar', { light: true });
+built('dragon_egg');
 built('door_out', { solid: false, flat: true, breakWith: undefined, drops: [] });
 // Cave
-addO(O('cave', { w: 2, h: 2, interact: 'cave', breakWith: undefined }));
-addO(O('bathhouse', { w: 3, h: 2, interact: 'bath', breakWith: undefined }));
 // The city: streets, blocks and stops (interaction with stops/stations lives with the travel feature)
-addO(O('bus_stop', { interact: 'bus', breakWith: undefined }));
-addO(O('train_station', { w: 3, h: 2, interact: 'train', breakWith: undefined, light: true }));
-addO(O('apartment', { w: 3, h: 3, breakWith: undefined }));
-addO(O('shop', { w: 3, h: 2, breakWith: undefined, light: true }));
-addO(O('traffic_light', { breakWith: undefined }));
 addO(O('street_lamp', { solid: false, breakWith: undefined, light: true }));
-addO(O('parked_car', { w: 2, h: 1, breakWith: undefined }));
 // Köpingen's Norse dressing (Saga III): a pole with a cloth banner (variant = colour 0–2), stacked barrels, a lit
 // runestone by the well and a hay cart by the market. Decoration only: nothing to use or break.
 addO(O('banner_pole', { breakWith: undefined }));
 addO(O('barrel_stack', { breakWith: undefined }));
 addO(O('runestone', { breakWith: undefined, light: true }));
 addO(O('hay_cart', { w: 2, h: 1, breakWith: undefined }));
-addO(O('bath_exit', { solid: false, flat: true, interact: 'exit', breakWith: undefined }));
-addO(O('cave_exit', { solid: false, flat: true, interact: 'exit', breakWith: undefined }));
-addO(O('cave_wall', { breakWith: undefined }));
-addO(O('cave_torch', { solid: false, breakWith: undefined, light: true }));
-addO(O('cave_rock', { breakWith: 'pick', drops: [{ item: 'stone', min: 1, max: 2 }] }));
-addO(O('treasure', { interact: 'treasure', breakWith: undefined }));
 // Dungeons: walls and the gate after the mid-boss (one look per dungeon: variant), torches, the way out,
 // rest stones, chests, the arches out in the world, Kämpastenen where you pick a class, and things to see
 addO(O('saga_wall', { breakWith: undefined }));
@@ -461,9 +199,8 @@ addO(O('saga_torch', { solid: false, breakWith: undefined, light: true }));
 addO(O('saga_exit', { solid: false, flat: true, interact: 'exit', breakWith: undefined, light: true }));
 addO(O('saga_rest', { interact: 'rest', breakWith: undefined, light: true }));
 addO(O('saga_chest', { interact: 'sagachest', breakWith: undefined }));
-addO(O('saga_portal', { w: 3, h: 2, interact: 'saga', breakWith: undefined, light: true }));
 addO(O('saga_stone', { interact: 'sagaclass', breakWith: undefined, light: true }));
-// Runs (M5b): the arch on the farm that starts one, and the way on at the end of a zone
+// Runs: the arch in the lobby that starts one, and the way on at the end of a zone
 addO(O('fardport', { w: 3, h: 2, interact: 'fardport', breakWith: undefined, light: true }));
 addO(O('run_exit', { solid: false, flat: true, interact: 'runexit', breakWith: undefined, light: true }));
 addO(O('saga_coffin', { breakWith: undefined }));
@@ -512,31 +249,6 @@ addO(O('saga_starlamp', { solid: false, breakWith: undefined, light: true }));
 addO(O('saga_runepillar', { breakWith: undefined }));
 // the Act II chapters' keepsakes for home (they all glow)
 for (const s of SAGA_ITEMS) if (s.kind === 'decor' && !OBJECTS[s.id]) built(s.id, { light: true });
-// Upptäcktsboken: the wild maps' landmarks, solid and touched to be found (3×3, a few 4×3)
-for (const d of Object.values(LANDMARKS)) addO(O(landmarkKind(d.id), { w: d.w ?? 3, h: 3, interact: 'landmark', breakWith: undefined, ...(d.light ? { light: true } : {}) }));
-built('coop', { w: 2, h: 2, houses: { species: 'hen', capacity: 4 } });
-built('hutch', { w: 1, h: 1, houses: { species: 'rabbit', capacity: 2 } });
-built('sheepfold', { w: 2, h: 2, houses: { species: 'sheep', capacity: 3 } });
-built('barn', { w: 3, h: 2, houses: { species: 'cow', capacity: 2 } });
-built('stall', { w: 3, h: 2, houses: { species: 'horse', capacity: 2 } });
-built('smithy', { w: 3, h: 2, light: true });
-built('herb_garden', { w: 2, h: 2 });
-built('longhall', { w: 4, h: 3, light: true });
-built('pigsty', { w: 2, h: 2, houses: { species: 'pig', capacity: 3 } });
-built('pumpkin_lantern');
-built('ghost_flag', { solid: false });
-built('xmas_tree', { w: 1, h: 2 });
-built('lights', { solid: false });
-built('snowman');
-built('easter_twigs');
-built('egg_basket');
-built('maypole', { w: 1, h: 2 });
-built('flower_wreath_decor', { solid: false, flat: true });
-built('crystal_lamp', { light: true });
-built('mushroom_lamp', { light: true });
-built('dino_skeleton', { w: 3, h: 2 });
-built('wisp_jar', { light: true });
-built('dragon_egg');
 
 // A house to show off in (house.ts): a hearth, a stand for gear, Norse decor from the dungeons and a trophy for every dungeon boss.
 addO(O('hearth', { w: 3, h: 1, breakWith: undefined, light: true }));
@@ -558,11 +270,7 @@ for (const b of Object.values(DUNGEONS)) {
 
 // Farmhouse fixtures (not breakable)
 addO(O('house', { w: 5, h: 4, breakWith: undefined }));
-addO(O('mailbox', { interact: 'catalogue', breakWith: undefined }));
-addO(O('sellbox', { interact: 'sell', breakWith: undefined }));
 addO(O('wardrobe', { interact: 'wardrobe', breakWith: undefined }));
-addO(O('start_chest', { interact: 'chest', breakWith: undefined }));
-addO(O('start_bench', { interact: 'workbench', breakWith: undefined }));
 
 export const objectDef = (kind: string): ObjectDef => {
   const d = OBJECTS[kind];
@@ -573,48 +281,19 @@ export const objectDef = (kind: string): ObjectDef => {
 // ---------- Animals ----------
 
 export const ANIMALS: Record<string, AnimalDef> = {
-  hen: { species: 'hen', product: 'egg', house: 'coop', growDays: 3, speed: 20 },
-  rabbit: { species: 'rabbit', house: 'hutch', growDays: 3, speed: 28 },
-  sheep: { species: 'sheep', product: 'wool', house: 'sheepfold', growDays: 3, speed: 16 },
-  cow: { species: 'cow', product: 'milk', house: 'barn', growDays: 3, speed: 14 },
   // Pigs root up truffles in the morning
-  pig: { species: 'pig', product: 'truffle', house: 'pigsty', growDays: 3, speed: 16 },
   // Horses give nothing but can be ridden by their owner once grown
-  horse: { species: 'horse', house: 'stall', growDays: 3, speed: 24 },
   // Pets follow their owner and need no house
   dog: { species: 'dog', house: '', growDays: 0, speed: 70, pet: true },
   cat: { species: 'cat', house: '', growDays: 0, speed: 60, pet: true },
   // Wild animals, one kind per biome; they wander and like to be petted
-  fox: { species: 'fox', house: '', growDays: 0, speed: 34, wild: 'skog' },
-  deer: { species: 'deer', house: '', growDays: 0, speed: 30, wild: 'ang' },
-  penguin: { species: 'penguin', house: '', growDays: 0, speed: 18, wild: 'is' },
-  crab: { species: 'crab', house: '', growDays: 0, speed: 20, wild: 'strand' },
-  goat: { species: 'goat', house: '', growDays: 0, speed: 26, wild: 'berg' },
-  lizard: { species: 'lizard', house: '', growDays: 0, speed: 36, wild: 'oken' },
-  hare: { species: 'hare', house: '', growDays: 0, speed: 40, wild: 'ang', wildCount: [2, 4] },
-  boar: { species: 'boar', house: '', growDays: 0, speed: 28, wild: 'skog', wildCount: [1, 2], tame: 0.5 },
-  moose: { species: 'moose', house: '', growDays: 0, speed: 22, wild: 'skog', wildCount: [0, 1], tame: 0.2 },
   // The wider world: one or two kinds per new biome (all can be caught with the lasso)
   frog: { species: 'frog', house: '', growDays: 0, speed: 30, wild: 'trask', wildCount: [3, 5] },
-  parrot: { species: 'parrot', house: '', growDays: 0, speed: 40, wild: 'djungel', wildCount: [2, 4], variants: 3 },
-  monkey: { species: 'monkey', house: '', growDays: 0, speed: 38, wild: 'djungel', wildCount: [2, 3] },
-  salamander: { species: 'salamander', house: '', growDays: 0, speed: 26, wild: 'vulkan', wildCount: [2, 4] },
-  hedgehog: { species: 'hedgehog', house: '', growDays: 0, speed: 16, wild: 'svamp|skog', wildCount: [1, 3] },
   dino: { species: 'dino', house: '', growDays: 0, speed: 34, wild: 'dino', wildCount: [3, 5], tame: 0.4, variants: 3 },
-  gummy: { species: 'gummy', house: '', growDays: 0, speed: 24, wild: 'godis', wildCount: [3, 6], variants: 4 },
-  alien: { species: 'alien', house: '', growDays: 0, speed: 28, wild: 'mane', wildCount: [3, 4], tame: 0.5 },
   // Hatches from a dragon egg found in the volcano's cave; follows whoever put the egg down
-  dragon: { species: 'dragon', house: '', growDays: 0, speed: 64, pet: true },
   // Predators (mild): they chase you a little and bite one heart; a lasso makes them pets
-  bear: { species: 'bear', house: '', growDays: 0, speed: 26, wild: 'skog', wildCount: [1, 1], tame: 0.3, predator: { hp: 5, aggroRange: 4 } },
-  wolf: { species: 'wolf', house: '', growDays: 0, speed: 34, wild: 'berg|skog', wildCount: [1, 2], tame: 0.3, predator: { hp: 3, aggroRange: 4 } },
-  lynx: { species: 'lynx', house: '', growDays: 0, speed: 36, wild: 'berg', wildCount: [1, 1], tame: 0.3, predator: { hp: 3, aggroRange: 3 } },
   // Vehicles: city traffic drives around the blocks (speed in px/s) and always stops for people;
   // a bought car or moped stands where you park it and is driven at `ride` × walking speed
-  car: { species: 'car', house: '', growDays: 0, speed: 48, vehicle: { speed: 48, ride: 2.6, traffic: true, rideable: true, seats: 2 } },
-  motorcycle: { species: 'motorcycle', house: '', growDays: 0, speed: 60, vehicle: { speed: 60, ride: 2.2, traffic: true, rideable: true, seats: 1 } },
-  bus: { species: 'bus', house: '', growDays: 0, speed: 36, vehicle: { speed: 36, traffic: true, seats: 6 } },
-  train: { species: 'train', house: '', growDays: 0, speed: 40, vehicle: { speed: 40, traffic: true, seats: 8 } },
   // Cave monsters (gentle): slime, bat, troll and the boss troll
   slime: { species: 'slime', house: '', growDays: 0, speed: 22, mob: { hp: 2, drops: [{ item: 'gold', min: 1, max: 2, chance: 0.8 }, { item: 'heartberry', min: 1, max: 1, chance: 0.25 }] } },
   bat: { species: 'bat', house: '', growDays: 0, speed: 44, mob: { hp: 1, drops: [{ item: 'gold', min: 1, max: 1, chance: 0.6 }] } },
@@ -677,154 +356,15 @@ roam('djungelimp', 'djungel', 32, 4, [['fiber', 0.4]], { count: WILD_COUNT });
 roam('benodla', 'dino', 30, 4, [['old_coin', 0.3]], { count: WILD_COUNT });
 roam('sockerspoke', 'godis', 28, 3, [['lollipop', 0.5]], { count: WILD_COUNT });
 roam('rymdkryp', 'mane', 30, 4, [['star_crystal', 0.2], ['moon_rock', 0.4]], { count: WILD_COUNT });
-/** Roaming monsters out in the world (hero mode's targets; everyone gets experience for them). */
-export const ROAMING: readonly string[] = [
-  'vandrardraug',
-  'mosspoke',
-  'gruvtroll',
-  'sjodraug',
-  'skuggalv',
-  'isvarg',
-  'eldimp',
-  'bergatroll',
-  'kustjatte',
-  'angsvatte',
-  'trollunge',
-  'snotroll',
-  'sandande',
-  'djungelimp',
-  'benodla',
-  'sockerspoke',
-  'rymdkryp',
-];
 // The fifteenth hero level's mount: a pale, glowing cousin of the Jättehjort
 ANIMALS.ljushjort = { species: 'ljushjort', house: '', growDays: 0, speed: 30, mount: { speed: 1.75 } };
 
 // ---------- Recipes ----------
 
-const R = (id: string, count: number, ...ins: [string, number][]): RecipeDef => ({
-  id,
-  out: { item: id, count },
-  in: ins.map(([item, c]) => ({ item, count: c })),
-});
-
-export const RECIPES: RecipeDef[] = [
-  R('fence', 4, ['wood', 2]),
-  R('paper', 3, ['wood', 1]),
-  R('gate', 1, ['wood', 3]),
-  R('path_dirt', 4, ['fiber', 1]),
-  R('path_stone', 4, ['stone', 2]),
-  R('wall_wood', 2, ['wood', 2]),
-  R('wall_stone', 2, ['stone', 3]),
-  R('floor_wood', 4, ['wood', 2]),
-  R('floor_stone', 4, ['stone', 2]),
-  R('door', 1, ['wood', 4]),
-  R('window', 1, ['wood', 2], ['stone', 1]),
-  R('chest', 1, ['wood', 8]),
-  R('workbench', 1, ['wood', 10], ['stone', 2]),
-  R('trough', 1, ['wood', 4], ['fiber', 2]),
-  R('torch', 2, ['wood', 1], ['fiber', 1]),
-  R('scarecrow', 1, ['wood', 3], ['fiber', 5]),
-  R('bench', 1, ['wood', 4]),
-  R('table', 1, ['wood', 5]),
-  R('flowerbox', 1, ['wood', 2], ['fiber', 2]),
-  R('well', 1, ['stone', 15], ['wood', 4]),
-  R('hutch', 1, ['wood', 10], ['fiber', 4]),
-  R('coop', 1, ['wood', 20], ['stone', 4]),
-  R('sheepfold', 1, ['wood', 25], ['stone', 6]),
-  R('barn', 1, ['wood', 40], ['stone', 15]),
-  R('stall', 1, ['wood', 45], ['stone', 10]),
-  R('smithy', 1, ['stone', 30], ['wood', 10], ['gold', 3]),
-  R('herb_garden', 1, ['wood', 10], ['fiber', 20]),
-  R('longhall', 1, ['wood', 60], ['stone', 20]),
-  R('pigsty', 1, ['wood', 24], ['stone', 8]),
-  R('hay', 2, ['fiber', 3]),
-  R('chair', 1, ['wood', 3]),
-  R('bed', 1, ['wood', 10], ['fiber', 6]),
-  R('bookshelf', 1, ['wood', 8]),
-  R('rug', 1, ['fiber', 8]),
-  R('lamp', 1, ['wood', 2], ['fiber', 2]),
-  R('plant', 1, ['fiber', 3], ['stone', 1]),
-  R('sword', 1, ['wood', 5], ['stone', 4]),
-  R('shield', 1, ['wood', 6], ['stone', 2]),
-  R('bow', 1, ['wood', 4], ['fiber', 5]),
-  R('lasso', 1, ['fiber', 5], ['wood', 2]),
-  R('bazooka', 1, ['stone', 12], ['wood', 8], ['gold', 2]),
-  R('rocket', 3, ['stone', 2], ['wood', 1]),
-  R('crystal_lamp', 1, ['crystal', 2], ['stone', 2]),
-  R('mushroom_lamp', 1, ['glowshroom', 3], ['wood', 1]),
-  R('dino_skeleton', 1, ['fossil', 5]),
-  ...PAINT_NAMES.map((c) => R(`paint_${c}`, 1, ['wood', 1], ['fiber', 2])),
-];
-
-/** What the treasure chest may hold besides gold and stars. */
-export const TREASURE: { item: string; count: number; weight: number }[] = [
-  { item: 'gem', count: 1, weight: 30 },
-  { item: 'hat_viking', count: 1, weight: 15 },
-  { item: 'shirt_knight', count: 1, weight: 15 },
-  { item: 'pumpkin_seed', count: 5, weight: 20 },
-  { item: 'strawberry_seed', count: 5, weight: 20 },
-];
-
-/** What loot chests, dig spots, fossil rocks and fairy rings give: `coins` kr, `stars` stars and `picks` draws from the pool. */
-export interface LootTable {
-  coins?: [number, number];
-  stars?: number;
-  picks: number;
-  /** Weighted; an empty item id means nothing this time. */
-  pool: { item: string; min: number; max: number; weight: number }[];
-}
-const L = (item: string, min: number, max: number, weight: number) => ({ item, min, max, weight });
-/** Cave chests are `cave_<theme>`, dig spots `dig_<biome>` (else `dig`). */
-export const LOOT: Record<string, LootTable> = {
-  cave_rot: { coins: [10, 25], stars: 1, picks: 2, pool: [L('gold', 2, 4, 30), L('crystal', 1, 1, 15), L('glowshroom', 2, 3, 20), L('mushroom', 2, 4, 20), L('old_coin', 1, 2, 15), L('gem', 1, 1, 8), L('hat_frog', 1, 1, 8)] },
-  cave_is: { coins: [10, 25], stars: 1, picks: 2, pool: [L('crystal', 1, 2, 30), L('iceberry', 3, 5, 25), L('gold', 2, 4, 20), L('gem', 1, 1, 10), L('hat_ice_crown', 1, 1, 8), L('fish_gold', 1, 1, 5)] },
-  cave_kristall: { coins: [15, 30], stars: 1, picks: 2, pool: [L('crystal', 2, 3, 35), L('gold', 3, 5, 25), L('gem', 1, 1, 20), L('gem', 2, 2, 5)] },
-  cave_sjorovare: { coins: [20, 40], stars: 1, picks: 2, pool: [L('gold', 4, 8, 30), L('pearl', 1, 2, 25), L('old_coin', 2, 4, 25), L('hat_pirate', 1, 1, 15), L('gem', 1, 1, 5)] },
-  cave_pyramid: { coins: [20, 40], stars: 1, picks: 2, pool: [L('gold', 4, 8, 30), L('scarab', 1, 1, 25), L('old_coin', 2, 3, 20), L('gem', 1, 1, 10)] },
-  cave_tempel: { coins: [20, 40], stars: 1, picks: 2, pool: [L('gold', 4, 8, 30), L('idol', 1, 1, 20), L('hat_explorer', 1, 1, 15), L('banana', 3, 5, 15), L('gem', 1, 1, 10)] },
-  cave_lava: { coins: [15, 30], stars: 1, picks: 2, pool: [L('fire_crystal', 1, 2, 30), L('obsidian', 2, 4, 25), L('gold', 3, 5, 20), L('gem', 1, 1, 10), L('dragon_egg', 1, 1, 9)] },
-  cave_svamp: { coins: [10, 25], stars: 1, picks: 2, pool: [L('glowshroom', 3, 5, 30), L('fairy_dust', 1, 2, 25), L('mushroom', 3, 5, 20), L('crystal', 1, 1, 10), L('gem', 1, 1, 5)] },
-  cave_fossil: { coins: [10, 25], stars: 1, picks: 2, pool: [L('fossil', 1, 3, 35), L('gold', 2, 4, 20), L('old_coin', 1, 2, 15), L('hat_dino', 1, 1, 12), L('gem', 1, 1, 8)] },
-  cave_godis: { coins: [10, 25], stars: 1, picks: 2, pool: [L('polkagris', 3, 6, 30), L('lollipop', 2, 4, 30), L('gold', 2, 4, 15), L('crystal', 1, 1, 10), L('gem', 1, 1, 5)] },
-  cave_rymd: { coins: [20, 40], stars: 2, picks: 2, pool: [L('star_crystal', 1, 1, 25), L('moon_rock', 2, 4, 25), L('moon_cheese', 1, 2, 20), L('hat_space', 1, 1, 12), L('shirt_space', 1, 1, 12)] },
-  // the chest by the shipwreck, and the one in the crashed UFO on the moon
-  shipwreck: { coins: [15, 30], stars: 1, picks: 2, pool: [L('gold', 3, 6, 30), L('pearl', 1, 1, 20), L('old_coin', 1, 3, 25), L('hat_pirate', 1, 1, 15), L('fish_gold', 1, 1, 5)] },
-  ufo: { coins: [20, 40], stars: 2, picks: 2, pool: [L('hat_space', 1, 1, 30), L('shirt_space', 1, 1, 30), L('star_crystal', 1, 2, 25), L('moon_cheese', 2, 2, 15)] },
-  // the secret room behind the rubble in a cave (break it with the pickaxe)
-  secret: { coins: [20, 50], stars: 2, picks: 1, pool: [L('gem', 1, 2, 40), L('gold', 5, 10, 40), L('crystal', 2, 3, 20)] },
-  dig_strand: { picks: 1, pool: [L('old_coin', 1, 2, 30), L('gold', 1, 3, 30), L('shell', 2, 3, 25), L('pearl', 1, 1, 10), L('hat_pirate', 1, 1, 5)] },
-  dig_oken: { picks: 1, pool: [L('old_coin', 1, 2, 30), L('gold', 2, 3, 35), L('cactus_fruit', 1, 2, 20), L('scarab', 1, 1, 10), L('gem', 1, 1, 5)] },
-  dig_dino: { picks: 1, pool: [L('fossil', 1, 1, 55), L('old_coin', 1, 1, 15), L('gold', 1, 3, 20), L('gem', 1, 1, 10)] },
-  dig_mane: { picks: 1, pool: [L('moon_rock', 1, 2, 40), L('star_crystal', 1, 1, 20), L('moon_cheese', 1, 1, 40)] },
-  dig: { picks: 1, pool: [L('old_coin', 1, 2, 40), L('gold', 1, 3, 50), L('gem', 1, 1, 10)] },
-  fossil_rock: { picks: 1, pool: [L('fossil', 1, 1, 60), L('', 0, 0, 40)] },
-  fairy: { picks: 1, pool: [L('fairy_dust', 1, 1, 70), L('fairy_dust', 2, 2, 20), L('gem', 1, 1, 10)] },
-  // the chest a world boss (Bergatrollet, Kustjätten) leaves behind
-  worldboss: { coins: [40, 70], stars: 2, picks: 2, pool: [L('healing_potion', 2, 3, 30), L('styrkedryck', 1, 2, 25), L('gold', 4, 8, 25), L('gem', 1, 1, 15), L('old_coin', 2, 3, 15)] },
-};
-/** Days before a loot chest has something for the same player again. */
-export const LOOT_REFILL_DAYS = 7;
-
-/** Recipes cooked at the stove (same shape as crafting recipes). */
-export const COOKING: RecipeDef[] = [
-  R('bread', 2, ['wheat', 3]),
-  R('pancakes', 1, ['wheat', 2], ['egg', 1], ['milk', 1]),
-  R('carrot_cake', 1, ['carrot', 3], ['egg', 1], ['wheat', 1]),
-  R('pumpkin_pie', 1, ['pumpkin', 1], ['egg', 1], ['wheat', 1]),
-  R('strawberry_jam', 1, ['strawberry', 4]),
-  R('fish_soup', 1, ['fish_perch', 1], ['potato', 2], ['carrot', 1]),
-  R('truffle_pasta', 1, ['truffle', 1], ['wheat', 2], ['milk', 1]),
-  R('cloudberry_jam', 1, ['cloudberry', 4]),
-  R('blueberry_pie', 1, ['blueberry', 6], ['wheat', 2], ['egg', 1]),
-];
-
 // ---------- Villagers ----------
 
 export const NPCS: Record<string, NpcDef> = {};
 
-/** The village east of the farm. */
-export const VILLAGE_KEY = 'a:1,0';
 NPCS.stina = {
   id: 'stina',
   name: 'Smed-Stina',
@@ -868,65 +408,10 @@ export const NPC_LINES: Record<string, { morning: string[]; day: string[]; eveni
 
 const A = (id: string, stat: string, goal: number, stars: number, icon: string): Achievement => ({ id, stat, goal, stars, icon });
 export const ACHIEVEMENTS: Achievement[] = [
-  A('harvest_1', 'harvest', 1, 1, 'carrot'),
-  A('harvest_25', 'harvest', 25, 2, 'strawberry'),
-  A('harvest_100', 'harvest', 100, 3, 'pumpkin'),
-  A('chop_10', 'chop', 10, 1, 'axe'),
-  A('chop_50', 'chop', 50, 2, 'wood'),
-  A('mine_10', 'mine', 10, 1, 'pick'),
-  A('mine_50', 'mine', 50, 2, 'stone'),
-  A('build_10', 'build', 10, 1, 'fence'),
-  A('build_50', 'build', 50, 3, 'coop'),
-  A('walls_20', 'walls', 20, 2, 'wall_wood'),
-  A('painted_1', 'painted', 1, 1, 'paint_red'),
-  A('rooms_1', 'rooms', 1, 2, 'floor_wood'),
-  A('fed_5', 'fed', 5, 1, 'hay'),
-  A('fed_30', 'fed', 30, 2, 'animal_cow'),
-  A('product_10', 'product', 10, 2, 'egg'),
-  A('fish_1', 'fish', 1, 1, 'rod'),
-  A('fish_20', 'fish', 20, 2, 'fish_pike'),
-  A('fish_gold', 'fish_gold', 1, 3, 'fish_gold'),
-  A('cook_5', 'cook', 5, 2, 'pancakes'),
-  A('pizza_5', 'pizza', 5, 2, 'pizza'),
-  A('quests_3', 'quests', 3, 1, 'egg_basket'),
-  A('quests_15', 'quests', 15, 3, 'maypole'),
-  A('coins_500', 'earned', 500, 1, 'animal_hen'),
-  A('coins_3000', 'earned', 3000, 3, 'animal_cow'),
-  A('areas_5', 'areas', 5, 2, 'signpost'),
-  A('areas_15', 'areas', 15, 4, 'signpost'),
-  A('wild_5', 'wildpet', 5, 2, 'animal_rabbit'),
-  A('wild_20', 'wildpet', 20, 3, 'animal_sheep'),
-  A('mobs_10', 'mobs', 10, 1, 'sword'),
-  A('mobs_50', 'mobs', 50, 2, 'bow'),
-  A('boss_1', 'boss', 1, 3, 'gem'),
-  A('boss_5', 'boss', 5, 5, 'hat_viking'),
-  A('boom_1', 'boom', 1, 1, 'bazooka'),
-  A('boom_25', 'boom', 25, 2, 'rocket'),
-  A('paint_1', 'paint', 1, 2, 'painting'),
-  A('paint_10', 'paint', 10, 3, 'paper'),
   A('ride_1', 'ride', 1, 1, 'animal_horse'),
   A('ride_25', 'ride', 25, 2, 'stall'),
-  A('drive_1', 'drive', 1, 1, 'vehicle_car_red'),
-  A('drive_1000', 'drive_tiles', 1000, 2, 'vehicle_motorcycle'),
-  A('truffle_1', 'truffle', 1, 1, 'truffle'),
-  A('truffle_20', 'truffle', 20, 2, 'animal_pig'),
-  A('swim_1', 'swim', 1, 1, 'shell'),
-  A('swim_25', 'swim', 25, 2, 'shell'),
-  A('trip_1', 'rides', 1, 1, 'lemonade'),
-  A('train_10', 'train_rides', 10, 2, 'gem'),
-  A('tame_1', 'tame', 1, 1, 'lasso'),
-  A('tame_bear', 'tame_bear', 1, 2, 'fur'),
-  A('tame_5', 'tame_species', 5, 3, 'animal_dog'),
-  A('biomes_5', 'biomes', 5, 2, 'signpost'),
-  A('biomes_all', 'biomes', 15, 6, 'star_crystal'),
-  A('caves_1', 'caves', 1, 1, 'crystal'),
-  A('caves_10', 'caves', 10, 3, 'gem'),
   A('loot_5', 'loot', 5, 2, 'old_coin'),
   A('loot_25', 'loot', 25, 4, 'idol'),
-  A('dig_5', 'dig', 5, 2, 'pearl'),
-  A('fossil_5', 'fossil', 5, 2, 'fossil'),
-  A('moon_1', 'moon', 1, 3, 'moon_rock'),
-  A('dragon_1', 'dragon', 1, 5, 'dragon_egg'),
   A('saga_class', 'sagaClass', 1, 1, 'hat_vaktarhjalm'),
   A('saga_draug', 'sagaDraug', 1, 3, 'runsvard'),
   A('saga_frost', 'sagaFrost', 1, 4, 'frostbett'),
@@ -943,15 +428,4 @@ export const ACHIEVEMENTS: Achievement[] = [
   A('saga_level_5', 'sagaLevel', 5, 3, 'amulet_vegvisir'),
   A('saga_level_10', 'sagaLevel', 10, 6, 'amulet_brisingamen'),
   A('saga_gear_legendary', 'sagaLegendary', 1, 4, 'offhand_tyrshandske'),
-  A('landmarks_5', 'landmarks', 5, 2, 'signpost'),
-  A('landmarks_15', 'landmarks', 15, 4, 'gem'),
-  A('landmarks_26', 'landmarks', 26, 6, 'star_crystal'),
-];
-
-/** Fish and how likely they bite (weights). */
-export const FISH: { item: string; weight: number }[] = [
-  { item: 'fish_roach', weight: 45 },
-  { item: 'fish_perch', weight: 35 },
-  { item: 'fish_pike', weight: 15 },
-  { item: 'fish_gold', weight: 5 },
 ];

@@ -12,9 +12,9 @@ COPY packages/clientljs/package.json packages/clientljs/
 COPY packages/art/package.json packages/art/
 RUN pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm -r run typecheck && pnpm -r run test && pnpm --filter @lilla-garden/server --filter @lilla-garden/clientljs run build
+RUN pnpm -r run typecheck && pnpm -r run test && pnpm --filter @varldstradet/server --filter @varldstradet/clientljs run build
 # Production node_modules for the server only
-RUN pnpm --filter @lilla-garden/server deploy --prod --legacy /out/server
+RUN pnpm --filter @varldstradet/server deploy --prod --legacy /out/server
 
 FROM node:24-alpine
 ENV NODE_ENV=production PORT=8080

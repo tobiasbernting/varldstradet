@@ -8,8 +8,6 @@ export const TILE = 16;
 /** The usual map size: the farm, cities, caves, buildings and dungeons are all 64×64 (and so is any map without a size). */
 export const MAP_W = 64;
 export const MAP_H = 64;
-/** Wild biome maps out in the world are bigger. */
-export const WILD_MAP = 96;
 /** Anything that knows its map size (a WorldState); no size means 64×64. */
 export interface MapSize {
   w?: number;
@@ -27,13 +25,12 @@ export const RUN_SPEED_MUL = 1.7;
 export const DEFAULT_MAX_PLAYERS = 20;
 /** The most the parent page may set. */
 export const MAX_PLAYERS_LIMIT = 100;
+/** Hearts a player has outside a dungeon (always full now). */
+export const MAX_HEARTS = 5;
 export const HOTBAR_SIZE = 8;
 export const BACKPACK_SIZE = 24;
 export const INVENTORY_SIZE = HOTBAR_SIZE + BACKPACK_SIZE;
-export const CHEST_SIZE = 32;
 export const MAX_STACK = 99;
-export const START_COINS = 150;
-export const WATERING_CAN_CHARGES = 20;
 
 export type Terrain =
   | 'grass'
@@ -80,8 +77,6 @@ export type Terrain =
 export const WALL_TERRAIN: ReadonlySet<Terrain> = new Set<Terrain>(['water', 'bog', 'lava', 'choco', 'rock', 'sandstone', 'basalt', 'space']);
 /** Cliffs (and the rock around a cave). */
 export const isCliff = (t: Terrain | undefined): boolean => t === 'rock' || t === 'sandstone' || t === 'basalt';
-/** Water you can fish in and fill the watering can from. */
-export const isFishWater = (t: Terrain | undefined): boolean => t === 'water' || t === 'bog';
 
 export type Facing = 'down' | 'up' | 'left' | 'right';
 
@@ -137,20 +132,6 @@ export interface ItemDef {
   icon: string;
 }
 
-export interface CropDef {
-  id: string;
-  seed: string;
-  produce: string;
-  /** Days per stage; length = number of growth stages before harvest. */
-  stages: number[];
-  /** After harvest, go back to this stage instead of being removed. */
-  regrowTo?: number;
-  /** Produce count on harvest [min, max]. */
-  yield: [number, number];
-  /** Seeds returned on harvest [min, max]. */
-  seedsBack: [number, number];
-}
-
 export interface ObjectDef {
   kind: string;
   w: number;
@@ -177,7 +158,6 @@ export interface ObjectDef {
 
 export interface AnimalDef {
   species: string;
-  product?: string;
   /** Building kind required. */
   house: string;
   /** Days until a baby is grown. */
@@ -208,19 +188,11 @@ export interface AnimalDef {
   mount?: { speed: number };
 }
 
-export interface RecipeDef {
-  id: string;
-  out: { item: string; count: number };
-  in: { item: string; count: number }[];
-}
-
 // ---- World state ----
 
 export interface ItemStack {
   item: string;
   count: number;
-  /** Tool-specific data (watering can charges). */
-  charges?: number;
   /** A painted tavla: its pixels. Stacks with data never merge. */
   data?: string;
 }
@@ -253,7 +225,6 @@ export interface PlayerState {
   y: number;
   facing: Facing;
   moving: boolean;
-  coins: number;
   inventory: Inventory;
   selected: number;
   online: boolean;
@@ -274,10 +245,6 @@ export interface PlayerState {
   visited: string[];
   /** Hearts left (dungeon); restored when leaving. */
   hearts: number;
-  /** Invulnerable until (wall clock) after being hit. */
-  hurtUntil?: number;
-  /** Bazooka reloading until (wall clock). */
-  reloadUntil?: number;
   /** Ticks during which client positions are ignored (just moved to another map). */
   moveLock?: number;
   /** Id of the horse the player is riding. */
@@ -286,15 +253,13 @@ export interface PlayerState {
   boostUntil?: number;
   /** Standing in a pool (set by the server tick, drives the splash and the Gårdsbok). */
   swimming?: boolean;
-  /** Next time (wall clock) a lost heart grows back outside the cave. */
-  healAt?: number;
   /** In bed: the night passes once every online player sleeps. */
   sleeping?: boolean;
   /** Unlocked achievement ids. */
   achievements: string[];
   /** Dungeons: class, Völvan's story, cleared dungeons, quests, titles. */
   saga?: SagaProgress;
-  /** Runs (M5b): sagafrön, the bought nodes of the sagaträd and run statistics. Optional: old saves load as they were. */
+  /** Runs: sagafrön, the bought nodes of the sagaträd and run statistics. Optional: old saves load as they were. */
   run?: RunSave;
   /** When this character was last in the game (server clock, ms): set on connect and disconnect, shown on the parent page. */
   lastPlayed?: number;
@@ -331,7 +296,7 @@ export interface Quest {
   id: string;
   npc: string;
   want: { item: string; count: number };
-  reward: { coins: number; stars: number; item?: { item: string; count: number } };
+  reward: { stars: number; item?: { item: string; count: number } };
   /** Dialogue line (Swedish). */
   text: string;
   /** Fixed story quest (not replaced daily). */
@@ -352,14 +317,6 @@ export interface NpcDef {
   area?: string;
 }
 
-export interface CropState {
-  crop: string;
-  stage: number;
-  /** Days accumulated in the current stage. */
-  progress: number;
-  watered: boolean;
-}
-
 export interface WorldObject {
   id: number;
   kind: string;
@@ -373,8 +330,6 @@ export interface WorldObject {
   variant?: number;
   /** A painted tavla hung up: its pixels. */
   data?: string;
-  /** Loot chests and fairy rings: the day each player last took something. */
-  openedBy?: Record<string, number>;
   /** A loot chest's own loot table (else the kind's). */
   loot?: string;
 }
@@ -408,26 +363,11 @@ export interface AnimalState {
   variant?: number;
   /** Mobs and predators: remaining hit points and next time it may attack. */
   hp?: number;
-  attackAt?: number;
-  /** Runs away from a point until (wall clock) after a missed lasso throw. */
-  fleeUntil?: number;
-  fleeX?: number;
-  fleeY?: number;
-  /** Wild animals (M7b): startled by a hero who comes close while moving, it bolts (faster than a lasso scare). */
-  startled?: boolean;
-  /** Wild animals (M7b): where it was when it was first startled; it goes back there after the hero has gone quiet. */
-  haunt?: { x: number; y: number };
   /** Wander target (vehicles: the next corner of their route). */
   tx?: number;
   ty?: number;
   /** Traffic: which loop it drives and the corner it is heading for. */
   route?: { loop: number; leg: number };
-  /** Traffic: when it may honk at the player in front of it / when it last stopped at a stop. */
-  honkAt?: number;
-  stoppedAt?: number;
-  /** Roaming monsters taunted by a hero out in the world: they go for this player until huntUntil (server ms). */
-  hunt?: string;
-  huntUntil?: number;
   /** A pet of the pets table (pets.ts): its kind. Pets live with their owner (PlayerState.pets); this animal is only where it shows. */
   petKind?: string;
   /** What the pet wears (pet gear, drawn at its anchors). */
@@ -466,13 +406,10 @@ export interface WorldState {
   day: number;
   /** Milliseconds into the current day. */
   timeMs: number;
-  /** Everyone is in bed: the new day starts at this wall-clock time. */
-  nightAt?: number;
   /** Map size in tiles (undefined: MAP_W × MAP_H). Read it with mapW()/mapH(). */
   w?: number;
   h?: number;
   terrain: Terrain[]; // w * h, row by row
-  crops: Record<string, CropState>; // key "x,y"
   objects: Record<number, WorldObject>;
   /** Fast lookup: tile key -> object id (including footprint tiles). */
   occupancy: Record<string, number>;
@@ -497,14 +434,8 @@ export interface WorldState {
   areas?: Record<string, WorldState>;
   /** 2D game: today's weather, the same everywhere in the world (not persisted). */
   weather?: WeatherState;
-  /** Dungeon: seed, size, whether the boss is beaten. */
-  dungeonInfo?: { seed: number; w: number; h: number; cleared: boolean; level: number; start: { x: number; y: number }; bossRoom: { x: number; y: number; w: number; h: number } };
   /** A cave out in the world: its look, the box it fills, and the map and tile its mouth is on. */
   cave?: CaveInfo;
-  /** Version of the area generator that built this map (see AREA_GEN in biomes.ts). */
-  gen?: number;
-  /** How many of each renewable thing (berries, crystals, buried treasure…) grow back here. */
-  renew?: Record<string, number>;
   /** A dungeon (Sagan om Världsträdet) while the family is in it. */
   saga?: SagaInstance;
   /** Farm world only (saved with it): the family's best clear time of each dungeon. */
@@ -515,7 +446,6 @@ export interface WorldState {
 export type CaveTheme = 'rot' | 'is' | 'kristall' | 'sjorovare' | 'pyramid' | 'tempel' | 'lava' | 'svamp' | 'fossil' | 'godis' | 'rymd';
 
 export interface CaveInfo {
-  theme: CaveTheme;
   /** The cave fills the top-left w × h tiles of the map; everything else is rock. */
   w: number;
   h: number;
@@ -539,7 +469,6 @@ export interface WeatherState {
   /** Chosen on the parent page: lasts its time and then the random pattern takes over again. */
   forced?: boolean;
   /** When the rain last watered the fields. */
-  rainedAt?: number;
 }
 
 export const key = (x: number, y: number): string => `${x},${y}`;

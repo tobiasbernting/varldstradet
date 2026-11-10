@@ -1,5 +1,5 @@
 // WebSocket connection with reconnect.
-import { rebuildOccupancy, type ClientMsg, type ServerMsg } from '@lilla-garden/shared';
+import { rebuildOccupancy, type ClientMsg, type ServerMsg } from '@varldstradet/shared';
 import { applyChange, bus, client, worldFor } from './state.js';
 
 /** Matches the server: the socket was closed because this device may not play (now). */
@@ -93,7 +93,6 @@ export class Net {
         client.weather = msg.world.weather ?? null;
         bus.emit('weather', client.weather);
         client.day = msg.world.day;
-        client.biomes = { ...msg.biomes };
         client.snaps.players.clear();
         client.snaps.animals.clear();
         client.snaps.npcs.clear();

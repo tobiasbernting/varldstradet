@@ -1,6 +1,6 @@
 // A small animated picture of a look and its effect, for the wardrobe's detail card and the loot window: the same vocabulary as the
 // world's effects (shared FX_KINDS), drawn on a 2D canvas instead of the game's WebGL batch. Stops by itself when it leaves the page.
-import { FX_KINDS, FX_PROCEDURAL, FX_FULL_TIER, FX_TIER, decodeLook, type DecodedLook, type FxSpec } from '@lilla-garden/shared';
+import { FX_KINDS, FX_PROCEDURAL, FX_FULL_TIER, FX_TIER, decodeLook, type DecodedLook, type FxSpec } from '@varldstradet/shared';
 import { lookIcon } from '@art/characters.ts';
 import { effectiveFx } from '../fxprefs.ts';
 

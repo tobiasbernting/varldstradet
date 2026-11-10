@@ -6,7 +6,7 @@
 // glowing on top. Out in the world a hero's spells and hits are drawn the same way (the telegraphs, bars and the
 // fallen and frozen are the dungeons' only).
 import { cameraShake, drawEllipse, drawLine, drawLineList, drawPoly, rgb, setAdditiveBlendMode, vec2, type Color, type Vector2 } from 'littlejsengine';
-import { BLOCK_SPECIES, SAGA_BOSSES, SAGA_MOBS, SPELLS, T, TILE, fmt, isSagaKey, type Change, type SagaZone } from '@lilla-garden/shared';
+import { BLOCK_SPECIES, SAGA_BOSSES, SAGA_MOBS, SPELLS, T, TILE, fmt, isSagaKey, type Change, type SagaZone } from '@varldstradet/shared';
 import { FLAG, fightMode, flagsOf, isFoe, liveTarget, sagaSnap, setTarget, webbed } from '@v1/saga.ts';
 import { SAGA_SFX, bossWindup } from '@v1/sagasfx.ts';
 import { activeWorld, bus, client, myPlayer, serverNow } from '@v1/state.ts';
@@ -90,8 +90,6 @@ const BOSS_MOVE_COLOUR: Record<string, Record<string, [number, number, number]>>
   nattmara: { nova: [0.6, 0.45, 1], mend: [0.75, 0.6, 1] },
   loke: { line: [0.4, 0.9, 1], pull: [0.55, 1, 0.75], mend: [0.5, 1, 0.4] },
 };
-/** Telegraphs of these moves are drawn in their own way (a sucking whirl, a soft glow), not as danger. */
-const SOFT_ZONES = new Set(['pull', 'mend']);
 const moveColour = (move: string, by: string | number | undefined): [number, number, number] => {
   const species = typeof by === 'number' ? activeWorld()?.animals[by]?.species : undefined;
   return (species ? BOSS_MOVE_COLOUR[species]?.[move] : undefined) ?? MOVE_COLOUR[move] ?? [1, 0.4, 0.2];

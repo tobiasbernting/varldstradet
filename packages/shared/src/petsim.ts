@@ -244,7 +244,7 @@ export function awardPetLooks(world: WorldState, p: PlayerState, dungeon: Dungeo
   const prev = [...out].reverse().find((c) => c.t === 'loot' && c.to === p.id && c.looks && c.looks.dungeon === DUNGEONS[dungeon].id);
   const info = { kind: def.id, name, drops };
   if (prev && prev.t === 'loot' && prev.looks) prev.looks.pet = info;
-  else out.push({ t: 'loot', to: p.id, from: DUNGEONS[dungeon].name, items: [], coins: 0, stars: 0, looks: { drops: [], ways: [], titles: [], dungeon, level, pet: info } });
+  else out.push({ t: 'loot', to: p.id, from: DUNGEONS[dungeon].name, items: [], stars: 0, looks: { drops: [], ways: [], titles: [], dungeon, level, pet: info } });
   syncPet(world, p, out);
   out.push(playerChange(p));
   return drops;
@@ -601,6 +601,3 @@ function tickPet(h: Here, a: AnimalState, owner: PlayerState, def: PetDef, party
     }
   }
 }
-
-/** A pet's state as the HUD shows it: helping, scared, hidden (waiting to pounce) or out (dismissed). */
-export const petStateOf = (a: AnimalState | undefined): 'help' | 'scared' | 'hidden' | 'out' => (a?.pf ? a.pf.st : 'out');

@@ -1,6 +1,6 @@
 // Small life in the fields: butterflies dancing between the flowers on warm days, and sparrows hopping and pecking
 // in the grass that take off when someone comes close.
-import { TILE, mapH, mapW, tileIndex, type WorldObject } from '@lilla-garden/shared';
+import { TILE, mapH, mapW, tileIndex, type WorldObject } from '@varldstradet/shared';
 import { on } from './features.ts';
 import { alpha, type DrawQueue } from './gfx.ts';
 import { inView, type Scene } from './scene.ts';

@@ -1,4 +1,4 @@
-// Whole runs played by bot parties (GAME2.md section 5.6): families of one to four heroes, careful and clumsy, through the route of
+// Whole runs played by bot parties (DESIGN.md section 5.6): families of one to four heroes, careful and clumsy, through the route of
 // Draugkryptan to the boss. Kept apart from run.test.ts so the two run side by side on the CI (each is a minute or so of simulated runs);
 // run.solo.test.ts (Vanlig) and run.latt.test.ts (Lätt) have the one-hero tables.
 import { describe, expect, it } from 'vitest';
@@ -11,25 +11,25 @@ const BOT_LIMIT = 60 * 60_000;
 const yieldToRunner = (): Promise<void> => new Promise((r) => setImmediate(r));
 
 describe('bot parties play whole runs', () => {
-  // [label, classes, longhouse, careful minutes (low, high), clumsy minutes (low, high)]: the ranges are the measured averages of GAME2.md
+  // [label, classes, careful minutes (low, high), clumsy minutes (low, high)]: the ranges are the measured averages of DESIGN.md
   // section 5.6 with a third on either side; the pair of a tank and a healer has no one to hurt anything (no follower), so it is the slow one
-  const FAMILIES: [string, ClassId[], boolean, [number, number], [number, number]][] = [
-    ['en spelare + Hirdmannen', ['krigare'], false, [9, 18], [20, 36]],
-    ['två spelare', ['vaktare', 'helare'], false, [17, 32], [36, 58]],
-    ['tre spelare', ['vaktare', 'helare', 'magiker'], false, [13, 26], [28, 46]],
-    ['fyra spelare', ['vaktare', 'helare', 'krigare', 'magiker'], true, [11, 22], [24, 41]],
+  const FAMILIES: [string, ClassId[], [number, number], [number, number]][] = [
+    ['en spelare + Hirdmannen', ['krigare'], [9, 18], [20, 36]],
+    ['två spelare', ['vaktare', 'helare'], [17, 32], [34, 58]],
+    ['tre spelare', ['vaktare', 'helare', 'magiker'], [13, 26], [28, 46]],
+    ['fyra spelare', ['vaktare', 'helare', 'krigare', 'magiker'], [11, 22], [24, 41]],
   ];
   const rows: string[] = [];
   const SEEDS = [1, 2, 3];
 
-  for (const [label, classes, longhall, careful, clumsy] of FAMILIES) {
+  for (const [label, classes, careful, clumsy] of FAMILIES) {
     for (const style of ['careful', 'clumsy'] as const) {
       it(`${label}, ${style}: finishes inside the limit (${SEEDS.length} runs)`, { timeout: 120_000 }, async () => {
         const mins: number[] = [];
         let wins = 0;
         for (const seed of SEEDS) {
           await yieldToRunner();
-          const party = makeParty(classes, { style, seed, longhall: longhall || classes.length === 4, level: 3 });
+          const party = makeParty(classes, { style, seed, level: 3 });
           const r = playRun(party, { seed }, BOT_LIMIT);
           // nothing is ever stuck: every run ends, in a win or a wipe, inside the limit
           expect(['win', 'wipe']).toContain(r.outcome);

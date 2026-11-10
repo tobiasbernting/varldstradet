@@ -1,5 +1,5 @@
 {
-  "name": "@lilla-garden/client",
+  "name": "@varldstradet/client",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -8,7 +8,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@lilla-garden/shared": "workspace:*"
+    "@varldstradet/shared": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

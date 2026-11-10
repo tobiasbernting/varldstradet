@@ -1,4 +1,4 @@
-// Runs (färdar): the data of GAME.md and GAME2.md. A run is one dungeon (a chapter) as a route of ten rows of stops in
+// Runs (färdar): the data of DESIGN.md (sections 2 to 6). A run is one dungeon (a chapter) as a route of ten rows of stops in
 // about 30 minutes; after a fight the party votes on a runa (a boon) and then walks onto one of up to three väg-runor
 // to choose the next stop; sagafrön earned are planted at the Yggdrasil shoot as the sagaträd; the farm feeds the run with
 // färdkost and companions. Data only: the route and its stops are built by runmap.ts, the rules are runsim.ts (which
@@ -26,7 +26,7 @@ export const RUN_NUDGE_MS = 10 * 60_000;
 export const RUN_PICK_MS = 60_000;
 export const RUN_PICK_MS_HARD = 30_000;
 export const runPickMs = (level: number): number => (level <= 1 ? RUN_PICK_MS : RUN_PICK_MS_HARD);
-/** The route (GAME2.md section 2): ten rows of stops, the mid-boss on row 5, the boss on row 10; wings of rows 1–4, 5–8 and 9–10. */
+/** The route (DESIGN.md section 2): ten rows of stops, the mid-boss on row 5, the boss on row 10; wings of rows 1–4, 5–8 and 9–10. */
 export const ROUTE_ROWS = 10;
 export const ROUTE_MINI_ROW = 5;
 export const ROUTE_REST_ROW = 9;
@@ -42,24 +42,18 @@ export const VILOSTEN_HEAL = 0.4;
 export const RUN_VICTORY_MS = 90_000;
 /** Family members this close to the arch (tiles) come along when it is used. */
 export const RUN_JOIN_RADIUS = 6;
-/** Players in a run: three, four with a longhouse. */
-export const RUN_PARTY_MAX = 3;
-export const RUN_PARTY_MAX_LONGHALL = 4;
+/** Players in a run. */
+export const RUN_PARTY_MAX = 4;
 /** A run whose last human has been offline this long ends. */
 export const RUN_OFFLINE_END_MS = 60_000;
-/** Offers of runor are this many cards. */
-export const RUNA_CARDS = 3;
 
 /**
- * The difficulty of a run (GAME2.md section 5.7): five levels chosen at the arch and fixed for the run. `0` Mycket lätt (kids
- * alone), `1` Lätt (kids with an adult: what Lätt was in R2), `2` Medel (what Vanlig was), `3` Svår, `4` Extrem.
+ * The difficulty of a run (DESIGN.md section 5.7): five levels chosen at the arch and fixed for the run. `0` Mycket lätt (kids
+ * alone), `1` Lätt (kids with an adult: the old Lätt), `2` Medel (what Vanlig was), `3` Svår, `4` Extrem.
  */
 export type RunLevel = 0 | 1 | 2 | 3 | 4;
 export const RUN_LEVEL_IDS: readonly RunLevel[] = [0, 1, 2, 3, 4];
-export const RUN_LEVEL_MYCKET_LATT: RunLevel = 0;
-export const RUN_LEVEL_LATT: RunLevel = 1;
 export const RUN_LEVEL_MEDEL: RunLevel = 2;
-export const RUN_LEVEL_SVAR: RunLevel = 3;
 export const RUN_LEVEL_EXTREM: RunLevel = 4;
 /** Left out of a start message, a run is Medel. */
 export const RUN_LEVEL_DEFAULT: RunLevel = RUN_LEVEL_MEDEL;
@@ -94,13 +88,12 @@ export const RUN_LEVELS: Record<RunLevel, RunLevelDef> = {
   0: { id: 0, hp: 0.4, dmg: 0.3, warn: 1.8, seeds: 0.35, spirit: 5, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 0.6, rank: 0, affixes: 0 },
   1: { id: 1, hp: 0.6, dmg: 0.5, warn: 1.4, seeds: 0.5, spirit: 3, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 1, rank: 0, affixes: 0 },
   2: { id: 2, hp: 1, dmg: 1, warn: 1, seeds: 1, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1, rank: 0, affixes: 0 },
-  3: { id: 3, hp: 1.65, dmg: 1.6, warn: 0.8, seeds: 1.5, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1.5, rank: 0.5, affixes: 1 },
+  3: { id: 3, hp: 1.75, dmg: 1.6, warn: 0.8, seeds: 1.5, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1.5, rank: 0.5, affixes: 1 },
   4: { id: 4, hp: 1.9, dmg: 1.6, warn: 0.65, seeds: 2, spirit: 0, spiritPerStop: 0, spiritMax: 0, soft: false, bossMoves: 0, rare: 2, rank: 1, affixes: 2 },
 };
 /** The boss attacks the easiest levels allow: its first two, whatever a first run's plan has locked. */
 export const LATT = { bossMoves: 2 } as const;
-export const SAGOANDAN_LATT_MAX = 5;
-/** The Sagoandan (GAME2.md section 4.5): free "everyone gets up" on a wipe, so the run does not end. How many a run starts with, by level (`RUN_LEVELS[l].spirit`). */
+/** The Sagoandan (DESIGN.md section 4.5): free "everyone gets up" on a wipe, so the run does not end. How many a run starts with, by level (`RUN_LEVELS[l].spirit`). */
 export const SAGOANDAN: Record<RunLevel, number> = { 0: RUN_LEVELS[0].spirit, 1: RUN_LEVELS[1].spirit, 2: RUN_LEVELS[2].spirit, 3: RUN_LEVELS[3].spirit, 4: RUN_LEVELS[4].spirit };
 /** Monster health, damage and warning multipliers for a level (the zone's own are multiplied by these). */
 export const levelMuls = (level: RunLevel): { hp: number; dmg: number; warn: number; seeds: number } => {
@@ -126,7 +119,7 @@ export function tally(counts: readonly number[], voters: number, opts: { late: b
   return top > 0 ? counts.flatMap((n, i) => (n === top ? [i] : [])) : [];
 }
 
-/** Sagafrön for what happens in a run (GAME2.md section 6): a pack 1, a stop cleared 3 (`zone`: the name is kept), the mid-boss 5 (`guard`), the boss 20 (12 on a replay). */
+/** Sagafrön for what happens in a run (DESIGN.md section 6): a pack 1, a stop cleared 3 (`zone`: the name is kept), the mid-boss 5 (`guard`), the boss 20 (12 on a replay). */
 export const RUN_SEEDS = { pack: 1, zone: 3, chest: 2, guard: 5, bossFirst: 20, bossReplay: 12 } as const;
 /** More sagafrön for each modifier (the särdrag of a level pay through the level's own multiplier instead). */
 export const MODIFIER_SEEDS = 0.15;
@@ -138,7 +131,7 @@ export const MODIFIER_SEEDS = 0.15;
 /**
  * Additions as fractions. The first block is combat (it ends up in `RunBuffs` and is read by sagasim.ts), the second
  * block is the rest of the run: potions handed out, more sagafrön, a new offer, a second dish slot, stronger dishes and
- * animals, a stronger companion and more sagafrön for the boss. (`coins`, more coins from the run's chests, is combat's.)
+ * animals, a stronger companion and more sagafrön for the boss.
  */
 export interface RunEffect extends Partial<Omit<RunBuffs, 'spell' | 'spellCd' | 'mods' | 'traits'>> {
   spell?: Record<string, number>;
@@ -151,15 +144,12 @@ export interface RunEffect extends Partial<Omit<RunBuffs, 'spell' | 'spellCd' | 
   potions?: number;
   seeds?: number;
   reroll?: number;
-  slots?: number;
-  food?: number;
-  animal?: number;
   companion?: number;
   bossSeeds?: number;
 }
 
-const COMBAT_KEYS = ['power', 'cd', 'hp', 'armor', 'taken', 'heal', 'potion', 'regen', 'rest', 'threat', 'leech', 'crit', 'down', 'reviveHp', 'coins'] as const;
-const META_KEYS = ['potions', 'seeds', 'reroll', 'slots', 'food', 'animal', 'companion', 'bossSeeds', 'luck'] as const;
+const COMBAT_KEYS = ['power', 'cd', 'hp', 'armor', 'taken', 'heal', 'potion', 'regen', 'rest', 'threat', 'leech', 'crit', 'down', 'reviveHp'] as const;
+const META_KEYS = ['potions', 'seeds', 'reroll', 'companion', 'bossSeeds', 'luck'] as const;
 /** Every number an effect can carry (the tests make sure each one does something). */
 export const EFFECT_KEYS: readonly string[] = [...COMBAT_KEYS, ...META_KEYS, 'spell', 'spellCd', 'mods', 'traits'];
 
@@ -233,7 +223,7 @@ export const MODIFIERS: ModifierDef[] = [
   { id: 'snabba', sight: 1.4 },
   { id: 'dimma', leash: 6, fog: true },
 ];
-/** The särdrag (GAME2.md 4.7, section 5.7): the ones the sim can express cheaply. A level of Svår has one of them, Extrem two, chosen by the seed. */
+/** The särdrag (DESIGN.md 4.7, section 5.7): the ones the sim can express cheaply. A level of Svår has one of them, Extrem two, chosen by the seed. */
 export const AFFIXES: ModifierDef[] = [
   { id: 'stalhud', affix: true, packHp: 1.2 },
   { id: 'stormig', affix: true, bossHp: 1.2, bossDmg: 1.1 },
@@ -271,12 +261,9 @@ export const SEED_TREE: TreeNode[] = [
   { id: 'g4', branch: 'gemenskap', cost: 25, needs: 'g2', effect: { heal: 0.08 } },
   { id: 'g5', branch: 'gemenskap', cost: 35, needs: 'g3', effect: { companion: 0.2 } },
   { id: 'g6', branch: 'gemenskap', cost: 40, needs: 'g4', effect: { seeds: 0.1 } },
-  { id: 'f1', branch: 'gard', cost: 15, effect: { slots: 1 } },
-  { id: 'f2', branch: 'gard', cost: 20, needs: 'f1', effect: { food: 0.25 } },
-  { id: 'f3', branch: 'gard', cost: 30, needs: 'f1', effect: { animal: 0.5 } },
   { id: 'f4', branch: 'gard', cost: 15, effect: { potions: 1 } },
-  { id: 'f5', branch: 'gard', cost: 35, needs: 'f2', effect: { coins: 0.25 } },
-  { id: 'f6', branch: 'gard', cost: 50, needs: 'f3', effect: { bossSeeds: 5 } },
+  { id: 'f5', branch: 'gard', cost: 35, needs: 'f4', effect: { seeds: 0.15 } },
+  { id: 'f6', branch: 'gard', cost: 50, needs: 'f5', effect: { bossSeeds: 5 } },
 ];
 export const treeNode = (id: string): TreeNode | undefined => SEED_TREE.find((n) => n.id === id);
 export const TREE_TOTAL = SEED_TREE.reduce((n, t) => n + t.cost, 0);
@@ -320,33 +307,11 @@ export function plantError(save: RunSave | undefined, id: string): 'unknown' | '
 }
 
 // ---------------------------------------------------------------------------
-// Färdkost and companions (the farm feeds the run)
+// Companions
 // ---------------------------------------------------------------------------
 
-/** Dishes (bag items) handed in at the arch, and what they do for the run. The potions come as items. */
-export const FARDKOST: Record<string, RunEffect> = {
-  bread: { hp: 0.06 },
-  pancakes: { cd: 0.05 },
-  carrot_cake: { power: 0.05 },
-  pumpkin_pie: { armor: 0.04 },
-  strawberry_jam: { regen: 0.4 },
-  fish_soup: { taken: 0.06 },
-  truffle_pasta: { power: 0.08 },
-  cloudberry_jam: { rest: 0.4 },
-  blueberry_pie: { hp: 0.08, heal: 0.05 },
-  healing_potion: { potions: 3 },
-  styrkedryck: { power: 0.06 },
-};
-export const FOOD_SLOTS = 1;
-
-/** A pet that follows, a mount that waits at the arch; an animal with this many hearts counts double. */
+/** A pet from the dungeons, out of the bag and by your side, helps a little in every run. */
 export const PET_EFFECT: RunEffect = { power: 0.03 };
-export const MOUNT_EFFECT: RunEffect = { armor: 0.02, hp: 0.03 };
-export const CARED_HEARTS = 4;
-/** Gårdsglädje: health per average heart of the farm's animals. */
-export const JOY_PER_HEART = 0.01;
-export const SMITHY_EFFECT: RunEffect = { power: 0.04 };
-export const HERB_EFFECT: RunEffect = { potions: 2, potion: 0.1 };
 
 // ---------------------------------------------------------------------------
 // Room layouts (the seven biome templates of v1: a Flock is built from four of their rooms; their ground, monsters and weather are gone: a run has the chapter's own look)
@@ -354,7 +319,6 @@ export const HERB_EFFECT: RunEffect = { potions: 2, potion: 0.1 };
 
 export type RunBiome = 'skog' | 'trask' | 'berg' | 'strand' | 'svamp' | 'is' | 'vulkan';
 export const RUN_BIOMES: readonly RunBiome[] = ['skog', 'trask', 'berg', 'strand', 'svamp', 'is', 'vulkan'];
-export const isRunBiome = (s: unknown): s is RunBiome => typeof s === 'string' && (RUN_BIOMES as readonly string[]).includes(s);
 
 /** start, two rooms of packs, a rest stone, the exit (behind the gate) and a side room with a guarded chest. A Flock uses start, the two pack rooms and the exit. */
 export type ZoneRole = 'start' | 'pack' | 'rest' | 'exit' | 'side';
@@ -423,7 +387,7 @@ export const ZONE_TEMPLATES: Record<RunBiome, ZoneTemplate> = {
 };
 
 /**
- * The fixed layouts of the other stops (GAME2.md section 2.3). The dungeon's own mid-boss and boss halls give the sizes of the
+ * The fixed layouts of the other stops (DESIGN.md section 2.3). The dungeon's own mid-boss and boss halls give the sizes of the
  * halls (`mini`, `hall`); the rest is here. A Vilosten is start, the stone's room and the exit room; the Mellanboss stop is start,
  * a room of packs, the hall and the exit room behind it; the boss stop is start, a room of packs and the hall.
  */
@@ -447,7 +411,7 @@ export const BOSS_STOP = {
   hall: { x: 4, y: 4, w: 24, h: 22 },
 };
 
-/** The route's kinds of stop (GAME2.md section 2.1; the others come in R4 and R5). */
+/** The route's kinds of stop (DESIGN.md section 2.1). */
 export type NodeKind = 'flock' | 'mini' | 'rest' | 'boss' | 'shop' | 'event' | 'treasure' | 'elite';
 export const NODE_KINDS: readonly NodeKind[] = ['flock', 'mini', 'rest', 'boss', 'shop', 'event', 'treasure', 'elite'];
 /** The stops where nobody fights: a camp (the Köpman, a Händelse) and a Vilosten. */
@@ -458,7 +422,7 @@ export const isFlockLike = (k: NodeKind): boolean => k === 'flock' || k === 'eli
 /** Which wing (0: rows 1–4, 1: rows 5–8, 2: rows 9–10) a row is in. */
 export const wingOf = (row: number): number => (row <= 4 ? 0 : row <= 8 ? 1 : 2);
 
-/** Health of a stop's monsters by wing (GAME2.md section 5.3): the later wings are tougher. Tuned by the bots. */
+/** Health of a stop's monsters by wing (DESIGN.md sections 2.3 and 5.1): the later wings are tougher. Tuned by the bots. */
 export const WING_HP: readonly number[] = [1.85, 2.3, 2.7];
 
 /** One human alone (with the hired companion, who counts as a fighter for the monsters' health): monsters tolerate this much less. */
@@ -477,7 +441,7 @@ export function companionClass(classes: ClassId[]): ClassId | null {
 
 /**
  * Packs per room (and members) by wing: a Flock has two rooms of packs (`a` the first, `b` the second), the Mellanboss stop and
- * the boss stop one room each (`mini`, `boss`). `big` is the number of big monsters per room. Tuned by the bots (run.test.ts), see GAME2.md.
+ * the boss stop one room each (`mini`, `boss`). `big` is the number of big monsters per room. Tuned by the bots (run.test.ts), see DESIGN.md.
  */
 export const FLOCK_PACKS = [
   { a: [3, 3], b: [3, 3], size: [4, 5], big: 0 },
@@ -490,7 +454,7 @@ export const ELITE_HP = 1.25;
 export const TREASURE_PACKS = { a: [1, 1], b: [1, 2], size: [3, 4], big: 0 } as const;
 export const BOSS_PACKS = { count: [3, 3], size: [3, 4] } as const;
 /**
- * Lätt's packs (GAME2.md section 5.3 wants a child through the route in about 20-28 minutes): fewer, smaller packs in a Flock and in the
+ * Lätt's packs (DESIGN.md section 5.3 wants a child through the route in about 20-28 minutes): fewer, smaller packs in a Flock and in the
  * rooms before the mid-boss and the boss, on top of the softer monsters. The same shape as above.
  */
 export const LATT_FLOCK_PACKS = [

@@ -18,7 +18,7 @@ import {
   type WeatherState,
   type WorldObject,
   type WorldState,
-} from '@lilla-garden/shared';
+} from '@varldstradet/shared';
 
 type Handler<T> = (data: T) => void;
 
@@ -71,10 +71,8 @@ export const bus = new Bus();
 
 export const client = {
   world: null as WorldState | null,
-  dungeon: null as WorldState | null,
   areas: {} as Record<string, WorldState>,
   /** The biome of every explored map (from the server at login, kept up to date as maps arrive). */
-  biomes: {} as Record<string, string>,
   me: '',
   season: 'none' as Season,
   /** server clock = Date.now() - offset */
@@ -106,11 +104,10 @@ export const myPlayer = () => (client.world ? client.world.players[client.me] : 
 /** The map the local player is on, falling back to the farm until that map's data has arrived. */
 export const myArea = (): string => {
   const a = myPlayer()?.area ?? 'farm';
-  if (a === 'dungeon') return client.dungeon ? 'dungeon' : 'farm';
   if (a !== 'farm') return client.areas[a] ? a : 'farm';
   return 'farm';
 };
-export const worldFor = (key: string): WorldState | null => (key === 'farm' ? client.world : key === 'dungeon' ? client.dungeon : (client.areas[key] ?? null));
+export const worldFor = (key: string): WorldState | null => (key === 'farm' ? client.world : (client.areas[key] ?? null));
 /** The world the local player is in. */
 export const activeWorld = (): WorldState | null => worldFor(myArea());
 
@@ -128,13 +125,12 @@ function dropObject(world: WorldState, obj: WorldObject): void {
 }
 
 /**
- * The maps already loaded (other areas, the dungeon) carry their own player lists, which the server fills only
+ * The maps already loaded (houses, dungeons and runs) carry their own player lists, which the server fills only
  * when it sends the whole map. Someone who arrives after that would be missing there, and the view reads the
  * list of the map it shows: keep every loaded map's list in step with the farm's records.
  */
 function syncAreaPlayers(id: string, rec: PlayerState | null): void {
   const maps: [string, WorldState][] = Object.entries(client.areas);
-  if (client.dungeon) maps.push(['dungeon', client.dungeon]);
   for (const [key, w] of maps) {
     if (rec && rec.area === key) w.players[id] = rec;
     else delete w.players[id];
@@ -151,11 +147,8 @@ export function applyChange(c: Change): void {
       // player records inside other maps are copies; use the farm's records
       for (const id of Object.keys(w.players)) if (farm.players[id]) w.players[id] = farm.players[id]!;
     }
-    if (c.key === 'dungeon') client.dungeon = w;
-    else if (w) {
-      client.areas[c.key] = w;
-      if (w.biome && c.key.startsWith('a:')) client.biomes[c.key] = w.biome;
-    } else delete client.areas[c.key];
+    if (w) client.areas[c.key] = w;
+    else delete client.areas[c.key];
     bus.emit('change', c);
     if (myPlayer()?.area === c.key && w) bus.emit('area', c.key);
     return;
@@ -169,9 +162,6 @@ export function applyChange(c: Change): void {
     case 'terrain':
       world.terrain[tileIndex(world, c.x, c.y)] = c.terrain;
       break;
-    case 'crop':
-      if (c.crop) world.crops[c.k] = c.crop;
-      else delete world.crops[c.k];
       break;
     case 'object':
       if (c.obj) putObject(world, c.obj);
@@ -268,7 +258,7 @@ export function applyChange(c: Change): void {
 
 // ---- local preferences ----
 
-const LS_PLAYER = 'lilla-garden.player';
+const LS_PLAYER = 'varldstradet.player';
 export const rememberedPlayer = (): string | null => {
   try {
     return localStorage.getItem(LS_PLAYER);
@@ -285,7 +275,7 @@ export const rememberPlayer = (id: string | null): void => {
   }
 };
 
-const LS_HELP = 'lilla-garden.helpSeen';
+const LS_HELP = 'varldstradet.helpSeen';
 export const helpSeen = (): boolean => {
   try {
     return localStorage.getItem(LS_HELP) === '1';

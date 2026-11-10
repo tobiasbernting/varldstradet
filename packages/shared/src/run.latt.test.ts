@@ -1,5 +1,5 @@
 // One hero (with the hired Hirdmannen) and a pair without a healer, played whole by the kid bots on Mycket lätt (level 0, the 7-year-old) and Lätt
-// (level 1, the clumsy bot) (GAME2.md sections 5.4, 5.6 and 5.7). Apart from run.test.ts so they run beside it on the CI (run.solo.test.ts has Medel).
+// (level 1, the clumsy bot) (DESIGN.md sections 5.4, 5.6 and 5.7). Apart from run.test.ts so they run beside it on the CI (run.solo.test.ts has Medel).
 import { describe, expect, it } from 'vitest';
 import { T, readRun, type ClassId } from './index.ts';
 import { makeParty, playRun } from './runplay.ts';
@@ -20,7 +20,7 @@ const LEVELS: [0 | 1, 'kid7' | 'clumsy', number, number][] = [
 ];
 
 for (const [level, style, lo, hi] of LEVELS) {
-  describe(`the ${style} bot on level ${level} ${T.runLevelName[level]} (GAME2.md 5.7: at least 95 % won, none ends on a wipe)`, () => {
+  describe(`the ${style} bot on level ${level} ${T.runLevelName[level]} (DESIGN.md 5.7: at least 95 % won, none ends on a wipe)`, () => {
     const SEEDS = [1, 2, 3, 4, 5, 6];
     for (const [label, classes] of SOLO) {
       it(`${label}: wins all ${SEEDS.length} runs, none ends on a wipe, in ${lo}-${hi} minutes`, { timeout: 150_000 }, async () => {

@@ -1,10 +1,9 @@
 // Everyone's own house: a small map of its own (an "area" keyed `house:<player id>`), made the first time anyone goes in,
 // saved with the other areas. The owner decorates it; visitors may walk and look. Also here: the boss trophies, and the
 // stand that shows a weapon, shield or amulet.
-import { AREA_GEN } from './biomes.ts';
 import { HOUSE_DOOR, addObject, emptyWorld, objectAt, removeObject } from './map.ts';
 import { ITEMS, NORSE_DECOR, TROPHY_LEVELS, TROPHY_PREFIX } from './data.ts';
-import { DUNGEONS, sagaItem } from './saga.ts';
+import { DUNGEONS, HOUSE_LOOT, sagaItem } from './saga.ts';
 import { hasLooks, lookPiece, standData, standLook } from './looks.ts';
 import { HOUSE_ROOM, HOUSE_EXIT, HOUSE_H, HOUSE_W, homeKey, isHomeKey, ownerOfHome } from './homekeys.ts';
 import { TILE } from './types.ts';
@@ -19,7 +18,6 @@ export const HOUSE_FIXED = '_house';
 /** The dungeon bosses that leave a trophy (each dungeon's last one), by boss id. */
 export const TROPHY_BOSSES: readonly string[] = Object.values(DUNGEONS).map((d) => d.boss);
 export const isTrophyKind = (kind: string): boolean => kind.startsWith(TROPHY_PREFIX);
-export const trophyBoss = (kind: string): string => kind.slice(TROPHY_PREFIX.length);
 export const clampTrophyLevel = (n: unknown): number => (typeof n === 'number' && Number.isFinite(n) ? Math.max(0, Math.min(TROPHY_LEVELS - 1, Math.floor(n))) : 1);
 /** The level a trophy stack or object remembers (0..4). */
 export const trophyLevelOf = (data: string | undefined): number => clampTrophyLevel(data === undefined ? 0 : Number(data));
@@ -36,7 +34,6 @@ export function generateHome(ownerId: string): WorldState {
   const world = emptyWorld(HOUSE_W, HOUSE_H);
   world.area = homeKey(ownerId);
   world.biome = 'house';
-  world.gen = AREA_GEN; // (nothing to upgrade: it is not an overworld map)
   world.terrain.fill('floor_wood');
   const R = HOUSE_ROOM;
   const windows = [R.x + 4, R.x + R.w - 5];
@@ -115,8 +112,6 @@ export function tickHome(house: WorldState, out: Change[]): void {
   }
 }
 
-/** Whose house this map is (the owner's id), if it is one. */
-export const houseOwner = (world: WorldState): string | undefined => (isHomeKey(world.area) ? ownerOfHome(world.area!) : undefined);
 export const isGuestHere = (world: WorldState, p: PlayerState): boolean => isHomeKey(world.area) && ownerOfHome(world.area!) !== p.id;
 export const houseName = (farm: WorldState, key: string): string => {
   const o = farm.players[ownerOfHome(key)];
@@ -143,7 +138,6 @@ function stackFor(obj: WorldObject): ItemStack | null {
   if (!it || it.places !== obj.kind) return null;
   const s: ItemStack = { item: obj.kind, count: 1 };
   if (isTrophyKind(obj.kind)) s.data = String(trophyLevelOf(obj.data));
-  else if (obj.kind === 'painting' && obj.data !== undefined) s.data = obj.data;
   return s;
 }
 
@@ -296,7 +290,7 @@ function standInHouse(world: WorldState, p: PlayerState, kind: string, level: nu
   const b = floorBox();
   for (let y = b.y0; y <= b.y1; y++)
     for (let x = b.x0; x <= b.x1; x++) {
-      if (objectAt(house, x, y) || house.crops[`${x},${y}`]) continue;
+      if (objectAt(house, x, y)) continue;
       const o = addObject(house, kind, x, y, { by: p.id, data: String(level), variant: level });
       if (!o) continue;
       out.push({ t: 'object', id: o.id, obj: o, area: key });
@@ -314,15 +308,14 @@ export function devTrophy(world: WorldState, playerId: string, id: string, level
   return out;
 }
 
-// the object table's view of a house (used by the clients and tests)
-export const isHouseFixture = (o: WorldObject): boolean => o.by === HOUSE_FIXED;
-
-/** Development only (DEV_TELEPORT=1): one of every piece of Norse decor, a gear stand and three pieces of gear, into the bag. */
+/** Development only (DEV_TELEPORT=1): one of every piece of decor a dungeon can drop (HOUSE_LOOT and the Norse set), the starter furniture, a gear stand and three pieces of gear, into the bag. */
 export function devDecor(world: WorldState, playerId: string): Change[] {
   const p = farmOf(world).players[playerId];
   if (!p) return [];
   const out: Change[] = [];
-  for (const id of [...NORSE_DECOR, 'gear_stand', 'runsvard', 'offhand_helskold', 'amulet_vegvisir', 'bed', 'rug']) giveItems(world, p, id, 1, out);
+  const decor = new Set<string>([...NORSE_DECOR, 'gear_stand', 'bed', 'table', 'chair', 'lamp']);
+  for (const d of Object.values(HOUSE_LOOT)) for (const [id] of [...d.boss, ...d.treasure]) decor.add(id);
+  for (const id of [...decor, 'runsvard', 'offhand_helskold', 'amulet_vegvisir']) giveItems(world, p, id, 1, out);
   out.push(playerChange(p));
   return out;
 }

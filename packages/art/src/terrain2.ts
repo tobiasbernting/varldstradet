@@ -5,7 +5,7 @@
 // neighbour mask (1 up, 2 right, 4 down, 8 left = that side borders other ground), and an edge always sits at
 // the same place where two tiles meet, so shores, rims and cliff faces run on from tile to tile. Light comes
 // from the top left. Each ground has a few variants, picked per tile with hash2, so nothing looks tiled.
-import { isCliff, type Terrain } from '@lilla-garden/shared';
+import { isCliff, type Terrain } from '@varldstradet/shared';
 import { Px, hash2, hexToRgb, rgbToHex, shade } from './px.js';
 import { bifrostTiles, cryptTiles, forgeTiles } from './saga.ts';
 
@@ -475,7 +475,7 @@ function sideRims(t: Tile, p: CliffPal, r: Rnd, left: boolean, right: boolean): 
 }
 
 /** Grey rock face: rounded folds of rock, lit on their left, dark crevices between them and at the foot. */
-function rockFace(t: Tile, p: CliffPal, r: Rnd, ft: number[], snowy: boolean): void {
+function rockFace(t: Tile, p: CliffPal, r: Rnd, ft: number[]): void {
   for (const [x0, x1] of folds(r)) {
     const w = x1 - x0;
     const sunk = r() < 0.4; // sits back under the lip, in its shadow
@@ -570,7 +570,7 @@ function cliffTile(kind: CliffKind, snowy: boolean, mask: number, v: number): Ti
   // the face: the bottom half of a tile with open ground below it, under a lit lip
   const ft = wobble(r, 1.2).map((w) => 8 + Math.round(w));
   if (down) {
-    if (kind === 'rock') rockFace(t, p, r, ft, snowy);
+    if (kind === 'rock') rockFace(t, p, r, ft);
     else if (kind === 'sandstone') sandstoneFace(t, p, r, ft);
     else basaltFace(t, p, r, ft, v === 2);
     if (left) for (let y = ft[1]!; y < 15; y++) t.set(1, y, p.faceL);

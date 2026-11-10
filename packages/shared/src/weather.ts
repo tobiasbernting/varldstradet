@@ -1,16 +1,12 @@
-// 2D game: weather. One sky for the whole world that drifts from one kind of weather to the next
-// in a random pattern (more snow in winter, hardly any in summer). Rain waters the fields.
-import { CROPS } from './data.ts';
-import { mapW } from './map.ts';
-import { key, type WeatherKind, type WorldState } from './types.ts';
+// Weather. One sky for the lobby that drifts from one kind of weather to the next
+// in a random pattern (more snow in winter, hardly any in summer).
+import type { WeatherKind, WorldState } from './types.ts';
 import type { Change } from './protocol.ts';
 import { T, WEATHER_NEWS } from './sv.ts';
 import type { SimCtx } from './sim.ts';
-import { isUnderground } from './caves.ts';
 import { isSagaKey } from './saga.ts';
 
 export const WEATHER_KINDS: WeatherKind[] = ['sun', 'cloudy', 'rain', 'storm', 'snow', 'hail', 'wind', 'fog'];
-export const isWeatherKind = (v: unknown): v is WeatherKind => WEATHER_KINDS.includes(v as WeatherKind);
 
 /** How long each kind lasts, in real minutes [min, max]. A game day is 10 minutes. */
 const DURATION_MIN: Record<WeatherKind, [number, number]> = {
@@ -56,23 +52,8 @@ export function nextWeather(kind: WeatherKind, month: number, rnd: () => number)
   return options[options.length - 1]![0];
 }
 
-/**
- * The weather as it looks in a biome: snow instead of rain on the ice, only wind in the desert, no snow
- * in the jungle or the volcano, mist over the swamp. The moon and the caves have no weather (the clients
- * show none there).
- */
-export function localWeather(kind: WeatherKind, biome: string | undefined): WeatherKind {
-  const cold = kind === 'snow' || kind === 'hail';
-  if (biome === 'is' && (kind === 'rain' || kind === 'storm' || kind === 'hail')) return 'snow';
-  if ((biome === 'oken' || biome === 'rymdbas') && (kind === 'rain' || kind === 'storm' || cold || kind === 'fog')) return 'wind';
-  if ((biome === 'dino' || biome === 'vulkan') && cold) return 'wind';
-  if (biome === 'djungel' && cold) return 'rain';
-  if (biome === 'trask' && kind === 'cloudy') return 'fog';
-  return kind;
-}
-
 /** Maps where the sky can't be seen: caves, the dungeons, and the moon (which has no weather). */
-export const noWeatherHere = (area: string | undefined): boolean => isUnderground(area) || isSagaKey(area) || area === 'moon';
+export const noWeatherHere = (area: string | undefined): boolean => isSagaKey(area);
 
 export const isWet = (kind: WeatherKind): boolean => kind === 'rain' || kind === 'storm';
 
@@ -88,47 +69,11 @@ export function setWeather(world: WorldState, kind: WeatherKind, ctx: SimCtx, fo
   return out;
 }
 
-/** Rain lands for this long before the soil counts as watered. */
-const RAIN_SOAK_MS = 8000;
-const RAIN_CHECK_MS = 3000;
-
-/** Rolls the weather on and lets the rain water every field it falls on. */
+/** Rolls the weather on when its time is up. */
 export function tickWeather(world: WorldState, ctx: SimCtx, out: Change[]): void {
   if (!world.weather) {
     world.weather = { kind: 'sun', since: ctx.now, until: ctx.now + weatherDuration('sun', ctx.rnd) };
     return;
   }
-  if (ctx.now >= world.weather.until) {
-    out.push(...setWeather(world, nextWeather(world.weather.kind, new Date(ctx.now).getMonth(), ctx.rnd), ctx));
-    return;
-  }
-  if (!isWet(world.weather.kind) || ctx.now - world.weather.since < RAIN_SOAK_MS) return;
-  if (ctx.now - (world.weather.rainedAt ?? 0) < RAIN_CHECK_MS) return;
-  world.weather.rainedAt = ctx.now;
-  for (const m of [world, ...Object.values(world.areas ?? {})]) {
-    if (!isWet(localWeather(world.weather.kind, m.biome))) continue;
-    out.push(...rainOn(m));
-  }
-}
-
-/** Wets every dry field on a map and waters what grows there. */
-export function rainOn(m: WorldState): Change[] {
-  const local: Change[] = [];
-  const W = mapW(m);
-  for (let i = 0; i < m.terrain.length; i++) {
-    if (m.terrain[i] !== 'soil') continue;
-    const x = i % W;
-    const y = Math.floor(i / W);
-    m.terrain[i] = 'soil_wet';
-    local.push({ t: 'terrain', x, y, terrain: 'soil_wet' });
-    const k = key(x, y);
-    const crop = m.crops[k];
-    if (crop && CROPS[crop.crop] && !crop.watered) {
-      crop.watered = true;
-      local.push({ t: 'crop', k, crop });
-    }
-  }
-  const area = m.area;
-  if (area && area !== 'dungeon') for (const c of local) if (c.t === 'terrain' || c.t === 'crop') c.area = area;
-  return local;
+  if (ctx.now >= world.weather.until) out.push(...setWeather(world, nextWeather(world.weather.kind, new Date(ctx.now).getMonth(), ctx.rnd), ctx));
 }

@@ -2,7 +2,7 @@
 // for weapons, as held icons. A piece has a base shape in the set's palette and five shine tiers that share it:
 // 1 plain, 2 trimmed (a metal edge), 3 glowing (a lit gem or rune), 4 the same with glints (the client adds its one particle
 // effect), 5 the full look (a bigger silhouette, glowing edges; the client adds its aura and the second effect).
-import type { DecodedLook, LookPal } from '@lilla-garden/shared';
+import type { DecodedLook, LookPal } from '@varldstradet/shared';
 import { Px, shade } from './px.js';
 
 type Dir = 'down' | 'up' | 'right';
@@ -477,6 +477,3 @@ export function drawWeapon(l: DecodedLook): Px {
   }
   return p.outline('#2a2420');
 }
-
-/** A weapon's icon in the wardrobe is its own drawing; the other pieces are shown on a plain mannequin (see characters.ts lookIcon). */
-export const isWeaponLook = (l: DecodedLook): boolean => l.piece.slot === 'weapon';

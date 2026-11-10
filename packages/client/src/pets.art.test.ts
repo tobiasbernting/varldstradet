@@ -1,7 +1,7 @@
 // The art of every pet (pets.ts): each one has a sprite with two walk frames in the size the table says, its anchors lie inside that
 // sprite, and the one place that draws pet gear (drawWorn in the art package) puts the test neckerchief on every pet.
 import { beforeAll, describe, expect, it } from 'vitest';
-import { PETS, PET_ANCHORS, PET_IDS, PET_LOOK_PIECES, encodeLook } from '@lilla-garden/shared';
+import { PETS, PET_ANCHORS, PET_IDS, PET_LOOK_PIECES, encodeLook } from '@varldstradet/shared';
 
 /** A canvas that only counts what is painted on it (the art draws with fillRect and image data; no browser is needed). */
 let paints = 0;

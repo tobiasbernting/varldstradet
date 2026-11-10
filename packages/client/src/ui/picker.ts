@@ -1,5 +1,5 @@
 // "Vem är du?" – character picker and creator.
-import { A11Y_T, ITEMS, T, itemName, type Appearance, type PlayerSummary } from '@lilla-garden/shared';
+import { A11Y_T, ITEMS, T, itemName, type Appearance, type PlayerSummary } from '@varldstradet/shared';
 import { HAIR_COLORS, HAIR_STYLES, SKIN_TONES } from '@art/characters.ts';
 import { portraitUrl } from '@art/textures.ts';
 import { toGate } from '../net.js';
@@ -11,7 +11,6 @@ const STARTER_SHIRTS = ['shirt_red', 'shirt_blue', 'shirt_green', 'shirt_yellow'
 
 export class Picker {
   root: HTMLElement;
-  private status: HTMLElement | null = null;
   private canCreate = true;
 
   constructor(
@@ -60,7 +59,7 @@ export class Picker {
       cards.append(add);
     }
     const settings = h('button', { class: 'alt settings-open', type: 'button' }, `⚙️ ${A11Y_T.settings}`);
-    onTap(settings, () => document.dispatchEvent(new Event('lilla:settings')));
+    onTap(settings, () => document.dispatchEvent(new Event('vt:settings')));
     this.root.append(h('h1', null, T.title), h('h2', { style: { color: '#fff', margin: '0' } }, T.whoAreYou), cards, settings);
   }
 

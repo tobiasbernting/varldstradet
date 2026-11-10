@@ -1,6 +1,6 @@
 // 2D game: chat with everyone in the world, buttons that tell your pets to stay or whistle for them,
 // and the weather chip.
-import { CHAT_MAX_LEN, CHAT_PHRASES, PET_T, PETS, T, activePet, ownedPetIds, WEATHER_EMOJI, WEATHER_NAMES, isIndoorKey, isCallable, localWeather, noWeatherHere, type Change } from '@lilla-garden/shared';
+import { CHAT_MAX_LEN, CHAT_PHRASES, PET_T, PETS, T, activePet, ownedPetIds, WEATHER_EMOJI, WEATHER_NAMES, isHomeKey, isCallable, noWeatherHere, type Change } from '@varldstradet/shared';
 import { net } from '../net.js';
 import { bus, client, myPlayer } from '../state.js';
 import { SFX } from '../sound.ts';
@@ -191,8 +191,7 @@ export function petToggle(): void {
 export function weatherChip(): HTMLElement | null {
   const w = client.weather;
   const me = myPlayer();
-  if (!w || !me || noWeatherHere(me.area) || isIndoorKey(me.area)) return null;
-  const biome = me.area === 'farm' ? undefined : client.areas[me.area]?.biome;
-  const kind = localWeather(w.kind, biome);
+  if (!w || !me || noWeatherHere(me.area) || isHomeKey(me.area)) return null;
+  const kind = w.kind;
   return h('div', { class: 'chip weather', title: WEATHER_NAMES[kind] ?? '' }, `${WEATHER_EMOJI[kind] ?? ''} ${WEATHER_NAMES[kind] ?? ''}`);
 }

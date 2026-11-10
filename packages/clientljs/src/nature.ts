@@ -1,6 +1,6 @@
 // Nature through the day and the year: trees turning with the seasons, leaves falling and lying under them in the
 // autumn, mist over the water and the fields at dawn, dew glinting on the grass in the morning sun.
-import { TILE, mapH, mapW } from '@lilla-garden/shared';
+import { TILE, mapH, mapW } from '@varldstradet/shared';
 import type { Sprite } from './atlas.ts';
 import { AUTUMN, DECIDUOUS, type Extras } from './extras.ts';
 import { autumnProgress, on, type YearSeason } from './features.ts';

@@ -5,7 +5,7 @@ import { inArray, sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { AREA_GEN, CAVE_EXIT_TILE, MAX_HEARTS, TILE, settlePlayer, upgradeSavedArea, ensureBathhouse, ensureGear, ensureLevelRewards, ensureRoaming, ensureTownDress, ensureSagaPlaces, ensureCity, ensureLandmarks, ensureNpcSpots, ensurePizzeria, ensureTransport, generateWorld, isRemovedAreaKey, isSagaKey, scrubArea, scrubPlayer, DUNGEONS, dungeonOfKey, portalFront, archFront, archFrontOf, ensureRunPlaces, isRunKey, newRunSave, rebuildOccupancy, type Change, type DungeonId, type WorldState } from '../../../shared/src/index.ts';
+import { MAX_HEARTS, TILE, ensureGear, ensureLevelRewards, generateWorld, isSagaKey, archFrontOf, ensureRunPlaces, newRunSave, rebuildOccupancy, type Change, type WorldState } from '../../../shared/src/index.ts';
 import * as s from './schema.ts';
 import { PgAccessStore } from './accessStore.ts';
 
@@ -38,10 +38,9 @@ export class PgStore implements Store {
   private db: PostgresJsDatabase;
   private worldDirty = false;
   private objects = new Set<number>();
-  private crops = new Set<string>();
   private animals = new Set<number>();
   private players = new Set<string>();
-  private gone = { objects: new Set<number>(), crops: new Set<string>(), animals: new Set<number>(), players: new Set<string>() };
+  private gone = { objects: new Set<number>(), animals: new Set<number>(), players: new Set<string>() };
   private flushing: Promise<void> | null = null;
 
   constructor(url: string) {
@@ -81,7 +80,6 @@ export class PgStore implements Store {
       seasonOverride: (row.seasonOverride as WorldState['seasonOverride']) ?? null,
       terrain: row.terrain,
       drops: row.drops ?? {},
-      crops: {},
       objects: {},
       occupancy: {},
       animals: {},
@@ -90,36 +88,17 @@ export class PgStore implements Store {
     // the family's best dungeon times (missing in saves from before them)
     if (row.sagaBest) world.sagaBest = row.sagaBest;
     const loadedObjectIds: number[] = [];
-    /** Players who were inside a dungeon: they go in front of its arch, wherever it stands in its map. */
-    const outOfDungeon: [string, DungeonId][] = [];
     const outOfRun: string[] = [];
     for (const o of await this.db.select().from(s.objects)) {
       world.objects[o.id] = o.data;
       loadedObjectIds.push(o.id);
     }
-    for (const c of await this.db.select().from(s.crops)) world.crops[c.k] = c.data;
     for (const a of await this.db.select().from(s.animals)) world.animals[a.id] = a.data;
-    /** Saves from before the minigames went (2026-11-01) are cleaned and written back. */
-    let scrubbed = false;
     for (const p of await this.db.select().from(s.players)) {
-      world.players[p.id] = { ...p.data, questsDone: p.data.questsDone ?? [], stars: p.data.stars ?? 0, stats: p.data.stats ?? {}, achievements: p.data.achievements ?? [], area: p.data.area && p.data.area !== 'dungeon' ? p.data.area : 'farm', visited: p.data.visited ?? ['farm'], hearts: MAX_HEARTS, online: false, moving: false };
+      world.players[p.id] = { ...p.data, questsDone: p.data.questsDone ?? [], stars: p.data.stars ?? 0, stats: p.data.stats ?? {}, achievements: p.data.achievements ?? [], area: p.data.area ?? 'farm', visited: p.data.visited ?? ['farm'], hearts: MAX_HEARTS, online: false, moving: false };
       delete world.players[p.id]!.riding; // horses are re-mounted after a restart
-      delete world.players[p.id]!.swimming;
-      if (p.data.area === 'dungeon') {
-        world.players[p.id]!.x = CAVE_EXIT_TILE.x * TILE + TILE / 2;
-        world.players[p.id]!.y = CAVE_EXIT_TILE.y * TILE + TILE / 2;
-      }
-      // inside a dungeon when the server stopped: wait in front of its arch (placed once the maps are loaded)
-      const sagaId = dungeonOfKey(p.data.area ?? '');
-      if (sagaId) {
-        const front = portalFront(DUNGEONS[sagaId].portal);
-        world.players[p.id]!.area = DUNGEONS[sagaId].portal.area;
-        world.players[p.id]!.x = front.x * TILE + TILE / 2;
-        world.players[p.id]!.y = front.y * TILE + TILE / 2;
-        outOfDungeon.push([p.id, sagaId]);
-      }
-      // inside a run when the server stopped (a run is never saved): home, in front of the arch (placed once the farm is checked)
-      if (isRunKey(p.data.area)) {
+      // inside a dungeon or a run when the server stopped (neither is saved): home, in front of the arch (placed once the lobby is checked)
+      if (isSagaKey(p.data.area)) {
         world.players[p.id]!.area = 'farm';
         outOfRun.push(p.id);
       }
@@ -127,12 +106,6 @@ export class PgStore implements Store {
       if (world.players[p.id]!.run) world.players[p.id]!.run = { ...newRunSave(), ...world.players[p.id]!.run };
       delete world.players[p.id]!.emote;
       delete world.players[p.id]!.fishing;
-      // scores, tickets, a garage or prizes from before the minigames went
-      if (scrubPlayer(world.players[p.id]!)) {
-        this.players.add(p.id);
-        this.worldDirty = true;
-        scrubbed = true;
-      }
       // heroes from before gear: their best weapon goes from the bag into their hand
       ensureGear(world.players[p.id]!);
       // heroes from before the level rewards: everything their level has earned (and levels from the new table)
@@ -141,82 +114,19 @@ export class PgStore implements Store {
         this.worldDirty = true;
       }
     }
-    // the TV, the rally garage and the prizes have no definitions any more: out before the occupancy is rebuilt
-    if (scrubArea(world)) scrubbed = true;
     rebuildOccupancy(world);
     world.areas = {};
     for (const row of await this.db.select().from(s.areas)) {
-      // Spelhallen's insides are gone (migration 0004 deletes the rows); dungeons start over
-      if (isRemovedAreaKey(row.key) || isSagaKey(row.key)) continue;
+      // dungeons start over
+      if (isSagaKey(row.key)) continue;
       const a = row.data;
       a.players = {};
       a.area = row.key;
-      if (scrubArea(a)) this.dirtyAreas.add(row.key);
       rebuildOccupancy(a);
-      if (ensureCity(a, world)) {
-        console.log(`rebuilt the saved village ${row.key} as a city`);
-        this.dirtyAreas.add(row.key);
-      }
-      if (ensurePizzeria(a)) {
-        console.log(`added the pizzeria to the saved village ${row.key}`);
-        this.dirtyAreas.add(row.key);
-      }
       world.areas[row.key] = a;
     }
     if (Object.keys(world.areas).length) console.log(`loaded ${Object.keys(world.areas).length} explored areas`);
-    // Maps from before the wider world (new biomes, caves, treasure): untouched ones are rebuilt, the rest topped up
-    let rebuilt = 0;
-    let topped = 0;
-    for (const [k, a] of Object.entries(world.areas)) {
-      if ((a.gen ?? 1) >= AREA_GEN) continue;
-      const up = upgradeSavedArea(a, k);
-      this.dirtyAreas.add(k);
-      if (!up.rebuilt) {
-        topped++;
-        continue;
-      }
-      rebuilt++;
-      world.areas[k] = up.area;
-      for (const p of Object.values(world.players)) if (p.area === k) settlePlayer(up.area, p);
-    }
-    if (rebuilt || topped) console.log(`the wider world: rebuilt ${rebuilt} untouched explored areas, topped up ${topped}`);
-    // Villages saved before the bath house existed get one
-    for (const [k, a] of Object.entries(world.areas)) {
-      if (ensureBathhouse(a)) {
-        this.dirtyAreas.add(k);
-        console.log(`added the bath house to ${k}`);
-      }
-      if (ensureTransport(a)) {
-        this.dirtyAreas.add(k);
-        console.log(`added the bus stop and station to ${k}`);
-      }
-      if (ensureTownDress(a)) {
-        this.dirtyAreas.add(k);
-        console.log(`dressed ${k} as a Norse market town`);
-      }
-      if (ensureSagaPlaces(k, a)) {
-        this.dirtyAreas.add(k);
-        console.log(`added a dungeon's arch or Kämpastenen to ${k}`);
-      }
-      if (ensureRoaming(a)) {
-        this.dirtyAreas.add(k);
-        console.log(`Loke's servants now roam ${k}`);
-      }
-      if (ensureLandmarks(a)) {
-        this.dirtyAreas.add(k);
-        console.log(`put Upptäcktsboken's landmarks on ${k}`);
-        // anyone who logged out where one now stands steps out in front of it
-        for (const p of Object.values(world.players)) if (p.area === k) settlePlayer(a, p);
-      }
-    }
-    for (const [id, sagaId] of outOfDungeon) {
-      const front = archFront(world, sagaId);
-      world.players[id]!.x = front.x * TILE + TILE / 2;
-      world.players[id]!.y = front.y * TILE + TILE / 2;
-    }
-    // Worlds saved by older versions: add the farmhouse interior and room for the villagers
     const before = Object.keys(world.objects).length;
-    ensureNpcSpots(world);
     if (ensureRunPlaces(world)) console.log('put the färdport and the Yggdrasil shoot on the farm');
     for (const id of outOfRun) {
       const front = archFrontOf(world);
@@ -225,8 +135,7 @@ export class PgStore implements Store {
     }
     // Objects removed by the repairs above must also leave the database
     for (const id of loadedObjectIds) if (!world.objects[id]) this.gone.objects.add(id);
-    if (scrubbed) console.log('cleaned what the minigames left in the saved world');
-    if (scrubbed || Object.keys(world.objects).length !== before || this.gone.objects.size > 0 || before === 0) {
+    if (Object.keys(world.objects).length !== before || this.gone.objects.size > 0 || before === 0) {
       this.markAllDirty(world);
       await this.flush(world);
     }
@@ -236,25 +145,20 @@ export class PgStore implements Store {
   private dirtyAreas = new Set<string>();
 
   noteArea(key: string): void {
-    if (key !== 'farm' && key !== 'dungeon') this.dirtyAreas.add(key);
+    if (key !== 'farm') this.dirtyAreas.add(key);
   }
 
   noteChanges(changes: Change[]): void {
     for (const c of changes) {
-      if ('area' in c && c.area && c.area !== 'dungeon') {
+      if ('area' in c && c.area) {
         this.dirtyAreas.add(c.area);
         continue;
       }
-      if (c.t === 'areaData' && c.key !== 'dungeon') this.dirtyAreas.add(c.key);
+      if (c.t === 'areaData') this.dirtyAreas.add(c.key);
       switch (c.t) {
         case 'terrain':
         case 'day':
         case 'sagaBest':
-          this.worldDirty = true;
-          break;
-        case 'crop':
-          if (c.crop) this.crops.add(c.k), this.gone.crops.delete(c.k);
-          else this.gone.crops.add(c.k), this.crops.delete(c.k);
           this.worldDirty = true;
           break;
         case 'object':
@@ -284,7 +188,6 @@ export class PgStore implements Store {
   markAllDirty(world: WorldState): void {
     this.worldDirty = true;
     for (const id of Object.keys(world.objects)) this.objects.add(Number(id));
-    for (const k of Object.keys(world.crops)) this.crops.add(k);
     for (const id of Object.keys(world.animals)) this.animals.add(Number(id));
     for (const [id, p] of Object.entries(world.players)) if (!p.bot) this.players.add(id);
   }
@@ -305,12 +208,10 @@ export class PgStore implements Store {
 
   private async doFlush(world: WorldState): Promise<void> {
     const objects = [...this.objects].filter((id) => world.objects[id]);
-    const crops = [...this.crops].filter((k) => world.crops[k]);
     const animals = [...this.animals].filter((id) => world.animals[id]);
     const players = [...this.players].filter((id) => world.players[id] && !world.players[id]!.bot);
     const gone = {
       objects: [...this.gone.objects],
-      crops: [...this.gone.crops],
       animals: [...this.gone.animals],
       players: [...this.gone.players],
     };
@@ -318,7 +219,6 @@ export class PgStore implements Store {
     const areasToSave = [...this.dirtyAreas].filter((k) => !isSagaKey(k));
     this.dirtyAreas.clear();
     this.objects.clear();
-    this.crops.clear();
     this.animals.clear();
     this.players.clear();
     for (const g of Object.values(this.gone)) g.clear();
@@ -352,12 +252,6 @@ export class PgStore implements Store {
           set: { kind: sql`excluded.kind`, x: sql`excluded.x`, y: sql`excluded.y`, data: sql`excluded.data` },
         });
       }
-      for (const batch of chunk(crops, 200)) {
-        await tx
-          .insert(s.crops)
-          .values(batch.map((k) => ({ k, data: world.crops[k]! })))
-          .onConflictDoUpdate({ target: s.crops.k, set: { data: sql`excluded.data` } });
-      }
       for (const batch of chunk(animals, 200)) {
         await tx
           .insert(s.animals)
@@ -376,11 +270,10 @@ export class PgStore implements Store {
         const data = { ...a, players: {} };
         await tx
           .insert(s.areas)
-          .values({ key: k, biome: a.biome ?? 'ang', data, updatedAt: new Date() })
+          .values({ key: k, data, updatedAt: new Date() })
           .onConflictDoUpdate({ target: s.areas.key, set: { data, updatedAt: new Date() } });
       }
       if (gone.objects.length) await tx.delete(s.objects).where(inArray(s.objects.id, gone.objects));
-      if (gone.crops.length) await tx.delete(s.crops).where(inArray(s.crops.k, gone.crops));
       if (gone.animals.length) await tx.delete(s.animals).where(inArray(s.animals.id, gone.animals));
       if (gone.players.length) await tx.delete(s.players).where(inArray(s.players.id, gone.players));
     });

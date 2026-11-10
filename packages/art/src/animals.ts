@@ -3,7 +3,7 @@ import { Px, shade } from './px.js';
 import { SAGA_AFTER, SAGA_ANIMAL_SIZE, SAGA_DRAW, SAGA_HAT_POS, SAGA_OUTLINE, SAGA_RIDE_LIFT, SAGA_VARIANTS } from './sagaanimals.ts';
 import { OUTLINE } from './world.js';
 import { PET_ANIMAL_SIZE, PET_DRAW, PET_HAT_POS } from './petanimals.ts';
-import { PET_ANCHORS, PET_HEADROOM, PETS, decodeLook, petOfSpecies, type PetWear } from '@lilla-garden/shared';
+import { PET_ANCHORS, PET_HEADROOM, PETS, decodeLook, petOfSpecies, type PetWear } from '@varldstradet/shared';
 import { drawPetLook } from './petlooks.ts';
 export { petLookIcon, petLookCells } from './petlooks.ts';
 
@@ -718,6 +718,3 @@ export function animalSheet(species: string, baby: boolean, jul: boolean, varian
   sheet.blit(drawAnimal(species, 0, baby, jul, variant, wear), 0, 0).blit(drawAnimal(species, 1, baby, jul, variant, wear), size.w, 0);
   return sheet.canvas;
 }
-
-export const animalKey = (species: string, baby: boolean, jul: boolean, variant = 0): string =>
-  `animal-${species}-${baby ? 'baby' : 'adult'}${jul ? '-jul' : ''}${variant ? `-v${variant}` : ''}`;

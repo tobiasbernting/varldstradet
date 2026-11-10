@@ -41,22 +41,20 @@ import {
   setProgress,
   setsOf,
   tierOf,
-  waysOf,
   wearClass,
   wearOf,
   wearableBy,
   type ClassId,
   type LookPiece,
-  type LookSlot,
   type PetAnchor,
   type WayId,
-} from '@lilla-garden/shared';
+} from '@varldstradet/shared';
 import { drawAnimal } from '@art/animals.ts';
 import { lookIcon } from '@art/characters.ts';
 import { portraitUrl } from '@art/textures.ts';
 import { FX_SETTINGS, effectiveFx, fxSetting, setFxSetting, type FxSetting } from '../fxprefs.ts';
 import { net } from '../net.ts';
-import { readProgress } from '@lilla-garden/shared';
+import { readProgress } from '@varldstradet/shared';
 import { SFX } from '../sound.ts';
 import { myPlayer } from '../state.ts';
 import { h, onTap } from './dom.ts';
@@ -106,9 +104,6 @@ export interface LooksHost {
   /** The tab to show first. */
   tab?: 'wear' | 'set' | 'pet';
 }
-
-/** The code of a piece as the player has it now (tier from the collection), in a way. */
-const codeOf = (pieceId: string, way?: WayId): string => encodeLook(pieceId, Math.max(1, tierOf(readProgress(myPlayer()), pieceId)), way);
 
 /** One look as a card: its picture, name, stars and state (worn, owned, locked), tapped to wear it (if owned) and to read about it. */
 function card(host: LooksHost, piece: LookPiece, cls: ClassId | undefined, opts: { stand?: boolean } = {}): HTMLElement {
@@ -241,7 +236,6 @@ function fxSettingRow(host: LooksHost): HTMLElement {
   return h('div', { class: 'fx-box' }, h('b', null, `${LOOK_T.fxTitle}:`), row, h('p', { class: 'hint' }, effectiveFx() === 'reduced' && fxSetting() === 'full' ? LOOK_T.fxCalm : LOOK_T.fxHint));
 }
 
-
 // ---------------------------------------------------------------------------
 // The "Djur" tab: dress the pets (pet gear is looks worn at an animal's head, neck or back)
 // ---------------------------------------------------------------------------
@@ -249,7 +243,6 @@ function fxSettingRow(host: LooksHost): HTMLElement {
 const petDress = (me: NonNullable<ReturnType<typeof myPlayer>>, kind: string, anchor: PetAnchor) => me.pets?.dress?.[kind]?.[anchor];
 const petTierOf = (me: NonNullable<ReturnType<typeof myPlayer>>, piece: string): number => me.pets?.gear?.[piece]?.tier ?? 0;
 const petName = (me: NonNullable<ReturnType<typeof myPlayer>>, kind: string): string => me.pets?.owned[kind]?.name || PETS[kind]?.name || kind;
-const petAnchorOf = (id: string): PetAnchor | undefined => lookPiece(id)?.petSlot;
 
 /** The pet as it looks now, drawn from its table entry and what it wears, as a picture. */
 function petPicture(me: NonNullable<ReturnType<typeof myPlayer>>, kind: string, scale: number): HTMLElement {
@@ -558,8 +551,8 @@ export function resetLooksWindow(selectPiece?: string, tab?: 'wear' | 'set' | 'p
 export { setsOf };
 
 /** The looks the last victory gave, kept for the run's summary (it opens after the loot window has come and gone). */
-let lastDrops: { looks: import('@lilla-garden/shared').LootLooks; at: number } | null = null;
-export function rememberLooks(looks: import('@lilla-garden/shared').LootLooks): void {
+let lastDrops: { looks: import('@varldstradet/shared').LootLooks; at: number } | null = null;
+export function rememberLooks(looks: import('@varldstradet/shared').LootLooks): void {
   lastDrops = { looks, at: Date.now() };
 }
 /** A row for the run's end summary: each look that dropped (picture, name, shine), the colourway and the title. Null if none lately. */

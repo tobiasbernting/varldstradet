@@ -1,4 +1,4 @@
-// Runor v2 (GAME2.md section 3, R4): rarity and tags, set bonuses, personal offers that lean to the class and the path, the rarity
+// Runor v2 (DESIGN.md section 3): rarity and tags, set bonuses, personal offers that lean to the class and the path, the rarity
 // weights and the pity rule, skärpa, and the run's personal pick (everyone at once, the clock, the Mellanboss's runa for the whole party).
 import { describe, expect, it } from 'vitest';
 import {

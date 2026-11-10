@@ -1,7 +1,7 @@
 // What a player chose for how the game looks and sounds to them ("Inställningar"): text size, high contrast, calm screen, no
 // shaking, colour-blind-safe telegraphs, how long a press must be held to explain, left-handed buttons, reading aloud. Kept on
 // the device (a tablet may want other things than a computer), applied at once to the page as classes and CSS variables, and
-// announced with a 'lilla:prefs' event for the parts that draw by themselves (the world's telegraphs and the camera).
+// announced with a 'vt:prefs' event for the parts that draw by themselves (the world's telegraphs and the camera).
 // The effects setting (sparks, smoke) lives in fxprefs.ts and is shown in the same window.
 export type TextSize = 'normal' | 'large' | 'xlarge';
 export type Device = 'touch' | 'mouse' | 'key' | 'pad';
@@ -79,7 +79,7 @@ export function setPref<K extends keyof Prefs>(k: K, v: Prefs[K]): void {
     /* no storage */
   }
   applyPrefs();
-  document.dispatchEvent(new CustomEvent('lilla:prefs'));
+  document.dispatchEvent(new CustomEvent('vt:prefs'));
 }
 
 /** Calm screen on (the player's choice, or the system's): the world and the HUD stop their loops and flashes. */
@@ -98,7 +98,7 @@ export function setDevice(d: Device): void {
   if (d === device) return;
   device = d;
   for (const k of ['touch', 'mouse', 'key', 'pad'] as const) document.body.classList.toggle(`dev-${k}`, k === d);
-  document.dispatchEvent(new CustomEvent('lilla:device'));
+  document.dispatchEvent(new CustomEvent('vt:device'));
 }
 
 let started = false;
@@ -123,7 +123,7 @@ export function initA11y(): void {
       if (!saved) {
         prefs().calm = systemCalm();
         applyPrefs();
-        document.dispatchEvent(new CustomEvent('lilla:prefs'));
+        document.dispatchEvent(new CustomEvent('vt:prefs'));
       }
     });
   } catch {

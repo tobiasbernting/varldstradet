@@ -6,7 +6,6 @@
 import {
   DUNGEONS,
   DUNGEON_IDS,
-  RUNA_TEXT,
   RUN_JOIN_RADIUS,
   RUN_LEVEL_IDS,
   RUN_LEVEL_DEFAULT,
@@ -51,8 +50,8 @@ import {
   type RouteNodeSnap,
   type RunSnap,
   type TreeNode,
-} from '@lilla-garden/shared';
-import { CLASS_IDS, LOOK_T, PETS, PET_T, activePet, ownedPetIds } from '@lilla-garden/shared';
+} from '@varldstradet/shared';
+import { CLASS_IDS, LOOK_T, PETS, PET_T, activePet, ownedPetIds } from '@varldstradet/shared';
 import { lookSummary } from './looks.ts';
 import { portraitUrl } from '@art/textures.ts';
 import { net } from '../net.ts';
@@ -132,7 +131,6 @@ export class RunUi {
   private treePick: string | null = null;
   /** The offer the cards were last opened for (a new offer opens them again). */
   private offerSeen = '';
-  private lastPhase = '';
   private wasIn = false;
   /** The server sent my summary (a player who goes home alone gets none: the window makes one from what it knew). */
   private gotEnded = true;
@@ -296,7 +294,7 @@ export class RunUi {
 
   // ---- reacting to the server ----
 
-  private fromRun(c: Extract<import('@lilla-garden/shared').Change, { t: 'run' }>): void {
+  private fromRun(c: Extract<import('@varldstradet/shared').Change, { t: 'run' }>): void {
     if (c.ev === 'state') {
       const run = myRun();
       const was = this.wasIn;
@@ -347,7 +345,6 @@ export class RunUi {
     document.body.classList.toggle('run-route', run?.phase === 'route');
     if (!run) {
       this.bar.hidden = this.vote.hidden = this.cardsBtn.hidden = this.runorStrip.hidden = this.note.hidden = true;
-      this.lastPhase = '';
       return;
     }
     this.renderBar(run);
@@ -366,7 +363,6 @@ export class RunUi {
     }
     this.note.hidden = run.phase !== 'victory';
     this.note.textContent = run.phase === 'victory' ? `🏆 ${RUN_UI.victory}` : '';
-    this.lastPhase = run.phase;
   }
 
   private renderBar(run: RunSnap): void {
@@ -790,7 +786,7 @@ export class RunUi {
     });
     // Garderoben (the looks of the class chosen above): a shortcut, since the looks are worn per class
     const wardrobe = h('button', { class: 'alt wardrobe-btn', type: 'button' }, `👕 ${LOOK_T.title}`);
-    this.tap(wardrobe, () => document.dispatchEvent(new Event('lilla:looks-arch')));
+    this.tap(wardrobe, () => document.dispatchEvent(new Event('vt:looks-arch')));
     body.append(h('div', { class: 'actions sticky' }, wardrobe, go));
     if (!cls) body.append(h('div', { class: 'hint' }, RUN_UI.noClass));
     else if (!arch.near) body.append(h('div', { class: 'hint' }, RUN_UI.nearGate));

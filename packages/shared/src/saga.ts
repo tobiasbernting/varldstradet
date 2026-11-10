@@ -99,7 +99,7 @@ export const GCD_MS = 400;
 export const DOWN_MS = 10_000;
 /** Everyone fell: after this long the party gets up at the last rest stone and the monsters reset. */
 export const WIPE_MS = 4_000;
-/** Health a fighter has after the Sagoandan of a run (a fraction of the maximum; GAME2.md section 4.5). */
+/** Health a fighter has after the Sagoandan of a run (a fraction of the maximum; DESIGN.md section 4.5). */
 export const SAGOANDAN_HP = 0.5;
 /** The monsters' speed and attack rate when a `jakten` monster is below a quarter health. */
 export const ENRAGE = { below: 0.25, speed: 1.4, rate: 1.4 } as const;
@@ -1002,7 +1002,6 @@ export const RARITY_NAMES: Record<Rarity, string> = { common: 'Vanlig', uncommon
 
 /** What a boss's chest gives each player (once a day per player). */
 export interface SagaLoot {
-  coins: [number, number];
   stars: number;
   /** One of these, by weight. */
   gear: { item: string; weight: number }[];
@@ -1011,15 +1010,13 @@ export interface SagaLoot {
 }
 
 export const SAGA_LOOT: Record<string, SagaLoot> = {
-  gravvaktare: { coins: [20, 40], stars: 0, gear: [{ item: 'shirt_ringbrynja', weight: 3 }, { item: 'runsvard', weight: 2 }, { item: 'healing_potion', weight: 4 }] },
+  gravvaktare: { stars: 0, gear: [{ item: 'shirt_ringbrynja', weight: 3 }, { item: 'runsvard', weight: 2 }, { item: 'healing_potion', weight: 4 }] },
   draugkung: {
-    coins: [60, 100],
     stars: 1,
     gear: [{ item: 'runsvard', weight: 3 }, { item: 'draugyxa', weight: 3 }, { item: 'volvastav', weight: 3 }, { item: 'hat_draugkrona', weight: 2 }, { item: 'shirt_ringbrynja', weight: 2 }],
   },
-  isbjorn: { coins: [30, 50], stars: 0, gear: [{ item: 'shirt_bjornfall', weight: 3 }, { item: 'isyxa', weight: 2 }, { item: 'healing_potion', weight: 4 }] },
+  isbjorn: { stars: 0, gear: [{ item: 'shirt_bjornfall', weight: 3 }, { item: 'isyxa', weight: 2 }, { item: 'healing_potion', weight: 4 }] },
   rimturs: {
-    coins: [80, 140],
     stars: 1,
     gear: [{ item: 'frostbett', weight: 3 }, { item: 'isyxa', weight: 3 }, { item: 'ullrsbage', weight: 3 }, { item: 'hat_valkyria', weight: 3 }, { item: 'shirt_bjornfall', weight: 2 }],
     rare: [
@@ -1027,9 +1024,8 @@ export const SAGA_LOOT: Record<string, SagaLoot> = {
       { item: 'mount_sleipner', chance: 0.12 },
     ],
   },
-  smeden: { coins: [40, 70], stars: 0, gear: [{ item: 'shirt_odenmantel', weight: 2 }, { item: 'mjolner', weight: 1 }, { item: 'healing_potion', weight: 4 }] },
+  smeden: { stars: 0, gear: [{ item: 'shirt_odenmantel', weight: 2 }, { item: 'mjolner', weight: 1 }, { item: 'healing_potion', weight: 4 }] },
   surt: {
-    coins: [120, 200],
     stars: 2,
     gear: [{ item: 'surtsvard', weight: 3 }, { item: 'mjolner', weight: 3 }, { item: 'gungner', weight: 3 }, { item: 'hat_oden', weight: 3 }, { item: 'shirt_odenmantel', weight: 2 }],
     rare: [
@@ -1038,23 +1034,20 @@ export const SAGA_LOOT: Record<string, SagaLoot> = {
     ],
   },
   // Act II, Lokes list
-  garm: { coins: [40, 70], stars: 0, gear: [{ item: 'shirt_helrustning', weight: 2 }, { item: 'garmklo', weight: 2 }, { item: 'offhand_helskold', weight: 2 }, { item: 'healing_potion', weight: 4 }] },
+  garm: { stars: 0, gear: [{ item: 'shirt_helrustning', weight: 2 }, { item: 'garmklo', weight: 2 }, { item: 'offhand_helskold', weight: 2 }, { item: 'healing_potion', weight: 4 }] },
   hel: {
-    coins: [120, 180],
     stars: 1,
     gear: [{ item: 'helsvard', weight: 3 }, { item: 'garmklo', weight: 2 }, { item: 'hat_helhjalm', weight: 3 }, { item: 'shirt_helrustning', weight: 2 }, { item: 'amulet_helring', weight: 3 }, { item: 'offhand_helskold', weight: 2 }],
     rare: [{ item: 'pet_garmvalp', chance: 0.2 }],
   },
-  jarnvakten: { coins: [45, 75], stars: 0, gear: [{ item: 'shirt_dvargbrynja', weight: 2 }, { item: 'gruvhacka', weight: 2 }, { item: 'offhand_dvargskold', weight: 2 }, { item: 'healing_potion', weight: 3 }, { item: 'styrkedryck', weight: 2 }] },
+  jarnvakten: { stars: 0, gear: [{ item: 'shirt_dvargbrynja', weight: 2 }, { item: 'gruvhacka', weight: 2 }, { item: 'offhand_dvargskold', weight: 2 }, { item: 'healing_potion', weight: 3 }, { item: 'styrkedryck', weight: 2 }] },
   fafner: {
-    coins: [130, 200],
     stars: 1,
     gear: [{ item: 'fafnerstand', weight: 3 }, { item: 'gruvhacka', weight: 2 }, { item: 'hat_dvarghjalm', weight: 3 }, { item: 'shirt_dvargbrynja', weight: 2 }, { item: 'amulet_andvaranaut', weight: 3 }, { item: 'offhand_dvargskold', weight: 2 }, { item: 'offhand_runbok', weight: 2 }],
     rare: [{ item: 'pet_guldbagge', chance: 0.2 }],
   },
-  blackis: { coins: [50, 80], stars: 0, gear: [{ item: 'shirt_fjallrustning', weight: 2 }, { item: 'korallspjut', weight: 1 }, { item: 'offhand_koger', weight: 2 }, { item: 'healing_potion', weight: 3 }, { item: 'styrkedryck', weight: 2 }] },
+  blackis: { stars: 0, gear: [{ item: 'shirt_fjallrustning', weight: 2 }, { item: 'korallspjut', weight: 1 }, { item: 'offhand_koger', weight: 2 }, { item: 'healing_potion', weight: 3 }, { item: 'styrkedryck', weight: 2 }] },
   jormungand: {
-    coins: [140, 220],
     stars: 1,
     gear: [{ item: 'korallspjut', weight: 3 }, { item: 'stormbage', weight: 3 }, { item: 'hat_sjokrona', weight: 3 }, { item: 'shirt_fjallrustning', weight: 2 }, { item: 'offhand_perlemorskold', weight: 2 }, { item: 'amulet_perla', weight: 3 }],
     rare: [
@@ -1062,9 +1055,8 @@ export const SAGA_LOOT: Record<string, SagaLoot> = {
       { item: 'mount_havshast', chance: 0.12 },
     ],
   },
-  spindeldrottning: { coins: [55, 85], stars: 0, gear: [{ item: 'shirt_alvmantel', weight: 2 }, { item: 'alvklinga', weight: 1 }, { item: 'offhand_alvlykta', weight: 1 }, { item: 'healing_potion', weight: 3 }, { item: 'styrkedryck', weight: 2 }] },
+  spindeldrottning: { stars: 0, gear: [{ item: 'shirt_alvmantel', weight: 2 }, { item: 'alvklinga', weight: 1 }, { item: 'offhand_alvlykta', weight: 1 }, { item: 'healing_potion', weight: 3 }, { item: 'styrkedryck', weight: 2 }] },
   nattmara: {
-    coins: [150, 230],
     stars: 1,
     gear: [{ item: 'alvklinga', weight: 3 }, { item: 'manstav', weight: 3 }, { item: 'hat_alvkrona', weight: 3 }, { item: 'shirt_alvmantel', weight: 2 }, { item: 'offhand_alvlykta', weight: 2 }, { item: 'amulet_alvsten', weight: 3 }],
     rare: [
@@ -1072,9 +1064,8 @@ export const SAGA_LOOT: Record<string, SagaLoot> = {
       { item: 'mount_jattehjort', chance: 0.12 },
     ],
   },
-  skoll: { coins: [60, 90], stars: 0, gear: [{ item: 'shirt_ulvpals', weight: 2 }, { item: 'tyrsyxa', weight: 1 }, { item: 'offhand_tyrshandske', weight: 1 }, { item: 'healing_potion', weight: 3 }, { item: 'styrkedryck', weight: 2 }] },
+  skoll: { stars: 0, gear: [{ item: 'shirt_ulvpals', weight: 2 }, { item: 'tyrsyxa', weight: 1 }, { item: 'offhand_tyrshandske', weight: 1 }, { item: 'healing_potion', weight: 3 }, { item: 'styrkedryck', weight: 2 }] },
   fenrisulven: {
-    coins: [160, 250],
     stars: 1,
     gear: [{ item: 'fenristand', weight: 3 }, { item: 'tyrsyxa', weight: 3 }, { item: 'hat_ulvhuva', weight: 3 }, { item: 'shirt_ulvpals', weight: 2 }, { item: 'offhand_tyrshandske', weight: 2 }, { item: 'amulet_gleipnir', weight: 3 }],
     rare: [
@@ -1082,9 +1073,8 @@ export const SAGA_LOOT: Record<string, SagaLoot> = {
       { item: 'mount_fenrisulv', chance: 0.12 },
     ],
   },
-  lokesskugga: { coins: [70, 100], stars: 0, gear: [{ item: 'shirt_lokesmantel', weight: 1 }, { item: 'offhand_lokesmask', weight: 1 }, { item: 'bifrostbage', weight: 1 }, { item: 'healing_potion', weight: 3 }, { item: 'styrkedryck', weight: 3 }] },
+  lokesskugga: { stars: 0, gear: [{ item: 'shirt_lokesmantel', weight: 1 }, { item: 'offhand_lokesmask', weight: 1 }, { item: 'bifrostbage', weight: 1 }, { item: 'healing_potion', weight: 3 }, { item: 'styrkedryck', weight: 3 }] },
   loke: {
-    coins: [250, 400],
     stars: 3,
     gear: [{ item: 'lokesstav', weight: 3 }, { item: 'bifrostbage', weight: 3 }, { item: 'heimdallshorn', weight: 2 }, { item: 'hat_lokeshorn', weight: 3 }, { item: 'shirt_lokesmantel', weight: 2 }, { item: 'offhand_lokesmask', weight: 2 }, { item: 'amulet_brisingamen', weight: 3 }],
     rare: [{ item: 'mount_lokeshast', chance: 0.25 }],
@@ -1093,22 +1083,22 @@ export const SAGA_LOOT: Record<string, SagaLoot> = {
 
 /** The treasure chest in each dungeon's side room. */
 export const SAGA_TREASURE: Record<DungeonId, SagaLoot> = {
-  draug: { coins: [25, 45], stars: 0, gear: [{ item: 'healing_potion', weight: 3 }, { item: 'old_coin', weight: 3 }, { item: 'gold', weight: 2 }] },
-  frost: { coins: [35, 60], stars: 0, gear: [{ item: 'healing_potion', weight: 3 }, { item: 'crystal', weight: 3 }, { item: 'gem', weight: 1 }] },
-  surt: { coins: [45, 80], stars: 0, gear: [{ item: 'healing_potion', weight: 3 }, { item: 'fire_crystal', weight: 3 }, { item: 'obsidian', weight: 2 }] },
-  hel: { coins: [50, 80], stars: 0, gear: [{ item: 'healing_potion', weight: 3 }, { item: 'old_coin', weight: 3 }, { item: 'crystal', weight: 2 }, { item: 'styrkedryck', weight: 1 }] },
-  dvarg: { coins: [55, 90], stars: 0, gear: [{ item: 'healing_potion', weight: 3 }, { item: 'gold', weight: 3 }, { item: 'gem', weight: 2 }, { item: 'styrkedryck', weight: 2 }] },
-  orm: { coins: [60, 95], stars: 0, gear: [{ item: 'healing_potion', weight: 3 }, { item: 'pearl', weight: 3 }, { item: 'shell', weight: 2 }, { item: 'styrkedryck', weight: 2 }] },
-  alv: { coins: [65, 100], stars: 0, gear: [{ item: 'healing_potion', weight: 3 }, { item: 'fairy_dust', weight: 3 }, { item: 'glowshroom', weight: 2 }, { item: 'styrkedryck', weight: 2 }] },
-  fenrir: { coins: [70, 110], stars: 0, gear: [{ item: 'healing_potion', weight: 3 }, { item: 'crystal', weight: 3 }, { item: 'fur', weight: 2 }, { item: 'styrkedryck', weight: 2 }] },
-  loke: { coins: [80, 130], stars: 0, gear: [{ item: 'healing_potion', weight: 3 }, { item: 'star_crystal', weight: 3 }, { item: 'gem', weight: 2 }, { item: 'styrkedryck', weight: 2 }] },
+  draug: { stars: 0, gear: [{ item: 'healing_potion', weight: 3 }, { item: 'old_coin', weight: 3 }, { item: 'gold', weight: 2 }] },
+  frost: { stars: 0, gear: [{ item: 'healing_potion', weight: 3 }, { item: 'crystal', weight: 3 }, { item: 'gem', weight: 1 }] },
+  surt: { stars: 0, gear: [{ item: 'healing_potion', weight: 3 }, { item: 'fire_crystal', weight: 3 }, { item: 'obsidian', weight: 2 }] },
+  hel: { stars: 0, gear: [{ item: 'healing_potion', weight: 3 }, { item: 'old_coin', weight: 3 }, { item: 'crystal', weight: 2 }, { item: 'styrkedryck', weight: 1 }] },
+  dvarg: { stars: 0, gear: [{ item: 'healing_potion', weight: 3 }, { item: 'gold', weight: 3 }, { item: 'gem', weight: 2 }, { item: 'styrkedryck', weight: 2 }] },
+  orm: { stars: 0, gear: [{ item: 'healing_potion', weight: 3 }, { item: 'pearl', weight: 3 }, { item: 'shell', weight: 2 }, { item: 'styrkedryck', weight: 2 }] },
+  alv: { stars: 0, gear: [{ item: 'healing_potion', weight: 3 }, { item: 'fairy_dust', weight: 3 }, { item: 'glowshroom', weight: 2 }, { item: 'styrkedryck', weight: 2 }] },
+  fenrir: { stars: 0, gear: [{ item: 'healing_potion', weight: 3 }, { item: 'crystal', weight: 3 }, { item: 'fur', weight: 2 }, { item: 'styrkedryck', weight: 2 }] },
+  loke: { stars: 0, gear: [{ item: 'healing_potion', weight: 3 }, { item: 'star_crystal', weight: 3 }, { item: 'gem', weight: 2 }, { item: 'styrkedryck', weight: 2 }] },
 };
 
 /**
  * What the dungeons give for a house (house.ts): Norse decor, and the farm's own furniture and keepsakes, as a chance on top of a
  * chest's loot. Per dungeon: its last boss's chest (which a run's reward is too) and the treasure chest in its side room.
  */
-const HOUSE_LOOT: Record<DungeonId, { boss: [string, number][]; treasure: [string, number][] }> = {
+export const HOUSE_LOOT: Record<DungeonId, { boss: [string, number][]; treasure: [string, number][] }> = {
   draug: { boss: [['candle_stick', 0.35], ['viking_shield', 0.15]], treasure: [['rune_stone', 0.25], ['clock', 0.15]] },
   frost: { boss: [['bear_rug', 0.35], ['drinking_horn', 0.15]], treasure: [['sofa', 0.15], ['viking_banner', 0.15]] },
   surt: { boss: [['weapon_rack', 0.35], ['dragon_egg', 0.1]], treasure: [['viking_shield', 0.25], ['lamp', 0.15]] },
@@ -1268,7 +1258,6 @@ export const SAGA_ITEMS: SagaItemDef[] = [
   { id: 'amulet_hjaltemarke', name: 'Hjältemärket', rarity: 'epic', kind: 'amulet', levelReward: 9, text: 'Ett märke av silver som bara riktiga hjältar får bära.' },
   { id: 'shirt_stjarnmantel', name: 'Stjärnmanteln', rarity: 'epic', kind: 'shirt', style: 'cloak', color: '#2a2a5a', glow: '#b8a8ff', levelReward: 10, text: 'En mantel lika mörk som natthimlen, full av små lysande stjärnor.' },
   { id: 'hat_norrskenshjalm', name: 'Norrskenshjälmen', rarity: 'epic', kind: 'hat', style: 'valkyrie', color: '#dfeeff', glow: '#5fd38d', levelReward: 12, text: 'En vingad hjälm som skimrar grönt som norrskenet.' },
-  { id: 'mount_ljushjort', name: 'Ljushjorten', rarity: 'legendary', kind: 'mount', species: 'ljushjort', levelReward: 15, text: 'En blekt vitblå hjort vars horn lyser som månsken.' },
   { id: 'shirt_eldmantel', name: 'Eldmanteln', rarity: 'legendary', kind: 'shirt', style: 'cloak', color: '#5a1a10', glow: '#ff6a3a', levelReward: 16, text: 'En mantel som fladdrar som lågor, men aldrig bränns.' },
   { id: 'hat_solkrona', name: 'Solkronan', rarity: 'legendary', kind: 'hat', style: 'crown', color: '#ffe27a', glow: '#ffe27a', levelReward: 18, text: 'En krona av guld som lyser som solen själv.' },
   { id: 'amulet_yggdrasil', name: 'Yggdrasils löv', rarity: 'legendary', kind: 'amulet', levelReward: 19, text: 'Ett löv från Världsträdet. Det är grönt året runt.' },
@@ -1311,7 +1300,7 @@ export interface SagaChapter {
    * biome `where`). Counted in SagaProgress.quests['field:<chapter index>']. A chapter is done when all its parts are.
    */
   field?: { target: string; count: number; where: string; text: string };
-  reward: { coins: number; stars: number; item?: string; title?: string };
+  reward: { stars: number; item?: string; title?: string };
 }
 
 export const SAGA_CHAPTERS: SagaChapter[] = [
@@ -1325,7 +1314,7 @@ export const SAGA_CHAPTERS: SagaChapter[] = [
     ],
     done: ['Bra! Nu har du en väg att gå. Lyssna noga, för nu börjar sagan.'],
     goal: 'Välj din väg vid Kämpastenen bredvid Völvan',
-    reward: { coins: 20, stars: 1 },
+    reward: { stars: 1 },
   },
   {
     dungeon: 'draug',
@@ -1337,7 +1326,7 @@ export const SAGA_CHAPTERS: SagaChapter[] = [
     ],
     done: ['Solrunan! Känn så varm den är. Sommaren är räddad, tack vare dig.', 'Men jag ser mer i mina drömmar… is, och en jätte.'],
     goal: 'Besegra Draugkungen på en färd genom färdporten',
-    reward: { coins: 100, stars: 2, item: 'solruna', title: 'Draugdödare' },
+    reward: { stars: 2, item: 'solruna', title: 'Draugdödare' },
   },
   {
     dungeon: 'frost',
@@ -1349,7 +1338,7 @@ export const SAGA_CHAPTERS: SagaChapter[] = [
     ],
     done: ['Källorna porlar igen! Rimtursen är besegrad.', 'Men nu brinner det i mina drömmar… Surt har vaknat.'],
     goal: 'Besegra Rimtursen i Frostjättens borg (färdporten)',
-    reward: { coins: 150, stars: 3, title: 'Frostbrytare' },
+    reward: { stars: 3, title: 'Frostbrytare' },
   },
   {
     dungeon: 'surt',
@@ -1361,7 +1350,7 @@ export const SAGA_CHAPTERS: SagaChapter[] = [
     ],
     done: ['Ni gjorde det! Surt är besegrad och Världsträdet är räddat!', 'Ta det här skottet av Yggdrasil. Det växer vid färdporten, så minns alla vad ni gjorde.'],
     goal: 'Besegra Surt i Surts smedja (färdporten)',
-    reward: { coins: 300, stars: 5, item: 'yggdrasil', title: 'Världsträdets väktare' },
+    reward: { stars: 5, item: 'yggdrasil', title: 'Världsträdets väktare' },
   },
   // Act II, Lokes list
   {
@@ -1375,7 +1364,7 @@ export const SAGA_CHAPTERS: SagaChapter[] = [
     ],
     done: ['Bra gjort! Skogen är lugn igen. Ta den här runan, Vegvisir. Den hjälper dig att hitta hem.', 'Men drömmen fortsätter… Loke har öppnat porten till Helheim.'],
     goal: 'Lyssna på Völvan och gå sedan vidare genom färdporten',
-    reward: { coins: 60, stars: 2, item: 'amulet_vegvisir' },
+    reward: { stars: 2, item: 'amulet_vegvisir' },
   },
   {
     dungeon: 'hel',
@@ -1387,7 +1376,7 @@ export const SAGA_CHAPTERS: SagaChapter[] = [
     ],
     done: ['Hel har gått tillbaka till sin tron och lovar att stanna där. Här är en lykta från Helheim.', 'Men Loke är inte klar. Jag hör hammarslag och dvärgsånger i mina drömmar…'],
     goal: 'Besegra Hel i Helheim (färdporten)',
-    reward: { coins: 150, stars: 3, item: 'hels_lykta', title: 'Helfarare' },
+    reward: { stars: 3, item: 'hels_lykta', title: 'Helfarare' },
   },
   {
     dungeon: 'dvarg',
@@ -1399,7 +1388,7 @@ export const SAGA_CHAPTERS: SagaChapter[] = [
     ],
     done: ['Fafner sover gott på en mycket mindre guldhög nu. Ta den här dvärgstatyn som tack!', 'Men vågorna har blivit så stora… Något väldigt långt rör sig i havet.'],
     goal: 'Besegra Fafner i Svartalfheims gruvor (färdporten)',
-    reward: { coins: 180, stars: 3, item: 'dvargstaty', title: 'Dvärgavän' },
+    reward: { stars: 3, item: 'dvargstaty', title: 'Dvärgavän' },
   },
   {
     dungeon: 'orm',
@@ -1411,7 +1400,7 @@ export const SAGA_CHAPTERS: SagaChapter[] = [
     ],
     done: ['Ormen har bitit sig i svansen igen, och havet är lugnt. Här är en tand han tappade.', 'Men nu drömmer alla så otäckt… Det kommer från Alvernas lund.'],
     goal: 'Besegra Jörmungandr i Havsormens tempel (färdporten)',
-    reward: { coins: 200, stars: 4, item: 'ormtand', title: 'Ormtämjare' },
+    reward: { stars: 4, item: 'ormtand', title: 'Ormtämjare' },
   },
   {
     dungeon: 'alv',
@@ -1423,7 +1412,7 @@ export const SAGA_CHAPTERS: SagaChapter[] = [
     ],
     done: ['Ljusalverna lyser igen, och i natt får alla sova gott. De skickar den här lyktan som tack.', 'Men nu ylar det i norr… Loke har släppt Fenrisulven fri!'],
     goal: 'Besegra Nattmaran i Alvernas lund (färdporten)',
-    reward: { coins: 220, stars: 4, item: 'alvlykta', title: 'Ljusbärare' },
+    reward: { stars: 4, item: 'alvlykta', title: 'Ljusbärare' },
   },
   {
     dungeon: 'fenrir',
@@ -1435,7 +1424,7 @@ export const SAGA_CHAPTERS: SagaChapter[] = [
     ],
     done: ['Fenrisulven är bunden igen, och han ser faktiskt ganska nöjd ut. Här är en länk från hans kedja.', 'Nu vet jag var Loke är. Han väntar på Bifrost, regnbågsbron.'],
     goal: 'Besegra Fenrisulven i Fenrisklyftan (färdporten)',
-    reward: { coins: 260, stars: 5, item: 'fenrislanka', title: 'Ulvbindare' },
+    reward: { stars: 5, item: 'fenrislanka', title: 'Ulvbindare' },
   },
   {
     dungeon: 'loke',
@@ -1451,19 +1440,16 @@ export const SAGA_CHAPTERS: SagaChapter[] = [
       'Och Loke? Han sitter bunden med ett starkt rep och fnissar för sig själv. Han är fast… tills nästa gång.',
     ],
     goal: 'Besegra Loke på Bifrost (färdporten)',
-    reward: { coins: 500, stars: 8, item: 'bifrostbit', title: 'Ragnaröks hjälte' },
+    reward: { stars: 8, item: 'bifrostbit', title: 'Ragnaröks hjälte' },
   },
 ];
 
 /** Völvan Sigrun, who tells the saga, stands by the Kämpastenen in the lobby (Gården). */
 export const VOLVA_ID = 'sigrun';
 export const VOLVA_SPOT = { x: 21, y: 15 };
-export const STONE_SPOT = { x: 22, y: 15 };
 
 /** The way into a dungeon out in the world: a stone arch 3 tiles wide and 2 high, walked into from below. */
 export const SAGA_PORTAL = { w: 3, h: 2 };
-/** The tile in front of a dungeon's arch (where you come out again). */
-export const portalFront = (p: { x: number; y: number }): { x: number; y: number } => ({ x: p.x + 1, y: p.y + 2 });
 
 
 // ---------------------------------------------------------------------------
@@ -1480,14 +1466,15 @@ export const gearSlotOf = (itemId: string): GearSlot | null => {
 };
 
 /**
- * What a hero level still gives: every level above the first adds this much damage, healing and health (+28.5 % at level 20).
- * Gear gives nothing of the kind: it is only for show (looks.ts).
+ * Hero levels give no power at all (they are a sign of experience, with cosmetic rewards: LEVEL_REWARDS). Every hero fights as a
+ * level-3 hero used to (1 + 1.5 % per level above the first), because the whole game was tuned with level-3 heroes (the bot tests,
+ * DESIGN.md section 5.6). This is the one place that number lives; change it here and nowhere else.
  */
-export const LEVEL_BONUS = 0.015;
+export const FLAT_LEVEL_MUL = 1 + 0.015 * 2;
 /**
  * The flat base every hero fights with, in place of what gear used to add. It is exactly what the starter set gave (an uncommon
  * weapon: x1.05 damage and healing, a wooden shield: 4 % less damage taken, a stone amulet: +8 health), so the bots' measured
- * minutes (GAME2.md section 5.6) stay as they were. Change it here and nowhere else.
+ * minutes (DESIGN.md section 5.6) stay as they were. Change it here and nowhere else.
  */
 export const BASE_POWER = 1.05;
 export const BASE_ARMOR = 0.04;
@@ -1508,7 +1495,7 @@ export interface LevelReward {
   title?: string;
   aura?: 1 | 2;
 }
-/** Hero level rewards: looks, never power (the items are SAGA_ITEMS with `levelReward`). */
+/** Hero level rewards: looks, titles and house decor, never power (clothes and gear are SAGA_ITEMS with `levelReward`; decor is a Norse decor piece for the house). */
 export const LEVEL_REWARDS: Record<number, LevelReward> = {
   2: { item: 'shirt_vandrarmantel' },
   3: { title: 'Vandrare' },
@@ -1521,7 +1508,9 @@ export const LEVEL_REWARDS: Record<number, LevelReward> = {
   10: { item: 'shirt_stjarnmantel', aura: 1 },
   12: { item: 'hat_norrskenshjalm' },
   13: { title: 'Stor hjälte' },
-  15: { item: 'mount_ljushjort' },
+  11: { item: 'candle_stick' },
+  14: { item: 'viking_banner' },
+  15: { item: 'yggdrasil_sapling' },
   16: { item: 'shirt_eldmantel' },
   17: { title: 'Legend' },
   18: { item: 'hat_solkrona' },
@@ -1545,7 +1534,7 @@ export const levelSpan = (xp: number): { level: number; from: number; next: numb
   return { level, from: XP_LEVELS[level - 1]!, next: XP_LEVELS[level] ?? null };
 };
 
-/** What a hero fights with: the flat base and the hero level, never the gear. */
+/** What a hero fights with: the flat base, never the hero level or the gear. */
 export interface FightStats {
   /** Damage and healing multiplier. */
   power: number;
@@ -1566,15 +1555,13 @@ export function gearOf(p: PlayerState): Partial<Record<GearSlot, string>> {
   return best ? { weapon: best.id } : {};
 }
 
-/** What a hero's level gives in a fight, on top of the flat base. */
-export const levelMul = (p: PlayerState): number => 1 + LEVEL_BONUS * (heroLevel(p.saga) - 1);
-/** What a player fights with (the hero level on a flat base; gear does not count). */
-export function fightStats(p: PlayerState): FightStats {
-  return { power: BASE_POWER * levelMul(p), hp: BASE_HP, armor: BASE_ARMOR };
+/** What a player fights with: the same flat numbers for everyone (neither the hero level nor the gear counts). */
+export function fightStats(_p: PlayerState): FightStats {
+  return { power: BASE_POWER * FLAT_LEVEL_MUL, hp: BASE_HP, armor: BASE_ARMOR };
 }
 
-/** A fighter's full health: the class's and the flat base, and a little more for every level. */
-export const fighterMax = (p: PlayerState, cls: ClassId): number => Math.round((CLASSES[cls].hp + BASE_HP) * levelMul(p));
+/** A fighter's full health: the class's and the flat base, the same at every hero level. */
+export const fighterMax = (_p: PlayerState, cls: ClassId): number => Math.round((CLASSES[cls].hp + BASE_HP) * FLAT_LEVEL_MUL);
 
 // ---------------------------------------------------------------------------
 // The villagers' quests: two for each dungeon, once Völvan has told its chapter
@@ -1595,7 +1582,7 @@ export interface SagaQuest {
   /** Collect quests: who drops it, and how often. */
   from?: string[];
   chance?: number;
-  reward: { coins: number; stars: number; item?: string; count?: number };
+  reward: { stars: number; item?: string; count?: number };
 }
 
 export const SAGA_QUESTS: SagaQuest[] = [
@@ -1610,7 +1597,7 @@ export const SAGA_QUESTS: SagaQuest[] = [
     kind: 'kill',
     target: 'skelett',
     count: 8,
-    reward: { coins: 40, stars: 1 },
+    reward: { stars: 1 },
   },
   {
     id: 'saga_jarn',
@@ -1625,7 +1612,7 @@ export const SAGA_QUESTS: SagaQuest[] = [
     count: 5,
     from: ['skelett', 'draugbage'],
     chance: 0.6,
-    reward: { coins: 50, stars: 1, item: 'healing_potion', count: 2 },
+    reward: { stars: 1, item: 'healing_potion', count: 2 },
   },
   {
     id: 'saga_vargar',
@@ -1638,7 +1625,7 @@ export const SAGA_QUESTS: SagaQuest[] = [
     kind: 'kill',
     target: 'isvarg',
     count: 6,
-    reward: { coins: 60, stars: 1 },
+    reward: { stars: 1 },
   },
   {
     id: 'saga_frostros',
@@ -1653,7 +1640,7 @@ export const SAGA_QUESTS: SagaQuest[] = [
     count: 4,
     from: ['isande'],
     chance: 0.7,
-    reward: { coins: 70, stars: 2 },
+    reward: { stars: 2 },
   },
   {
     id: 'saga_kol',
@@ -1668,7 +1655,7 @@ export const SAGA_QUESTS: SagaQuest[] = [
     count: 6,
     from: ['eldimp'],
     chance: 0.6,
-    reward: { coins: 80, stars: 2 },
+    reward: { stars: 2 },
   },
   {
     id: 'saga_eldhund',
@@ -1681,7 +1668,7 @@ export const SAGA_QUESTS: SagaQuest[] = [
     kind: 'kill',
     target: 'eldhund',
     count: 5,
-    reward: { coins: 90, stars: 2, item: 'healing_potion', count: 3 },
+    reward: { stars: 2, item: 'healing_potion', count: 3 },
   },
   // Act II, Lokes list
   {
@@ -1695,7 +1682,7 @@ export const SAGA_QUESTS: SagaQuest[] = [
     kind: 'kill',
     target: 'gengangare',
     count: 8,
-    reward: { coins: 100, stars: 2 },
+    reward: { stars: 2 },
   },
   {
     id: 'saga_helhund',
@@ -1708,7 +1695,7 @@ export const SAGA_QUESTS: SagaQuest[] = [
     kind: 'kill',
     target: 'helhund',
     count: 6,
-    reward: { coins: 100, stars: 2, item: 'healing_potion', count: 3 },
+    reward: { stars: 2, item: 'healing_potion', count: 3 },
   },
   {
     id: 'saga_glimmer',
@@ -1723,7 +1710,7 @@ export const SAGA_QUESTS: SagaQuest[] = [
     count: 6,
     from: ['gruvtroll'],
     chance: 0.6,
-    reward: { coins: 110, stars: 2, item: 'styrkedryck', count: 2 },
+    reward: { stars: 2, item: 'styrkedryck', count: 2 },
   },
   {
     id: 'saga_guldbagge',
@@ -1736,7 +1723,7 @@ export const SAGA_QUESTS: SagaQuest[] = [
     kind: 'kill',
     target: 'guldbagge',
     count: 8,
-    reward: { coins: 110, stars: 2 },
+    reward: { stars: 2 },
   },
   {
     id: 'saga_krabbklo',
@@ -1751,7 +1738,7 @@ export const SAGA_QUESTS: SagaQuest[] = [
     count: 5,
     from: ['jattekrabba'],
     chance: 0.6,
-    reward: { coins: 120, stars: 2, item: 'healing_potion', count: 3 },
+    reward: { stars: 2, item: 'healing_potion', count: 3 },
   },
   {
     id: 'saga_sjodraug',
@@ -1764,7 +1751,7 @@ export const SAGA_QUESTS: SagaQuest[] = [
     kind: 'kill',
     target: 'sjodraug',
     count: 8,
-    reward: { coins: 120, stars: 2 },
+    reward: { stars: 2 },
   },
   {
     id: 'saga_alvdagg',
@@ -1779,7 +1766,7 @@ export const SAGA_QUESTS: SagaQuest[] = [
     count: 5,
     from: ['skuggalv'],
     chance: 0.6,
-    reward: { coins: 130, stars: 3 },
+    reward: { stars: 3 },
   },
   {
     id: 'saga_spindlar',
@@ -1792,7 +1779,7 @@ export const SAGA_QUESTS: SagaQuest[] = [
     kind: 'kill',
     target: 'jattespindel',
     count: 6,
-    reward: { coins: 130, stars: 3, item: 'styrkedryck', count: 2 },
+    reward: { stars: 3, item: 'styrkedryck', count: 2 },
   },
   {
     id: 'saga_ulvtand',
@@ -1807,7 +1794,7 @@ export const SAGA_QUESTS: SagaQuest[] = [
     count: 5,
     from: ['ulv'],
     chance: 0.6,
-    reward: { coins: 140, stars: 3, item: 'healing_potion', count: 3 },
+    reward: { stars: 3, item: 'healing_potion', count: 3 },
   },
   {
     id: 'saga_rimtroll',
@@ -1820,7 +1807,7 @@ export const SAGA_QUESTS: SagaQuest[] = [
     kind: 'kill',
     target: 'rimtroll',
     count: 5,
-    reward: { coins: 140, stars: 3, item: 'styrkedryck', count: 3 },
+    reward: { stars: 3, item: 'styrkedryck', count: 3 },
   },
   {
     id: 'saga_bifrost',
@@ -1835,7 +1822,7 @@ export const SAGA_QUESTS: SagaQuest[] = [
     count: 5,
     from: ['skelett', 'isvarg', 'eldhund', 'gengangare'],
     chance: 0.4,
-    reward: { coins: 150, stars: 3 },
+    reward: { stars: 3 },
   },
   {
     id: 'saga_salt',
@@ -1848,7 +1835,7 @@ export const SAGA_QUESTS: SagaQuest[] = [
     kind: 'kill',
     target: 'lokesskugga',
     count: 1,
-    reward: { coins: 150, stars: 3, item: 'healing_potion', count: 3 },
+    reward: { stars: 3, item: 'healing_potion', count: 3 },
   },
 ];
 export const sagaQuest = (id: string): SagaQuest | undefined => SAGA_QUESTS.find((q) => q.id === id);
@@ -2062,14 +2049,12 @@ export interface RunBuffs {
   /** A fallen friend gets up this much sooner (a fraction off DOWN_MS), and a revive gives this much more health. */
   down: number;
   reviveHp: number;
-  /** More coins from the chests of a run. */
-  coins: number;
   /** The hero's path (paths.ts): what it changes in each spell, and the traits that are not a spell's. Empty before a path is chosen. */
   mods: Record<string, SpellMod>;
   traits: PathTraits;
 }
 
-export const noBuffs = (): RunBuffs => ({ power: 0, spell: {}, cd: 0, spellCd: {}, hp: 0, armor: 0, taken: 0, heal: 0, potion: 0, regen: 0, rest: 0, threat: 0, leech: 0, crit: 0, down: 0, reviveHp: 0, coins: 0, mods: {}, traits: {} });
+export const noBuffs = (): RunBuffs => ({ power: 0, spell: {}, cd: 0, spellCd: {}, hp: 0, armor: 0, taken: 0, heal: 0, potion: 0, regen: 0, rest: 0, threat: 0, leech: 0, crit: 0, down: 0, reviveHp: 0, mods: {}, traits: {} });
 
 /**
  * What a path (väg, paths.ts) does to one spell, all optional. The spell system reads these generically, so a path is data: numbers
@@ -2140,7 +2125,7 @@ export interface SagaRunLink {
   buffs: Record<string, RunBuffs>;
   /** The line under "Alla föll…" (a run ends there instead of getting up). */
   wipeSub: string;
-  /** Lätt (GAME2.md 5.3): the boss's warnings last this much longer (a multiplier; left out, 1). */
+  /** Lätt (DESIGN.md 5.3): the boss's warnings last this much longer (a multiplier; left out, 1). */
   warnMul?: number;
   /** Lätt: 0.6 for everything the boss calls in (phase adds, summons, the ice and web blocks); left out on Vanlig. */
   levelHp?: number;

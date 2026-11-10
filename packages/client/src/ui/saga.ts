@@ -15,7 +15,6 @@ import {
   FRIEND_KINDS,
   DUNGEONS,
   DUNGEON_IDS,
-  LANDMARKS,
   LEVEL_REWARDS,
   MAX_LEVEL,
   MAX_HEARTS,
@@ -33,16 +32,9 @@ import {
   areaName,
   chapterDone,
   combatDef,
-  countItem,
-  fieldCount,
-  fighterMax,
   fmt,
-  gearOf,
-  gearSlotOf,
   heroLevel,
-  isBathKey,
   isSagaKey,
-  hasLooks,
   LOOK_T,
   LOOK_TIER_NAMES,
   encodeLook,
@@ -50,10 +42,7 @@ import {
   setsOf,
   wearableBy,
   itemName,
-  landmarkKind,
   levelSpan,
-  placeEmoji,
-  placeName,
   previousDungeon,
   questCount,
   questState,
@@ -63,12 +52,9 @@ import {
   sagaItem,
   type Change,
   type ClassId,
-  type GearSlot,
-  type PlayerState,
   type Rarity,
-  type SagaItemDef,
   type SagaQuest,
-} from '@lilla-garden/shared';
+} from '@varldstradet/shared';
 import { getArt, portraitUrl } from '@art/textures.ts';
 import { net } from '../net.ts';
 import {
@@ -215,8 +201,8 @@ function levelSub(c: BannerChange): HTMLElement {
   const pic = r?.item ? itemIcon(r.item) : r?.title ? h('span', { class: 'em' }, '👑') : r?.aura ? h('span', { class: 'em' }, r.aura === 2 ? '🌈' : '✨') : null;
   return h('div', { class: 'sub reward' }, pic ? h('span', { class: 'pic' }, pic) : null, h('span', null, c.sub ?? ''));
 }
-const rewardText = (r: { coins: number; stars: number; item?: string; count?: number; title?: string }): string =>
-  [`+${r.coins} ${T.coins}`, `+${r.stars} ⭐`, r.item ? `${itemName(r.item)}${(r.count ?? 1) > 1 ? ` × ${r.count}` : ''}` : '', r.title ? `👑 ${r.title}` : ''].filter(Boolean).join(' · ');
+const rewardText = (r: { stars: number; item?: string; count?: number; title?: string }): string =>
+  [`+${r.stars} ⭐`, r.item ? `${itemName(r.item)}${(r.count ?? 1) > 1 ? ` × ${r.count}` : ''}` : '', r.title ? `👑 ${r.title}` : ''].filter(Boolean).join(' · ');
 
 /** The experience bar: how far into this level, and the experience needed for the next. */
 function xpMeter(xp: number): HTMLElement {
@@ -244,16 +230,6 @@ function rewardParts(level: number): HTMLElement[] {
 // Upptäcktsboken: the landmarks of the wild maps
 // ---------------------------------------------------------------------------
 
-const lmPics = new Map<string, string>();
-/** A landmark's picture as it stands in the world (its first frame), for the journal. */
-function landmarkPic(id: string): HTMLElement {
-  let url = lmPics.get(id);
-  if (url === undefined) {
-    url = getArt().objects[landmarkKind(id)]?.frames[0]?.dataUrl() ?? '';
-    lmPics.set(id, url);
-  }
-  return url ? h('img', { src: url, alt: '', draggable: 'false' }) : h('span', { class: 'em' }, '🧭');
-}
 /** "4:07" from milliseconds. */
 const clock = (ms: number): string => {
   const sec = Math.max(0, Math.round(ms / 1000));
@@ -262,31 +238,7 @@ const clock = (ms: number): string => {
 
 /** Where someone is, for the family list. */
 function placeOf(area: string): string {
-  if (area === 'farm' || area === 'dungeon' || isBathKey(area)) return areaName(area);
-  if (isSagaKey(area)) return `⚔️ ${areaName(area)}`;
-  const biome = client.biomes[area] ?? client.areas[area]?.biome;
-  return `${placeEmoji(biome)} ${placeName(biome)}`;
-}
-
-/**
- * A chapter of Act II in its parts, for the tracker and the journal: the task out in the world ("🗡️ Jaga bort 6
- * mosspökar…: 2/6") and the dungeon. Empty for a chapter with only one part (its goal line says it all).
- */
-function chapterParts(index: number): { text: string; done: boolean }[] {
-  const ch = SAGA_CHAPTERS[index];
-  const prog = readProgress(myPlayer());
-  if (!ch?.field) return [];
-  const parts: { text: string; done: boolean }[] = [];
-  const n = Math.min(ch.field.count, index === prog.chapter ? fieldCount(prog) : ch.field.count);
-  const fieldDone = n >= ch.field.count;
-  parts.push({ text: fieldDone ? fmt(T.sagaFieldDone, { text: ch.field.text }) : `🗡️ ${fmt(T.sagaFieldProgress, { text: ch.field.text, n, count: ch.field.count })}`, done: fieldDone });
-  if (ch.dungeon) {
-    const d = DUNGEONS[ch.dungeon];
-    const done = prog.cleared.includes(ch.dungeon);
-    const boss = SAGA_BOSSES[d.boss]?.name ?? d.boss;
-    parts.push({ text: `${done ? '✅' : '⚔️'} ${fmt(T.sagaDungeonLine, { boss, dungeon: d.name })}`, done });
-  }
-  return parts;
+  return isSagaKey(area) ? `⚔️ ${areaName(area)}` : areaName(area);
 }
 
 // ---------------------------------------------------------------------------
@@ -425,24 +377,24 @@ export class SagaUi {
       this.renderTracker();
     });
     // the gamepad's face buttons (ui/gamepad.ts): a spell, or its card while the explain mode is on
-    document.addEventListener('lilla:spell', (e) => this.padPress((e as CustomEvent<number>).detail));
-    document.addEventListener('lilla:explain', () => this.setExplain(!cards.mode));
-    document.addEventListener('lilla:device', () => this.refreshLabels());
+    document.addEventListener('vt:spell', (e) => this.padPress((e as CustomEvent<number>).detail));
+    document.addEventListener('vt:explain', () => this.setExplain(!cards.mode));
+    document.addEventListener('vt:device', () => this.refreshLabels());
     // the family list sits with the chat button
     const fam = h('div', { class: 'round small', title: T.familyBtn }, '👪');
     onTap(fam, () => this.open('family'));
     social.append(fam);
 
     // the gear window: the HUD's ⚔️ button and the gamepad's Select ask for it
-    document.addEventListener('lilla:gear', () => {
+    document.addEventListener('vt:gear', () => {
       this.openLooks();
     });
     // the journal's level page: the HUD's level chip asks for it
-    document.addEventListener('lilla:journal', () => this.open('journal'));
+    document.addEventListener('vt:journal', () => this.open('journal'));
     // Smed-Stina's window (ui/menus.ts) opens the wardrobe on the sets tab with a line about collecting them
-    document.addEventListener('lilla:sets', () => this.openLooks(null, { tab: 'set', note: LOOK_T.stinaLine }));
-    document.addEventListener('lilla:looks-arch', () => this.openLooks());
-    document.addEventListener('lilla:pet-gear', () => this.openLooks(null, { tab: 'pet' })); // (the kennel's and the pet button's way in)
+    document.addEventListener('vt:sets', () => this.openLooks(null, { tab: 'set', note: LOOK_T.stinaLine }));
+    document.addEventListener('vt:looks-arch', () => this.openLooks());
+    document.addEventListener('vt:pet-gear', () => this.openLooks(null, { tab: 'pet' })); // (the kennel's and the pet button's way in)
     bus.on('open', (c) => {
       if (c.ui === 'sagaClass') this.open('class');
       else if (c.ui === 'saga') this.open('volva');
@@ -493,12 +445,12 @@ export class SagaUi {
     if (fightMode() && /^[1-8]$/.test(e.key)) {
       if (this.menus.isOpen()) return true;
       // (the spell bar decides: it goes off, or while the explain mode is on its card comes up)
-      if (e.key <= '5') document.dispatchEvent(new CustomEvent('lilla:spell', { detail: Number(e.key) - 1 }));
+      if (e.key <= '5') document.dispatchEvent(new CustomEvent('vt:spell', { detail: Number(e.key) - 1 }));
       return true;
     }
     // ? is the explain mode (the ❔ button); then 1-5 read a spell instead of casting it
     if (fightMode() && e.key === '?' && !this.menus.isOpen()) {
-      document.dispatchEvent(new Event('lilla:explain'));
+      document.dispatchEvent(new Event('vt:explain'));
       return true;
     }
     if (this.menus.isOpen()) return false;
@@ -905,9 +857,7 @@ export class SagaUi {
     this.bannerBusy = true;
     document.body.classList.add('saga-banner-on');
     const kind = c.kind ?? 'enter';
-    // a landmark found: its picture over the words, and a little longer to read its story
-    const lm = kind === 'reward' ? Object.keys(LANDMARKS).find((id) => c.text.includes(LANDMARKS[id]!.name)) : undefined;
-    const el = h('div', { class: `saga-banner ${kind}${lm ? ' landmark' : ''}` }, lm ? h('div', { class: 'lm-pic' }, landmarkPic(lm)) : null, h('div', { class: 'big' }, c.text), c.sub ? (kind === 'level' ? levelSub(c) : h('div', { class: 'sub' }, c.sub)) : null);
+    const el = h('div', { class: `saga-banner ${kind}` }, h('div', { class: 'big' }, c.text), c.sub ? (kind === 'level' ? levelSub(c) : h('div', { class: 'sub' }, c.sub)) : null);
     this.banners.append(el);
     if (kind === 'boss' || kind === 'cleared') {
       this.confetti(kind === 'cleared' ? 90 : 55, true);
@@ -925,7 +875,7 @@ export class SagaUi {
       this.sparkles(30);
     } else if (kind === 'rest') SAGA_SFX.calm();
     else SAGA_SFX.banner();
-    const ms = kind === 'cleared' || lm ? 5200 : kind === 'boss' || kind === 'reward' || kind === 'enter' || kind === 'chapter' || kind === 'level' ? 4300 : 3200;
+    const ms = kind === 'cleared' ? 5200 : kind === 'boss' || kind === 'reward' || kind === 'enter' || kind === 'chapter' || kind === 'level' ? 4300 : 3200;
     setTimeout(() => el.classList.add('out'), ms - 600);
     setTimeout(() => {
       el.remove();
@@ -1025,12 +975,8 @@ export class SagaUi {
     if (!this.trackerOpen) return;
     const ch = SAGA_CHAPTERS[prog.chapter];
     if (ch) {
-      const parts = prog.heard && !chapterDone(prog) ? chapterParts(prog.chapter) : [];
-      if (parts.length) for (const p of parts) this.tracker.append(h('div', { class: `line${p.done ? ' done' : ''}` }, p.text));
-      else {
-        const line = !prog.heard ? T.sagaVisitVolva : chapterDone(prog) ? T.sagaBackToVolva : ch.goal;
-        this.tracker.append(h('div', { class: `line${prog.heard && chapterDone(prog) ? ' done' : ''}` }, `${prog.heard ? '🎯' : '❗'} ${line}`));
-      }
+      const line = !prog.heard ? T.sagaVisitVolva : chapterDone(prog) ? T.sagaBackToVolva : ch.goal;
+      this.tracker.append(h('div', { class: `line${prog.heard && chapterDone(prog) ? ' done' : ''}` }, `${prog.heard ? '🎯' : '❗'} ${line}`));
     }
     for (const q of SAGA_QUESTS) {
       const st = questState(me, q);
@@ -1247,14 +1193,13 @@ export class SagaUi {
       if (i === ACT_TWO) chapters.append(h('div', { class: 'act' }, `🌀 ${T.sagaActTwo}`));
       const done = i < prog.chapter;
       const name = i === 0 ? ch.title : fmt(T.sagaChapter, { n: i, title: ch.title });
-      const parts = !done && prog.heard ? chapterParts(i) : [];
       const need = h('span', { class: 'need' }, done ? ch.done[0]! : prog.heard ? ch.goal : T.sagaVisitVolva);
       chapters.append(
         h(
           'div',
           { class: `row${done ? ' done' : ''}` },
           h('span', { class: 'badge' }, done ? '✅' : '📜'),
-          h('span', { class: 'name' }, name, h('br'), need, ...parts.map((p) => h('span', { class: `part${p.done ? ' done' : ''}` }, p.text))),
+          h('span', { class: 'name' }, name, h('br'), need),
           done ? null : h('span', { class: 'price' }, T.sagaChapterNow),
         ),
       );
@@ -1391,7 +1336,7 @@ export class SagaUi {
       }
       for (const t of lk.titles) rows.append(h('div', { class: 'loot title' }, h('span', { class: 'pic' }, h('span', { class: 'em' }, '👑')), h('div', { class: 'col' }, h('b', { class: 'nm' }, fmt(LOOK_T.lootTitle, { title: t })))));
     }
-    if (c.coins > 0 || c.stars > 0) rows.append(h('div', { class: 'loot coins' }, h('span', { class: 'pic' }, h('span', { class: 'em' }, '🪙')), h('b', null, `+${c.coins} ${T.coins}`), c.stars ? h('b', { class: 'stars' }, `+${c.stars} ⭐`) : null));
+    if (c.stars > 0) rows.append(h('div', { class: 'loot coins' }, h('span', { class: 'pic' }, h('span', { class: 'em' }, '⭐')), h('b', { class: 'stars' }, `+${c.stars} ⭐`)));
     const rar = RARITY_ORDER[best]!;
     // the day's second (and later) chest from a boss: a plainer one, no rays and no fireworks
     const replay = !!c.replay;

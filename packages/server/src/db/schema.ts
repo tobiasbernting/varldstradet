@@ -1,5 +1,5 @@
 import { integer, jsonb, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
-import type { AnimalState, CropState, DropState, PlayerState, Terrain, WorldObject, WorldState } from '../../../shared/src/index.ts';
+import type { AnimalState, DropState, PlayerState, Terrain, WorldObject, WorldState } from '../../../shared/src/index.ts';
 
 /** Single row (id = 1) with the world-wide state. */
 export const world = pgTable('world', {
@@ -23,11 +23,6 @@ export const objects = pgTable('objects', {
   data: jsonb('data').$type<WorldObject>().notNull(),
 });
 
-export const crops = pgTable('crops', {
-  k: text('k').primaryKey(),
-  data: jsonb('data').$type<CropState>().notNull(),
-});
-
 export const animals = pgTable('animals', {
   id: integer('id').primaryKey(),
   species: text('species').notNull(),
@@ -47,10 +42,9 @@ export const settings = pgTable('settings', {
   value: text('value').notNull(),
 });
 
-/** Generated overworld areas that have been visited (full state as JSON). */
+/** Maps other than the lobby that are kept: the players' houses (full state as JSON). */
 export const areas = pgTable('areas', {
   key: text('key').primaryKey(),
-  biome: text('biome').notNull(),
   data: jsonb('data').$type<WorldState>().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

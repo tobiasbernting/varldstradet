@@ -243,163 +243,6 @@ describe('the characters on the parent page', () => {
   });
 });
 
-describe('a native client (bearer token)', () => {
-  // its own server: the wrong-code test locks code entry for this address
-  let g: Game;
-  let a: Access;
-  let srv: http.Server;
-  let h = '';
-  let b = '';
-  beforeAll(async () => {
-    g = new Game(new MemoryStore(), { autoStart: false });
-    await g.start();
-    a = new Access(new MemoryAccessStore(), { parentPassword: PW });
-    await a.load();
-    srv = createServer(g, { clientDist: null, seasonEnv: undefined, access: a });
-    await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
-    h = `127.0.0.1:${(srv.address() as AddressInfo).port}`;
-    b = `http://${h}`;
-  });
-  afterAll(() => {
-    srv.closeAllConnections();
-    srv.close();
-  });
-
-  const parentCode = async (opts: Record<string, string>): Promise<{ parent: string; code: string }> => {
-    const parent = cookieFrom(await fetch(`${b}/admin/login`, { method: 'POST', redirect: 'manual', headers: { origin: b }, body: new URLSearchParams({ password: PW }) }));
-    await fetch(`${b}/admin/access/invite`, { method: 'POST', redirect: 'manual', headers: { cookie: parent, origin: b }, body: new URLSearchParams(opts) });
-    const page = await (await fetch(`${b}/admin`, { headers: { cookie: parent } })).text();
-    return { parent, code: /class="code">([A-Z2-9]{4}-[A-Z2-9]{4})</.exec(page)![1]! };
-  };
-  const admin = (parent: string, path: string, form: Record<string, string>) =>
-    fetch(`${b}/admin/access/${path}`, { method: 'POST', redirect: 'manual', headers: { cookie: parent, origin: b }, body: new URLSearchParams(form) });
-  /** Like the Godot client: JSON, a bearer header when it has a token, and never an Origin or a cookie. */
-  const api = (path: string, init: { method?: string; token?: string; body?: unknown } = {}) =>
-    fetch(`${b}${path}`, {
-      method: init.method ?? 'GET',
-      redirect: 'manual',
-      headers: { ...(init.token ? { authorization: `Bearer ${init.token}` } : {}), ...(init.body !== undefined ? { 'content-type': 'application/json' } : {}) },
-      ...(init.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
-    });
-  const socket = (headers: Record<string, string>): Promise<{ ws: WebSocket; closed: Promise<number> } | { refused: number }> =>
-    new Promise((resolve) => {
-      const ws = new WebSocket(`ws://${h}/ws`, { headers });
-      ws.on('unexpected-response', (_req, res) => resolve({ refused: res.statusCode ?? 0 }));
-      ws.on('open', () => resolve({ ws, closed: new Promise((r) => ws.on('close', (code) => r(code))) }));
-      ws.on('error', () => {});
-    });
-
-  it('joins with an auto code, gets the token in the body and no cookie, and plays over the socket until paused', async () => {
-    const { parent, code } = await parentCode({ label: 'Pappas dator', kind: 'family', hours: '24', newPlayers: '0', approval: 'auto' });
-    const joined = await api('/api/join', { method: 'POST', body: { code: code.toLowerCase(), name: 'MacBook' } });
-    expect(joined.status).toBe(200);
-    expect(joined.headers.getSetCookie()).toEqual([]);
-    const j = (await joined.json()) as { gate: string; token: string; name: string; kind: string; pending?: string };
-    expect(j).toMatchObject({ gate: 'ok', name: 'MacBook', kind: 'family' });
-    expect(j.pending).toBeUndefined();
-    expect(j.token).toMatch(/^[A-Za-z0-9_-]{40,}$/);
-    // only the hash is stored
-    expect(a.approved().some((d) => d.tokenHash === j.token)).toBe(false);
-    expect(a.deviceFor(j.token)?.name).toBe('MacBook');
-
-    // the bearer works on the JSON routes, with no Origin header at all
-    expect(await (await api('/api/gate', { token: j.token })).json()).toMatchObject({ gate: 'ok', name: 'MacBook', kind: 'family', canCreate: true });
-    expect(await (await api('/api/me', { token: j.token })).json()).toMatchObject({ gate: 'ok' });
-    expect((await api('/api/players')).status).toBe(403);
-    expect((await api('/api/players', { token: 'not-a-token' })).status).toBe(403);
-    expect((await api('/api/players', { token: j.token })).status).toBe(200);
-    const created = await api('/api/players', { method: 'POST', token: j.token, body: { name: 'Pappa' } });
-    expect(created.status).toBe(201);
-    const pappa = (await created.json()) as { id: string };
-    expect(((await (await api('/api/players', { token: j.token })).json()) as { id: string }[]).map((p) => p.id)).toContain(pappa.id);
-    // a browser with the same bearer but from another site is still refused (the browser rules are unchanged)
-    expect((await fetch(`${b}/api/players`, { method: 'POST', headers: { authorization: `Bearer ${j.token}`, origin: 'https://evil.example', 'content-type': 'application/json' }, body: '{"name":"x"}' })).status).toBe(403);
-
-    // the parent page never takes a bearer: not a device's, not a parent session's
-    expect((await api('/admin', { token: j.token })).headers.get('location')).toBe('/admin/login');
-    const session = parent.replace(/^vt_parent=/, '');
-    expect((await api('/admin', { token: session })).headers.get('location')).toBe('/admin/login');
-    expect((await api('/admin/skipday', { method: 'POST', token: session })).status).toBe(401);
-    expect((await api('/admin/access/mode', { method: 'POST', token: session, body: { mode: 'closed' } })).status).toBe(401);
-    expect(a.settings.mode).toBe('family');
-
-    // the socket: bearer on the upgrade, no Origin; the header wins over a cookie
-    expect(await socket({})).toEqual({ refused: 403 });
-    expect(await socket({ authorization: 'Bearer nope', cookie: `vt_device=${j.token}` })).toEqual({ refused: 403 });
-    expect(await socket({ authorization: `Bearer ${j.token}`, origin: 'https://evil.example' })).toEqual({ refused: 403 });
-    const s = await socket({ authorization: `Bearer ${j.token}` });
-    if (!('ws' in s)) throw new Error('refused');
-    const welcomed = new Promise<void>((r) => s.ws.on('message', (d) => String(d).includes('"welcome"') && r()));
-    s.ws.send(JSON.stringify({ t: 'hello', playerId: pappa.id }));
-    await welcomed;
-    expect(g.onlinePlayers()).toEqual(['Pappa']);
-    // the parent pauses the device: the 4003 close reaches the native client too
-    await admin(parent, 'pause', { id: a.deviceFor(j.token)!.id, paused: '1' });
-    expect(await s.closed).toBe(4003);
-    expect(await (await api('/api/gate', { token: j.token })).json()).toMatchObject({ gate: 'paused' });
-    expect(await socket({ authorization: `Bearer ${j.token}` })).toEqual({ refused: 403 });
-    // outside the play hours the gate says when the farm opens (the client has no gate page to show)
-    await admin(parent, 'pause', { id: a.deviceFor(j.token)!.id, paused: '0' });
-    await admin(parent, 'hours', { from: '03:00', to: '03:01' });
-    expect(await (await api('/api/gate', { token: j.token })).json()).toMatchObject({ gate: 'hours', hours: { from: '03:00', to: '03:01' } });
-    await admin(parent, 'hours', { from: '', to: '' });
-    expect(await (await api('/api/gate', { token: j.token })).json()).toMatchObject({ gate: 'ok' });
-  });
-
-  it('joins with a parent-approval code, shows the 6-digit number and waits on /api/gate', async () => {
-    const { parent, code } = await parentCode({ label: 'Kusin Anna', kind: 'guest', hours: '24', newPlayers: '1', approval: 'parent' });
-    await admin(parent, 'mode', { mode: 'open' });
-    const joined = await api('/api/join', { method: 'POST', body: { code } });
-    expect(joined.status).toBe(200);
-    expect(joined.headers.getSetCookie()).toEqual([]);
-    const j = (await joined.json()) as { gate: string; token: string; name: string; kind: string; pending?: string };
-    expect(j).toMatchObject({ gate: 'pending', name: 'Kusin Anna', kind: 'guest' }); // no name given: the code's label
-    expect(j.pending).toMatch(/^\d{6}$/);
-    expect(a.pending()[0]!.code).toBe(j.pending);
-
-    // while waiting: the gate says so, nothing else opens
-    const waiting = await api('/api/gate', { token: j.token });
-    expect(waiting.status).toBe(403);
-    expect(await waiting.json()).toMatchObject({ gate: 'pending', name: 'Kusin Anna', canCreate: false });
-    expect((await api('/api/players', { token: j.token })).status).toBe(403);
-    expect(await socket({ authorization: `Bearer ${j.token}` })).toEqual({ refused: 403 });
-    // the code is spent
-    expect((await api('/api/join', { method: 'POST', body: { code, name: 'Någon annan' } })).status).toBe(403);
-
-    await admin(parent, 'approve', { id: a.pending()[0]!.id });
-    const ok = await api('/api/gate', { token: j.token });
-    expect(ok.status).toBe(200);
-    expect(await ok.json()).toMatchObject({ gate: 'ok', kind: 'guest', canCreate: true });
-    expect(await (await api('/api/players', { token: j.token })).json()).toEqual([]);
-    const s = await socket({ authorization: `Bearer ${j.token}` });
-    expect('ws' in s).toBe(true);
-    if ('ws' in s) s.ws.close();
-  });
-
-  it('answers bad requests with JSON, and locks code entry after too many wrong codes', async () => {
-    expect(await (await api('/api/join', { method: 'GET' })).json()).toEqual({ gate: 'unknown' }); // only POST joins; GET is just an unknown device at the gate
-    const junk = await fetch(`${b}/api/join`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{not json' });
-    expect(junk.status).toBe(400);
-    expect(await junk.json()).toEqual({ error: 'json' });
-    const { code } = await parentCode({ label: 'Sent', kind: 'family', hours: '24', newPlayers: '0', approval: 'auto' });
-    // 10 wrong codes per address lock it (the spent code above already counted as one)
-    let wrong = 0;
-    for (;;) {
-      const r = await api('/api/join', { method: 'POST', body: { code: `WRONG-${wrong}` } });
-      if (r.status === 429) break;
-      expect(r.status).toBe(403);
-      expect(await r.json()).toEqual({ error: 'invalid' });
-      expect(++wrong).toBeLessThanOrEqual(10);
-    }
-    expect(wrong).toBeGreaterThanOrEqual(9);
-    const locked = await api('/api/join', { method: 'POST', body: { code } });
-    expect(locked.status).toBe(429);
-    expect(await locked.json()).toEqual({ error: 'limit' });
-    // the same lock holds the browser route (shared limiter)
-    expect((await fetch(`${b}/join`, { method: 'POST', redirect: 'manual', headers: { origin: b }, body: new URLSearchParams({ code }) })).status).toBe(429);
-  });
-});
-
 describe('a separate parent server', () => {
   it('serves the parent page only on its own port, and the game only on the public one', async () => {
     const g = new Game(new MemoryStore(), { autoStart: false });
@@ -456,11 +299,11 @@ describe('ntfy', () => {
     });
     await new Promise<void>((r) => ntfy.listen(0, '127.0.0.1', r));
     try {
-      const notify = ntfyNotifier(`http://127.0.0.1:${(ntfy.address() as AddressInfo).port}/lilla-garden`, 'tk_secret');
+      const notify = ntfyNotifier(`http://127.0.0.1:${(ntfy.address() as AddressInfo).port}/varldstradet`, 'tk_secret');
       notify({ at: 0, event: 'mode', detail: 'not interesting', ip: 'x' });
       notify({ at: 0, event: 'join', detail: 'Kalles iPad kom in med koden för Kalle', ip: '1.2.3.4' });
       await vi.waitFor(() => expect(got).toHaveLength(1));
-      expect(got[0]).toMatchObject({ auth: 'Bearer tk_secret', topic: 'lilla-garden', title: 'Någon kom in i Världsträdet', message: 'Kalles iPad kom in med koden för Kalle\n1.2.3.4' });
+      expect(got[0]).toMatchObject({ auth: 'Bearer tk_secret', topic: 'varldstradet', title: 'Någon kom in i Världsträdet', message: 'Kalles iPad kom in med koden för Kalle\n1.2.3.4' });
     } finally {
       ntfy.close();
     }

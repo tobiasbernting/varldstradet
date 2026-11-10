@@ -1,6 +1,6 @@
 // A bot party that plays a whole run on a farm (for run.test.ts and the tuning of the numbers): families of one to four
 // fighters, careful or clumsy, starting at the färdport and playing until the run is over. Not part of the game.
-import { addObject } from './map.ts';
+
 import { addItem } from './inventory.ts';
 import { mulberry32 } from './rng.ts';
 import { CLASSES, XP_LEVELS, newSagaProgress, type ClassId } from './saga.ts';
@@ -26,15 +26,9 @@ export interface Party {
 }
 
 /** A farm with the arch, and `classes.length` heroes of `level` in the starter set standing in front of it. */
-export function makeParty(classes: ClassId[], opts: { level?: number; style?: BotStyle; seed?: number; longhall?: boolean; lane?: 'safe' | 'random'; pet?: string | string[] } = {}): Party {
+export function makeParty(classes: ClassId[], opts: { level?: number; style?: BotStyle; seed?: number; lane?: 'safe' | 'random'; pet?: string | string[] } = {}): Party {
   const world = generateWorld(opts.seed ?? 7);
   ensureRunPlaces(world);
-  if (opts.longhall) {
-    const f = archFrontOf(world);
-    // the longhall (the fourth place and the hired companion) beside the arch, wherever it fits
-    for (let r = 4; r < 30 && !Object.values(world.objects).some((o) => o.kind === 'longhall'); r++)
-      for (let dx = -r; dx <= r; dx++) addObject(world, 'longhall', f.x + dx, f.y + r);
-  }
   const party: Party = { world, players: [], minds: new Map(), now: 1_000_000, rnd: mulberry32((opts.seed ?? 7) * 31 + 5), ctx: () => ({ season: 'none', now: party.now, rnd: party.rnd }) };
   const front = archFrontOf(world);
   classes.forEach((cls, i) => {

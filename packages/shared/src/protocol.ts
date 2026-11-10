@@ -1,7 +1,6 @@
 import type {
   AnimalState,
   Appearance,
-  CropState,
   DropState,
   Facing,
   Outfit,
@@ -32,7 +31,6 @@ export interface LootLooks {
 
 export type Change =
   | { t: 'terrain'; x: number; y: number; terrain: Terrain; area?: string }
-  | { t: 'crop'; k: string; crop: CropState | null; area?: string }
   | { t: 'object'; id: number; obj: WorldObject | null; area?: string }
   | { t: 'animal'; id: number; animal: AnimalState | null; area?: string }
   | { t: 'drop'; id: number; drop: DropState | null; area?: string }
@@ -40,7 +38,7 @@ export type Change =
   | { t: 'player'; id: string; player: PlayerState | null }
   | { t: 'day'; day: number }
   | { t: 'toast'; to: string | null; text: string }
-  | { t: 'open'; to: string; ui: 'looks' | 'chest' | 'catalogue' | 'sell' | 'workbench' | 'wardrobe' | 'nameAnimal' | 'npc' | 'cook' | 'paint' | 'pizzeria' | 'travel' | 'saga' | 'sagaClass' | 'run' | 'seed' | 'houses' | 'kennel'; id?: number; npc?: string }
+  | { t: 'open'; to: string; ui: 'looks' | 'nameAnimal' | 'npc' | 'saga' | 'sagaClass' | 'run' | 'seed' | 'houses' | 'kennel'; id?: number; npc?: string }
   | { t: 'quests'; quests: Quest[] }
   | { t: 'fx'; x: number; y: number; kind: 'heart' | 'sparkle' | 'water' | 'chop' | 'poof' | 'coin' | 'hit' | 'arrow' | 'rocket' | 'boom' | 'splash' | 'lasso' | 'honk'; area?: string; from?: { x: number; y: number } }
   /** 2D game: someone said something. `old` marks history sent to a player who just came online. */
@@ -61,26 +59,24 @@ export type Change =
   | { t: 'banner'; to: string | null; area?: string; text: string; sub?: string; kind?: 'enter' | 'boss' | 'cleared' | 'chapter' | 'reward' | 'rest' | 'wipe' | 'level' }
   /** What a dungeon chest gave you (a loot window in rarity colours). */
   /** A chest's loot for one player; `replay` when it was the smaller replay chest (the full one was taken today). */
-  | { t: 'loot'; to: string; from: string; items: { item: string; count: number }[]; coins: number; stars: number; replay?: true; looks?: LootLooks }
+  | { t: 'loot'; to: string; from: string; items: { item: string; count: number }[]; stars: number; replay?: true; looks?: LootLooks }
   /** The family beat its best time through a dungeon (also on the farm WorldState's sagaBest). */
   | { t: 'sagaBest'; dungeon: DungeonId; best: SagaBest }
   /** Hero experience gained (anywhere): the client floats "+n xp" from where the player stood (pixels; area left out on the farm). */
   | { t: 'xp'; to: string; n: number; x: number; y: number; area?: string }
   /**
-   * Runs (M5b, GAME.md): the run as it is now (`run` null: none), the three cards being voted on (`offer` null: the vote is
+   * Runs (DESIGN.md section 2): the run as it is now (`run` null: none), the three cards being voted on (`offer` null: the vote is
    * over), and how a run ended for one player. `to` null is everyone.
    */
   | { t: 'run'; ev: 'state'; to: string | null; run: RunSnap | null }
   | { t: 'run'; ev: 'offer'; to: string | null; offer: RunOfferSnap | null }
   | { t: 'run'; ev: 'ended'; to: string; outcome: RunOutcome; ms: number; seeds: number; zones: number; runor: string[]; level?: RunLevel; spiritUsed?: number; path?: NodeKind[]; trophy?: string; trophyWhere?: string; silver?: number }
   /** Runs: one player's sagafrön, the nodes they have planted, and how grown the family's tree is (0..4). */
-  | { t: 'seed'; ev: 'tree'; to: string; seeds: number; earned: number; tree: string[]; stage: number }
-  /** Runs: the dishes this player has chosen to bring and how many they may bring. */
-  | { t: 'fardkost'; to: string; items: string[]; slots: number };
+  | { t: 'seed'; ev: 'tree'; to: string; seeds: number; earned: number; tree: string[]; stage: number };
 
-/** A slot in the player's own inventory (chest undefined) or in a chest object. */
+
+/** A slot in the player's own inventory. */
 export interface SlotRef {
-  chest?: number;
   slot: number;
 }
 
@@ -90,19 +86,10 @@ export type ClientMsg =
   | { t: 'act'; tx: number; ty: number }
   | { t: 'select'; slot: number }
   | { t: 'swap'; a: SlotRef; b: SlotRef }
-  | { t: 'sort'; chest?: number }
-  | { t: 'quickStack'; chest: number }
-  | { t: 'craft'; recipe: string }
-  | { t: 'cook'; recipe: string }
-  | { t: 'buy'; item: string; qty: number }
-  | { t: 'sell'; slot: number; qty: number }
+  | { t: 'sort' }
   | { t: 'equip'; slot: 'hat' | 'shirt' | 'pants' | 'shoes'; item: string | null }
   | { t: 'emote'; id: string }
-  | { t: 'honk' }
-  | { t: 'drop'; slot: number; qty: number }
   | { t: 'nameAnimal'; id: number; name: string }
-  | { t: 'quest'; id: string }
-  | { t: 'paint'; pixels: string }
   /** 2D game: tell your pets and horses to stay, or whistle for them. */
   | { t: 'pets'; cmd: 'stay' | 'come' }
   /** The lobby's kennel: take your first pet (free, once): a dog or a cat. */
@@ -142,11 +129,11 @@ export type ClientMsg =
    * if you had walked through its arch; a player without a class becomes a Krigare first. For the native client,
    * which has no world map yet. The server answers `error` when the switch is off. */
   /**
-   * Runs (GAME.md): whoever stands at the färdport starts a run (`replay`: a cleared boss at random instead of the next
-   * chapter's; `companion: false` goes without the hired Hirdmannen; `fardkost`: the dishes to bring; `level`: 0 Mycket lätt, 1 Lätt, 2 Medel (which is also what a message without one means), 3 Svår or 4 Extrem), anyone joins or
+   * Runs (DESIGN.md section 2.6): whoever stands at the färdport starts a run (`replay`: a cleared boss at random instead of the next
+   * chapter's; `companion: false` goes without the hired Hirdmannen; `level`: 0 Mycket lätt, 1 Lätt, 2 Medel (which is also what a message without one means), 3 Svår or 4 Extrem), anyone joins or
    * leaves, the party votes on a card of the offer (`card` is its index 0..2) and may ask for a new offer once.
    */
-  | { t: 'run'; a: 'start'; replay?: boolean; companion?: boolean; fardkost?: string[]; level?: RunLevel; dungeon?: string }
+  | { t: 'run'; a: 'start'; replay?: boolean; companion?: boolean; level?: RunLevel; dungeon?: string }
   | { t: 'run'; a: 'join' }
   | { t: 'run'; a: 'pick'; card: number }
   | { t: 'run'; a: 'reroll' }
@@ -160,12 +147,7 @@ export type ClientMsg =
   /** The Yggdrasil shoot: plant a node of the sagaträd with sagafrön, or ask for the tree's state. */
   | { t: 'seed'; a: 'plant'; node: string }
   | { t: 'seed'; a: 'state' }
-  /** At the färdport: choose the dishes to bring on the run (item ids from the bag; the server takes them when it starts). */
-  | { t: 'fardkost'; items: string[] }
   | { t: 'dev'; a: 'saga'; id: string }
-  /** Development only (same switch): the day rolls over now, as the parent page's "skip day" does, so a check can
-   * wait for a crop to grow. The server answers `error` when the switch is off. */
-  | { t: 'dev'; a: 'nextDay' }
   | { t: 'dev'; a: 'runclear' }
   /** Development only: jump the run to the first unwalked stop of this kind ('shop', 'event', 'rest', 'mini', 'boss', ...) and set the purse. */
   | { t: 'dev'; a: 'runnext'; kind: string; purse?: number }
@@ -179,10 +161,10 @@ export type ClientMsg =
   | { t: 'dev'; a: 'looks'; set?: string; tier?: number; ways?: boolean; cls?: string }
   /** Development only (same switch): every dungeon before the last counts as cleared, so a check can use a later chapter's arch. */
   | { t: 'dev'; a: 'unlock' }
-  /** Development only (same switch): materials and 400 kr for two forge levels and a starter piece, two papers, two buckets of red paint and a run of wall pieces, for a check of the smithy and the paint screen. */
-  | { t: 'dev'; a: 'kit' }
   /** Development only (same switch): record this time (ms) as the family's best through dungeon `id`, by me alone, for a check of the journal. */
   | { t: 'dev'; a: 'sagaBest'; id: string; ms: number }
+  /** Development only (same switch): become hero level `n` (1..20), as if the experience had been won. */
+  | { t: 'dev'; a: 'level'; n: number }
   /** Dev: give pets (`all` or a kind), and put the test gear (a red neckerchief) on the pet or take it off. */
   | { t: 'dev'; a: 'pet'; id: string }
   | { t: 'dev'; a: 'petgear'; tier?: number; set?: string }
@@ -219,8 +201,7 @@ export interface AnimalSnap {
 }
 
 export type ServerMsg =
-  /** `biomes`: the biome of every explored map (for the world map). */
-  | { t: 'welcome'; you: string; world: WorldState; season: Season; now: number; tick: number; biomes?: Record<string, string> }
+  | { t: 'welcome'; you: string; world: WorldState; season: Season; now: number; tick: number }
   | { t: 'state'; timeMs: number; day: number; season: Season; players: PlayerSnap[]; animals: AnimalSnap[]; npcs: NpcSnap[]; now: number; weather?: WeatherState; saga?: Record<string, SagaSnap> }
   | { t: 'changes'; changes: Change[] }
   | { t: 'error'; text: string }

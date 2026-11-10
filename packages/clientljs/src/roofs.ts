@@ -1,5 +1,5 @@
 // Gabled roofs over the rooms players close with wall pieces (the 2D game's look), each painted once into a texture.
-import { findRooms, mapW, TILE, type WorldState } from '@lilla-garden/shared';
+import { findRooms, mapW, TILE, type WorldState } from '@varldstradet/shared';
 import { release, standalone, type Sprite } from './atlas.ts';
 
 export interface Roof {

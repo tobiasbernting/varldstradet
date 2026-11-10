@@ -1,7 +1,7 @@
 // Layered, tintable 16x24 characters: body, hair, shirt, pants, shoes, hat.
 // Directions: down, up, right (left is right flipped). Frames: 0 stand, 1/2 walk.
 import { petLookIcon } from './petlooks.ts';
-import { ITEMS, decodeLook, type Appearance, type DecodedLook, type Facing, type LookSlot, type Outfit } from '@lilla-garden/shared';
+import { ITEMS, decodeLook, type Appearance, type DecodedLook, type Facing, type LookSlot, type Outfit } from '@varldstradet/shared';
 import { SET_STYLES, drawWeapon, decorHat, decorShirt, drawAmulet, drawCloak, drawOffhand, drawShoulders } from './looks.js';
 import { Px, shade } from './px.js';
 import { OUTLINE } from './world.js';
@@ -13,7 +13,6 @@ export type Dir = 'down' | 'up' | 'right';
  * is below it (a glass helmet clips the hair, a frog hat hides the hair's top row).
  */
 export type CharLayer = 'pants' | 'shoes' | 'shirt' | 'hands' | 'shirt_over' | 'head' | 'hair' | 'shirt_shade' | 'head_shade' | 'hat' | 'hat_erase';
-export const CHAR_LAYERS: CharLayer[] = ['pants', 'shoes', 'shirt', 'hands', 'shirt_over', 'head', 'hair', 'shirt_shade', 'head_shade', 'hat'];
 export const DIRS: Dir[] = ['down', 'up', 'right'];
 export const CHAR_W = 16;
 /** Empty rows over the 24-row figure, so tall hats (a wizard's point, horns, wings) fit in the frame. */

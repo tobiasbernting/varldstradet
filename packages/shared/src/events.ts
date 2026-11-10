@@ -1,4 +1,4 @@
-// Händelser (events) and the Köpman (GAME2.md sections 2.5 and 3.4): data and the pure rules. A Händelse is a small glade with a picture, a
+// Händelser (events) and the Köpman (DESIGN.md sections 2.5 and 3.4): data and the pure rules. A Händelse is a small glade with a picture, a
 // story line and two or three choices; the party votes (the same rule as every vote of a run), and what happens is one or more outcomes
 // (Hacksilver, a runa for the whole party, healing, potions, a blessing, a free skärpa, cards for everyone). No choice ever takes health, a runa you
 // hold or progress: a choice may cost Hacksilver, and every event has a free choice. The Köpman sells with the same prices every visit.
@@ -76,7 +76,6 @@ export const EVENTS: EventDef[] = [
     { id: 'bjorn', icon: '🐻', outcome: [{ heal: 1 }] },
   ] },
 ];
-export const EVENT_IDS: readonly string[] = EVENTS.map((e) => e.id);
 export const eventDef = (id: string): EventDef | undefined => EVENTS.find((e) => e.id === id);
 
 /** Which event a stop holds: by the seed and the stop, never one the run has met already (until all ten have been). */
@@ -94,7 +93,7 @@ export const defaultChoice = (e: EventDef): number => Math.max(0, e.choices.find
 // Hacksilver and the Köpman
 // ---------------------------------------------------------------------------
 
-/** Hacksilver from a pack by its size (GAME2.md 3.4: 3 to 6), and from the other stops. */
+/** Hacksilver from a pack by its size (DESIGN.md 3.4: 3 to 6), and from the other stops. */
 export const packSilver = (size: number): number => Math.max(3, Math.min(6, size));
 export const SILVER = { elite: 12, treasure: 20, mini: 40 } as const;
 /** Leftover Hacksilver turns into sagafrön at the end of a run: this many to one. */

@@ -4,16 +4,15 @@
 // on the ground before they land, call helpers at each new phase, and some attacks can be stopped with a
 // stun. Rest stones heal and become where the family gets up after falling. Chests give each player their
 // own loot. Völvan Sigrun tells the saga, the villagers give quests, and anyone can jump to a family member.
-import { ANIMALS, ITEMS, NPCS, VILLAGE_KEY, objectDef } from './data.ts';
-import { MAX_HEARTS } from './dungeon.ts';
-import { isIndoorKey } from './bath.ts';
+import { ITEMS, NPCS } from './data.ts';
+
 import { awardTrophy } from './house.ts';
 import { awardLooks, lookRng, syncLooks } from './looks.ts';
 import { RUN_LEVEL_MEDEL } from './run.ts';
 import { addItem, countItem, removeItem } from './inventory.ts';
 import { addObject, inBounds, mapH, mapW, objectAt, removeObject, tileIndex } from './map.ts';
 import type { Change } from './protocol.ts';
-import { randInt } from './rng.ts';
+
 import {
   CALM_MS,
   CLASSES,
@@ -32,16 +31,16 @@ import {
   fightStats,
   isGearSlot,
   xpLevel,
+  XP_LEVELS,
+  MAX_LEVEL,
   SAGA_BOSSES,
   SAGA_CHAPTERS,
   SAGA_LOOT,
   SAGA_MOBS,
-  SAGA_PORTAL,
   SAGA_QUESTS,
   SAGA_RESET_MS,
   SAGA_TREASURE,
   SPELLS,
-  STONE_SPOT,
   addCount,
   VOLVA_ID,
   WIPE_MS,
@@ -50,14 +49,11 @@ import {
   isDungeonId,
   dungeonOfKey,
   isClassId,
-  isRunKey,
   isSagaKey,
   mobDmgScale,
   mobHpScale,
   newSagaProgress,
   noBuffs,
-  portalFront,
-  previousDungeon,
   sagaItem,
   sagaKey,
   sagaQuest,
@@ -70,7 +66,6 @@ import {
   type SagaProgress,
   type SagaQuest,
   type SagaZone,
-  type SagaBossDef,
   type BossAbility,
   type LevelReward,
   type SagaBest,
@@ -86,20 +81,14 @@ import { runHooks } from './runhooks.ts';
 import { awardPetLooks, giveClearPets, petSoak, rollPetDrops, tickPets } from './petsim.ts';
 import { sagaCheckpoint, spawnSagaMob } from './sagamap.ts';
 import {
-  ATTACK_GAP,
-  animalAt,
-  attackMob,
   bump,
   farmOf,
   fx,
   getArea,
   giveItems,
-  isFarm,
-  isHostile,
   isSolidForAnimal,
   isSolidForPlayer,
   lineOfSight,
-  npcAt,
   npcState,
   openTileNear,
   placeIn,
@@ -107,13 +96,11 @@ import {
   PLAYER_HALF_H,
   PLAYER_HALF_W,
   resolveMove,
-  tagArea,
   toast,
   type SimCtx,
 } from './sim.ts';
-import { isUnderground } from './caves.ts';
 import { RUN_T, T, fmt, fmtDuration, itemName } from './sv.ts';
-import { MAP_H, MAP_W, TILE, type AnimalState, type PlayerState, type WorldObject, type WorldState } from './types.ts';
+import { TILE, type PlayerState, type WorldObject, type WorldState } from './types.ts';
 
 const px = (t: number): number => t * TILE + TILE / 2;
 const tileOf = (v: number): number => Math.floor(v / TILE);
@@ -149,7 +136,6 @@ const buffsOf = (h: Here, id: string): RunBuffs => h.inst.run?.buffs[id] ?? ZERO
 /** Cooldown left after the run's reductions (never below 40 %). */
 const cdOf = (rb: RunBuffs, spellId: string, cd: number): number => cd * (1 - Math.max(-0.5, Math.min(0.6, rb.cd + (rb.spellCd[spellId] ?? 0) + (rb.mods[spellId]?.cd ?? 0))));
 
-
 const upright = (h: Here, p: PlayerState): boolean => {
   const f = h.inst.fighters[p.id];
   return !!f && f.down === undefined;
@@ -177,7 +163,7 @@ const yell = (h: Here, species: string, text: string): Change => ({ t: 'yell', a
 // In and out
 // ---------------------------------------------------------------------------
 
-/** A fighter's full health: gear and level, and in a run the run's hp buff (bit-identical to `fighterMax` without one). */
+/** A fighter's full health: the class's, and in a run the run's hp buff (bit-identical to `fighterMax` without one). */
 function maxHealth(h: Here | undefined, p: PlayerState, cls: ClassId): number {
   const base = fighterMax(p, cls);
   const hp = h ? buffsOf(h, p.id).hp : 0;
@@ -207,17 +193,6 @@ function joined(h: Here, p: PlayerState, out: Change[], greet: boolean): void {
   }
 }
 
-/** Walks into a dungeon through its arch out in the world. */
-export function enterSaga(world: WorldState, p: PlayerState, arch: WorldObject): Change[] {
-  const id = DUNGEON_IDS[arch.variant ?? 0];
-  if (!id) return [];
-  const prog = progressOf(p);
-  if (!prog.cls) return [toast(p.id, T.sagaNeedClass)];
-  const prev = previousDungeon(id);
-  if (prev && !prog.cleared.includes(prev)) return [toast(p.id, fmt(T.sagaLocked, { name: DUNGEONS[id].name, boss: SAGA_BOSSES[DUNGEONS[prev].boss]!.name, prev: DUNGEONS[prev].name }))];
-  return goInto(farmOf(world), p, id, null);
-}
-
 function goInto(farm: WorldState, p: PlayerState, id: DungeonId, at: { x: number; y: number } | null): Change[] {
   const key = sagaKey(id);
   const area = getArea(farm, key);
@@ -239,26 +214,15 @@ export function leaveSaga(world: WorldState, p: PlayerState): Change[] {
   const h = hereOf(world, p);
   if (h) forget(h, p.id);
   const out: Change[] = [];
-  const front = archFront(farm, id);
-  placeIn(farm, p, DUNGEONS[id].portal.area, front.x, front.y, 'down', out);
+  const front = archFront(farm);
+  placeIn(farm, p, 'farm', front.x, front.y, 'down', out);
   return out;
 }
 
-/** The tile in front of a dungeon's arch out in the world (wherever it ended up). */
-export function archFront(farm: WorldState, id: DungeonId): { x: number; y: number } {
-  const plan = DUNGEONS[id].portal;
-  const a = getArea(farm, plan.area);
-  const arch = a ? Object.values(a.objects).find((o) => o.kind === 'saga_portal' && (o.variant ?? 0) === DUNGEON_IDS.indexOf(id)) : undefined;
-  return portalFront(arch ?? (a ? archPlan(a, plan) : plan));
-}
-
-/**
- * Where an arch is planned in its map. The plans are drawn for 64×64 maps; on a bigger map the spot moves out
- * with the map, so the arch keeps its place relative to the middle.
- */
-function archPlan(a: WorldState, plan: { x: number; y: number }): { x: number; y: number } {
-  if (mapW(a) === MAP_W && mapH(a) === MAP_H) return plan;
-  return { x: Math.round((plan.x * mapW(a)) / MAP_W), y: Math.round((plan.y * mapH(a)) / MAP_H) };
+/** The tile in front of the färdport arch in the lobby, where a dungeon sends you back to. */
+export function archFront(farm: WorldState): { x: number; y: number } {
+  const arch = Object.values(farm.objects).find((o) => o.kind === 'fardport');
+  return arch ? { x: arch.x + 1, y: arch.y + 2 } : { x: 15, y: 11 };
 }
 
 /** A player is no longer in the fight: monsters stop chasing them. */
@@ -281,46 +245,18 @@ export function rejoinSaga(world: WorldState, playerId: string): Change[] {
   if (!area?.saga || !p.saga?.cls) {
     // no class any more (or no dungeon): out in front of the arch
     const out: Change[] = [];
-    const front = archFront(farm, id);
-    placeIn(farm, p, DUNGEONS[id].portal.area, front.x, front.y, 'down', out);
+    const front = archFront(farm);
+    placeIn(farm, p, 'farm', front.x, front.y, 'down', out);
     return out;
   }
   delete area.saga.fighters[p.id];
   return goInto(farm, p, id, sagaCheckpoint(area.saga));
 }
 
-/** Jumps to a family member, wherever they are: into their dungeon too (with a class). */
-export function jumpTo(world: WorldState, playerId: string, toId: string): Change[] {
-  const farm = farmOf(world);
-  const p = farm.players[playerId];
-  const q = farm.players[toId];
-  if (!p || !q || p.id === q.id || !q.online || p.sleeping) return [];
-  if (p.area === 'dungeon' || q.area === 'dungeon') return [toast(p.id, T.jumpNo)];
-  // a run's zone is entered at the arch and left by leaving the run, never by a jump
-  if (isRunKey(p.area) || isRunKey(q.area)) return [toast(p.id, T.jumpNo)];
-  const qid = dungeonOfKey(q.area);
-  if (qid && !p.saga?.cls) return [toast(p.id, T.sagaNeedClass)];
-  const leaving = hereOf(world, p);
-  if (leaving && leaving.key !== q.area) forget(leaving, p.id);
-  const area = getArea(farm, q.area);
-  if (!area) return [toast(p.id, T.jumpNo)];
-  const at = openTileNear(area, tileOf(q.x), tileOf(q.y) + 1);
-  const out: Change[] = [];
-  if (qid) {
-    if (leaving && leaving.key === q.area) {
-      warp(leaving, p, at.x, at.y, out);
-      return out;
-    }
-    out.push(...goInto(farm, p, qid, at));
-  } else if (!placeIn(farm, p, q.area, at.x, at.y, q.facing, out)) return [toast(p.id, T.jumpNo)];
-  out.push(toast(p.id, fmt(T.jumpTo, { name: q.name })), toast(q.id, fmt(T.jumpedHere, { name: p.name })), fxOn(q.area, at.x, at.y, 'sparkle'));
-  return out;
-}
-
 /**
  * Development only (the server enables it with DEV_TELEPORT=1): puts a player straight into dungeon `id` from wherever
  * they are, the way its arch would, for a client that cannot walk to the arch yet (the native client has no world map
- * in M3). A player without a class becomes a Krigare first, exactly as Kämpastenen would make them one. The dungeon
+ * yet). A player without a class becomes a Krigare first, exactly as Kämpastenen would make them one. The dungeon
  * comes from the normal path (getArea → generateSaga), so it is the real thing: monsters, gate, rest stones, chests.
  */
 export function devEnterSaga(world: WorldState, playerId: string, id: string): Change[] {
@@ -347,22 +283,6 @@ export function devUnlockChapters(world: WorldState, playerId: string): Change[]
   return [playerChange(p)];
 }
 
-/**
- * Development only (DEV_TELEPORT=1, `dev kit`): what a check of the native client's smithy and paint screen needs in the bag
- * without a day's work to earn it: materials and coins for the first two forge levels (stone, gold, crystal, 400 kr), two
- * papers, two buckets of red paint and a run of wall pieces (two wood, a stone, a door, a window). Everyone, with or without a class.
- */
-export function devKit(world: WorldState, playerId: string): Change[] {
-  const farm = farmOf(world);
-  const p = farm.players[playerId];
-  if (!p) return [];
-  const out: Change[] = [];
-  for (const [id, n] of [['stone', 20], ['gold', 10], ['crystal', 4], ['paper', 2], ['paint_red', 2], ['wall_wood', 2], ['wall_stone', 1], ['door', 1], ['window', 1]] as const) giveItems(farm, p, id, n, out);
-  p.coins += 400;
-  out.push(playerChange(p));
-  return out;
-}
-
 /** Moves a player within the map they are on (blink, charge, getting up, a boss's pull): the client jumps there too. */
 function warp(h: Here | string, p: PlayerState, tx: number, ty: number, out: Change[], exact?: { x: number; y: number }): void {
   p.x = exact?.x ?? px(tx);
@@ -375,60 +295,6 @@ function warp(h: Here | string, p: PlayerState, tx: number, ty: number, out: Cha
 // ---------------------------------------------------------------------------
 // Out in the world: the arches, Kämpastenen, Völvan and the villagers
 // ---------------------------------------------------------------------------
-
-const ARCH_CLEAR = new Set(['tree', 'tree_pine', 'tree_apple', 'tree_snow', 'tree_dead', 'stump', 'rock', 'boulder', 'bush', 'flower', 'grass_tuft', 'mushroom', 'ice_rock', 'snow_rock', 'ash_rock', 'lava_rock', 'reed', 'berry_bush']);
-
-/** Puts a dungeon's arch on its map (and Kämpastenen on the city square) if it is missing. True if something changed. */
-export function ensureSagaPlaces(keyStr: string, a: WorldState): boolean {
-  let changed = false;
-  DUNGEON_IDS.forEach((id, variant) => {
-    const plan = DUNGEONS[id].portal;
-    if (plan.area !== keyStr || Object.values(a.objects).some((o) => o.kind === 'saga_portal' && (o.variant ?? 0) === variant)) return;
-    const spot = archSpot(a, archPlan(a, plan));
-    if (!spot) return;
-    const front = portalFront(spot);
-    // clear the footprint, a tile around it and the path in front: only trees and stones go from the top row
-    for (let dy = -1; dy <= SAGA_PORTAL.h + 1; dy++)
-      for (let dx = -1; dx <= SAGA_PORTAL.w; dx++) {
-        const tx = spot.x + dx;
-        const ty = spot.y + dy;
-        if (!inBounds(a, tx, ty)) continue;
-        const o = objectAt(a, tx, ty);
-        if (o && (dy >= 0 || ARCH_CLEAR.has(o.kind))) removeObject(a, o.id);
-        const t = a.terrain[tileIndex(a, tx, ty)];
-        const solid = t === 'water' || t === 'lava' || t === 'bog' || t === 'basalt' || t === 'rock' || t === 'sandstone' || t === 'choco';
-        if (dy >= 0 && dy < SAGA_PORTAL.h && solid) a.terrain[tileIndex(a, tx, ty)] = 'stone';
-        if (dy >= SAGA_PORTAL.h && (solid || (tx === front.x && dy === SAGA_PORTAL.h))) a.terrain[tileIndex(a, tx, ty)] = 'path_stone';
-      }
-    if (addObject(a, 'saga_portal', spot.x, spot.y, { variant })) changed = true;
-  });
-  if (keyStr === VILLAGE_KEY && !Object.values(a.objects).some((o) => o.kind === 'saga_stone')) {
-    const o = objectAt(a, STONE_SPOT.x, STONE_SPOT.y);
-    if (o && !objectDef(o.kind).interact) removeObject(a, o.id);
-    if (addObject(a, 'saga_stone', STONE_SPOT.x, STONE_SPOT.y)) changed = true;
-  }
-  return changed;
-}
-
-/** The planned spot for an arch, or the closest one with no door, chest, cave or building in the way. */
-function archSpot(a: WorldState, plan: { x: number; y: number }): { x: number; y: number } | null {
-  for (let r = 0; r <= 6; r++)
-    for (let dy = -r; dy <= r; dy++)
-      for (let dx = -r; dx <= r; dx++) {
-        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-        const s = { x: plan.x + dx, y: plan.y + dy };
-        if (s.x < 2 || s.y < 2 || s.x + SAGA_PORTAL.w > mapW(a) - 2 || s.y + SAGA_PORTAL.h + 2 > mapH(a) - 2) continue;
-        let ok = true;
-        for (let ty = s.y - 1; ty <= s.y + SAGA_PORTAL.h + 1 && ok; ty++)
-          for (let tx = s.x - 1; tx <= s.x + SAGA_PORTAL.w && ok; tx++) {
-            const o = objectAt(a, tx, ty);
-            const d = o ? objectDef(o.kind) : undefined;
-            if (o && d && !ARCH_CLEAR.has(o.kind) && (d.interact || d.w > 1 || d.h > 1)) ok = false;
-          }
-        if (ok) return s;
-      }
-  return null;
-}
 
 /** Kämpastenen: picks (or changes) a class. The class's clothes go to the wardrobe and are put on. */
 export function chooseClass(world: WorldState, playerId: string, cls: string): Change[] {
@@ -443,8 +309,6 @@ export function chooseClass(world: WorldState, playerId: string, cls: string): C
   const c = CLASSES[cls];
   for (const piece of [c.outfit.hat, c.outfit.shirt]) if (!p.wardrobe.includes(piece)) p.wardrobe.push(piece);
   p.outfit = { ...p.outfit, hat: c.outfit.hat, shirt: c.outfit.shirt };
-  // the new class's clothes are what the hero switch puts on from now on
-  prog.heroOutfit = { ...p.outfit };
   syncLooks(p); // (the looks of the new class)
   const out: Change[] = [toast(p.id, fmt(T.sagaClassChosen, { cls: c.name })), fxOn(p.area, tileOf(p.x), tileOf(p.y), 'sparkle')];
   if (first) {
@@ -467,17 +331,12 @@ const nearNpc = (farm: WorldState, p: PlayerState, npcId: string): boolean => {
   return Math.hypot(st.x - p.x, st.y - p.y) <= 4 * TILE;
 };
 
-/** Where a chapter's task out in the world is counted (SagaProgress.quests). */
-export const fieldKey = (chapter: number): string => `field:${chapter}`;
-/** How far a player has got with the task out in the world of the chapter Völvan is on. */
-export const fieldCount = (prog: SagaProgress): number => prog.quests[fieldKey(prog.chapter)] ?? 0;
-
 /** Is the goal of the chapter Völvan has told done? Every part of it: the task out in the world and the dungeon. */
 export const chapterDone = (prog: SagaProgress): boolean => {
   const ch = SAGA_CHAPTERS[prog.chapter];
   if (!ch) return false;
-  if (!ch.dungeon && !ch.field) return !!prog.cls;
-  return (!ch.dungeon || prog.cleared.includes(ch.dungeon)) && (!ch.field || fieldCount(prog) >= ch.field.count);
+  if (!ch.dungeon) return !!prog.cls;
+  return prog.cleared.includes(ch.dungeon);
 };
 
 /** Talking to Völvan: hear the next chapter, or hand in the one you have done. */
@@ -496,20 +355,17 @@ export function sagaChapter(world: WorldState, playerId: string): Change[] {
   }
   if (!chapterDone(prog)) return [toast(p.id, ch.goal)];
   const r = ch.reward;
-  p.coins += r.coins;
   p.stars += r.stars;
-  bump(p, 'earned', r.coins, out);
   if (r.item) giveItems(farm, p, r.item, 1, out);
   if (r.title && !prog.titles.includes(r.title)) {
     prog.titles.push(r.title);
     out.push(toast(p.id, fmt(T.sagaTitle, { title: r.title })));
   }
   if (prog.chapter === SAGA_CHAPTERS.length - 1) bump(p, 'sagaAct2', 1, out);
-  delete prog.quests[fieldKey(prog.chapter)];
   prog.chapter++;
   prog.heard = false;
   giveXp(p, SAGA_XP.chapter, out);
-  out.push({ t: 'banner', to: p.id, kind: 'reward', text: fmt(T.sagaChapterDone, { title: ch.title }), sub: `+${r.coins} kr · +${r.stars} ⭐${r.item ? ` · ${itemName(r.item)}` : ''}` }, fxOn(p.area, tileOf(p.x), tileOf(p.y), 'sparkle'), playerChange(p));
+  out.push({ t: 'banner', to: p.id, kind: 'reward', text: fmt(T.sagaChapterDone, { title: ch.title }), sub: `+${r.stars} ⭐${r.item ? ` · ${itemName(r.item)}` : ''}` }, fxOn(p.area, tileOf(p.x), tileOf(p.y), 'sparkle'), playerChange(p));
   return out;
 }
 
@@ -542,9 +398,7 @@ export function sagaQuestAct(world: WorldState, playerId: string, questId: strin
   delete prog.quests[q.id];
   prog.done.push(q.id);
   const out: Change[] = [];
-  p.coins += q.reward.coins;
   p.stars += q.reward.stars;
-  bump(p, 'earned', q.reward.coins, out);
   if (q.reward.item) giveItems(farm, p, q.reward.item, q.reward.count ?? 1, out);
   bump(p, 'sagaQuests', 1, out);
   giveXp(p, SAGA_XP.quest, out);
@@ -583,7 +437,6 @@ export const POTION_CD = 15_000;
 /** Drinks a healing potion (the potion button, or pressing action with one in hand). */
 export function drinkPotion(world: WorldState, playerId: string, ctx: SimCtx): Change[] {
   const p = farmOf(world).players[playerId];
-  if (p && !isSagaKey(p.area) && p.saga?.hero) return drinkFieldPotion(world, playerId, ctx);
   const h = p ? hereOf(world, p) : null;
   const f = h && p ? h.inst.fighters[p.id] : undefined;
   if (!p || !h || !f || f.down !== undefined || f.frozen !== undefined) return [];
@@ -607,11 +460,10 @@ export function drinkStrength(world: WorldState, playerId: string, ctx: SimCtx):
   const h = hereOf(world, p);
   const f = h ? h.inst.fighters[p.id] : undefined;
   if (h && (!f || f.down !== undefined || f.frozen !== undefined)) return [];
-  if (!h && !canFieldCast(world, p)) return [];
+  if (!h) return [];
   if (!removeItem(p.inventory, STRENGTH_POTION, 1)) return [toast(p.id, T.sagaNoStrength)];
   const until = ctx.now + STRENGTH_MS;
   if (f) f.strong = until;
-  else fieldState(p.id).strong = until;
   return [spellFx(h ?? p.area, p.id, 'strength', p), toast(p.id, T.sagaStrength), playerChange(p)];
 }
 
@@ -641,7 +493,7 @@ function openChest(h: Here, p: PlayerState, chest: WorldObject, ctx: SimCtx): Ch
   const prog = progressOf(p);
   const days = (prog.chestDay ??= {});
   const today = h.farm.day;
-  if (days[species] === today) replayChest(h, p, table, SAGA_BOSSES[species]!.name, ctx, out);
+  if (days[species] === today) replayChest(h, p, SAGA_BOSSES[species]!.name, out);
   else {
     days[species] = today;
     rollLoot(h, p, table, SAGA_BOSSES[species]!.name, ctx, out);
@@ -649,15 +501,12 @@ function openChest(h: Here, p: PlayerState, chest: WorldObject, ctx: SimCtx): Ch
   return out;
 }
 
-/** The smaller chest of a boss already looted today: a third of the coins and a healing potion, no stars. */
-function replayChest(h: Here, p: PlayerState, table: SagaLoot, from: string, ctx: SimCtx, out: Change[]): void {
-  const coins = Math.floor(randInt(ctx.rnd, table.coins[0], table.coins[1]) / 3);
+/** The smaller chest of a boss already looted today: a healing potion, no stars. */
+function replayChest(h: Here, p: PlayerState, from: string, out: Change[]): void {
   const items = [{ item: 'healing_potion', count: 1 }];
-  p.coins += coins;
-  bump(p, 'earned', coins, out);
   for (const it of items) giveItems(h.area, p, it.item, it.count, out);
   bump(p, 'loot', 1, out);
-  out.push({ t: 'loot', to: p.id, from, items, coins, stars: 0, replay: true }, playerChange(p));
+  out.push({ t: 'loot', to: p.id, from, items, stars: 0, replay: true }, playerChange(p));
 }
 
 /** How many steps up from common a piece of gear is (a level's loot bonus adds weight per step). */
@@ -672,8 +521,6 @@ const unique = (id: string): boolean => {
 function rollLoot(h: Here, p: PlayerState, table: SagaLoot, from: string, ctx: SimCtx, out: Change[], extra: { item: string; count: number }[] = []): void {
   const prog = progressOf(p);
   const items: { item: string; count: number }[] = [];
-  const base = randInt(ctx.rnd, table.coins[0], table.coins[1]);
-  const coins = base + Math.round(base * buffsOf(h, p.id).coins);
   const fresh = table.gear.filter((g) => !unique(g.item) || !prog.found.includes(g.item));
   const pool = fresh.length ? fresh : table.gear;
   const total = pool.reduce((n, g) => n + g.weight, 0);
@@ -693,9 +540,7 @@ function rollLoot(h: Here, p: PlayerState, table: SagaLoot, from: string, ctx: S
   for (const rare of table.rare ?? []) if (!prog.found.includes(rare.item) && ctx.rnd() < rare.chance * (h.inst.run?.lootRare ?? 1)) items.push({ item: rare.item, count: 1 });
   for (const pet of rollPetDrops(h.farm, p, from, h.inst.run?.lootRare ?? 1, ctx.rnd, out)) items.push({ item: pet, count: 1 }); // (pets.ts: kept by the player, never twice)
   items.push(...extra);
-  p.coins += coins;
   p.stars += table.stars;
-  bump(p, 'earned', coins, out);
   for (const it of items) {
     if (unique(it.item) && prog.found.includes(it.item) && !fresh.length) {
       // everything here is found already: a potion instead of a second copy
@@ -708,14 +553,14 @@ function rollLoot(h: Here, p: PlayerState, table: SagaLoot, from: string, ctx: S
     } else giveItems(h.area, p, it.item, it.count, out);
   }
   bump(p, 'loot', 1, out);
-  out.push({ t: 'loot', to: p.id, from, items, coins, stars: table.stars }, playerChange(p));
+  out.push({ t: 'loot', to: p.id, from, items, stars: table.stars }, playerChange(p));
 }
 
 // ---------------------------------------------------------------------------
 // Spells
 // ---------------------------------------------------------------------------
 
-/** The gear and the hero's level make every spell stronger (and a strength potion, while it lasts). */
+/** Every hero's spells are equally strong (a strength potion adds to that, while it lasts). */
 const spellPower = (p: PlayerState, strongUntil: number | undefined, now: number): number => fightStats(p).power * (strongUntil !== undefined && now < strongUntil ? STRENGTH_MUL : 1);
 
 const CRIT_CHANCE = 0.12;
@@ -784,7 +629,6 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
   const f = h && p ? h.inst.fighters[p.id] : undefined;
   const sp = SPELLS[spellId];
   // out in the world in hero mode, the same spells work on Loke's roaming servants
-  if (p && !h && !isSagaKey(p.area) && p.saga?.hero) return castFieldSpell(world, playerId, spellId, target, ctx, opts);
   if (!p || !h || !f || !sp || !CLASSES[f.cls].spells.includes(spellId)) return [];
   const now = ctx.now;
   if (f.down !== undefined || f.frozen !== undefined || now < f.gcd || now < (f.cd[spellId] ?? 0)) return [];
@@ -1140,7 +984,7 @@ export function hurtMob(h: Here, m: SagaMob, by: string, amount: number, threatM
   if (f) f.fightAt = ctx.now;
   out.push(hit(h, m.id, n, crit ? 'crit' : 'dmg'));
   if (m.hp <= 0) {
-    mobDown(h, m, by, ctx, out);
+    mobDown(h, m, ctx, out);
     return;
   }
   // a boss gets a new phase at each health mark: a shout and helpers
@@ -1175,7 +1019,7 @@ export function hurtMob(h: Here, m: SagaMob, by: string, amount: number, threatM
  * A monster is beaten (by `by`): quest credit for everyone there, now and then a Monsteressens for whoever beat a
  * dungeon monster, the gate opens after the mid-boss, a chest after a boss, and the family's best time after the last.
  */
-function mobDown(h: Here, m: SagaMob, by: string, ctx: SimCtx, out: Change[]): void {
+function mobDown(h: Here, m: SagaMob, ctx: SimCtx, out: Change[]): void {
   const a = h.area.animals[m.id];
   delete h.inst.mobs[m.id];
   delete h.area.animals[m.id];
@@ -1292,6 +1136,16 @@ export function devSagaBest(world: WorldState, playerId: string, id: string, ms:
   if (!p || !isDungeonId(id) || !Number.isFinite(ms) || ms < 0) return [];
   const out: Change[] = [];
   recordBestTime(farm, id, [p.name], Math.round(ms), out);
+  return out;
+}
+
+/** Development only (`dev level`): gives the experience that makes the player hero level `level` (1..MAX_LEVEL), with the level-up banner and rewards. */
+export function devHeroLevel(world: WorldState, playerId: string, level: number): Change[] {
+  const p = farmOf(world).players[playerId];
+  if (!p || !Number.isFinite(level)) return [];
+  const goal = XP_LEVELS[Math.max(1, Math.min(MAX_LEVEL, Math.round(level))) - 1]!;
+  const out: Change[] = [];
+  giveXp(p, Math.max(1, goal - (p.saga?.xp ?? 0)), out);
   return out;
 }
 
@@ -1937,19 +1791,16 @@ export function idleSaga(farm: WorldState, key: string, area: WorldState, now: n
   // anyone still inside (offline) waits in front of the arch instead
   const id = dungeonOfKey(key);
   if (id) {
-    const front = archFront(farm, id);
+    const front = archFront(farm);
     for (const p of Object.values(farm.players)) {
       if (p.area !== key) continue;
-      p.area = DUNGEONS[id].portal.area;
+      p.area = 'farm';
       p.x = px(front.x);
       p.y = px(front.y);
     }
   }
   return true;
 }
-
-/** Monsters that do not move by the farm's animal rules. */
-export const isSagaMob = (area: WorldState, id: number): boolean => !!area.saga?.mobs[id];
 
 /** A fallen or frozen player cannot walk. */
 export function sagaRooted(world: WorldState, p: PlayerState): boolean {
@@ -2011,7 +1862,7 @@ export function ensureGear(p: PlayerState): boolean {
   return true;
 }
 
-/** A fighter's full health follows their gear and level (they keep what they gained or lost). */
+/** A fighter's full health: the class's (they keep what they gained or lost). */
 function refreshMax(p: PlayerState, f: SagaFighter, h?: Here): void {
   const max = maxHealth(h, p, f.cls);
   if (max === f.max) return;
@@ -2062,7 +1913,7 @@ export function equipGear(world: WorldState, playerId: string, slot: string, ite
 /**
  * Hero experience, for everyone (the saga record is made if there is none; spells still need a class). A floating
  * "+n xp" for the player, and at each new level a banner naming the level's reward, a sparkle, the reward itself
- * and a little more power and health.
+ * (levels give nothing that changes a fight).
  */
 export function giveXp(p: PlayerState, n: number, out: Change[], h?: Here): void {
   if (n <= 0) return;
@@ -2127,306 +1978,17 @@ export function ensureLevelRewards(p: PlayerState, out?: Change[]): boolean {
     } else if (addItem(p.inventory, r.item, 1) > 0) {
       out?.push(toast(p.id, fmt(T.sagaLevelBagFull, { item: itemName(r.item) })));
       continue;
-    } else out?.push(toast(p.id, fmt(T.sagaLevelToBag, { item: itemName(r.item) })));
+    } else out?.push(toast(p.id, fmt(ITEMS[r.item]?.category === 'placeable' ? T.sagaLevelToHouse : T.sagaLevelToBag, { item: itemName(r.item) })));
     prog.found.push(r.item);
     changed = true;
   }
   return changed;
 }
 
-/** Experience for beating something out in the world or in the farm's cave (0: it gives none). */
-export function killXpOf(species: string): number {
-  const def = ANIMALS[species];
-  if (def?.mob) return def.wild ? (def.mob.boss ? SAGA_XP.worldBoss : SAGA_XP.wild) : def.mob.boss ? SAGA_XP.caveBoss : SAGA_XP.cave;
-  return def?.predator ? SAGA_XP.predator : 0;
-}
-
-/**
- * Something was beaten out in the world or in the farm's cave (attackMob calls this: the sword, the bow, the bazooka,
- * a spell): experience for whoever did it and for everyone within FIELD_SHARE tiles on the same map, class or not.
- * A roaming monster, a predator, a cave monster, the cave's troll king or a world boss (SAGA_XP). Dungeons count
- * their own (mobDown).
- */
-export function killXp(area: WorldState, by: PlayerState, mob: AnimalState, out: Change[]): void {
-  if (isSagaKey(area.area)) return;
-  const n = killXpOf(mob.species);
-  if (!n) return;
-  const key = area.area ?? 'farm';
-  const there = Object.values(area.players).filter((q) => q.id !== by.id && q.online && q.area === key && dist(q, mob) <= FIELD_SHARE);
-  for (const q of [by, ...there]) {
-    giveXp(q, n, out);
-    // everyone's record goes out (the killer's too: not every kill path sends it), so the level chips follow
-    out.push(playerChange(q));
-  }
-}
-
-/**
- * The hero switch: walk the world as your class (spells, the weapon drawn, the hero outfit) or as a farmer again.
- * Needs a class; inside a dungeon you are always the hero.
- */
-export function setHero(world: WorldState, playerId: string, on: boolean): Change[] {
-  const p = farmOf(world).players[playerId];
-  if (!p) return [];
-  const prog = progressOf(p);
-  if (!prog.cls) return [toast(p.id, T.sagaHeroNeedClass)];
-  if (isSagaKey(p.area)) return [toast(p.id, T.sagaHeroInDungeon)];
-  if (!!prog.hero === on) return [];
-  ensureGear(p);
-  if (on) {
-    const c = CLASSES[prog.cls].outfit;
-    prog.farmOutfit = { ...p.outfit };
-    p.outfit = { ...(prog.heroOutfit ?? { ...p.outfit, hat: c.hat, shirt: c.shirt }) };
-  } else {
-    prog.heroOutfit = { ...p.outfit };
-    if (prog.farmOutfit) p.outfit = { ...prog.farmOutfit };
-  }
-  prog.hero = on;
-  syncLooks(p);
-  return [toast(p.id, on ? T.sagaHeroOn : T.sagaHeroOff), fxOn(p.area, tileOf(p.x), tileOf(p.y), 'sparkle'), playerChange(p)];
-}
-
 /** What a player holds in the picture: their weapon while a hero (and in a dungeon), else what they have selected. */
 export const shownHeld = (p: PlayerState): string | null => {
   const weapon = p.saga?.gear?.weapon;
-  if (weapon && (p.saga?.hero || isSagaKey(p.area))) return weapon;
+  if (weapon && isSagaKey(p.area)) return weapon;
   return p.inventory[p.selected]?.item ?? null;
 };
-
-/** Spells out in the world: cooldowns and buffs per player (not saved; a restart makes them all ready). */
-interface FieldState {
-  cd: Record<string, number>;
-  gcd: number;
-  rage?: number;
-  potionAt?: number;
-  strong?: number;
-}
-const FIELD = new Map<string, FieldState>();
-const fieldState = (id: string): FieldState => {
-  let st = FIELD.get(id);
-  if (!st) FIELD.set(id, (st = { cd: {}, gcd: 0 }));
-  return st;
-};
-/** Spell power is counted in dungeon health; out in the world monsters have hearts, so it is divided by this. */
-const FIELD_DIV = 8;
-/** Monsters beaten this close count for everyone's experience, field task and quests (tiles). */
-const FIELD_SHARE = 10;
-const FIELD_POTION_HEARTS = 3;
-const FIELD_HEAL_HEARTS = 2;
-
-/** May this player cast spells where they are? A hero, out in the world (not the farm's cave, indoors or a dungeon). */
-function canFieldCast(world: WorldState, p: PlayerState): boolean {
-  if (!p.saga?.cls || !p.saga.hero || p.sleeping || p.hearts <= 0) return false;
-  if (isSagaKey(p.area) || p.area === 'dungeon' || isIndoorKey(p.area)) return false;
-  const area = getArea(farmOf(world), p.area);
-  return !!area;
-}
-
-/** A monster out in the world is dazed: it stands still and does not bite for a while (sim's tickMob reads attackAt). */
-const daze = (a: AnimalState, ms: number, now: number): void => {
-  a.attackAt = Math.max(a.attackAt ?? 0, now + ATTACK_GAP + ms);
-};
-
-/**
- * A hero's spell out in the world, at the roaming monsters (any hostile animal) and the family. Damage is counted
- * in hearts like the sword's; heals give hearts back. `target`: an animal id or a player id (left out, the server
- * picks). castSpell sends a hero out in the world here by itself.
- */
-export function castFieldSpell(world: WorldState, playerId: string, spellId: string, target: number | string | undefined, ctx: SimCtx, opts: { quiet?: boolean } = {}): Change[] {
-  const farm = farmOf(world);
-  const p = farm.players[playerId];
-  const sp = SPELLS[spellId];
-  const cls = p?.saga?.cls;
-  if (!p || !cls || !sp || !CLASSES[cls].spells.includes(spellId) || !canFieldCast(farm, p)) return [];
-  const area = getArea(farm, p.area);
-  if (!area) return [];
-  const st = fieldState(p.id);
-  const now = ctx.now;
-  if (now < st.gcd || now < (st.cd[spellId] ?? 0)) return [];
-  const key = p.area;
-  const out: Change[] = [];
-  const raging = st.rage !== undefined && now < st.rage;
-  const pow = spellPower(p, st.strong, now) * (raging ? 1.5 : 1);
-  const hostile = (a: AnimalState | undefined): a is AnimalState => !!a && isHostile(a) && !area.saga?.mobs[a.id];
-  const inReach = (a: AnimalState, range: number, sight: boolean): boolean => dist(a, p) <= range + 0.6 && (!sight || lineOfSight(area, p.x, p.y, a.x, a.y));
-  const pick = (range: number, sight: boolean): AnimalState | null => {
-    const wanted = typeof target === 'number' ? area.animals[target] : undefined;
-    if (hostile(wanted) && inReach(wanted, range, sight)) return wanted;
-    let best: AnimalState | null = null;
-    for (const a of Object.values(area.animals)) if (hostile(a) && inReach(a, range, sight) && (!best || dist(a, p) < dist(best, p))) best = a;
-    return best;
-  };
-  const near = (at: { x: number; y: number }, r: number): AnimalState[] => Object.values(area.animals).filter((a) => hostile(a) && dist(a, at) <= r + 0.4);
-  const strike = (a: AnimalState, base: number): void => {
-    if (area.animals[a.id] === a) attackMob(area, p, a, Math.max(1, Math.round((base * pow) / FIELD_DIV)), ctx, out);
-  };
-  const friends = (r: number): PlayerState[] => Object.values(area.players).filter((q) => q.online && q.area === key && q.hearts > 0 && dist(q, p) <= r + 0.6);
-  const noTarget = (): Change[] => (opts.quiet ? [] : [toast(p.id, T.sagaNoTarget)]);
-  switch (sp.kind) {
-    case 'melee':
-    case 'bolt':
-    case 'lance':
-    case 'bash': {
-      const a = pick(sp.range, sp.kind === 'bolt' || sp.kind === 'lance');
-      if (!a) return noTarget();
-      out.push(spellFx(key, p.id, sp.id, p, a, a.id));
-      strike(a, sp.power);
-      if ((sp.kind === 'bash' || sp.kind === 'lance') && area.animals[a.id]) daze(a, sp.kind === 'bash' ? (sp.ms ?? 1500) : 800, now);
-      break;
-    }
-    case 'charge': {
-      const a = pick(sp.range, true);
-      if (!a) return noTarget();
-      const d = Math.max(1, Math.hypot(p.x - a.x, p.y - a.y));
-      const to = { x: a.x + ((p.x - a.x) / d) * TILE, y: a.y + ((p.y - a.y) / d) * TILE };
-      const from = { x: p.x, y: p.y };
-      if (!isSolidForPlayer(area, tileOf(to.x), tileOf(to.y))) warp(key, p, 0, 0, out, to);
-      out.push(spellFx(key, p.id, sp.id, from, a, a.id));
-      strike(a, sp.power);
-      if (area.animals[a.id]) daze(a, sp.ms ?? 1000, now);
-      break;
-    }
-    case 'storm': {
-      const a = pick(sp.range, true);
-      if (!a) return noTarget();
-      const at = { x: a.x, y: a.y };
-      out.push(spellFx(key, p.id, sp.id, p, at));
-      for (const o of near(at, sp.radius ?? 2)) strike(o, sp.power);
-      break;
-    }
-    case 'whirl':
-      out.push(spellFx(key, p.id, sp.id, p));
-      for (const o of near(p, sp.radius ?? 2)) strike(o, sp.power);
-      break;
-    case 'taunt':
-      out.push(spellFx(key, p.id, sp.id, p));
-      for (const a of near(p, sp.radius ?? 5)) {
-        a.hunt = p.id;
-        a.huntUntil = now + (sp.ms ?? 4000);
-      }
-      break;
-    case 'heal': {
-      const all = friends(sp.range).filter((q) => q.hearts < MAX_HEARTS);
-      const q = all.find((x) => x.id === target) ?? all.sort((x, y) => x.hearts - y.hearts)[0];
-      if (!q) return opts.quiet ? [] : [toast(p.id, T.sagaAllWell)];
-      q.hearts = Math.min(MAX_HEARTS, q.hearts + FIELD_HEAL_HEARTS);
-      out.push(spellFx(key, p.id, sp.id, p, q, q.id), playerChange(q));
-      break;
-    }
-    case 'hot':
-      out.push(spellFx(key, p.id, sp.id, p));
-      for (const q of friends(sp.radius ?? 4))
-        if (q.hearts < MAX_HEARTS) {
-          q.hearts++;
-          out.push(playerChange(q));
-        }
-      break;
-    case 'revive':
-      return opts.quiet ? [] : [toast(p.id, T.sagaNoneDown)];
-    case 'wall':
-      p.hurtUntil = now + (sp.ms ?? 6000);
-      out.push(spellFx(key, p.id, sp.id, p));
-      break;
-    case 'rage':
-      st.rage = now + (sp.ms ?? 8000);
-      p.boostUntil = st.rage;
-      out.push(spellFx(key, p.id, sp.id, p), playerChange(p));
-      break;
-    case 'blink': {
-      const dir = p.facing === 'left' ? [-1, 0] : p.facing === 'right' ? [1, 0] : p.facing === 'up' ? [0, -1] : [0, 1];
-      let to = { x: p.x, y: p.y };
-      for (let s = 0.5; s <= sp.range; s += 0.5) {
-        const nx = p.x + dir[0]! * s * TILE;
-        const ny = p.y + dir[1]! * s * TILE;
-        if (!inBounds(area, tileOf(nx), tileOf(ny)) || isSolidForPlayer(area, tileOf(nx), tileOf(ny))) break;
-        to = { x: nx, y: ny };
-      }
-      out.push(spellFx(key, p.id, sp.id, p, to));
-      warp(key, p, 0, 0, out, to);
-      break;
-    }
-  }
-  st.gcd = now + GCD_MS;
-  st.cd[spellId] = now + sp.cd;
-  return tagArea(out, key);
-}
-
-/** A healing potion out in the world: three hearts back. */
-export function drinkFieldPotion(world: WorldState, playerId: string, ctx: SimCtx): Change[] {
-  const farm = farmOf(world);
-  const p = farm.players[playerId];
-  if (!p || !canFieldCast(farm, p)) return [];
-  const st = fieldState(p.id);
-  if (ctx.now < (st.potionAt ?? 0)) return [toast(p.id, T.sagaNotReady)];
-  if (!removeItem(p.inventory, 'healing_potion', 1)) return [toast(p.id, T.sagaNoPotion)];
-  st.potionAt = ctx.now + POTION_CD;
-  p.hearts = Math.min(MAX_HEARTS, p.hearts + FIELD_POTION_HEARTS);
-  return [spellFx(p.area, p.id, 'potion', p), playerChange(p)];
-}
-
-/**
- * The use key in hero mode out in the world (from performAction): a monster within the attack spell's reach gets the
- * spell. Pointing at something to open, talk to or pet still does that. Null: do the normal farm action.
- */
-export function heroAction(world: WorldState, p: PlayerState, tx: number, ty: number, ctx: SimCtx): Change[] | null {
-  const cls = p.saga?.cls;
-  if (!cls || !canFieldCast(world, p)) return null;
-  if (p.inventory[p.selected]?.item === STRENGTH_POTION) return drinkStrength(world, p.id, ctx);
-  const obj = objectAt(world, tx, ty);
-  if (obj && objectDef(obj.kind).interact) return null;
-  const pointed = animalAt(world, tx, ty);
-  if (pointed && !isHostile(pointed)) return null;
-  if (npcAt(world, tx, ty)) return null;
-  const sp = SPELLS[attackSpellOf(cls)]!;
-  const sight = sp.kind !== 'melee' && sp.kind !== 'bash';
-  const inReach = Object.values(world.animals).some((a) => isHostile(a) && dist(a, p) <= sp.range + 0.6 && (!sight || lineOfSight(world, p.x, p.y, a.x, a.y)));
-  if (!inReach) return null;
-  return castFieldSpell(world, p.id, sp.id, pointed?.id, ctx, { quiet: true });
-}
-
-/**
- * One of Loke's roaming servants is beaten out in the world (by a spell, the sword or anything else): field tasks
- * and villagers' kill quests for every hero close by (the experience comes from killXp), and a world boss leaves its treasure chest.
- * Returns false for anything that is not a roaming monster (the caller handles it as before).
- */
-export function roamingDown(area: WorldState, by: PlayerState, mob: AnimalState, ctx: SimCtx, out: Change[]): boolean {
-  const def = ANIMALS[mob.species];
-  if (!def?.mob || !def.wild) return false;
-  const key = area.area ?? 'farm';
-  const there = Object.values(area.players).filter((q) => q.online && q.area === key && (q.id === by.id || dist(q, mob) <= FIELD_SHARE));
-  if (!there.some((q) => q.id === by.id)) there.push(by);
-  for (const q of there) {
-    const prog = q.saga;
-    if (!prog?.cls) continue;
-    questCredit(area, q, mob.species, ctx, out, false);
-    const ch = SAGA_CHAPTERS[prog.chapter];
-    if (prog.heard && ch?.field?.target === mob.species) {
-      const k = fieldKey(prog.chapter);
-      const n = (prog.quests[k] ?? 0) + 1;
-      if (n <= ch.field.count) {
-        prog.quests[k] = n;
-        out.push(toast(q.id, n >= ch.field.count ? fmt(T.sagaFieldDone, { text: ch.field.text }) : fmt(T.sagaFieldProgress, { text: ch.field.text, n, count: ch.field.count })));
-      }
-    }
-    // (killXp has already sent each of them, and objects are sent by reference)
-  }
-  if (def.mob.boss) {
-    // the world boss's chest: one per map, filled again for everyone each time the boss is beaten
-    let chest = Object.values(area.objects).find((o) => o.kind === 'loot_chest' && o.loot === WORLD_BOSS_LOOT) ?? null;
-    if (chest) chest.openedBy = {};
-    else {
-      const tx = tileOf(mob.x);
-      const ty = tileOf(mob.y);
-      for (let r = 0; r <= 2 && !chest; r++)
-        for (let dy = -r; dy <= r && !chest; dy++)
-          for (let dx = -r; dx <= r && !chest; dx++) if (Math.max(Math.abs(dx), Math.abs(dy)) === r && !isSolidForPlayer(area, tx + dx, ty + dy)) chest = addObject(area, 'loot_chest', tx + dx, ty + dy, { loot: WORLD_BOSS_LOOT });
-    }
-    if (chest) out.push({ t: 'object', id: chest.id, obj: chest });
-    bump(by, 'worldBoss', 1, out);
-    out.push(toast(null, fmt(T.sagaWorldBossDown, { names: there.map((q) => q.name).join(' och '), boss: mob.name })));
-  } else out.push(toast(by.id, fmt(T.sagaRoamDown, { name: mob.name })));
-  out.push(playerChange(by));
-  return true;
-}
-/** The loot table of a world boss's chest (LOOT in data.ts). */
-const WORLD_BOSS_LOOT = 'worldboss';
 

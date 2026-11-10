@@ -1,1 +1,0 @@
-ALTER TABLE "world" ADD COLUMN "saga_best" jsonb;

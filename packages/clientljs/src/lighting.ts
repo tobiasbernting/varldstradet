@@ -2,7 +2,7 @@
 // the sky's ambient colour and gets every lamp, torch, window and lantern added in. Glows go on top after that, and
 // the things that shine by themselves (lit windows, flames, fireflies, lightning) are drawn last, unlit.
 import { EngineObject, Light, LightSystemPlugin, engineAddPlugin, lightSystem, rgb, vec2 } from 'littlejsengine';
-import { DUNGEONS, TILE, type DungeonId } from '@lilla-garden/shared';
+import { DUNGEONS, TILE, type DungeonId } from '@varldstradet/shared';
 
 export interface LampSpec {
   /** Colour of the light, 0..1. */

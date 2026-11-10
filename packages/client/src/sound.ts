@@ -4,7 +4,7 @@ import { bus } from './state.ts';
 let ctx: AudioContext | null = null;
 let muted = (() => {
   try {
-    return localStorage.getItem('lilla-garden.muted') === '1';
+    return localStorage.getItem('varldstradet.muted') === '1';
   } catch {
     return false;
   }

@@ -1,6 +1,6 @@
 // Things for a house to show off: a longhouse hearth, a stand for gear, the Norse decor the dungeons give, and a trophy for every
 // dungeon boss (the rim says the hardest level it was won on). Drawn in code like everything else.
-import { DUNGEONS, TROPHY_LEVELS, TROPHY_PREFIX } from '@lilla-garden/shared';
+import { DUNGEONS, TROPHY_LEVELS, TROPHY_PREFIX } from '@varldstradet/shared';
 import { Px, shade } from './px.js';
 
 type SetArt = (kind: string, frames: Px[], ox?: number, oy?: number, animated?: boolean) => void;

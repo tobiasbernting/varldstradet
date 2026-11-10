@@ -1,8 +1,6 @@
 name: Server tests
 
-# Typecheck and test the server and shared packages on every pull request, with a real Postgres so that the tests that
-# need one (packages/server/src/importSave.pg.test.ts, the save importer) run instead of skipping. The image build in
-# docker.yml runs the same tests without a database.
+# Typecheck and test every package on every pull request (no database is needed: the server tests use in-memory stores).
 
 on:
   pull_request:
@@ -20,20 +18,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -44,4 +28,4 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r run typecheck
       - run: pnpm -r run test
-      - run: pnpm --filter @lilla-garden/clientljs run build
+      - run: pnpm --filter @varldstradet/clientljs run build

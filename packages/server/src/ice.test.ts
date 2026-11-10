@@ -18,7 +18,7 @@ describe('ice servers', () => {
   it('makes coturn’s short-lived logins from a shared secret', async () => {
     const now = 1_700_000_000_000;
     const c = turnRestCredential('s3cret', now);
-    expect(c.username).toBe(`${1_700_000_000 + TURN_TTL_S}:lilla`);
+    expect(c.username).toBe(`${1_700_000_000 + TURN_TTL_S}:vt`);
     expect(c.credential).toBe(crypto.createHmac('sha1', 's3cret').update(c.username).digest('base64'));
     const got = await iceProvider({ TURN_URLS: 'turn:r:3478', TURN_SECRET: 's3cret' }, { now: () => now }).servers();
     expect(got[1]).toEqual({ urls: ['turn:r:3478'], ...c });

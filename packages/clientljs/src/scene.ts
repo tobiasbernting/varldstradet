@@ -1,5 +1,5 @@
 // What the cozy extras get to know about the scene each frame, filled in by the view.
-import type { WeatherKind, WorldState } from '@lilla-garden/shared';
+import type { WeatherKind, WorldState } from '@varldstradet/shared';
 import type { Sprites } from './art.ts';
 import type { Extras } from './extras.ts';
 import type { YearSeason } from './features.ts';

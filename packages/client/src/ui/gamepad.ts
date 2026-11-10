@@ -169,14 +169,14 @@ export function initGamepad(opts: {
       // no hotbar in a fight (a dungeon, or hero mode out in the world): the face buttons are the spells, like the keys 1–4
       if (hit(B.A) || hit(B.RT)) t.act();
       // (the spell bar decides: a spell goes off, or its card comes up while the explain mode is on)
-      [B.X, B.Y, B.B, B.RB, B.LB].forEach((b, i) => hit(b) && document.dispatchEvent(new CustomEvent('lilla:spell', { detail: i })));
+      [B.X, B.Y, B.B, B.RB, B.LB].forEach((b, i) => hit(b) && document.dispatchEvent(new CustomEvent('vt:spell', { detail: i })));
       // R3 or up on the d-pad: the explain mode (the ? button)
-      if ((hit(B.R3) && !down(B.LT)) || hit(B.Up)) document.dispatchEvent(new Event('lilla:explain'));
+      if ((hit(B.R3) && !down(B.LT)) || hit(B.Up)) document.dispatchEvent(new Event('vt:explain'));
       if (hit(B.Left) || hit(B.Right)) cycleTarget();
       // Select: the backpack in a dungeon, the gear window out in the world
       if (hit(B.Back)) {
         if (inSaga()) menus.toggle('inventory');
-        else document.dispatchEvent(new Event('lilla:gear'));
+        else document.dispatchEvent(new Event('vt:gear'));
       }
       return;
     }
@@ -187,7 +187,7 @@ export function initGamepad(opts: {
     // in your own house Select is Möblera, else the book
     if (hit(B.Back)) {
       if (inOwnHouse()) hud.toggleFurnish();
-      else document.dispatchEvent(new Event('lilla:journal'));
+      else document.dispatchEvent(new Event('vt:journal'));
     }
   }
 
