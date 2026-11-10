@@ -1,5 +1,5 @@
 // HUD: top chips, hotbar, toasts, touch controls.
-import { A11Y_T, HOTBAR_SIZE, HOUSE_T, MAX_HEARTS, SPELLS, T, areaName, fmt, houseTitle, isHomeKey, isSagaKey, ownerOfHome, stackName, type ItemStack } from '@lilla-garden/shared';
+import { A11Y_T, HOTBAR_SIZE, HOUSE_T, MAX_HEARTS, SPELLS, T, areaName, fmt, houseTitle, isHomeKey, isSagaKey, ownerOfHome, stackName, type ItemStack } from '@varldstradet/shared';
 import { Minimap } from './minimap.ts';
 import { getArt } from '@art/textures.ts';
 import { stackIconUrl } from '@art/stackicon.ts';

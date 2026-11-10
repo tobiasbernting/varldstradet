@@ -54,7 +54,7 @@ import {
   type ClassId,
   type Rarity,
   type SagaQuest,
-} from '@lilla-garden/shared';
+} from '@varldstradet/shared';
 import { getArt, portraitUrl } from '@art/textures.ts';
 import { net } from '../net.ts';
 import {

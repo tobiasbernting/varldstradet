@@ -5,7 +5,7 @@
 // neighbour mask (1 up, 2 right, 4 down, 8 left = that side borders other ground), and an edge always sits at
 // the same place where two tiles meet, so shores, rims and cliff faces run on from tile to tile. Light comes
 // from the top left. Each ground has a few variants, picked per tile with hash2, so nothing looks tiled.
-import { isCliff, type Terrain } from '@lilla-garden/shared';
+import { isCliff, type Terrain } from '@varldstradet/shared';
 import { Px, hash2, hexToRgb, rgbToHex, shade } from './px.js';
 import { bifrostTiles, cryptTiles, forgeTiles } from './saga.ts';
 

@@ -172,7 +172,7 @@ importers:
 
   packages/art:
     dependencies:
-      '@lilla-garden/shared':
+      '@varldstradet/shared':
         specifier: workspace:*
         version: link:../shared
     devDependencies:
@@ -182,7 +182,7 @@ importers:
 
   packages/client:
     dependencies:
-      '@lilla-garden/shared':
+      '@varldstradet/shared':
         specifier: workspace:*
         version: link:../shared
     devDependencies:
@@ -198,7 +198,7 @@ importers:
 
   packages/clientljs:
     dependencies:
-      '@lilla-garden/shared':
+      '@varldstradet/shared':
         specifier: workspace:*
         version: link:../shared
       littlejsengine:
@@ -220,7 +220,7 @@ importers:
 
   packages/server:
     dependencies:
-      '@lilla-garden/shared':
+      '@varldstradet/shared':
         specifier: workspace:*
         version: link:../shared
       drizzle-orm:

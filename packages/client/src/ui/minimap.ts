@@ -1,5 +1,5 @@
 // A small map of the farm (or the cave) drawn on a canvas: terrain, trees, buildings and who is where.
-import { ANIMALS, MAP_H, MAP_W, NPCS, isSagaKey, mapH, mapW, objectDef, tileIndex, type WorldState } from '@lilla-garden/shared';
+import { ANIMALS, MAP_H, MAP_W, NPCS, isSagaKey, mapH, mapW, objectDef, tileIndex, type WorldState } from '@varldstradet/shared';
 import { activeWorld, bus, client, myArea, myPlayer } from '../state.ts';
 import { h } from './dom.ts';
 

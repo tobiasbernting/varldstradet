@@ -1,5 +1,5 @@
 // Icons of inventory stacks.
-import { TROPHY_PREFIX } from '@lilla-garden/shared';
+import { TROPHY_PREFIX } from '@varldstradet/shared';
 import { Px } from './px.js';
 import { getArt } from './textures.js';
 

@@ -1,5 +1,5 @@
 // Draws every picture once (terrain, objects, crops, effects, icons). Also exposes icon data URLs for the HTML UI.
-import type { Appearance, Outfit } from '@lilla-garden/shared';
+import type { Appearance, Outfit } from '@varldstradet/shared';
 import { lookOf, portrait } from './characters.js';
 import { drawIcons } from './icons.js';
 import type { Px } from './px.js';

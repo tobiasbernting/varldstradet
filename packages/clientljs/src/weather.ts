@@ -1,7 +1,7 @@
 // Weather on screen: rain with splashes, snow, hail, wind with leaves and gusts, fog, cloud shadows drifting over the
 // fields, lightning in storms and a rainbow when the sun comes out after rain.
 import { cameraShake, drawLine, rgb, setAdditiveBlendMode, vec2 } from 'littlejsengine';
-import { TILE, type WeatherKind } from '@lilla-garden/shared';
+import { TILE, type WeatherKind } from '@varldstradet/shared';
 import { SFX, setAmbience } from '@v1/sound.ts';
 import type { Sprites } from './art.ts';
 import { alpha, clamp01, drawSprite, rgba, smooth } from './gfx.ts';

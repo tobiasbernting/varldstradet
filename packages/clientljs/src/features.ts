@@ -1,7 +1,7 @@
 // The cozy extras, each on its own so they can be compared: `?fx=seasons,smoke` in the address bar turns on just
 // those, `?fx=none` none of them. `?year=winter` (spring, summer, autumn) previews another time of year, and
 // `?quality=high` keeps the glow and tilt-shift on even on a slow screen.
-import type { Season } from '@lilla-garden/shared';
+import type { Season } from '@varldstradet/shared';
 
 export const FEATURES = ['seasons', 'windows', 'smoke', 'indoors', 'critters', 'pond', 'mist', 'puddles', 'glow', 'tiltshift', 'sounds'] as const;
 export type Feature = (typeof FEATURES)[number];

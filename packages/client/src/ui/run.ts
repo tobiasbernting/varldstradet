@@ -50,8 +50,8 @@ import {
   type RouteNodeSnap,
   type RunSnap,
   type TreeNode,
-} from '@lilla-garden/shared';
-import { CLASS_IDS, LOOK_T, PETS, PET_T, activePet, ownedPetIds } from '@lilla-garden/shared';
+} from '@varldstradet/shared';
+import { CLASS_IDS, LOOK_T, PETS, PET_T, activePet, ownedPetIds } from '@varldstradet/shared';
 import { lookSummary } from './looks.ts';
 import { portraitUrl } from '@art/textures.ts';
 import { net } from '../net.ts';
@@ -295,7 +295,7 @@ export class RunUi {
 
   // ---- reacting to the server ----
 
-  private fromRun(c: Extract<import('@lilla-garden/shared').Change, { t: 'run' }>): void {
+  private fromRun(c: Extract<import('@varldstradet/shared').Change, { t: 'run' }>): void {
     if (c.ev === 'state') {
       const run = myRun();
       const was = this.wasIn;

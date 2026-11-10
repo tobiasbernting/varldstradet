@@ -18,7 +18,7 @@ import {
   type WeatherState,
   type WorldObject,
   type WorldState,
-} from '@lilla-garden/shared';
+} from '@varldstradet/shared';
 
 type Handler<T> = (data: T) => void;
 

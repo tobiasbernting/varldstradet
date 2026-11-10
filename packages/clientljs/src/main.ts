@@ -1,7 +1,7 @@
 // Sagan om Världsträdet (LittleJS): the same server, HUD, menus, sounds and pixel art as the 2D game, with the world drawn by
 // LittleJS: light and shadow through the day, lamps at night, and things that sway, squash and pop.
 import './prefs.ts';
-import { A11Y_T, T } from '@lilla-garden/shared';
+import { A11Y_T, T } from '@varldstradet/shared';
 import {
   averageFPS,
   engineInit,

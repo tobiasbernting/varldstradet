@@ -1,5 +1,5 @@
 // Terrain tiles, world objects, crops and effects — all drawn in code.
-import { type Terrain } from '@lilla-garden/shared';
+import { type Terrain } from '@varldstradet/shared';
 import { Px, hash2, shade } from './px.js';
 import { drawSaga } from './saga.ts';
 import { crystalLamp, dragonEgg, mushroomLamp, wispJar } from './decor.ts';

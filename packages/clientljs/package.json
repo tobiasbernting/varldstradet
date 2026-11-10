@@ -1,5 +1,5 @@
 {
-  "name": "@lilla-garden/clientljs",
+  "name": "@varldstradet/clientljs",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@lilla-garden/shared": "workspace:*",
+    "@varldstradet/shared": "workspace:*",
     "littlejsengine": "1.28.0"
   },
   "devDependencies": {

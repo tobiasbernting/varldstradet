@@ -15,7 +15,7 @@
 // A pet of the large size class (pets.ts: `size`) gets every piece one column and one row bigger, made from the same drawing.
 //
 // To draw a new piece: add an entry to PIECES (a picture in letters, see `put`) and an icon; a test draws every piece on every pet.
-import type { DecodedLook, PetAnchor } from '@lilla-garden/shared';
+import type { DecodedLook, PetAnchor } from '@varldstradet/shared';
 import { Px, shade } from './px.js';
 import { OUTLINE } from './world.js';
 

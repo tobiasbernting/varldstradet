@@ -1,6 +1,6 @@
 // 2D game: chat with everyone in the world, buttons that tell your pets to stay or whistle for them,
 // and the weather chip.
-import { CHAT_MAX_LEN, CHAT_PHRASES, PET_T, PETS, T, activePet, ownedPetIds, WEATHER_EMOJI, WEATHER_NAMES, isHomeKey, isCallable, noWeatherHere, type Change } from '@lilla-garden/shared';
+import { CHAT_MAX_LEN, CHAT_PHRASES, PET_T, PETS, T, activePet, ownedPetIds, WEATHER_EMOJI, WEATHER_NAMES, isHomeKey, isCallable, noWeatherHere, type Change } from '@varldstradet/shared';
 import { net } from '../net.js';
 import { bus, client, myPlayer } from '../state.js';
 import { SFX } from '../sound.ts';

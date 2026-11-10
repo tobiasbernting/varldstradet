@@ -30,7 +30,7 @@ import {
   type ClassId,
   type RunOfferSnap,
   type RunSnap,
-} from '@lilla-garden/shared';
+} from '@varldstradet/shared';
 import { h } from './dom.ts';
 
 /** What the pick windows need from the run window (ui/run.ts): tapping that respects the ? button, and the info card. */

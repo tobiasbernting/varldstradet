@@ -1,6 +1,6 @@
 // The ground: which tile picture each cell shows (the 2D game's choice, edges and all), drawn for the cells in view.
 // Under ground the rock around a cave is solid darkness (in the farm's monster cave that rock is 'water').
-import { TILE, mapH, mapW, type Terrain, type WorldState } from '@lilla-garden/shared';
+import { TILE, mapH, mapW, type Terrain, type WorldState } from '@varldstradet/shared';
 import { getArt } from '@art/textures.ts';
 import type { Sprite } from './atlas.ts';
 import { drawSprite } from './gfx.ts';

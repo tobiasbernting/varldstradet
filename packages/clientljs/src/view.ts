@@ -48,7 +48,7 @@ import {
   type WeatherKind,
   type WorldObject,
   type WorldState,
-} from '@lilla-garden/shared';
+} from '@varldstradet/shared';
 import { ANIMAL_SIZE, ANIMAL_VARIANTS, RIDE_LIFT } from '@art/animals.ts';
 import { CHAR_H, dirOf, frameIndex, HEADROOM } from '@art/characters.ts';
 import { SAGA_LOOKS, SAGA_STEPPED } from '@art/saga.ts';

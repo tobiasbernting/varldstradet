@@ -5,7 +5,7 @@
 // particle. Drawn in the bright pass, before the dungeon's telegraphs, so a boss's marks always lie over it. "Effekter: full /
 // mindre / av" is kept on the device (client/src/fxprefs.ts); reduced keeps only the glows and glitter, off keeps nothing.
 import { setAdditiveBlendMode } from 'littlejsengine';
-import { decodeLook, FX_FULL_TIER, FX_KINDS, FX_PROCEDURAL, FX_TIER, type DecodedLook, type FxAnchor, type FxId, type FxKind, type LookSlot } from '@lilla-garden/shared';
+import { decodeLook, FX_FULL_TIER, FX_KINDS, FX_PROCEDURAL, FX_TIER, type DecodedLook, type FxAnchor, type FxId, type FxKind, type LookSlot } from '@varldstradet/shared';
 import { effectiveFx } from '@v1/fxprefs.ts';
 import type { Sprites } from './art.ts';
 import { drawSprite, rgba } from './gfx.ts';

@@ -4,7 +4,7 @@
 // Voice is per room (see shared/voice.ts). Only the room's speaker device opens the microphone and plays the other
 // rooms' speakers, over WebRTC straight between the browsers; the server introduces them and relays the handshake.
 // Both sides use "perfect negotiation": the one `offers()` picks is impolite, the other gives way on a collision.
-import { T, mySpeaker, offers, voicePeers, type IceServer, type ServerMsg, type VoiceState } from '@lilla-garden/shared';
+import { T, mySpeaker, offers, voicePeers, type IceServer, type ServerMsg, type VoiceState } from '@varldstradet/shared';
 import { net } from '../net.js';
 import { bus, client } from '../state.js';
 import { SFX } from '../sound.ts';

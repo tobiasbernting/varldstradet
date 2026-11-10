@@ -30,7 +30,7 @@ import {
   type ClassDef,
   type PlayerState,
   type SagaSnap,
-} from '@lilla-garden/shared';
+} from '@varldstradet/shared';
 import { net } from './net.ts';
 import { activeWorld, bus, client, myPlayer, serverNow } from './state.ts';
 

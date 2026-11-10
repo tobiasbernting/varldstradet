@@ -1,6 +1,6 @@
 // The pond and the rain: lily pads and jumping fish, the moon and the stars mirrored in the water at night, and
 // puddles that gather on the paths when it rains and slowly dry up afterwards.
-import { TILE, inBounds, mapH, mapW, tileIndex } from '@lilla-garden/shared';
+import { TILE, inBounds, mapH, mapW, tileIndex } from '@varldstradet/shared';
 import { on } from './features.ts';
 import { alpha, clamp01, drawSprite, rgba, smooth } from './gfx.ts';
 import { cellHash, inView, type Scene } from './scene.ts';

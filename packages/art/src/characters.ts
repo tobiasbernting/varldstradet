@@ -1,7 +1,7 @@
 // Layered, tintable 16x24 characters: body, hair, shirt, pants, shoes, hat.
 // Directions: down, up, right (left is right flipped). Frames: 0 stand, 1/2 walk.
 import { petLookIcon } from './petlooks.ts';
-import { ITEMS, decodeLook, type Appearance, type DecodedLook, type Facing, type LookSlot, type Outfit } from '@lilla-garden/shared';
+import { ITEMS, decodeLook, type Appearance, type DecodedLook, type Facing, type LookSlot, type Outfit } from '@varldstradet/shared';
 import { SET_STYLES, drawWeapon, decorHat, decorShirt, drawAmulet, drawCloak, drawOffhand, drawShoulders } from './looks.js';
 import { Px, shade } from './px.js';
 import { OUTLINE } from './world.js';

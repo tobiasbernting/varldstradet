@@ -1,6 +1,6 @@
 // The light of the day: what colour the world is lit with, where the sun is (for the shadows it casts) and how dark
 // it is (for lamps), from the time of day, the weather and the season.
-import { DAY_LENGTH_MS, type Season, type WeatherKind } from '@lilla-garden/shared';
+import { DAY_LENGTH_MS, type Season, type WeatherKind } from '@varldstradet/shared';
 import { clamp01, lerp, smooth } from './gfx.ts';
 
 type RGB = [number, number, number];

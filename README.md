@@ -21,8 +21,8 @@ Needs Node 24 (CI and the image use it), pnpm, and a container runtime (podman o
 pnpm install
 pnpm db:up                  # Postgres 17 on localhost:5435 (compose.yaml; podman or docker)
 cp .env.example .env        # set PARENT_PASSWORD; ACCESS=open turns the access gate off on a home network
-pnpm --filter @lilla-garden/clientljs build   # the browser game -> packages/clientljs/dist
-pnpm --filter @lilla-garden/server dev        # the server on :8080, serves the build at /
+pnpm --filter @varldstradet/clientljs build   # the browser game -> packages/clientljs/dist
+pnpm --filter @varldstradet/server dev        # the server on :8080, serves the build at /
 ```
 
 Open `http://localhost:8080`, or `http://<your-computer-ip>:8080` from another device on the same network. The server's
@@ -32,7 +32,7 @@ For client work run the Vite dev server instead, with hot reload. It proxies `/a
 `/health` and `/ws` to the server on :8080:
 
 ```bash
-pnpm --filter @lilla-garden/clientljs dev     # http://localhost:5173 (VITE_HTTPS=1 for https with a self-signed certificate)
+pnpm --filter @varldstradet/clientljs dev     # http://localhost:5173 (VITE_HTTPS=1 for https with a self-signed certificate)
 ```
 
 `pnpm dev` runs the `dev` script of every package in parallel (the server and Vite). Without `DATABASE_URL` the server
@@ -130,7 +130,7 @@ pnpm test            # vitest in every package
   looks, pets, paths, houses, the fight sim.
 - **Bot tests** play whole runs with bot parties (`run.bots.test.ts`, `run.solo.test.ts`, `run.latt.test.ts`,
   `run.hard.test.ts`, and the stall check that runs all nine dungeons in `run.bots.test.ts`). They are slow, so run one
-  file with `pnpm --filter @lilla-garden/shared exec vitest run src/run.hard.test.ts`. The bots are `careful`, `clumsy`
+  file with `pnpm --filter @varldstradet/shared exec vitest run src/run.hard.test.ts`. The bots are `careful`, `clumsy`
   and `kid7`; DESIGN.md section 8 explains them and the bands the tests hold.
 - **Tuning script**: `node --experimental-transform-types packages/shared/src/runtune.ts --level 2 --style clumsy --seeds 20`
   prints wins, wipes, Sagoandar used and minutes per party. Other options are `--dungeon`, `--parties solo|duo|pair|all`,

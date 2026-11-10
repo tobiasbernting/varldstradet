@@ -1,7 +1,7 @@
 // Drawing in world pixels (16 per tile, y down, like the 2D game) straight into LittleJS's WebGL batch. LittleJS
 // works in world units with y up; one unit here is one tile.
 import { glDraw, glEnable, glSetTexture } from 'littlejsengine';
-import { TILE } from '@lilla-garden/shared';
+import { TILE } from '@varldstradet/shared';
 import type { Sprite } from './atlas.ts';
 
 /** RGBA in 0..1 packed the way glDraw takes it. */

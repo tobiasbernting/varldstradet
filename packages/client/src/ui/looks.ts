@@ -48,13 +48,13 @@ import {
   type LookPiece,
   type PetAnchor,
   type WayId,
-} from '@lilla-garden/shared';
+} from '@varldstradet/shared';
 import { drawAnimal } from '@art/animals.ts';
 import { lookIcon } from '@art/characters.ts';
 import { portraitUrl } from '@art/textures.ts';
 import { FX_SETTINGS, effectiveFx, fxSetting, setFxSetting, type FxSetting } from '../fxprefs.ts';
 import { net } from '../net.ts';
-import { readProgress } from '@lilla-garden/shared';
+import { readProgress } from '@varldstradet/shared';
 import { SFX } from '../sound.ts';
 import { myPlayer } from '../state.ts';
 import { h, onTap } from './dom.ts';
@@ -551,8 +551,8 @@ export function resetLooksWindow(selectPiece?: string, tab?: 'wear' | 'set' | 'p
 export { setsOf };
 
 /** The looks the last victory gave, kept for the run's summary (it opens after the loot window has come and gone). */
-let lastDrops: { looks: import('@lilla-garden/shared').LootLooks; at: number } | null = null;
-export function rememberLooks(looks: import('@lilla-garden/shared').LootLooks): void {
+let lastDrops: { looks: import('@varldstradet/shared').LootLooks; at: number } | null = null;
+export function rememberLooks(looks: import('@varldstradet/shared').LootLooks): void {
   lastDrops = { looks, at: Date.now() };
 }
 /** A row for the run's end summary: each look that dropped (picture, name, shine), the colourway and the title. Null if none lately. */

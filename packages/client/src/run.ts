@@ -1,6 +1,6 @@
 // Runs (färdar) on the client: the run the server last told us about, its card offer, the sagaträd and the summary of the
 // run that just ended, plus the clocks that tick between two server messages. The windows and the HUD are in ui/run.ts.
-import type { Change, NodeKind, RunOfferSnap, RunOutcome, RunSnap } from '@lilla-garden/shared';
+import type { Change, NodeKind, RunOfferSnap, RunOutcome, RunSnap } from '@varldstradet/shared';
 import { bus, client } from './state.ts';
 
 /** The pictures of the stops of a route (the väg-runor on the floor carry the same ones) and their colours. */

@@ -6,7 +6,7 @@ numbers. Swedish names and strings are quoted as they appear in the game (all of
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
 The game grew out of a family farm game, "Lilla Gården", and kept its server, protocol and art pipeline; the farm, the open
-world and the native client that were tried in between are gone. Hence the `@lilla-garden/*` package names.
+world and the native client that were tried in between are gone. Hence the `@varldstradet/*` package names.
 
 Code comments and tests refer to sections by number (for example "DESIGN.md 5.7"); keep the numbers stable when editing.
 

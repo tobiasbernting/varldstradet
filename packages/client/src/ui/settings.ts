@@ -2,7 +2,7 @@
 // left-handed buttons and reading aloud. Opened from the HUD's ⚙️, the help window and the character picker (event 'lilla:settings').
 // Every change is applied at once and saved on the device (a11y.ts, fxprefs.ts). A window like the others: a dialog, Escape and the
 // gamepad's B close it, the focus comes back to what opened it.
-import { A11Y_T } from '@lilla-garden/shared';
+import { A11Y_T } from '@varldstradet/shared';
 import { HOLD_CHOICES, prefs, setPref, textCapped, type Prefs, type TextSize } from '../a11y.ts';
 import { FX_SETTINGS, fxSetting, setFxSetting, type FxSetting } from '../fxprefs.ts';
 import { clear, h, onTap } from './dom.ts';

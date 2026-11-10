@@ -30,7 +30,7 @@ import {
   noWeatherHere,
   talkNode,
   type Talk,
-} from '@lilla-garden/shared';
+} from '@varldstradet/shared';
 import {
   portraitUrl,
   getArt,

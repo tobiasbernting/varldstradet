@@ -1,5 +1,5 @@
 // "Vem är du?" – character picker and creator.
-import { A11Y_T, ITEMS, T, itemName, type Appearance, type PlayerSummary } from '@lilla-garden/shared';
+import { A11Y_T, ITEMS, T, itemName, type Appearance, type PlayerSummary } from '@varldstradet/shared';
 import { HAIR_COLORS, HAIR_STYLES, SKIN_TONES } from '@art/characters.ts';
 import { portraitUrl } from '@art/textures.ts';
 import { toGate } from '../net.js';

@@ -1,6 +1,6 @@
 // Homes that feel lived in: smoke curling from the chimneys, and inside the farmhouse the sun falling in through the
 // windows in long beams with dust drifting in them (the moon's at night).
-import { TILE } from '@lilla-garden/shared';
+import { TILE } from '@varldstradet/shared';
 import { on } from './features.ts';
 import { clamp01, drawSprite, rgba, smooth } from './gfx.ts';
 import { inView, type Scene } from './scene.ts';

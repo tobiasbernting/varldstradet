@@ -1,6 +1,6 @@
 // Every picture the view draws, packed into the atlas: the 2D game's generated art plus a few soft shapes of our own
 // for light, weather and effects.
-import { decodeLook, type Appearance, type Outfit, type PetWear } from '@lilla-garden/shared';
+import { decodeLook, type Appearance, type Outfit, type PetWear } from '@varldstradet/shared';
 import { animalSheet, ANIMAL_SIZE } from '@art/animals.ts';
 import { CHAR_H, CHAR_W, drawCharacterSheet, lookIcon, lookKey, lookOf } from '@art/characters.ts';
 import { getArt } from '@art/textures.ts';

@@ -1,6 +1,6 @@
 // The client's mirror of the world: the player records the other maps carry.
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { PlayerState, WorldState } from '@lilla-garden/shared';
+import type { PlayerState, WorldState } from '@varldstradet/shared';
 import { applyChange, client, worldFor } from './state.ts';
 
 const player = (id: string, area: string): PlayerState => ({ id, name: id, area, x: 0, y: 0, facing: 'down', moving: false, online: true, inventory: [], selected: 0 }) as unknown as PlayerState;
