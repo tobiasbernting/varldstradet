@@ -33,6 +33,7 @@ import {
   companionClass,
   fmt,
   fmtDuration,
+  itemName,
   parseRunLevel,
   plantError,
   runa,
@@ -56,6 +57,7 @@ import { KIND_COLOR, KIND_ICON, myRun, offerLeft, routeLeft, runClient, runElaps
 import { SFX } from '../sound.ts';
 import { bus, client, myPlayer } from '../state.ts';
 import { clear, h, onTap } from './dom.ts';
+import { itemIcon } from './saga.ts';
 
 /** What the info card (tap and hold, the ? button, keyboard and gamepad focus) shows about a thing. */
 export interface Info {
@@ -1004,6 +1006,7 @@ export class RunUi {
         stat('🌟', RUN_UI.spiritsUsed, `${e.spiritUsed ?? 0}`),
       ),
     );
+    if (e.trophy) body.append(h('div', { class: 'stat trophy' }, h('span', { class: 'ic' }, itemIcon(e.trophy, '🏆')), h('span', { class: 'lb' }, RUN_UI.trophy), h('b', { class: 'val' }, `${itemName(e.trophy)} (${RUN_UI.trophyWhere[e.trophyWhere ?? 'bag'] ?? ''})`)));
     if (e.path?.length) body.append(h('div', { class: 'trail' }, h('span', null, '👣'), path));
     if (e.runor.length) body.append(h('div', { class: 'trail' }, h('span', null, '🎴'), runor));
     const lookRow = e.outcome === 'win' ? lookSummary() : null;

@@ -504,7 +504,7 @@ export const T = {
   moveHint: 'Tryck på en sak, sedan på en ruta för att flytta den.',
   nothingHere: 'Inget här just nu.',
   alreadyOwn: 'Har redan',
-  nothingToSell: 'Du har inget att sälja just nu. Odla något!',
+  nothingToSell: 'Du har inget att sälja just nu.',
   needs: 'behöver',
   youHave: 'Du har {n}',
   onTheWay: 'På väg i morgon',
@@ -1060,7 +1060,7 @@ export const T = {
   actLeaveHouse: 'Gå ut',
   actTable: 'Bords {name}',
   craftHint: 'Snickra av det du samlat. Röda siffror är det som saknas.',
-  cookHint: 'Laga mat av grödor och det djuren ger.',
+  cookHint: 'Laga mat av det du hittar.',
   cookTitle: 'Spisen',
   shopTitle: 'Gårdsbutik',
   shopOrderedFor: 'beställd av {who}',
@@ -1349,7 +1349,7 @@ export const fmt = (s: string, vars: Record<string, string | number>): string =>
 export const FILTER_NAMES: Record<string, string> = {
   tools: 'Verktyg',
   seeds: 'Frön',
-  food: 'Mat & skörd',
+  food: 'Mat',
   materials: 'Material',
   build: 'Bygg & möbler',
   other: 'Annat',
@@ -1525,7 +1525,7 @@ export const WEATHER_EMOJI: Record<string, string> = {
 export const WEATHER_NEWS: Record<string, string> = {
   sun: 'Solen tittar fram! ☀️',
   cloudy: 'Nu kommer molnen. ☁️',
-  rain: 'Det börjar regna! Regnet vattnar åkrarna åt dig. 🌧️',
+  rain: 'Det börjar regna! Ta på dig stövlarna. 🌧️',
   storm: 'Åskväder! Det mullrar och blixtrar. ⛈️',
   snow: 'Titta, det snöar! ❄️',
   hail: 'Hagel! Små isbollar studsar överallt. 🧊',
@@ -1636,6 +1636,7 @@ export const RUN_T = {
   food: 'Matsäck: {item}',
   foodNone: 'Du har ingen matsäck att ta med.',
   treeGrows: 'Yggdrasil växer!',
+  trophyFrom: 'bossen',
   ended: { win: 'Färden är klar', wipe: 'Alla föll', leave: 'Färden är slut' } as Record<string, string>,
 };
 export const runaName = (id: string): string => RUNA_NAMES[id] ?? id;
@@ -1699,6 +1700,8 @@ export const RUN_UI = {
   level: 'Nivå',
   spiritsUsed: 'Sagoandar använda',
   backHome: 'Hem',
+  trophy: 'Trofé',
+  trophyWhere: { bag: 'i väskan', home: 'står i ditt hus', up: 'blev finare' } as Record<string, string>,
   treeTitle: 'Sagaträdet',
   treeSub: 'Plantera sagafrön så växer hela familjens träd.',
   treeYou: 'Du har {n} sagafrön',
