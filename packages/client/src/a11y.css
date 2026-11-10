@@ -600,11 +600,13 @@ button.pick:disabled {
 @media (max-height: 480px), (max-width: 820px) {
   .social {
     flex-wrap: wrap-reverse;
-    width: 112px;
+    left: 14px;
+    width: 128px;
     row-gap: 24px;
+    column-gap: 24px;
   }
   body.touch .hotbar {
-    left: 136px;
+    left: 162px;
     right: 232px;
     transform: none;
     overflow-x: auto;
