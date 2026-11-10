@@ -223,7 +223,43 @@ export class PgStore implements Store {
     this.players.clear();
     for (const g of Object.values(this.gone)) g.clear();
     this.worldDirty = false;
+    // The rows are read from the world now, before the first await: the game keeps ticking while the transaction runs,
+    // and an animal, object or player listed above can be gone by the time its batch is written (a pet sent away).
+    const objectRows = objects.map((id) => {
+      const o = world.objects[id]!;
+      return { id, kind: o.kind, x: o.x, y: o.y, data: o };
+    });
+    const animalRows = animals.map((id) => ({ id, species: world.animals[id]!.species, name: world.animals[id]!.name, data: world.animals[id]! }));
+    const playerRows = players.map((id) => ({ id, name: world.players[id]!.name, data: world.players[id]! }));
 
+    try {
+      await this.write(world, { worldDirty, objectRows, animalRows, playerRows, areasToSave, gone });
+    } catch (e) {
+      // nothing was written (one transaction): mark it all again so the next flush retries instead of losing it
+      for (const id of objects) if (!this.gone.objects.has(id)) this.objects.add(id);
+      for (const id of animals) if (!this.gone.animals.has(id)) this.animals.add(id);
+      for (const id of players) if (!this.gone.players.has(id)) this.players.add(id);
+      for (const id of gone.objects) if (!this.objects.has(id)) this.gone.objects.add(id);
+      for (const id of gone.animals) if (!this.animals.has(id)) this.gone.animals.add(id);
+      for (const id of gone.players) if (!this.players.has(id)) this.gone.players.add(id);
+      for (const k of areasToSave) this.dirtyAreas.add(k);
+      if (worldDirty) this.worldDirty = true;
+      throw e;
+    }
+  }
+
+  private async write(
+    world: WorldState,
+    b: {
+      worldDirty: boolean;
+      objectRows: { id: number; kind: string; x: number; y: number; data: unknown }[];
+      animalRows: { id: number; species: string; name: string | undefined; data: unknown }[];
+      playerRows: { id: string; name: string; data: unknown }[];
+      areasToSave: string[];
+      gone: { objects: number[]; animals: number[]; players: string[] };
+    },
+  ): Promise<void> {
+    const { worldDirty, objectRows, animalRows, playerRows, areasToSave, gone } = b;
     await this.db.transaction(async (tx) => {
       if (worldDirty) {
         const row = {
@@ -242,26 +278,22 @@ export class PgStore implements Store {
           .values(row)
           .onConflictDoUpdate({ target: s.world.id, set: { ...row, id: undefined } });
       }
-      for (const batch of chunk(objects, 200)) {
-        const rows = batch.map((id) => {
-          const o = world.objects[id]!;
-          return { id, kind: o.kind, x: o.x, y: o.y, data: o };
-        });
-        await tx.insert(s.objects).values(rows).onConflictDoUpdate({
+      for (const rows of chunk(objectRows, 200)) {
+        await tx.insert(s.objects).values(rows as never).onConflictDoUpdate({
           target: s.objects.id,
           set: { kind: sql`excluded.kind`, x: sql`excluded.x`, y: sql`excluded.y`, data: sql`excluded.data` },
         });
       }
-      for (const batch of chunk(animals, 200)) {
+      for (const rows of chunk(animalRows, 200)) {
         await tx
           .insert(s.animals)
-          .values(batch.map((id) => ({ id, species: world.animals[id]!.species, name: world.animals[id]!.name, data: world.animals[id]! })))
+          .values(rows as never)
           .onConflictDoUpdate({ target: s.animals.id, set: { species: sql`excluded.species`, name: sql`excluded.name`, data: sql`excluded.data` } });
       }
-      for (const batch of chunk(players, 50)) {
+      for (const rows of chunk(playerRows, 50)) {
         await tx
           .insert(s.players)
-          .values(batch.map((id) => ({ id, name: world.players[id]!.name, data: world.players[id]! })))
+          .values(rows as never)
           .onConflictDoUpdate({ target: s.players.id, set: { name: sql`excluded.name`, data: sql`excluded.data` } });
       }
       for (const k of areasToSave) {
