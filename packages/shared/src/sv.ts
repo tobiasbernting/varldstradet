@@ -1791,6 +1791,7 @@ export const RUN_UI = {
   step: 'Steg {n} av {max}',
   lockedHint: 'Klara förra färden först.',
   cappedFor: 'Spärrad för {names}',
+  cappedMe: 'dig',
   cappedHint: 'En förälder har spärrat den här svårigheten för {names}. Välj en lättare.',
   cleared: 'Klarad',
   noClass: 'Välj en roll först',

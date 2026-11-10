@@ -642,7 +642,7 @@ export class RunUi {
     const lv = h('div', { class: 'tiles levels' });
     for (const l of levels) {
       // a level above a party member's cap (set by a parent) is marked before Starta is pressed; a tap says why
-      const names = arch.party.filter((p) => p.levelCap !== undefined && l.level > p.levelCap).map((p) => (p.id === client.me ? RUN_UI.me : p.name)).join(', ');
+      const names = arch.party.filter((p) => p.levelCap !== undefined && l.level > p.levelCap).map((p) => (p.id === client.me ? RUN_UI.cappedMe : p.name)).join(', ');
       const t = h(
         'button',
         { class: `tile level${this.level === l.level ? ' sel' : ''}${names ? ' capped' : ''}`, 'aria-pressed': String(this.level === l.level), 'aria-disabled': names ? 'true' : undefined },
