@@ -638,6 +638,15 @@ device (`varldstradet.a11y` in local storage) and applied as classes and CSS var
   the potion, Tab to aim, Q bag, F emotes, B or J the journal, H help, T chat, M map, G wardrobe), gamepad (Xbox, PlayStation and
   Switch layouts; the stick and d-pad move a highlight in menus, A selects, B closes). In a fight X, Y, B and RB are spells 1 to 4 and LB
   the potion. Votes can be made with keys 1 to 3 in a Händelse and at the Köpman.
+- **Messages and the Logg.** Everything the game writes on the screen for a moment (toasts, title banners, a boss's shout, the aiming hint) goes
+  through `say()` in `ui/lane.ts` into ONE message lane at the top centre, under the run bar and the round buttons and between the frames at
+  the sides. The panels that stay up (boss bar, the vote on the way on, the "bring the window back" button, the note after a boss) dock in the
+  same column (`.hud-center`) above the lane, so nothing is drawn over a message and a message never over a panel. Several messages stack
+  (what does not fit waits), each stays by its length (never shortened by the calm screen) and waits while a window covers the screen. The
+  same call writes a line (time, kind picture and word, text, who) to the Logg window (`ui/log.ts`; key L, the HUD's 📜 button with an unread
+  dot, the help window, the gamepad through the HUD ring or the help). The last 300 lines are kept in memory and sessionStorage, nothing on the
+  server; chat lines are in it too (filters Alla / Händelser / Chatt). In a run the top of the screen is one row (the run bar; on a screen under
+  500 px high the round buttons fold into one ☰ button), and world labels hide under HUD panels.
 - **Colour is never the only signal.** Low health is a mark and stripes as well as red; telegraphs have a colour-blind variant with other
   colours and stripes; the cards have a star count as well as a border colour.
 

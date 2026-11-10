@@ -22,6 +22,7 @@ import {
   EVENT_NAMES,
   RUN_T,
   RUN_UI,
+  LOG_T,
   SEED_TREE,
   STOP_NAMES,
   STOP_WORDS,
@@ -62,6 +63,7 @@ import { SFX } from '../sound.ts';
 import { bus, client, myPlayer } from '../state.ts';
 import { clear, h, onTap } from './dom.ts';
 import { announce } from './access.ts';
+import { centerColumn, say } from './lane.ts';
 import { cards } from './info.ts';
 import type { Info } from './info.ts';
 import { itemIcon } from './saga.ts';
@@ -167,7 +169,9 @@ export class RunUi {
     private ui: HTMLElement,
     hudRoot: HTMLElement,
   ) {
-    hudRoot.append(this.bar, this.vote, this.cardsBtn, this.runorStrip, this.note, this.live);
+    hudRoot.append(this.bar, this.runorStrip, this.live);
+    // the vote, the button that brings a window back and the note hang in the column under the message lane
+    centerColumn(hudRoot).append(this.vote, this.cardsBtn, this.note);
     this.bar.hidden = this.vote.hidden = this.cardsBtn.hidden = this.runorStrip.hidden = this.note.hidden = true;
     cards.onMode(() => {
       if (!this.win && myRun()) this.sync();
@@ -297,6 +301,7 @@ export class RunUi {
   private fromRun(c: Extract<import('@varldstradet/shared').Change, { t: 'run' }>): void {
     if (c.ev === 'state') {
       const run = myRun();
+      this.logRun(run);
       const was = this.wasIn;
       this.wasIn = !!run;
       if (run && !was) {
@@ -332,6 +337,38 @@ export class RunUi {
       this.gotEnded = true;
       this.open('summary');
       SFX.talk();
+    }
+  }
+
+  /** Lines for the log that the server does not send as messages: where the vote led, and what the others got. */
+  private logNode = -1;
+  private logHold: Record<string, string[]> | null = null;
+  private logWon = false;
+
+  private logRun(run: RunSnap | null): void {
+    if (!run) {
+      this.logNode = -1;
+      this.logHold = null;
+      this.logWon = false;
+      return;
+    }
+    if (this.logNode >= 0 && run.node !== this.logNode) {
+      const kind = run.kind;
+      say(fmt(LOG_T.nextStop, { stop: STOP_NAMES[kind] ?? '', n: run.row, max: ROWS }), { kind: 'run', icon: KIND_ICON[kind], show: false, announce: false });
+    }
+    this.logNode = run.node;
+    const hold = Object.fromEntries(Object.entries(run.hold).map(([id, hs]) => [id, hs.map((x) => x.id)]));
+    if (this.logHold) {
+      for (const p of run.party) {
+        if (p.id === client.me) continue;
+        const before = this.logHold[p.id] ?? [];
+        for (const id of hold[p.id] ?? []) if (!before.includes(id)) say(fmt(LOG_T.gotRuna, { name: p.name, runa: runaName(id) }), { kind: 'run', icon: runa(id)?.icon ?? '🎴', who: p.name, show: false, announce: false });
+      }
+    }
+    this.logHold = hold;
+    if (run.phase === 'victory' && !this.logWon) {
+      this.logWon = true;
+      say(RUN_UI.victory, { kind: 'run', icon: '🏆', show: false, announce: false });
     }
   }
 
@@ -382,20 +419,26 @@ export class RunUi {
       if (kind && state !== 'next') dot.style.setProperty('--c', KIND_COLOR[kind]);
       rail.append(dot);
     }
-    const chip = (cls: string, text: string | Node, label: string, i: Info): HTMLElement => {
+    const chip = (cls: string, text: string | Node | Node[], label: string, i: Info): HTMLElement => {
       const el = h('button', { class: `chip-btn ${cls}`, 'aria-label': label }, text);
       this.tap(el, () => this.showInfo(el));
       return this.info(el, i.icon, i.name, i.text);
     };
-    const spirit = chip('spirit', `🌟 ${run.spirit}`, `${RUN_UI.spirits}: ${run.spirit}`, { icon: '🌟', name: RUN_UI.spirits, text: RUN_UI.infoSpirit });
-    const purse = chip('purse', `🪙 ${run.purse}`, `${RUN_UI.purse}: ${run.purse}`, { icon: '🪙', name: RUN_UI.purse, text: RUN_UI.infoPurse });
-    const seeds = chip('seeds', `🌱 ${mine}`, `${RUN_UI.seeds}: ${mine}`, { icon: '🌱', name: RUN_UI.seeds, text: RUN_UI.infoSeeds });
+    // a chip is a picture and a word: the word folds away when the bar gets narrow (ui/lane.css), the picture and the info card stay
+    const two = (ic: string, word: string): Node[] => [h('span', { class: 'ic', 'aria-hidden': 'true' }, ic), h('span', { class: 'lb' }, word)];
+    const spirit = chip('spirit', two('🌟', String(run.spirit)), `${RUN_UI.spirits}: ${run.spirit}`, { icon: '🌟', name: RUN_UI.spirits, text: RUN_UI.infoSpirit });
+    const purse = chip('purse', two('🪙', String(run.purse)), `${RUN_UI.purse}: ${run.purse}`, { icon: '🪙', name: RUN_UI.purse, text: RUN_UI.infoPurse });
+    const seeds = chip('seeds', two('🌱', String(mine)), `${RUN_UI.seeds}: ${mine}`, { icon: '🌱', name: RUN_UI.seeds, text: RUN_UI.infoSeeds });
     const myPath = run.paths[client.me];
-    const pathChip = myPath ? chip('path', `${pathIcon(myPath)} ${pathName(myPath)}`, `${RUN_UI.pathMine}: ${pathName(myPath)}`, { icon: pathIcon(myPath), name: `${RUN_UI.pathMine}: ${pathName(myPath)}`, text: PATH_TEXT[myPath] ?? '' }) : null;
-    const level = chip('level', `${lvl.icon} ${lvl.name}`, `${RUN_UI.level}: ${lvl.name}`, { icon: lvl.icon, name: lvl.name, text: lvl.blurb });
+    const pathChip = myPath ? chip('path', two(pathIcon(myPath), pathName(myPath)), `${RUN_UI.pathMine}: ${pathName(myPath)}`, { icon: pathIcon(myPath), name: `${RUN_UI.pathMine}: ${pathName(myPath)}`, text: PATH_TEXT[myPath] ?? '' }) : null;
+    const level = chip('level', two(lvl.icon, lvl.name), `${RUN_UI.level}: ${lvl.name}`, { icon: lvl.icon, name: lvl.name, text: lvl.blurb });
     const clock = chip('clockbox', h('span', null, '⏱ ', this.clockEl), RUN_UI.time, { icon: '⏱', name: RUN_UI.time, text: RUN_UI.infoClock });
-    const stopTxt = `${cur ? `${KIND_ICON[cur.kind]} ${STOP_WORDS[cur.kind]}` : ''} · ${fmt(RUN_UI.step, { n: run.row, max: ROWS })}`;
-    const stop = chip('stop', stopTxt, stopTxt, { icon: cur ? KIND_ICON[cur.kind] : '🧭', name: cur ? STOP_NAMES[cur.kind] ?? '' : '', text: `${cur ? RUN_UI.kinds[cur.kind] : ''} ${RUN_UI.infoStep}` });
+    const affixList = run.modifiers.filter((m) => AFFIX_IDS.includes(m));
+    const stopWord = cur ? STOP_WORDS[cur.kind] : '';
+    const stopLabel = `${stopWord} · ${fmt(RUN_UI.step, { n: run.row, max: ROWS })}`;
+    // the stop's card also says what the chips that folded away say: the difficulty, the path and the special rules
+    const more = [`${lvl.name}.`, myPath ? `${pathName(myPath)}.` : '', ...affixList.map((m) => `${MODIFIER_NAMES[m] ?? m}.`)].filter(Boolean).join(' ');
+    const stop = chip('stop', [h('span', { class: 'ic', 'aria-hidden': 'true' }, cur ? KIND_ICON[cur.kind] : '🧭'), h('span', { class: 'lb' }, stopWord), h('span', { class: 'st' }, ` · ${fmt(RUN_UI.step, { n: run.row, max: ROWS })}`), h('span', { class: 'st-s' }, `${run.row}/${ROWS}`)], stopLabel, { icon: cur ? KIND_ICON[cur.kind] : '🧭', name: cur ? (STOP_NAMES[cur.kind] ?? '') : '', text: `${cur ? RUN_UI.kinds[cur.kind] : ''} ${RUN_UI.infoStep} ${more}` });
     const ask = h('button', { class: `round-btn${this.infoMode ? ' on' : ''}`, 'aria-label': RUN_UI.explain, 'aria-pressed': String(this.infoMode) }, '❔');
     onTap(ask, () => {
       this.infoMode = !this.infoMode;
@@ -410,8 +453,9 @@ export class RunUi {
     const home = h('button', { class: 'round-btn danger', 'aria-label': RUN_UI.home }, '🚪');
     this.tap(home, () => this.open('leave'));
     this.info(home, '🚪', RUN_UI.home, RUN_UI.infoHome);
-    const affixes = run.modifiers.filter((m) => AFFIX_IDS.includes(m)).map((m) => chip('affix', `${ico(MODIFIER_ICON[m])} ${MODIFIER_NAMES[m] ?? m}`, MODIFIER_NAMES[m] ?? m, { icon: ico(MODIFIER_ICON[m]), name: MODIFIER_NAMES[m] ?? m, text: MODIFIER_TEXT[m] ?? '' }));
-    this.bar.append(h('div', { class: 'line1' }, stop, level, pathChip, ...affixes, clock, spirit, purse, seeds, ask, map, home), rail, h('div', { class: 'clockbar' }, this.clockFill));
+    const affixes = affixList.map((m) => chip('affix', two(ico(MODIFIER_ICON[m]), MODIFIER_NAMES[m] ?? m), MODIFIER_NAMES[m] ?? m, { icon: ico(MODIFIER_ICON[m]), name: MODIFIER_NAMES[m] ?? m, text: MODIFIER_TEXT[m] ?? '' }));
+    // ONE row at every width: the stop, the road, then the chips, then the three buttons; the clock's bar is a thin line under it
+    this.bar.append(h('div', { class: 'line1' }, stop, rail, level, pathChip, ...affixes, clock, spirit, purse, seeds, ask, map, home), h('div', { class: 'clockbar' }, this.clockFill));
     this.tickClock(run);
   }
 
@@ -430,7 +474,7 @@ export class RunUi {
     for (const id of run.runor) this.runorStrip.append(h('span', { class: 'r party', title: `${RUN_UI.cardsAll}: ${runaName(id)}` }, runa(id)?.icon ?? '🔹'));
   }
 
-  /** The vote on the way on: a card for each rune on the floor, who stands on it and the clock. */
+  /** The vote on the way on: a card for each rune on the floor, what comes after it, who stands on it and the clock. */
   private renderVote(run: RunSnap): void {
     clear(this.vote);
     this.voteLeftEl = null;
@@ -442,16 +486,56 @@ export class RunUi {
     head.append(this.voteLeftEl);
     const finder = run.finder ? names.get(run.finder) : null;
     const cards = h('div', { class: 'choices' });
-    for (const c of run.choices!) {
-      const card = h('div', { class: `choice${c.on.length ? ' on' : ''}` });
+    // what lies down each branch: the stops straight after it, and (within three steps) every kind it can lead to
+    const nodeOf = (id: number): RouteNodeSnap | undefined => run.route.find((n) => n.id === id);
+    const nextKinds = (id: number): NodeKind[] => [...new Set((nodeOf(id)?.next ?? []).map((n) => nodeOf(n)?.kind).filter((k): k is NodeKind => !!k))];
+    const reach = (id: number): NodeKind[] => {
+      const seen = new Set<number>();
+      const kinds = new Set<NodeKind>();
+      let layer = [id];
+      for (let d = 0; d < 3; d++) {
+        layer = [...new Set(layer.flatMap((n) => nodeOf(n)?.next ?? []))].filter((n) => !seen.has(n));
+        for (const n of layer) {
+          seen.add(n);
+          const k = nodeOf(n)?.kind;
+          if (k) kinds.add(k);
+        }
+      }
+      return [...kinds];
+    };
+    const sig = (id: number): string => `${nodeOf(id)?.kind}|${nextKinds(id).sort().join(',')}|${reach(id).sort().join(',')}`;
+    const choices = run.choices!;
+    const same = choices.length > 1 && choices.every((c) => sig(c.node) === sig(choices[0]!.node));
+    const list = (ks: NodeKind[]): string => ks.map((k) => STOP_NAMES[k] ?? '').join(', ');
+    if (same) head.append(h('span', { class: 'same-note' }, LOG_T.voteSameShort));
+    for (const c of choices) {
+      const nx = nextKinds(c.node);
+      const mine = reach(c.node);
+      const others = new Set(choices.filter((o) => o !== c).flatMap((o) => [o.kind, ...reach(o.node)]));
+      const only = same ? [] : mine.filter((k) => !others.has(k));
+      const who = c.on.map((id) => names.get(id) ?? '').filter(Boolean);
+      const card = h('div', { class: `choice${c.on.length ? ' on' : ''}${same ? ' same' : ''}` });
       card.style.setProperty('--c', KIND_COLOR[c.kind]);
       card.append(h('span', { class: 'ic' }, KIND_ICON[c.kind]), h('span', { class: 'nm' }, STOP_WORDS[c.kind]));
-      card.append(h('span', { class: 'who' }, c.on.length ? `🧍 ${c.on.map((id) => names.get(id) ?? '').join(', ')}` : '·'));
+      if (nx.length) card.append(h('span', { class: 'next', 'aria-hidden': 'true' }, `→ ${nx.map((k) => KIND_ICON[k]).join(' ')}`));
+      card.append(h('span', { class: 'who' }, who.length ? `🧍 ${who.join(', ')}` : `🧍 ${LOG_T.voteStand}`));
+      if (same) card.append(h('span', { class: 'why' }, '='));
+      else if (only.length) card.append(h('span', { class: 'why', 'aria-hidden': 'true' }, `★ ${only.map((k) => KIND_ICON[k]).join(' ')}`));
+      const text = [
+        RUN_UI.kinds[c.kind] ?? '',
+        nx.length ? fmt(LOG_T.voteAfter, { stops: list(nx) }) + '.' : LOG_T.voteAfterNone,
+        only.length ? fmt(LOG_T.voteOnly, { stop: list(only) }) : '',
+        same ? LOG_T.voteSameInfo : '',
+        who.length ? fmt(LOG_T.voteOn, { names: who.join(', ') }) + '.' : LOG_T.voteStandInfo,
+      ]
+        .filter(Boolean)
+        .join(' ');
       card.setAttribute('tabindex', '-1');
-      this.info(card, KIND_ICON[c.kind], STOP_NAMES[c.kind] ?? '', RUN_UI.kinds[c.kind] ?? '');
+      card.setAttribute('aria-label', `${STOP_NAMES[c.kind] ?? ''}. ${text}`);
+      this.info(card, KIND_ICON[c.kind], STOP_NAMES[c.kind] ?? '', text);
       cards.append(card);
     }
-    this.vote.append(head, cards, h('div', { class: 'sub' }, `${RUN_UI.voteNone}${finder ? ` · 🧭 ${RUN_UI.finder}: ${finder}` : ''}`));
+    this.vote.append(head, cards, h('div', { class: 'sub' }, same ? LOG_T.voteSame : `${RUN_UI.voteNone}${finder ? ` · 🧭 ${RUN_UI.finder}: ${finder}` : ''}`));
     this.updateVoteClock();
   }
 

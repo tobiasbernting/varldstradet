@@ -54,6 +54,7 @@ import { CHAR_H, dirOf, frameIndex, HEADROOM } from '@art/characters.ts';
 import { SAGA_LOOKS, SAGA_STEPPED } from '@art/saga.ts';
 import { EMOTE_GLYPH, PAINT_COLORS } from '@art/world.ts';
 import { net } from '@v1/net.ts';
+import { underHud } from '@v1/ui/lane.ts';
 import { SFX } from '@v1/sound.ts';
 import { activeWorld, bus, client, furnish, inOwnHouse, myArea, myPlayer, serverNow } from '@v1/state.ts';
 import { attackTarget, heroOn, levelOf, sagaMarker, sagaSpeed, titleOf } from '@v1/saga.ts';
@@ -1981,6 +1982,8 @@ export class View implements HudTarget {
       if (el.textContent !== text) el.textContent = text;
       el.classList.toggle('on', names.length > 0);
       place(el, ov.o.x * TILE + TILE / 2, ov.o.y * TILE - 6);
+      // never drawn under a HUD panel (the vote names the choices there)
+      el.style.visibility = underHud(el.getBoundingClientRect()) ? 'hidden' : '';
     }
     for (const [id, el] of this.runeLabels) {
       if (live.has(id)) continue;

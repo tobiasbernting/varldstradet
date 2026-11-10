@@ -98,7 +98,7 @@ export function initGamepad(opts: {
 
   /** The open window, or the character picker before the game starts. */
   function menuRoot(): HTMLElement | null {
-    if (windows.some((w) => w.isOpen())) return ui.querySelector<HTMLElement>('.modal');
+    if (windows.some((w) => w.isOpen())) return [...ui.querySelectorAll<HTMLElement>('.modal')].pop() ?? null;
     return ui.querySelector<HTMLElement>('.picker');
   }
 
