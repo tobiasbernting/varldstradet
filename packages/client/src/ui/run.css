@@ -1469,7 +1469,7 @@ html body.in-run .run-bar .line1 {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   overflow: hidden;
 }
 html body.in-run .run-bar .line1 > * {

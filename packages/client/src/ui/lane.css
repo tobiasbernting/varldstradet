@@ -55,7 +55,11 @@
 .lane-item.measuring {
   visibility: hidden;
 }
-.lane-item.in {
+.msg-lane .toast.lane-item {
+  animation: none;
+  white-space: normal;
+}
+.msg-lane .lane-item.in {
   animation: lane-in 0.3s ease-out;
 }
 .lane-item.out {
