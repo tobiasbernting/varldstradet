@@ -33,6 +33,7 @@ import {
   companionClass,
   fmt,
   fmtDuration,
+  itemName,
   parseRunLevel,
   plantError,
   runa,
@@ -59,6 +60,7 @@ import { clear, h, onTap } from './dom.ts';
 import { announce } from './access.ts';
 import { cards } from './info.ts';
 import type { Info } from './info.ts';
+import { itemIcon } from './saga.ts';
 
 export type { Info } from './info.ts';
 import './run.css';
@@ -933,6 +935,7 @@ export class RunUi {
         stat('🌟', RUN_UI.spiritsUsed, `${e.spiritUsed ?? 0}`),
       ),
     );
+    if (e.trophy) body.append(h('div', { class: 'stat trophy' }, h('span', { class: 'ic' }, itemIcon(e.trophy, '🏆')), h('span', { class: 'lb' }, RUN_UI.trophy), h('b', { class: 'val' }, `${itemName(e.trophy)} (${RUN_UI.trophyWhere[e.trophyWhere ?? 'bag'] ?? ''})`)));
     if (e.path?.length) body.append(h('div', { class: 'trail' }, h('span', null, '👣'), path));
     if (e.runor.length) body.append(h('div', { class: 'trail' }, h('span', null, '🎴'), runor));
     const lookRow = e.outcome === 'win' ? lookSummary() : null;

@@ -621,6 +621,10 @@ body.saga-banner-on .saga-yell {
     opacity 0.6s,
     transform 0.6s;
 }
+/* the loot window is the news: a banner ("Draugkungen är besegrad!") must not print over its title */
+body:has(.saga-panel.loot) .saga-banners {
+  display: none;
+}
 @keyframes saga-banner-in {
   from {
     opacity: 0;
@@ -819,7 +823,7 @@ body.saga-banner-on .saga-yell {
 }
 body.touch .saga-hint {
   bottom: auto;
-  top: calc(33 * var(--u));
+  top: calc(52 * var(--u)); /* (under the run bar, not printed behind it) */
 }
 /* small screens: bigger words in the tracker */
 body.touch .saga-tracker {
@@ -2411,6 +2415,12 @@ button.pick {
   font-style: normal;
   color: #6a5a7a;
   text-shadow: none;
+}
+
+/* the loot window is the news: nothing else may print over its title */
+body:has(.saga-panel.loot) .run-note,
+body:has(.saga-panel.loot) .saga-yell {
+  display: none;
 }
 
 /* ---- the pets of the party (pets.ts): a small frame each, with a state icon ---- */

@@ -699,7 +699,8 @@ function interactObject(world: WorldState, p: PlayerState, obj: WorldObject, _he
       standAct(world, p, obj, _held, out);
       return;
     case 'kennel':
-      out.push({ t: 'open', to: p.id, ui: 'kennel', id: obj.id });
+      // one free pet each: afterwards the kennel only says so (not a window that offers a first pet again)
+      out.push((p.stats.petAdopted ?? 0) > 0 ? toast(p.id, T.kennelOnce) : { t: 'open', to: p.id, ui: 'kennel', id: obj.id });
       return;
   }
 }

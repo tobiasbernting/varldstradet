@@ -2631,3 +2631,18 @@ describe('pets and runs', () => {
     expect(dogs(party.world)).toHaveLength(1);
   });
 });
+
+describe('the boss trophy of a win is shown', () => {
+  it('a win sends the trophy to the loot window (icon and name via the item) and names it in the summary', { timeout: 120_000 }, () => {
+    const party = makeParty(['krigare', 'vaktare'], { seed: 5, level: 4 });
+    const r = playRun(party, { seed: 5, level: 0 }, 60 * 60_000);
+    expect(r.outcome).toBe('win');
+    const me = party.players[0]!;
+    const loot = r.changes.find((c) => c.t === 'loot' && c.to === me.id && c.items.some((i) => i.item.startsWith('trophy_')));
+    expect(loot).toBeTruthy();
+    const ended = r.changes.find((c) => c.t === 'run' && c.ev === 'ended' && c.to === me.id);
+    expect(ended && ended.t === 'run' && ended.ev === 'ended' ? ended.trophy : undefined).toMatch(/^trophy_/);
+    expect(me.inventory.some((s) => s?.item.startsWith('trophy_'))).toBe(true);
+  });
+});
+
