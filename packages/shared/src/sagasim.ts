@@ -493,7 +493,7 @@ function openChest(h: Here, p: PlayerState, chest: WorldObject, ctx: SimCtx): Ch
   const prog = progressOf(p);
   const days = (prog.chestDay ??= {});
   const today = h.farm.day;
-  if (days[species] === today) replayChest(h, p, table, SAGA_BOSSES[species]!.name, ctx, out);
+  if (days[species] === today) replayChest(h, p, SAGA_BOSSES[species]!.name, out);
   else {
     days[species] = today;
     rollLoot(h, p, table, SAGA_BOSSES[species]!.name, ctx, out);
@@ -502,7 +502,7 @@ function openChest(h: Here, p: PlayerState, chest: WorldObject, ctx: SimCtx): Ch
 }
 
 /** The smaller chest of a boss already looted today: a healing potion, no stars. */
-function replayChest(h: Here, p: PlayerState, table: SagaLoot, from: string, ctx: SimCtx, out: Change[]): void {
+function replayChest(h: Here, p: PlayerState, from: string, out: Change[]): void {
   const items = [{ item: 'healing_potion', count: 1 }];
   for (const it of items) giveItems(h.area, p, it.item, it.count, out);
   bump(p, 'loot', 1, out);
@@ -984,7 +984,7 @@ export function hurtMob(h: Here, m: SagaMob, by: string, amount: number, threatM
   if (f) f.fightAt = ctx.now;
   out.push(hit(h, m.id, n, crit ? 'crit' : 'dmg'));
   if (m.hp <= 0) {
-    mobDown(h, m, by, ctx, out);
+    mobDown(h, m, ctx, out);
     return;
   }
   // a boss gets a new phase at each health mark: a shout and helpers
@@ -1019,7 +1019,7 @@ export function hurtMob(h: Here, m: SagaMob, by: string, amount: number, threatM
  * A monster is beaten (by `by`): quest credit for everyone there, now and then a Monsteressens for whoever beat a
  * dungeon monster, the gate opens after the mid-boss, a chest after a boss, and the family's best time after the last.
  */
-function mobDown(h: Here, m: SagaMob, by: string, ctx: SimCtx, out: Change[]): void {
+function mobDown(h: Here, m: SagaMob, ctx: SimCtx, out: Change[]): void {
   const a = h.area.animals[m.id];
   delete h.inst.mobs[m.id];
   delete h.area.animals[m.id];

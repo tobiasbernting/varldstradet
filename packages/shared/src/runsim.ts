@@ -414,7 +414,7 @@ function snap(farm: WorldState, run: RunState): RunSnap {
     spiritUsed: run.spiritUsed,
     runor: [...run.runor],
     purse: run.purse,
-    ...(run.shop && run.plan.stops[run.node]!.kind === 'shop' ? { shop: shopSnap(farm, run) } : {}),
+    ...(run.shop && run.plan.stops[run.node]!.kind === 'shop' ? { shop: shopSnap(run) } : {}),
     ...(run.event && run.phase === 'event' ? { event: { id: run.event.id, choices: eventDef(run.event.id)!.choices.map((c) => ({ id: c.id, cost: c.cost ?? 0 })), votes: { ...run.event.votes }, left: Math.max(0, Math.round(run.event.until - run.elapsed)) } } : {}),
     hold: Object.fromEntries(Object.entries(run.hold).map(([id, hs]) => [id, hs.map((h) => ({ ...h }))])),
     earned: { ...run.earned },
@@ -427,7 +427,7 @@ function snap(farm: WorldState, run: RunState): RunSnap {
 const stateChange = (farm: WorldState, run: RunState | undefined): Change => ({ t: 'run', ev: 'state', to: null, run: run ? snap(farm, run) : null });
 
 /** What the Köpman shows: the prices are the same every visit (events.ts). */
-function shopSnap(farm: WorldState, run: RunState): NonNullable<RunSnap['shop']> {
+function shopSnap(run: RunState): NonNullable<RunSnap['shop']> {
   const st = run.shop!;
   const def = RUN_LEVELS[run.level];
   return {
@@ -823,7 +823,6 @@ const silverFor = (run: RunState, n: number): number => Math.round(n * (run.leve
 /** The stop is cleared: the cards of a runa after a fight (a Flock, the Mellanboss), and then the way on. */
 function stopCleared(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
   const z = run.plan.stops[run.node]!;
-  const out: Change[] = [];
   // after the Mellanboss everyone chooses a path first (paths.ts), then the runor
   if (z.kind === 'mini') return startPaths(farm, run, ctx);
   if (z.kind === 'flock') return openCards(farm, run, ctx, 'flock');
@@ -1409,14 +1408,14 @@ function watchStop(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
     out.push(...stopCleared(farm, run, ctx));
     return out;
   }
-  if (inst.bossDown && run.phase === 'stop') out.push(...victory(farm, run, ctx));
+  if (inst.bossDown && run.phase === 'stop') out.push(...victory(farm, run));
   if (run.phase === 'victory' && run.victoryAt !== undefined && run.elapsed - run.victoryAt >= RUN_VICTORY_MS) return [...out, ...endRun(farm, run, 'win', ctx)];
   if (inst.wipeAt !== undefined && ctx.now >= inst.wipeAt && !inst.run?.revive) return [...out, ...endRun(farm, run, 'wipe', ctx)];
   return out;
 }
 
 /** The boss has fallen: its sagafrön and the statistics. */
-function victory(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
+function victory(farm: WorldState, run: RunState): Change[] {
   const out: Change[] = [];
   run.phase = 'victory';
   run.victoryAt = run.elapsed;

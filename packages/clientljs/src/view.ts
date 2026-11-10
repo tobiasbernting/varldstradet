@@ -418,10 +418,6 @@ export class View implements HudTarget {
     return (is(x, y - 1) ? 1 : 0) | (is(x + 1, y) ? 2 : 0) | (is(x, y + 1) ? 4 : 0) | (is(x - 1, y) ? 8 : 0);
   }
 
-  private fenceMask(x: number, y: number): number {
-    return this.linkMask(x, y, (k) => k === 'fence' || k === 'gate');
-  }
-
   private wallMask(x: number, y: number): number {
     return this.linkMask(x, y, (k) => WALL_KINDS.has(k));
   }

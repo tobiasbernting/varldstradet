@@ -1,7 +1,6 @@
 // HUD: top chips, hotbar, toasts, touch controls.
 import { A11Y_T, HOTBAR_SIZE, HOUSE_T, MAX_HEARTS, SPELLS, T, areaName, fmt, houseTitle, isHomeKey, isSagaKey, ownerOfHome, stackName, type ItemStack } from '@varldstradet/shared';
 import { Minimap } from './minimap.ts';
-import { getArt } from '@art/textures.ts';
 import { stackIconUrl } from '@art/stackicon.ts';
 import { net } from '../net.js';
 import { bus, client, furnish, inOwnHouse, myPlayer, serverNow } from '../state.js';
@@ -20,7 +19,6 @@ export interface HudTarget {
 }
 
 export function slotEl(stack: ItemStack | null, opts: { selected?: boolean; picked?: boolean; dim?: boolean; key?: string; onTap?: () => void } = {}): HTMLDivElement {
-  const art = getArt();
   const el = h('div', { class: `slot${opts.selected ? ' selected' : ''}${opts.picked ? ' picked' : ''}${opts.dim ? ' dim' : ''}` });
   if (opts.key) el.append(h('span', { class: 'key' }, opts.key));
   if (stack) {
@@ -151,7 +149,6 @@ export class Hud {
 
   /** The gear button: only with a class. */
   private renderHero(): void {
-    const me = myPlayer();
     this.gearBtn.hidden = false; // Garderoben: for everyone (looks are earned, but the wardrobe is always there)
   }
 

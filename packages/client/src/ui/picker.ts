@@ -11,7 +11,6 @@ const STARTER_SHIRTS = ['shirt_red', 'shirt_blue', 'shirt_green', 'shirt_yellow'
 
 export class Picker {
   root: HTMLElement;
-  private status: HTMLElement | null = null;
   private canCreate = true;
 
   constructor(

@@ -131,7 +131,6 @@ export class RunUi {
   private treePick: string | null = null;
   /** The offer the cards were last opened for (a new offer opens them again). */
   private offerSeen = '';
-  private lastPhase = '';
   private wasIn = false;
   /** The server sent my summary (a player who goes home alone gets none: the window makes one from what it knew). */
   private gotEnded = true;
@@ -346,7 +345,6 @@ export class RunUi {
     document.body.classList.toggle('run-route', run?.phase === 'route');
     if (!run) {
       this.bar.hidden = this.vote.hidden = this.cardsBtn.hidden = this.runorStrip.hidden = this.note.hidden = true;
-      this.lastPhase = '';
       return;
     }
     this.renderBar(run);
@@ -365,7 +363,6 @@ export class RunUi {
     }
     this.note.hidden = run.phase !== 'victory';
     this.note.textContent = run.phase === 'victory' ? `🏆 ${RUN_UI.victory}` : '';
-    this.lastPhase = run.phase;
   }
 
   private renderBar(run: RunSnap): void {

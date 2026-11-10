@@ -202,7 +202,7 @@ export class Menus {
     const body = h('div', { class: 'body' });
     const panel = h('div', { class: 'panel' }, head, body);
     if (SEARCH_KINDS.includes(this.kind)) {
-      this.frame = this.buildFrame(panel, head, body);
+      this.frame = this.buildFrame(panel, body);
       this.modal.append(panel);
       this.renderBody(true);
       return;
@@ -278,7 +278,7 @@ export class Menus {
     return b;
   }
 
-  private buildFrame(panel: HTMLElement, head: HTMLElement, body: HTMLElement): SearchFrame {
+  private buildFrame(panel: HTMLElement, body: HTMLElement): SearchFrame {
     const kind = this.kind!;
     const search = this.searchInput();
     const chips = new Map<string, HTMLElement>();

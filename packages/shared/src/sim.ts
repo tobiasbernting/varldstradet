@@ -45,7 +45,6 @@ import {
   TILE,
   RIDE_SPEED_MUL,
   RUN_SPEED_MUL,
-  key,
 } from './types.ts';
 
 export interface SimCtx {

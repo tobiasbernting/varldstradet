@@ -136,7 +136,7 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
   /**
    * Requests that change something must come from our own pages (no cross-site forms or sockets).
    */
-  const sameOrigin = (req: http.IncomingMessage, p: string): boolean => {
+  const sameOrigin = (req: http.IncomingMessage): boolean => {
     const o = req.headers.origin;
     const site = req.headers['sec-fetch-site'];
     // browsers send "null" in some privacy modes; then only the fetch metadata can vouch for it
@@ -241,7 +241,7 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
         res.writeHead(200, { 'content-type': 'text/plain' });
         return void res.end('User-agent: *\nDisallow: /\n');
       }
-      if (access && req.method === 'POST' && !sameOrigin(req, p)) {
+      if (access && req.method === 'POST' && !sameOrigin(req)) {
         await access.record('refused', `fel ursprung ${String(req.headers.origin ?? '')} → ${p}`, ip);
         return json(res, 403, { error: 'origin' });
       }
@@ -484,7 +484,7 @@ export function createServers(game: Game, opts: ServerOptions): { server: http.S
     if (p !== '/ws') return refuse('404 Not Found');
     let device: Device | null = null;
     if (access) {
-      if (!sameOrigin(req, p)) return refuse('403 Forbidden');
+      if (!sameOrigin(req)) return refuse('403 Forbidden');
       device = deviceOf(req);
       if (access.gate(device) !== 'ok') return refuse('403 Forbidden');
       access.seen(device!, clientIp(req));

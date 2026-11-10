@@ -357,7 +357,7 @@ const tree = (kind: 'round' | 'pine' | 'apple', v: number): Px => {
       [8, 6, 12],
       [10, 1, 6],
     ];
-    for (const [x, y, w] of layers) {
+    for (const [, y, w] of layers) {
       const h = 10;
       for (let yy = 0; yy < h; yy++) {
         const half = Math.round((w / 2) * (yy / h)) + 1;
