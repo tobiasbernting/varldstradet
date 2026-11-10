@@ -116,6 +116,30 @@ const SPELL_SOUNDS: Record<string, () => void> = {
     later(110, () => tone(360, 0.08, 'sine', 0.06, 240));
     later(240, () => notes([784, 1047], 60, 0.12, 'sine', 0.035));
   },
+  // the pets (pets.ts): small and friendly
+  pet_bite: () => {
+    sweep(0.06, 2400, 900, 0.04, 'highpass');
+    tone(520, 0.05, 'square', 0.025, -200);
+  },
+  pet_pounce: () => {
+    sweep(0.12, 1500, 400, 0.05, 'highpass');
+    thud();
+  },
+  pet_purr: () => notes([659, 784, 988], 55, 0.1, 'sine', 0.03),
+  pet_roar: () => {
+    tone(130, 0.3, 'sawtooth', 0.05, -40);
+    sweep(0.3, 500, 180, 0.035, 'bandpass', 2);
+  },
+  pet_howl: () => {
+    tone(440, 0.5, 'sine', 0.05, 330);
+    later(250, () => tone(660, 0.5, 'sine', 0.04, -200));
+  },
+  pet_mark: () => notes([1319, 1760], 60, 0.1, 'triangle', 0.03),
+  pet_ram: () => {
+    thud();
+    later(50, () => notes([392, 523], 60, 0.1, 'square', 0.03));
+  },
+  pet_dig: () => sweep(0.12, 900, 400, 0.025, 'lowpass'),
   claw: () => {
     sweep(0.08, 1800, 600, 0.05, 'highpass');
     tone(180, 0.06, 'square', 0.03, -80);

@@ -78,7 +78,7 @@ export class Hud {
     });
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) run.addEventListener(ev, () => setRun(false));
     // the gear window lives with the saga's windows (ui/saga.ts)
-    this.gearBtn = this.roundBtn('⚔️', () => document.dispatchEvent(new Event('lilla:gear')));
+    this.gearBtn = this.roundBtn('👕', () => document.dispatchEvent(new Event('lilla:gear')));
     this.gearBtn.classList.add('gear-btn');
     this.gearBtn.title = T.sagaGearBtn;
     this.furnishBtn = this.roundBtn('🪑', () => this.toggleFurnish());
@@ -151,7 +151,7 @@ export class Hud {
   /** The gear button: only with a class. */
   private renderHero(): void {
     const me = myPlayer();
-    this.gearBtn.hidden = !me?.saga?.cls;
+    this.gearBtn.hidden = false; // Garderoben: for everyone (looks are earned, but the wardrobe is always there)
   }
 
   /** Möblera on or off (only in your own house). */
@@ -210,7 +210,7 @@ export class Hud {
     const f = client.timeMs / (10 * 60 * 1000);
     const clock = f < 0.3 ? '🌅' : f < 0.65 ? '☀️' : f < 0.8 ? '🌇' : '🌙';
     this.top.append(h('div', { class: 'chip' }, clock));
-    if (me) this.top.append(h('div', { class: 'chip' }, h('span', { class: 'coins' }, `${me.coins} ${T.coins}`)));
+    // (no purse: nothing in the game spends kronor any more; the shop, the smithy and the crafts are gone)
     if (me && me.stars > 0) this.top.append(h('div', { class: 'chip' }, `⭐ ${me.stars}`));
     // the hero level, for anyone past the first or with a class; a tap opens the journal's level page
     if (me && showsLevel(me)) {

@@ -9,6 +9,8 @@ import {
   BATH_ROOM,
   BOOST_SPEED_MUL,
   countItem,
+  decodeLook,
+  STAND_PREFIX,
   CROPS,
   DAY_LENGTH_MS,
   dungeonOfKey,
@@ -16,6 +18,8 @@ import {
   STOP_WORDS,
   DUNGEON_H,
   DUNGEON_W,
+  PETS,
+  type LookSlot,
   facingTile,
   heldItem,
   HOUSE_ROOM,
@@ -70,7 +74,8 @@ import { activeWorld, bus, client, furnish, inOwnHouse, myArea, myPlayer, server
 import { attackTarget, heroOn, levelOf, sagaMarker, sagaSpeed, titleOf } from '@v1/saga.ts';
 import { KIND_ICON, runClient } from '@v1/run.ts';
 import type { HudTarget } from '@v1/ui/hud.ts';
-import { animalSprites, characterSprites, loadSprites, paintingSprite, type ObjectSprites, type Sprites } from './art.ts';
+import { animalSprites, characterSprites, loadSprites, lookSprite, paintingSprite, type ObjectSprites, type Sprites } from './art.ts';
+import { LooksFx, type FxActor } from './looksfx.ts';
 import type { Sprite } from './atlas.ts';
 import { Effects } from './fx.ts';
 import { SagaView, type Spot } from './saga.ts';
@@ -272,6 +277,9 @@ export class View implements HudTarget {
   private fx!: Effects;
   /** Sagan om Världsträdet: telegraphs, spells, numbers and bars in the dungeons. */
   private sagaFx!: SagaView;
+  /** The looks' glows, sparks and trails (looksfx.ts), and the players it was told about this frame. */
+  private looksFx!: LooksFx;
+  private fxList: FxActor[] = [];
   private weather!: WeatherView;
   private flashLamps: { lamp: Lamp; fl: { t: number; dur: number } }[] = [];
   private sky: SkyLight = skyLight(0, null, 'none');
@@ -345,6 +353,8 @@ export class View implements HudTarget {
     new LightPainter(() => this.paintLight());
     this.fx = new Effects(this.art);
     this.sagaFx = new SagaView(this.art, this.labels, this.fx, (id) => this.spotOf(id));
+    this.looksFx = new LooksFx(this.art);
+    (window as unknown as { __looksFx?: LooksFx }).__looksFx = this.looksFx; // (for the frame cost check)
     this.weather = new WeatherView(this.art);
   }
 
@@ -665,8 +675,8 @@ export class View implements HudTarget {
 
   private putAnimal(a: AnimalState): void {
     const variant = (a.variant ?? 0) % (ANIMAL_VARIANTS[a.species] ?? 1);
-    const frames = animalSprites(a.species, isBaby(a), client.season === 'jul', variant);
-    const key = `${a.species}-${isBaby(a)}-${client.season === 'jul'}-${variant}`;
+    const frames = animalSprites(a.species, isBaby(a), client.season === 'jul', variant, a.wear);
+    const key = `${a.species}-${isBaby(a)}-${client.season === 'jul'}-${variant}${a.wear ? `-${JSON.stringify(a.wear)}` : ''}`;
     let actor = this.animals.get(a.id);
     if (!actor) {
       actor = this.newActor('animal', frames, key, a.x, a.y, this.makeLabel(a.name, 'animal'), a.species);
@@ -731,6 +741,7 @@ export class View implements HudTarget {
         break;
       }
       case 'spell': {
+        if (typeof c.by === 'number' && c.spell.startsWith('pet_')) this.petCue.set(c.by, c.spell);
         // a hero swings their weapon (or staff) with every spell, like the ✋ button
         if (typeof c.by !== 'string' || c.area !== this.area || c.spell.startsWith('cast_') || c.spell.startsWith('land_') || c.spell === 'potion') break;
         const a = this.players.get(c.by);
@@ -995,6 +1006,7 @@ export class View implements HudTarget {
     this.updateLight(me, dt);
     this.fx.update(dt);
     this.sagaFx.update(dt);
+    this.looksFx.update(dt, (this.fxList = this.fxActors(world)));
 
     const sc = this.makeScene(world, dt);
     this.scene = sc;
@@ -1544,7 +1556,8 @@ export class View implements HudTarget {
       q.push(ov.depth, sprite, cx, cy, w, h, angle);
       // a weapon, shield or amulet put on a gear stand hangs on its arms
       if (ov.o.kind === 'gear_stand' && ov.o.data) {
-        const shown = this.art.icons[ov.o.data];
+        // (a look from the owner's collection stands there with its shine; an old stand holds an item)
+        const shown = ov.o.data.startsWith(STAND_PREFIX) ? lookSprite(ov.o.data.slice(STAND_PREFIX.length)) : this.art.icons[ov.o.data];
         if (shown) q.push(ov.depth + 0.01, shown, ov.x + s.w / 2, ov.y + 17, 15, 15, 0);
       }
     }
@@ -1596,6 +1609,69 @@ export class View implements HudTarget {
       const hop = rider ? 0 : this.hopOf(a);
       const w = s.w * (1 + a.squash * 0.6) * turnScale(a.flip);
       const h = s.h * (1 - a.squash * 0.6);
+      // a pet: a small bounce in its step, and in a fight a pose when it acts that reads at sprite size, by what it does:
+      // bite and ram lunge, pounce leaps, purr hops and floats a heart, guard rears up, howl lifts its nose, peck dips, dig dips and throws dirt
+      if (an.petKind) {
+        const bob = a.wasMoving && Math.floor(a.walk * 5) % 2 === 1 ? 1 : 0;
+        let dx = 0;
+        let dy = -bob;
+        let ang = 0;
+        let sw = w;
+        let sh = h;
+        let tint: ReturnType<typeof rgba> | undefined;
+        if (an.pf) {
+          const since = serverNow() - (an.pf.actAt ?? 0);
+          const act = since >= 0 && since < 650 ? Math.sin((since / 650) * Math.PI) : 0; // (a pose is held for about half a second so it can be seen)
+          const side = a.flip < 0 ? -1 : 1;
+          const cue = act > 0 ? this.petCue.get(id) : undefined;
+          switch (cue) {
+            case 'pet_pounce':
+              dx = side * act * 7;
+              dy -= act * 9;
+              ang = side * act * 0.5;
+              break;
+            case 'pet_purr':
+              dy -= act * 3;
+              this.petHeart(q, a.x - side * 1, a.y + 4 - hop - sh - 3 - act * 5, act);
+              break;
+            case 'pet_roar':
+              sw = w * (1 + 0.22 * act);
+              sh = h * (1 + 0.3 * act);
+              ang = -side * act * 0.35;
+              break;
+            case 'pet_howl':
+              ang = -side * act * 0.55;
+              dy -= act * 2;
+              break;
+            case 'pet_mark':
+              ang = side * act * 0.55;
+              dy += act;
+              break;
+            case 'pet_dig':
+              ang = side * act * 0.45;
+              dy += act;
+              dx = Math.sin(this.t * 50) * act * 0.7;
+              this.petDirt(q, a.x + side * 7, a.y + 4, act);
+              break;
+            case 'pet_ram':
+              dx = side * act * 6;
+              ang = side * act * 0.25;
+              break;
+            case undefined:
+              break;
+            default:
+              // pet_bite and anything new: a lunge
+              dx = side * act * 3;
+              dy -= act * 4;
+              ang = side * act * 0.32;
+          }
+          const shake = an.pf.st === 'scared' ? Math.sin(this.t * 45) * 0.9 : 0;
+          dx += shake;
+          tint = an.pf.st === 'hidden' ? alpha(0.4) : an.pf.st === 'scared' ? rgba(0.72, 0.82, 1, 1) : undefined;
+        }
+        q.push(a.y + 4, s, a.x + dx, a.y + 4 - hop - sh / 2 + dy, sw, sh, ang, tint);
+        continue;
+      }
       q.push(a.y + 4, s, a.x, a.y + 4 - hop - h / 2, w, h);
     }
     for (const r of this.roofs) if (r.alpha > 0.01 && inView(r.x, r.y, r.sprite.w, r.sprite.h)) q.push(r.depth, r.sprite, r.x + r.sprite.w / 2, r.y + r.sprite.h / 2, r.sprite.w, r.sprite.h, 0, alpha(r.alpha));
@@ -1660,11 +1736,22 @@ export class View implements HudTarget {
     const swimming = this.bath && inPool(this.world!, a);
     // on the moon everyone walks in slow, floaty bounces
     const lift = ride.lift + (this.moon && p.moving && p.riding === undefined ? Math.abs(Math.sin(a.walk * Math.PI * 1.4)) * 7 : 0);
+    this.queueGhosts(a, p, lift);
     this.queueCharacterAt(a, p.facing, p.moving, lift, ride.cropLegs, swimming);
     this.queueHeld(a, p, swimming, lift);
     if (swimming) {
       const rip = this.art.fx.ripple?.[Math.floor(this.t / 0.4) % 2];
       if (rip) this.queue.push(a.y + 3, rip, a.x, a.y + 3, rip.w, rip.h, 0, alpha(0.9));
+    }
+  }
+
+  /** The fading copies behind a hero whose set leaves a trail (tier 5 Björnbärsärken, Skuggornas hatt, Lokes lek). */
+  private queueGhosts(a: Actor, p: PlayerState, lift: number): void {
+    for (const g of this.looksFx.ghostsOf(p.id)) {
+      const s = this.characterFrame(a, g.facing, true);
+      if (!s) continue;
+      const [r, gg, b] = g.tint;
+      this.queue.push(g.y + 3.5, s, g.x, g.y + 4 - lift - s.h / 2, s.w * (g.facing === 'left' ? -1 : 1), s.h, 0, rgba(0.55 + r * 0.45, 0.55 + gg * 0.45, 0.55 + b * 0.45, g.alpha));
     }
   }
 
@@ -1682,6 +1769,57 @@ export class View implements HudTarget {
     this.queue.push(a.y + 4 + (lift > 0 ? 2 : 0), s, a.x, footY - h / 2, w, h, 0, WHITE, 0, part);
   }
 
+  /** The players in sight that wear looks, for the effects (the others cost nothing). */
+  /** What a pet did last (its spell name), to pose it: set from the server's spell changes. */
+  private petCue = new Map<number, string>();
+
+  /** A little pixel heart that floats up from a purring pet. */
+  private petHeart(q: DrawQueue, x: number, y: number, k: number): void {
+    const cells: [number, number][] = [[0, 0], [2, 0], [-1, 1], [0, 1], [1, 1], [2, 1], [3, 1], [0, 2], [1, 2], [2, 2], [1, 3]];
+    const c = rgba(1, 0.42, 0.55, Math.min(1, k * 1.6));
+    for (const [cx, cy] of cells) q.push(9500, this.art.white, x + cx - 1, y + cy, 1, 1, 0, c);
+  }
+
+  /** Dirt thrown up where a fox digs. */
+  private petDirt(q: DrawQueue, x: number, y: number, k: number): void {
+    for (let i = 0; i < 4; i++) {
+      const u = (this.t * 9 + i * 0.37) % 1;
+      q.push(9500, this.art.white, x + (i - 1.5) * 2.2, y - 2 - Math.sin(u * Math.PI) * 6 * k, 1, 1, 0, rgba(0.55, 0.38, 0.2, k));
+    }
+  }
+
+  private fxActors(world: WorldState): FxActor[] {
+    const out: FxActor[] = [];
+    const [vx, vy, vw, vh] = this.viewRect();
+    for (const [id, a] of this.players) {
+      const p = world.players[id];
+      if (!p || p.sleeping || !p.outfit.looks || this.sagaFx.pose(id) === 'down') continue;
+      if (a.x < vx - 40 || a.x > vx + vw + 40 || a.y < vy - 50 || a.y > vy + vh + 40) continue;
+      out.push({ id, x: a.x, y: a.y + 4 - this.rideInfo(p).lift, facing: p.facing, moving: p.moving, seed: a.seed, looks: p.outfit.looks });
+    }
+    // the pets' gear: each animal with something on is its own small actor (looksfx.ts gives it a smaller budget)
+    for (const [id, a] of this.animals) {
+      const an = world.animals[id];
+      if (!an?.petKind || !an.wear || a.x < vx - 40 || a.x > vx + vw + 40 || a.y < vy - 50 || a.y > vy + vh + 40) continue;
+      const def = PETS[an.petKind];
+      if (!def) continue;
+      const size = ANIMAL_SIZE[an.species] ?? { w: 16, h: 16 };
+      const f = a.wasMoving ? Math.floor(a.walk * 5) % 2 : 0;
+      const side = a.flip < 0 ? -1 : 1;
+      const hop = this.hopOf(a);
+      const at = (k: 'head' | 'neck' | 'back', dy: number): [number, number] => {
+        const [ax, ay] = def.anchors[k][f] ?? def.anchors[k][0]!;
+        return [a.x + side * (ax - size.w / 2), a.y + 4 - hop - size.h + ay + dy];
+      };
+      const looks: Partial<Record<LookSlot, string>> = {};
+      if (an.wear.head) looks.hat = an.wear.head;
+      if (an.wear.neck) looks.amulet = an.wear.neck;
+      if (an.wear.back) looks.cloak = an.wear.back;
+      out.push({ id: `pet${id}`, x: a.x, y: a.y + 4 - hop, facing: side < 0 ? 'left' : 'right', moving: a.wasMoving, seed: a.seed, looks, pet: { head: at('head', -2), chest: at('neck', 1), back: at('back', 0) } });
+    }
+    return out;
+  }
+
   /**
    * A hero's weapon: the one they wear while hero mode is on (or in a dungeon, where everyone is their class).
    * Other players' snapshots carry it as `held` too, for a record that has not caught up yet.
@@ -1697,9 +1835,10 @@ export class View implements HudTarget {
   /** A hero's weapon glows in its own colour at night (a rainbow one shifts through them all). */
   private updateWeaponLamp(a: Actor, p: PlayerState, lit: number): void {
     const id = this.weaponOf(p);
-    // a weapon Smed-Stina has forged shines brighter with every level (a plain one gets a warm smithy shine)
-    const forged = id ? (p.saga?.forge?.[id] ?? 0) : 0;
-    const glow = id && !p.sleeping ? (sagaItem(id)?.glow ?? (forged > 0 ? '#ffd9a0' : null)) : null;
+    // a weapon look glows from tier 3 in its own colour, brighter as it shines more (tier 4 and 5 stand for the old "forge" level)
+    const wl = decodeLook(p.outfit.looks?.weapon);
+    const forged = wl && wl.tier >= 3 ? wl.tier - 2 : 0;
+    const glow = wl && !p.sleeping ? (wl.tier >= 3 ? wl.pal.glow : null) : id && !p.sleeping ? (sagaItem(id)?.glow ?? null) : null;
     const want = glow ? `${glow}|${forged}` : null;
     if (want !== (a.weaponGlow ?? null)) {
       a.weaponLamp?.destroy();
@@ -1829,17 +1968,21 @@ export class View implements HudTarget {
 
   /** The item in someone's hand (tools, weapons, food… everything), swung when used; a hero's weapon in hero mode. */
   private queueHeld(a: Actor, p: PlayerState, swimming: boolean, lift: number): void {
-    const weapon = this.weaponOf(p);
+    // a weapon look is always in hand (wherever they are); an old weapon only for a hero
+    const lookCode = p.outfit.looks?.weapon;
+    const weapon = lookCode ? null : this.weaponOf(p);
     const stack = weapon ? { item: weapon, count: 1 } : heldItem(p);
     const driving = p.riding !== undefined && !!this.world!.animals[p.riding] && isVehicle(this.world!.animals[p.riding]!);
-    const icon = stack && !swimming && !p.sleeping && !driving ? this.art.icons[stack.item] : undefined;
+    const free = !swimming && !p.sleeping && !driving;
+    const icon = !free ? undefined : lookCode ? lookSprite(lookCode) : stack ? this.art.icons[stack.item] : undefined;
     if (!icon) return;
+    const looks = !!lookCode;
     const f = p.facing;
     const bob = p.moving ? Math.round(Math.sin(this.t * 11)) : 0;
-    const tool = !!weapon || ITEMS[stack!.item]?.category === 'tool';
+    const tool = !!weapon || looks || ITEMS[stack!.item]?.category === 'tool';
     const swing = a.swing > 0 ? Math.sin((1 - a.swing / 0.26) * Math.PI) : 0;
-    const w = icon.w * 0.55;
-    const h = icon.h * 0.55;
+    const w = icon.w * (looks ? 0.7 : 0.55);
+    const h = icon.h * (looks ? 0.7 : 0.55);
     if (f === 'right' || f === 'left') {
       const s = f === 'right' ? 1 : -1;
       const ang = (tool ? s * -25 * DEG : 0) + s * swing * 1.4;
@@ -1920,6 +2063,12 @@ export class View implements HudTarget {
       this.water.drawBright(sc);
       this.homes.drawBright(sc);
       setAdditiveBlendMode(false);
+    }
+    // the looks' effects first, so a boss's marks lie over them
+    this.looksFx.draw(this.t, this.fxList);
+    for (const ov of this.objects.values()) {
+      const data = ov.o.kind === 'gear_stand' ? ov.o.data : undefined;
+      if (data?.startsWith(STAND_PREFIX) && ov.x > vx - 40 && ov.x < vx + vw + 40 && ov.y > vy - 40 && ov.y < vy + vh + 40) this.looksFx.drawStand(ov.x + ov.sprite.w / 2, ov.y + 17, data.slice(STAND_PREFIX.length), this.t);
     }
     this.sagaFx.drawBright();
     setAdditiveBlendMode(true);

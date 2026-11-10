@@ -2324,3 +2324,41 @@ body:has(.saga-panel.loot) .run-note,
 body:has(.saga-panel.loot) .saga-yell {
   display: none;
 }
+
+/* ---- the pets of the party (pets.ts): a small frame each, with a state icon ---- */
+.saga-pet {
+  display: flex;
+  align-items: center;
+  gap: calc(1.5 * var(--u));
+  padding: calc(0.5 * var(--u)) calc(2 * var(--u));
+  min-height: calc(5.5 * var(--u));
+  margin-left: calc(4 * var(--u));
+  background: rgba(43, 36, 25, 0.78);
+  border: calc(0.5 * var(--u)) solid rgba(255, 255, 255, 0.18);
+  border-left: calc(1 * var(--u)) solid #e9c46a;
+  border-radius: calc(2 * var(--u));
+  color: #fff;
+  font-size: calc(3.2 * var(--u));
+  font-weight: 800;
+  cursor: help;
+}
+.saga-pet .em {
+  font-size: calc(4.6 * var(--u));
+}
+.saga-pet .nm {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.saga-pet .st {
+  font-size: calc(4 * var(--u));
+}
+.saga-pet.scared {
+  background: rgba(60, 70, 110, 0.85);
+  border-left-color: #8fb4ff;
+}
+.saga-pet.hidden {
+  opacity: 0.7;
+  border-left-color: #6fbf73;
+}

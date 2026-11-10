@@ -2,6 +2,7 @@
 
 import type { DungeonId, SagaBest, SagaInstance, SagaProgress } from './saga.ts';
 import type { RunSave } from './run.ts';
+import type { PetsSave, PetWear } from './pets.ts';
 
 export const TILE = 16;
 /** The usual map size: the farm, cities, caves, buildings and dungeons are all 64×64 (and so is any map without a size). */
@@ -237,6 +238,8 @@ export interface Outfit {
   shirt?: string;
   pants?: string;
   shoes?: string;
+  /** The looks (cool gear, only for show) a hero has on, as `piece|tier|way` codes per slot; made by syncLooks (looks.ts), drawn over the clothes. */
+  looks?: Partial<Record<'hat' | 'shoulders' | 'shirt' | 'cloak' | 'weapon' | 'offhand' | 'amulet', string>>;
 }
 
 export interface PlayerState {
@@ -301,6 +304,8 @@ export interface PlayerState {
   trophies?: Record<string, number>;
   /** A fighter the server runs (the hired companion of a run): not a character, never saved, never listed. */
   bot?: true;
+  /** The pets this player owns, the one that comes along and whether it is out (pets.ts). Pets are stored here, not as animals on a map. */
+  pets?: PetsSave;
 }
 
 export interface Achievement {
@@ -423,7 +428,26 @@ export interface AnimalState {
   /** Roaming monsters taunted by a hero out in the world: they go for this player until huntUntil (server ms). */
   hunt?: string;
   huntUntil?: number;
+  /** A pet of the pets table (pets.ts): its kind. Pets live with their owner (PlayerState.pets); this animal is only where it shows. */
+  petKind?: string;
+  /** What the pet wears (pet gear, drawn at its anchors). */
+  wear?: PetWear;
+  /** The pet in a fight (petsim.ts): its state, what is left of its courage, and when it may act again. Not shown to the owner as numbers. */
+  pf?: PetFight;
   waitMs: number;
+}
+
+/** A pet's fight record. `st`: helping, scared (runs to its owner, out for a few seconds) or hidden (the lodjur waiting to pounce). */
+export interface PetFight {
+  st: 'help' | 'scared' | 'hidden';
+  courage: number;
+  /** Wall clock: when it may act again, when it comes back from being scared, when it last acted (for the sprite). */
+  cd: number;
+  scaredUntil?: number;
+  actAt?: number;
+  /** The second ability (the varg's howl, the björn's roar) and the lodjur's last fight. */
+  cd2?: number;
+  fightAt?: number;
 }
 
 export interface DropState {

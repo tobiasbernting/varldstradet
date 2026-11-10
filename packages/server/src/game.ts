@@ -6,7 +6,6 @@ import {
   callPets,
   castSpell,
   chooseClass,
-  craftGear,
   devEnterSaga,
   devKit,
   devTrophy,
@@ -15,11 +14,12 @@ import {
   enterHouse,
   homeKey,
   pickUpFurniture,
+  setStandLook,
+  equipLook,
+  devGrantLooks,
   devSagaBest,
-  devStarterKit,
   devUnlockChapters,
   equipGear,
-  forgeGear,
   noticeLandmarks,
   shownHeld,
   drinkPotion,
@@ -41,6 +41,13 @@ import {
   NPCS,
   TICK_HZ,
   adoptPet,
+  devPet,
+  pickPet,
+  togglePet,
+  devPetGear,
+  devPetScare,
+  equipPetLook,
+  stripPet,
   applyMove,
   areaOf,
   createPlayer,
@@ -483,6 +490,9 @@ export class Game {
         break;
       case 'pet':
         if (msg.a === 'adopt') changes = tagArea(adoptPet(this.world, pid, String(msg.species ?? ''), this.ctx()), areaK);
+        else if (msg.a === 'toggle') changes = togglePet(this.world, pid);
+        else if (msg.a === 'pick') changes = pickPet(this.world, pid, String(msg.id ?? ''));
+        else if (msg.a === 'wear') changes = msg.all ? stripPet(this.world, pid, typeof msg.kind === 'string' ? msg.kind : undefined) : equipPetLook(this.world, pid, typeof msg.piece === 'string' ? msg.piece : null, msg.anchor, msg.way, typeof msg.kind === 'string' ? msg.kind : undefined);
         break;
       case 'pets':
         changes = callPets(this.world, pid, msg.cmd, this.ctx());
@@ -498,8 +508,6 @@ export class Game {
         else if (msg.a === 'chapter') changes = sagaChapter(this.world, pid);
         else if (msg.a === 'quest') changes = sagaQuestAct(this.world, pid, String(msg.id ?? ''));
         else if (msg.a === 'equip') changes = equipGear(this.world, pid, String(msg.slot ?? ''), typeof msg.item === 'string' ? msg.item : null);
-        else if (msg.a === 'forge') changes = forgeGear(this.world, pid, String(msg.item ?? ''));
-        else if (msg.a === 'craft') changes = craftGear(this.world, pid, String(msg.item ?? ''));
         break;
       case 'house':
         if (msg.a === 'enter') {
@@ -507,6 +515,13 @@ export class Game {
           changes = enterHouse(this.world, pid, of);
           if (changes.length) this.store.noteArea?.(homeKey(of));
         } else if (msg.a === 'pick') changes = tagArea(pickUpFurniture(w, pid, Math.floor(msg.x), Math.floor(msg.y)), areaK);
+        break;
+      case 'look':
+        // Garderoben: a look on or off (free, instant), or one on a gear stand of the player's house
+        if (typeof msg.obj === 'number') {
+          changes = tagArea(setStandLook(w, pid, msg.obj, typeof msg.piece === 'string' ? msg.piece : null, msg.way), areaK);
+          if (changes.length) this.store.noteArea?.(me.area);
+        } else changes = equipLook(me, msg.slot, typeof msg.piece === 'string' ? msg.piece : null, msg.way, msg.cls);
         break;
       case 'run':
       case 'seed':
@@ -520,12 +535,15 @@ export class Game {
         }
         if (msg.a === 'saga') changes = devEnterSaga(this.world, pid, String(msg.id ?? ''));
         else if (msg.a === 'nextDay') this.skipDay();
-        else if (msg.a === 'starter') changes = devStarterKit(this.world, pid);
         else if (msg.a === 'unlock') changes = devUnlockChapters(this.world, pid);
         else if (msg.a === 'kit') changes = devKit(this.world, pid);
         else if (msg.a === 'warp') changes = devWarp(this.world, pid, Number(msg.x), Number(msg.y));
         else if (msg.a === 'decor') changes = devDecor(this.world, pid);
         else if (msg.a === 'trophy') changes = devTrophy(this.world, pid, String(msg.id ?? ''), Number(msg.level));
+        else if (msg.a === 'pet') changes = devPet(this.world, pid, String(msg.id ?? ''));
+        else if (msg.a === 'petscare') changes = devPetScare(this.world, pid, this.ctx().now);
+        else if (msg.a === 'petgear') changes = devPetGear(this.world, pid, Number(msg.tier ?? 5), typeof msg.set === 'string' ? msg.set : undefined);
+        else if (msg.a === 'looks') changes = devGrantLooks(me, typeof msg.set === 'string' ? msg.set : undefined, Number(msg.tier ?? 5), msg.ways !== false, true, typeof msg.cls === 'string' ? msg.cls : undefined);
         else if (msg.a === 'sagaBest') changes = devSagaBest(this.world, pid, String(msg.id ?? ''), Number(msg.ms));
         break;
       case 'voice':

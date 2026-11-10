@@ -302,6 +302,24 @@ export class SagaView {
         return this.slash(c.on, to ?? from, [1, 0.55, 0.25], 12, 1.6);
       case 'claw':
         return this.claw(c.on, to ?? from);
+      // the pets (pets.ts)
+      case 'pet_bite':
+        return this.slash(c.on, to ?? from, [1, 0.92, 0.75], 7, 0.9);
+      case 'pet_pounce':
+        this.fx.spawn((to ?? from).x, (to ?? from).y, 'chop');
+        return this.slash(c.on, to ?? from, [1, 0.7, 0.3], 13, 1.7);
+      case 'pet_purr':
+        return this.healRune(c.on ?? c.by, to ?? from, 13, 0.9);
+      case 'pet_roar':
+        return this.taunt(c.by, from);
+      case 'pet_howl':
+        return this.burstRing(c.by, from, [0.7, 0.85, 1], 32, 0.7);
+      case 'pet_mark':
+        return this.explode(to ?? from, [1, 0.45, 0.85], 12, c.on);
+      case 'pet_ram':
+        return this.charge(from, to ?? from, c.on);
+      case 'pet_dig':
+        return this.explode({ x: from.x + 4, y: from.y }, [1, 0.9, 0.45], 7);
       case 'utmana':
         return this.taunt(c.by, from);
       case 'skoldslag':

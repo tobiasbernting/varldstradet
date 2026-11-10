@@ -8,6 +8,7 @@
 // Menus: stick/d-pad moves a highlight between buttons, A presses, B closes, right stick scrolls.
 import { castSlot, cycleTarget, drinkPotion, fightMode, inSaga } from '../saga.ts';
 import { inOwnHouse, myPlayer } from '../state.ts';
+import { petToggle } from './social.ts';
 import type { Hud, HudTarget } from './hud.ts';
 import type { Menus } from './menus.ts';
 
@@ -146,6 +147,7 @@ export function initGamepad(opts: {
     if (hit(B.Up)) menus.toggle('emotes');
     if (hit(B.Down)) hud.minimap.toggle();
     if (hit(B.Start)) menus.toggle('help');
+    if (hit(B.R3)) petToggle(); // the pet in or out
 
     if (fightMode()) {
       // no hotbar in a fight (a dungeon, or hero mode out in the world): the face buttons are the spells, like the keys 1–4

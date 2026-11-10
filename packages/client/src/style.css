@@ -1369,6 +1369,26 @@ body.touch .round.pet-btn i {
   font-size: calc(22 * var(--u));
   line-height: 1;
 }
+.kennel-row.pets {
+  flex-wrap: wrap;
+}
+.kennel-row.pets .kennel-card {
+  padding: calc(2 * var(--u)) calc(5 * var(--u));
+  font-size: calc(4.6 * var(--u));
+  min-width: 48px;
+  min-height: 48px;
+}
+.kennel-row.pets .kennel-card .em {
+  font-size: calc(12 * var(--u));
+}
+.kennel-card.sel {
+  background: #fff3c0;
+  outline: calc(1 * var(--u)) solid #d9a52a;
+}
+.kennel-card small {
+  font-size: calc(3.2 * var(--u));
+  color: #6a5a30;
+}
 
 /* ---- hus: Möblera (only in your own house) and whose house it is ---- */
 .round.furnish-btn.on {
@@ -1380,4 +1400,30 @@ body.touch .round.pet-btn i {
 .chip.house {
   background: #f1dfb8;
   font-weight: 900;
+}
+
+/* ---- pets (pets.ts): the one button that brings your pet in or out (at least 48 px to touch, the label always shown) ---- */
+.round.pet-toggle {
+  width: max(48px, calc(11 * var(--u)));
+  height: max(48px, calc(11 * var(--u)));
+  min-width: 48px;
+  min-height: 48px;
+  margin-bottom: calc(3.5 * var(--u));
+}
+.round.pet-toggle i {
+  display: block;
+  top: calc(100% + var(--u));
+  font-size: max(11px, calc(2.8 * var(--u)));
+}
+.round.pet-toggle.out {
+  background: var(--panel-dark);
+}
+.round.pet-toggle.out span {
+  filter: grayscale(0.85);
+  opacity: 0.7;
+}
+.round.pet-toggle:focus-visible,
+.round.pet-toggle.pad-focus {
+  outline: calc(0.75 * var(--u)) solid #ffd54a;
+  outline-offset: calc(0.5 * var(--u));
 }

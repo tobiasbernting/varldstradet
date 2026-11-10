@@ -18,6 +18,7 @@ import {
   RECIPES,
   SPECIES_NAMES,
   T,
+  LOOK_T,
   fmt,
   itemName,
   filterOf,
@@ -28,6 +29,9 @@ import {
   type SlotRef,
   DAY_LENGTH_MS,
   isCallable,
+  PETS,
+  PET_T,
+  ownedPetIds,
   localWeather,
   noWeatherHere,
   talkNode,
@@ -64,7 +68,6 @@ import {
   SFX,
 } from '../sound.ts';
 import {
-  FORGE_NPC,
   hasSagaQuests,
   sagaQuestRows,
 } from './saga.ts';
@@ -115,9 +118,14 @@ export class Menus {
     bus.on('open', (c) => {
       if (c.ui === 'nameAnimal') this.open('nameAnimal', c.id);
       else if (c.ui === 'kennel') this.open('kennel');
-      else if (c.ui === 'saga' || c.ui === 'sagaClass') return; // the saga's own windows (ui/saga.ts)
+      else if (c.ui === 'saga' || c.ui === 'sagaClass' || c.ui === 'looks') return; // the saga's own windows (ui/saga.ts)
       else if (c.ui === 'seed' || c.ui === 'run') return; // the run's windows (ui/run.ts)
       else if (c.ui === 'npc') {
+        // Smed-Stina has lost her forge: she sends you to the wardrobe's sets (unless a saga quest of hers is waiting)
+        if (c.npc === 'stina' && !hasSagaQuests('stina')) {
+          document.dispatchEvent(new Event('lilla:sets'));
+          return;
+        }
         this.npcId = c.npc ?? null;
         this.open('npc');
       } else if (c.ui === 'wardrobe') this.open('wardrobe');
@@ -348,17 +356,44 @@ export class Menus {
   // ---- the kennel: one free first pet ----
 
   private renderKennel(body: HTMLElement): void {
-    body.append(h('p', { class: 'help-intro' }, T.kennelPick));
-    const row = h('div', { class: 'kennel-row' });
-    for (const [species, label, glyph] of [['dog', T.kennelDog, '🐶'], ['cat', T.kennelCat, '🐱']] as const) {
-      const card = h('button', { class: 'kennel-card' }, h('span', { class: 'em' }, glyph), h('b', null, label));
+    const me = myPlayer()!;
+    const owned = ownedPetIds(me);
+    const adopted = (me.stats.petAdopted ?? 0) > 0;
+    if (!adopted) {
+      body.append(h('p', { class: 'help-intro' }, T.kennelPick));
+      const row = h('div', { class: 'kennel-row' });
+      for (const [species, label, glyph] of [['dog', T.kennelDog, '🐶'], ['cat', T.kennelCat, '🐱']] as const) {
+        const card = h('button', { class: 'kennel-card' }, h('span', { class: 'em' }, glyph), h('b', null, label));
+        onTap(card, () => {
+          net.send({ t: 'pet', a: 'adopt', species });
+          this.close();
+        });
+        row.append(card);
+      }
+      body.append(row);
+    }
+    if (!owned.length) return;
+    // the pets you have: tap one to bring it along (one at a time; it is the one chosen at the färdport too)
+    body.append(h('p', { class: 'help-intro' }, adopted ? `${T.kennelOnce} ${PET_T.kennelSwap}` : PET_T.kennelSwap), h('div', { class: 'sect' }, `🐾 ${PET_T.kennelHave}`));
+    const row = h('div', { class: 'kennel-row pets' });
+    for (const id of owned) {
+      const d = PETS[id]!;
+      const mine = me.pets?.active === id;
+      const name = me.pets?.owned[id]?.name || d.name;
+      const card = h('button', { class: `kennel-card${mine ? ' sel' : ''}`, 'aria-pressed': String(mine), title: `${d.trickText}` }, h('span', { class: 'em' }, d.emoji), h('b', null, mine ? `✔ ${name}` : name), h('small', null, mine ? PET_T.chosen : PET_T.choose));
       onTap(card, () => {
-        net.send({ t: 'pet', a: 'adopt', species });
+        net.send({ t: 'pet', a: 'pick', id });
         this.close();
       });
       row.append(card);
     }
     body.append(row);
+    const gear = h('button', { class: 'gold', type: 'button', style: { minHeight: '48px', marginTop: '10px' } }, `🧣 ${PET_T.gearTitle}`);
+    onTap(gear, () => {
+      this.close();
+      document.dispatchEvent(new CustomEvent('lilla:pet-gear'));
+    });
+    body.append(gear);
   }
 
   // ---- inventory & chest (tap one slot, then another to move) ----
@@ -516,7 +551,13 @@ export class Menus {
     body.append(h('div', { class: 'npc-talk' }, h('img', { class: 'portrait', src: portraitUrl(npc.appearance, npc.outfit, 4) }), h('div', { class: 'bubble-text' }, greeting)));
     const chat = h('button', null, '💬 Prata!');
     onTap(chat, () => this.say(npc.id, 'start', ''));
-    body.append(h('div', { class: 'npc-actions' }, chat, this.forgeButton(npc.id)));
+    const sets = npc.id === 'stina' ? h('button', { class: 'alt' }, `👕 ${LOOK_T.title}`) : null;
+    if (sets)
+      onTap(sets, () => {
+        this.close();
+        document.dispatchEvent(new Event('lilla:sets'));
+      });
+    body.append(h('div', { class: 'npc-actions' }, chat, sets));
     // the saga's quests (ui/saga.ts)
     if (saga) body.append(sagaQuestRows(npc.id));
   }
@@ -556,8 +597,7 @@ export class Menus {
       opts.append(b);
     }
     body.append(opts);
-    const forge = this.forgeButton(npcId);
-    if (hasQuests || forge) {
+    if (hasQuests) {
       let back: HTMLElement | null = null;
       if (hasQuests) {
         back = h('button', { class: 'alt' }, '📜 Uppdrag');
@@ -567,19 +607,8 @@ export class Menus {
           this.rerender();
         });
       }
-      body.append(h('div', { class: 'npc-actions', style: { marginTop: 'calc(2 * var(--u))' } }, back, forge));
+      body.append(h('div', { class: 'npc-actions', style: { marginTop: 'calc(2 * var(--u))' } }, back));
     }
-  }
-
-  /** Smed-Stina's forge (ui/saga.ts): a button in her window, for everyone (anyone can own gear). */
-  private forgeButton(npcId: string): HTMLElement | null {
-    if (npcId !== FORGE_NPC) return null;
-    const b = h('button', { class: 'forge-btn' }, T.forgeBtn);
-    onTap(b, () => {
-      this.close();
-      document.dispatchEvent(new CustomEvent('lilla:forge'));
-    });
-    return b;
   }
 
   // ---- help ----
