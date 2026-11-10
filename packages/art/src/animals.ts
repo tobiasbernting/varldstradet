@@ -3,9 +3,9 @@ import { Px, shade } from './px.js';
 import { SAGA_AFTER, SAGA_ANIMAL_SIZE, SAGA_DRAW, SAGA_HAT_POS, SAGA_OUTLINE, SAGA_RIDE_LIFT, SAGA_VARIANTS } from './sagaanimals.ts';
 import { OUTLINE } from './world.js';
 import { PET_ANIMAL_SIZE, PET_DRAW, PET_HAT_POS } from './petanimals.ts';
-import { PET_ANCHORS, decodeLook, petOfSpecies, type PetWear } from '@lilla-garden/shared';
+import { PET_ANCHORS, PET_HEADROOM, PETS, decodeLook, petOfSpecies, type PetWear } from '@lilla-garden/shared';
 import { drawPetLook } from './petlooks.ts';
-export { petLookIcon } from './petlooks.ts';
+export { petLookIcon, petLookCells } from './petlooks.ts';
 
 export const ANIMAL_SIZE: Record<string, { w: number; h: number }> = {
   hen: { w: 16, h: 16 },
@@ -50,6 +50,9 @@ export const ANIMAL_SIZE: Record<string, { w: number; h: number }> = {
   ...SAGA_ANIMAL_SIZE,
   ...PET_ANIMAL_SIZE,
 };
+// Every species a pet is drawn from has PET_HEADROOM empty rows on top for the horns and plumes of its gear (pets.ts).
+for (const d of Object.values(PETS)) ANIMAL_SIZE[d.species] = { w: ANIMAL_SIZE[d.species]!.w, h: ANIMAL_SIZE[d.species]!.h + PET_HEADROOM };
+const lift = (species: string): number => (petOfSpecies(species) ? PET_HEADROOM : 0);
 
 function hen(p: Px, f: number): void {
   p.ellipse(3, 5, 10, 8, '#f4ead8').rect(10, 3, 4, 5, '#f4ead8').rect(11, 2, 2, 1, '#d8363a').px(14, 5, '#f5a623').px(13, 4, OUTLINE);
@@ -679,16 +682,22 @@ export function drawWorn(p: Px, species: string, frame: number, wear: PetWear | 
   for (const anchor of PET_ANCHORS) {
     const l = decodeLook(wear[anchor]);
     const at = def.anchors[anchor]?.[frame];
-    if (l && at) drawPetLook(p, l, anchor, at[0], at[1], frame);
+    if (l && at) drawPetLook(p, l, anchor, at[0], at[1], frame, def.size === 'large');
   }
 }
 
 export function drawAnimal(species: string, frame: number, baby: boolean, jul: boolean, variant = 0, wear?: PetWear): Px {
   const size = ANIMAL_SIZE[species] ?? { w: 16, h: 16 };
   const full = new Px(size.w, size.h);
-  DRAW[species]?.(full, frame, variant);
+  const up = lift(species);
+  if (up) {
+    const body = new Px(size.w, size.h - up);
+    DRAW[species]?.(body, frame, variant);
+    full.blit(body, 0, up);
+  } else DRAW[species]?.(full, frame, variant);
   if (jul && !VEHICLE_SPECIES.has(species)) {
-    const [hx, hy] = HAT_POS[species] ?? [8, 0];
+    const [hx, hy0] = HAT_POS[species] ?? [8, 0];
+    const hy = hy0 + up;
     full.rect(hx - 3, hy + 1, 6, 1, '#ffffff').rect(hx - 2, hy - 1, 4, 2, '#d8363a').rect(hx - 1, hy - 3, 2, 2, '#d8363a').px(hx + 1, hy - 3, '#ffffff');
   }
   drawWorn(full, species, frame, wear);

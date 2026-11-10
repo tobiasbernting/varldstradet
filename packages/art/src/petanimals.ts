@@ -7,8 +7,20 @@ import { lump, pal } from './saga.ts';
 type Draw = (p: Px, f: number, v?: number) => void;
 const K = '#1e1a22';
 
-/** Legs that take turns: x of the back and the front leg on frame f. */
-const stride = (f: number, back: number, front: number, reach = 2): [number, number] => (f ? [back + reach, front - reach] : [back, front]);
+/**
+ * Four legs that trot: x of the near back, far back, near front and far front leg on the two frames. Frame 0 has them spread (a
+ * stride), frame 1 gathered under the belly, and on each frame one diagonal pair is `lift` pixels shorter (in the air), so the
+ * step reads even when the animal is small. `paw` colours the last rows. Draw the legs first, then the body over their tops.
+ */
+const legs = (p: Px, f: number, y: number, len: number, w: number, a: number[], b: number[], c: { near: string; far: string; paw?: string }, pawH = 1, lift = 1): void => {
+  const xs = f ? b : a;
+  const air = f ? [0, 3] : [1, 2];
+  for (const i of [1, 3, 0, 2]) {
+    const l = len - (air.includes(i) ? lift : 0);
+    p.rect(xs[i]!, y, w, l, i % 2 ? c.far : c.near);
+    if (c.paw) p.rect(xs[i]!, y + l - pawH, w, pawH, c.paw);
+  }
+};
 
 /** A big friendly eye: dark, with a light in it. */
 const eye = (p: Px, x: number, y: number, c = K): void => {
@@ -16,27 +28,26 @@ const eye = (p: Px, x: number, y: number, c = K): void => {
 };
 
 function pet_korp(p: Px, f: number): void {
-  // a raven: glossy blue-black, a thick beak, a bright eye, wings folded, hopping on thin legs
+  // a raven: glossy blue-black, a thick beak, a bright eye, hopping on thin legs; on the hop it lifts its wings and trails its feet
   const c = pal('#0e0c18', '#1c1a30', '#2e2c4e', '#4a4878', '#7674a8');
   const hop = f ? 1 : 0;
-  p.rect(8, 12 - hop, 1, 3 + hop, '#4a3a30').rect(12, 12 + hop - 1, 1, 3 - hop + 1, '#4a3a30'); // legs
-  p.rect(7, 14, 3, 1, '#4a3a30').rect(11, 14, 3, 1, '#4a3a30'); // feet
-  p.rect(0, 8, 5, 3, c.d).rect(0, 10, 4, 2, c.d2).rect(2, 9, 3, 1, c.b); // tail feathers
+  const leg = '#4a3a30';
+  if (f) p.rect(7, 12, 1, 3, leg).rect(6, 14, 2, 1, leg).rect(12, 12, 1, 2, leg).rect(12, 13, 2, 1, leg); // in the air: one foot trailing, one tucked
+  else p.rect(8, 12, 1, 3, leg).rect(12, 12, 1, 3, leg).rect(7, 14, 3, 1, leg).rect(11, 14, 3, 1, leg); // standing on two feet
+  p.rect(0, 8 - hop, 5, 3, c.d).rect(0, 10 - hop, 4, 2, c.d2).rect(2, 9 - hop, 3, 1, c.b); // tail feathers
   lump(p, 3, 3 - hop, 12, 9, c, 0.2, 251, 0.3); // the plump body
-  p.rect(4, 6 - hop, 8, 4, c.b).rect(5, 7 - hop, 6, 1, c.l).rect(5, 9 - hop, 7, 1, c.d).px(4, 9 - hop, c.d2); // a folded wing with feather lines
+  if (f) p.rect(3, 3, 8, 2, c.b).rect(1, 5, 3, 2, c.b).rect(4, 5, 6, 3, c.b).rect(5, 6, 5, 1, c.l).px(1, 5, c.l).rect(4, 8, 7, 1, c.d); // wing lifted, its tip up behind
+  else p.rect(4, 6, 8, 4, c.b).rect(5, 7, 6, 1, c.l).rect(5, 9, 7, 1, c.d).px(4, 9, c.d2); // a folded wing with feather lines
   lump(p, 11, 0, 7, 7, c, 0.15, 252, 0.35); // the head
   p.rect(16, 3, 4, 3, '#3a3a46').rect(16, 3, 4, 1, '#6a6a78').rect(17, 5, 3, 1, '#22222c'); // a thick beak
   p.rect(14, 2, 2, 2, '#e8e8f4').px(15, 3, K); // an eye you can see
 }
 
 function pet_bear(p: Px, f: number): void {
-  // a young brown bear: round, soft, with a tan muzzle and little round ears
+  // a young brown bear: round, soft, with a tan muzzle and little round ears; four sturdy legs that plod
   const fur = pal('#3a2414', '#573520', '#7a4c2c', '#a06a40', '#c08c5c');
   const tan = pal('#6a4a2c', '#8a6640', '#b08a5c', '#cca878', '#e2c498');
-  const [b, fr] = stride(f, 3, 12);
-  p.rect(b, 10, 4, 7, fur.d).rect(b, 15, 4, 2, fur.d2); // back legs (far one darker)
-  p.rect(fr, 10, 4, 7, fur.b).rect(fr, 15, 4, 2, fur.d);
-  p.rect(b + 4, 10, 3, 6, fur.b).rect(fr - 3, 10, 3, 6, fur.d);
+  legs(p, f, 10, 7, 3, [1, 5, 12, 8], [4, 7, 9, 6], { near: fur.b, far: fur.d }, 2, 2);
   lump(p, 0, 3, 15, 9, fur, 0.2, 201, 0.3); // the round back and belly
   p.rect(0, 6, 2, 3, fur.d).px(0, 6, fur.b); // tail nub
   lump(p, 12, 2, 10, 10, fur, 0.15, 202, 0.35); // the head
@@ -49,16 +60,13 @@ function pet_bear(p: Px, f: number): void {
 }
 
 function pet_wolf(p: Px, f: number): void {
-  // a young grey wolf: pointed ears, a pale muzzle and belly, a bushy tail with a dark tip
+  // a young grey wolf: pointed ears, a pale muzzle and belly, a bushy tail with a dark tip, four long legs that trot
   const fur = pal('#2c3038', '#454b56', '#6a7280', '#9aa2b0', '#c4cad4');
   const pale = pal('#8a929e', '#aab2be', '#cdd4dc', '#e6eaee', '#ffffff');
-  const [b, fr] = stride(f, 4, 12);
-  p.rect(b, 10, 2, 4, fur.d).rect(b + 3, 10, 2, 4, fur.b);
-  p.rect(fr - 3, 10, 2, 4, fur.d).rect(fr, 10, 2, 4, fur.b);
-  p.px(b, 13, pale.b).px(b + 3, 13, pale.b).px(fr - 3, 13, pale.b).px(fr, 13, pale.b);
-  // the tail: a bushy lump pointing up and back, dark at the tip
-  lump(p, 0, 2, 6, 5, fur, 0.3, 211, 0.3);
-  p.rect(0, 2, 2, 2, fur.d2);
+  legs(p, f, 10, 4, 2, [2, 5, 13, 10], [5, 8, 10, 7], { near: fur.b, far: fur.d, paw: pale.b });
+  // the tail: a bushy lump pointing up and back, dark at the tip (it swings up on the second frame)
+  lump(p, 0, f ? 3 : 2, 6, 5, fur, 0.3, 211, 0.3);
+  p.rect(0, f ? 3 : 2, 2, 2, fur.d2);
   lump(p, 2, 4, 13, 7, fur, 0.2, 212, 0.3); // body
   p.rect(5, 9, 7, 2, pale.b).rect(6, 9, 5, 1, pale.l); // pale belly
   lump(p, 11, 2, 7, 7, fur, 0.15, 213, 0.35); // head
@@ -71,35 +79,29 @@ function pet_wolf(p: Px, f: number): void {
 }
 
 function pet_lynx(p: Px, f: number): void {
-  // a young lynx: a long low body, a head held up on its own with black-tipped tufted ears, a striped face, white chest, spots, a stubby black-tipped tail, big white paws
+  // a young lynx, kept simple so it reads at a glance: a tan body with three spots, long legs with white paws, a round head with a
+  // white muzzle and cheek ruffs, and the lynx's own mark, tall ears each with a black tuft
   const fur = pal('#4a2c10', '#6e4a1e', '#a87838', '#d4a460', '#f0cc90');
   const white = '#f6ecd8';
-  const [b, fr] = stride(f, 2, 11, 2);
-  // four legs with air between them: the far ones dark, the near ones lighter, all with white paws
-  for (const [x, c] of [[b, fur.d], [b + 4, fur.b], [fr - 3, fur.d], [fr + 1, fur.b]] as const) p.rect(x, 8, 2, 4, c).rect(x, 12, 3, 1, white);
-  lump(p, 1, 4, 12, 6, fur, 0.2, 221, 0.3); // body
-  p.rect(0, 5, 2, 3, fur.b).rect(0, 7, 2, 1, K); // short tail with a black tip
-  for (const [x, y] of [[3, 5], [6, 4], [9, 5], [4, 7], [7, 7]] as const) p.rect(x, y, 2, 1, fur.d2); // bold spots
-  p.rect(4, 9, 6, 1, white); // pale belly
-  p.rect(10, 6, 2, 3, fur.d2); // a shadow where the head sits on the body, so head and body read as two parts
-  lump(p, 11, 1, 7, 7, fur, 0.15, 222, 0.35); // head
-  p.rect(11, 0, 2, 3, fur.b).px(11, 0, K).px(12, 0, K).px(12, 1, '#e8a0a8'); // tufted ears, black tips
-  p.rect(15, 0, 2, 3, fur.d).px(15, 0, K).px(16, 0, K);
-  p.rect(11, 6, 2, 2, white).rect(16, 6, 2, 2, white); // cheek ruffs
-  p.rect(12, 5, 6, 1, fur.d2); // a dark stripe across the face
-  p.rect(14, 5, 3, 3, white).rect(16, 5, 1, 1, '#e87890').px(15, 7, K); // muzzle, nose and mouth
-  p.rect(12, 3, 3, 2, '#f0d84a').px(13, 3, K).px(13, 4, K); // a big yellow eye with a slit pupil
+  legs(p, f, 8, 5, 2, [1, 4, 11, 8], [4, 7, 8, 5], { near: fur.b, far: fur.d, paw: white }, 1);
+  lump(p, 1, 3, 12, 5, fur, 0.1, 221, 0.3); // body
+  p.rect(0, 4, 2, 3, fur.b).rect(0, 6, 2, 1, K); // short tail with a black tip
+  p.rect(3, 7, 6, 1, white); // pale belly
+  for (const [x, y] of [[4, 4], [7, 4], [9, 5]] as const) p.px(x, y, fur.d2); // three spots, no more
+  lump(p, 11, 3, 7, 6, pal(fur.b, fur.b, fur.l, fur.l2, white), 0.05, 222, 0.4); // head, lighter than the body so the two read apart
+  p.rect(11, 1, 2, 2, fur.b).px(12, 1, '#e8a0a8').rect(16, 1, 2, 2, fur.b).px(16, 1, '#e8a0a8'); // the tufted ears: tall...
+  p.px(11, 0, K).px(17, 0, K).px(12, 0, K).px(16, 0, K); // ...each with a black tuft
+  p.rect(11, 8, 2, 2, white).rect(16, 8, 2, 2, white); // cheek ruffs
+  p.rect(13, 4, 2, 2, '#f0d84a').px(14, 4, K).px(14, 5, K); // a big yellow eye with a slit pupil
+  p.rect(14, 7, 3, 2, white).px(16, 6, '#e87890').px(15, 8, K); // muzzle, nose and mouth
 }
 
 function pet_goat(p: Px, f: number): void {
-  // a goat kid in Thor's spirit: creamy white, small curved horns, a little beard, dark hooves
+  // a goat kid in Thor's spirit: creamy white, small curved horns, a little beard, dark hooves; four legs that skip along
   const fur = pal('#9a9488', '#c4beb2', '#e4dfd2', '#f4f0e6', '#ffffff');
   const horn = pal('#5a3a1a', '#7a5a2a', '#a8864a', '#c8a868', '#e2c88c');
-  const [b, fr] = stride(f, 3, 10);
-  p.rect(b, 10, 2, 4, fur.d).rect(b + 3, 10, 2, 4, fur.b);
-  p.rect(fr - 2, 10, 2, 4, fur.d).rect(fr, 10, 2, 4, fur.b);
-  p.rect(b, 13, 2, 2, '#3a3028').rect(b + 3, 13, 2, 2, '#3a3028').rect(fr - 2, 13, 2, 2, '#3a3028').rect(fr, 13, 2, 2, '#3a3028'); // hooves
-  lump(p, 1, 4, 12, 8, fur, 0.2, 231, 0.3);
+  legs(p, f, 10, 5, 2, [1, 4, 11, 8], [4, 7, 8, 5], { near: fur.b, far: fur.d, paw: '#3a3028' }, 2);
+  lump(p, 1, 3, 12, 7, fur, 0.2, 231, 0.3);
   p.rect(0, 5, 2, 2, fur.l); // tail tuft
   lump(p, 10, 1, 6, 7, fur, 0.15, 232, 0.35);
   p.line(11, 1, 10, -1, horn.b).line(14, 1, 15, -1, horn.b); // horns (clipped by the canvas when high)
