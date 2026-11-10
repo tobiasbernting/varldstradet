@@ -17,6 +17,12 @@ export type PetRole = 'attack' | 'heal' | 'guard' | 'utility';
 export type PetRarity = 'common' | 'rare' | 'epic';
 export type PetAnchor = 'head' | 'neck' | 'back';
 export const PET_ANCHORS: readonly PetAnchor[] = ['head', 'neck', 'back'];
+/** The gear's size class: a large pet gets every piece one column and one row bigger (art/src/petlooks.ts). */
+export type PetSize = 'small' | 'large';
+/** A box on the sprite: x, y, width, height. */
+export type PetBox = [number, number, number, number];
+/** Empty rows the art puts above every pet sprite so a horn, a plume or a spike has room to stand up (the sprite is that much taller). */
+export const PET_HEADROOM = 3;
 
 /** What a pet does on its own in a fight. One small set of kinds, each implemented once in petsim.ts. */
 export type PetTrick =
@@ -63,13 +69,22 @@ export interface PetDef {
   trick: PetTrick;
   /** Where its head, neck and back are on each of the two walk frames (pixels of the sprite facing right): gear is drawn there. */
   anchors: Record<PetAnchor, [number, number][]>;
+  /** The size class gear is drawn in (small: katt, hund, räv, korp, lodjur; large: björn, varg, get). */
+  size: PetSize;
+  /** What gear must never cover, per walk frame: the eyes and the muzzle (a test checks every piece against these). */
+  face: { eye: PetBox[]; muzzle: PetBox[] };
 }
 
-const A = (head: [number, number], neck: [number, number], back: [number, number], bob = 0): PetDef['anchors'] => ({
-  head: [head, [head[0], head[1] + bob]],
-  neck: [neck, [neck[0], neck[1] + bob]],
-  back: [back, [back[0], back[1] + bob]],
+// The table is written in the pixels of the animal as it is drawn (art/src/petanimals.ts); the sprite has PET_HEADROOM empty rows on
+// top, which the helpers add to every y. `bob` moves the neck and the back on the second walk frame (a hop), `headBob` the head.
+const up = (a: [number, number], dy = 0): [number, number] => [a[0], a[1] + PET_HEADROOM + dy];
+const A = (head: [number, number], neck: [number, number], back: [number, number], bob = 0, headBob = 0): PetDef['anchors'] => ({
+  head: [up(head), up(head, headBob)],
+  neck: [up(neck), up(neck, bob)],
+  back: [up(back), up(back, bob)],
 });
+const box = (b: PetBox): PetBox => [b[0], b[1] + PET_HEADROOM, b[2], b[3]];
+const F = (eye: PetBox, muzzle: PetBox): PetDef['face'] => ({ eye: [box(eye), box(eye)], muzzle: [box(muzzle), box(muzzle)] });
 
 export const PETS: Record<string, PetDef> = {
   hund: {
@@ -85,7 +100,9 @@ export const PETS: Record<string, PetDef> = {
     courage: 60,
     source: { kind: 'kennel' },
     trick: { kind: 'bite', dmg: 6, cd: 1800, range: 1.5 },
-    anchors: A([12, 3], [10, 6], [6, 3], 0),
+    anchors: A([11, 2], [9, 5], [5, 3]),
+    size: 'small',
+    face: F([12, 3, 3, 3], [13, 5, 3, 4]),
   },
   katt: {
     id: 'katt',
@@ -100,7 +117,9 @@ export const PETS: Record<string, PetDef> = {
     courage: 40,
     source: { kind: 'kennel' },
     trick: { kind: 'purr', heal: 10, cd: 4500, range: 6, below: 0.85 },
-    anchors: A([10, 3], [8, 5], [5, 3], 0),
+    anchors: A([11, 2], [8, 5], [5, 4]),
+    size: 'small',
+    face: F([11, 3, 3, 2], [11, 5, 3, 2]),
   },
   rav: {
     id: 'rav',
@@ -115,7 +134,9 @@ export const PETS: Record<string, PetDef> = {
     courage: 40,
     source: { kind: 'clear', dungeon: 'draug' },
     trick: { kind: 'find', seeds: 0.12 },
-    anchors: A([12, 3], [10, 5], [6, 3], 0),
+    anchors: A([13, 2], [10, 5], [7, 3]),
+    size: 'small',
+    face: F([13, 4, 2, 2], [14, 6, 4, 2]),
   },
   korp: {
     id: 'korp',
@@ -130,7 +151,9 @@ export const PETS: Record<string, PetDef> = {
     courage: 35,
     source: { kind: 'drop', boss: 'draugkung', chance: 0.3 },
     trick: { kind: 'mark', bonus: 0.2, ms: 6000, cd: 9000, range: 8 },
-    anchors: A([14, 3], [10, 5], [7, 5], 0),
+    anchors: A([14, 0], [11, 5], [7, 4], -1),
+    size: 'small',
+    face: F([14, 2, 2, 2], [16, 3, 4, 3]),
   },
   bjorn: {
     id: 'bjorn',
@@ -145,7 +168,9 @@ export const PETS: Record<string, PetDef> = {
     courage: 130,
     source: { kind: 'drop', boss: 'isbjorn', chance: 0.3 },
     trick: { kind: 'guard', soak: 0.3, roarCd: 9000, range: 3 },
-    anchors: A([15, 5], [12, 7], [7, 4], 0),
+    anchors: A([17, 2], [12, 8], [7, 3]),
+    size: 'large',
+    face: F([16, 4, 2, 2], [17, 6, 5, 5]),
   },
   varg: {
     id: 'varg',
@@ -160,7 +185,9 @@ export const PETS: Record<string, PetDef> = {
     courage: 55,
     source: { kind: 'drop', boss: 'skoll', chance: 0.3 },
     trick: { kind: 'howl', dmg: 7, cd: 1500, range: 1.5, buff: 0.1, buffMs: 6000, howlCd: 24000 },
-    anchors: A([14, 3], [11, 5], [6, 3], 0),
+    anchors: A([14, 2], [11, 6], [7, 4]),
+    size: 'large',
+    face: F([15, 3, 2, 2], [16, 5, 4, 3]),
   },
   get: {
     id: 'get',
@@ -175,7 +202,9 @@ export const PETS: Record<string, PetDef> = {
     courage: 90,
     source: { kind: 'drop', boss: 'surt', chance: 0.3 },
     trick: { kind: 'ram', dmg: 12, stunMs: 1500, cd: 12000, range: 4 },
-    anchors: A([13, 3], [10, 5], [6, 3], 0),
+    anchors: A([12, 1], [10, 6], [6, 3]),
+    size: 'large',
+    face: F([12, 3, 2, 2], [13, 5, 3, 3]),
   },
   lodjur: {
     id: 'lodjur',
@@ -190,7 +219,9 @@ export const PETS: Record<string, PetDef> = {
     courage: 50,
     source: { kind: 'drop', boss: 'nattmara', chance: 0.3 },
     trick: { kind: 'ambush', first: 28, dmg: 3, cd: 2200, range: 1.6, hideMs: 6000 },
-    anchors: A([13, 3], [8, 6], [6, 3], 0),
+    anchors: A([14, 3], [10, 7], [6, 3]),
+    size: 'small',
+    face: F([13, 4, 2, 2], [14, 6, 3, 3]),
   },
 };
 
