@@ -65,7 +65,7 @@ export type Change =
   /** Hero experience gained (anywhere): the client floats "+n xp" from where the player stood (pixels; area left out on the farm). */
   | { t: 'xp'; to: string; n: number; x: number; y: number; area?: string }
   /**
-   * Runs (M5b, GAME.md): the run as it is now (`run` null: none), the three cards being voted on (`offer` null: the vote is
+   * Runs (DESIGN.md section 2): the run as it is now (`run` null: none), the three cards being voted on (`offer` null: the vote is
    * over), and how a run ended for one player. `to` null is everyone.
    */
   | { t: 'run'; ev: 'state'; to: string | null; run: RunSnap | null }
@@ -129,7 +129,7 @@ export type ClientMsg =
    * if you had walked through its arch; a player without a class becomes a Krigare first. For the native client,
    * which has no world map yet. The server answers `error` when the switch is off. */
   /**
-   * Runs (GAME.md): whoever stands at the färdport starts a run (`replay`: a cleared boss at random instead of the next
+   * Runs (DESIGN.md section 2.6): whoever stands at the färdport starts a run (`replay`: a cleared boss at random instead of the next
    * chapter's; `companion: false` goes without the hired Hirdmannen; `level`: 0 Mycket lätt, 1 Lätt, 2 Medel (which is also what a message without one means), 3 Svår or 4 Extrem), anyone joins or
    * leaves, the party votes on a card of the offer (`card` is its index 0..2) and may ask for a new offer once.
    */

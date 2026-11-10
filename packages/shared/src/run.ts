@@ -1,4 +1,4 @@
-// Runs (färdar): the data of GAME.md and GAME2.md. A run is one dungeon (a chapter) as a route of ten rows of stops in
+// Runs (färdar): the data of DESIGN.md (sections 2 to 6). A run is one dungeon (a chapter) as a route of ten rows of stops in
 // about 30 minutes; after a fight the party votes on a runa (a boon) and then walks onto one of up to three väg-runor
 // to choose the next stop; sagafrön earned are planted at the Yggdrasil shoot as the sagaträd; the farm feeds the run with
 // färdkost and companions. Data only: the route and its stops are built by runmap.ts, the rules are runsim.ts (which
@@ -26,7 +26,7 @@ export const RUN_NUDGE_MS = 10 * 60_000;
 export const RUN_PICK_MS = 60_000;
 export const RUN_PICK_MS_HARD = 30_000;
 export const runPickMs = (level: number): number => (level <= 1 ? RUN_PICK_MS : RUN_PICK_MS_HARD);
-/** The route (GAME2.md section 2): ten rows of stops, the mid-boss on row 5, the boss on row 10; wings of rows 1–4, 5–8 and 9–10. */
+/** The route (DESIGN.md section 2): ten rows of stops, the mid-boss on row 5, the boss on row 10; wings of rows 1–4, 5–8 and 9–10. */
 export const ROUTE_ROWS = 10;
 export const ROUTE_MINI_ROW = 5;
 export const ROUTE_REST_ROW = 9;
@@ -48,8 +48,8 @@ export const RUN_PARTY_MAX = 4;
 export const RUN_OFFLINE_END_MS = 60_000;
 
 /**
- * The difficulty of a run (GAME2.md section 5.7): five levels chosen at the arch and fixed for the run. `0` Mycket lätt (kids
- * alone), `1` Lätt (kids with an adult: what Lätt was in R2), `2` Medel (what Vanlig was), `3` Svår, `4` Extrem.
+ * The difficulty of a run (DESIGN.md section 5.7): five levels chosen at the arch and fixed for the run. `0` Mycket lätt (kids
+ * alone), `1` Lätt (kids with an adult: the old Lätt), `2` Medel (what Vanlig was), `3` Svår, `4` Extrem.
  */
 export type RunLevel = 0 | 1 | 2 | 3 | 4;
 export const RUN_LEVEL_IDS: readonly RunLevel[] = [0, 1, 2, 3, 4];
@@ -93,7 +93,7 @@ export const RUN_LEVELS: Record<RunLevel, RunLevelDef> = {
 };
 /** The boss attacks the easiest levels allow: its first two, whatever a first run's plan has locked. */
 export const LATT = { bossMoves: 2 } as const;
-/** The Sagoandan (GAME2.md section 4.5): free "everyone gets up" on a wipe, so the run does not end. How many a run starts with, by level (`RUN_LEVELS[l].spirit`). */
+/** The Sagoandan (DESIGN.md section 4.5): free "everyone gets up" on a wipe, so the run does not end. How many a run starts with, by level (`RUN_LEVELS[l].spirit`). */
 export const SAGOANDAN: Record<RunLevel, number> = { 0: RUN_LEVELS[0].spirit, 1: RUN_LEVELS[1].spirit, 2: RUN_LEVELS[2].spirit, 3: RUN_LEVELS[3].spirit, 4: RUN_LEVELS[4].spirit };
 /** Monster health, damage and warning multipliers for a level (the zone's own are multiplied by these). */
 export const levelMuls = (level: RunLevel): { hp: number; dmg: number; warn: number; seeds: number } => {
@@ -119,7 +119,7 @@ export function tally(counts: readonly number[], voters: number, opts: { late: b
   return top > 0 ? counts.flatMap((n, i) => (n === top ? [i] : [])) : [];
 }
 
-/** Sagafrön for what happens in a run (GAME2.md section 6): a pack 1, a stop cleared 3 (`zone`: the name is kept), the mid-boss 5 (`guard`), the boss 20 (12 on a replay). */
+/** Sagafrön for what happens in a run (DESIGN.md section 6): a pack 1, a stop cleared 3 (`zone`: the name is kept), the mid-boss 5 (`guard`), the boss 20 (12 on a replay). */
 export const RUN_SEEDS = { pack: 1, zone: 3, chest: 2, guard: 5, bossFirst: 20, bossReplay: 12 } as const;
 /** More sagafrön for each modifier (the särdrag of a level pay through the level's own multiplier instead). */
 export const MODIFIER_SEEDS = 0.15;
@@ -223,7 +223,7 @@ export const MODIFIERS: ModifierDef[] = [
   { id: 'snabba', sight: 1.4 },
   { id: 'dimma', leash: 6, fog: true },
 ];
-/** The särdrag (GAME2.md 4.7, section 5.7): the ones the sim can express cheaply. A level of Svår has one of them, Extrem two, chosen by the seed. */
+/** The särdrag (DESIGN.md 4.7, section 5.7): the ones the sim can express cheaply. A level of Svår has one of them, Extrem two, chosen by the seed. */
 export const AFFIXES: ModifierDef[] = [
   { id: 'stalhud', affix: true, packHp: 1.2 },
   { id: 'stormig', affix: true, bossHp: 1.2, bossDmg: 1.1 },
@@ -387,7 +387,7 @@ export const ZONE_TEMPLATES: Record<RunBiome, ZoneTemplate> = {
 };
 
 /**
- * The fixed layouts of the other stops (GAME2.md section 2.3). The dungeon's own mid-boss and boss halls give the sizes of the
+ * The fixed layouts of the other stops (DESIGN.md section 2.3). The dungeon's own mid-boss and boss halls give the sizes of the
  * halls (`mini`, `hall`); the rest is here. A Vilosten is start, the stone's room and the exit room; the Mellanboss stop is start,
  * a room of packs, the hall and the exit room behind it; the boss stop is start, a room of packs and the hall.
  */
@@ -411,7 +411,7 @@ export const BOSS_STOP = {
   hall: { x: 4, y: 4, w: 24, h: 22 },
 };
 
-/** The route's kinds of stop (GAME2.md section 2.1; the others come in R4 and R5). */
+/** The route's kinds of stop (DESIGN.md section 2.1). */
 export type NodeKind = 'flock' | 'mini' | 'rest' | 'boss' | 'shop' | 'event' | 'treasure' | 'elite';
 export const NODE_KINDS: readonly NodeKind[] = ['flock', 'mini', 'rest', 'boss', 'shop', 'event', 'treasure', 'elite'];
 /** The stops where nobody fights: a camp (the Köpman, a Händelse) and a Vilosten. */
@@ -422,7 +422,7 @@ export const isFlockLike = (k: NodeKind): boolean => k === 'flock' || k === 'eli
 /** Which wing (0: rows 1–4, 1: rows 5–8, 2: rows 9–10) a row is in. */
 export const wingOf = (row: number): number => (row <= 4 ? 0 : row <= 8 ? 1 : 2);
 
-/** Health of a stop's monsters by wing (GAME2.md section 5.3): the later wings are tougher. Tuned by the bots. */
+/** Health of a stop's monsters by wing (DESIGN.md sections 2.3 and 5.1): the later wings are tougher. Tuned by the bots. */
 export const WING_HP: readonly number[] = [1.85, 2.3, 2.7];
 
 /** One human alone (with the hired companion, who counts as a fighter for the monsters' health): monsters tolerate this much less. */
@@ -441,7 +441,7 @@ export function companionClass(classes: ClassId[]): ClassId | null {
 
 /**
  * Packs per room (and members) by wing: a Flock has two rooms of packs (`a` the first, `b` the second), the Mellanboss stop and
- * the boss stop one room each (`mini`, `boss`). `big` is the number of big monsters per room. Tuned by the bots (run.test.ts), see GAME2.md.
+ * the boss stop one room each (`mini`, `boss`). `big` is the number of big monsters per room. Tuned by the bots (run.test.ts), see DESIGN.md.
  */
 export const FLOCK_PACKS = [
   { a: [3, 3], b: [3, 3], size: [4, 5], big: 0 },
@@ -454,7 +454,7 @@ export const ELITE_HP = 1.25;
 export const TREASURE_PACKS = { a: [1, 1], b: [1, 2], size: [3, 4], big: 0 } as const;
 export const BOSS_PACKS = { count: [3, 3], size: [3, 4] } as const;
 /**
- * Lätt's packs (GAME2.md section 5.3 wants a child through the route in about 20-28 minutes): fewer, smaller packs in a Flock and in the
+ * Lätt's packs (DESIGN.md section 5.3 wants a child through the route in about 20-28 minutes): fewer, smaller packs in a Flock and in the
  * rooms before the mid-boss and the boss, on top of the softer monsters. The same shape as above.
  */
 export const LATT_FLOCK_PACKS = [

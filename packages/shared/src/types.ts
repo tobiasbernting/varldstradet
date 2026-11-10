@@ -259,7 +259,7 @@ export interface PlayerState {
   achievements: string[];
   /** Dungeons: class, Völvan's story, cleared dungeons, quests, titles. */
   saga?: SagaProgress;
-  /** Runs (M5b): sagafrön, the bought nodes of the sagaträd and run statistics. Optional: old saves load as they were. */
+  /** Runs: sagafrön, the bought nodes of the sagaträd and run statistics. Optional: old saves load as they were. */
   run?: RunSave;
   /** When this character was last in the game (server clock, ms): set on connect and disconnect, shown on the parent page. */
   lastPlayed?: number;

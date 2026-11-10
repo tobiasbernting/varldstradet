@@ -99,7 +99,7 @@ export const GCD_MS = 400;
 export const DOWN_MS = 10_000;
 /** Everyone fell: after this long the party gets up at the last rest stone and the monsters reset. */
 export const WIPE_MS = 4_000;
-/** Health a fighter has after the Sagoandan of a run (a fraction of the maximum; GAME2.md section 4.5). */
+/** Health a fighter has after the Sagoandan of a run (a fraction of the maximum; DESIGN.md section 4.5). */
 export const SAGOANDAN_HP = 0.5;
 /** The monsters' speed and attack rate when a `jakten` monster is below a quarter health. */
 export const ENRAGE = { below: 0.25, speed: 1.4, rate: 1.4 } as const;
@@ -1468,13 +1468,13 @@ export const gearSlotOf = (itemId: string): GearSlot | null => {
 /**
  * Hero levels give no power at all (they are a sign of experience, with cosmetic rewards: LEVEL_REWARDS). Every hero fights as a
  * level-3 hero used to (1 + 1.5 % per level above the first), because the whole game was tuned with level-3 heroes (the bot tests,
- * GAME2.md section 5.6). This is the one place that number lives; change it here and nowhere else.
+ * DESIGN.md section 5.6). This is the one place that number lives; change it here and nowhere else.
  */
 export const FLAT_LEVEL_MUL = 1 + 0.015 * 2;
 /**
  * The flat base every hero fights with, in place of what gear used to add. It is exactly what the starter set gave (an uncommon
  * weapon: x1.05 damage and healing, a wooden shield: 4 % less damage taken, a stone amulet: +8 health), so the bots' measured
- * minutes (GAME2.md section 5.6) stay as they were. Change it here and nowhere else.
+ * minutes (DESIGN.md section 5.6) stay as they were. Change it here and nowhere else.
  */
 export const BASE_POWER = 1.05;
 export const BASE_ARMOR = 0.04;
@@ -2125,7 +2125,7 @@ export interface SagaRunLink {
   buffs: Record<string, RunBuffs>;
   /** The line under "Alla föll…" (a run ends there instead of getting up). */
   wipeSub: string;
-  /** Lätt (GAME2.md 5.3): the boss's warnings last this much longer (a multiplier; left out, 1). */
+  /** Lätt (DESIGN.md 5.3): the boss's warnings last this much longer (a multiplier; left out, 1). */
   warnMul?: number;
   /** Lätt: 0.6 for everything the boss calls in (phase adds, summons, the ice and web blocks); left out on Vanlig. */
   levelHp?: number;

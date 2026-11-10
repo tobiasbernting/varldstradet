@@ -1,4 +1,4 @@
-// Runs (M5b): the generator, the data, every effect of every runa and node, the run's rules (the vote, sagafrön, the timer,
+// Runs: the generator, the data, every effect of every runa and node, the run's rules (the vote, sagafrön, the timer,
 // the wipe, joining, the companion, the sagaträd, the farm's objects, saves) and whole runs played by bot parties.
 import { describe, expect, it } from 'vitest';
 import {
@@ -239,7 +239,7 @@ describe('the route generator (generateRoute)', () => {
       const to = new Set([last]);
       for (const n of [...route.nodes].reverse()) if (n.next.some((m) => to.has(m))) to.add(n.id);
       expect(to.size, why).toBe(route.nodes.length);
-      // the other kinds (GAME2.md 2.1): a Köpman in each of the first two wings (so one is reachable on every route), a plain fight or a Vilosten
+      // the other kinds (DESIGN.md 2.1): a Köpman in each of the first two wings (so one is reachable on every route), a plain fight or a Vilosten
       // in every row, a Stark vakt only from row 3 and not on the two easiest levels, never two Händelser in one row
       for (const [lo, hi] of [[2, 4], [6, 8]] as const) expect(route.nodes.some((n) => n.row >= lo && n.row <= hi && n.kind === 'shop' && from.has(n.id)), `${why} Köpman rows ${lo}-${hi}`).toBe(true);
       for (const r of [2, 3, 4, 6, 7, 8]) expect(rows[r - 1]!.some((n) => n.kind === 'flock' || n.kind === 'rest'), `${why} row ${r} has a fight or a rest`).toBe(true);
@@ -1025,7 +1025,7 @@ describe('starting, joining and leaving', () => {
   });
 });
 
-describe('the run is one dungeon, chosen at the arch (GAME2.md section 2.4)', () => {
+describe('the run is one dungeon, chosen at the arch (DESIGN.md section 2.4)', () => {
   const cleared = (party: Party, ids: DungeonId[]): void => {
     party.players[0]!.saga!.cleared = [...ids];
   };
@@ -1363,7 +1363,7 @@ describe('the vote on a runa', () => {
   });
 });
 
-describe('the vote on the way on (GAME2.md section 2.2)', () => {
+describe('the vote on the way on (DESIGN.md section 2.2)', () => {
   /** The cards are voted and done: the väg-runor are out and the party stands in the exit room. */
   function atTheRoute(classes: ClassId[] = ['vaktare', 'helare', 'magiker'], opts: { companion?: boolean } = {}): Party {
     const party = makeParty(classes, { seed: 6 });
@@ -2129,7 +2129,7 @@ describe('saves', () => {
   });
 });
 
-describe('Lätt and the Sagoandan (GAME2.md 4.5 and 5.3)', () => {
+describe('Lätt and the Sagoandan (DESIGN.md 4.5 and 5.3)', () => {
   const wipeIt = (l: ReturnType<typeof lab>): Change[] => {
     for (const f of Object.values(l.inst.fighters)) {
       f.down = l.party.now;

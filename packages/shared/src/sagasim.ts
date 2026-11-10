@@ -256,7 +256,7 @@ export function rejoinSaga(world: WorldState, playerId: string): Change[] {
 /**
  * Development only (the server enables it with DEV_TELEPORT=1): puts a player straight into dungeon `id` from wherever
  * they are, the way its arch would, for a client that cannot walk to the arch yet (the native client has no world map
- * in M3). A player without a class becomes a Krigare first, exactly as Kämpastenen would make them one. The dungeon
+ * yet). A player without a class becomes a Krigare first, exactly as Kämpastenen would make them one. The dungeon
  * comes from the normal path (getArea → generateSaga), so it is the real thing: monsters, gate, rest stones, chests.
  */
 export function devEnterSaga(world: WorldState, playerId: string, id: string): Change[] {

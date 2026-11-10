@@ -1,4 +1,4 @@
-// The rules of a run (färd), GAME.md and GAME2.md. A run is started at the färdport on the farm; the party walks a route of
+// The rules of a run (färd), DESIGN.md sections 2 to 6. A run is started at the färdport in the lobby (the world whose area id is still `farm`); the party walks a route of
 // ten rows of stops through one dungeon, each stop a saga map built by runmap.ts and fought by sagasim.ts (every fight rule is the
 // saga's, a run only hands each fighter its buffs and watches what happens). This file is the run state, the vote on runor and the
 // vote on the way on (walking onto a väg-runa), the sagafrön, the timer, the wipe and the end, the Yggdrasil shoot, the farm
@@ -99,7 +99,7 @@ export interface RunState {
   seed: number;
   plan: RunPlan;
   starter: string;
-  /** 0 Mycket lätt … 4 Extrem (GAME2.md 5.7). */
+  /** 0 Mycket lätt … 4 Extrem (DESIGN.md 5.7). */
   level: RunLevel;
   /** The Sagoandans left (the star on the HUD), and the wipes they (or Lätt) have saved so far. */
   spirit: number;
@@ -476,7 +476,7 @@ export interface StartOptions {
   companion?: boolean;
   /** 0 Lätt or 1 Vanlig (the default). */
   level?: RunLevel;
-  /** The dungeon (chapter) to run: the one the starter has cleared or the next one; left out, the next one (GAME2.md section 2). */
+  /** The dungeon (chapter) to run: the one the starter has cleared or the next one; left out, the next one (DESIGN.md section 2). */
   dungeon?: DungeonId;
 }
 

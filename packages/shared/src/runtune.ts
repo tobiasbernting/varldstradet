@@ -1,4 +1,4 @@
-// A tuning script for the runs (GAME2.md section 8): plays bot runs of the route and prints the table of section 5.4.
+// A tuning script for the runs (DESIGN.md sections 5.6 and 8): plays bot runs of the route and prints the table of section 5.4.
 //   node --experimental-transform-types packages/shared/src/runtune.ts [--level 0..4] [--style clumsy|careful|kid7] [--seeds 20] [--from 1]
 //        [--dungeon draug] [--parties solo|duo|pair|all] [--lane safe|random] [--limit 60]
 // One row per party: wins, runs that ended on a wipe, Sagoandans used, minutes until the boss falls, and what the route held on

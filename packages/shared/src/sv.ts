@@ -785,7 +785,7 @@ export const WEATHER_NEWS: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Runs (färdar): names and one-line texts (at most 40 characters, a number in each, for the big cards). GAME.md.
+// Runs (färdar): names and one-line texts (at most 40 characters, a number in each, for the big cards)..
 // ---------------------------------------------------------------------------
 
 export const RUNA_NAMES: Record<string, string> = {
@@ -847,7 +847,7 @@ export const MODIFIER_TEXT: Record<string, string> = {
   fler: 'En till i varje flock', segare: 'Monstren tål 25 % mer', harda: 'Monstren slår 20 % hårdare', vakten: 'En mellanboss vaktar vägen', snabba: 'Monstren ser dig på längre håll', dimma: 'Dimma, och monstren ger inte upp',
 };
 
-/** The kinds of stop on a route (GAME2.md section 2.1): the name on the banner and the line under it, and the short word on the map. */
+/** The kinds of stop on a route (DESIGN.md section 2.1): the name on the banner and the line under it, and the short word on the map. */
 export const STOP_NAMES: Record<string, string> = { flock: 'Ett flock', mini: 'Mellanbossen', rest: 'Vilosten', boss: 'Bossen', shop: 'Köpmannen', event: 'En händelse', treasure: 'Skattrummet', elite: 'Stark vakt' };
 export const STOP_WORDS: Record<string, string> = { flock: 'Flock', mini: 'Mellanboss', rest: 'Vilosten', boss: 'Boss', shop: 'Köpman', event: 'Händelse', treasure: 'Skatt', elite: 'Stark vakt' };
 export const STOP_INTROS: Record<string, string> = {

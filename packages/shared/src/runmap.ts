@@ -1,4 +1,4 @@
-// The run generator (GAME2.md section 2): a run is one dungeon (a chapter) as a route, a graph of stops in ten rows, up to
+// The run generator (DESIGN.md section 2): a run is one dungeon (a chapter) as a route, a graph of stops in ten rows, up to
 // three lanes wide. `generateRoute` makes the graph from a seed; `generateRun` adds the plan of every stop (rooms, packs,
 // the numbers that make it a stop of a run); `buildStop` builds one stop's map with the same builder as the saga's dungeons
 // (sagamap.ts), so a stop has the object kinds the client already draws: walls, gates, torches, rest stones, decor. It has the
@@ -71,7 +71,7 @@ const SINGLE_ROWS = new Set([1, ROUTE_MINI_ROW, ROUTE_REST_ROW, ROUTE_ROWS]);
 const SAFE_ROWS = new Set([4, 8]);
 
 /**
- * The route of a run, deterministic from the seed (like every generator here). The hard rules (GAME2.md section 2.1, for the
+ * The route of a run, deterministic from the seed (like every generator here). The hard rules (DESIGN.md section 2.1, for the
  * kinds there are in R3): row 1 a Flock, row 5 the Mellanboss, row 9 a Vilosten, row 10 the Boss; rows 2–4 and 6–8 have two or three
  * lanes; rows 4 and 8 always have a Vilosten lane that every stop before can walk to; a Vilosten also turns up now and then on rows
  * 2 and 6 (never on 3 and 7: no two in a row); every stop has a way in and a way on, so all of them can be reached from the start
@@ -89,7 +89,7 @@ export function generateRoute(seed: number, opts: { dungeon: DungeonId; level: R
     else if (row === ROUTE_ROWS) kinds[0] = 'boss';
     else if (SAFE_ROWS.has(row)) kinds[randInt(rnd, 0, lanes - 1)] = 'rest';
     else if ((row === 2 || row === 6) && rnd() < 0.3) kinds[randInt(rnd, 0, lanes - 1)] = 'rest';
-    // the free lanes are not all fights (GAME2.md 2.1): a Händelse, a Skatt, a Stark vakt (not before row 3 and not on the two easiest levels) or a Köpman
+    // the free lanes are not all fights (DESIGN.md 2.1): a Händelse, a Skatt, a Stark vakt (not before row 3 and not on the two easiest levels) or a Köpman
     if (!SINGLE_ROWS.has(row))
       kinds.forEach((k, lane) => {
         if (k !== 'flock') return;

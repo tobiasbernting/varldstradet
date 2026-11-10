@@ -1,4 +1,4 @@
-// Whole runs played by bot parties (GAME2.md section 5.6): families of one to four heroes, careful and clumsy, through the route of
+// Whole runs played by bot parties (DESIGN.md section 5.6): families of one to four heroes, careful and clumsy, through the route of
 // Draugkryptan to the boss. Kept apart from run.test.ts so the two run side by side on the CI (each is a minute or so of simulated runs);
 // run.solo.test.ts (Vanlig) and run.latt.test.ts (Lätt) have the one-hero tables.
 import { describe, expect, it } from 'vitest';
@@ -11,7 +11,7 @@ const BOT_LIMIT = 60 * 60_000;
 const yieldToRunner = (): Promise<void> => new Promise((r) => setImmediate(r));
 
 describe('bot parties play whole runs', () => {
-  // [label, classes, careful minutes (low, high), clumsy minutes (low, high)]: the ranges are the measured averages of GAME2.md
+  // [label, classes, careful minutes (low, high), clumsy minutes (low, high)]: the ranges are the measured averages of DESIGN.md
   // section 5.6 with a third on either side; the pair of a tank and a healer has no one to hurt anything (no follower), so it is the slow one
   const FAMILIES: [string, ClassId[], [number, number], [number, number]][] = [
     ['en spelare + Hirdmannen', ['krigare'], [9, 18], [20, 36]],

@@ -1,4 +1,4 @@
-// Hacksilver, the Köpman, the Händelser, the Skatt and the Stark vakt (GAME2.md R5): the purse, each kind of stop, every event's outcomes,
+// Hacksilver, the Köpman, the Händelser, the Skatt and the Stark vakt (DESIGN.md 2.5 and 3.4): the purse, each kind of stop, every event's outcomes,
 // the prices, who may spend and the leftover that turns into sagafrön.
 import { describe, expect, it } from 'vitest';
 import {

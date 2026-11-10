@@ -1,4 +1,4 @@
-// The Köpman's window and the Händelse window of a run (GAME2.md 3.4 and 2.5), next to ui/run.ts so that file stays what it was.
+// The Köpman's window and the Händelse window of a run (DESIGN.md 3.4 and 2.5), next to ui/run.ts so that file stays what it was.
 // Every ware is a card with a picture, a name, one sentence and a price in silver coins; a price is never only a colour (a card you cannot
 // afford says so in words); a Händelse is a story and two or three big choices, everyone votes, nobody is punished for a choice.
 import { EVENT_CHOICES, EVENT_TEXT, RUN_T, RUN_UI, canSharpen, eventDef, fmt, type RunSnap } from '@varldstradet/shared';

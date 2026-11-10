@@ -1,6 +1,6 @@
-// The two hard levels played whole by a careful two-player party (GAME2.md 5.7): Svår (3) is won about half to three quarters of the time,
+// The two hard levels played whole by a careful two-player party (DESIGN.md 5.7): Svår (3) is won about half to three quarters of the time,
 // Extrem (4) one run in about four. The party is a Krigare and a Magiker (a tank in the party makes both levels easier: see the table in
-// GAME2.md). Apart from run.test.ts so they run beside it on the CI; sixteen capped seeds each.
+// DESIGN.md). Apart from run.test.ts so they run beside it on the CI; sixteen capped seeds each.
 import { describe, expect, it } from 'vitest';
 import { AFFIX_IDS, T, generateRun } from './index.ts';
 import { makeParty, playRun } from './runplay.ts';

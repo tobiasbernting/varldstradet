@@ -1,4 +1,4 @@
-// Runor v2 (GAME2.md section 3): the cards a hero takes during a run. Every runa has a rarity (vanlig, ovanlig, sällsynt, legendarisk) and
+// Runor v2 (DESIGN.md section 3): the cards a hero takes during a run. Every runa has a rarity (vanlig, ovanlig, sällsynt, legendarisk) and
 // one or two tags; two and four runor of one tag give a small and a big set bonus; offers are personal (each hero draws their own three,
 // leaning to their class and path), the rarity of a card is rolled by weights that depend on the stop and on the sagaträd's luck, and
 // a runa a hero holds can be sharpened (skärpa: x1.25 a step) at a Vilosten, at the Köpman or by a smith. Data and rules only; the run's
@@ -141,7 +141,7 @@ export function tagCounts(held: readonly RunaHeld[], party: readonly string[] = 
   return n;
 }
 
-/** The set bonuses: two runor of a tag give the first, four the second as well (GAME2.md 3.1). Plain effects, so the tests' "every effect changes something" covers them. */
+/** The set bonuses: two runor of a tag give the first, four the second as well (DESIGN.md 3.1). Plain effects, so the tests' "every effect changes something" covers them. */
 export const SET_BONUS: Record<RunTag, [RunEffect, RunEffect]> = {
   eld: [{ power: 0.03 }, { power: 0.04, leech: 0.02 }],
   is: [{ taken: 0.03 }, { taken: 0.03, cd: 0.03 }],
@@ -176,7 +176,7 @@ export function heldEffect(h: RunaHeld): RunEffect {
 // Offers: personal cards with a rarity
 // ---------------------------------------------------------------------------
 
-/** Where an offer comes from: the weights of the four rarities (GAME2.md 3.2; the sagaträd's `luck` raises the rarer ones). */
+/** Where an offer comes from: the weights of the four rarities (DESIGN.md 3.2; the sagaträd's `luck` raises the rarer ones). */
 export type OfferSource = 'flock' | 'stark' | 'skatt' | 'mini' | 'shop';
 export const OFFER_WEIGHTS: Record<OfferSource, readonly [number, number, number, number]> = {
   flock: [60, 30, 10, 0],

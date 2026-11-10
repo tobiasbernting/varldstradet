@@ -11,7 +11,7 @@ import { CLASSES, REST_RADIUS, SAGA_BOSSES, SPELLS, type ClassId, type SagaMob }
 import { PLAYER_SPEED, TILE, type AnimalState, type Facing, type PlayerState, type WorldState } from './types.ts';
 import type { Change } from './protocol.ts';
 
-/** `kid7` is a 7-year-old: clumsy with a 1.2 times longer think between moves and 40 % misses (GAME2.md section 8). */
+/** `kid7` is a 7-year-old: clumsy with a 1.2 times longer think between moves and 40 % misses (DESIGN.md section 5.6). */
 export type BotStyle = 'careful' | 'clumsy' | 'kid7';
 
 export interface BotMind {

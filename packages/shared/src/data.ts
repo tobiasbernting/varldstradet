@@ -52,7 +52,6 @@ add(I('star_crystal', 'material', { sell: 120 }));
 // Placeables (crafted or bought)
 const place = (id: string, extra: Partial<ItemDef> = {}) =>
   add(I(id, 'placeable', { places: id, ...extra }));
-// The run's buildings (M5b, GAME.md section 4): the forge house, the herb garden and the longhouse
 // Furniture (Möbler) – crafted or bought, usable inside the house and outside
 // Furniture: a new house starts with a bed, a table, a chair and a lamp, and the dungeons drop the rest (HOUSE_LOOT)
 place('bench', { sell: 5 });
@@ -201,7 +200,7 @@ addO(O('saga_exit', { solid: false, flat: true, interact: 'exit', breakWith: und
 addO(O('saga_rest', { interact: 'rest', breakWith: undefined, light: true }));
 addO(O('saga_chest', { interact: 'sagachest', breakWith: undefined }));
 addO(O('saga_stone', { interact: 'sagaclass', breakWith: undefined, light: true }));
-// Runs (M5b): the arch on the farm that starts one, and the way on at the end of a zone
+// Runs: the arch in the lobby that starts one, and the way on at the end of a zone
 addO(O('fardport', { w: 3, h: 2, interact: 'fardport', breakWith: undefined, light: true }));
 addO(O('run_exit', { solid: false, flat: true, interact: 'runexit', breakWith: undefined, light: true }));
 addO(O('saga_coffin', { breakWith: undefined }));
