@@ -715,3 +715,6 @@ button.pick:disabled {
   margin-top: 8px;
   z-index: 2;
 }
+.saga-tracker {
+  background: rgba(24, 18, 30, 0.86);
+}
