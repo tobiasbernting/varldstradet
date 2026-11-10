@@ -3,7 +3,7 @@
 // stand that shows a weapon, shield or amulet.
 import { HOUSE_DOOR, addObject, emptyWorld, objectAt, removeObject } from './map.ts';
 import { ITEMS, NORSE_DECOR, TROPHY_LEVELS, TROPHY_PREFIX } from './data.ts';
-import { DUNGEONS, sagaItem } from './saga.ts';
+import { DUNGEONS, HOUSE_LOOT, sagaItem } from './saga.ts';
 import { hasLooks, lookPiece, standData, standLook } from './looks.ts';
 import { HOUSE_ROOM, HOUSE_EXIT, HOUSE_H, HOUSE_W, homeKey, isHomeKey, ownerOfHome } from './homekeys.ts';
 import { TILE } from './types.ts';
@@ -308,12 +308,14 @@ export function devTrophy(world: WorldState, playerId: string, id: string, level
   return out;
 }
 
-/** Development only (DEV_TELEPORT=1): one of every piece of Norse decor, a gear stand and three pieces of gear, into the bag. */
+/** Development only (DEV_TELEPORT=1): one of every piece of decor a dungeon can drop (HOUSE_LOOT and the Norse set), the starter furniture, a gear stand and three pieces of gear, into the bag. */
 export function devDecor(world: WorldState, playerId: string): Change[] {
   const p = farmOf(world).players[playerId];
   if (!p) return [];
   const out: Change[] = [];
-  for (const id of [...NORSE_DECOR, 'gear_stand', 'runsvard', 'offhand_helskold', 'amulet_vegvisir', 'bed', 'rug']) giveItems(world, p, id, 1, out);
+  const decor = new Set<string>([...NORSE_DECOR, 'gear_stand', 'bed', 'table', 'chair', 'lamp']);
+  for (const d of Object.values(HOUSE_LOOT)) for (const [id] of [...d.boss, ...d.treasure]) decor.add(id);
+  for (const id of [...decor, 'runsvard', 'offhand_helskold', 'amulet_vegvisir']) giveItems(world, p, id, 1, out);
   out.push(playerChange(p));
   return out;
 }

@@ -112,7 +112,7 @@ client: `lillaGarden.net.send({ t: 'dev', a: 'warp', x: 20, y: 20 })`. Without t
 | `{ a: 'warp', x, y }` | Stand on tile (x, y) of the map you are in. |
 | `{ a: 'trophy', id, level }` | Win the trophy of boss `id` at difficulty `level` (0 to 4). |
 | `{ a: 'looks', set?, tier?, ways?, cls? }` | Every piece of a set (all sets if left out) at shine tier 1 to 5, with colourways, titles and the signature weapons. |
-| `{ a: 'decor' }` | One of every Norse decor piece, a gear stand and some gear, into the bag. |
+| `{ a: 'decor' }` | One of every piece of house decor a dungeon can drop, the starter furniture, a gear stand and some gear, into the bag. |
 | `{ a: 'level', n }` | Set the hero level of your character to `n`. |
 | `{ a: 'pet', id }` | Give a pet kind, or `all`. |
 | `{ a: 'petgear', tier?, set? }` | Pet gear at a tier, and put the first piece of each anchor on the active pet. |
