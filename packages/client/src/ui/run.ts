@@ -240,6 +240,13 @@ export class RunUi {
       else if (this.win === 'offer' && runClient.offer) {
         if (/^[1-3]$/.test(e.key)) this.pick(Number(e.key) - 1);
         else if (e.key === 'r' || e.key === 'R') this.reroll();
+      } else if (this.win === 'event' && /^[1-3]$/.test(e.key)) {
+        const n = Number(e.key) - 1;
+        if (myRun()?.event?.choices[n]) this.voteEvent(n);
+      } else if (this.win === 'shop' && /^[1-3]$/.test(e.key)) {
+        // the number on a card of the shelf buys it
+        const n = Number(e.key) - 1;
+        if (myRun()?.shop?.slots[client.me]?.[n]) this.buy('runa', n);
       } else if (this.win === 'path' && /^[1-3]$/.test(e.key)) {
         const cls = myPlayer()?.saga?.cls;
         const list = cls ? pathsOf(cls) : [];
