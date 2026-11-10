@@ -41,7 +41,7 @@ const PIECES: Record<string, Piece> = {
   // Isdiademet: a thin circlet with three ice spikes, the middle one tallest
   pet_frost_head: { ox: 2, oy: 2, rows: ['..l..', 'l.l.l', 'lmlml', 'dmgmd'], icon: ['...l...', 'l..l..l', 'l.lll.l', 'lllllll', 'lmmgmml', 'dmmmmmd', 'ddddddd'] },
   // Korpfjädern: a plain band with one tall feather leaning back
-  pet_hel_head: { ox: 2, oy: 4, rows: ['l....', 'ml...', 'dml..', '.dmd.', 'dmgmd', '.ddd.'], icon: ['.....mm', '...mmmd', '..mlmd.', '.mlmd..', 'mlmd...', 'lmd....', 'gd.....'] },
+  pet_hel_head: { ox: 2, oy: 3, rows: ['ml...', 'dml..', '.dmd.', 'dmgmd', '.ddd.'], icon: ['.....mm', '...mmmd', '..mlmd.', '.mlmd..', 'mlmd...', 'lmd....', 'gd.....'] },
   // Lövkransen: a low wreath of leaves, wider than the head, with a berry
   pet_alv_head: { ox: 3, oy: 1, rows: ['.l...l.', 'lmmgmml', '.dmmmd.'], icon: ['..lml..', '.m...m.', 'l.....l', 'm.....m', 'l.....l', '.mlmlm.', '..mgm..'] },
   // Hornhjälmen: a round helmet with a big horn on each side

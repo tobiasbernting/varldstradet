@@ -5,7 +5,7 @@ import { OUTLINE } from './world.js';
 import { PET_ANIMAL_SIZE, PET_DRAW, PET_HAT_POS } from './petanimals.ts';
 import { PET_ANCHORS, PET_HEADROOM, PETS, decodeLook, petOfSpecies, type PetWear } from '@lilla-garden/shared';
 import { drawPetLook } from './petlooks.ts';
-export { petLookIcon } from './petlooks.ts';
+export { petLookIcon, petLookCells } from './petlooks.ts';
 
 export const ANIMAL_SIZE: Record<string, { w: number; h: number }> = {
   hen: { w: 16, h: 16 },

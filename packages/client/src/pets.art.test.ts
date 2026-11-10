@@ -75,5 +75,35 @@ describe('the art of the pets', () => {
           }
       expect([...bad], `outside the ${id} sprite (${size.w}x${size.h})`).toEqual([]);
     });
-      }
+
+    it(`${id}: gear never covers the eyes or the muzzle, a head piece stays on top of the head, a neck piece is a thin band, a back piece a blanket`, () => {
+      const d = PETS[id]!;
+      const big = d.size === 'large';
+      const inBox = ([x, y]: [number, number], [bx, by, bw, bh]: [number, number, number, number]): boolean => x >= bx && x < bx + bw && y >= by && y < by + bh;
+      for (const x of PET_LOOK_PIECES)
+        for (const f of [0, 1]) {
+          const at = d.anchors[x.petSlot!][f]!;
+          const cells = art.petLookCells(x.id, at, f, big);
+          expect(cells.length, `${x.id} has cells`).toBeGreaterThan(0);
+          for (const c of cells)
+            for (const b of [d.face.eye[f]!, d.face.muzzle[f]!]) expect(inBox(c, b), `${x.id} on ${id}, frame ${f}, covers the face at ${c}`).toBe(false);
+          const ys = cells.map((c) => c[1]);
+          const xs = cells.map((c) => c[0]);
+          const h = Math.max(...ys) - Math.min(...ys) + 1;
+          const w = Math.max(...xs) - Math.min(...xs) + 1;
+          if (x.petSlot === 'head') {
+            // it covers only the top two rows of the skull (the anchor row and the one below); the rest stands up above
+            expect(Math.max(...ys), `${x.id} on ${id}: a head piece covers at most a third of the head`).toBeLessThanOrEqual(at[1] + 1);
+            expect(h).toBeLessThanOrEqual(7);
+          } else if (x.petSlot === 'neck') {
+            expect(Math.min(...xs) >= at[0] - 1 && Math.max(...xs) <= at[0] + 2, `${x.id} on ${id}: a neck piece is a thin band`).toBe(true);
+            expect(Math.min(...ys)).toBeGreaterThanOrEqual(at[1]);
+          } else {
+            expect(Math.min(...ys), `${x.id}: a back piece starts at the back`).toBeGreaterThanOrEqual(at[1]);
+            expect(h).toBeLessThanOrEqual(big ? 6 : 5);
+            expect(w).toBeLessThanOrEqual(big ? 8 : 7);
+          }
+        }
+    });
+  }
 });
