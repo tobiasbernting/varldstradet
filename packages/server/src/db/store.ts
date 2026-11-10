@@ -38,10 +38,9 @@ export class PgStore implements Store {
   private db: PostgresJsDatabase;
   private worldDirty = false;
   private objects = new Set<number>();
-  private crops = new Set<string>();
   private animals = new Set<number>();
   private players = new Set<string>();
-  private gone = { objects: new Set<number>(), crops: new Set<string>(), animals: new Set<number>(), players: new Set<string>() };
+  private gone = { objects: new Set<number>(), animals: new Set<number>(), players: new Set<string>() };
   private flushing: Promise<void> | null = null;
 
   constructor(url: string) {
@@ -81,7 +80,6 @@ export class PgStore implements Store {
       seasonOverride: (row.seasonOverride as WorldState['seasonOverride']) ?? null,
       terrain: row.terrain,
       drops: row.drops ?? {},
-      crops: {},
       objects: {},
       occupancy: {},
       animals: {},
@@ -95,7 +93,6 @@ export class PgStore implements Store {
       world.objects[o.id] = o.data;
       loadedObjectIds.push(o.id);
     }
-    for (const c of await this.db.select().from(s.crops)) world.crops[c.k] = c.data;
     for (const a of await this.db.select().from(s.animals)) world.animals[a.id] = a.data;
     for (const p of await this.db.select().from(s.players)) {
       world.players[p.id] = { ...p.data, questsDone: p.data.questsDone ?? [], stars: p.data.stars ?? 0, stats: p.data.stats ?? {}, achievements: p.data.achievements ?? [], area: p.data.area ?? 'farm', visited: p.data.visited ?? ['farm'], hearts: MAX_HEARTS, online: false, moving: false };
@@ -164,11 +161,6 @@ export class PgStore implements Store {
         case 'sagaBest':
           this.worldDirty = true;
           break;
-        case 'crop':
-          if (c.crop) this.crops.add(c.k), this.gone.crops.delete(c.k);
-          else this.gone.crops.add(c.k), this.crops.delete(c.k);
-          this.worldDirty = true;
-          break;
         case 'object':
           if (c.obj) this.objects.add(c.id), this.gone.objects.delete(c.id);
           else this.gone.objects.add(c.id), this.objects.delete(c.id);
@@ -196,7 +188,6 @@ export class PgStore implements Store {
   markAllDirty(world: WorldState): void {
     this.worldDirty = true;
     for (const id of Object.keys(world.objects)) this.objects.add(Number(id));
-    for (const k of Object.keys(world.crops)) this.crops.add(k);
     for (const id of Object.keys(world.animals)) this.animals.add(Number(id));
     for (const [id, p] of Object.entries(world.players)) if (!p.bot) this.players.add(id);
   }
@@ -217,12 +208,10 @@ export class PgStore implements Store {
 
   private async doFlush(world: WorldState): Promise<void> {
     const objects = [...this.objects].filter((id) => world.objects[id]);
-    const crops = [...this.crops].filter((k) => world.crops[k]);
     const animals = [...this.animals].filter((id) => world.animals[id]);
     const players = [...this.players].filter((id) => world.players[id] && !world.players[id]!.bot);
     const gone = {
       objects: [...this.gone.objects],
-      crops: [...this.gone.crops],
       animals: [...this.gone.animals],
       players: [...this.gone.players],
     };
@@ -230,7 +219,6 @@ export class PgStore implements Store {
     const areasToSave = [...this.dirtyAreas].filter((k) => !isSagaKey(k));
     this.dirtyAreas.clear();
     this.objects.clear();
-    this.crops.clear();
     this.animals.clear();
     this.players.clear();
     for (const g of Object.values(this.gone)) g.clear();
@@ -264,12 +252,6 @@ export class PgStore implements Store {
           set: { kind: sql`excluded.kind`, x: sql`excluded.x`, y: sql`excluded.y`, data: sql`excluded.data` },
         });
       }
-      for (const batch of chunk(crops, 200)) {
-        await tx
-          .insert(s.crops)
-          .values(batch.map((k) => ({ k, data: world.crops[k]! })))
-          .onConflictDoUpdate({ target: s.crops.k, set: { data: sql`excluded.data` } });
-      }
       for (const batch of chunk(animals, 200)) {
         await tx
           .insert(s.animals)
@@ -288,11 +270,10 @@ export class PgStore implements Store {
         const data = { ...a, players: {} };
         await tx
           .insert(s.areas)
-          .values({ key: k, biome: a.biome ?? 'ang', data, updatedAt: new Date() })
+          .values({ key: k, data, updatedAt: new Date() })
           .onConflictDoUpdate({ target: s.areas.key, set: { data, updatedAt: new Date() } });
       }
       if (gone.objects.length) await tx.delete(s.objects).where(inArray(s.objects.id, gone.objects));
-      if (gone.crops.length) await tx.delete(s.crops).where(inArray(s.crops.k, gone.crops));
       if (gone.animals.length) await tx.delete(s.animals).where(inArray(s.animals.id, gone.animals));
       if (gone.players.length) await tx.delete(s.players).where(inArray(s.players.id, gone.players));
     });

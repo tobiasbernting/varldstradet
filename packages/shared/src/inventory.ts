@@ -1,15 +1,11 @@
 import { ITEMS, item } from './data.ts';
 import { itemName } from './sv.ts';
 import type { Inventory, ItemCategory, ItemStack } from './types.ts';
-import { MAX_STACK, WATERING_CAN_CHARGES } from './types.ts';
+import { MAX_STACK } from './types.ts';
 
 export const makeInventory = (size: number): Inventory => Array.from({ length: size }, () => null);
 
-export const makeStack = (id: string, count = 1): ItemStack => {
-  const s: ItemStack = { item: id, count };
-  if (item(id).tool === 'can') s.charges = WATERING_CAN_CHARGES;
-  return s;
-};
+export const makeStack = (id: string, count = 1): ItemStack => ({ item: id, count });
 
 /** Adds `count` of `id`; returns the number that did not fit. */
 export function addItem(inv: Inventory, id: string, count: number): number {
@@ -74,7 +70,7 @@ export function moveStack(a: Inventory, ia: number, b: Inventory, ib: number): v
   const sa = a[ia];
   const sb = b[ib];
   if (ia < 0 || ia >= a.length || ib < 0 || ib >= b.length) return;
-  if (sa && sb && sa.item === sb.item && sa.charges === undefined && sa.data === undefined && sb.data === undefined) {
+  if (sa && sb && sa.item === sb.item && sa.data === undefined && sb.data === undefined) {
     const max = Math.min(item(sa.item).stack, MAX_STACK);
     const take = Math.min(max - sb.count, sa.count);
     sb.count += take;
@@ -85,18 +81,6 @@ export function moveStack(a: Inventory, ia: number, b: Inventory, ib: number): v
   a[ia] = sb ?? null;
   b[ib] = sa ?? null;
 }
-
-export const hasSpace = (inv: Inventory, id: string, count: number): boolean => {
-  const def = item(id);
-  const max = Math.min(def.stack, MAX_STACK);
-  let room = 0;
-  for (const s of inv) {
-    if (s === null) room += max;
-    else if (s.item === id) room += max - s.count;
-    if (room >= count) return true;
-  }
-  return room >= count;
-};
 
 export const CATEGORY_ORDER: ItemCategory[] = [
   'tool',
@@ -112,9 +96,9 @@ export const CATEGORY_ORDER: ItemCategory[] = [
   'decor',
 ];
 
-/** Stacks that carry per-stack state (paintings, watering can charges) never merge. */
+/** Stacks that carry per-stack state (a trophy's level) never merge. */
 const mergeable = (s: ItemStack): boolean => {
-  if (s.data !== undefined || s.charges !== undefined) return false;
+  if (s.data !== undefined) return false;
   const def = ITEMS[s.item];
   // Unknown items and corrupt over-max stacks are kept as they are, never merged or split.
   return def !== undefined && s.count <= Math.min(def.stack, MAX_STACK);
@@ -170,24 +154,4 @@ export function sortInventory(inv: Inventory, from = 0, to = inv.length): void {
   );
   if (merged.length > end - start) return;
   for (let i = start; i < end; i++) inv[i] = merged[i - start] ?? null;
-}
-
-/**
- * Moves stacks from `from[fromStart, fromEnd)` into `to`, but only items that already
- * exist in `to` (never `skipSlot`, e.g. the held stack). Returns the number of items moved.
- */
-export function quickStack(from: Inventory, fromStart: number, fromEnd: number, to: Inventory, skipSlot = -1): number {
-  let moved = 0;
-  for (let i = Math.max(0, fromStart); i < Math.min(fromEnd, from.length); i++) {
-    if (i === skipSlot) continue;
-    const s = from[i];
-    if (!s || !ITEMS[s.item] || s.data !== undefined || s.charges !== undefined) continue;
-    if (!to.some((t) => t && t.item === s.item && t.data === undefined && t.charges === undefined)) continue;
-    const left = addItem(to, s.item, s.count);
-    const took = s.count - left;
-    moved += took;
-    s.count = left;
-    if (s.count === 0) from[i] = null;
-  }
-  return moved;
 }

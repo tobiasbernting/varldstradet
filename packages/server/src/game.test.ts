@@ -167,34 +167,6 @@ describe('the lobby and dropped connections', () => {
     expect(on.world.players[b.id]!.area).toBe(key);
   });
 
-  it('rolls the day over with the dev message only when DEV_TELEPORT is on', async () => {
-    const appearance = { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' };
-    const off = new Game(new MemoryStore(), { autoStart: false });
-    await off.start();
-    const a = off.createPlayer('Astrid', appearance)!;
-    const la = fakeLink();
-    const ha = off.connect(la);
-    ha({ t: 'hello', playerId: a.id });
-    la.msgs.length = 0;
-    const day0 = off.world.day;
-    ha({ t: 'dev', a: 'nextDay' });
-    expect(off.world.day).toBe(day0);
-    expect(la.msgs.some((m) => m.t === 'error')).toBe(true);
-
-    const on = new Game(new MemoryStore(), { autoStart: false, devTeleport: true });
-    await on.start();
-    const b = on.createPlayer('Bo', appearance)!;
-    const lb = fakeLink();
-    const hb = on.connect(lb);
-    hb({ t: 'hello', playerId: b.id });
-    lb.msgs.length = 0;
-    const day1 = on.world.day;
-    hb({ t: 'dev', a: 'nextDay' });
-    expect(on.world.day).toBe(day1 + 1);
-    const changes = lb.msgs.flatMap((m) => (m.t === 'changes' ? m.changes : []));
-    expect(changes.some((c) => c.t === 'day' && c.day === day1 + 1)).toBe(true);
-  });
-
   it('grants looks with the dev message only when DEV_TELEPORT is on, and wears them through the look message', async () => {
     const appearance = { skin: '#f1c9a5', hair: '#5a3a1e', hairStyle: 'short' };
     const mk = async (devTeleport: boolean) => {
@@ -294,7 +266,6 @@ describe('runs over the socket', () => {
     pb.y = TILE * 3;
     la.msgs.length = 0;
     lb.msgs.length = 0;
-    ha({ t: 'fardkost', items: [] });
     ha({ t: 'run', a: 'start' });
     const run = runOf(game.world)!;
     expect(run).toBeTruthy();

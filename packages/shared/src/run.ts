@@ -42,13 +42,10 @@ export const VILOSTEN_HEAL = 0.4;
 export const RUN_VICTORY_MS = 90_000;
 /** Family members this close to the arch (tiles) come along when it is used. */
 export const RUN_JOIN_RADIUS = 6;
-/** Players in a run: three, four with a longhouse. */
-export const RUN_PARTY_MAX = 3;
-export const RUN_PARTY_MAX_LONGHALL = 4;
+/** Players in a run. */
+export const RUN_PARTY_MAX = 4;
 /** A run whose last human has been offline this long ends. */
 export const RUN_OFFLINE_END_MS = 60_000;
-/** Offers of runor are this many cards. */
-export const RUNA_CARDS = 3;
 
 /**
  * The difficulty of a run (GAME2.md section 5.7): five levels chosen at the arch and fixed for the run. `0` Mycket lätt (kids
@@ -56,10 +53,7 @@ export const RUNA_CARDS = 3;
  */
 export type RunLevel = 0 | 1 | 2 | 3 | 4;
 export const RUN_LEVEL_IDS: readonly RunLevel[] = [0, 1, 2, 3, 4];
-export const RUN_LEVEL_MYCKET_LATT: RunLevel = 0;
-export const RUN_LEVEL_LATT: RunLevel = 1;
 export const RUN_LEVEL_MEDEL: RunLevel = 2;
-export const RUN_LEVEL_SVAR: RunLevel = 3;
 export const RUN_LEVEL_EXTREM: RunLevel = 4;
 /** Left out of a start message, a run is Medel. */
 export const RUN_LEVEL_DEFAULT: RunLevel = RUN_LEVEL_MEDEL;
@@ -99,7 +93,6 @@ export const RUN_LEVELS: Record<RunLevel, RunLevelDef> = {
 };
 /** The boss attacks the easiest levels allow: its first two, whatever a first run's plan has locked. */
 export const LATT = { bossMoves: 2 } as const;
-export const SAGOANDAN_LATT_MAX = 5;
 /** The Sagoandan (GAME2.md section 4.5): free "everyone gets up" on a wipe, so the run does not end. How many a run starts with, by level (`RUN_LEVELS[l].spirit`). */
 export const SAGOANDAN: Record<RunLevel, number> = { 0: RUN_LEVELS[0].spirit, 1: RUN_LEVELS[1].spirit, 2: RUN_LEVELS[2].spirit, 3: RUN_LEVELS[3].spirit, 4: RUN_LEVELS[4].spirit };
 /** Monster health, damage and warning multipliers for a level (the zone's own are multiplied by these). */
@@ -151,15 +144,12 @@ export interface RunEffect extends Partial<Omit<RunBuffs, 'spell' | 'spellCd' | 
   potions?: number;
   seeds?: number;
   reroll?: number;
-  slots?: number;
-  food?: number;
-  animal?: number;
   companion?: number;
   bossSeeds?: number;
 }
 
 const COMBAT_KEYS = ['power', 'cd', 'hp', 'armor', 'taken', 'heal', 'potion', 'regen', 'rest', 'threat', 'leech', 'crit', 'down', 'reviveHp', 'coins'] as const;
-const META_KEYS = ['potions', 'seeds', 'reroll', 'slots', 'food', 'animal', 'companion', 'bossSeeds', 'luck'] as const;
+const META_KEYS = ['potions', 'seeds', 'reroll', 'companion', 'bossSeeds', 'luck'] as const;
 /** Every number an effect can carry (the tests make sure each one does something). */
 export const EFFECT_KEYS: readonly string[] = [...COMBAT_KEYS, ...META_KEYS, 'spell', 'spellCd', 'mods', 'traits'];
 
@@ -271,12 +261,9 @@ export const SEED_TREE: TreeNode[] = [
   { id: 'g4', branch: 'gemenskap', cost: 25, needs: 'g2', effect: { heal: 0.08 } },
   { id: 'g5', branch: 'gemenskap', cost: 35, needs: 'g3', effect: { companion: 0.2 } },
   { id: 'g6', branch: 'gemenskap', cost: 40, needs: 'g4', effect: { seeds: 0.1 } },
-  { id: 'f1', branch: 'gard', cost: 15, effect: { slots: 1 } },
-  { id: 'f2', branch: 'gard', cost: 20, needs: 'f1', effect: { food: 0.25 } },
-  { id: 'f3', branch: 'gard', cost: 30, needs: 'f1', effect: { animal: 0.5 } },
   { id: 'f4', branch: 'gard', cost: 15, effect: { potions: 1 } },
-  { id: 'f5', branch: 'gard', cost: 35, needs: 'f2', effect: { coins: 0.25 } },
-  { id: 'f6', branch: 'gard', cost: 50, needs: 'f3', effect: { bossSeeds: 5 } },
+  { id: 'f5', branch: 'gard', cost: 35, needs: 'f4', effect: { coins: 0.25 } },
+  { id: 'f6', branch: 'gard', cost: 50, needs: 'f5', effect: { bossSeeds: 5 } },
 ];
 export const treeNode = (id: string): TreeNode | undefined => SEED_TREE.find((n) => n.id === id);
 export const TREE_TOTAL = SEED_TREE.reduce((n, t) => n + t.cost, 0);
@@ -320,33 +307,11 @@ export function plantError(save: RunSave | undefined, id: string): 'unknown' | '
 }
 
 // ---------------------------------------------------------------------------
-// Färdkost and companions (the farm feeds the run)
+// Companions
 // ---------------------------------------------------------------------------
 
-/** Dishes (bag items) handed in at the arch, and what they do for the run. The potions come as items. */
-export const FARDKOST: Record<string, RunEffect> = {
-  bread: { hp: 0.06 },
-  pancakes: { cd: 0.05 },
-  carrot_cake: { power: 0.05 },
-  pumpkin_pie: { armor: 0.04 },
-  strawberry_jam: { regen: 0.4 },
-  fish_soup: { taken: 0.06 },
-  truffle_pasta: { power: 0.08 },
-  cloudberry_jam: { rest: 0.4 },
-  blueberry_pie: { hp: 0.08, heal: 0.05 },
-  healing_potion: { potions: 3 },
-  styrkedryck: { power: 0.06 },
-};
-export const FOOD_SLOTS = 1;
-
-/** A pet that follows, a mount that waits at the arch; an animal with this many hearts counts double. */
+/** A pet from the dungeons, out of the bag and by your side, helps a little in every run. */
 export const PET_EFFECT: RunEffect = { power: 0.03 };
-export const MOUNT_EFFECT: RunEffect = { armor: 0.02, hp: 0.03 };
-export const CARED_HEARTS = 4;
-/** Gårdsglädje: health per average heart of the farm's animals. */
-export const JOY_PER_HEART = 0.01;
-export const SMITHY_EFFECT: RunEffect = { power: 0.04 };
-export const HERB_EFFECT: RunEffect = { potions: 2, potion: 0.1 };
 
 // ---------------------------------------------------------------------------
 // Room layouts (the seven biome templates of v1: a Flock is built from four of their rooms; their ground, monsters and weather are gone: a run has the chapter's own look)
@@ -354,7 +319,6 @@ export const HERB_EFFECT: RunEffect = { potions: 2, potion: 0.1 };
 
 export type RunBiome = 'skog' | 'trask' | 'berg' | 'strand' | 'svamp' | 'is' | 'vulkan';
 export const RUN_BIOMES: readonly RunBiome[] = ['skog', 'trask', 'berg', 'strand', 'svamp', 'is', 'vulkan'];
-export const isRunBiome = (s: unknown): s is RunBiome => typeof s === 'string' && (RUN_BIOMES as readonly string[]).includes(s);
 
 /** start, two rooms of packs, a rest stone, the exit (behind the gate) and a side room with a guarded chest. A Flock uses start, the two pack rooms and the exit. */
 export type ZoneRole = 'start' | 'pack' | 'rest' | 'exit' | 'side';

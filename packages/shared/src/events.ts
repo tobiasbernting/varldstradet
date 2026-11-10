@@ -76,7 +76,6 @@ export const EVENTS: EventDef[] = [
     { id: 'bjorn', icon: '🐻', outcome: [{ heal: 1 }] },
   ] },
 ];
-export const EVENT_IDS: readonly string[] = EVENTS.map((e) => e.id);
 export const eventDef = (id: string): EventDef | undefined => EVENTS.find((e) => e.id === id);
 
 /** Which event a stop holds: by the seed and the stop, never one the run has met already (until all ten have been). */

@@ -41,13 +41,11 @@ import {
   setProgress,
   setsOf,
   tierOf,
-  waysOf,
   wearClass,
   wearOf,
   wearableBy,
   type ClassId,
   type LookPiece,
-  type LookSlot,
   type PetAnchor,
   type WayId,
 } from '@lilla-garden/shared';
@@ -106,9 +104,6 @@ export interface LooksHost {
   /** The tab to show first. */
   tab?: 'wear' | 'set' | 'pet';
 }
-
-/** The code of a piece as the player has it now (tier from the collection), in a way. */
-const codeOf = (pieceId: string, way?: WayId): string => encodeLook(pieceId, Math.max(1, tierOf(readProgress(myPlayer()), pieceId)), way);
 
 /** One look as a card: its picture, name, stars and state (worn, owned, locked), tapped to wear it (if owned) and to read about it. */
 function card(host: LooksHost, piece: LookPiece, cls: ClassId | undefined, opts: { stand?: boolean } = {}): HTMLElement {
@@ -241,7 +236,6 @@ function fxSettingRow(host: LooksHost): HTMLElement {
   return h('div', { class: 'fx-box' }, h('b', null, `${LOOK_T.fxTitle}:`), row, h('p', { class: 'hint' }, effectiveFx() === 'reduced' && fxSetting() === 'full' ? LOOK_T.fxCalm : LOOK_T.fxHint));
 }
 
-
 // ---------------------------------------------------------------------------
 // The "Djur" tab: dress the pets (pet gear is looks worn at an animal's head, neck or back)
 // ---------------------------------------------------------------------------
@@ -249,7 +243,6 @@ function fxSettingRow(host: LooksHost): HTMLElement {
 const petDress = (me: NonNullable<ReturnType<typeof myPlayer>>, kind: string, anchor: PetAnchor) => me.pets?.dress?.[kind]?.[anchor];
 const petTierOf = (me: NonNullable<ReturnType<typeof myPlayer>>, piece: string): number => me.pets?.gear?.[piece]?.tier ?? 0;
 const petName = (me: NonNullable<ReturnType<typeof myPlayer>>, kind: string): string => me.pets?.owned[kind]?.name || PETS[kind]?.name || kind;
-const petAnchorOf = (id: string): PetAnchor | undefined => lookPiece(id)?.petSlot;
 
 /** The pet as it looks now, drawn from its table entry and what it wears, as a picture. */
 function petPicture(me: NonNullable<ReturnType<typeof myPlayer>>, kind: string, scale: number): HTMLElement {

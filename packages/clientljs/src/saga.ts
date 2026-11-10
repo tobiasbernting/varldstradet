@@ -90,8 +90,6 @@ const BOSS_MOVE_COLOUR: Record<string, Record<string, [number, number, number]>>
   nattmara: { nova: [0.6, 0.45, 1], mend: [0.75, 0.6, 1] },
   loke: { line: [0.4, 0.9, 1], pull: [0.55, 1, 0.75], mend: [0.5, 1, 0.4] },
 };
-/** Telegraphs of these moves are drawn in their own way (a sucking whirl, a soft glow), not as danger. */
-const SOFT_ZONES = new Set(['pull', 'mend']);
 const moveColour = (move: string, by: string | number | undefined): [number, number, number] => {
   const species = typeof by === 'number' ? activeWorld()?.animals[by]?.species : undefined;
   return (species ? BOSS_MOVE_COLOUR[species]?.[move] : undefined) ?? MOVE_COLOUR[move] ?? [1, 0.4, 0.2];

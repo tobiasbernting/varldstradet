@@ -109,7 +109,6 @@ export function blockOf(id: string): AnimalState | null {
 }
 /** Is a frozen friend held by a spider's web (not ice)? */
 export const webbed = (id: string): boolean => blockOf(id)?.species === 'spindelnat';
-export const isBossSpecies = (species: string): boolean => !!SAGA_BOSSES[species];
 
 // ---------------------------------------------------------------------------
 // The target: a monster (its animal id) or a friend (a player id)
@@ -332,9 +331,3 @@ export function sagaMarker(npcId: string): { text: string; cls: string } | null 
   if (busy) return { text: '?', cls: 'bubble marker saga busy' };
   return null;
 }
-
-/** Has this player started the saga (heard Völvan, or picked a class)? */
-export const sagaStarted = (p: PlayerState | undefined): boolean => {
-  const prog = readProgress(p);
-  return !!prog.cls || prog.heard || prog.chapter > 0;
-};

@@ -4,8 +4,8 @@
 // on the ground before they land, call helpers at each new phase, and some attacks can be stopped with a
 // stun. Rest stones heal and become where the family gets up after falling. Chests give each player their
 // own loot. Völvan Sigrun tells the saga, the villagers give quests, and anyone can jump to a family member.
-import { ANIMALS, ITEMS, NPCS, VILLAGE_KEY, objectDef } from './data.ts';
-import { MAX_HEARTS } from './dungeon.ts';
+import { ITEMS, NPCS } from './data.ts';
+
 import { awardTrophy } from './house.ts';
 import { awardLooks, lookRng, syncLooks } from './looks.ts';
 import { RUN_LEVEL_MEDEL } from './run.ts';
@@ -35,12 +35,10 @@ import {
   SAGA_CHAPTERS,
   SAGA_LOOT,
   SAGA_MOBS,
-  SAGA_PORTAL,
   SAGA_QUESTS,
   SAGA_RESET_MS,
   SAGA_TREASURE,
   SPELLS,
-  STONE_SPOT,
   addCount,
   VOLVA_ID,
   WIPE_MS,
@@ -49,14 +47,11 @@ import {
   isDungeonId,
   dungeonOfKey,
   isClassId,
-  isRunKey,
   isSagaKey,
   mobDmgScale,
   mobHpScale,
   newSagaProgress,
   noBuffs,
-  portalFront,
-  previousDungeon,
   sagaItem,
   sagaKey,
   sagaQuest,
@@ -69,7 +64,6 @@ import {
   type SagaProgress,
   type SagaQuest,
   type SagaZone,
-  type SagaBossDef,
   type BossAbility,
   type LevelReward,
   type SagaBest,
@@ -85,19 +79,14 @@ import { runHooks } from './runhooks.ts';
 import { awardPetLooks, giveClearPets, petSoak, rollPetDrops, tickPets } from './petsim.ts';
 import { sagaCheckpoint, spawnSagaMob } from './sagamap.ts';
 import {
-  ATTACK_GAP,
-  animalAt,
   bump,
   farmOf,
   fx,
   getArea,
   giveItems,
-  isFarm,
-  isHostile,
   isSolidForAnimal,
   isSolidForPlayer,
   lineOfSight,
-  npcAt,
   npcState,
   openTileNear,
   placeIn,
@@ -105,12 +94,11 @@ import {
   PLAYER_HALF_H,
   PLAYER_HALF_W,
   resolveMove,
-  tagArea,
   toast,
   type SimCtx,
 } from './sim.ts';
 import { RUN_T, T, fmt, fmtDuration, itemName } from './sv.ts';
-import { MAP_H, MAP_W, TILE, type AnimalState, type PlayerState, type WorldObject, type WorldState } from './types.ts';
+import { TILE, type PlayerState, type WorldObject, type WorldState } from './types.ts';
 
 const px = (t: number): number => t * TILE + TILE / 2;
 const tileOf = (v: number): number => Math.floor(v / TILE);
@@ -145,7 +133,6 @@ const ZERO_BUFFS: RunBuffs = noBuffs();
 const buffsOf = (h: Here, id: string): RunBuffs => h.inst.run?.buffs[id] ?? ZERO_BUFFS;
 /** Cooldown left after the run's reductions (never below 40 %). */
 const cdOf = (rb: RunBuffs, spellId: string, cd: number): number => cd * (1 - Math.max(-0.5, Math.min(0.6, rb.cd + (rb.spellCd[spellId] ?? 0) + (rb.mods[spellId]?.cd ?? 0))));
-
 
 const upright = (h: Here, p: PlayerState): boolean => {
   const f = h.inst.fighters[p.id];
@@ -292,22 +279,6 @@ export function devUnlockChapters(world: WorldState, playerId: string): Change[]
   if (!p?.saga?.cls) return [];
   for (const id of DUNGEON_IDS.slice(0, -1)) if (!p.saga.cleared.includes(id)) p.saga.cleared.push(id);
   return [playerChange(p)];
-}
-
-/**
- * Development only (DEV_TELEPORT=1, `dev kit`): what a check of the native client's smithy and paint screen needs in the bag
- * without a day's work to earn it: materials and coins for the first two forge levels (stone, gold, crystal, 400 kr), two
- * papers, two buckets of red paint and a run of wall pieces (two wood, a stone, a door, a window). Everyone, with or without a class.
- */
-export function devKit(world: WorldState, playerId: string): Change[] {
-  const farm = farmOf(world);
-  const p = farm.players[playerId];
-  if (!p) return [];
-  const out: Change[] = [];
-  for (const [id, n] of [['stone', 20], ['gold', 10], ['crystal', 4], ['paper', 2], ['paint_red', 2], ['wall_wood', 2], ['wall_stone', 1], ['door', 1], ['window', 1]] as const) giveItems(farm, p, id, n, out);
-  p.coins += 400;
-  out.push(playerChange(p));
-  return out;
 }
 
 /** Moves a player within the map they are on (blink, charge, getting up, a boss's pull): the client jumps there too. */
@@ -1829,9 +1800,6 @@ export function idleSaga(farm: WorldState, key: string, area: WorldState, now: n
   }
   return true;
 }
-
-/** Monsters that do not move by the farm's animal rules. */
-export const isSagaMob = (area: WorldState, id: number): boolean => !!area.saga?.mobs[id];
 
 /** A fallen or frozen player cannot walk. */
 export function sagaRooted(world: WorldState, p: PlayerState): boolean {

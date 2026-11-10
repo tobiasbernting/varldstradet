@@ -601,6 +601,3 @@ function tickPet(h: Here, a: AnimalState, owner: PlayerState, def: PetDef, party
     }
   }
 }
-
-/** A pet's state as the HUD shows it: helping, scared, hidden (waiting to pounce) or out (dismissed). */
-export const petStateOf = (a: AnimalState | undefined): 'help' | 'scared' | 'hidden' | 'out' => (a?.pf ? a.pf.st : 'out');

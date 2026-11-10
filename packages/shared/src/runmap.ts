@@ -32,8 +32,6 @@ import {
   ELITE_HP,
   ELITE_PACKS,
   TREASURE_PACKS,
-  isCamp,
-  isFlockLike,
   modifier,
   wingOf,
   type NodeKind,
@@ -461,9 +459,3 @@ export function placeRunes(world: WorldState, z: StopPlan, route: RoutePlan, nex
 
 /** The variant of a väg-runa object: which stop's picture it carries. */
 export const NODE_KIND_CODE: Record<NodeKind, number> = { flock: 0, rest: 1, mini: 2, boss: 3, shop: 4, event: 5, treasure: 6, elite: 7 };
-
-/** Where the boss waits, in pixels (for tests and the client). */
-export const bossSpot = (world: WorldState): { x: number; y: number } => {
-  const a = world.animals[world.saga!.boss];
-  return a ? { x: a.x, y: a.y } : { x: 0, y: 0 };
-};

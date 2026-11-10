@@ -24,7 +24,6 @@ import {
   emote,
   generateWorld,
   isPetAnimal,
-  key,
   mulberry32,
   nameAnimal,
   objectAt,
@@ -77,7 +76,6 @@ function clearTile(world: WorldState, tx: number, ty: number): void {
     for (const [k, id] of Object.entries(world.occupancy)) if (id === o.id) delete world.occupancy[k];
   }
   world.terrain[tileIndex(world, tx, ty)] = 'grass';
-  delete world.crops[key(tx, ty)];
 }
 
 const select = (p: PlayerState, itemId: string): void => {
@@ -298,14 +296,14 @@ describe('sorting the bag', () => {
     const hotbar = p.inventory.slice(0, 8).map((s) => (s ? { ...s } : null));
     p.selected = 2;
     for (let i = 8; i < 32; i++) p.inventory[i] = null;
-    p.inventory[20] = { item: 'carrot', count: 3 };
-    p.inventory[9] = { item: 'carrot', count: 4 };
-    p.inventory[15] = { item: 'hoe', count: 1 };
+    p.inventory[20] = { item: 'healing_potion', count: 3 };
+    p.inventory[9] = { item: 'healing_potion', count: 4 };
+    p.inventory[15] = { item: 'jarnsvard', count: 1 };
     const out = sortSlots(world, p.id);
     expect(p.inventory.slice(0, 8)).toEqual(hotbar);
     expect(p.selected).toBe(2);
-    expect(p.inventory[8]?.item).toBe('hoe');
-    expect(p.inventory[9]).toEqual({ item: 'carrot', count: 7 });
+    expect(p.inventory[8]?.item).toBe('jarnsvard');
+    expect(p.inventory[9]).toEqual({ item: 'healing_potion', count: 7 });
     expect(p.inventory[10]).toBeNull();
     expect(toasts(out)).toContain('Sorterat!');
     expect(out.some((c) => c.t === 'player')).toBe(true);
@@ -314,20 +312,20 @@ describe('sorting the bag', () => {
   it('sortSlots keeps the held backpack stack selected', () => {
     const { world, p } = setup();
     for (let i = 8; i < 32; i++) p.inventory[i] = null;
-    p.inventory[9] = { item: 'carrot', count: 4 };
-    p.inventory[20] = { item: 'hoe', count: 1 };
-    p.inventory[25] = { item: 'potato', count: 2 };
+    p.inventory[9] = { item: 'healing_potion', count: 4 };
+    p.inventory[20] = { item: 'jarnsvard', count: 1 };
+    p.inventory[25] = { item: 'styrkedryck', count: 2 };
     p.selected = 25;
     sortSlots(world, p.id);
-    expect(p.inventory[p.selected]).toEqual({ item: 'potato', count: 2 });
+    expect(p.inventory[p.selected]).toEqual({ item: 'styrkedryck', count: 2 });
     expect(p.selected).toBeGreaterThanOrEqual(8);
     // a merged stack is followed by item id
     for (let i = 8; i < 32; i++) p.inventory[i] = null;
-    p.inventory[9] = { item: 'carrot', count: 4 };
-    p.inventory[20] = { item: 'carrot', count: 3 };
+    p.inventory[9] = { item: 'healing_potion', count: 4 };
+    p.inventory[20] = { item: 'healing_potion', count: 3 };
     p.selected = 20;
     sortSlots(world, p.id);
-    expect(p.inventory[p.selected]?.item).toBe('carrot');
+    expect(p.inventory[p.selected]?.item).toBe('healing_potion');
   });
 
 });
@@ -355,7 +353,6 @@ describe('the lobby (Gården)', () => {
 
   it('has no fields, animals, shop, sell box, cave or bus, and a new player has nothing in the bag', () => {
     const { world, p } = setup();
-    expect(Object.keys(world.crops)).toHaveLength(0);
     expect(Object.keys(world.animals)).toHaveLength(0);
     for (const o of Object.values(world.objects)) expect(['mailbox', 'sellbox', 'start_chest', 'start_bench', 'cave', 'bus_stop']).not.toContain(o.kind);
     expect(p.inventory.filter(Boolean)).toHaveLength(0);
@@ -364,18 +361,18 @@ describe('the lobby (Gården)', () => {
 
   it('cannot be changed: no chopping, digging, planting or building, whatever is held', () => {
     const { world, p } = setup();
-    for (const tool of ['axe', 'hoe', 'hammer', 'pick', 'fence', 'carrot_seed']) {
+    for (const tool of ['jarnsvard', 'healing_potion', 'viking_shield']) {
       addItem(p.inventory, tool, 1);
       p.selected = p.inventory.findIndex((s) => s?.item === tool);
       standAt(world, p, 20, 25);
       clearTile(world, 21, 25);
-      const before = JSON.stringify([world.terrain.slice(0, 4096), Object.keys(world.objects).length, world.crops]);
+      const before = JSON.stringify([world.terrain.slice(0, 4096), Object.keys(world.objects).length]);
       for (const [tx, ty] of [[21, 25], [20, 26], [6, 18], [24, 14]] as const) {
         p.x = (tx - 1) * TILE + TILE / 2;
         p.y = ty * TILE + TILE / 2;
         performAction(world, p.id, tx, ty, ctx());
       }
-      expect(JSON.stringify([world.terrain.slice(0, 4096), Object.keys(world.objects).length, world.crops])).toBe(before);
+      expect(JSON.stringify([world.terrain.slice(0, 4096), Object.keys(world.objects).length])).toBe(before);
     }
   });
 

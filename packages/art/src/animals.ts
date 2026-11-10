@@ -718,6 +718,3 @@ export function animalSheet(species: string, baby: boolean, jul: boolean, varian
   sheet.blit(drawAnimal(species, 0, baby, jul, variant, wear), 0, 0).blit(drawAnimal(species, 1, baby, jul, variant, wear), size.w, 0);
   return sheet.canvas;
 }
-
-export const animalKey = (species: string, baby: boolean, jul: boolean, variant = 0): string =>
-  `animal-${species}-${baby ? 'baby' : 'adult'}${jul ? '-jul' : ''}${variant ? `-v${variant}` : ''}`;

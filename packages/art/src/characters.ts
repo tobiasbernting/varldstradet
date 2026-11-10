@@ -13,7 +13,6 @@ export type Dir = 'down' | 'up' | 'right';
  * is below it (a glass helmet clips the hair, a frog hat hides the hair's top row).
  */
 export type CharLayer = 'pants' | 'shoes' | 'shirt' | 'hands' | 'shirt_over' | 'head' | 'hair' | 'shirt_shade' | 'head_shade' | 'hat' | 'hat_erase';
-export const CHAR_LAYERS: CharLayer[] = ['pants', 'shoes', 'shirt', 'hands', 'shirt_over', 'head', 'hair', 'shirt_shade', 'head_shade', 'hat'];
 export const DIRS: Dir[] = ['down', 'up', 'right'];
 export const CHAR_W = 16;
 /** Empty rows over the 24-row figure, so tall hats (a wizard's point, horns, wings) fit in the frame. */

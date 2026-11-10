@@ -138,8 +138,7 @@ body {
   }
   html.rotate-off #rotate {
     display: none;
-  }
-}
+  }}
 
 /* ---- HUD ---- */
 .hud-top {
@@ -250,22 +249,6 @@ body {
     var(--u) 0 0 #000,
     0 calc(-1 * var(--u)) 0 #000,
     calc(-1 * var(--u)) 0 0 #000;
-}
-.slot .charges {
-  position: absolute;
-  z-index: 1;
-  left: calc(1 * var(--u));
-  right: calc(1 * var(--u));
-  bottom: calc(0.5 * var(--u));
-  height: calc(2.5 * var(--u));
-  background: #3a3a3a;
-  border: calc(0.5 * var(--u)) solid var(--ink);
-  border-radius: var(--u);
-}
-.slot .charges i {
-  display: block;
-  height: 100%;
-  background: #7fd0ff;
 }
 .slot .key {
   position: absolute;
@@ -502,15 +485,6 @@ input[type='text'].search {
 }
 .slot.dim img {
   filter: grayscale(1);
-}
-.hint.title-row {
-  display: flex;
-  align-items: center;
-  gap: max(8px, calc(2 * var(--u)));
-}
-.hint.title-row button {
-  min-height: calc(8 * var(--u));
-  font-size: max(var(--fs), calc(3.5 * var(--u) * var(--txt)));
 }
 .hint.section {
   font-weight: 800;
@@ -926,59 +900,6 @@ body:not(.touch) .run-btn {
   flex-direction: column;
   gap: max(8px, calc(2 * var(--u)));
 }
-.paint-top {
-  display: flex;
-  gap: calc(3 * var(--u));
-  align-items: flex-start;
-}
-.paint-canvas {
-  width: min(calc(128 * var(--u)), 60vmin);
-  height: min(calc(128 * var(--u)), 60vmin);
-  image-rendering: pixelated;
-  border: var(--u) solid var(--ink);
-  border-radius: calc(1 * var(--u));
-  background: #f6efdc;
-  touch-action: none;
-  cursor: crosshair;
-  flex: none;
-}
-.paint-side {
-  display: flex;
-  flex-direction: column;
-  gap: max(8px, calc(2 * var(--u)));
-}
-.paint-palette {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: max(8px, calc(1.5 * var(--u)));
-}
-.paint-swatch {
-  width: calc(14 * var(--u));
-  height: calc(14 * var(--u));
-  padding: 0;
-  border-radius: calc(2 * var(--u));
-}
-.paint-swatch.on,
-.paint-tool.on {
-  outline: calc(1.5 * var(--u)) solid var(--gold);
-  outline-offset: calc(0.5 * var(--u));
-}
-.paint-tools {
-  display: flex;
-  flex-direction: column;
-  gap: max(8px, calc(1.5 * var(--u)));
-}
-.paint-tools button {
-  text-align: left;
-}
-.paint-actions {
-  display: flex;
-  gap: max(8px, calc(2 * var(--u)));
-  align-items: center;
-}
-.paint-actions .spacer {
-  flex: 1;
-}
 
 /* ---- bus / train trip ---- */
 .ride {
@@ -994,31 +915,6 @@ body:not(.touch) .run-btn {
 .ride.show {
   opacity: 1;
 }
-.ride-sky {
-  position: absolute;
-  inset: 0 0 35% 0;
-  background: linear-gradient(#6fb4e8, #bfe3fb);
-}
-.ride-cloud {
-  position: absolute;
-  top: 18%;
-  width: calc(30 * var(--u));
-  height: calc(10 * var(--u));
-  border-radius: calc(6 * var(--u));
-  background: #fff;
-  box-shadow: calc(8 * var(--u)) calc(-4 * var(--u)) 0 calc(2 * var(--u)) #fff, calc(-10 * var(--u)) calc(-2 * var(--u)) 0 calc(1 * var(--u)) #fff;
-  animation: ride-cloud 2.6s linear infinite;
-}
-.ride-cloud.c2 {
-  top: 34%;
-  animation-delay: -0.9s;
-  transform: scale(0.7);
-}
-.ride-cloud.c3 {
-  top: 8%;
-  animation-delay: -1.8s;
-  transform: scale(1.2);
-}
 @keyframes ride-cloud {
   from {
     left: 110%;
@@ -1026,31 +922,6 @@ body:not(.touch) .run-btn {
   to {
     left: -40%;
   }
-}
-.ride-ground {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 35%;
-  background: linear-gradient(#62a844 0 55%, #4a4f5a 55% 100%);
-}
-.ride.train .ride-ground {
-  background: linear-gradient(#62a844 0 55%, #8a6a4a 55% 62%, #4a4f5a 62% 100%);
-}
-.ride-track {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 22%;
-  height: calc(26 * var(--u));
-}
-.ride-vehicle {
-  position: absolute;
-  bottom: 0;
-  height: calc(26 * var(--u));
-  image-rendering: pixelated;
-  animation: ride-drive 2.6s cubic-bezier(0.3, 0, 0.7, 1) forwards, ride-bump 0.18s ease-in-out infinite alternate;
 }
 @keyframes ride-drive {
   from {
@@ -1068,33 +939,10 @@ body:not(.touch) .run-btn {
     transform: translateY(calc(-1 * var(--u)));
   }
 }
-.ride-text {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 55%;
-  text-align: center;
-  font-size: max(var(--fs), calc(8 * var(--u) * var(--txt)));
-  color: #fff;
-  text-shadow: 0 calc(1 * var(--u)) 0 var(--ink), 0 0 calc(3 * var(--u)) rgba(0, 0, 0, 0.5);
-}
 
 /* the rocket to the moon */
 .ride.rocket {
   background: #05061a;
-}
-.ride.rocket .ride-sky {
-  inset: 0;
-  background:
-    radial-gradient(1px 1px at 12% 22%, #fff 60%, transparent),
-    radial-gradient(1px 1px at 32% 12%, #fff 60%, transparent),
-    radial-gradient(2px 2px at 58% 30%, #fff 60%, transparent),
-    radial-gradient(1px 1px at 77% 16%, #fff 60%, transparent),
-    radial-gradient(1px 1px at 88% 40%, #fff 60%, transparent),
-    radial-gradient(2px 2px at 22% 48%, #fff 60%, transparent),
-    radial-gradient(1px 1px at 46% 60%, #cfe0ff 60%, transparent),
-    linear-gradient(#03041a, #142060 70%, #3a5aa0);
-  animation: rocket-sky 3s ease-in forwards;
 }
 @keyframes rocket-sky {
   from {
@@ -1104,11 +952,6 @@ body:not(.touch) .run-btn {
     filter: brightness(0.7);
   }
 }
-.ride.rocket .ride-ground {
-  height: 16%;
-  background: linear-gradient(#d8c690 0 40%, #9a9aa4 40% 100%);
-  animation: rocket-ground 2.6s ease-in forwards;
-}
 @keyframes rocket-ground {
   0%,
   30% {
@@ -1117,15 +960,6 @@ body:not(.touch) .run-btn {
   to {
     transform: translateY(120%);
   }
-}
-.ride-rocket {
-  position: absolute;
-  left: 50%;
-  bottom: 14%;
-  height: calc(44 * var(--u));
-  image-rendering: pixelated;
-  transform: translateX(-50%);
-  animation: rocket-up 2.8s cubic-bezier(0.55, 0, 0.9, 0.5) forwards, rocket-shake 0.07s linear infinite alternate;
 }
 @keyframes rocket-up {
   0%,
@@ -1143,9 +977,6 @@ body:not(.touch) .run-btn {
   to {
     margin-left: calc(0.4 * var(--u));
   }
-}
-.ride.rocket .ride-text {
-  top: 30%;
 }
 
 /* ---- 2D game: chat, pet buttons, weather chip, villager conversations ---- */

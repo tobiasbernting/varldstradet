@@ -6,6 +6,10 @@ import {
   BOSS_STOP,
   MINI_STOP,
   REST_STOP,
+  homeKey,
+  createPlayer,
+  newSagaProgress,
+  setOnline,
   NODE_KINDS,
   ROUTE_ROWS,
   ROUTE_MINI_ROW,
@@ -36,7 +40,6 @@ import {
   RUN_BIOMES,
   RUN_MAX_MS,
   RUN_NUDGE_MS,
-  RUN_PICK_MS,
   RUN_SEEDS,
   RUN_T,
   LATT,
@@ -74,11 +77,8 @@ import {
   ZONE_TEMPLATES,
   STOP_NAMES,
   STOP_WORDS,
-  FARDKOST,
-  FOOD_TEXT,
   MODIFIER_NAMES,
   addEffect,
-  addItem,
   addObject,
   applyMove,
   archFrontOf,
@@ -86,12 +86,10 @@ import {
   buildStop,
   castSpell,
   chapterBoss,
-  chooseFardkost,
   enterStop,
   endRun,
   ensureRunPlaces,
   fardportOf,
-  foodSlots,
   generateRun,
   getArea,
   isSolidForPlayer,
@@ -118,7 +116,6 @@ import {
   tick,
   treeNode,
   treeStage,
-  unlocksOf,
   mulberry32,
   type Change,
   type ClassId,
@@ -446,12 +443,11 @@ describe('the data', () => {
     expect(TREE_STAGES).toHaveLength(5);
   });
 
-  it('names every modifier, zone and dish, and every dish is an item the farm makes', () => {
+  it('names every modifier and zone', () => {
     for (const m of MODIFIERS) {
       expect(MODIFIER_NAMES[m.id]).toBeTruthy();
       expect(MODIFIER_TEXT[m.id]).toBeTruthy();
     }
-    for (const d of Object.keys(FARDKOST)) expect(FOOD_TEXT[d], d).toBeTruthy();
     for (const k of NODE_KINDS) {
       expect(STOP_NAMES[k]).toBeTruthy();
       expect(STOP_WORDS[k]).toBeTruthy();
@@ -568,7 +564,7 @@ describe('every effect', () => {
   });
 
   it('the run’s health buff survives a level-up and a change of gear, for the hero and the hired companion', () => {
-    const party = makeParty(['magiker'], { seed: 3, longhall: true, level: 3 });
+    const party = makeParty(['magiker'], { seed: 3, level: 3 });
     const p = party.players[0]!;
     startRun(party.world, p.id, { seed: 3 }, party.ctx());
     const run = runOf(party.world)!;
@@ -874,8 +870,8 @@ describe('starting, joining and leaving', () => {
   it('takes the family members at the arch along, joins at the last lit rest stone, and leaves', () => {
     const party = makeParty(['vaktare', 'helare', 'krigare']);
     const [a, b, c] = party.players as [import('./index.ts').PlayerState, import('./index.ts').PlayerState, import('./index.ts').PlayerState];
-    // c is far away, in the wild: not taken along
-    placeIn(party.world, c, 'a:0,1', 5, 5, 'down', []);
+    // c is far away, in her house: not taken along
+    placeIn(party.world, c, homeKey(c.id), 5, 5, 'down', []);
     startRun(party.world, a.id, { seed: 4 }, party.ctx());
     const run = runOf(party.world)!;
     expect(run.party).toEqual([a.id, b.id]);
@@ -903,16 +899,16 @@ describe('starting, joining and leaving', () => {
     expect(Math.hypot(c.x - px(rest.x), c.y - px(rest.y))).toBeLessThan(3 * TILE);
   });
 
-  it('the mercy is for a human with the hired companion (no longhouse needed), not for a lone player who turns it down; a duo with a companion is not softened', () => {
-    const hp = (classes: ClassId[], opts: { longhall?: boolean; companion?: boolean }): { mul: number; boss: number; plan: number; bossPlan: number; n: number } => {
-      const party = makeParty(classes, { seed: 6, longhall: opts.longhall });
+  it('the mercy is for a human with the hired companion, not for a lone player who turns it down; a duo with a companion is not softened', () => {
+    const hp = (classes: ClassId[], opts: { companion?: boolean }): { mul: number; boss: number; plan: number; bossPlan: number; n: number } => {
+      const party = makeParty(classes, { seed: 6 });
       startRun(party.world, party.players[0]!.id, { seed: 6, ...(opts.companion === false ? { companion: false } : {}) }, party.ctx());
       const run = runOf(party.world)!;
       const r = party.world.areas![run.key]!.saga!.run!;
       return { mul: r.hpMul, boss: r.bossMul, plan: run.plan.stops[0]!.hpMul, bossPlan: run.plan.stops[0]!.bossMul, n: run.companions.length };
     };
-    // the farm has no longhouse, and a lone player still gets the Hirdmannen and the mercy
-    for (const hired of [hp(['krigare'], {}), hp(['krigare'], { longhall: true })]) {
+    // a lone player still gets the Hirdmannen and the mercy
+    for (const hired of [hp(['krigare'], {})]) {
       expect(hired.n).toBe(1);
       expect(hired.mul).toBeCloseTo(hired.plan * SOLO_MERCY);
       expect(hired.boss).toBeCloseTo(hired.bossPlan * SOLO_MERCY);
@@ -930,24 +926,20 @@ describe('starting, joining and leaving', () => {
     expect(hp(['vaktare', 'helare', 'krigare'], {}).n).toBe(0);
   });
 
-  it('leaving and joining again does not bring the player in twice: one run counted, the potions once, the dishes kept', () => {
+  it('leaving and joining again does not bring the player in twice: one run counted, the potions once', () => {
     const party = makeParty(['vaktare', 'helare', 'krigare']);
     const [a, b, c] = party.players as [import('./index.ts').PlayerState, import('./index.ts').PlayerState, import('./index.ts').PlayerState];
-    placeIn(party.world, c, 'a:0,1', 5, 5, 'down', []);
-    addItem(c.inventory, 'bread', 1);
+    placeIn(party.world, c, homeKey(c.id), 5, 5, 'down', []);
     startRun(party.world, a.id, { seed: 4 }, party.ctx());
     const run = runOf(party.world)!;
     void b;
     const potions = (): number => c.inventory.reduce((n, s) => n + (s?.item === 'healing_potion' ? s.count : 0), 0);
-    // she joins with bread chosen: used up once
+    // she joins from the lobby
     const front = archFrontOf(party.world);
     placeIn(party.world, c, 'farm', front.x, front.y, 'down', []);
-    chooseFardkost(party.world, c.id, ['bread']);
     joinRun(party.world, c.id, party.ctx());
     expect(readRun(c).runs).toBe(1);
-    expect(run.food[c.id]).toEqual(['bread']);
-    const hp = run.base[c.id]!.hp;
-    expect(hp).toBeGreaterThan(0);
+    const hp = run.base[c.id]!.hp ?? 0;
     const bag = potions();
     // out and in again
     leaveRun(party.world, c.id, party.ctx());
@@ -956,22 +948,18 @@ describe('starting, joining and leaving', () => {
     expect(run.party).toContain(c.id);
     expect(readRun(c).runs).toBe(1);
     expect(potions()).toBe(bag);
-    expect(run.base[c.id]!.hp).toBe(hp);
-    expect(run.food[c.id]).toEqual(['bread']);
-    expect(party.world.areas![run.key]!.saga!.run!.buffs[c.id]!.hp).toBeCloseTo(hp!);
+    expect(run.base[c.id]!.hp ?? 0).toBe(hp);
+    expect(party.world.areas![run.key]!.saga!.run!.buffs[c.id]!.hp ?? 0).toBeCloseTo(hp);
   });
 
-  it('is full at three, or four with a longhouse', () => {
+  it('is full at four', () => {
     const party = makeParty(['vaktare', 'helare', 'krigare', 'magiker']);
-    const [a, , , d] = party.players as [import('./index.ts').PlayerState, import('./index.ts').PlayerState, import('./index.ts').PlayerState, import('./index.ts').PlayerState];
-    expect(unlocksOf(party.world).longhall).toBe(false);
-    startRun(party.world, a.id, { seed: 2 }, party.ctx());
-    expect(runOf(party.world)!.party).toHaveLength(3);
-    expect(listen(joinRun(party.world, d.id, party.ctx()), RUN_T.full)).toBe(true);
-    const lh = makeParty(['vaktare', 'helare', 'krigare', 'magiker'], { longhall: true });
-    expect(unlocksOf(lh.world).longhall).toBe(true);
-    startRun(lh.world, lh.players[0]!.id, { seed: 2 }, lh.ctx());
-    expect(runOf(lh.world)!.party).toHaveLength(4);
+    startRun(party.world, party.players[0]!.id, { seed: 2 }, party.ctx());
+    expect(runOf(party.world)!.party).toHaveLength(4);
+    const late = createPlayer(party.world, 'Femte', { skin: '#f1c9a5', hair: '#2b2119', hairStyle: 'short' });
+    late.saga = { ...newSagaProgress(), cls: 'krigare', heard: true };
+    setOnline(party.world, late.id, true);
+    expect(listen(joinRun(party.world, late.id, party.ctx()), RUN_T.full)).toBe(true);
   });
 
   it('companionClass: the class the party lacks, for one or two humans, never for three', () => {
@@ -988,11 +976,10 @@ describe('starting, joining and leaving', () => {
     expect(companionClass(['vaktare', 'helare', 'krigare', 'magiker'])).toBeNull();
   });
 
-  it('hires the Hirdmannen for one or two players, no longhouse needed: the class they lack, never saved, gone with the run', () => {
+  it('hires the Hirdmannen for one or two players: the class they lack, never saved, gone with the run', () => {
     for (const [classes, want] of [[['krigare'], 'helare'], [['magiker'], 'helare'], [['vaktare'], 'helare'], [['helare'], 'vaktare'], [['krigare', 'magiker'], 'helare'], [['helare', 'krigare'], 'vaktare']] as [ClassId[], ClassId][]) {
-      for (const longhall of [false, true]) {
-        const party = makeParty(classes, { longhall, level: 5 });
-        expect(unlocksOf(party.world).longhall).toBe(longhall);
+      {
+        const party = makeParty(classes, { level: 5 });
         const players = Object.keys(party.world.players).length;
         startRun(party.world, party.players[0]!.id, { seed: 2 }, party.ctx());
         const run = runOf(party.world)!;
@@ -1153,87 +1140,28 @@ describe('the run is one dungeon, chosen at the arch (GAME2.md section 2.4)', ()
   });
 });
 
-describe('the farm feeds the run', () => {
-  it('färdkost: the dishes in the bag are taken, in as many slots as the tree gives, and give their buffs', () => {
-    const party = makeParty(['krigare']);
-    const p = party.players[0]!;
-    p.inventory[3] = { item: 'bread', count: 2 };
-    p.inventory[4] = { item: 'pumpkin_pie', count: 1 };
-    p.inventory[5] = { item: 'carrot', count: 1 };
-    expect(foodSlots(p)).toBe(1);
-    const chosen = chooseFardkost(party.world, p.id, ['carrot', 'bread', 'pumpkin_pie']);
-    expect(chosen[0]).toMatchObject({ t: 'fardkost', items: ['bread'] });
-    startRun(party.world, p.id, { seed: 3 }, party.ctx());
-    const run = runOf(party.world)!;
-    expect(run.food[p.id]).toEqual(['bread']);
-    expect(p.inventory.find((s) => s?.item === 'bread')?.count).toBe(1);
-    expect(run.base[p.id]!.hp).toBeCloseTo(0.06, 2);
-    const inst = party.world.areas![run.key]!.saga!;
-    expect(inst.run!.buffs[p.id]!.hp).toBeGreaterThanOrEqual(0.06);
-    // two slots with the node f1, and the dishes 25 % stronger with f2
-    const two = makeParty(['krigare']);
-    const q = two.players[0]!;
-    runSaveOf(q).tree = ['f1', 'f2'];
-    q.inventory[3] = { item: 'bread', count: 1 };
-    q.inventory[4] = { item: 'pumpkin_pie', count: 1 };
-    expect(foodSlots(q)).toBe(2);
-    startRun(two.world, q.id, { seed: 3, fardkost: ['bread', 'pumpkin_pie'] }, two.ctx());
-    const r2 = runOf(two.world)!;
-    expect(r2.food[q.id]).toEqual(['bread', 'pumpkin_pie']);
-    expect(r2.base[q.id]!.hp).toBeCloseTo(0.06 * 1.25, 3);
-    expect(r2.base[q.id]!.armor).toBeCloseTo(0.04 * 1.25, 3);
-  });
-
-  it('potions come as items: the start potions of the herb garden, the tree and a dish', () => {
+describe('what the lobby gives a run', () => {
+  it('potions come as items: the start potions and the tree\'s extra one', () => {
     const party = makeParty(['krigare']);
     const p = party.players[0]!;
     const count = () => p.inventory.reduce((n, s) => n + (s?.item === 'healing_potion' ? s.count : 0), 0);
     expect(count()).toBe(3);
     runSaveOf(p).tree = ['f4'];
-    const f = archFrontOf(party.world);
-    addObject(party.world, 'herb_garden', f.x + 4, f.y + 1) ?? addObject(party.world, 'herb_garden', f.x - 6, f.y + 1);
-    expect(unlocksOf(party.world).herb).toBe(true);
     startRun(party.world, p.id, { seed: 3 }, party.ctx());
-    expect(count()).toBe(3 + 1 + 2);
-    expect(runOf(party.world)!.base[p.id]!.potion).toBeCloseTo(0.1);
+    expect(count()).toBe(3 + 1);
   });
 
-  it('animals: a cared-for pet counts double, a mount only with a stall, and a happy farm gives health', () => {
+  it('a pet from the dungeons by your side gives power +3 %', () => {
     const party = makeParty(['krigare']);
     const p = party.players[0]!;
     const w = party.world;
     const dog = { id: 9001, species: 'dog', name: 'Fido', x: 0, y: 0, facing: 'down', moving: false, hearts: 2, heartProgress: 0, fed: false, petted: false, brushed: false, hasProduct: false, named: true, age: 10, homeId: 0, waitMs: 0, owner: p.id } as unknown as WorldState['animals'][number];
     w.animals[dog.id] = dog;
-    const horse = { ...dog, id: 9002, species: 'horse', name: 'Blixt', hearts: 5 };
-    w.animals[horse.id] = horse;
-    const cow = { ...dog, id: 9003, species: 'cow', name: 'Kossan', hearts: 4, owner: undefined };
-    w.animals[cow.id] = cow;
     startRun(w, p.id, { seed: 3 }, party.ctx());
     const e = runOf(w)!.base[p.id]!;
     expect(e.power).toBeCloseTo(0.03, 3);
     expect(e.armor ?? 0).toBe(0);
-    expect(e.hp).toBeCloseTo(0.04, 3);
-    // with 4 hearts the pet counts double, a stall lets the mount come, and f3 makes both stronger
-    dog.hearts = 4;
-    const f = archFrontOf(w);
-    addObject(w, 'stall', f.x + 4, f.y + 1) ?? addObject(w, 'stall', f.x - 7, f.y + 1);
-    runSaveOf(p).tree = ['f1', 'f3'];
-    const again = makeParty(['krigare']);
-    void again;
-    endRun(w, runOf(w)!, 'leave', party.ctx());
-    startRun(w, p.id, { seed: 3 }, party.ctx());
-    const e2 = runOf(w)!.base[p.id]!;
-    expect(e2.power).toBeCloseTo(0.03 * 2 * 1.5, 3);
-    expect(e2.armor).toBeCloseTo(0.02 * 2 * 1.5, 3);
-    expect(e2.hp).toBeCloseTo(0.03 * 2 * 1.5 + 0.04, 3);
-  });
-
-  it('the smithy gives spells +4 %', () => {
-    const party = makeParty(['krigare']);
-    const f = archFrontOf(party.world);
-    addObject(party.world, 'smithy', f.x + 4, f.y + 1) ?? addObject(party.world, 'smithy', f.x - 8, f.y + 1);
-    startRun(party.world, party.players[0]!.id, { seed: 3 }, party.ctx());
-    expect(runOf(party.world)!.base[party.players[0]!.id]!.power).toBeCloseTo(0.04);
+    expect(e.hp ?? 0).toBe(0);
   });
 });
 
@@ -1268,8 +1196,8 @@ function takeRune(party: Party, kind: NodeKind = 'flock'): void {
 
 describe('the vote on a runa', () => {
   /** A party whose first stop is cleared: the cards of a runa are out (the vote on). */
-  function atTheVote(classes: ClassId[] = ['vaktare', 'helare', 'magiker'], longhall = false): Party {
-    const party = makeParty(classes, { seed: 6, longhall });
+  function atTheVote(classes: ClassId[] = ['vaktare', 'helare', 'magiker']): Party {
+    const party = makeParty(classes, { seed: 6 });
     startRun(party.world, party.players[0]!.id, { seed: 6 }, party.ctx());
     const run = runOf(party.world)!;
     const inst = party.world.areas![run.key]!.saga!;
@@ -1283,7 +1211,7 @@ describe('the vote on a runa', () => {
   }
 
   it('a solo player with the hired companion sees only cards of their own class; the companion takes none', () => {
-    const party = atTheVote(['krigare'], true);
+    const party = atTheVote(['krigare']);
     const run = runOf(party.world)!;
     expect(run.companions).toHaveLength(1);
     const comp = party.world.players[run.companions[0]!]!;
@@ -1657,7 +1585,7 @@ describe('the vote on the way on (GAME2.md section 2.2)', () => {
   it('a friend who joins while the cards are out waits on the farm and is in the next stop; one who joins on the way is in the exit room', () => {
     const party = makeParty(['vaktare', 'helare', 'krigare']);
     const [a, , c] = party.players as [import('./index.ts').PlayerState, import('./index.ts').PlayerState, import('./index.ts').PlayerState];
-    placeIn(party.world, c, 'a:0,1', 5, 5, 'down', []);
+    placeIn(party.world, c, homeKey(c.id), 5, 5, 'down', []);
     startRun(party.world, a.id, { seed: 6 }, party.ctx());
     const run = runOf(party.world)!;
     clearStop(party);
@@ -1996,7 +1924,7 @@ describe('the clock, the wipe and the end', () => {
     expect(readRun(b).clears.draug).toBe(1);
 
     // one player and the companion: the companion never takes a chest, an essence or sagafrön
-    const solo = makeParty(['magiker'], { seed: 6, longhall: true });
+    const solo = makeParty(['magiker'], { seed: 6 });
     startRun(solo.world, solo.players[0]!.id, { seed: 6 }, solo.ctx());
     const lab = atTheBoss(solo);
     const h = solo.players[0]!;
@@ -2028,7 +1956,7 @@ describe('the clock, the wipe and the end', () => {
   it('f6 pays its five extra sagafrön to the planter only, not to the whole party', () => {
     const duo = makeParty(['magiker', 'vaktare'], { seed: 6 });
     const [a, b] = duo.players as [import('./index.ts').PlayerState, import('./index.ts').PlayerState];
-    runSaveOf(a).tree = ['f1', 'f3', 'f6'];
+    runSaveOf(a).tree = ['f4', 'f5', 'f6'];
     startRun(duo.world, a.id, { seed: 6 }, duo.ctx());
     const { inst } = atTheBoss(duo);
     const before = [readRun(a).seeds, readRun(b).seeds];
@@ -2159,15 +2087,14 @@ describe('the sagaträd', () => {
       const built = inst.run!.buffs[a.id]!;
       const key = Object.keys(n.effect)[0]!;
       if (n.effect.potions) expect(a.inventory.reduce((s, x) => s + (x?.item === 'healing_potion' ? x.count : 0), 0)).toBe(3 + n.effect.potions);
-      else if (key === 'slots') expect(foodSlots(a)).toBe(2);
       else if (key === 'reroll') expect(runOf(party.world)!.rerolls[a.id] ?? 0).toBe(0);
-      else if (['food', 'animal', 'companion', 'bossSeeds', 'seeds', 'luck'].includes(key)) expect((mine as Record<string, number>)[key] ?? 0).toBeGreaterThanOrEqual((none as Record<string, number>)[key] ?? 0);
+      else if (['companion', 'bossSeeds', 'seeds', 'luck'].includes(key)) expect((mine as Record<string, number>)[key] ?? 0).toBeGreaterThanOrEqual((none as Record<string, number>)[key] ?? 0);
       else expect((built as unknown as Record<string, number>)[key]).toBeGreaterThan(0);
     }
   });
 
   it('g5 makes the hired companion stronger, g6 and f6 pay more, and f5 more coins', () => {
-    const party = makeParty(['krigare'], { longhall: true, seed: 5 });
+    const party = makeParty(['krigare'], { seed: 5 });
     const p = party.players[0]!;
     runSaveOf(p).tree = ['g1', 'g3', 'g5'];
     startRun(party.world, p.id, { seed: 5 }, party.ctx());
@@ -2178,7 +2105,7 @@ describe('the sagaträd', () => {
     expect(inst.run!.buffs[c]!.hp).toBeCloseTo(0.2);
     expect(inst.run!.buffs[p.id]!.power).toBe(0);
     const six = makeParty(['krigare'], { seed: 5 });
-    runSaveOf(six.players[0]!).tree = ['g1', 'g2', 'g4', 'g6', 'f1', 'f3', 'f6', 'f2', 'f5'];
+    runSaveOf(six.players[0]!).tree = ['g1', 'g2', 'g4', 'g6', 'f4', 'f5', 'f6'];
     startRun(six.world, six.players[0]!.id, { seed: 5 }, six.ctx());
     const r6 = runOf(six.world)!;
     expect(r6.base[six.players[0]!.id]!.bossSeeds).toBe(5);

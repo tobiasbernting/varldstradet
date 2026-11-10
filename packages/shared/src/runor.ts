@@ -107,7 +107,6 @@ export const RUNOR: RunaDef[] = [
 ];
 
 export const runa = (id: string): RunaDef | undefined => RUNOR.find((r) => r.id === id);
-export const isPartyRuna = (id: string): boolean => runa(id)?.cls === undefined;
 
 // ---------------------------------------------------------------------------
 // Held runor, skärpa and set bonuses

@@ -135,9 +135,9 @@ describe('houses', () => {
     expect(performAction(house, b.id, chair.x, chair.y, ctx()).every((c) => c.t === 'toast')).toBe(true);
     expect(pickUpFurniture(house, b.id, chair.x, chair.y)).toEqual([]);
     expect(objectAt(house, chair.x, chair.y)?.kind).toBe('chair');
-    // with a hammer too
-    addItem(b.inventory, 'hammer', 1);
-    b.selected = b.inventory.findIndex((s) => s?.item === 'hammer');
+    // with a weapon in hand too
+    addItem(b.inventory, 'jarnsvard', 1);
+    b.selected = b.inventory.findIndex((s) => s?.item === 'jarnsvard');
     performAction(house, b.id, chair.x, chair.y, ctx());
     expect(objectAt(house, chair.x, chair.y)?.kind).toBe('chair');
     // the owner may

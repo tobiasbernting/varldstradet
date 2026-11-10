@@ -6,15 +6,12 @@ import {
   DOWN_MS,
   DUNGEONS,
   DUNGEON_IDS,
-  NPCS,
   SAGA_BOSSES,
   SAGA_CHAPTERS,
   SAGA_RESET_MS,
-  STONE_SPOT,
   T,
   TILE,
   fmt,
-  VILLAGE_KEY,
   VOLVA_SPOT,
   WIPE_MS,
   attackSpellOf,
@@ -22,12 +19,8 @@ import {
   castSpell,
   chooseClass,
   createPlayer,
-  applyMove,
-  previousDungeon,
-  tileIndex,
   generateSaga,
   generateWorld,
-  getArea,
   npcState,
   isSolidForPlayer,
   devEnterSaga,
@@ -35,16 +28,11 @@ import {
   mobDmgScale,
   objectAt,
   performAction,
-  portalFront,
-  questState,
   sagaChapter,
   sagaKey,
-  sagaQuest,
-  sagaQuestAct,
   setOnline,
   setWeather,
   tick,
-  ANIMALS,
   SAGA_XP,
   XP_LEVELS,
   addObject,
@@ -56,11 +44,8 @@ import {
   BASE_POWER,
   BASE_ARMOR,
   BASE_HP,
-  newDay,
-  openTileNear,
   placeIn,
   sagaSnapshot,
-  shownHeld,
   LEVEL_REWARDS,
   MAX_LEVEL,
   SAGA_ITEMS,
@@ -71,10 +56,7 @@ import {
   ensureLevelRewards,
   giveXp,
   ITEMS,
-  devKit,
-  itemName,
   leaveSaga,
-  type AnimalState,
   type Change,
   type DungeonId,
   type PlayerState,
@@ -947,13 +929,6 @@ const count = (p: PlayerState, item: string): number => p.inventory.reduce((n, s
 const said = (ch: Change[], text: string): boolean => ch.some((c) => c.t === 'toast' && c.text.includes(text));
 
 describe('Smedjan', () => {
-  it('the development kit gives paper, paint and a wall piece', () => {
-    const { world, p } = atStina();
-    expect(devKit(world, p.id).length).toBeGreaterThan(0);
-    expect([count(p, 'paper'), count(p, 'paint_red'), count(p, 'wall_wood'), count(p, 'wall_stone'), count(p, 'door'), count(p, 'window'), p.coins]).toEqual([2, 2, 2, 1, 1, 1, 400]);
-    expect(devKit(world, 'nobody')).toEqual([]);
-  });
-
   it('no gear has any effect on damage, healing or health: the stat fields are gone and a legendary set fights like none', () => {
     const { p } = atStina('magiker');
     const bare = { power: fightStats(p).power, armor: fightStats(p).armor, max: fighterMax(p, 'magiker') };

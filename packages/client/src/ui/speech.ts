@@ -53,11 +53,3 @@ export function speak(text: string): void {
     /* no speech */
   }
 }
-
-export function stopSpeaking(): void {
-  try {
-    window.speechSynthesis?.cancel();
-  } catch {
-    /* none */
-  }
-}

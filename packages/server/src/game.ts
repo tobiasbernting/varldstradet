@@ -7,7 +7,6 @@ import {
   castSpell,
   chooseClass,
   devEnterSaga,
-  devKit,
   devTrophy,
   devDecor,
   devWarp,
@@ -526,7 +525,6 @@ export class Game {
         break;
       case 'run':
       case 'seed':
-      case 'fardkost':
         changes = runMessage(this.world, pid, msg as unknown as Parameters<typeof runMessage>[2], this.ctx());
         break;
       case 'dev':
@@ -535,11 +533,9 @@ export class Game {
           return;
         }
         if (msg.a === 'saga') changes = devEnterSaga(this.world, pid, String(msg.id ?? ''));
-        else if (msg.a === 'nextDay') this.skipDay();
         else if (msg.a === 'runclear') changes = devClearStop(this.world, pid);
         else if (msg.a === 'runnext') changes = devRunNext(this.world, pid, String(msg.kind ?? ''), typeof msg.purse === 'number' ? msg.purse : undefined, this.ctx());
         else if (msg.a === 'unlock') changes = devUnlockChapters(this.world, pid);
-        else if (msg.a === 'kit') changes = devKit(this.world, pid);
         else if (msg.a === 'warp') changes = devWarp(this.world, pid, Number(msg.x), Number(msg.y));
         else if (msg.a === 'decor') changes = devDecor(this.world, pid);
         else if (msg.a === 'trophy') changes = devTrophy(this.world, pid, String(msg.id ?? ''), Number(msg.level));

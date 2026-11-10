@@ -1,8 +1,8 @@
 // HUD: top chips, hotbar, toasts, touch controls.
-import { A11Y_T, HOTBAR_SIZE, HOUSE_T, MAX_HEARTS, SPELLS, T, WATERING_CAN_CHARGES, areaName, fmt, houseTitle, isHomeKey, isSagaKey, itemName, ownerOfHome, stackName, type ItemStack } from '@lilla-garden/shared';
+import { A11Y_T, HOTBAR_SIZE, HOUSE_T, MAX_HEARTS, SPELLS, T, areaName, fmt, houseTitle, isHomeKey, isSagaKey, ownerOfHome, stackName, type ItemStack } from '@lilla-garden/shared';
 import { Minimap } from './minimap.ts';
 import { getArt } from '@art/textures.ts';
-import { stackIconUrl } from '@art/painting.ts';
+import { stackIconUrl } from '@art/stackicon.ts';
 import { net } from '../net.js';
 import { bus, client, furnish, inOwnHouse, myPlayer, serverNow } from '../state.js';
 import { clear, h, icon, onTap } from './dom.js';
@@ -28,9 +28,7 @@ export function slotEl(stack: ItemStack | null, opts: { selected?: boolean; pick
     el.dataset.infoName = stackName(stack);
     el.dataset.infoText = '';
     el.setAttribute('aria-label', stackName(stack));
-    if (stack.charges !== undefined) {
-      el.append(h('div', { class: 'charges' }, h('i', { style: { width: `${(stack.charges / WATERING_CAN_CHARGES) * 100}%` } })));
-    } else if (stack.count > 1) el.append(h('span', { class: 'count' }, stack.count));
+    if (stack.count > 1) el.append(h('span', { class: 'count' }, stack.count));
   }
   if (opts.onTap) onTap(el, opts.onTap);
   return el;

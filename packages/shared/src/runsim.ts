@@ -4,10 +4,10 @@
 // vote on the way on (walking onto a väg-runa), the sagafrön, the timer, the wipe and the end, the Yggdrasil shoot, the farm
 // objects and the hired companion.
 // The run lives in memory only (like a dungeon): it is never saved, what players earn is paid out at once.
-import { ANIMALS, objectDef } from './data.ts';
+import { objectDef } from './data.ts';
 import { awardTrophy } from './house.ts';
 import { awardLooks, lookRng } from './looks.ts';
-import { addItem, countItem, removeItem } from './inventory.ts';
+import { addItem } from './inventory.ts';
 import { addObject, mapH, mapW, objectAt, removeObject, tileIndex } from './map.ts';
 import type { Change } from './protocol.ts';
 import {
@@ -15,7 +15,6 @@ import {
   DUNGEON_IDS,
   XP_LEVELS,
   heroLevel,
-  isRunKey,
   newSagaProgress,
   type ClassId,
   type DungeonId,
@@ -26,26 +25,18 @@ import { runHooks } from './runhooks.ts';
 import { awardPetLooks, giveClearPets, petSeedBonus } from './petsim.ts';
 import { botStep, newMind, type BotMind } from './runbot.ts';
 import {
-  CARED_HEARTS,
-  FARDKOST,
-  FOOD_SLOTS,
-  HERB_EFFECT,
-  JOY_PER_HEART,
   MODIFIER_SEEDS,
-  MOUNT_EFFECT,
   PET_EFFECT,
   RUN_JOIN_RADIUS,
   RUN_MAX_MS,
   RUN_NUDGE_MS,
   RUN_OFFLINE_END_MS,
   RUN_PARTY_MAX,
-  RUN_PARTY_MAX_LONGHALL,
   companionClass,
   runPickMs,
   RUN_SEEDS,
   RUN_VICTORY_MS,
   RUN_WARN_MS,
-  SMITHY_EFFECT,
   SOLO_MERCY,
   SAGOANDAN,
   RUN_LEVELS,
@@ -81,7 +72,7 @@ import { defaultPath, pathDef, pathsOf } from './paths.ts';
 import { canSharpen, heldEffect, offerFor, partyRuna, runa, runaOfRarity, setEffect, tagCounts, type OfferSource, type RunRarity, type RunTag, type RunaHeld } from './runor.ts';
 import { buildStop, chapterBoss, generateRun, placeRunes, routeSnap, type RunPlan } from './runmap.ts';
 import { SHOP_LEGENDARY_ROW, SHOP_PRICE, SHOP_POTIONS, SHOP_SLOTS, SILVER, defaultChoice, eventDef, packSilver, pickEvent, seedsFromSilver, type EventOutcome } from './events.ts';
-import { COMPANION_NAME, EVENT_CHOICES, EVENT_NAMES, PATH_NAMES, RUNA_NAMES, RUN_UI, RUN_T, T, TREE_NAMES, fmt, fmtDuration, itemName } from './sv.ts';
+import { COMPANION_NAME, EVENT_CHOICES, EVENT_NAMES, PATH_NAMES, RUNA_NAMES, RUN_UI, RUN_T, T, TREE_NAMES, fmt, fmtDuration } from './sv.ts';
 import {
   farmOf,
   getArea,
@@ -100,8 +91,6 @@ import { TILE, type PlayerState, type WorldObject, type WorldState } from './typ
 
 /** The boss attacks Lätt allows: its first two, whatever a first run's plan has locked (the lock is Vanlig's variety). */
 export const lattMoves = (): number[] => Array.from({ length: LATT.bossMoves }, (_, k) => k);
-
-const tileOf = (v: number): number => Math.floor(v / TILE);
 
 // ---------------------------------------------------------------------------
 // The state
@@ -157,7 +146,6 @@ export interface RunState {
   pathUntil?: number;
   /** What each player brings from the farm (tree, dishes, animals, buildings): added up once at the start or on joining. */
   base: Record<string, RunEffect>;
-  food: Record<string, string[]>;
   /** Who has been brought in for this run (their dishes, potions and the run count): a rejoiner is not brought twice. Never saved. */
   brought: Set<string>;
   earned: Record<string, number>;
@@ -239,7 +227,7 @@ function boxFree(a: WorldState, x: number, y: number, w: number, h: number, ring
   if (x - ring < 2 || y - ring < 2 || x + w + ring > mapW(a) - 2 || y + h + ring > mapH(a) - 2) return false;
   for (let ty = y - ring; ty < y + h + ring; ty++)
     for (let tx = x - ring; tx < x + w + ring; tx++) {
-      if (BLOCKED.has(a.terrain[tileIndex(a, tx, ty)] ?? '') || a.crops[`${tx},${ty}`]) return false;
+      if (BLOCKED.has(a.terrain[tileIndex(a, tx, ty)] ?? '')) return false;
       const o = objectAt(a, tx, ty);
       if (o && !CLEARABLE.has(o.kind)) return false;
     }
@@ -297,27 +285,9 @@ export function ensureRunPlaces(farm: WorldState): boolean {
   return changed;
 }
 
-/** The buildings on the farm that a run reads (GAME.md section 4). */
-export function unlocksOf(farm: WorldState): { smithy: boolean; stall: boolean; herb: boolean; longhall: boolean } {
-  const has = (k: string): boolean => Object.values(farm.objects).some((o) => o.kind === k);
-  return { smithy: has('smithy'), stall: has('stall'), herb: has('herb_garden'), longhall: has('longhall') };
-}
-export const partyMax = (farm: WorldState): number => (unlocksOf(farm).longhall ? RUN_PARTY_MAX_LONGHALL : RUN_PARTY_MAX);
-
 // ---------------------------------------------------------------------------
 // What a player brings: the tree, dishes, animals and buildings
 // ---------------------------------------------------------------------------
-
-/** Dishes chosen at the arch, by player (until the run starts). Not saved. */
-const CHOICES = new WeakMap<WorldState, Map<string, string[]>>();
-const choicesOf = (farm: WorldState): Map<string, string[]> => {
-  let m = CHOICES.get(farm);
-  if (!m) CHOICES.set(farm, (m = new Map()));
-  return m;
-};
-
-/** The dishes a player may bring: one slot, two with the node `f1`. */
-export const foodSlots = (p: PlayerState): number => FOOD_SLOTS + (treeEffectOf(p, 'gard').slots ?? 0);
 
 /** The sum of a player's planted nodes of the given branch. */
 function treeEffectOf(p: PlayerState, branch: 'hjalte' | 'gemenskap' | 'gard'): RunEffect {
@@ -340,34 +310,13 @@ function partyTree(farm: WorldState, run: RunState): RunEffect {
   return out;
 }
 
-/** Gårdsglädje: the average hearts of the farm's animals in their houses. */
-function farmJoy(farm: WorldState): number {
-  const stock = Object.values(farm.animals).filter((a) => !a.owner && !!ANIMALS[a.species]?.house && !isMount(a));
-  if (!stock.length) return 0;
-  return stock.reduce((n, a) => n + a.hearts, 0) / stock.length;
-}
-
-/** Everything the farm gives one player at the start of a run (before runor). */
-export function farmEffect(farm: WorldState, p: PlayerState, dishes: string[]): RunEffect {
+/** Everything the sagaträd and a pet by their side give one player at the start of a run (before runor). */
+export function farmEffect(farm: WorldState, p: PlayerState): RunEffect {
   const e: RunEffect = {};
-  const hero = treeEffectOf(p, 'hjalte');
-  const gard = treeEffectOf(p, 'gard');
-  addEffect(e, hero);
-  addEffect(e, gard);
-  const un = unlocksOf(farm);
-  // dishes (stronger with the node f2)
-  for (const d of dishes) addEffect(e, FARDKOST[d] ?? {}, 1 + (gard.food ?? 0));
-  // animals of the player's own: the best pet, and a mount if there is a stall; those with 4 hearts count double
-  const mine = Object.values(farm.animals).filter((a) => a.owner === p.id);
-  const best = (xs: typeof mine): (typeof mine)[number] | undefined => [...xs].sort((a, b) => b.hearts - a.hearts)[0];
-  const pet = best(mine.filter((a) => isPetAnimal(a) && !isMount(a) && !a.petKind)); // (a pets.ts pet helps for real in the fights instead)
-  const mount = un.stall ? best(mine.filter((a) => isMount(a))) : undefined;
-  const animalMul = 1 + (gard.animal ?? 0);
-  if (pet) addEffect(e, PET_EFFECT, animalMul * (pet.hearts >= CARED_HEARTS ? 2 : 1));
-  if (mount) addEffect(e, MOUNT_EFFECT, animalMul * (mount.hearts >= CARED_HEARTS ? 2 : 1));
-  e.hp = (e.hp ?? 0) + JOY_PER_HEART * farmJoy(farm);
-  if (un.smithy) addEffect(e, SMITHY_EFFECT);
-  if (un.herb) addEffect(e, HERB_EFFECT);
+  addEffect(e, treeEffectOf(p, 'hjalte'));
+  addEffect(e, treeEffectOf(p, 'gard'));
+  // a pet from the dungeons that follows its owner (a pets.ts pet helps for real in the fights instead)
+  if (Object.values(farm.animals).some((a) => a.owner === p.id && isPetAnimal(a) && !isMount(a) && !a.petKind)) addEffect(e, PET_EFFECT);
   return e;
 }
 
@@ -527,7 +476,6 @@ export interface StartOptions {
   seed?: number;
   replay?: boolean;
   companion?: boolean;
-  fardkost?: string[];
   /** 0 Lätt or 1 Vanlig (the default). */
   level?: RunLevel;
   /** The dungeon (chapter) to run: the one the starter has cleared or the next one; left out, the next one (GAME2.md section 2). */
@@ -539,10 +487,10 @@ export const runnableDungeons = (cleared: readonly DungeonId[]): DungeonId[] => 
 
 const distTo = (p: PlayerState, tx: number, ty: number): number => Math.hypot(p.x - tx, p.y - ty) / TILE;
 
-/** The arch window: opens it for the player with their dishes and what they may bring. */
+/** The arch window: opens it for the player. */
 export function openFardport(world: WorldState, p: PlayerState): Change[] {
   const farm = farmOf(world);
-  const out: Change[] = [{ t: 'open', to: p.id, ui: 'run' }, treeChange(farm, p), { t: 'fardkost', to: p.id, items: choicesOf(farm).get(p.id) ?? [], slots: foodSlots(p) }];
+  const out: Change[] = [{ t: 'open', to: p.id, ui: 'run' }, treeChange(farm, p)];
   const run = RUNS.get(farm);
   out.push(stateChange(farm, run));
   return out;
@@ -553,39 +501,12 @@ export function openYggdrasil(world: WorldState, p: PlayerState): Change[] {
   return [{ t: 'open', to: p.id, ui: 'seed' }, treeChange(farmOf(world), p)];
 }
 
-/** Choose the dishes to bring (the ones that are dishes, in the bag, and fit the slots). */
-export function chooseFardkost(world: WorldState, playerId: string, items: string[]): Change[] {
-  const farm = farmOf(world);
-  const p = farm.players[playerId];
-  if (!p) return [];
-  const have = new Map<string, number>();
-  const chosen: string[] = [];
-  for (const id of items) {
-    if (chosen.length >= foodSlots(p) || !(id in FARDKOST)) continue;
-    const n = (have.get(id) ?? 0) + 1;
-    if (countItem(p.inventory, id) < n) continue;
-    have.set(id, n);
-    chosen.push(id);
-  }
-  choicesOf(farm).set(p.id, chosen);
-  return [{ t: 'fardkost', to: p.id, items: chosen, slots: foodSlots(p) }];
-}
-
-/** Takes the chosen dishes out of the bag and adds up what the farm gives this player (and hands out the start potions). */
-function bring(farm: WorldState, run: RunState, p: PlayerState, items: string[] | undefined, out: Change[]): void {
-  const dishes: string[] = [];
-  for (const id of items ?? choicesOf(farm).get(p.id) ?? []) {
-    if (dishes.length < foodSlots(p) && id in FARDKOST && removeItem(p.inventory, id, 1)) {
-      dishes.push(id);
-      out.push(toast(p.id, fmt(RUN_T.food, { item: itemName(id) })));
-    }
-  }
-  choicesOf(farm).delete(p.id);
-  run.food[p.id] = dishes;
+/** Adds up what the tree gives this player (and hands out the start potions). */
+function bring(farm: WorldState, run: RunState, p: PlayerState, out: Change[]): void {
   run.brought.add(p.id);
-  const e = farmEffect(farm, p, dishes);
+  const e = farmEffect(farm, p);
   run.base[p.id] = e;
-  // potions come as items: the dishes', the herb garden's and the tree's
+  // potions come as items: the tree's
   if (e.potions) giveHere(farm, p, 'healing_potion', Math.round(e.potions), out);
   delete e.potions;
   out.push(playerChange(p));
@@ -600,7 +521,7 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
   const arch = fardportOf(farm);
   if (p.area !== 'farm' || !arch || distTo(p, (arch.x + 1.5) * TILE, (arch.y + 1) * TILE) > RUN_JOIN_RADIUS) return [toast(p.id, RUN_T.needPort)];
   if (!p.saga?.cls) return [toast(p.id, T.sagaNeedClass)];
-  const max = partyMax(farm);
+  const max = RUN_PARTY_MAX;
   const near = Object.values(farm.players)
     .filter((q) => q.id !== p.id && !q.bot && q.online && q.area === 'farm' && !!q.saga?.cls && distTo(q, (arch.x + 1.5) * TILE, (arch.y + 1) * TILE) <= RUN_JOIN_RADIUS)
     .slice(0, max - 1);
@@ -656,7 +577,6 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
     rerolls: {},
     paths: {},
     base: {},
-    food: {},
     brought: new Set(),
     earned: {},
     carry: {},
@@ -667,7 +587,7 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
   };
   const out: Change[] = [];
   for (const q of party) {
-    bring(farm, run, q, q.id === p.id && opts.fardkost ? opts.fardkost : undefined, out);
+    bring(farm, run, q, out);
     runSaveOf(q).runs++;
   }
   if (opts.companion !== false) hireCompanion(farm, run, party, out);
@@ -679,7 +599,7 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
 
 /** The hired companion (Hirdmannen): a fighter the server runs with the test bots' brain, taking the class the player lacks. */
 function hireCompanion(farm: WorldState, run: RunState, humansIn: PlayerState[], out: Change[]): void {
-  // one or two humans get the Hirdmannen, no longhouse needed (GAME.md section 6): the class the party lacks
+  // one or two humans get the Hirdmannen: the class the party lacks
   const cls = companionClass(humansIn.map((q) => q.saga?.cls).filter((x): x is ClassId => !!x));
   if (!cls) return;
   const human = humansIn[0]!;
@@ -794,16 +714,16 @@ export function joinRun(world: WorldState, playerId: string, ctx: SimCtx): Chang
   if (run.party.includes(p.id)) return [];
   if (!p.saga?.cls) return [toast(p.id, T.sagaNeedClass)];
   if (p.area !== 'farm') return [toast(p.id, RUN_T.needPort)];
-  if (run.party.length >= partyMax(farm)) return [toast(p.id, RUN_T.full)];
+  if (run.party.length >= RUN_PARTY_MAX) return [toast(p.id, RUN_T.full)];
   const cap = ctx.levelCap?.(p.id) ?? RUN_LEVEL_EXTREM;
   if (run.level > cap) return [toast(p.id, fmt(RUN_T.cappedYou, { max: T.runLevelName[cap]! }))];
   const out: Change[] = [];
   // a lone player's hired companion steps aside for a real friend
   if (run.companions.length) dismissCompanions(farm, run, out);
   run.party.push(p.id);
-  // someone who left and comes back is not brought in again: no second run counted, no second potions, and the dishes of the first time still count
+  // someone who left and comes back is not brought in again: no second run counted, no second potions,
   if (!run.brought.has(p.id)) {
-    bring(farm, run, p, undefined, out);
+    bring(farm, run, p, out);
     runSaveOf(p).runs++;
   }
   if (run.path.some((n) => run.plan.route.nodes[n]?.kind === 'mini') && run.phase !== 'path') assignPath(run, p, ctx);
@@ -1598,11 +1518,10 @@ export function plantNode(world: WorldState, playerId: string, nodeId: string): 
 }
 
 /** Everything the three client messages of a run do (the server calls this). */
-export function runMessage(world: WorldState, playerId: string, msg: { t: 'run' | 'seed' | 'fardkost'; [k: string]: unknown }, ctx: SimCtx): Change[] {
+export function runMessage(world: WorldState, playerId: string, msg: { t: 'run' | 'seed'; [k: string]: unknown }, ctx: SimCtx): Change[] {
   const farm = farmOf(world);
   const p = farm.players[playerId];
   if (!p) return [];
-  if (msg.t === 'fardkost') return chooseFardkost(farm, playerId, Array.isArray(msg.items) ? msg.items.filter((x): x is string => typeof x === 'string') : []);
   if (msg.t === 'seed') {
     if (msg.a === 'plant') return plantNode(farm, playerId, String(msg.node ?? ''));
     return [treeChange(farm, p)];
@@ -1613,7 +1532,7 @@ export function runMessage(world: WorldState, playerId: string, msg: { t: 'run' 
       if (level === null) return [toast(playerId, RUN_T.badLevel)];
       // a dungeon: left out is the chapter's own; anything that is not a dungeon's id is refused (startRun refuses one not yet reached)
       if (msg.dungeon !== undefined && !(typeof msg.dungeon === 'string' && (DUNGEON_IDS as readonly string[]).includes(msg.dungeon))) return [toast(playerId, RUN_T.badDungeon)];
-      return startRun(farm, playerId, { level, ...(msg.dungeon !== undefined ? { dungeon: msg.dungeon as DungeonId } : {}), replay: msg.replay === true, ...(msg.companion === false ? { companion: false } : {}), ...(Array.isArray(msg.fardkost) ? { fardkost: msg.fardkost.filter((x): x is string => typeof x === 'string') } : {}) }, ctx);
+      return startRun(farm, playerId, { level, ...(msg.dungeon !== undefined ? { dungeon: msg.dungeon as DungeonId } : {}), replay: msg.replay === true, ...(msg.companion === false ? { companion: false } : {}) }, ctx);
     }
     case 'join':
       return joinRun(farm, playerId, ctx);

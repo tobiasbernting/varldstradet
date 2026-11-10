@@ -10,19 +10,16 @@ import {
   dummyAnimal,
   placeIn,
   homeKey,
-  addObject,
   callPets,
   cleanChat,
   createPlayer,
   generateWorld,
-  key,
   mulberry32,
   nextWeather,
   setOnline,
   setWeather,
   talkNode,
   tick,
-  tileIndex,
   type AnimalState,
   type Change,
   type PlayerState,
@@ -101,7 +98,6 @@ describe('pets: stay and whistle', () => {
     expect(stay.filter((c) => c.t === 'animal').every((c) => c.t === 'animal' && c.area === homeKey(p.id))).toBe(true);
     expect(moved?.stay).toBeDefined();
   });
-
 
   it('other players’ animals do not listen, and without pets you get a hint', () => {
     const { world, p } = setup();

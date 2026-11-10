@@ -10,13 +10,10 @@ import {
   countItem,
   decodeLook,
   STAND_PREFIX,
-  CROPS,
   DAY_LENGTH_MS,
   dungeonOfKey,
   NODE_KIND_CODE,
   STOP_WORDS,
-  DUNGEON_H,
-  DUNGEON_W,
   PETS,
   type LookSlot,
   facingTile,
@@ -26,7 +23,6 @@ import {
   isSagaKey,
   isHomeKey,
   objectAt,
-  LOOT_REFILL_DAYS,
   ITEMS,
   MAP_H,
   MAP_W,
@@ -36,13 +32,10 @@ import {
   NPC_LINES,
   NPCS,
   objectDef,
-  PLAYER_HALF_H,
-  PLAYER_HALF_W,
   REACH,
   rideSpeedMul,
   sagaItem,
   stepPlayer,
-  T,
   TILE,
   tileOf,
   WALL_KINDS,
@@ -66,12 +59,12 @@ import { activeWorld, bus, client, furnish, inOwnHouse, myArea, myPlayer, server
 import { attackTarget, heroOn, levelOf, sagaMarker, sagaSpeed, titleOf } from '@v1/saga.ts';
 import { KIND_ICON, runClient } from '@v1/run.ts';
 import type { HudTarget } from '@v1/ui/hud.ts';
-import { animalSprites, characterSprites, loadSprites, lookSprite, paintingSprite, type ObjectSprites, type Sprites } from './art.ts';
+import { animalSprites, characterSprites, loadSprites, lookSprite, type ObjectSprites, type Sprites } from './art.ts';
 import { LooksFx, type FxActor } from './looksfx.ts';
 import type { Sprite } from './atlas.ts';
 import { Effects } from './fx.ts';
 import { SagaView, type Spot } from './saga.ts';
-import { alpha, clamp01, DrawQueue, drawSheared, drawSprite, easeOutBack, easeOutElastic, lerp, rgba, smooth, WHITE } from './gfx.ts';
+import { alpha, clamp01, DrawQueue, drawSheared, drawSprite, easeOutBack, lerp, rgba, smooth, WHITE } from './gfx.ts';
 import { dungeonAmbient, dungeonLamps, Lamp, lampFor, lampForAnimal, LightPainter, setAmbient } from './lighting.ts';
 import { Critters } from './critters.ts';
 import { loadExtras, SNOWY, type Extras } from './extras.ts';
@@ -160,17 +153,6 @@ interface ObjView {
   ownChimney?: boolean;
 }
 
-interface CropView {
-  x: number;
-  y: number;
-  crop: string;
-  stage: number;
-  sprite: Sprite | undefined;
-  grew: number;
-  phase: number;
-  rustle: number;
-}
-
 interface DropView {
   d: DropState;
   icon: Sprite | undefined;
@@ -254,7 +236,6 @@ export class View implements HudTarget {
   private inside = false;
   private ground: Ground | null = null;
   private objects = new Map<number, ObjView>();
-  private crops = new Map<string, CropView>();
   private drops = new Map<number, DropView>();
   private players = new Map<string, Actor>();
   private npcs = new Map<string, Actor>();
@@ -379,7 +360,6 @@ export class View implements HudTarget {
     this.ground.snowy = this.snowGround;
     this.ground.rebuild();
     for (const o of Object.values(world.objects)) this.putObject(o, false);
-    for (const [k, c] of Object.entries(world.crops)) this.putCrop(k, c.stage, c.crop);
     for (const d of Object.values(world.drops)) this.putDrop(d);
     for (const a of Object.values(world.animals)) this.putAnimal(a);
     for (const p of Object.values(world.players)) if (p.online && (p.area ?? 'farm') === this.area) this.putPlayer(p);
@@ -403,7 +383,6 @@ export class View implements HudTarget {
     for (const f of this.flashLamps) f.lamp.destroy();
     this.flashLamps = [];
     this.objects.clear();
-    this.crops.clear();
     this.drops.clear();
     this.players.clear();
     this.npcs.clear();
@@ -478,16 +457,7 @@ export class View implements HudTarget {
     }
     let variant = (o.variant ?? 0) % art.frames.length;
     const isWall = WALL_KINDS.has(o.kind);
-    if (o.kind === 'loot_chest') {
-      // open (and empty) for you if you took this week's treasure; closed and glinting otherwise
-      const last = o.openedBy?.[client.me];
-      const emptied = last !== undefined && client.day - last < LOOT_REFILL_DAYS;
-      variant = (((o.variant ?? 0) * 2 + (emptied ? 1 : 0)) % art.frames.length);
-    } else if (o.kind === 'fence') variant = this.fenceMask(o.x, o.y);
-    else if (o.kind === 'gate') {
-      const m = this.fenceMask(o.x, o.y);
-      variant = m & 5 && !(m & 10) ? 1 : 0;
-    } else if (o.kind === 'saga_gate') {
+    if (o.kind === 'saga_gate') {
       // the dungeon's look in o.variant; across a corridor that runs sideways it stands on end
       const m = this.linkMask(o.x, o.y, (k) => k === 'saga_gate' || k === 'saga_wall');
       variant = ((o.variant ?? 0) % SAGA_LOOKS) * 2 + (m & 5 && !(m & 10) ? 1 : 0);
@@ -504,13 +474,12 @@ export class View implements HudTarget {
       } else variant = colour * 16 + m;
     }
     if (refresh && (o.kind === 'fence' || o.kind === 'gate' || isWall)) this.refreshNeighbours(o.x, o.y);
-    const painting = o.kind === 'painting' && o.data !== undefined;
     // trees through the year: autumn colours, snow on the branches, blossom
-    const look = painting ? null : treeLook(o.kind, o.x, o.y, this.year, this.snowGround, this.extras);
+    const look = treeLook(o.kind, o.x, o.y, this.year, this.snowGround, this.extras);
     const frames = look?.frames ?? art.frames;
-    const sprite = painting ? paintingSprite(o.data!) : (frames[variant] ?? frames[0]!);
-    const x = painting ? o.x * TILE - 2 : o.x * TILE + art.ox;
-    const y = painting ? o.y * TILE - 8 : o.y * TILE + art.oy;
+    const sprite = frames[variant] ?? frames[0]!;
+    const x = o.x * TILE + art.ox;
+    const y = o.y * TILE + art.oy;
     const tall = sprite.h >= 14 && !def.flat && !FLAT_LOOKING.has(o.kind);
     // a lamp, a torch, a lit house: keep its light when only its picture changes
     let lamp = old?.lamp;
@@ -527,7 +496,7 @@ export class View implements HudTarget {
     const chimney = on('smoke') ? (o.kind === 'house' ? { x: x + 62, y: y + 2 } : o.kind === 'house_small' ? { x: x + 34.5, y: y + 4 } : undefined) : undefined;
     const view: ObjView = {
       o,
-      art: painting ? null : art,
+      art,
       sprite,
       frame: variant,
       x,
@@ -567,26 +536,6 @@ export class View implements HudTarget {
       }
       if (this.doorIsOpen(o) !== open) this.putObject(o, false, false);
     }
-  }
-
-  private putCrop(k: string, stage: number, crop: string): void {
-    const [xs, ys] = k.split(',');
-    const x = Number(xs);
-    const y = Number(ys);
-    const n = CROPS[crop]?.stages.length ?? 0;
-    const frame = Math.min(stage, n);
-    const old = this.crops.get(k);
-    this.crops.set(k, {
-      x,
-      y,
-      crop,
-      stage: frame,
-      sprite: this.art.crops[crop]?.[frame],
-      // growing a stage (or being planted) makes it pop
-      grew: !this.loading && (!old || old.stage !== frame) ? this.t : (old?.grew ?? -1),
-      phase: (x * 1.1 + y * 0.7) % (Math.PI * 2),
-      rustle: old?.rustle ?? 0,
-    });
   }
 
   private putDrop(d: DropState): void {
@@ -697,14 +646,10 @@ export class View implements HudTarget {
     const world = this.world;
     if (!world || c.t === 'areaData') return;
     const forArea = ('area' in c && c.area) || 'farm';
-    if ((c.t === 'terrain' || c.t === 'crop' || c.t === 'object' || c.t === 'animal' || c.t === 'drop') && forArea !== this.area) return;
+    if ((c.t === 'terrain' || c.t === 'object' || c.t === 'animal' || c.t === 'drop') && forArea !== this.area) return;
     switch (c.t) {
       case 'terrain':
         this.ground?.set(c.x, c.y);
-        break;
-      case 'crop':
-        if (c.crop) this.putCrop(c.k, c.crop.stage, c.crop.crop);
-        else this.crops.delete(c.k);
         break;
       case 'object':
         this.roofsDirty = true;
@@ -960,18 +905,15 @@ export class View implements HudTarget {
       this.updateNpcTalk(id, actor, me);
     }
 
-    // --- plants rustle as someone walks through them ---
+    // --- bushes rustle as someone walks through them ---
     for (const a of [...this.players.values(), ...this.animals.values(), ...this.npcs.values()]) {
       if (!a.wasMoving) continue;
       const key = `${tileOf(a.x)},${tileOf(a.y)}`;
       const id = world.occupancy[key];
       const ov = id === undefined ? undefined : this.objects.get(id);
       if (ov && ov.sway) ov.rustle = 1;
-      const cv = this.crops.get(key);
-      if (cv) cv.rustle = 1;
     }
     for (const ov of this.objects.values()) if (ov.rustle > 0) ov.rustle = Math.max(0, ov.rustle - dt * 1.6);
-    for (const cv of this.crops.values()) if (cv.rustle > 0) cv.rustle = Math.max(0, cv.rustle - dt * 1.6);
 
     // --- roofs: the one over the room I'm in fades away ---
     const myTile = tileIndex(world, tileOf(me.x), tileOf(me.y));
@@ -1102,15 +1044,12 @@ export class View implements HudTarget {
   }
 
   private updateCamera(me: PlayerState, dt: number): void {
-    // what the camera may show: the map, the cave, or the bath house and a little around it
+    // what the camera may show: the map, or the room of a house and a little around it
     let bx = 0;
     let by = 0;
     let bw = (this.world ? mapW(this.world) : MAP_W) * TILE;
     let bh = (this.world ? mapH(this.world) : MAP_H) * TILE;
-    if (this.cave && !this.saga) {
-      bw = (this.world?.cave?.w ?? DUNGEON_W) * TILE;
-      bh = (this.world?.cave?.h ?? DUNGEON_H) * TILE;
-    } else if (this.inside) {
+    if (this.inside) {
       bx = (HOUSE_ROOM.x - 1) * TILE;
       by = (HOUSE_ROOM.y - 1.5) * TILE;
       bw = (HOUSE_ROOM.w + 2) * TILE;
@@ -1527,18 +1466,6 @@ export class View implements HudTarget {
         const shown = ov.o.data.startsWith(STAND_PREFIX) ? lookSprite(ov.o.data.slice(STAND_PREFIX.length)) : this.art.icons[ov.o.data];
         if (shown) q.push(ov.depth + 0.01, shown, ov.x + s.w / 2, ov.y + 17, 15, 15, 0);
       }
-    }
-    for (const cv of this.crops.values()) {
-      const s = cv.sprite;
-      if (!s || !inView(cv.x * TILE, cv.y * TILE, s.w, s.h)) continue;
-      let angle = 0.07 * wind * Math.sin(t * 1.9 + cv.phase);
-      if (cv.rustle > 0) angle += Math.sin(cv.rustle * 22) * cv.rustle * 0.18;
-      let sc = 1;
-      if (cv.grew >= 0 && t - cv.grew < 0.6) sc = 0.55 + 0.45 * easeOutElastic((t - cv.grew) / 0.6);
-      const footX = cv.x * TILE + s.w / 2;
-      const footY = cv.y * TILE + s.h;
-      const h = s.h * sc;
-      q.push((cv.y + 1) * TILE - 2, s, footX + Math.sin(angle) * (h / 2), footY - Math.cos(angle) * (h / 2), s.w * sc, h, angle);
     }
     for (const dv of this.drops.values()) {
       if (!dv.icon) continue;

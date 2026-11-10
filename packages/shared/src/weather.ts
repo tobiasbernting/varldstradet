@@ -7,7 +7,6 @@ import type { SimCtx } from './sim.ts';
 import { isSagaKey } from './saga.ts';
 
 export const WEATHER_KINDS: WeatherKind[] = ['sun', 'cloudy', 'rain', 'storm', 'snow', 'hail', 'wind', 'fog'];
-export const isWeatherKind = (v: unknown): v is WeatherKind => WEATHER_KINDS.includes(v as WeatherKind);
 
 /** How long each kind lasts, in real minutes [min, max]. A game day is 10 minutes. */
 const DURATION_MIN: Record<WeatherKind, [number, number]> = {

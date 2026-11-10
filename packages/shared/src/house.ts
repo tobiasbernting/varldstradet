@@ -18,7 +18,6 @@ export const HOUSE_FIXED = '_house';
 /** The dungeon bosses that leave a trophy (each dungeon's last one), by boss id. */
 export const TROPHY_BOSSES: readonly string[] = Object.values(DUNGEONS).map((d) => d.boss);
 export const isTrophyKind = (kind: string): boolean => kind.startsWith(TROPHY_PREFIX);
-export const trophyBoss = (kind: string): string => kind.slice(TROPHY_PREFIX.length);
 export const clampTrophyLevel = (n: unknown): number => (typeof n === 'number' && Number.isFinite(n) ? Math.max(0, Math.min(TROPHY_LEVELS - 1, Math.floor(n))) : 1);
 /** The level a trophy stack or object remembers (0..4). */
 export const trophyLevelOf = (data: string | undefined): number => clampTrophyLevel(data === undefined ? 0 : Number(data));
@@ -113,8 +112,6 @@ export function tickHome(house: WorldState, out: Change[]): void {
   }
 }
 
-/** Whose house this map is (the owner's id), if it is one. */
-export const houseOwner = (world: WorldState): string | undefined => (isHomeKey(world.area) ? ownerOfHome(world.area!) : undefined);
 export const isGuestHere = (world: WorldState, p: PlayerState): boolean => isHomeKey(world.area) && ownerOfHome(world.area!) !== p.id;
 export const houseName = (farm: WorldState, key: string): string => {
   const o = farm.players[ownerOfHome(key)];
@@ -294,7 +291,7 @@ function standInHouse(world: WorldState, p: PlayerState, kind: string, level: nu
   const b = floorBox();
   for (let y = b.y0; y <= b.y1; y++)
     for (let x = b.x0; x <= b.x1; x++) {
-      if (objectAt(house, x, y) || house.crops[`${x},${y}`]) continue;
+      if (objectAt(house, x, y)) continue;
       const o = addObject(house, kind, x, y, { by: p.id, data: String(level), variant: level });
       if (!o) continue;
       out.push({ t: 'object', id: o.id, obj: o, area: key });
@@ -311,9 +308,6 @@ export function devTrophy(world: WorldState, playerId: string, id: string, level
   awardTrophy(world, p, id, level, out);
   return out;
 }
-
-// the object table's view of a house (used by the clients and tests)
-export const isHouseFixture = (o: WorldObject): boolean => o.by === HOUSE_FIXED;
 
 /** Development only (DEV_TELEPORT=1): one of every piece of Norse decor, a gear stand and three pieces of gear, into the bag. */
 export function devDecor(world: WorldState, playerId: string): Change[] {

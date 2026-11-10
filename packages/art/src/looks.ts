@@ -477,6 +477,3 @@ export function drawWeapon(l: DecodedLook): Px {
   }
   return p.outline('#2a2420');
 }
-
-/** A weapon's icon in the wardrobe is its own drawing; the other pieces are shown on a plain mannequin (see characters.ts lookIcon). */
-export const isWeaponLook = (l: DecodedLook): boolean => l.piece.slot === 'weapon';

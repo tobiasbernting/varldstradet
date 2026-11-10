@@ -103,8 +103,6 @@ function walkTo(area: WorldState, p: PlayerState, mind: BotMind, goalTile: { x: 
   applyMove(area, p.id, p.x + (dx / d) * step, p.y + (dy / d) * step, facingOf(dx, dy), true);
 }
 
-const SAFE_PAD = 0.6;
-
 /** Is a point inside any mark on the ground (or about to be)? */
 const marked = (area: WorldState, x: number, y: number, now: number): boolean =>
   (area.saga?.zones ?? []).some((z) => (z.until === undefined || now >= z.at) && inZone(z, { x, y }) && (z.dmg > 0 || z.until !== undefined));

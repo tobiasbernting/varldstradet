@@ -1458,12 +1458,9 @@ export const SAGA_CHAPTERS: SagaChapter[] = [
 /** Völvan Sigrun, who tells the saga, stands by the Kämpastenen in the lobby (Gården). */
 export const VOLVA_ID = 'sigrun';
 export const VOLVA_SPOT = { x: 21, y: 15 };
-export const STONE_SPOT = { x: 22, y: 15 };
 
 /** The way into a dungeon out in the world: a stone arch 3 tiles wide and 2 high, walked into from below. */
 export const SAGA_PORTAL = { w: 3, h: 2 };
-/** The tile in front of a dungeon's arch (where you come out again). */
-export const portalFront = (p: { x: number; y: number }): { x: number; y: number } => ({ x: p.x + 1, y: p.y + 2 });
 
 
 // ---------------------------------------------------------------------------

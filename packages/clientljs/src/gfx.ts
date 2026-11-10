@@ -47,11 +47,6 @@ export function drawSheared(s: Sprite, bx: number, by: number, w: number, h: num
   }
 }
 
-/** Centre of a w×h picture standing on (bx, by) and leaning clockwise by angle about that foot point. */
-export function centreFromFoot(bx: number, by: number, h: number, angle: number): [number, number] {
-  return [bx + Math.sin(angle) * (h / 2), by - Math.cos(angle) * (h / 2)];
-}
-
 interface Item {
   depth: number;
   s: Sprite;
@@ -113,10 +108,4 @@ export const easeOutCubic = (t: number): number => 1 - Math.pow(1 - clamp01(t), 
 export const easeOutBack = (t: number): number => {
   const x = clamp01(t) - 1;
   return 1 + 2.7 * x * x * x + 1.7 * x * x;
-};
-/** Springy overshoot that settles at 1. */
-export const easeOutElastic = (t: number): number => {
-  const x = clamp01(t);
-  if (x === 0 || x === 1) return x;
-  return Math.pow(2, -10 * x) * Math.sin((x * 10 - 0.75) * ((2 * Math.PI) / 3)) + 1;
 };

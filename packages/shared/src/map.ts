@@ -30,7 +30,6 @@ export function addObject(
       if (!inBounds(world, tx, ty)) return null;
       if (world.occupancy[key(tx, ty)] !== undefined) return null;
       if (world.terrain[tileIndex(world, tx, ty)] === 'water') return null;
-      if (world.crops[key(tx, ty)]) return null;
     }
   const id = world.nextId++;
   const obj: WorldObject = { id, kind, x, y, ...extra };
@@ -78,7 +77,6 @@ export function emptyWorld(w = MAP_W, h = MAP_H): WorldState {
     day: 1,
     timeMs: 2 * 60 * 1000, // start mid-morning
     terrain: new Array<Terrain>(w * h).fill('grass'),
-    crops: {},
     objects: {},
     occupancy: {},
     animals: {},

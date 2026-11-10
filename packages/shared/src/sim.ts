@@ -2,17 +2,17 @@
 // The server runs this; the client reuses movement for prediction.
 
 import { ACHIEVEMENTS, ANIMALS, ITEMS, NPCS, item, objectDef } from './data.ts';
-import { MAX_HEARTS } from './dungeon.ts';
+
 import { DUNGEONS, VOLVA_ID, dungeonOfKey, isSagaKey, sagaItem } from './saga.ts';
 import { generateSaga } from './sagamap.ts';
 import { openFardport, openYggdrasil, tickRuns } from './runsim.ts';
-import { HOUSE_FIXED, generateHome, houseAct, houseName, isGuestHere, placedExtra, standAct, tickHome, tickHouseDoor } from './house.ts';
-import { homeKey, isHomeKey, ownerOfHome } from './homekeys.ts';
+import { generateHome, houseAct, houseName, placedExtra, standAct, tickHome, tickHouseDoor } from './house.ts';
+import { isHomeKey, ownerOfHome } from './homekeys.ts';
 import { grantPet, petAnimalOf, syncPet, renamePet } from './petsim.ts';
 import { idleSaga, sagaAct, sagaRooted, tickSaga } from './sagasim.ts';
 import { addItem, makeInventory, moveStack, removeItem, sortInventory, takeFromSlot } from './inventory.ts';
-import { SPAWN, addObject, inBounds, isHouseDoor, mapH, mapW, objectAt, removeObject, tileIndex } from './map.ts';
-import { randInt } from './rng.ts';
+import { SPAWN, addObject, inBounds, isHouseDoor, mapH, mapW, objectAt, tileIndex } from './map.ts';
+
 import { ACHIEVEMENT_TEXT, SPECIES_NAMES, T, fmt } from './sv.ts';
 import type { Change, SlotRef } from './protocol.ts';
 import { tickWeather } from './weather.ts';
@@ -37,17 +37,15 @@ import type {
   WorldState,
 } from './types.ts';
 import {
-  
   HOTBAR_SIZE,
+  MAX_HEARTS,
   DAY_LENGTH_MS,
   INVENTORY_SIZE,
-  
   PLAYER_SPEED,
   START_COINS,
   TILE,
   RIDE_SPEED_MUL,
   RUN_SPEED_MUL,
-  
   key,
 } from './types.ts';
 
@@ -598,7 +596,7 @@ export function swapSlots(world: WorldState, playerId: string, a: SlotRef, b: Sl
 
 /** Cheap structural fingerprint of an inventory, to tell whether a sort changed anything. */
 const inventoryKey = (inv: Inventory): string =>
-  JSON.stringify(inv.map((s) => (s ? [s.item, s.count, s.data ?? null, s.charges ?? null] : null)));
+  JSON.stringify(inv.map((s) => (s ? [s.item, s.count, s.data ?? null] : null)));
 
 /** Sorts the backpack (slots 8..31, hotbar untouched). */
 export function sortSlots(world: WorldState, playerId: string): Change[] {
@@ -735,7 +733,6 @@ function applyMoveInner(world: WorldState, playerId: string, x: number, y: numbe
   }
   if (clamp) [x, y] = clamp(x, y);
   const r = resolveMove((tx, ty) => isSolidForPlayer(world, tx, ty), p.x, p.y, x, y, PLAYER_HALF_W, PLAYER_HALF_H, world);
-  const moved = r.x !== p.x || r.y !== p.y;
   p.x = r.x;
   p.y = r.y;
   p.facing = facing;
@@ -988,9 +985,6 @@ function summonFromBag(world: WorldState, p: PlayerState, itemId: string, out: C
   out.push({ t: 'animal', id: a.id, animal: a }, fx(tx, ty, 'sparkle'), fx(tx, ty + 1, 'heart'), toast(p.id, fmt(T.sagaPetCome, { name: s.name })), playerChange(p));
 }
 
-/** The longest pause between two bites; a later attackAt means the monster is dazed. */
-export const ATTACK_GAP = 1500;
-
 /** True when no wall or rock lies on the straight tile line between two points. */
 export function lineOfSight(d: WorldState, x0: number, y0: number, x1: number, y1: number): boolean {
   const steps = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / (TILE / 2));
@@ -1009,7 +1003,7 @@ export function lineOfSight(d: WorldState, x0: number, y0: number, x1: number, y
 export function tagArea(changes: Change[], keyStr: string): Change[] {
   if (keyStr === 'farm') return changes;
   for (const c of changes) {
-    if (c.t === 'terrain' || c.t === 'crop' || c.t === 'object' || c.t === 'animal' || c.t === 'drop' || c.t === 'fx') c.area = keyStr;
+    if (c.t === 'terrain' || c.t === 'object' || c.t === 'animal' || c.t === 'drop' || c.t === 'fx') c.area = keyStr;
   }
   return changes;
 }

@@ -5,36 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1792833696400,
-      "tag": "0000_curious_vindicator",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1792848086017,
-      "tag": "0001_soft_purple_man",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1793279245977,
-      "tag": "0002_access_control",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1793473767912,
-      "tag": "0003_saga_best",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1793522497924,
-      "tag": "0004_remove_minigames",
+      "when": 1794291973297,
+      "tag": "0000_initial",
       "breakpoints": true
     }
   ]

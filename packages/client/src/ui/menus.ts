@@ -1,20 +1,16 @@
 // All in-game menus as HTML overlays: ryggsäck, kista, gårdsbutik, sälj, snickra, garderob, emotes, namn.
 import {
   A11Y_T,
-  ANIMALS,
   FILTER_NAMES,
   HELP,
   HOUSE_T,
-  homeKey,
   houseTitle,
   isHomeKey,
-  ownerOfHome,
   INVENTORY_FILTERS,
   NPCS,
   HOTBAR_SIZE,
   INVENTORY_SIZE,
   ITEMS,
-  RECIPES,
   SPECIES_NAMES,
   T,
   LOOK_T,
@@ -60,7 +56,6 @@ import {
 import {
   slotEl,
 } from './hud.js';
-
 
 import {
   SFX,
@@ -126,8 +121,7 @@ export class Menus {
         }
         this.npcId = c.npc ?? null;
         this.open('npc');
-      } else if (c.ui === 'wardrobe') this.open('wardrobe');
-      else if (c.ui === 'houses') this.open('houses');
+      } else if (c.ui === 'houses') this.open('houses');
     });
     bus.on('connection', (s) => {
       if (s !== 'open') this.close();
@@ -604,13 +598,7 @@ export class Menus {
   private helpTopic = 'lobby';
 
   private helpText(text: string): string {
-    return text
-      .replace(/\{recipe:(\w+)\}/g, (_, id: string) => {
-        const r = RECIPES.find((x) => x.id === id);
-        return r ? r.in.map((i) => `${i.count} ${itemName(i.item).toLowerCase()}`).join(' + ') : id;
-      })
-      .replace(/\{price:(\w+)\}/g, (_, id: string) => `${ITEMS[id]?.buy ?? '?'} ${T.coins}`)
-      .replace(/\{name:(\w+)\}/g, (_, id: string) => itemName(id));
+    return text.replace(/\{name:(\w+)\}/g, (_, id: string) => itemName(id));
   }
 
   private helpIcon(ref: string | undefined): HTMLElement {
@@ -647,23 +635,6 @@ export class Menus {
       list.append(h('li', null, this.helpIcon(step.icon), h('span', null, this.helpText(step.text))));
     }
     body.append(list);
-    if (topic.houses) {
-      const rows = h('div', { class: 'rows' });
-      for (const a of Object.values(ANIMALS)) {
-        const r = RECIPES.find((x) => x.id === a.house);
-        const animalItem = ITEMS[`animal_${a.species}`];
-        rows.append(
-          h(
-            'div',
-            { class: 'row' },
-            icon(getArt().iconUrl[a.house] ?? ''),
-            h('span', { class: 'name' }, `${itemName(a.house)} → ${SPECIES_NAMES[a.species] ?? a.species}`, h('br'), h('span', { class: 'need' }, r ? r.in.map((i) => `${i.count} ${itemName(i.item).toLowerCase()}`).join(' + ') : '')),
-            h('span', { class: 'price' }, `${animalItem?.buy ?? '?'} ${T.coins}`),
-          ),
-        );
-      }
-      body.append(h('p', { class: 'help-intro' }, 'Alla djurhus:'), rows);
-    }
   }
 
   // ---- animal name ----
