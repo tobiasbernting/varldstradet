@@ -1668,8 +1668,17 @@ export function devRunNext(world: WorldState, playerId: string, kind: string, pu
   const farm = farmOf(world);
   const run = RUNS.get(farm);
   if (!run || !run.party.includes(playerId)) return [];
-  const node = run.plan.stops.findIndex((z, i) => z.kind === kind && !run.path.includes(i));
+  let node = run.plan.stops.findIndex((z, i) => z.kind === kind && !run.path.includes(i));
   if (purse !== undefined && Number.isFinite(purse)) run.purse = purse;
+  // a seed without such a stop: the first unwalked fight stop becomes one (development only)
+  if (node < 0 && kind !== 'boss' && kind !== 'mini') {
+    node = run.plan.stops.findIndex((z, i) => z.kind === 'flock' && !run.path.includes(i));
+    if (node >= 0) {
+      run.plan.stops[node]!.kind = kind as never;
+      const rn = run.plan.route.nodes[node];
+      if (rn) rn.kind = kind as never;
+    }
+  }
   if (node < 0) return [];
   return enterStop(farm, run, node, ctx);
 }

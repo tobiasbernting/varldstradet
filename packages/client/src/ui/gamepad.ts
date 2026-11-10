@@ -50,6 +50,8 @@ export function initGamepad(opts: {
   /** LT + Start: the focus ring walks over the HUD's own buttons (B or Start gives the controls back to play). */
   let hudMode = false;
   let navDir = '';
+  let focusIndex = -1;
+  let lastRoot: HTMLElement | null = null;
   let navNext = 0;
   let last = performance.now();
 
@@ -117,6 +119,7 @@ export function initGamepad(opts: {
       menuFrame(ui.querySelector<HTMLElement>('.hud') ?? ui, dt, now);
     } else {
       setFocus(null);
+      lastRoot = null;
       playFrame();
     }
   }
@@ -218,8 +221,12 @@ export function initGamepad(opts: {
     // menus redraw themselves when the game state changes: keep the highlight where it was
     if (!focus || !focus.isConnected || !root.contains(focus)) {
       focus = null;
-      setFocus(nearest(list, focusAt) ?? null);
+      // a window that redrew itself (a toggle, a purchase): the thing in the same place in the list gets the ring back
+      const same = focusIndex >= 0 && root === lastRoot ? list[Math.min(focusIndex, list.length - 1)] : undefined;
+      setFocus(same ?? nearest(list, focusAt) ?? null);
     }
+    lastRoot = root;
+    focusIndex = focus ? list.indexOf(focus) : -1;
 
     const [lx, ly, , ry] = axes as [number, number, number, number];
     const dir =
@@ -281,7 +288,8 @@ export function initGamepad(opts: {
       const along = (c.x - from.x) * ux + (c.y - from.y) * uy;
       if (along < 4) continue;
       const across = Math.abs((c.x - from.x) * uy - (c.y - from.y) * ux);
-      const score = along + across * 2.5;
+      // a sticky bar at the foot of a window (Starta, the reroll) is always on screen: things scrolled out of view above it come first
+      const score = along + across * 2.5 + (e.closest('.sticky') && !focus.closest('.sticky') ? 4000 : 0);
       if (score < bestScore) {
         bestScore = score;
         best = e;
