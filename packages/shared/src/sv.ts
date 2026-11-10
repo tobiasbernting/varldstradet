@@ -498,7 +498,7 @@ export const T = {
   moveHint: 'Tryck på en sak, sedan på en ruta för att flytta den.',
   nothingHere: 'Inget här just nu.',
   alreadyOwn: 'Har redan',
-  nothingToSell: 'Du har inget att sälja just nu. Odla något!',
+  nothingToSell: 'Du har inget att sälja just nu.',
   needs: 'behöver',
   youHave: 'Du har {n}',
   onTheWay: 'På väg i morgon',
@@ -1385,7 +1385,7 @@ export const fmt = (s: string, vars: Record<string, string | number>): string =>
 export const FILTER_NAMES: Record<string, string> = {
   tools: 'Verktyg',
   seeds: 'Frön',
-  food: 'Mat & skörd',
+  food: 'Mat',
   materials: 'Material',
   build: 'Bygg & möbler',
   other: 'Annat',
