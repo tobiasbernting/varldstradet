@@ -54,11 +54,15 @@ export function prefs(): Prefs {
   return (cur ??= load());
 }
 
+/** A short screen (a phone held sideways, under 480 px high) cannot hold the biggest text with the spell bar: there it stops at "Stor". */
+export const textCap = (): number => (window.innerHeight < 480 ? TEXT_SCALE.large : TEXT_SCALE.xlarge);
+export const textCapped = (): boolean => TEXT_SCALE[prefs().text] > textCap();
+
 /** Puts the settings on the page: classes on <html> and the text scale as a CSS variable. */
 export function applyPrefs(): void {
   const p = prefs();
   const root = document.documentElement;
-  root.style.setProperty('--txt', String(TEXT_SCALE[p.text]));
+  root.style.setProperty('--txt', String(Math.min(TEXT_SCALE[p.text], textCap())));
   root.classList.toggle('a11y-contrast', p.contrast);
   root.classList.toggle('a11y-calm', p.calm);
   root.classList.toggle('a11y-cb', p.cb);
@@ -103,6 +107,7 @@ export function initA11y(): void {
   if (started) return;
   started = true;
   applyPrefs();
+  window.addEventListener('resize', applyPrefs);
   document.body.classList.add(`dev-${device}`);
   window.addEventListener('pointerdown', (e) => setDevice(e.pointerType === 'mouse' ? 'mouse' : 'touch'), { capture: true });
   window.addEventListener('keydown', () => setDevice('key'), { capture: true });

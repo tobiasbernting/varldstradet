@@ -47,6 +47,8 @@ export function initGamepad(opts: {
   let moving = false;
   let focus: HTMLElement | null = null;
   let focusAt = { x: 0, y: 0 };
+  /** LT + Start: the focus ring walks over the HUD's own buttons (B or Start gives the controls back to play). */
+  let hudMode = false;
   let navDir = '';
   let navNext = 0;
   let last = performance.now();
@@ -110,6 +112,9 @@ export function initGamepad(opts: {
     if (root) {
       stopPlaying();
       menuFrame(root, dt, now);
+    } else if (hudMode) {
+      stopPlaying();
+      menuFrame(ui.querySelector<HTMLElement>('.hud') ?? ui, dt, now);
     } else {
       setFocus(null);
       playFrame();
@@ -149,6 +154,10 @@ export function initGamepad(opts: {
     // (in a fight up on the d-pad is the explain mode, see below; emotes are in the HUD)
     if (hit(B.Up) && !fightMode()) menus.toggle('emotes');
     if (hit(B.Down)) hud.minimap.toggle();
+    if (hit(B.Start) && down(B.LT)) {
+      hudMode = true;
+      return;
+    }
     if (hit(B.Start)) menus.toggle('help');
     // the pet in or out: the right stick (in a fight that is the explain mode, so there it is LT held + the right stick)
     if (hit(B.R3) && (!fightMode() || down(B.LT))) petToggle();
@@ -232,7 +241,10 @@ export function initGamepad(opts: {
     const open = windows.find((w) => w.isOpen());
     if (hit(B.B) || hit(B.Start)) {
       if (open) open.close();
-      else root.querySelector<HTMLElement>('button.alt')?.click(); // the picker's "back"
+      else if (hudMode) {
+        hudMode = false;
+        setFocus(null);
+      } else root.querySelector<HTMLElement>('button.alt')?.click(); // the picker's "back"
     }
     if ((hit(B.Y) || hit(B.Back)) && open === menus) menus.close();
   }

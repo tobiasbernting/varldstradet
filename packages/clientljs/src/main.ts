@@ -129,6 +129,8 @@ bus.on('connection', (s) => {
 window.addEventListener('keydown', (e) => {
   if (!started) return;
   if (e.target instanceof HTMLInputElement) return;
+  // Enter and Space on a focused button press that button (they must not open the chat or use the thing in front of you)
+  if ((e.key === 'Enter' || e.key === ' ') && e.target instanceof HTMLElement && e.target.closest('button, [role=button]')) return;
   // in a dungeon 1–5 are spells and a potion and Tab picks a monster; the saga's windows take their keys
   if (run.key(e)) return;
   if (saga.key(e)) return;
