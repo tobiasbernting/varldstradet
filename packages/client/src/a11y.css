@@ -680,3 +680,36 @@ button.pick:disabled {
     display: none;
   }
 }
+
+/* the loot window with looks, pet gear and a trophy: two columns, and the OK button always in view, so every "Ta på" is a tap away */
+.saga-panel.loot {
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+}
+.saga-panel.loot .body {
+  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.saga-loot:has(.loot-look) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr));
+}
+.saga-panel.loot:has(.loot-look) {
+  width: min(96vw, 780px);
+}
+.saga-loot .loot-look canvas {
+  width: 88px;
+  height: 88px;
+  max-width: none;
+}
+.saga-panel.loot .q-act {
+  position: sticky;
+  bottom: 0;
+  background: #1c1624;
+  padding: 8px 0 0;
+  margin-top: 8px;
+  z-index: 2;
+}
