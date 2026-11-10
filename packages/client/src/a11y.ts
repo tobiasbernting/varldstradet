@@ -4,6 +4,8 @@
 // announced with a 'vt:prefs' event for the parts that draw by themselves (the world's telegraphs and the camera).
 // The effects setting (sparks, smoke) lives in fxprefs.ts and is shown in the same window.
 export type TextSize = 'normal' | 'large' | 'xlarge';
+/** How big the HUD's buttons, frames and bars are (not its text: that is the text size). */
+export type HudSize = 'small' | 'normal' | 'large';
 export type Device = 'touch' | 'mouse' | 'key' | 'pad';
 export interface Prefs {
   text: TextSize;
@@ -18,8 +20,24 @@ export interface Prefs {
   left: boolean;
   /** Read the info cards out loud when they come up. */
   read: boolean;
+  /** HUD size; null until the player chooses (then it follows the screen: see defaultHud). */
+  hud: HudSize | null;
 }
 export const TEXT_SCALE: Record<TextSize, number> = { normal: 1, large: 1.25, xlarge: 1.5 };
+/** What the HUD's size is until the player chooses: small on a phone held sideways or a small window, big only on a big touch screen, else normal. */
+export function defaultHud(): HudSize {
+  const shorter = Math.min(window.innerWidth, window.innerHeight);
+  if (shorter < 520) return 'small';
+  let touch = false;
+  try {
+    touch = matchMedia('(pointer: coarse)').matches;
+  } catch {
+    /* no matchMedia */
+  }
+  return touch && shorter >= 900 ? 'large' : 'normal';
+}
+export const HUD_SCALE: Record<HudSize, number> = { small: 0.85, normal: 1, large: 1.2 };
+export const hudSize = (): HudSize => prefs().hud ?? defaultHud();
 export const HOLD_CHOICES = [300, 450, 700] as const;
 const KEY = 'varldstradet.a11y';
 
@@ -30,7 +48,7 @@ const systemCalm = (): boolean => {
     return false;
   }
 };
-const defaults = (): Prefs => ({ text: 'normal', contrast: false, calm: systemCalm(), shake: true, cb: false, hold: 450, left: false, read: false });
+const defaults = (): Prefs => ({ text: 'normal', contrast: false, calm: systemCalm(), shake: true, cb: false, hold: 450, left: false, read: false, hud: null });
 
 let cur: Prefs | null = null;
 
@@ -42,6 +60,7 @@ function load(): Prefs {
       const o = JSON.parse(raw) as Partial<Prefs>;
       if (o.text === 'normal' || o.text === 'large' || o.text === 'xlarge') p.text = o.text;
       for (const k of ['contrast', 'calm', 'shake', 'cb', 'left', 'read'] as const) if (typeof o[k] === 'boolean') p[k] = o[k]!;
+      if (o.hud === 'small' || o.hud === 'normal' || o.hud === 'large') p.hud = o.hud;
       if (typeof o.hold === 'number' && o.hold >= 200 && o.hold <= 1500) p.hold = o.hold;
     }
   } catch {
@@ -68,6 +87,9 @@ export function applyPrefs(): void {
   root.classList.toggle('a11y-cb', p.cb);
   root.classList.toggle('a11y-left', p.left);
   root.classList.toggle('a11y-big', p.text !== 'normal');
+  const hs = hudSize();
+  root.style.setProperty('--hk', String(HUD_SCALE[hs]));
+  for (const k of ['small', 'normal', 'large'] as const) root.classList.toggle(`hud-${k}`, k === hs);
 }
 
 export function setPref<K extends keyof Prefs>(k: K, v: Prefs[K]): void {
