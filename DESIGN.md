@@ -322,8 +322,7 @@ choice is made in a window with a clock; the hired Hirdmannen gets one at random
 
 ### 4.3 The Hirdmannen and party size
 
-A run has up to **three** heroes (`RUN_PARTY_MAX`). The code has a fourth seat for a lobby with a longhouse (`longhall`), which the
-lobby cannot build, so in practice it is three (see section 12).
+A run has up to **four** heroes (`RUN_PARTY_MAX`; there is no longhouse unlock any more). The bot tests play parties of one to four.
 
 A small party is never alone. The **Hirdmannen** is one fighter the server runs, with the careful bot's brain, in a starter set, at
 the hero level of the first human (`hireCompanion`, `companionClass`):
@@ -430,7 +429,7 @@ just before the boss. `runtune.ts` prints how many Flocks and Vilosten the route
 ### 5.6 What the bots measure
 
 The bots (`runbot.ts`, `runplay.ts`) play whole runs in memory with `applyMove`, `castSpell` and `performAction`, nothing else, so
-they find what a person at a keyboard could do. A party is made with `makeParty(classes, { style, seed, level, longhall, lane, pet })`
+they find what a person at a keyboard could do. A party is made with `makeParty(classes, { style, seed, level, lane, pet })`
 and played with `playRun`. Styles (`BotStyle`):
 
 - `careful`: walks to the next monster, uses its class the way a person would (the tank taunts and shields, the healer heals and
@@ -476,16 +475,16 @@ one node at a time, in the **sagaträd**.
 Multiplied by the level (5.7), plus the bonuses of runor and nodes (`seeds`), the +15 % of each replay modifier, and a pet that digs
 (7.4). Whole seeds are paid and the remainder is carried to the next payment.
 
-The tree has 19 nodes in three branches, 502 sagafrön in all (`SEED_TREE`). A node needs its parent. The shoot grows
+The tree has 16 nodes in three branches, 437 sagafrön in all (`SEED_TREE`). A node needs its parent. The shoot grows
 visibly from the whole family's planted nodes: stages at 0, 3, 8, 14 and 24 nodes (`TREE_STAGES`).
 
 | Branch | Node (id, cost): effect |
 | --- | --- |
 | Hjälten | Starkare skott (`h1`, 10): spells +3 % · Tjockare skinn (`h2`, 12): health +5 % · Segerviljan (`h3`, 20): crits +4 % · Hård hud (`h4`, 25): armor +3 % · Heltens ande (`h5`, 30): healing potions heal 10 % more · Evig låga (`h6`, 45): cooldowns 4 % faster · Runlycka (`h7`, 40): rarer runa cards |
 | Gemenskapen | Starkare band (`g1`, 10): rest stones heal 25 % faster · Mjukt uppvaknande (`g2`, 15): fallen get up 20 % faster · Omval (`g3`, 30): one card reroll per run · Delad glädje (`g4`, 25): healing +8 % · Hirdens lön (`g5`, 35): the Hirdmannen is 20 % stronger · Frögåva (`g6`, 40): sagafrön +10 % |
-| Gården | Större matsäck (`f1`, 15) · Gyllene skörd (`f2`, 20) · Djurens vänskap (`f3`, 30) · Extra flaskor (`f4`, 15): one more potion at the start · Rikare kistor (`f5`, 35): coins from chests +25 % · Världsträdets rot (`f6`, 50): the boss gives 5 sagafrön more to the one who planted it |
+| Gården | Extra flaskor (`f4`, 15): one more potion at the start · Rikare kistor (`f5`, 35): coins from chests +25 % · Världsträdets rot (`f6`, 50): the boss gives 5 sagafrön more to the one who planted it |
 
-The tree adds breadth and small numbers; no node makes the run trivial. (`f1` to `f3` act on dishes and farm animals, see section 12.)
+The tree adds breadth and small numbers; no node makes the run trivial.
 
 ## 7. The lobby, houses, cosmetics and pets
 
@@ -512,7 +511,7 @@ The lobby map (`M`) shows where everyone stands.
 ### 7.2 Houses
 
 Every character has a house, a small map of its own (`house:<player id>`, made the first time anyone goes in, saved with the
-other maps): a longhouse of wooden walls with a hearth and a starter set (bed, table, chair, lamp). The owner decorates it: tap a
+other maps): a hall of wooden walls with a hearth and a starter set (bed, table, chair, lamp). The owner decorates it: tap a
 piece to pick it up into the bag (it is selected, so a tap on the floor puts it down), tap the floor to place one. A visitor
 may walk and look but not move anything. What stands in a house:
 
@@ -699,7 +698,7 @@ Code: `access.ts` (rules and state), `http.ts` (routes, cookies, the WebSocket u
   may play (access control).
 - **Maps.** Everything is a `WorldState` with an `area` key: the lobby, `house:<id>`, and a run's stops (`saga:<run>z<node>`). Changes
   carry the area they belong to.
-- **Persistence.** Postgres through Drizzle (`db/schema.ts`; migrations in `packages/server/drizzle`, applied on boot). The world row (day,
+- **Persistence.** Postgres through Drizzle (`db/schema.ts`; one initial migration in `packages/server/drizzle`, applied on boot). The world row (day,
   family best times), the lobby's objects, each player as one JSON record (`PlayerState`: class and saga progress, hero experience, looks,
   pets and pet gear, run save with sagafrön and the tree, titles, trophies, wardrobe), the other maps (houses), and the access tables
   (devices, join codes, log, settings). `MemoryStore` is the same interface without a database. A **run is never saved**: it lives in
@@ -712,12 +711,7 @@ Code: `access.ts` (rules and state), `http.ts` (routes, cookies, the WebSocket u
 
 ## 12. Known gaps and open questions
 
-- **Four seats are not real.** `RUN_PARTY_MAX` is 3; a fourth place exists only for a lobby that has a longhouse (`RUN_PARTY_MAX_LONGHALL`), and the
-  lobby cannot build one. Decide whether four should be free for everyone (the bot tests already play four-hero parties).
 - **One run at a time per server.** A second party waits (`RUN_T.already`). Fine for one family; a household with two groups needs more.
-- **Farm leftovers in the run.** Dishes ("färdkost" from the old cooking), farm animals and old buildings still add bonuses through
-  `farmEffect`, and the sagaträd branch Gården (`f1` to `f3`) acts on them. The lobby cannot produce any of it, so for a new character those
-  nodes do nothing. Replace or remove them.
 - **Four särdrag.** More would need new ground effects in the fight sim (a periodic circle under each player, orbs to pop, a slow that
   stacks, a puddle where monsters fall).
 - **Pack roles.** Packs are drawn from the dungeon's three species. Monsters pick targets by threat (the tank's spells make more, Utmana!

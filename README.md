@@ -97,9 +97,6 @@ the game, `/api` and the WebSocket refuse browsers without an approved device co
 - Cookies are `HttpOnly` and `SameSite=Strict`, forms and the WebSocket check the origin, the Content-Security-Policy is
   strict, and `/health` reveals nothing when access control is on.
 
-The same device token is accepted as an `Authorization: Bearer` header on `/api/*` and the game socket, for bots and
-tests that have no cookie jar. The parent page stays cookie-only.
-
 ## Dev helpers
 
 With `DEV_TELEPORT=1` the server accepts `dev` messages over the game socket. From the browser console of a running
@@ -116,6 +113,7 @@ client: `lillaGarden.net.send({ t: 'dev', a: 'warp', x: 20, y: 20 })`. Without t
 | `{ a: 'trophy', id, level }` | Win the trophy of boss `id` at difficulty `level` (0 to 4). |
 | `{ a: 'looks', set?, tier?, ways?, cls? }` | Every piece of a set (all sets if left out) at shine tier 1 to 5, with colourways, titles and the signature weapons. |
 | `{ a: 'decor' }` | One of every Norse decor piece, a gear stand and some gear, into the bag. |
+| `{ a: 'level', n }` | Set the hero level of your character to `n`. |
 | `{ a: 'pet', id }` | Give a pet kind, or `all`. |
 | `{ a: 'petgear', tier?, set? }` | Pet gear at a tier, and put the first piece of each anchor on the active pet. |
 | `{ a: 'petscare' }` | Scare your pet now, to see the state and the way back. |
@@ -137,10 +135,8 @@ pnpm test            # vitest in every package
 - **Tuning script**: `node --experimental-transform-types packages/shared/src/runtune.ts --level 2 --style clumsy --seeds 20`
   prints wins, wipes, Sagoandar used and minutes per party. Other options are `--dungeon`, `--parties solo|duo|pair|all`,
   `--lane safe|random`, `--limit` (minutes) and `--from` (first seed); the file's header lists them.
-- **Server tests** include `readme.test.ts`, which checks that every image the README links to exists. Some tests need a
-  real Postgres (`importSave.pg.test.ts`); they run when `TEST_DATABASE_URL` points at a server where scratch databases
-  may be created, e.g. `TEST_DATABASE_URL=postgres://postgres@localhost:5435/postgres pnpm test`, and are skipped
-  otherwise. CI (`.github/workflows/server.yml`) runs typecheck, tests and the client build against a Postgres service.
+- **Server tests** include `readme.test.ts`, which checks that every image the README links to exists. They use in-memory
+  stores and need no database. CI (`.github/workflows/server.yml`) runs typecheck, tests and the client build.
 - **Accessibility audit** (not part of `pnpm test`; it needs a running server and Playwright, which is not a dependency):
   `node packages/client/scripts/a11y-audit.cjs --url http://localhost:8110/`. It plays to each screen at four viewports
   and measures target size, gaps, font size and contrast against the numbers in DESIGN.md section 9.
@@ -162,7 +158,3 @@ Without Docker: `pnpm build` (builds the server bundle and the client), then
 The owner's homelab runs the image as a LAN instance, deployed by an Ansible role that lives in another repository. Keep
 the container interface (port, environment variables, `/health`, migrations on boot) compatible with it. The database is
 the world: dump it with `pg_dump` for backups.
-
-A save from the older browser game `tobiasbernting/lilla-garden` can be imported into a new, empty database with
-`pnpm --filter @lilla-garden/server import-save <dump.sql|postgres://source> --target postgres://… [--dry-run]`; the usage
-text is in `packages/server/src/importSaveCli.ts`. Devices and join codes do not come over: make new codes on `/admin`.
