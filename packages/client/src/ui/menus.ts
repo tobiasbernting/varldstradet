@@ -162,7 +162,8 @@ export class Menus {
     if (kind === 'nameAnimal') this.animalId = id ?? null;
     this.modal = h('div', { class: 'modal' });
     this.modal.addEventListener('pointerdown', (e) => {
-      if (e.target === this.modal) this.close();
+      // only the plain windows close on a tap beside them (the wardrobe, kennel, houses, naming and talking hold choices)
+      if (e.target === this.modal && (this.kind === 'inventory' || this.kind === 'emotes' || this.kind === 'help')) this.close();
     });
     this.ui.append(this.modal);
     this.rerender();
@@ -255,7 +256,7 @@ export class Menus {
   }
 
   private searchInput(): HTMLInputElement {
-    const input = h('input', { type: 'text', class: 'search', placeholder: T.search, value: this.query, maxlength: '20', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search' });
+    const input = h('input', { type: 'text', class: 'search', placeholder: T.search, 'aria-label': T.search, value: this.query, maxlength: '20', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search' });
     // keep the game's and the global shortcuts' hands off typed characters (same as renderName).
     // keyup must still reach the game, or a key held while clicking here would never be released.
     input.addEventListener('keydown', (e) => {

@@ -27,7 +27,7 @@ export function announce(text: string, urgent = false): void {
 const emojiOnly = (s: string): boolean => /^[\p{Extended_Pictographic}\p{Emoji_Presentation}\s️‍\d]+$/u.test(s);
 
 /** Elements that are clicked with a finger or a mouse but are not buttons: made reachable and usable from the keyboard. */
-const PSEUDO = '.round, .chip.level, .slot, .saga-member, .swatch, .picker .card, .tnode';
+const PSEUDO = '.round, .chip.level, .slot, .saga-member, .saga-pet, .swatch, .picker .card, .tnode';
 
 function makeButton(el: HTMLElement): void {
   if (el.matches('button, a[href], input, select, textarea') || el.dataset.a11y) return;

@@ -524,5 +524,8 @@ button.chip {
   color: #ffe9a8;
 }
 .run-bar {
-  margin-top: 8px;
+  margin-top: 16px;
+}
+.saga-pet {
+  min-height: var(--tap);
 }

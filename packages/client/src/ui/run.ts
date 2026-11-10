@@ -463,7 +463,8 @@ export class RunUi {
     }
     this.modal = h('div', { class: `modal run-modal ${win}` });
     this.modal.addEventListener('pointerdown', (e) => {
-      if (e.target === this.modal) this.close();
+      // a stray tap beside a window that holds choices must not dismiss it: only the read-only ones close this way
+      if (e.target === this.modal && (this.win === 'map' || this.win === 'runor')) this.close();
     });
     this.ui.append(this.modal);
     this.render();

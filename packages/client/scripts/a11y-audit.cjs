@@ -129,8 +129,10 @@ async function scenarios(browser, v, res) {
     await shut();
   }
   // the settings window, when there is one
-  const sb = await page.$('[data-open="settings"]');
-  if (sb) { await sb.click(); await page.waitForTimeout(400); await tag(page, 'settings'); await shut(); }
+  await page.evaluate(() => document.dispatchEvent(new Event('lilla:settings')));
+  await page.waitForTimeout(400);
+  if (await page.$('.settings-panel')) await tag(page, 'settings'); else console.log('no settings window');
+  await shut();
   // the class window
   await page.evaluate(() => window.lillaGarden.bus.emit('open', { ui: 'sagaClass' }));
   await page.waitForTimeout(500);

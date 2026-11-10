@@ -1047,7 +1047,8 @@ export class SagaUi {
     if (win === 'class') this.pickCls = readProgress(myPlayer()).cls ?? null;
     this.modal = h('div', { class: 'modal saga-modal' });
     this.modal.addEventListener('pointerdown', (e) => {
-      if (e.target === this.modal && this.win !== 'loot') this.close();
+      // (only the journal is read-only: the class stone, Völvan, the family list and the wardrobe hold choices)
+      if (e.target === this.modal && this.win === 'journal') this.close();
     });
     this.ui.append(this.modal);
     this.render();
