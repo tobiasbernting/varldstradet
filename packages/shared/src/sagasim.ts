@@ -2127,7 +2127,7 @@ export function ensureLevelRewards(p: PlayerState, out?: Change[]): boolean {
     } else if (addItem(p.inventory, r.item, 1) > 0) {
       out?.push(toast(p.id, fmt(T.sagaLevelBagFull, { item: itemName(r.item) })));
       continue;
-    } else out?.push(toast(p.id, fmt(T.sagaLevelToBag, { item: itemName(r.item) })));
+    } else out?.push(toast(p.id, fmt(ITEMS[r.item]?.category === 'placeable' ? T.sagaLevelToHouse : T.sagaLevelToBag, { item: itemName(r.item) })));
     prog.found.push(r.item);
     changed = true;
   }

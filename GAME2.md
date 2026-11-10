@@ -765,8 +765,13 @@ every gate opens) is kept and extended with "every route has a Vilosten and a K√
 
 ## 9. Looks: cool gear that is only for show (built)
 
-Gear gives no power: damage, healing, health and armor come from the class, the hero level (+1.5 % per level) and a flat base
-(`BASE_POWER/ARMOR/HP` in saga.ts, what the starter set used to give, so the bot tables of 5.6 did not move). The forge's levels and the
+Gear gives no power, and neither do hero levels: damage, healing, health and armor come from the class and a flat base
+(`BASE_POWER/ARMOR/HP` in saga.ts, what the starter set used to give, times `FLAT_LEVEL_MUL`, what a level-3 hero used to get: the one
+place the baseline lives, so the bot tables of 5.6 did not move). A level-1 and a level-20 hero of a class fight identically and all
+four spells are there from level 1, so a friend's new character is as strong as a veteran's. Levels (1-20, experience from monsters)
+stay as a harmless sign of play, shown on the HUD and the parent page; each gives only something cosmetic (`LEVEL_REWARDS`): a
+colourful piece of clothing or an amulet, a title, the husdjur Lyktf√©n, a soft glow (10, 20) or a piece of Norse decor for the house
+(levels 11, 14, 15: ljusstake, vikingabaner, Yggdrasilsplanta). The old riding Ljushjorten (a speed boost) is no longer a reward. The forge's levels and the
 chest's weapons/shields/amulets are gone. Instead (`shared/src/looks.ts`, art in `packages/art/src/looks.ts`, effects in
 `packages/clientljs/src/looksfx.ts`, window in `packages/client/src/ui/looks.ts`):
 
