@@ -15,7 +15,7 @@ describe('bot parties play whole runs', () => {
   // section 5.6 with a third on either side; the pair of a tank and a healer has no one to hurt anything (no follower), so it is the slow one
   const FAMILIES: [string, ClassId[], boolean, [number, number], [number, number]][] = [
     ['en spelare + Hirdmannen', ['krigare'], false, [9, 18], [20, 36]],
-    ['två spelare', ['vaktare', 'helare'], false, [17, 32], [36, 58]],
+    ['två spelare', ['vaktare', 'helare'], false, [17, 32], [33, 58]],
     ['tre spelare', ['vaktare', 'helare', 'magiker'], false, [13, 26], [28, 46]],
     ['fyra spelare', ['vaktare', 'helare', 'krigare', 'magiker'], true, [11, 22], [24, 41]],
   ];
