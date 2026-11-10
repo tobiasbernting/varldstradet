@@ -20,6 +20,7 @@ import {
   isRunKey,
   type RunLevel,
   RUN_PARTY_MAX,
+  EVENT_NAMES,
   RUN_T,
   RUN_UI,
   SEED_TREE,
@@ -55,6 +56,7 @@ import { lookSummary } from './looks.ts';
 import { portraitUrl } from '@art/textures.ts';
 import { net } from '../net.ts';
 import { KIND_COLOR, KIND_ICON, myRun, offerLeft, pickLeft, routeLeft, runClient, runElapsed } from '../run.ts';
+import { renderEventWindow, renderShopWindow } from './runshop.ts';
 import { pathIcon, pathName, pathTimeText, renderHoldWindow, renderOfferWindow, renderPathWindow, renderRestWindow } from './runpick.ts';
 import { SFX } from '../sound.ts';
 import { bus, client, myPlayer } from '../state.ts';
@@ -78,7 +80,7 @@ const BRANCH_ICON: Record<string, string> = { hjalte: '⚔️', gemenskap: '🤝
 const BRANCHES = ['hjalte', 'gemenskap', 'gard'] as const;
 const ROWS = 10;
 
-type Win = 'fard' | 'offer' | 'path' | 'rest' | 'map' | 'tree' | 'summary' | 'runor' | 'leave';
+type Win = 'fard' | 'offer' | 'path' | 'rest' | 'shop' | 'event' | 'map' | 'tree' | 'summary' | 'runor' | 'leave';
 
 const NS = 'http://www.w3.org/2000/svg';
 function svg<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number> = {}, text?: string): SVGElementTagNameMap[K] {
@@ -146,6 +148,8 @@ export class RunUi {
   private cardsBtn = h('button', { class: 'run-cards-btn' });
   private runorStrip = h('button', { class: 'run-runor', 'aria-label': RUN_UI.runorHeld });
   private note = h('div', { class: 'run-note' });
+  private seenStop = '';
+  private reopenWin: Win = 'offer';
   private offerBars: { fill: HTMLElement; text: HTMLElement } | null = null;
 
   // explaining things, focus and the screen reader
@@ -168,7 +172,7 @@ export class RunUi {
     this.infoEl.hidden = true;
     ui.append(this.infoEl);
     onTap(this.infoEl, () => this.hideInfo());
-    this.tap(this.cardsBtn, () => this.open('offer'));
+    this.tap(this.cardsBtn, () => this.open(this.reopenWin));
     this.tap(this.runorStrip, () => this.open('runor'));
     this.info(this.runorStrip, '🎴', RUN_UI.runorHeld, RUN_UI.infoRunor);
     this.setupInfo();
@@ -364,12 +368,13 @@ export class RunUi {
         this.leaving = false;
       }
       if (!run && was && !this.gotEnded && this.leaving) setTimeout(() => this.leaveSummary(), 600);
-      if (!run && this.win && ['offer', 'path', 'rest', 'map', 'runor', 'leave'].includes(this.win)) this.close(true);
+      if (!run && this.win && ['offer', 'path', 'rest', 'shop', 'event', 'map', 'runor', 'leave'].includes(this.win)) this.close(true);
       // everyone chooses a path after the Mellanboss: the window opens by itself and goes when the choosing is over
       if (run?.phase === 'path' && this.win !== 'path') this.open('path');
       else if (this.win === 'path' && run?.phase !== 'path') this.close(true);
       else if (this.win === 'path') this.render();
-      if (this.win === 'fard' || this.win === 'map') this.render();
+      this.autoOpen(run);
+      if (this.win === 'fard' || this.win === 'map' || this.win === 'shop' || this.win === 'rest') this.render();
       this.sync();
     } else if (c.ev === 'offer') {
       const o = runClient.offer;
@@ -411,10 +416,13 @@ export class RunUi {
     this.renderVote(run);
     this.renderRunor(run);
     const offer = runClient.offer;
-    this.cardsBtn.hidden = !(offer && run.phase === 'pick' && this.win !== 'offer');
-    if (!this.cardsBtn.hidden) {
+    // one button brings back the window the stop is about: my cards, the Vilosten's choice or the Köpman
+    const reopen: { win: Win; label: string } | null = offer && run.phase === 'pick' && this.win !== 'offer' ? { win: 'offer', label: `🎴 ${RUN_UI.cardsReopen}` } : run.shop && run.kind === 'shop' && this.win !== 'shop' && run.phase !== 'pick' ? { win: 'shop', label: `🪙 ${RUN_UI.shopOpen}` } : (run.restChoice ?? []).includes(client.me) && this.win !== 'rest' && run.phase !== 'pick' ? { win: 'rest', label: `💚 ${RUN_UI.restReopen}` } : null;
+    this.reopenWin = reopen?.win ?? 'offer';
+    this.cardsBtn.hidden = !reopen;
+    if (reopen) {
       clear(this.cardsBtn);
-      this.cardsBtn.append(`🎴 ${RUN_UI.cardsReopen}`);
+      this.cardsBtn.append(reopen.label);
     }
     this.note.hidden = run.phase !== 'victory';
     this.note.textContent = run.phase === 'victory' ? `🏆 ${RUN_UI.victory}` : '';
@@ -444,6 +452,7 @@ export class RunUi {
       return this.info(el, i.icon, i.name, i.text);
     };
     const spirit = chip('spirit', `🌟 ${run.spirit}`, `${RUN_UI.spirits}: ${run.spirit}`, { icon: '🌟', name: RUN_UI.spirits, text: RUN_UI.infoSpirit });
+    const purse = chip('purse', `🪙 ${run.purse}`, `${RUN_UI.purse}: ${run.purse}`, { icon: '🪙', name: RUN_UI.purse, text: RUN_UI.infoPurse });
     const seeds = chip('seeds', `🌱 ${mine}`, `${RUN_UI.seeds}: ${mine}`, { icon: '🌱', name: RUN_UI.seeds, text: RUN_UI.infoSeeds });
     const myPath = run.paths[client.me];
     const pathChip = myPath ? chip('path', `${pathIcon(myPath)} ${pathName(myPath)}`, `${RUN_UI.pathMine}: ${pathName(myPath)}`, { icon: pathIcon(myPath), name: `${RUN_UI.pathMine}: ${pathName(myPath)}`, text: PATH_TEXT[myPath] ?? '' }) : null;
@@ -469,7 +478,7 @@ export class RunUi {
     this.tap(home, () => this.open('leave'));
     this.info(home, '🚪', RUN_UI.home, RUN_UI.infoHome);
     const affixes = run.modifiers.filter((m) => AFFIX_IDS.includes(m)).map((m) => chip('affix', `${ico(MODIFIER_ICON[m])} ${MODIFIER_NAMES[m] ?? m}`, MODIFIER_NAMES[m] ?? m, { icon: ico(MODIFIER_ICON[m]), name: MODIFIER_NAMES[m] ?? m, text: MODIFIER_TEXT[m] ?? '' }));
-    this.bar.append(h('div', { class: 'line1' }, stop, level, pathChip, ...affixes, clock, spirit, seeds, ask, map, home), rail, h('div', { class: 'clockbar' }, this.clockFill));
+    this.bar.append(h('div', { class: 'line1' }, stop, level, pathChip, ...affixes, clock, spirit, purse, seeds, ask, map, home), rail, h('div', { class: 'clockbar' }, this.clockFill));
     this.tickClock(run);
   }
 
@@ -530,6 +539,11 @@ export class RunUi {
       this.offerBars.fill.style.width = `${Math.min(100, (left / runPickMs(myRun()?.level ?? 2)) * 100)}%`;
       this.offerBars.text.textContent = pathTimeText(left);
     }
+    if (this.win === 'event' && this.offerBars) {
+      const left = Math.max(0, (myRun()?.event?.left ?? 0) - (performance.now() - runClient.runAt));
+      this.offerBars.fill.style.width = `${Math.min(100, (left / runPickMs(myRun()?.level ?? 2)) * 100)}%`;
+      this.offerBars.text.textContent = pathTimeText(left);
+    }
     if (this.win === 'offer' && this.offerBars) {
       const o = runClient.offer;
       const left = offerLeft();
@@ -567,7 +581,7 @@ export class RunUi {
   /** Closes the window. The cards of a runa cannot be closed by a tap beside them (only `force`, when the vote is over). */
   close(force = false): void {
     if (!this.modal) return;
-    if ((this.win === 'offer' || this.win === 'path') && !force) return;
+    if ((this.win === 'offer' || this.win === 'path' || this.win === 'event') && !force) return;
     this.modal.remove();
     this.modal = null;
     this.win = null;
@@ -605,6 +619,8 @@ export class RunUi {
       offer: `🎴 ${RUN_UI.cardsTitle}`,
       path: `✨ ${RUN_UI.pathTitle}`,
       rest: `💚 ${STOP_NAMES.rest}`,
+      shop: `🪙 ${RUN_UI.shopTitle}`,
+      event: `❓ ${EVENT_NAMES[myRun()?.event?.id ?? ''] ?? RUN_UI.eventTitle}`,
       map: `🗺️ ${RUN_UI.route}`,
       tree: `🌳 ${RUN_UI.treeTitle}`,
       summary: `📜 ${RUN_UI.summary}`,
@@ -613,8 +629,8 @@ export class RunUi {
     };
     const foot = h('div', { class: 'foot' });
     panel.setAttribute('aria-label', titles[this.win]);
-    const canExplain = ['fard', 'map', 'tree', 'runor', 'path', 'offer', 'rest'].includes(this.win);
-    panel.append(h('h2', null, titles[this.win], h('span', { class: 'spacer' }), canExplain ? explain : null, this.win === 'offer' || this.win === 'path' ? null : closeBtn), ...(this.infoMode && canExplain ? [h('div', { class: 'explain-hint' }, RUN_UI.explainOn)] : []), body, foot);
+    const canExplain = ['fard', 'map', 'tree', 'runor', 'path', 'offer', 'rest', 'shop', 'event'].includes(this.win);
+    panel.append(h('h2', null, titles[this.win], h('span', { class: 'spacer' }), canExplain ? explain : null, this.win === 'offer' || this.win === 'path' || this.win === 'event' ? null : closeBtn), ...(this.infoMode && canExplain ? [h('div', { class: 'explain-hint' }, RUN_UI.explainOn)] : []), body, foot);
     this.modal.append(panel);
     switch (this.win) {
       case 'fard':
@@ -632,6 +648,17 @@ export class RunUi {
       case 'rest':
         this.renderRest(body);
         break;
+      case 'shop': {
+        const run = myRun();
+        if (run) renderShopWindow({ tap: (el, fn) => this.tap(el, fn), info: (el, i, n, t) => this.info(el, i, n, t) }, body, run, client.me, { buy: (item, slot, id) => this.buy(item, slot, id) });
+        break;
+      }
+      case 'event': {
+        const run = myRun();
+        if (run) this.offerBars = renderEventWindow({ tap: (el, fn) => this.tap(el, fn), info: (el, i, n, t) => this.info(el, i, n, t) }, body, run, client.me, (i) => this.voteEvent(i));
+        this.tick();
+        break;
+      }
       case 'map':
         this.renderMap(body);
         break;
@@ -875,6 +902,36 @@ export class RunUi {
     SFX.talk();
   }
 
+  private buy(item: 'runa' | 'party' | 'potion' | 'spirit' | 'sharpen', slot?: number, id?: string): void {
+    net.send({ t: 'run', a: 'buy', item, ...(slot !== undefined ? { slot } : {}), ...(id !== undefined ? { id } : {}) });
+    SFX.talk();
+  }
+
+  private voteEvent(choice: number): void {
+    net.send({ t: 'run', a: 'event', choice });
+    SFX.talk();
+  }
+
+  /** The windows that open by themselves: the path, a Händelse, and once for each stop the Köpman's camp and a Vilosten's choice. */
+  private autoOpen(run: RunSnap | null): void {
+    if (!run) return;
+    if (run.phase === 'event') {
+      if (this.win !== 'event') this.open('event');
+      else this.render();
+      return;
+    }
+    if (this.win === 'event') this.close(true);
+    const key = `${run.id}:${run.node}`;
+    const mineRest = (run.restChoice ?? []).includes(client.me);
+    if (run.shop && run.kind === 'shop' && this.seenStop !== `shop:${key}` && (!this.win || this.win === 'map')) {
+      this.seenStop = `shop:${key}`;
+      this.open('shop');
+    } else if (mineRest && this.seenStop !== `rest:${key}` && !this.win) {
+      this.seenStop = `rest:${key}`;
+      this.open('rest');
+    } else if (this.win === 'rest' && !mineRest) this.render();
+  }
+
   private choosePath(id: string): void {
     if (myRun()?.paths[client.me]) return;
     net.send({ t: 'run', a: 'path', id });
@@ -928,7 +985,7 @@ export class RunUi {
     for (let r = 1; r <= ROWS; r++) s.append(svg('text', { x: 20 + (r - 1) * colW, y: 14, 'text-anchor': 'middle', class: 'rownum' }, String(r)));
     body.append(h('p', { class: 'intro' }, RUN_UI.mapHint), h('div', { class: 'route-wrap' }, s));
     const legend = h('div', { class: 'legend' });
-    for (const k of ['flock', 'rest', 'mini', 'boss'] as NodeKind[]) {
+    for (const k of ['flock', 'elite', 'treasure', 'event', 'shop', 'rest', 'mini', 'boss'] as NodeKind[]) {
       const b = h('button', { class: 'alt legend-btn' }, `${KIND_ICON[k]} ${STOP_WORDS[k]}`);
       this.tap(b, () => this.showInfo(b));
       legend.append(this.info(b, KIND_ICON[k], STOP_NAMES[k] ?? '', RUN_UI.kinds[k] ?? ''));

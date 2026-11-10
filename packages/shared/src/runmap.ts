@@ -96,8 +96,8 @@ export function generateRoute(seed: number, opts: { dungeon: DungeonId; level: R
       kinds.forEach((k, lane) => {
         if (k !== 'flock') return;
         const roll = rnd() * 100;
-        const elite = row >= 3 && !isEasy(opts.level);
-        const wanted: NodeKind = roll < 18 ? 'event' : roll < 28 ? 'treasure' : roll < 40 && elite ? 'elite' : roll < 47 ? 'shop' : 'flock';
+        const elite = row >= 3;
+        const wanted: NodeKind = roll < 18 ? 'event' : roll < 28 ? 'treasure' : roll < 40 ? (elite ? 'elite' : 'flock') : roll < 47 ? 'shop' : 'flock';
         // never two Händelser in one row, and one lane of every row is a plain fight (the party can always choose to fight, and a row is never all surprises)
         if (wanted === 'event' && kinds.includes('event')) return;
         kinds[lane] = wanted;
@@ -105,6 +105,8 @@ export function generateRoute(seed: number, opts: { dungeon: DungeonId; level: R
     // (one roll for the fix, used or not, so the map does not depend on the level)
     const fixAt = rnd();
     if (!SINGLE_ROWS.has(row) && !kinds.some((k) => k === 'flock' || k === 'rest')) kinds[Math.floor(fixAt * lanes)] = 'flock';
+    // (the two easiest levels have no Stark vakt: it is a plain Flock there, after everything else has been decided)
+    if (isEasy(opts.level)) kinds.forEach((k, i) => { if (k === 'elite') kinds[i] = 'flock'; });
     rows.push(kinds.map((kind, lane) => ({ id: id++, row, lane, lanes, kind, next: [] })));
   }
   // a Köpman on every route, in each of the first two wings (rows 2-4 and 6-8): the party can spend what it earns
@@ -113,8 +115,10 @@ export function generateRoute(seed: number, opts: { dungeon: DungeonId; level: R
     const pickAt = rnd();
     if (inWing.some((n) => n.kind === 'shop')) continue;
     // a surprise lane makes way for it; else a fight lane in a row that keeps another fight or a Vilosten
-    const surprise = inWing.filter((n) => n.kind === 'event' || n.kind === 'treasure' || n.kind === 'elite');
-    const free = inWing.filter((n) => n.kind === 'flock' && rows[n.row - 1]!.filter((m) => m.kind === 'flock' || m.kind === 'rest').length >= 2);
+    // (a Stark vakt counts as a Flock here, so the map is the same on every level)
+    const fight = (k: NodeKind): boolean => k === 'flock' || k === 'elite';
+    const surprise = inWing.filter((n) => n.kind === 'event' || n.kind === 'treasure');
+    const free = inWing.filter((n) => fight(n.kind) && rows[n.row - 1]!.filter((m) => fight(m.kind) || m.kind === 'rest').length >= 2);
     const from = surprise.length ? surprise : free;
     from[Math.floor(pickAt * from.length)]!.kind = 'shop';
   }
