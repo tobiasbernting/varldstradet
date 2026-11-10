@@ -402,3 +402,10 @@
   height: 32px;
   image-rendering: pixelated;
 }
+
+/* the Djur tab: the animal as it looks now, drawn big and crisp */
+.looks .pet-pic {
+  image-rendering: pixelated;
+  display: block;
+  margin: 0 auto;
+}

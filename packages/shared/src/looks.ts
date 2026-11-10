@@ -7,6 +7,7 @@ import type { PlayerState } from './types.ts';
 import { CLASS_IDS, DUNGEONS, DUNGEON_IDS, newSagaProgress } from './saga.ts';
 import { LOOK_TEXT, LOOK_TIER_NAMES, LOOK_TITLE_TEXT, fmt } from './sv.ts';
 import type { Change } from './protocol.ts';
+import type { PetAnchor } from './pets.ts';
 import { playerChange } from './sim.ts';
 import { mulberry32 } from './rng.ts';
 
@@ -106,6 +107,8 @@ export interface LookPiece {
   text: string;
   /** Weapons: the shape drawn. */
   shape?: WeaponShape;
+  /** Pet gear: the anchor of the animal it sits at (its `slot` is the hero slot with the same effect anchor: hat, amulet, cloak). */
+  petSlot?: PetAnchor;
   /** Tier 4 gives the first effect, tier 5 both. */
   fx: [FxSpec, FxSpec?];
 }
@@ -121,6 +124,8 @@ export interface LookSet {
   aura: 'ring' | 'trail';
   ways: Record<WayId, LookWay>;
   pieces: LookPiece[];
+  /** A small set of pet gear (PET_LOOK_SETS), not for heroes. */
+  pet?: true;
 }
 
 const piece = (set: string, slot: LookSlot, fx: [FxSpec, FxSpec?], shape?: WeaponShape): LookPiece => ({ id: `${set}_${slot}`, set, slot, name: LOOK_TEXT[`${set}_${slot}`]!.name, text: LOOK_TEXT[`${set}_${slot}`]!.text!, fx, ...(shape ? { shape } : {}) });
@@ -324,9 +329,48 @@ export const SIGNATURE_WEAPONS: SignatureWeapon[] = [
   sig('surtsvard', 'surt', 'sword', { main: '#d85a2a', dark: '#7a2410', light: '#ffd07a', trim: '#ffcf6a', glow: '#ff9a3a', accent: '#fff0a0' }, [F('embers', 'tip'), F('smoke', 'tip')]),
 ];
 
+// ---------------------------------------------------------------------------
+// Pet gear: the same pieces, tiers, colourways and effects, for animals. A pet piece sits at one anchor of the animal (head, neck or
+// back: pets.ts gives every kind its three points), and any pet kind can wear any piece. Each of the dungeons below has a small
+// set of two pieces, themed like the hero set of that dungeon; the colourways are the hero set's own (unlocked by the same hard clears).
+// To add a piece: one entry here, its words in LOOK_TEXT (sv.ts) and its drawing in art/src/petlooks.ts (a test checks all three).
+// ---------------------------------------------------------------------------
+
+const PET_SLOT_AS: Record<PetAnchor, LookSlot> = { head: 'hat', neck: 'amulet', back: 'cloak' };
+const petPiece = (set: string, anchor: PetAnchor, fx: [FxSpec, FxSpec?]): LookPiece => {
+  const id = `pet_${set}_${anchor}`;
+  return { id, set: `pet_${set}`, slot: PET_SLOT_AS[anchor], petSlot: anchor, name: LOOK_TEXT[id]!.name, text: LOOK_TEXT[id]!.text!, fx };
+};
+const petSet = (set: string, dungeon: DungeonId, like: string, over: Partial<LookPal>, pieces: LookPiece[]): LookSet => {
+  const hero = LOOK_SETS.find((x) => x.id === like)!;
+  return {
+    id: `pet_${set}`,
+    name: LOOK_TEXT[`pet_${set}`]!.name,
+    dungeon,
+    cls: null,
+    pal: { ...hero.pal, ...over },
+    aura: 'ring',
+    ways: { svar: { name: LOOK_TEXT[`pet_${set}`]!.svar!, pal: hero.ways.svar.pal }, extrem: { name: LOOK_TEXT[`pet_${set}`]!.extrem!, pal: hero.ways.extrem.pal } },
+    pieces,
+    pet: true,
+  };
+};
+export const PET_LOOK_SETS: LookSet[] = [
+  petSet('draug', 'draug', 'draugvakt', {}, [petPiece('draug', 'head', [F('smoke', 'head'), F('glitter', 'head')]), petPiece('draug', 'neck', [F('runepulse', 'chest'), F('glitter', 'chest')])]),
+  petSet('frost', 'frost', 'frostbrost', {}, [petPiece('frost', 'head', [F('frost', 'head'), F('glitter', 'head')]), petPiece('frost', 'back', [F('frost', 'back'), F('glitter', 'back')])]),
+  petSet('surt', 'surt', 'smedensglod', {}, [petPiece('surt', 'neck', [F('embers', 'chest'), F('runepulse', 'chest')]), petPiece('surt', 'back', [F('embers', 'back'), F('smoke', 'back')])]),
+  petSet('hel', 'hel', 'huginmunin', {}, [petPiece('hel', 'head', [F('tendrils', 'head'), F('glitter', 'head')]), petPiece('hel', 'back', [F('leaves', 'back'), F('tendrils', 'back')])]),
+  petSet('alv', 'alv', 'volvaljus', {}, [petPiece('alv', 'head', [F('leaves', 'head'), F('dripping', 'head')]), petPiece('alv', 'neck', [F('dripping', 'chest'), F('glitter', 'chest')])]),
+  petSet('fenrir', 'fenrir', 'bjornbarsark', { main: '#c83a3a', dark: '#8a1e26', light: '#ff7a6a', trim: '#e8d8a0', glow: '#ffb090' }, [petPiece('fenrir', 'neck', [F('runepulse', 'chest'), F('glitter', 'chest')]), petPiece('fenrir', 'head', [F('glitter', 'head'), F('runepulse', 'head')])]),
+];
+export const PET_LOOK_PIECES: LookPiece[] = PET_LOOK_SETS.flatMap((s) => s.pieces);
+export const isPetPiece = (id: string): boolean => PET_LOOK_PIECES.some((p) => p.id === id);
+/** The pet sets of a dungeon. */
+export const petSetsOf = (dungeon: DungeonId): LookSet[] => PET_LOOK_SETS.filter((s) => s.dungeon === dungeon);
+
 export const ALL_PIECES: LookPiece[] = [...LOOK_SETS.flatMap((s) => s.pieces), ...SIGNATURE_WEAPONS];
-const PIECE_BY_ID = new Map(ALL_PIECES.map((p) => [p.id, p]));
-const SET_BY_ID = new Map(LOOK_SETS.map((s) => [s.id, s]));
+const PIECE_BY_ID = new Map([...ALL_PIECES, ...PET_LOOK_PIECES].map((p) => [p.id, p]));
+const SET_BY_ID = new Map([...LOOK_SETS, ...PET_LOOK_SETS].map((s) => [s.id, s]));
 const SIG_BY_ID = new Map(SIGNATURE_WEAPONS.map((s) => [s.id, s]));
 export const lookPiece = (id: string): LookPiece | undefined => PIECE_BY_ID.get(id);
 export const lookSet = (id: string): LookSet | undefined => SET_BY_ID.get(id);

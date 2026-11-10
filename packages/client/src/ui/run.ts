@@ -48,7 +48,7 @@ import {
   type RunSnap,
   type TreeNode,
 } from '@lilla-garden/shared';
-import { CLASS_IDS, LOOK_T } from '@lilla-garden/shared';
+import { CLASS_IDS, LOOK_T, PETS, PET_T, activePet, ownedPetIds } from '@lilla-garden/shared';
 import { lookSummary } from './looks.ts';
 import { portraitUrl } from '@art/textures.ts';
 import { net } from '../net.ts';
@@ -565,7 +565,8 @@ export class RunUi {
 
   private archSig(): string {
     const a = atArch();
-    return `${a.near}:${a.party.map((p) => p.id).join(',')}:${a.extra.length}`;
+    const pets = a.me?.pets;
+    return `${a.near}:${a.party.map((p) => p.id).join(',')}:${a.extra.length}:${pets?.active ?? ''}:${pets?.out ? 1 : 0}:${Object.keys(pets?.owned ?? {}).join(',')}`;
   }
 
   private renderFard(body: HTMLElement): void {
@@ -678,6 +679,9 @@ export class RunUi {
     }
     body.append(spells);
 
+    // which animal comes along (pets.ts): one on a run, chosen here (or in the lobby at the kennel)
+    this.petRow(body, me);
+
     // who comes
     body.append(h('div', { class: 'sect' }, `👪 ${RUN_UI.whoComes}`));
     const classes = arch.party.map((p) => p.saga?.cls).filter((c): c is ClassId => !!c);
@@ -706,6 +710,38 @@ export class RunUi {
     body.append(h('div', { class: 'actions sticky' }, wardrobe, go));
     if (!cls) body.append(h('div', { class: 'hint' }, RUN_UI.noClass));
     else if (!arch.near) body.append(h('div', { class: 'hint' }, RUN_UI.nearGate));
+  }
+
+  /** "Vilket djur följer med?": the pets you have, one chosen; each one explains itself on the info card. */
+  private petRow(body: HTMLElement, me: PlayerState): void {
+    body.append(h('div', { class: 'sect' }, `🐾 ${PET_T.title}`));
+    const owned = ownedPetIds(me);
+    if (!owned.length) {
+      body.append(h('div', { class: 'hint' }, PET_T.noneRow));
+      return;
+    }
+    const here = activePet(me);
+    const row = h('div', { class: 'tiles pets' });
+    for (const id of owned) {
+      const d = PETS[id]!;
+      const mine = me.pets?.active === id;
+      const name = me.pets?.owned[id]?.name || d.name;
+      const roleName = PET_T[`role${d.role[0]!.toUpperCase()}${d.role.slice(1)}` as 'roleAttack'];
+      const t = h(
+        'button',
+        { class: `tile pet${mine ? ' sel' : ''}`, 'aria-pressed': String(mine), title: name },
+        h('span', { class: 'ic' }, d.emoji),
+        h('span', { class: 'nm' }, mine ? `✔ ${name}` : name),
+        h('span', { class: 'st' }, mine && !here ? PET_T.stateOut : mine ? PET_T.chosen : roleName),
+      );
+      this.info(t, d.emoji, `${name} · ${roleName} · ${PET_T.rarity[d.rarity]}`, `${d.trickText} ${d.blurb}`);
+      this.tap(t, () => {
+        net.send({ t: 'pet', a: 'pick', id });
+        SFX.talk();
+      });
+      row.append(t);
+    }
+    body.append(row);
   }
 
   private face(p: PlayerState | undefined, name: string, bot: boolean, emoji?: string): HTMLElement {

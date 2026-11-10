@@ -246,7 +246,7 @@ class InfoCards {
     });
     document.addEventListener('focusin', (e) => {
       const t = own(e.target);
-      if (t && !this.quiet && (e.target as HTMLElement).matches?.(':focus-visible') && t.closest('.modal, .hud, .run-bar, .run-vote, .run-runor, .saga-bar')) this.show(t);
+      if (t && !this.quiet && (e.target as HTMLElement).matches?.(':focus-visible') && t.closest('.modal, .hud, .run-bar, .run-vote, .run-runor, .saga-bar, .pet-toggle')) this.show(t);
     });
     document.addEventListener('focusout', (e) => {
       if (this.forEl && e.target === this.forEl) this.hide();

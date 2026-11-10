@@ -43,7 +43,7 @@ import { SettingsUi } from '@v1/ui/settings.ts';
 import { initAccess } from '@v1/ui/access.ts';
 import { initA11y, prefs } from '@v1/a11y.ts';
 import { initSound, isMuted, setMuted } from '@v1/sound.ts';
-import { Chat, SocialButtons, petCommand, weatherChip } from '@v1/ui/social.ts';
+import { Chat, SocialButtons, petCommand, petToggle, weatherChip } from '@v1/ui/social.ts';
 import { VoiceUi } from '@v1/ui/voice.ts';
 import '@v1/a11y.css';
 import { forceQuality, on } from './features.ts';
@@ -141,6 +141,7 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') menus.close();
   else if ((e.key === 'x' || e.key === 'X') && !menus.isOpen()) petCommand('stay');
   else if ((e.key === 'v' || e.key === 'V') && !menus.isOpen()) petCommand('come');
+  else if ((e.key === 'p' || e.key === 'P') && !menus.isOpen()) petToggle();
   else if (e.key === 'q' || e.key === 'Q' || e.key === 'i' || e.key === 'I' || e.key === 'Tab') {
     e.preventDefault();
     menus.toggle('inventory');

@@ -26,6 +26,8 @@ export interface LootLooks {
   titles: string[];
   dungeon: string;
   level: number;
+  /** Pet gear this clear gave (a pet was along): which pet, and the pieces. */
+  pet?: { kind: string; name: string; drops: { piece: string; tier: number; isNew: boolean }[] };
 }
 
 export type Change =
@@ -105,6 +107,11 @@ export type ClientMsg =
   | { t: 'pets'; cmd: 'stay' | 'come' }
   /** The lobby's kennel: take your first pet (free, once): a dog or a cat. */
   | { t: 'pet'; a: 'adopt'; species: string }
+  /** The pet in or out (the one button), and which of your pets comes along (not in the middle of a run). */
+  | { t: 'pet'; a: 'toggle' }
+  | { t: 'pet'; a: 'pick'; id: string }
+  /** Pet gear: put a piece on a pet kind (default: the active one) at its anchor, or take the anchor's piece off (`piece` null), or all (`all`). */
+  | { t: 'pet'; a: 'wear'; anchor?: string; piece: string | null; way?: string; kind?: string; all?: true }
   /** 2D game: a chat line to everyone. */
   | { t: 'chat'; text: string }
   /** Dungeons: cast a spell at a monster (animal id) or a friend (player id); left out, the server picks. */
@@ -168,6 +175,10 @@ export type ClientMsg =
   | { t: 'dev'; a: 'kit' }
   /** Development only (same switch): record this time (ms) as the family's best through dungeon `id`, by me alone, for a check of the journal. */
   | { t: 'dev'; a: 'sagaBest'; id: string; ms: number }
+  /** Dev: give pets (`all` or a kind), and put the test gear (a red neckerchief) on the pet or take it off. */
+  | { t: 'dev'; a: 'pet'; id: string }
+  | { t: 'dev'; a: 'petgear'; tier?: number; set?: string }
+  | { t: 'dev'; a: 'petscare' }
   | { t: 'ping' };
 
 export interface PlayerSnap {
