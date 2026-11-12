@@ -1491,3 +1491,68 @@ export const LOG_T = {
   voteSameInfo: 'De två vägarna ser likadana ut hela vägen. Välj vilken ni vill.',
   voteDiffInfo: 'Titta på bilderna efter pilen: de visar vad som kommer efter.',
 };
+
+// The dungeons' ordinary monsters in the journal (Dagboken): the heading over them, what each archetype is called, and one
+// sentence a child can read for every species (mobs.ts has the families; mobs.test.ts checks that every one has its sentence).
+export const MOB_T = {
+  journalHead: 'Monster här inne:',
+  archetype: { swarmer: 'Snabb', brute: 'Stark', shooter: 'Skjuter' } as Record<string, string>,
+};
+export const MOB_TEXT: Record<string, string> = {
+  // Draugkryptan
+  gravrotta: 'En rund råtta som bor bland gravarna och nafsar efter tår.',
+  draugbage: 'Ett skelett med huva som skjuter pilar på långt håll.',
+  skelett: 'Ett skelett med svärd och sköld som skramlar när det går.',
+  fladdermoss: 'Tre små fladdermöss som alltid flyger tillsammans.',
+  gravljus: 'En liten låga med ögon som svävar över gravarna och spottar gnistor.',
+  rostdraug: 'En draug i rostig hjälm som gömmer sig bakom sin runda sköld.',
+  // Frostjättens borg
+  isvarg: 'En varg med päls av rimfrost och istappar på ryggen.',
+  isande: 'En liten ande av is som kastar kyla så att du går saktare.',
+  frosttroll: 'Ett stort blått troll med en klubba av is.',
+  snouggla: 'En vit uggla med stora gula ögon som dyker ner utan ett ljud.',
+  jatteunge: 'Frostjättens unge, som tycker att snöbollskrig är det roligaste som finns.',
+  snogubbe: 'En snögubbe som har vaknat och lunkar omkring med sin kvast.',
+  // Surts smedja
+  eldimp: 'En liten röd rackare med horn och en låga på huvudet.',
+  eldhund: 'En sotig hund med man av eld.',
+  lavagolem: 'En jätte av svart sten med glödande lava i sprickorna.',
+  eldsalamander: 'En kvick liten ödla med eld längs hela ryggen.',
+  sotnisse: 'En sotig liten nisse som springer runt med smedens glödheta hammare.',
+  lavasnigel: 'En snigel med ett hus av sten som ryker som en liten vulkan.',
+  // Helheim
+  helhund: 'En svart hund med två huvuden och gröna ögon.',
+  benspindel: 'En spindel av ben som spottar klibbiga nät.',
+  gengangare: 'Ett spöke i lakan som bär på en grön lykta.',
+  benkatt: 'En katt av bara ben som smyger tyst och spinner som en skallra.',
+  ljusskalle: 'En dödskalle med ett ljus på huvudet som svävar runt och blåser kall rök.',
+  kistgast: 'En gammal kista som har fått ben och tittar ut under locket.',
+  // Svartalfheims gruvor
+  guldbagge: 'En skalbagge som glänser som guld och springer fort.',
+  gruvtroll: 'Ett grönt troll med gruvhjälm och hacka.',
+  stengolem: 'En jätte av stenblock med runor som lyser blått.',
+  gruvmullvad: 'En mullvad med gruvlampa som gräver sig fram med stora klor.',
+  svartalf: 'En sur dvärg med stort skägg som inte vill dela med sig av sin malm.',
+  malmvagn: 'En gruvvagn full av malm som rullar helt av sig själv.',
+  // Havsormens tempel
+  manet: 'En lila manet som svävar och bränns lite.',
+  sjodraug: 'Ett skelett från havet med sjögräs i håret och en treudd.',
+  jattekrabba: 'En röd krabba, stor som ett bord, med en väldig klo.',
+  sjohast: 'En sjöhäst som blåser bubblor så att du går saktare.',
+  marulk: 'En fisk med jättestor mun och en liten lykta som dinglar framför näsan.',
+  jatteskoldpadda: 'En urgammal sköldpadda med koraller på sitt tjocka skal.',
+  // Alvernas lund
+  jattespindel: 'En luden spindel med stora runda ögon.',
+  skuggalv: 'En alv i mörk kappa som skjuter med silverbåge.',
+  svampvakt: 'En flugsvamp som står vakt med spjut och sköld.',
+  nattfjaril: 'En stor nattfjäril med ögon på vingarna som fladdrar i månljuset.',
+  spottblomma: 'En blomma som har ryckt upp sina rötter och spottar frön.',
+  stubbgubbe: 'En gammal stubbe som har tröttnat på att stå still.',
+  // Fenrisklyftan
+  ulv: 'En stor grå varg med gula ögon.',
+  rimtroll: 'Ett troll med isspikar på ryggen och en snöboll i handen.',
+  bergsjatte: 'En jätte som bär ett stenblock på axeln.',
+  fjallbagge: 'En bagge med krokiga horn som stångas så fort den får chansen.',
+  ulvhedin: 'En krigare i vargskinn som tror att han själv är en varg.',
+  uroxe: 'En jättelik oxe med långa horn och rimfrost i pälsen.',
+};

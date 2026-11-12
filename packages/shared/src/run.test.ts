@@ -123,6 +123,7 @@ import {
   type NodeKind,
   type RunEffect,
   type WorldState,
+  mobBase,
 } from './index.ts';
 import { makeParty, playRun, step, type Party } from './runplay.ts';
 
@@ -301,7 +302,8 @@ describe('the route generator (generateRoute)', () => {
       const species = new Set([...mobs.small, ...mobs.medium, ...mobs.big]);
       expect([...species].every((m) => (DUNGEONS[boss].rooms.flatMap((r) => r.packs ?? []).flat() as string[]).includes(m))).toBe(true);
       for (const z of plan.stops) {
-        for (const r of z.def.rooms) for (const pk of r.packs ?? []) for (const m of pk) expect(species.has(m), `${boss} ${z.kind}: ${m}`).toBe(true);
+        // (every member stands in a slot of the dungeon: one of its original species or that one's mate, mobs.ts)
+        for (const r of z.def.rooms) for (const pk of r.packs ?? []) for (const m of pk) expect(species.has(mobBase(m)), `${boss} ${z.kind}: ${m}`).toBe(true);
         if (z.kind !== 'flock') continue;
         const t = ZONE_TEMPLATES[z.layout!];
         used.add(z.layout!);

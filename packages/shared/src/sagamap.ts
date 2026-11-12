@@ -4,6 +4,8 @@
 // dungeon starts over, so nothing of it is saved. Every dungeon is drawn for a 64×64 map (STANDARD_MAP).
 import { addObject, emptyWorld, inBounds, tileIndex } from './map.ts';
 import { mulberry32, randInt } from './rng.ts';
+import { addSpecies, spawnSkin } from './mobpacks.ts';
+import { mobSkins, mobVariant } from './mobs.ts';
 import { DUNGEONS, SAGA_BOSSES, SAGA_MOBS, sagaKey, type DungeonId, type SagaDungeonDef, type SagaInstance, type SagaMob, type SagaRoom } from './saga.ts';
 import { MAP_H, MAP_W, STANDARD_MAP, TILE, type AnimalState, type Terrain, type WorldState } from './types.ts';
 
@@ -109,6 +111,8 @@ function route(from: { x: number; y: number }, to: { x: number; y: number }, blo
 
 /** Puts a monster (or a boss) on the map and gives it its fight record. */
 export function spawnSagaMob(world: WorldState, inst: SagaInstance, species: string, x: number, y: number, kind: SagaMob['kind'], pack: number): AnimalState {
+  // a boss's helper may be the helper's mate, where that suits the boss (mobs.ts)
+  if (kind === 'add') species = addSpecies(species, world.nextId);
   const boss = SAGA_BOSSES[species];
   const def = SAGA_MOBS[species];
   const a: AnimalState = {
@@ -131,7 +135,9 @@ export function spawnSagaMob(world: WorldState, inst: SagaInstance, species: str
     waitMs: 0,
   };
   // in Loke's dungeon the monsters are illusions (drawn ghostly); Loke and his shadow are real enough
-  if (DUNGEONS[inst.id].illusions && !boss && kind !== 'ice') a.variant = 1;
+  // (an illusion is an odd variant; an ordinary monster's skin is the rest of it: mobVariant)
+  const illusion = !!DUNGEONS[inst.id].illusions && !boss && kind !== 'ice';
+  if (illusion || (!boss && mobSkins(species) > 1)) a.variant = mobVariant(mobSkins(species) > 1 ? spawnSkin(species, a.id, pack) : 0, illusion);
   world.animals[a.id] = a;
   const hp = boss?.hp ?? def?.hp ?? 1;
   inst.mobs[a.id] = { id: a.id, species, kind, hp, max: hp, home: { x, y }, pack, state: 'idle', threat: {}, atkAt: 0 };
