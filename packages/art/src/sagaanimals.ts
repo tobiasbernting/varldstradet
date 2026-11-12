@@ -208,10 +208,10 @@ function draugkung(p: Px, f: number): void {
 // Frostjättens borg: frost trolls, ice wolves, ice spirits and the ice block; the polar bear and the frost giant
 // ---------------------------------------------------------------------------
 
-function frosttroll(p: Px, f: number): void {
+function frosttroll(p: Px, f: number, v = 0): void {
   // a chunky troll with pale blue skin, shaggy white hair, a fur kilt, a big round nose, two little tusks and a
   // club of ice over its shoulder
-  const skin = pal('#2e4e6e', '#4e7292', '#7098b8', '#98bcd6', '#c0dcee');
+  const skin = by(v, pal('#2e4e6e', '#4e7292', '#7098b8', '#98bcd6', '#c0dcee'), pal('#1e4a4e', '#346e72', '#52969a', '#7cbcbe', '#aedcdc'), pal('#3a3a6e', '#585a94', '#7e80b8', '#a6a8d6', '#cecef0'));
   const [b, fr] = stride(f, 5, 12, 2);
   p.rect(b, 19, 4, 5, skin.d).rect(fr, 19, 4, 5, skin.b).rect(b - 1, 23, 6, 3, SNOWFUR.b).rect(fr, 23, 6, 3, SNOWFUR.l);
   // the far arm, the body, a shaggy kilt
@@ -221,28 +221,48 @@ function frosttroll(p: Px, f: number): void {
   p.px(9, 12, skin.l2).px(7, 13, skin.l);
   // the club of ice resting on the shoulder, held in the near hand
   p.line(13, 14, 19, 4, WOOD.b).line(14, 14, 20, 4, WOOD.d);
-  paint(p, 16, 0, 6, 7, (x, y) => (Math.hypot(x + 0.5 - 19, y + 0.5 - 3.5) < 3.1 ? (x + y < 21 ? FROST.l2 : x > 19 ? FROST.b : FROST.l) : null));
-  p.px(17, 1, '#ffffff').px(21, 1, FROST.l2).px(16, 5, FROST.l);
+  if (v === 1) {
+    // an icicle for a club
+    shard(p, 19, 6, 4, 7, 1, FROST);
+  } else {
+    paint(p, 16, 0, 6, 7, (x, y) => (Math.hypot(x + 0.5 - 19, y + 0.5 - 3.5) < 3.1 ? (x + y < 21 ? FROST.l2 : x > 19 ? FROST.b : FROST.l) : null));
+    p.px(17, 1, '#ffffff').px(21, 1, FROST.l2).px(16, 5, FROST.l);
+    if (v === 2) p.px(15, 2, FROST.l2).px(18, 7, FROST.l).px(21, 6, FROST.l2);
+  }
   lump(p, 12, 12, 5, 5, skin, 0.1, 73, 0.35);
   // the head: shaggy white hair, little eyes, a bulb of a nose, an underbite with two tusks
   lump(p, 7, 1, 11, 10, skin, 0.15, 74, 0.35);
   lump(p, 15, 4, 5, 5, skin, 0.1, 75, 0.5);
   p.px(17, 5, skin.l2);
   p.rect(13, 4, 2, 2, K).px(14, 4, '#ffffff');
-  p.rect(6, 0, 9, 2, SNOWFUR.l).rect(5, 2, 3, 4, SNOWFUR.b).px(9, 0, '#ffffff').px(12, 2, SNOWFUR.b).rect(11, 3, 4, 1, SNOWFUR.l2);
+  if (v === 1) {
+    // bald, with two short horns
+    p.line(8, 2, 6, 0, BONE.l).px(7, 2, BONE.b).line(13, 1, 14, 0, BONE.l).rect(11, 3, 4, 1, SNOWFUR.l2);
+  } else p.rect(6, 0, 9, 2, SNOWFUR.l).rect(5, 2, 3, 4, SNOWFUR.b).px(9, 0, '#ffffff').px(12, 2, SNOWFUR.b).rect(11, 3, 4, 1, SNOWFUR.l2);
   p.rect(12, 9, 5, 1, skin.d2).px(13, 8, '#ffffff').px(16, 8, '#ffffff');
+  // (the third has a white beard down its chest and its hair in a knot)
+  if (v === 2) {
+    paint(p, 10, 10, 8, 6, (x, y) => (Math.abs(x + 0.5 - 14) > 3.6 - (y - 10) * 0.55 ? null : (x + y) % 3 === 0 ? SNOWFUR.b : SNOWFUR.l));
+    p.rect(9, -1, 3, 2, SNOWFUR.l2);
+  }
 }
 
-function isvarg(p: Px, f: number): void {
+function isvarg(p: Px, f: number, v = 0): void {
   // an ice wolf: frosty white-blue fur, a few shards of ice down its back, glowing blue eyes, a bushy tail
-  const fur = pal('#4e6c8a', '#7e9cba', '#b8cee2', '#dce8f2', '#ffffff');
+  const fur = by(v, pal('#4e6c8a', '#7e9cba', '#b8cee2', '#dce8f2', '#ffffff'), pal('#3a4654', '#5a6878', '#8494a4', '#b0bcc8', '#dce4ea'), pal('#1e3a6a', '#345a96', '#5684c0', '#86b0e0', '#c0dcf6'));
   const [b, fr] = stride(f, 4, 14, 2);
   p.rect(b, 11, 2, 5, fur.d).rect(b + 4, 11, 2, 5, fur.b).rect(fr, 11, 2, 5, fur.b).rect(fr - 4, 11, 2, 5, fur.d);
   // the tail, then the body
   lump(p, 0, 3, 6, 5, fur, 0.2, 83, 0.4);
   lump(p, 3, 5, 14, 8, fur, 0.25, 81, 0.3);
   p.rect(7, 11, 7, 1, fur.l2);
-  for (const [x, h] of [[7, 2], [10, 3], [13, 2]] as const) p.rect(x, 5 - h, 1, h, FROST.l).px(x + 1, 5 - h + 1, FROST.b).px(x, 5 - h, '#ffffff');
+  // shards of ice down its back: small ones, a tall ridge, or none (a white ruff and a tail tip of ice instead)
+  const ridge: readonly (readonly [number, number])[] = by(v, [[7, 2], [10, 3], [13, 2]], [[5, 3], [8, 5], [11, 5], [13, 3]], []);
+  for (const [x, h] of ridge) p.rect(x, 5 - h, v === 1 ? 2 : 1, h, FROST.l).px(x + 1, 5 - h + 1, FROST.b).px(x, 5 - h, '#ffffff');
+  if (v === 2) {
+    lump(p, 11, 4, 6, 8, SNOWFUR, 0.3, 84, 0.3);
+    p.rect(0, 2, 2, 3, FROST.l2).px(0, 1, '#ffffff');
+  }
   // the head with pricked ears and a long snout
   lump(p, 14, 3, 6, 7, fur, 0.2, 82, 0.35);
   p.rect(14, 0, 2, 4, fur.b).px(15, 1, '#c8a0b0').rect(17, 1, 2, 3, fur.d);
@@ -256,7 +276,8 @@ export const glass = (hex: string, a: number): string => {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 };
 
-function isande(p: Px, f: number): void {
+function isande(p: Px, f: number, v = 0): void {
+  const [hi, mid, low, dark] = by(v, ['#e8faff', '#b4e4fa', '#7ac8f0', '#1e3a5a'], ['#f0eaff', '#c8b8fa', '#9a84ee', '#2a1e5a'], ['#eafff4', '#b0f0d4', '#6ad8b0', '#1e4a3a']);
   // a floating spirit of frost: a round see-through head, big dark eyes, a crown of little shards, a wispy tail
   const body = (x: number, y: number) => {
     const t = (y - 7) / 12; // the tail tapers and sways
@@ -269,14 +290,17 @@ function isande(p: Px, f: number): void {
       const head = Math.hypot((x + 0.5 - 8) / 5.6, (y + 0.5 - 8) / 5.2) <= 1;
       if (!head && !body(x, y)) continue;
       const edge = x < 5 || y < 5;
-      p.px(x, y, glass(edge ? '#e8faff' : y > 13 ? '#7ac8f0' : '#b4e4fa', y > 15 ? 0.55 : 0.8));
+      p.px(x, y, glass(edge ? hi : y > 13 ? low : mid, y > 15 ? 0.55 : 0.8));
     }
   // little arms
-  p.px(2, 11, glass('#b4e4fa', 0.8)).px(1, f ? 10 : 12, glass('#e8faff', 0.8)).px(13, 11, glass('#b4e4fa', 0.8)).px(14, f ? 12 : 10, glass('#e8faff', 0.8));
+  p.px(2, 11, glass(mid, 0.8)).px(1, f ? 10 : 12, glass(hi, 0.8)).px(13, 11, glass(mid, 0.8)).px(14, f ? 12 : 10, glass(hi, 0.8));
   // the face, and the crown of shards
-  p.rect(8, 7, 2, 3, '#1e3a5a').rect(11, 7, 2, 3, '#1e3a5a').px(8, 7, '#ffffff').px(11, 7, '#ffffff');
-  p.rect(9, 11, 3, 1, '#4a8ac0');
-  for (const [x, h] of [[4, 2], [6, 3], [8, 4], [10, 3], [12, 2]] as const) p.rect(x, 3 - h, 1, h, '#e8faff').px(x, 3 - h, '#ffffff');
+  p.rect(8, 7, 2, 3, dark).rect(11, 7, 2, 3, dark).px(8, 7, '#ffffff').px(11, 7, '#ffffff');
+  p.rect(9, 11, 3, 1, shade(low, 0.7));
+  // a crown of little shards, three big ones, or two horns of ice curling out
+  if (v === 0) for (const [x, h] of [[4, 2], [6, 3], [8, 4], [10, 3], [12, 2]] as const) p.rect(x, 3 - h, 1, h, hi).px(x, 3 - h, '#ffffff');
+  if (v === 1) for (const [x, h] of [[4, 2], [7, 3], [11, 2]] as const) p.rect(x, 3 - h, 2, h + 1, hi).px(x, 3 - h, '#ffffff').px(x + 1, 3 - h, mid);
+  if (v === 2) p.line(3, 5, 1, 2, hi).px(1, 1, '#ffffff').px(2, 0, hi).line(12, 5, 14, 2, hi).px(14, 1, '#ffffff').px(13, 0, hi);
 }
 
 function isblock(p: Px, f: number): void {
@@ -369,14 +393,19 @@ export function imp(p: Px, f: number, skin: Pal, horn: string, eyes: string): vo
   p.rect(8, 10, 5, 1, K).px(9, 10, '#ffffff').px(11, 10, '#ffffff');
 }
 
-function eldimp(p: Px, f: number): void {
-  // a small fire imp: round and red, two little horns, a big grin, bat wings, a pointy tail, a flame on top
-  imp(p, f, pal('#6a140c', '#a8241a', '#e04a2a', '#ff8a5a', '#ffc0a0'), '#f4e0c0', '#ffe14a');
+function eldimp(p: Px, f: number, v = 0): void {
+  // a small fire imp: round and red (or orange, or dark as coal), two little horns, a big grin, bat wings, a pointy tail, a flame on top
+  const skin = by(v, pal('#6a140c', '#a8241a', '#e04a2a', '#ff8a5a', '#ffc0a0'), pal('#7a3a08', '#b8620e', '#f0921e', '#ffc04a', '#ffe49a'), pal('#1e0e1c', '#3a1a30', '#5c2a48', '#824266', '#aa648a'));
+  imp(p, f, skin, '#f4e0c0', by(v, '#ffe14a', '#ffffff', '#ff8a2a'));
+  // long curved horns; or big pointed ears and a tuft on its tail
+  if (v === 1) p.px(4, 1, '#f4e0c0').px(3, 0, '#fffaf0').px(11, 1, '#f4e0c0').px(12, 0, '#fffaf0');
+  if (v === 2) p.rect(1, 6, 2, 2, skin.b).px(0, 5, skin.l).rect(12, 5, 2, 2, skin.l).px(13, 4, skin.l2).px(0, 9, skin.l).px(0, 8, skin.l2);
 }
 
-function lavagolem(p: Px, f: number): void {
+function lavagolem(p: Px, f: number, v = 0): void {
   // a golem of black basalt boulders with lava glowing between them, big fists, small hot eyes
-  const rock = pal('#100e12', '#1e1b22', '#2e2a33', '#433e4a', '#5a5462');
+  const rock = by(v, pal('#100e12', '#1e1b22', '#2e2a33', '#433e4a', '#5a5462'), pal('#1a1210', '#2e201c', '#46322a', '#62483c', '#806252'), pal('#16161c', '#28282e', '#3e3e46', '#5a5a64', '#787884'));
+  const lava = by(v, EMBER, { d: '#8a5a08', m: '#e8a81a', h: '#ffd84a', hot: '#fffad0' }, EMBER);
   const [b, fr] = stride(f, 5, 15, 2);
   lump(p, b, 19, 6, 7, rock, 0.3, 121);
   lump(p, fr, 19, 6, 7, rock, 0.3, 122);
@@ -385,14 +414,25 @@ function lavagolem(p: Px, f: number): void {
   lump(p, 17, 12, 7, 9, rock, 0.3, 125);
   lump(p, 7, 0, 11, 9, rock, 0.3, 126, 0.35);
   // the lava in the cracks, and the eyes
-  for (const [x0, y0, x1, y1] of [[6, 9, 11, 15], [11, 15, 9, 19], [14, 8, 17, 13], [2, 14, 5, 16], [19, 15, 21, 18]] as const) p.line(x0, y0, x1, y1, EMBER.m);
-  p.px(11, 15, EMBER.h).px(17, 13, EMBER.h).px(8, 21, EMBER.m).px(17, 22, EMBER.m);
-  p.rect(13, 3, 2, 2, EMBER.h).px(14, 3, EMBER.hot).rect(16, 3, 1, 2, EMBER.h);
+  for (const [x0, y0, x1, y1] of [[6, 9, 11, 15], [11, 15, 9, 19], [14, 8, 17, 13], [2, 14, 5, 16], [19, 15, 21, 18]] as const) p.line(x0, y0, x1, y1, lava.m);
+  p.px(11, 15, lava.h).px(17, 13, lava.h).px(8, 21, lava.m).px(17, 22, lava.m);
+  if (v === 2) {
+    // one big eye, and a spike of basalt on its head
+    p.rect(13, 3, 4, 3, lava.h).rect(14, 4, 2, 1, lava.hot).px(16, 3, lava.hot);
+    shard(p, 11, 2, 3, 5, -1, rock);
+    return;
+  }
+  p.rect(13, 3, 2, 2, lava.h).px(14, 3, lava.hot).rect(16, 3, 1, 2, lava.h);
+  // (the second has shards of obsidian on its shoulders)
+  if (v === 1) {
+    shard(p, 3, 12, 3, 6, -2, pal('#08080c', '#18161e', '#2c2836', '#4a4458', '#7a7290'));
+    shard(p, 20, 13, 3, 6, 2, pal('#08080c', '#18161e', '#2c2836', '#4a4458', '#7a7290'));
+  }
 }
 
-function eldhund(p: Px, f: number): void {
+function eldhund(p: Px, f: number, v = 0): void {
   // a fire hound: sooty fur with glowing cracks, a mane of flames on its neck, a burning tail tip, hot eyes
-  const fur = pal('#16111a', '#261e28', '#3a2e38', '#54444e', '#6e5a64');
+  const fur = by(v, pal('#16111a', '#261e28', '#3a2e38', '#54444e', '#6e5a64'), pal('#2a2a30', '#44444c', '#64646e', '#868690', '#aaaab4'), pal('#2a0e0a', '#4a1a12', '#72301e', '#9a4c30', '#c0704a'));
   const [b, fr] = stride(f, 4, 14, 2);
   p.rect(b, 11, 2, 5, fur.d).rect(b + 4, 11, 2, 5, fur.b).rect(fr, 11, 2, 5, fur.b).rect(fr - 4, 11, 2, 5, fur.d);
   p.line(0, 5, 3, 8, fur.b).line(1, 5, 4, 8, fur.l);
@@ -402,6 +442,9 @@ function eldhund(p: Px, f: number): void {
   p.rect(19, 6, 3, 3, fur.l).rect(19, 8, 3, 1, fur.b).px(21, 6, '#0a0808').px(20, 9, EMBER.m);
   p.rect(17, 5, 2, 1, '#ffd040').px(18, 4, '#fff6c8');
   p.px(6, 9, EMBER.m).px(7, 10, EMBER.d).px(11, 8, EMBER.m).px(10, 11, EMBER.d).px(13, 10, EMBER.m);
+  // an iron collar with spikes; or two horns and a jaw that glows
+  if (v === 1) p.rect(13, 6, 2, 5, IRON.b).rect(13, 6, 1, 5, IRON.l).px(12, 6, IRON.l2).px(12, 9, IRON.l2).px(15, 11, IRON.l2);
+  if (v === 2) p.line(15, 1, 13, 0, BONE.l).line(18, 1, 20, 0, BONE.l).rect(19, 9, 3, 1, EMBER.h);
 }
 
 function smeden(p: Px, f: number): void {
@@ -2026,12 +2069,15 @@ function spindelnat(p: Px, f: number): void {
 // ---------------------------------------------------------------------------
 
 const AFTER: Record<string, Draw> = {
-  eldimp: (p, f) => {
-    flame(p, 8, 5, 4, f ? 5 : 4, f ? 1 : -1, '#e04a14', '#ff9a2a', '#fff0a0');
-    halo(p, 8, 8, 8, '#ff8a3a', 0.2);
+  eldimp: (p, f, v = 0) => {
+    const [a, b, c] = by(v, ['#e04a14', '#ff9a2a', '#fff0a0'], ['#e8901a', '#ffd04a', '#fffad0'], ['#5a2ad8', '#a070ff', '#f0e8ff']);
+    flame(p, 8, 5, 4, f ? 5 : 4, f ? 1 : -1, a, b, c);
+    halo(p, 8, 8, 8, b, 0.2);
   },
-  eldhund: (p, f) => {
-    for (const [x, y, h] of [[13, 5, 4], [10, 6, 3], [1, 5, 3]] as const) flame(p, x, y, 3, h + (f ? 1 : 0), f ? -1 : 0.5, '#e04a14', '#ff9a2a', '#fff0a0');
+  eldhund: (p, f, v = 0) => {
+    // a mane of flames; a burning tail and one flame on the brow; a ridge all down the back
+    const at: readonly (readonly [number, number, number])[] = by(v, [[13, 5, 4], [10, 6, 3], [1, 5, 3]], [[16, 3, 3], [1, 5, 5], [3, 6, 3]], [[13, 5, 3], [10, 6, 4], [7, 6, 3], [4, 6, 3], [1, 5, 3]]);
+    for (const [x, y, h] of at) flame(p, x, y, 3, h + (f ? 1 : 0), f ? -1 : 0.5, '#e04a14', '#ff9a2a', '#fff0a0');
   },
   lavagolem: (p) => halo(p, 12, 13, 13, '#ff6a2a', 0.15),
   isande: (p, f) => {
