@@ -1131,6 +1131,30 @@ button.pick {
 .saga-dungeon .tx {
   color: #5a5040;
 }
+.saga-dungeon .mobs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(calc(70 * var(--u)), 1fr));
+  gap: calc(1 * var(--u)) calc(3 * var(--u));
+  margin-top: calc(1 * var(--u));
+}
+.saga-dungeon .mob {
+  display: flex;
+  align-items: center;
+  gap: calc(2 * var(--u));
+}
+.saga-dungeon .mob .pic {
+  flex: 0 0 calc(16 * var(--u));
+  min-width: 64px;
+  display: flex;
+  justify-content: center;
+}
+.saga-dungeon .mob .pic img {
+  image-rendering: pixelated;
+}
+.saga-dungeon .mob .kind {
+  color: #7a6a50;
+  font-weight: 700;
+}
 .saga-dungeon .moves {
   margin: calc(0.5 * var(--u)) 0 0;
   padding-left: calc(4 * var(--u));

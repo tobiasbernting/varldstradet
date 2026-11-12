@@ -10,6 +10,8 @@ import type { WorldState } from './types.ts';
 
 /** Tests turn this off to see the packs as the slots alone would make them (the originals only). */
 export const PACK_VARIETY = { on: true };
+/** Tests turn this off to play the same run with every monster in its first skin (a skin must never change a fight). */
+export const MOB_SKINNING = { on: true };
 
 /** A pack of four or more of one slot, all swarmers, is now and then left as one species: a swarm. */
 export const SWARM_CHANCE = 0.12;
@@ -95,7 +97,7 @@ export function addSpecies(species: string, id: number): string {
 }
 
 /** The skin a monster gets when nothing else decides it (a boss's helpers, the saga's own dungeons): by its id and its pack. */
-export const spawnSkin = (species: string, id: number, pack: number): number => (hashInts(pack + 1, 0x5c1) + id) % mobSkins(species);
+export const spawnSkin = (species: string, id: number, pack: number): number => (MOB_SKINNING.on ? (hashInts(pack + 1, 0x5c1) + id) % mobSkins(species) : 0);
 
 /**
  * The skins of a stop's monsters, by the run's seed: in a pack, the members of one species take the skins in turn from a
@@ -103,7 +105,7 @@ export const spawnSkin = (species: string, id: number, pack: number): number => 
  */
 export function skinStop(world: WorldState, seed: number, node: number): void {
   const inst = world.saga;
-  if (!inst) return;
+  if (!inst || !MOB_SKINNING.on) return;
   inst.packs.forEach((pk, pi) => {
     const seen: Record<string, number> = {};
     for (const id of pk.members) {
