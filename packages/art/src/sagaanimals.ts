@@ -5,23 +5,23 @@
 import { Px, shade } from './px.js';
 import { flame, halo, lump, pal, paint, shard, twinkle, type Pal } from './saga.ts';
 
-type Draw = (p: Px, f: number, v?: number) => void;
+export type Draw = (p: Px, f: number, v?: number) => void;
 
-const BONE = pal('#8a7c60', '#b8aa88', '#e2d6b8', '#f4ecd8', '#fffaf0');
-const IRON = pal('#24262c', '#3e4048', '#5e626c', '#8a8e9a', '#bcc0ca');
-const WOOD = pal('#3e2614', '#5e3c20', '#86582f', '#b07c48', '#d4a46c');
-const GOLD = pal('#8a5a10', '#b8861a', '#e8b830', '#ffe27a', '#fff6c8');
-const ICE = pal('#2c5a86', '#4c82b2', '#84bae0', '#bfe1f5', '#eef9ff');
-const FROST = pal('#2a6aa0', '#4a9ad0', '#8ad8f8', '#ccf2ff', '#ffffff');
-const SNOWFUR = pal('#8ea4bc', '#b8cadc', '#dde8f2', '#f2f7fb', '#ffffff');
-const BASALT = pal('#121014', '#1f1d23', '#302d35', '#45414c', '#5c5866');
-const EMBER = { d: '#7a2210', m: '#d8481a', h: '#ffa040', hot: '#fff0a0' };
-const FIREPAL = pal('#8e1a0a', '#d8401a', '#ff8a2a', '#ffd060', '#fff6c8');
-const GHOST = '#9cff8a';
-const K = '#1e1a22';
+export const BONE = pal('#8a7c60', '#b8aa88', '#e2d6b8', '#f4ecd8', '#fffaf0');
+export const IRON = pal('#24262c', '#3e4048', '#5e626c', '#8a8e9a', '#bcc0ca');
+export const WOOD = pal('#3e2614', '#5e3c20', '#86582f', '#b07c48', '#d4a46c');
+export const GOLD = pal('#8a5a10', '#b8861a', '#e8b830', '#ffe27a', '#fff6c8');
+export const ICE = pal('#2c5a86', '#4c82b2', '#84bae0', '#bfe1f5', '#eef9ff');
+export const FROST = pal('#2a6aa0', '#4a9ad0', '#8ad8f8', '#ccf2ff', '#ffffff');
+export const SNOWFUR = pal('#8ea4bc', '#b8cadc', '#dde8f2', '#f2f7fb', '#ffffff');
+export const BASALT = pal('#121014', '#1f1d23', '#302d35', '#45414c', '#5c5866');
+export const EMBER = { d: '#7a2210', m: '#d8481a', h: '#ffa040', hot: '#fff0a0' };
+export const FIREPAL = pal('#8e1a0a', '#d8401a', '#ff8a2a', '#ffd060', '#fff6c8');
+export const GHOST = '#9cff8a';
+export const K = '#1e1a22';
 
 /** A round skull facing right at (x, y), w×h: a big dark eye with a light in it, a nose hole, a toothy grin. */
-function skull(p: Px, x: number, y: number, w: number, h: number, eye: string): void {
+export function skull(p: Px, x: number, y: number, w: number, h: number, eye: string): void {
   lump(p, x, y, w, h, BONE, 0.1, 3, 0.35);
   const ex = x + Math.round(w * 0.58);
   const ey = y + Math.round(h * 0.38);
@@ -37,13 +37,13 @@ function skull(p: Px, x: number, y: number, w: number, h: number, eye: string): 
 }
 
 /** A bone from (x0, y0) to (x1, y1), lit on its upper side, with knobby ends. */
-function bone(p: Px, x0: number, y0: number, x1: number, y1: number, thick = 1): void {
+export function bone(p: Px, x0: number, y0: number, x1: number, y1: number, thick = 1): void {
   for (let i = 0; i < thick; i++) p.line(x0 + i, y0, x1 + i, y1, i === 0 ? BONE.l : BONE.b);
   p.px(x0, y0, BONE.l2).px(x1, y1, BONE.d);
 }
 
 /** Legs that take turns: x of the back and the front leg on frame f. */
-const stride = (f: number, back: number, front: number, reach = 1): [number, number] => (f ? [back + reach, front - reach] : [back, front]);
+export const stride = (f: number, back: number, front: number, reach = 1): [number, number] => (f ? [back + reach, front - reach] : [back, front]);
 
 // ---------------------------------------------------------------------------
 // Draugkryptan: skeleton warriors and archers, grave rats; the grave guard and the draug king
@@ -229,7 +229,7 @@ function isvarg(p: Px, f: number): void {
 }
 
 /** A soft see-through colour (the ice spirit and the ice block). */
-const glass = (hex: string, a: number): string => {
+export const glass = (hex: string, a: number): string => {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 };
@@ -336,7 +336,7 @@ function rimturs(p: Px, f: number): void {
 // ---------------------------------------------------------------------------
 
 /** An imp: round, two little horns, a big grin, bat wings, a pointy tail (the fire imp's flame comes after the outline). */
-function imp(p: Px, f: number, skin: Pal, horn: string, eyes: string): void {
+export function imp(p: Px, f: number, skin: Pal, horn: string, eyes: string): void {
   p.line(0, 12, 3, 11, skin.d).tpl(0, 10, ['#.', '##'], { '#': skin.b });
   p.tpl(1, 4, ['..##', '.###', '####', '..##'], { '#': f ? skin.d : skin.b });
   const [b, fr] = stride(f, 4, 8);
@@ -523,7 +523,7 @@ function gullinbursti(p: Px, f: number): void {
 // ---------------------------------------------------------------------------
 
 /** A big round eye at (x, y), s×s: dark with a white glint, or lit all over in one colour (glow). */
-function eye(p: Px, x: number, y: number, s: number, glow?: string): void {
+export function eye(p: Px, x: number, y: number, s: number, glow?: string): void {
   if (glow) {
     p.rect(x, y, s, s, glow).px(x + s - 1, y, shade(glow, 1.6));
     if (s >= 3) p.px(x, y + s - 1, shade(glow, 0.7));
@@ -534,7 +534,7 @@ function eye(p: Px, x: number, y: number, s: number, glow?: string): void {
 }
 
 /** A thick round tube along a path of [x, y, radius] (a serpent, a tail): a ball every half pixel, lit from the top-left. */
-function tube(p: Px, pts: [number, number, number][], c: Pal, salt: number): void {
+export function tube(p: Px, pts: [number, number, number][], c: Pal, salt: number): void {
   for (let i = 0; i < pts.length - 1; i++) {
     const [x0, y0, r0] = pts[i]!;
     const [x1, y1, r1] = pts[i + 1]!;
@@ -571,7 +571,7 @@ interface DogLook {
  * A dog or a wolf, side view facing right, at scale s (1 = 24×17): a bushy tail, a long body, a deep chest, pricked
  * ears and a long snout. Hounds, wolves, Garm, Sköll, Fenrisulven and the wolf you can ride all start here.
  */
-function canine(p: Px, f: number, s: number, o: DogLook): void {
+export function canine(p: Px, f: number, s: number, o: DogLook): void {
   const oy = o.oy ?? 0;
   const S = (v: number) => Math.round(v * s);
   const Y = (v: number) => Math.round(v * s) + oy;
@@ -696,7 +696,7 @@ interface SpiderLook {
 }
 
 /** A spider at scale s (1 = 28×16): eight bent legs arching out front and back, a round abdomen, a head with eyes. */
-function spider(p: Px, f: number, s: number, o: SpiderLook): void {
+export function spider(p: Px, f: number, s: number, o: SpiderLook): void {
   const oy = o.oy ?? 0;
   const S = (v: number) => Math.round(v * s);
   const Y = (v: number) => Math.round(v * s) + oy;
@@ -768,7 +768,7 @@ function spider(p: Px, f: number, s: number, o: SpiderLook): void {
 }
 
 /** Lighter, bluer and see-through: the shape an illusion takes (drawn after the outline, so the edge fades too). */
-function ghostify(p: Px, tint: string, alpha = 0.78): void {
+export function ghostify(p: Px, tint: string, alpha = 0.78): void {
   const n = parseInt(tint.slice(1), 16);
   const tr = (n >> 16) & 255;
   const tg = (n >> 8) & 255;
@@ -813,8 +813,8 @@ const hexRgb = (h: string): [number, number, number] => {
 // Helheim: ghosts with lanterns, two-headed hounds, bone spiders; Garm and Hel
 // ---------------------------------------------------------------------------
 
-const SHEET = pal('#7e7e98', '#aaaac0', '#d6d6e6', '#eeeef8', '#ffffff');
-const HELGREEN = '#7aff6a';
+export const SHEET = pal('#7e7e98', '#aaaac0', '#d6d6e6', '#eeeef8', '#ffffff');
+export const HELGREEN = '#7aff6a';
 
 interface SheetLook {
   sheet: Pal;
@@ -831,7 +831,7 @@ function gengangare(p: Px, f: number): void {
   sheetGhost(p, f, { sheet: SHEET, cheek: '#f0c0d0', frame: [IRON.b, IRON.d, IRON.b, IRON.d], light: '#c8ffb0' });
 }
 
-function sheetGhost(p: Px, f: number, o: SheetLook): void {
+export function sheetGhost(p: Px, f: number, o: SheetLook): void {
   const sh = o.sheet;
   const bob = f ? 1 : 0;
   const cx = 8.5;
@@ -972,9 +972,9 @@ function gruvtroll(p: Px, f: number): void {
   p.rect(5, 4, 14, 1, '#7a5208').rect(15, 1, 3, 3, IRON.b).rect(16, 2, 2, 1, '#fff6c8');
 }
 
-const BEETLE_HEAD = pal('#1e1408', '#3a2810', '#5a4018', '#7a5a26', '#9a7838');
+export const BEETLE_HEAD = pal('#1e1408', '#3a2810', '#5a4018', '#7a5a26', '#9a7838');
 
-function beetle(p: Px, f: number, bow: boolean, shell = GOLD, head = BEETLE_HEAD, shine = '#fff6c8'): void {
+export function beetle(p: Px, f: number, bow: boolean, shell = GOLD, head = BEETLE_HEAD, shine = '#fff6c8'): void {
   // a golden beetle: a shiny round shell, a dark head with feelers, six busy legs
   const legs = [3, 6, 9];
   legs.forEach((x, i) => p.line(x + 1, 8, x + (i % 2 === f ? 0 : 2), 11, head.d2));
@@ -1117,9 +1117,9 @@ function fafner(p: Px, f: number): void {
 // Havsormens tempel: sea draugs, giant crabs, glowing jellyfish; Bläckis and the Midgård serpent
 // ---------------------------------------------------------------------------
 
-const KELP = pal('#14301a', '#1e4a26', '#2e6a34', '#46904a', '#6ab464');
-const SEAEYE = '#5af0e0';
-const MOSSPAL = pal('#1e3418', '#2e5024', '#457434', '#629848', '#8abc62');
+export const KELP = pal('#14301a', '#1e4a26', '#2e6a34', '#46904a', '#6ab464');
+export const SEAEYE = '#5af0e0';
+export const MOSSPAL = pal('#1e3418', '#2e5024', '#457434', '#629848', '#8abc62');
 
 function sjodraug(p: Px, f: number): void {
   // a skeleton from the sea: seaweed hanging off its shoulders and skull, a bronze trident, a starfish for a hat
@@ -1175,7 +1175,7 @@ function jattekrabba(p: Px, f: number): void {
   p.px(26, 1, shell.l2);
 }
 
-function jelly(p: Px, f: number, x0: number, w: number, h: number, a: number): void {
+export function jelly(p: Px, f: number, x0: number, w: number, h: number, a: number): void {
   // a see-through bell with a lighter rim, a sleepy smile, and tentacles that wave
   const bob = f ? 0 : 1;
   const bell = Math.round(h * 0.45);
@@ -1281,7 +1281,7 @@ function jormungand(p: Px, f: number): void {
 // Alvernas lund: shadow elves, giant spiders, mushroom guards; the spider queen and the night mare
 // ---------------------------------------------------------------------------
 
-const ELFEYE = '#e08aff';
+export const ELFEYE = '#e08aff';
 
 function skuggalv(p: Px, f: number): void {
   // a shadow elf archer: violet-grey skin, long white hair, a pointed ear, a dark cloak, a silver bow, glowing eyes
@@ -1373,7 +1373,7 @@ function nattmara(p: Px, f: number): void {
 // Fenrisklyftan: grey wolves, rime trolls, mountain giants; Sköll and Fenrisulven
 // ---------------------------------------------------------------------------
 
-const WOLF = pal('#2a2c34', '#464a56', '#6a707e', '#9298a6', '#c0c6d2');
+export const WOLF = pal('#2a2c34', '#464a56', '#6a707e', '#9298a6', '#c0c6d2');
 
 function ulv(p: Px, f: number): void {
   // a big grey wolf with a pale belly and amber eyes
@@ -2132,15 +2132,7 @@ const AFTER: Record<string, Draw> = {
   },
 };
 
-// The illusions on Bifrost: Loke conjures beaten foes again, pale and see-through (variant 1).
-const ILLUSION_TINT = '#bfe0ff';
-for (const s of ['skelett', 'isvarg', 'eldhund', 'gengangare']) {
-  const own = AFTER[s];
-  AFTER[s] = (p, f, v) => {
-    own?.(p, f, v);
-    if (v === 1) ghostify(p, ILLUSION_TINT);
-  };
-}
+// (The illusions on Bifrost, and every ordinary monster's skins, are put on in sagamobs2.ts.)
 
 // ---------------------------------------------------------------------------
 
@@ -2298,10 +2290,10 @@ export const SAGA_DRAW: Record<string, Draw> = {
 export const SAGA_AFTER = AFTER;
 
 /**
- * Colour variants the saga's creatures have (variant 0 is the default). The illusions on Bifrost are variant 1 of
- * the monsters Loke copies: pale and see-through.
+ * How many variants the saga's creatures have (variant 0 is the default): sagamobs2.ts fills it in for the dungeons' ordinary
+ * monsters (their skins, and each skin again as one of Loke's pale illusions on Bifrost).
  */
-export const SAGA_VARIANTS: Record<string, number> = { skelett: 2, isvarg: 2, eldhund: 2, gengangare: 2 };
+export const SAGA_VARIANTS: Record<string, number> = {};
 
 /** Where a tomteluva sits at Christmas (head centre x, top y). */
 export const SAGA_HAT_POS: Record<string, [number, number]> = {
