@@ -219,6 +219,8 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     !!boss &&
     !!boss.next &&
     (SAGA_BOSSES[boss.species]?.moves ?? []).some((mv, k) => mv.interrupt && (mv.phase ?? 0) <= (boss.phase ?? 0) && (!unlocked || unlocked.includes(k)) && boss.next![k]! - now < (SPELLS[kick]?.cd ?? 0));
+  // ... and a Besvärjare or a Skytt in the fight: the interrupt waits for their cast instead of being spent on a combo
+  const save = keep || (careful && fighting.some((m) => m.role === 'healer' || m.role === 'archer'));
   const casting = (): boolean => {
     if (!fighting.length && !(ice && cls)) return false;
     // the masher: every button that is ready, 4, 3, 2, 1, at nothing in particular
@@ -255,7 +257,7 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
       if (f.hp < f.max * 0.5) go('skoldmur');
       const taunted = fighting.filter((m) => m.tauntBy === pid && now < (m.tauntUntil ?? 0));
       if (f.pips >= 1 && (full || !careful || open(target) || taunted.length >= 2) && (d <= 2.2 || taunted.length > 0) && go(spend, target.id)) return true;
-      if (d <= 1.8 && !keep && go('skoldslag', target.id)) return true;
+      if (d <= 1.8 && !save && go('skoldslag', target.id)) return true;
       return false;
     }
     if (cls === 'krigare') {
@@ -265,10 +267,10 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
       const big = target.kind === 'boss' || target.kind === 'mini';
       if (f.pips >= 1 && d <= 2.2 && ready(spend) && (full || !careful || open(target) || dazed(target))) {
         // the combo: daze it with Stormsteg first, then the Jättehugg hits double (a boss cannot be dazed)
-        if (careful && full && !keep && !big && !dazed(target) && ready('stormsteg')) go('stormsteg', target.id);
+        if (careful && full && !save && !big && !dazed(target) && ready('stormsteg')) go('stormsteg', target.id);
         if (go(spend, target.id)) return true;
       }
-      if (d > 2.5 && !keep && go('stormsteg', target.id)) return true;
+      if (d > 2.5 && !save && go('stormsteg', target.id)) return true;
       return false;
     }
     // magiker
@@ -277,7 +279,7 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     if (clustered.length >= 2 && go('askregn', target.id)) return true;
     if (f.pips >= 1 && ready(spend) && (full || !careful || open(target) || chilled(target))) {
       // the combo: Isspjut first, then the Runsmäll shatters the slowed monster
-      if (careful && full && !keep && target.kind !== 'ice' && !chilled(target) && ready('isspjut')) go('isspjut', target.id);
+      if (careful && full && !save && target.kind !== 'ice' && !chilled(target) && ready('isspjut')) go('isspjut', target.id);
       if (go(spend, target.id)) return true;
     }
     if (!careful && target.kind !== 'ice' && target.hp > 150 && go('isspjut', target.id)) return true;

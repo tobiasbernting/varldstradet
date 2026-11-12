@@ -917,30 +917,50 @@ describe('the masher bot', () => {
     expect(slammed('careful')).toBe(0);
   });
 
-  it('the careful bot holds its spender for three pips, uses its combo, and goes for the Besvärjare first', () => {
+  it('the careful bot holds its spender for three pips, uses its combo, goes for the Besvärjare first and keeps its interrupt for the cast', () => {
+    /** Plays the careful Krigare for `ms`: the spells it pressed, each with the pips it had. */
+    const play = (l: Lab, mind: ReturnType<typeof newMind>, ms: number): [string, number][] => {
+      const spells: [string, number][] = [];
+      for (let t = 0; t < ms; t += 50) {
+        const pips = l.f.pips;
+        for (const c of botStep(l.party.world, l.p.id, mind, l.ctx(), 50)) if (c.t === 'spell' && c.by === l.p.id && c.spell !== 'yxhugg') spells.push([c.spell, pips]);
+        l.go(50);
+      }
+      return spells;
+    };
+    const quiet = (l: Lab): void => {
+      l.f.cd.raseri = NEVER;
+      l.f.cd.virvelvind = NEVER;
+    };
+    // one plain monster: Stormsteg dazes it right before the three-pip Jättehugg
+    const solo = lab(['krigare'], { level: 2 });
+    quiet(solo);
+    solo.place('skelett', 1.5);
+    const combo = play(solo, newMind('careful', () => 0.5), 6000);
+    const spends = combo.filter(([s]) => s === 'jattehugg');
+    expect(spends.length).toBeGreaterThan(0);
+    for (const [, pips] of spends) expect(pips).toBe(3);
+    expect(combo[combo.findIndex(([s]) => s === 'jattehugg') - 1]?.[0]).toBe('stormsteg');
+    // a Besvärjare in the pack: it is the target though the other one stands closer, and the Stormsteg waits for its cast
     const l = lab(['krigare'], { level: 2 });
+    quiet(l);
     const mind = newMind('careful', () => 0.5);
     const pk = l.pack();
     const plain = l.place('skelett', 1.5, { pack: pk });
     const healer = l.place('skelett', 2.5, { pack: pk, role: 'healer' });
     healer.roleAt = NEVER;
-    l.f.cd.raseri = NEVER;
-    l.f.cd.virvelvind = NEVER;
-    const spells: [string, number][] = [];
-    for (let t = 0; t < 6000; t += 50) {
-      const pips = l.f.pips;
-      for (const c of botStep(l.party.world, l.p.id, mind, l.ctx(), 50)) if (c.t === 'spell' && c.by === l.p.id) spells.push([c.spell, pips]);
-      l.go(50);
-    }
-    // it chose the Besvärjare, though the other one stands closer
+    const before = play(l, mind, 5000);
     expect(l.f.target).toBe(healer.id);
-    expect(healer.max - healer.hp).toBeGreaterThan((plain.max - plain.hp) * 3);
-    const spends = spells.filter(([s]) => s === 'jattehugg');
-    expect(spends.length).toBeGreaterThan(0);
-    for (const [, pips] of spends) expect(pips).toBe(3);
-    // Stormsteg right before the Jättehugg: the dazed monster takes double
-    const i = spells.findIndex(([s]) => s === 'jattehugg');
-    expect(spells[i - 1]?.[0]).toBe('stormsteg');
+    // (the other one gets the swings on the way over and the three-pip arc; the Besvärjare gets the most)
+    expect(healer.max - healer.hp).toBeGreaterThan((plain.max - plain.hp) * 1.5);
+    expect(before.some(([s]) => s === 'stormsteg')).toBe(false);
+    plain.hp = 50_000;
+    healer.roleAt = l.party.now;
+    const during = play(l, mind, 600);
+    expect(during.some(([s]) => s === 'stormsteg')).toBe(true);
+    expect(healer.cast).toBeUndefined();
+    expect(healer.open).toBeDefined();
+    expect(l.inst.mobHeals).toBe(0);
   });
 });
 
