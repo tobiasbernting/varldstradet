@@ -276,8 +276,29 @@ export function underHud(r: DOMRect): boolean {
   return hudRects.some((h) => r.left < h.right && r.right > h.left && r.top < h.bottom && r.bottom > h.top);
 }
 
+/** The most the run bar folds (ui/run.css: the rules' words, the rules, the long step, the road, the stop's word, the sagafrön). */
+const MAX_FOLD = 6;
+let foldKey = '';
 /**
- * Where the column goes: under the lowest of the run bar and the round buttons, between whatever stands at the left (the minimap,
+ * The run bar is one row: when its pieces do not fit in it, it folds a step at a time until they do. It starts again from nothing
+ * folded when the room, the text size or what the bar says changes, so it unfolds when there is room again.
+ */
+function foldRunBar(): void {
+  const bar = document.querySelector<HTMLElement>('.run-bar');
+  const line = bar?.querySelector<HTMLElement>('.line1');
+  if (!bar || !line || !visible(bar)) return;
+  const key = `${line.clientWidth}|${getComputedStyle(document.documentElement).getPropertyValue('--txt')}|${line.querySelectorAll('button').length}|${line.textContent?.length ?? 0}`;
+  let n = Number(bar.dataset.fold ?? 0);
+  if (key !== foldKey) {
+    foldKey = key;
+    n = 0;
+    bar.dataset.fold = '0';
+  }
+  while (n < MAX_FOLD && line.scrollWidth > line.clientWidth + 1) bar.dataset.fold = String(++n);
+}
+
+/**
+ * Where the column goes: under the top row (the run bar in a run, the chips and the round buttons out of one), between whatever stands at the left (the minimap,
  * the party's frames) and at the right (the quest tracker). Measured, not guessed, so it holds at every screen size and text size.
  */
 function layout(): void {
@@ -286,17 +307,15 @@ function layout(): void {
   const vh = window.innerHeight;
   const root = column.offsetParent instanceof HTMLElement ? column.offsetParent : document.body;
   const origin = root.getBoundingClientRect();
-  // the round buttons fold into one menu button on a short screen in a run (ui/run.css): they are then not part of the top
-  const inRun = document.body.classList.contains('in-run');
-  const menuMode = inRun && vh <= 500;
+  // the top row: in a run the run bar from edge to edge with the three round buttons at its end (the bar keeps that room free),
+  // out of a run the chips at the left and the three buttons at the right
   const hudRight = document.querySelector('.hud-right');
-  const rightBottom = visible(hudRight) && !menuMode ? hudRight.getBoundingClientRect().bottom : 0;
   const root0 = document.documentElement.style;
-  root0.setProperty('--bar-top', `${vw >= 1400 || menuMode ? 8 : Math.round(rightBottom + 2)}px`);
+  if (visible(hudRight)) root0.setProperty('--hud-right-w', `${Math.round(hudRight.getBoundingClientRect().width)}px`);
+  foldRunBar();
   let top = 8;
-  for (const sel of ['.hud-top', '.hud-right', '.run-bar', '.hud-menu-btn']) {
+  for (const sel of ['.hud-top', '.hud-right', '.run-bar']) {
     const el = document.querySelector(sel);
-    if (sel === '.hud-right' && menuMode) continue;
     if (visible(el)) top = Math.max(top, el.getBoundingClientRect().bottom + 8);
   }
   root0.setProperty('--hud-top', `${Math.round(top)}px`);

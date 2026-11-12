@@ -1,12 +1,10 @@
-// HUD: top chips, hotbar, toasts, touch controls.
-import { A11Y_T, HOTBAR_SIZE, HOUSE_T, MAX_HEARTS, SPELLS, T, areaName, fmt, houseTitle, isHomeKey, isSagaKey, itemText, ownerOfHome, stackName, type ItemStack } from '@varldstradet/shared';
+// HUD: top chips, the three round buttons at the top right, hotbar, toasts, touch controls.
+import { A11Y_T, HOTBAR_SIZE, HOUSE_T, MAX_HEARTS, MENU_T, RUN_UI, SPELLS, T, areaName, fmt, houseTitle, isHomeKey, isSagaKey, itemText, ownerOfHome, stackName, type ItemStack } from '@varldstradet/shared';
 import { Minimap } from './minimap.ts';
 import { stackIconUrl } from '@art/stackicon.ts';
 import { net } from '../net.js';
 import { bus, client, furnish, inOwnHouse, myPlayer, serverNow } from '../state.js';
-import { LOG_T } from '@varldstradet/shared';
 import { clear, h, icon, onTap } from './dom.js';
-import { isMuted, setMuted } from '../sound.ts';
 import { levelOf, showsLevel } from '../saga.ts';
 import { cards } from './info.ts';
 import { centerColumn, classifyToast, say } from './lane.ts';
@@ -43,10 +41,7 @@ export class Hud {
   private heldName: HTMLElement;
   private joy: HTMLElement;
   private joyKnob: HTMLElement;
-  /** Sagan om Världsträdet: the gear window. */
-  private gearBtn: HTMLElement;
-  /** In your own house: tap furniture to take it up (Möblera). */
-  private furnishBtn: HTMLElement;
+  private menuBtn!: HTMLElement;
   minimap!: Minimap;
   /** Extra chips after the built-in ones (the 2D game adds the weather). */
   topExtras: (() => HTMLElement | null)[] = [];
@@ -54,7 +49,7 @@ export class Hud {
   constructor(
     private ui: HTMLElement,
     private scene: () => HudTarget | null,
-    private openMenu: (ui: 'inventory' | 'emotes' | 'help') => void,
+    private openMenu: (ui: 'inventory') => void,
   ) {
     this.root = h('div', { class: 'hud' });
     this.top = h('div', { class: 'hud-top' });
@@ -81,76 +76,32 @@ export class Hud {
       setRun(true);
     });
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) run.addEventListener(ev, () => setRun(false));
-    // the gear window lives with the saga's windows (ui/saga.ts)
-    this.gearBtn = this.roundBtn('👕', () => document.dispatchEvent(new Event('vt:gear')), T.sagaGearBtn, A11Y_T.btnGear);
-    this.gearBtn.classList.add('gear-btn');
-    this.furnishBtn = this.roundBtn('🪑', () => this.toggleFurnish(), HOUSE_T.furnish, A11Y_T.btnFurnish);
-    this.furnishBtn.classList.add('furnish-btn');
-    this.furnishBtn.hidden = true;
-    const right = h('div', { class: 'hud-right' }, this.furnishBtn, this.gearBtn, this.roundBtn('🎒', () => this.openMenu('inventory'), T.inventory, A11Y_T.btnBag), this.roundBtn('😊', () => this.openMenu('emotes'), A11Y_T.emotes, A11Y_T.btnEmotes), this.roundBtn('📖', () => document.dispatchEvent(new Event('vt:journal')), T.sagaJournalTab, A11Y_T.btnJournal), createLogButton(), this.roundBtn('🧭', () => this.minimap.toggle(), A11Y_T.map, A11Y_T.btnMap), this.roundBtn('❓', () => this.openMenu('help'), T.help, A11Y_T.btnHelp), this.roundBtn('⚙️', () => document.dispatchEvent(new Event('vt:settings')), A11Y_T.settings, A11Y_T.settingsInfo), this.muteBtn(), ...(matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches ? [] : [this.fullscreenBtn()]));
-    // a short screen in a run: the round buttons fold into this one button (ui/run.css), so the top of the screen is one row
-    const menuBtn = h('button', { class: 'round hud-menu-btn', type: 'button', 'aria-label': LOG_T.menu, 'aria-expanded': 'false' }, '☰');
-    cards.info(menuBtn, '☰', LOG_T.menu, LOG_T.menuInfo);
-    cards.tap(menuBtn, () => {
-      const open = right.classList.toggle('open');
-      menuBtn.setAttribute('aria-expanded', String(open));
-    });
-    const closeMenu = (): void => {
-      right.classList.remove('open');
-      menuBtn.setAttribute('aria-expanded', 'false');
-    };
-    right.addEventListener('click', (e) => {
-      if ((e.target as HTMLElement).closest('button, .round')) window.setTimeout(closeMenu, 0);
-    });
-    document.addEventListener('pointerdown', (e) => {
-      if (right.classList.contains('open') && !(e.target as HTMLElement).closest('.hud-right, .hud-menu-btn')) closeMenu();
-    });
+    // The top right: three round buttons, in the lobby and in a run alike. The Logg (it carries the unread dot), the map (out of a
+    // run the little map of where you are, in a run the map of the road: ui/run.css shows the one that fits) and ☰, which opens
+    // the menu with everything else (ui/hudmenu.ts). ☰ stands in the corner, where it is easiest to hit.
+    const mapBtn = this.roundBtn('🧭', () => this.minimap.toggle(), A11Y_T.map, A11Y_T.btnMap);
+    mapBtn.classList.add('map-btn');
+    const routeBtn = this.roundBtn('🗺️', () => document.dispatchEvent(new Event('vt:runmap')), RUN_UI.route, RUN_UI.infoMap);
+    routeBtn.classList.add('route-btn');
+    // (onTap, not cards.tap: while "Förklara" is on the menu still opens, and the mode is turned off in it)
+    const menuBtn = (this.menuBtn = h('button', { class: 'round hud-menu-btn', type: 'button', 'aria-label': MENU_T.title, 'aria-haspopup': 'dialog' }, '☰'));
+    cards.info(menuBtn, '☰', MENU_T.title, MENU_T.btnInfo);
+    onTap(menuBtn, () => document.dispatchEvent(new Event('vt:menu')));
+    const right = h('div', { class: 'hud-right' }, createLogButton(), mapBtn, routeBtn, menuBtn);
     this.minimap = new Minimap();
     document.addEventListener('vt:minimap', () => this.minimap.toggle());
-    this.root.append(this.top, right, menuBtn, this.hotbar, this.heldName, zone, act, run, this.minimap.el);
+    this.root.append(this.top, right, this.hotbar, this.heldName, zone, act, run, this.minimap.el);
     centerColumn(this.root);
     ui.append(this.root);
     this.setupJoystick(zone);
 
     bus.on('me', () => this.render());
-    bus.on('area', () => {
-      this.renderHero();
-      this.renderFurnish();
-    });
+    bus.on('area', () => this.renderFurnish());
     bus.on('state', () => this.renderTop());
     bus.on('day', () => this.renderTop());
     // long ones (how to let the microphone in) stay long enough to be read: the lane times a message by its length
     bus.on('toast', (text) => this.toast(text));
     this.render();
-  }
-
-  private fullscreenBtn(): HTMLElement {
-    const b = h('button', { class: 'round small fs-btn', type: 'button' }, '⛶');
-    cards.info(b, '⛶', T.fullscreen, A11Y_T.btnFullscreen);
-    cards.tap(b, () => {
-      const el = document.documentElement as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> };
-      // iPhone Safari can't make a page fullscreen; a game started from the home screen fills the screen instead
-      if (!el.requestFullscreen && !el.webkitRequestFullscreen) return this.toast(T.fullscreenIphone, 8000);
-      if (document.fullscreenElement) void document.exitFullscreen();
-      else void (el.requestFullscreen?.() ?? el.webkitRequestFullscreen?.())?.catch(() => {});
-    });
-    document.addEventListener('fullscreenchange', () => (b.textContent = document.fullscreenElement ? '🡼' : '⛶'));
-    return b;
-  }
-
-  private muteBtn(): HTMLElement {
-    const b = h('button', { class: 'round small', type: 'button' }, isMuted() ? '🔇' : '🔊');
-    cards.info(b, '🔊', A11Y_T.sound, A11Y_T.btnSound);
-    cards.tap(b, () => {
-      setMuted(!isMuted());
-      b.textContent = isMuted() ? '🔇' : '🔊';
-      try {
-        localStorage.setItem('varldstradet.muted', isMuted() ? '1' : '0');
-      } catch {
-        /* ignore */
-      }
-    });
-    return b;
   }
 
   private roundBtn(label: string, fn: () => void, name: string, text: string): HTMLElement {
@@ -165,11 +116,6 @@ export class Hud {
     say(text, { kind: classifyToast(text, !!myRun()), ...(ms ? { ms: Math.max(ms, 3500) } : {}) });
   }
 
-  /** The gear button: only with a class. */
-  private renderHero(): void {
-    this.gearBtn.hidden = false; // Garderoben: for everyone (looks are earned, but the wardrobe is always there)
-  }
-
   /** Möblera on or off (only in your own house). */
   toggleFurnish(): void {
     if (!inOwnHouse()) return;
@@ -179,15 +125,13 @@ export class Hud {
   }
 
   private renderFurnish(): void {
-    const own = inOwnHouse();
-    if (!own) furnish.on = false;
-    this.furnishBtn.hidden = !own;
-    this.furnishBtn.classList.toggle('on', furnish.on);
+    if (!inOwnHouse()) furnish.on = false;
+    // Möblera is in the menu: while it is on, ☰ carries a little chair, so it is plain where to turn it off
+    this.menuBtn.classList.toggle('furnishing', furnish.on);
   }
 
   render(): void {
     this.renderTop();
-    this.renderHero();
     this.renderFurnish();
     const me = myPlayer();
     clear(this.hotbar);

@@ -1,7 +1,7 @@
 // Accessibility audit of the running game (Playwright, headless Chromium). Not part of the test run: it needs a server.
 // Needs a server with a FRESH database and no run in progress (DEV_TELEPORT=1 ACCESS=open): a leftover run or many characters change the scenes.
 //   node packages/client/scripts/a11y-audit.cjs [--url http://localhost:8110/] [--out dir] [--tag after] [--only 1024x768]
-// For four viewports it plays to each screen (picker, lobby, bag, class window, journal, wardrobe, settings, fight HUD, arch
+// For four viewports it plays to each screen (picker, lobby, the ☰ menu, bag, class window, journal, wardrobe, settings, fight HUD, arch
 // window, run stop with the cards, summary) and measures every visible interactive element (size, gap to the next), the computed
 // font size of every text, and the contrast of text against what is really behind it (a screenshot taken with the text hidden).
 // It prints and writes a JSON with the counts of violations. Playwright is not a dependency of the repo: it must be installed.
@@ -130,6 +130,14 @@ async function scenarios(browser, v, res) {
     if (await page.$('.modal')) await tag(page, label); else console.log('no window for key', key);
     await shut();
   }
+  // the menu behind the HUD's ☰ (everything that has no button of its own at the top)
+  const menu = async (label) => {
+    await page.evaluate(() => document.dispatchEvent(new Event('vt:menu')));
+    await page.waitForTimeout(400);
+    if (await page.$('.menu-panel')) await tag(page, label); else console.log('no menu window');
+    await shut();
+  };
+  await menu('menu');
   // the settings window, when there is one
   await page.evaluate(() => document.dispatchEvent(new Event('vt:settings')));
   await page.waitForTimeout(400);
@@ -191,6 +199,8 @@ async function scenarios(browser, v, res) {
     await page.evaluate(() => document.querySelector('.run-panel .runa-card')?.click());
     await page.waitForTimeout(800);
     await tag(page, 'run-hud');
+    // the menu in a run: the run's group and "Gå hem" at the end
+    await menu('run-menu');
     // the windows of the roguelike's depth, reached with the dev jump (DEV_TELEPORT): cards, the Köpman, a Händelse, a Vilosten, the path pick, the loot
     const jump = async (label, msg, wait = 3500, after) => { await page.send(msg); await page.waitForTimeout(wait); if (after) await after(); await tag(page, label); };
     await jump('run-cards', { t: 'dev', a: 'runclear' }, 7000);

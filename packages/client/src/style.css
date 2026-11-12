@@ -1226,13 +1226,7 @@ body.touch .round.pet-btn i {
   color: #6a5a30;
 }
 
-/* ---- hus: Möblera (only in your own house) and whose house it is ---- */
-.round.furnish-btn.on {
-  background: var(--gold, #f5c542);
-  box-shadow:
-    0 0 0 calc(0.75 * var(--u)) #fff,
-    0 var(--u) 0 var(--ink);
-}
+/* ---- hus: whose house it is (Möblera is in the menu, ui/hudmenu.css) ---- */
 .chip.house {
   background: #f1dfb8;
   font-weight: 900;

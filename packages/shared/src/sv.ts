@@ -204,7 +204,7 @@ export const T = {
   seasonOverride: 'Tvinga säsong',
   admin: 'Föräldrasida',
   help: 'Hjälp',
-  helpHint: 'Tryck på ? när du vill veta hur man gör',
+  helpHint: 'Vill du veta hur man gör? Tryck på ☰ och sedan på Hjälp.',
   stars: 'stjärnor',
   achievement: 'Bragd: {title}! +{stars} ⭐',
   enteredHouse: 'Välkommen in! Möblera som du vill.',
@@ -355,7 +355,6 @@ export const T = {
   fullscreen: 'Helskärm',
   fullscreenIphone: 'På iPhone: tryck på Dela ⬆️ i Safari och välj ”Lägg till på hemskärmen”. Starta spelet därifrån så fyller det hela skärmen.',
   players: 'Spelare',
-  sagaGearBtn: 'Garderoben (G)',
   sagaActTwo: 'Andra delen: Lokes list',
   // Saga III (client)
   sagaLevelChip: 'Nivå {n}',
@@ -589,7 +588,6 @@ export const A11Y_T = {
   rotateGo: 'Spela ändå',
   emotes: 'Känslor',
   map: 'Karta',
-  sound: 'Ljud',
   btnGear: 'Byt kläder och vapen. Här finns allt du har vunnit.',
   btnFurnish: 'Flytta möbler i ditt hus.',
   btnBag: 'Titta i din ryggsäck.',
@@ -651,15 +649,16 @@ export const HELP: HelpTopic[] = [
       { icon: 'emoji:✋', text: 'Tryck på den stora handen för att prata med någon eller använda det framför dig.', only: 'touch' },
       { icon: 'emoji:👆', text: 'Du kan också trycka direkt på en ruta bredvid dig.', only: 'touch' },
       { icon: 'emoji:🏃', text: 'Håll in springknappen för att springa fortare.', only: 'touch' },
-      { icon: 'emoji:❔', text: 'Vill du veta vad en knapp gör? Håll ner den en stund, eller tryck på Förklara och sedan på knappen. Då gör den ingenting.', only: 'touch' },
+      { icon: 'emoji:❔', text: 'Vill du veta vad en knapp gör? Håll ner den en stund. Eller tryck på ☰, sedan på Förklara och sedan på knappen. Då gör den ingenting.', only: 'touch' },
       { icon: 'emoji:⌨️', text: 'Gå med piltangenterna eller W A S D.', only: 'desktop' },
       { icon: 'emoji:⎵', text: 'Tryck E eller mellanslag för att prata med någon eller använda det framför dig. Du kan också klicka på en ruta bredvid dig.', only: 'desktop' },
       { icon: 'emoji:🎒', text: 'Q öppnar ryggsäcken, F visar känslor, B eller J dagboken, L loggen (allt som stått på skärmen), H hjälpen och T chatten.', only: 'desktop' },
       { icon: 'emoji:🏃', text: 'Håll in Shift för att springa.', only: 'desktop' },
       { icon: 'emoji:❔', text: 'Håll musen över en knapp, eller välj den med Tab och tryck ?, så får du läsa vad den gör.', only: 'desktop' },
       { icon: 'emoji:🎮', text: 'Med handkontroll: vänster spak går, X eller RT använder, B springer, Y öppnar ryggsäcken. I menyerna flyttar du med spaken, A väljer och B stänger. I en strid: R3 eller upp på styrkorset förklarar knapparna. Håll LT och tryck Start för att flytta mellan knapparna högst upp, B går tillbaka.' },
-      { icon: 'emoji:🗺️', text: 'Kartknappen (eller M) visar en liten karta över Gården: du är gul och kompisar är vita.' },
-      { icon: 'emoji:😊', text: 'Smiley-knappen visar känslor till dina kompisar.' },
+      { icon: 'emoji:☰', text: 'Uppe till höger finns 3 knappar: loggen, kartan och menyn ☰. I menyn finns kläder, ryggsäck, känslor, sagobok, hjälp och inställningar.' },
+      { icon: 'emoji:🗺️', text: 'Kartknappen (eller M) visar en liten karta över Gården: du är gul och kompisar är vita. På en färd visar den färdkartan (K), och den lilla kartan finns i menyn.' },
+      { icon: 'emoji:😊', text: 'Känslor i menyn (eller F) visar känslor till dina kompisar.' },
     ],
   },
   {
@@ -1056,6 +1055,7 @@ export const RUN_UI = {
   treeBtn: 'Sagaträdet',
   seeds: 'Sagafrön',
   route: 'Färdkartan',
+  numbers: 'Färdens siffror',
   map: 'Karta',
   mapHint: 'Där ni har gått är guld. Gå ut på en vägruna för att välja nästa steg.',
   home: 'Gå hem',
@@ -1476,6 +1476,28 @@ export const LOOK_T = {
 };
 
 // ---------------------------------------------------------------------------
+// Meny: the sheet behind the HUD's ☰ with everything that has no button of its own at the top (client ui/hudmenu.ts)
+// ---------------------------------------------------------------------------
+
+export const MENU_T = {
+  title: 'Meny',
+  btnInfo: 'Allt annat finns här: kläder, ryggsäck, hjälp och inställningar.',
+  // the groups
+  mine: 'Mina saker',
+  help: 'Hjälp och inställningar',
+  run: 'Färden',
+  // the tiles that have no word elsewhere (one word each)
+  gear: 'Kläder',
+  journal: 'Sagobok',
+  soundOn: 'Ljud på',
+  soundOff: 'Ljud av',
+  minimap: 'Minikarta',
+  // (a soft hyphen: on a narrow tile the long word breaks there, and nowhere else)
+  settings: 'Inställ\u00adningar',
+  keyIs: 'Tangent: {key}.',
+};
+
+// ---------------------------------------------------------------------------
 // Logg: everything the game wrote on the screen, to read again (client ui/lane.ts, ui/log.ts)
 // ---------------------------------------------------------------------------
 
@@ -1483,8 +1505,6 @@ export const LOG_T = {
   title: 'Logg',
   btn: 'Logg',
   btnInfo: 'Allt som stått på skärmen, så du kan läsa det igen. Tangent: L.',
-  menu: 'Meny',
-  menuInfo: 'Alla knappar: väska, kläder, hjälp och mer.',
   newDot: 'Nytt i loggen',
   empty: 'Inget har hänt än. Det som står på skärmen hamnar här.',
   emptyChat: 'Ingen har pratat än.',

@@ -1,5 +1,5 @@
-// "Logg": a window with everything the game wrote on the screen for a moment (ui/lane.ts keeps the lines). Opened from the HUD's
-// 📜 button, the key L, the help window and the gamepad (the HUD ring, or the help). It does not pause the game. The newest line is at
+// "Logg": a window with everything the game wrote on the screen for a moment (ui/lane.ts keeps the lines). Opened from the 📜 button
+// at the top right (one of the HUD's three), the key L, the help window and the gamepad (the HUD ring, or the help). It does not pause the game. The newest line is at
 // the bottom and the view stays there unless the player scrolled up; a button goes back to the newest. Filters: Alla, Händelser, Chatt.
 // A window like the others: a dialog, Escape and the gamepad's B close it, the focus comes back to what opened it.
 import { A11Y_T, LOG_T } from '@varldstradet/shared';
@@ -20,7 +20,7 @@ const clock = (at: number): string => {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 };
 
-/** The HUD's button: a scroll with the word, and a dot when something was written since the window was last open. */
+/** The HUD's button: a scroll with the word (the scroll alone where the run bar is narrow), and a dot when something was written since the window was last open. */
 export function createLogButton(): HTMLElement {
   const dot = h('i', { class: 'dot', 'aria-hidden': 'true', hidden: true });
   const b = h('button', { class: 'round log-btn', type: 'button', 'aria-label': LOG_T.btn }, h('span', { class: 'ic', 'aria-hidden': 'true' }, '📜'), h('span', { class: 'lb' }, LOG_T.btn), dot);

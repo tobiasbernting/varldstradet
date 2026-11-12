@@ -631,26 +631,42 @@ device (`varldstradet.a11y` in local storage) and applied as classes and CSS var
   icon, name, one sentence, a speaker button. A press that opened a card does not use the thing when it is released.
 - **Release, not press.** Buttons fire on pointer-up (`onTap` in `ui/dom.ts`), and a press that opened an info card does not fire when it
   is released. Spells are cast the same way, on release.
-- **Settings** ("Inställningar", the gear on the HUD): text size, strong contrast, effects (Alla / Mindre / Av), calm screen (no loops
+- **Settings** ("Inställningar", in the menu behind ☰, in the help window and on the character picker): text size, strong contrast, effects (Alla / Mindre / Av), calm screen (no loops
   or flashes; follows the system's reduced-motion choice until the player chooses), screen shake, colour-blind-safe telegraphs, how long
   to hold to read, HUD size (Liten / Normal / Stor: the buttons, frames and bars, not the words; from the start it follows the screen), left-handed
   buttons, reading aloud (the device's Swedish voice; hidden if there is none).
 - **Input.** Touch (stick on the left half, a big hand button, tap on a tile), keyboard (arrows or WASD, E or space, 1 to 5 for spells and
-  the potion, Tab to aim, Q bag, F emotes, B or J the journal, H help, T chat, M map, G wardrobe), gamepad (Xbox, PlayStation and
-  Switch layouts; the stick and d-pad move a highlight in menus, A selects, B closes). In a fight X, Y, B and RB are spells 1 to 4 and LB
-  the potion. Votes can be made with keys 1 to 3 in a Händelse and at the Köpman.
+  the potion, Tab to aim, Q bag, F emotes, B or J the journal, L the Logg, H help, T chat, M map, K the map of the road in a run, G
+  wardrobe), gamepad (Xbox, PlayStation and Switch layouts; the stick and d-pad move a highlight in menus, A selects, B closes; LT and
+  Start put the highlight on the HUD's own buttons). In a fight X, Y, B and RB are spells 1 to 4 and LB the potion. Votes can be made
+  with keys 1 to 3 in a Händelse and at the Köpman.
+- **The top of the screen and the menu.** The top right has three round buttons and no more, in the lobby and in a run alike
+  (`ui/hud.ts`): the Logg (it carries the unread dot), the map (out of a run the little map of where you are, in a run the map of the
+  road; the little map is then in the menu) and ☰ in the corner. ☰ opens the menu (`ui/hudmenu.ts`, a `.modal` like the others): big
+  tiles, a picture and one word each, in groups: "Mina saker" (wardrobe, bag, emotes, the journal, and Möblera in your own house),
+  "Hjälp och inställningar" (help, Förklara, settings, sound, fullscreen) and in a run "Färden" (the little map), with "Gå hem" apart
+  at the end, which still asks before it ends the run for you. A tile closes the menu and opens its window, so the focus comes back to
+  ☰; the sound is a switch and stays. Escape and the gamepad's B close the menu, the arrow keys walk the tiles, and a key that opens a
+  window (G, Q, F, B or J, L, M, K, H) closes the menu and does its thing. While Förklara or Möblera is on, ☰ carries its picture.
+  In a run the run bar is the top row, flush with the top edge and from side to side (safe-area insets kept), with the three buttons
+  at its right end: where we are (the stop, "Steg n av 10", the road's ten dots), then the run's numbers as one group (time,
+  Sagoandar, hacksilver, sagafrön), then the run's rules (difficulty, path, särdrag). When the row is too narrow it folds, measured
+  (`ui/lane.ts`, `data-fold`): the words of the rules, the rules, the long step, the dots, the stop's word, the sagafrön; the stop's
+  card and the map say what folded away. Out of a run the top row is the chips at the left and the three buttons at the right.
 - **Messages and the Logg.** Everything the game writes on the screen for a moment (toasts, title banners, a boss's shout, the aiming hint) goes
-  through `say()` in `ui/lane.ts` into ONE message lane at the top centre, under the run bar and the round buttons and between the frames at
-  the sides. The panels that stay up (boss bar, the vote on the way on, the "bring the window back" button, the note after a boss) dock in the
+  through `say()` in `ui/lane.ts` into ONE message lane at the top centre, under the top row (the run bar in a run, the chips and the
+  round buttons out of one) and between the frames at the sides. The panels that stay up (boss bar, the vote on the way on, the "bring the window back" button, the note after a boss) dock in the
   same column (`.hud-center`) above the lane, so nothing is drawn over a message and a message never over a panel. Several messages stack
   (what does not fit waits), each stays by its length (never shortened by the calm screen) and waits while a window covers the screen. The
-  same call writes a line (time, kind picture and word, text, who) to the Logg window (`ui/log.ts`; key L, the HUD's 📜 button with an unread
-  dot, the help window, the gamepad through the HUD ring or the help). The last 300 lines are kept in memory and sessionStorage, nothing on the
-  server; chat lines are in it too (filters Alla / Händelser / Chatt). In a run the top of the screen is one row (the run bar; on a screen under
-  500 px high the round buttons fold into one ☰ button), and world labels hide under HUD panels.
+  same call writes a line (time, kind picture and word, text, who) to the Logg window (`ui/log.ts`; key L, the 📜 button at the top right
+  with an unread dot, the help window, the gamepad through the HUD ring or the help). The last 300 lines are kept in memory and sessionStorage, nothing on the
+  server; chat lines are in it too (filters Alla / Händelser / Chatt). In a run the top of the screen is one row (the run bar with the
+  three round buttons in it), the party's frames hang directly under it at the left, and world labels hide under HUD panels.
 - **The HUD's budget** (`hud.css`, `ui/hudfit.ts`; aim: about a quarter of the screen, a third at most, the middle and the hero free, nothing
   over anything). Sizes come from the shorter side of the window, the text size (`--txt`) and the HUD size (`--hk` 0.85 / 1 / 1.2), never under
   the floors: spell buttons 66 px wide (the word Förklara at 16 px) by 52 px, 12 px apart; round buttons 48 px; "Slå" and "Spring" 72 / 64 px.
+  The top is one row as high as a round button (56 px, 48 px on a screen under 700 px wide) plus its edges: about 68 px in a run, where
+  it was two rows (about 136 px) before the menu.
   The spell bar is one row when it fits between the two sides of the bottom (chat/pet/more and the runor chip at one, "Slå"/"Spring" at the
   other, mirrored when left-handed), else two (four spells below, explain, aim and the potion above). `hudfit.ts` measures and sets `--res-l`,
   `--res-r`, `--left-stack`. Under 1240 px wide or 620 px high only chat, the pet and a "⋯" button are shown at the bottom left and the rest

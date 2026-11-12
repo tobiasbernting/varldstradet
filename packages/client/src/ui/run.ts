@@ -178,6 +178,9 @@ export class RunUi {
     });
     this.tap(this.cardsBtn, () => this.open(this.reopenWin));
     this.tap(this.runorStrip, () => this.open('runor'));
+    // the map of the road (the HUD's 🗺️ at the top right) and going home (the menu, ui/hudmenu.ts)
+    document.addEventListener('vt:runmap', () => myRun() && (this.win === 'map' ? this.close() : this.open('map')));
+    document.addEventListener('vt:runleave', () => myRun() && this.open('leave'));
     this.info(this.runorStrip, '🎴', RUN_UI.runorHeld, RUN_UI.infoRunor);
 
     bus.on('open', (c) => {
@@ -439,23 +442,12 @@ export class RunUi {
     // the stop's card also says what the chips that folded away say: the difficulty, the path and the special rules
     const more = [`${lvl.name}.`, myPath ? `${pathName(myPath)}.` : '', ...affixList.map((m) => `${MODIFIER_NAMES[m] ?? m}.`)].filter(Boolean).join(' ');
     const stop = chip('stop', [h('span', { class: 'ic', 'aria-hidden': 'true' }, cur ? KIND_ICON[cur.kind] : '🧭'), h('span', { class: 'lb' }, stopWord), h('span', { class: 'st' }, ` · ${fmt(RUN_UI.step, { n: run.row, max: ROWS })}`), h('span', { class: 'st-s' }, `${run.row}/${ROWS}`)], stopLabel, { icon: cur ? KIND_ICON[cur.kind] : '🧭', name: cur ? (STOP_NAMES[cur.kind] ?? '') : '', text: `${cur ? RUN_UI.kinds[cur.kind] : ''} ${RUN_UI.infoStep} ${more}` });
-    const ask = h('button', { class: `round-btn${this.infoMode ? ' on' : ''}`, 'aria-label': RUN_UI.explain, 'aria-pressed': String(this.infoMode) }, '❔');
-    onTap(ask, () => {
-      this.infoMode = !this.infoMode;
-      if (this.infoMode) cards.note('❔', RUN_UI.explain, RUN_UI.explainOn);
-      else this.hideInfo();
-      this.sync();
-    });
-    this.info(ask, '❔', RUN_UI.explain, RUN_UI.explainOn);
-    const map = h('button', { class: 'round-btn', 'aria-label': RUN_UI.route }, '🗺️');
-    this.tap(map, () => this.open('map'));
-    this.info(map, '🗺️', RUN_UI.route, RUN_UI.infoMap);
-    const home = h('button', { class: 'round-btn danger', 'aria-label': RUN_UI.home }, '🚪');
-    this.tap(home, () => this.open('leave'));
-    this.info(home, '🚪', RUN_UI.home, RUN_UI.infoHome);
     const affixes = affixList.map((m) => chip('affix', two(ico(MODIFIER_ICON[m]), MODIFIER_NAMES[m] ?? m), MODIFIER_NAMES[m] ?? m, { icon: ico(MODIFIER_ICON[m]), name: MODIFIER_NAMES[m] ?? m, text: MODIFIER_TEXT[m] ?? '' }));
-    // ONE row at every width: the stop, the road, then the chips, then the three buttons; the clock's bar is a thin line under it
-    this.bar.append(h('div', { class: 'line1' }, stop, rail, level, pathChip, ...affixes, clock, spirit, purse, seeds, ask, map, home), h('div', { class: 'clockbar' }, this.clockFill));
+    // ONE row at every width, read from the left: where we are (the stop, the step and the road), then the run's numbers as one group
+    // (time, Sagoandar, hacksilver, sagafrön), then the run's rules (difficulty, path, särdrag), which fold away first. The clock's
+    // bar is a thin line under it. The buttons are not here: the map is at the top right and the rest in the menu (ui/hudmenu.ts).
+    const nums = h('div', { class: 'nums', role: 'group', 'aria-label': RUN_UI.numbers }, clock, spirit, purse, seeds);
+    this.bar.append(h('div', { class: 'line1' }, stop, rail, nums, level, pathChip, ...affixes), h('div', { class: 'clockbar' }, this.clockFill));
     this.tickClock(run);
   }
 
