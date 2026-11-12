@@ -891,9 +891,14 @@ interface SheetLook {
   stripe?: string;
 }
 
-function gengangare(p: Px, f: number): void {
+function gengangare(p: Px, f: number, v = 0): void {
   // a sheet ghost bobbing along with a lantern: a round top, a wavy hem that sways, big dark eyes, a little "o" mouth
-  sheetGhost(p, f, { sheet: SHEET, cheek: '#f0c0d0', frame: [IRON.b, IRON.d, IRON.b, IRON.d], light: '#c8ffb0' });
+  const sheet = by(v, SHEET, pal('#6a86a0', '#96b2c8', '#c4dcea', '#e2f0f8', '#ffffff'), pal('#8a8468', '#b4ae8e', '#dcd6b8', '#f0ecd6', '#fffdf0'));
+  sheetGhost(p, f, { sheet, cheek: '#f0c0d0', frame: by(v, [IRON.b, IRON.d, IRON.b, IRON.d], [GOLD.b, GOLD.d, GOLD.b, GOLD.d], [IRON.b, IRON.d, IRON.b, IRON.d]), light: by(v, '#c8ffb0', '#b0e8ff', '#ffe8a0'), ...(v === 2 ? { stripe: '#b89a8a' } : {}) });
+  const bob = f ? 1 : 0;
+  // a nightcap with a bobble; or a chain it drags along
+  if (v === 1) p.rect(3, 1 + bob, 10, 2, '#5a4a9a').rect(4, bob, 7, 1, '#7a6ac0').px(2, 3 + bob, '#5a4a9a').px(1, 4 + bob, '#5a4a9a').rect(0, 5 + bob, 2, 2, '#f4ecd8').rect(3, 3 + bob, 10, 1, '#f4ecd8');
+  if (v === 2) for (let i = 0; i < 5; i++) p.px(3 - (i > 2 ? 1 : 0) - (i > 3 ? 1 : 0), 17 + i + bob, i % 2 ? IRON.l2 : IRON.b);
 }
 
 export function sheetGhost(p: Px, f: number, o: SheetLook): void {
@@ -928,14 +933,24 @@ export function sheetGhost(p: Px, f: number, o: SheetLook): void {
   p.rect(15, 17 + bob, 2, 4, o.light);
 }
 
-function helhund(p: Px, f: number): void {
+function helhund(p: Px, f: number, v = 0): void {
   // a hound of Hel: sooty fur, two heads (one peeks over the other) with green eyes, a bony collar
-  canine(p, f, 1, { fur: pal('#120e18', '#221a2a', '#342a40', '#4e4260', '#6a5c80'), glow: HELGREEN, twoHeads: true, oy: 4, fangs: true });
+  const fur = by(v, pal('#120e18', '#221a2a', '#342a40', '#4e4260', '#6a5c80'), pal('#1a120c', '#2e2016', '#483424', '#664c36', '#866a4e'), pal('#5a5a66', '#82828e', '#aeaeb8', '#d2d2da', '#f0f0f6'));
+  canine(p, f, 1, { fur, glow: by(v, HELGREEN, '#ffb040', '#6ac8ff'), twoHeads: true, oy: 4, fangs: true, ...(v === 1 ? { ruff: pal('#3a2a1a', '#5a442c', '#806444', '#a88a62', '#ccb088') } : {}) });
+  // a collar of iron spikes; or a ridge of bone along its back
+  if (v === 1) p.rect(13, 10, 2, 5, IRON.b).px(12, 10, IRON.l2).px(12, 13, IRON.l2).px(15, 15, IRON.l2).px(13, 10, IRON.l);
+  if (v === 2) for (const x of [5, 8, 11]) p.rect(x, 7, 1, 2, BONE.l).px(x, 6, BONE.l2);
 }
 
-function benspindel(p: Px, f: number): void {
+function benspindel(p: Px, f: number, v = 0): void {
   // a bone spider: a skull for a head, a ribbed body, legs of thin bones; it spits sticky webs
-  spider(p, f, 1, { body: BONE, legs: BONE, bone: true, glow: HELGREEN });
+  spider(p, f, 1, { body: BONE, legs: BONE, bone: true, glow: by(v, HELGREEN, '#ff8a3a', '#6ac8ff') });
+  // two horns on its skull; or a row of spines on its back and a little candle stuck there
+  if (v === 1) p.line(15, 5, 13, 2, BONE.l).px(13, 1, BONE.l2).line(21, 5, 23, 2, BONE.l).px(23, 1, BONE.l2);
+  if (v === 2) {
+    for (const x of [7, 10, 13]) p.rect(x, 1, 1, 3, BONE.l).px(x, 0, BONE.l2);
+    p.rect(18, 2, 2, 3, '#e2d6b8').px(18, 1, '#6ac8ff').px(19, 0, '#e8f8ff');
+  }
 }
 
 function garm(p: Px, f: number): void {
@@ -1006,10 +1021,10 @@ function hel(p: Px, f: number): void {
 // Svartalfheims gruvor: mine trolls, golden beetles, stone golems; the iron guardian and Fafner on his gold
 // ---------------------------------------------------------------------------
 
-function gruvtroll(p: Px, f: number): void {
+function gruvtroll(p: Px, f: number, v = 0): void {
   // a mossy grey-green troll in a miner's helmet with a lamp, a pick over its shoulder, a big round nose
-  const skin = pal('#26301c', '#3e4e2c', '#5a6e40', '#7a905a', '#a0b47e');
-  const cloth = pal('#2e1e12', '#4a3020', '#6a4a30', '#8a6644', '#aa845c');
+  const skin = by(v, pal('#26301c', '#3e4e2c', '#5a6e40', '#7a905a', '#a0b47e'), pal('#2e2a26', '#4a443c', '#6c645a', '#8e867a', '#b0a89c'), pal('#1e2c36', '#32485a', '#4c6a80', '#6e8ea4', '#96b2c4'));
+  const cloth = by(v, pal('#2e1e12', '#4a3020', '#6a4a30', '#8a6644', '#aa845c'), pal('#3a1414', '#5e2020', '#863232', '#aa4c48', '#cc6e68'), pal('#2e1e12', '#4a3020', '#6a4a30', '#8a6644', '#aa845c'));
   const [b, fr] = stride(f, 5, 12, 2);
   p.rect(b, 19, 4, 5, skin.d).rect(fr, 19, 4, 5, skin.b).rect(b - 1, 23, 6, 3, cloth.d).rect(fr, 23, 6, 3, cloth.b);
   lump(p, 1, 11, 6, 9, skin, 0.1, 241, 0.3);
@@ -1019,7 +1034,10 @@ function gruvtroll(p: Px, f: number): void {
   p.rect(8, 16, 3, 3, '#7a6a3a').rect(13, 9, 2, 6, cloth.b);
   // the pick over the shoulder
   p.line(12, 15, 19, 4, WOOD.b).line(13, 15, 20, 4, WOOD.d);
-  p.line(15, 3, 18, 2, IRON.l).line(18, 2, 21, 4, IRON.b).line(21, 4, 22, 7, IRON.b).line(15, 4, 14, 6, IRON.d).px(18, 3, IRON.b);
+  // a pick, a spade or a sledge
+  if (v === 0) p.line(15, 3, 18, 2, IRON.l).line(18, 2, 21, 4, IRON.b).line(21, 4, 22, 7, IRON.b).line(15, 4, 14, 6, IRON.d).px(18, 3, IRON.b);
+  if (v === 1) p.rect(17, 0, 5, 5, IRON.b).rect(17, 0, 2, 5, IRON.l).px(21, 4, IRON.d).px(17, 4, IRON.d);
+  if (v === 2) p.rect(16, 1, 6, 4, IRON.b).rect(16, 1, 6, 1, IRON.l2).rect(16, 4, 6, 1, IRON.d);
   lump(p, 12, 12, 5, 5, skin, 0.1, 243, 0.35);
   // the head, the nose, a toothy underbite
   lump(p, 7, 2, 11, 9, skin, 0.15, 244, 0.35);
@@ -1032,9 +1050,17 @@ function gruvtroll(p: Px, f: number): void {
     const dx = (x + 0.5 - 12) / 6;
     const dy = (y + 0.5 - 5) / 5;
     if (dx * dx + dy * dy > 1) return null;
-    return dx < -0.3 && dy < -0.3 ? '#f0c040' : y > 3 ? '#9a6a10' : '#d8a020';
+    const [hl, hd, hb] = by(v, ['#f0c040', '#9a6a10', '#d8a020'], ['#e86a5a', '#7a1e1a', '#c03a30'], [IRON.l2, IRON.d, IRON.l]);
+    return dx < -0.3 && dy < -0.3 ? hl : y > 3 ? hd : hb;
   });
-  p.rect(5, 4, 14, 1, '#7a5208').rect(15, 1, 3, 3, IRON.b).rect(16, 2, 2, 1, '#fff6c8');
+  p.rect(5, 4, 14, 1, by(v, '#7a5208', '#5a1612', IRON.d2));
+  // the lamp; a candle on the brim; two little horns and an orange beard
+  if (v === 0) p.rect(15, 1, 3, 3, IRON.b).rect(16, 2, 2, 1, '#fff6c8');
+  if (v === 1) p.rect(15, 1, 2, 3, '#e2d6b8').px(15, 0, '#ffd060').px(16, 0, '#fff6c8');
+  if (v === 2) {
+    p.px(6, 1, BONE.l).px(5, 0, BONE.l2).px(17, 1, BONE.l).px(18, 0, BONE.l2);
+    paint(p, 10, 10, 8, 5, (x, y) => (Math.abs(x + 0.5 - 14) > 3.6 - (y - 10) * 0.7 ? null : (x + y) % 3 === 0 ? '#a8501a' : '#d8782a'));
+  }
 }
 
 export const BEETLE_HEAD = pal('#1e1408', '#3a2810', '#5a4018', '#7a5a26', '#9a7838');
@@ -1052,14 +1078,20 @@ export function beetle(p: Px, f: number, bow: boolean, shell = GOLD, head = BEET
   p.px(15, 8, head.l);
   if (bow) p.tpl(4, 0, ['#.#', '###', '#.#'], { '#': '#e8405a' }).px(5, 1, '#ff8aa0');
 }
-const guldbagge = (p: Px, f: number) => beetle(p, f, false);
+function guldbagge(p: Px, f: number, v = 0): void {
+  // gold, silver with a horn on its nose, or copper gone green with a stag beetle's jaws
+  const shell = by(v, GOLD, pal('#4a5260', '#788292', '#aab4c2', '#d6dee8', '#ffffff'), pal('#1e4a3a', '#2e7256', '#4a9e76', '#7cc8a0', '#b8ecd0'));
+  beetle(p, f, false, shell, by(v, BEETLE_HEAD, pal('#16181e', '#2a2e38', '#424854', '#5e6672', '#808894'), pal('#3a1e0c', '#5e3214', '#864c20', '#ac6a34', '#d0905a')), by(v, '#fff6c8', '#ffffff', '#f0fff6'));
+  if (v === 1) p.line(14, 6, 15, 3, shell.l).px(15, 2, shell.l2).px(14, 5, shell.b);
+  if (v === 2) p.line(14, 6, 15, 5, shell.d).px(15, 4, shell.b).line(14, 8, 15, 9, shell.d).px(15, 10, shell.b).px(4, 4, shell.d).px(7, 5, shell.d).px(9, 4, shell.d);
+}
 const guldbaggeTam = (p: Px, f: number) => beetle(p, f, true);
 
-function stengolem(p: Px, f: number): void {
+function stengolem(p: Px, f: number, v = 0): void {
   // a golem of grey blocks with moss on its shoulders and blue runes that glow
-  const rock = pal('#24262a', '#3a3e44', '#565c64', '#767e88', '#9aa2ac');
-  const moss = pal('#1e3418', '#2e5024', '#457434', '#629848', '#8abc62');
-  const rune = '#6ad8ff';
+  const rock = by(v, pal('#24262a', '#3a3e44', '#565c64', '#767e88', '#9aa2ac'), pal('#3a2a1e', '#5a4430', '#806448', '#a48664', '#c8aa86'), pal('#14141a', '#24242c', '#383842', '#50505c', '#6c6c7a'));
+  const moss = by(v, pal('#1e3418', '#2e5024', '#457434', '#629848', '#8abc62'), pal('#5a4a2a', '#7e6a3e', '#a48c56', '#c4ae74', '#e0cc98'), pal('#6a4a10', '#9a701a', '#d8a82a', '#f8d45a', '#fff2b0'));
+  const rune = by(v, '#6ad8ff', '#ff9a3a', '#ffe27a');
   const [b, fr] = stride(f, 5, 15, 2);
   lump(p, b, 20, 6, 7, rock, 0.3, 261);
   lump(p, fr, 20, 6, 7, rock, 0.3, 262);
@@ -1078,6 +1110,14 @@ function stengolem(p: Px, f: number): void {
   // glowing runes and eyes
   p.line(8, 16, 9, 18, rune).px(10, 16, rune).line(14, 17, 16, 17, rune).px(15, 18, rune);
   p.rect(13, 4, 2, 2, rune).px(14, 4, '#e8faff').rect(16, 4, 2, 2, rune);
+  // crystals growing from its shoulders; or a square head with a crest
+  if (v === 1) {
+    const cr = pal('#8a3a10', '#c8601a', '#f8962e', '#ffc46a', '#fff0c0');
+    shard(p, 3, 11, 3, 6, -1, cr);
+    shard(p, 21, 11, 3, 6, 1, cr);
+    shard(p, 6, 10, 2, 4, 0, cr);
+  }
+  if (v === 2) p.rect(7, 0, 11, 2, rock.b).rect(7, 0, 11, 1, rock.l).rect(7, 1, 1, 6, rock.l).rect(17, 1, 1, 6, rock.d).rect(11, -1, 3, 1, moss.b);
 }
 
 function jarnvakten(p: Px, f: number): void {
@@ -1186,7 +1226,8 @@ export const KELP = pal('#14301a', '#1e4a26', '#2e6a34', '#46904a', '#6ab464');
 export const SEAEYE = '#5af0e0';
 export const MOSSPAL = pal('#1e3418', '#2e5024', '#457434', '#629848', '#8abc62');
 
-function sjodraug(p: Px, f: number): void {
+function sjodraug(p: Px, f: number, v = 0): void {
+  const kelp = by(v, KELP, pal('#3a1414', '#5e2420', '#8a3a30', '#b05a48', '#d08468'), pal('#12283a', '#1e4460', '#2e6488', '#4a8ab0', '#74b4d4'));
   // a skeleton from the sea: seaweed hanging off its shoulders and skull, a bronze trident, a starfish for a hat
   const [b, fr] = stride(f, 8, 12);
   bone(p, 10, 17, b, 21);
@@ -1197,22 +1238,31 @@ function sjodraug(p: Px, f: number): void {
   for (const y of [10, 12, 14]) p.rect(8, y, 6, 1, BONE.l).px(8, y, BONE.b);
   // seaweed over the shoulders, hanging down and swaying
   for (const [x, len] of [[7, 8], [9, 6], [13, 7]] as const)
-    for (let i = 0; i < len; i++) p.px(x + ((i + f) % 3 === 0 ? 1 : 0), 9 + i, i % 2 ? KELP.b : KELP.l);
+    for (let i = 0; i < len; i++) p.px(x + ((i + f) % 3 === 0 ? 1 : 0), 9 + i, i % 2 ? kelp.b : kelp.l);
   // the trident held out in front
   bone(p, 12, 11, 14, 13);
   bone(p, 14, 13, 16, 12);
   p.rect(17, 3, 1, 20, '#8a5a2a').px(17, 3, '#c08a4a');
-  p.rect(15, 3, 5, 1, '#c08a4a').rect(15, 0, 1, 3, '#d8a860').rect(17, 0, 1, 3, '#e8c080').rect(19, 0, 1, 3, '#d8a860');
-  p.px(15, 0, '#fff0c0').px(17, 0, '#fff6d8').px(19, 0, '#fff0c0').rect(15, 12, 3, 1, '#8a5a2a');
+  // a trident, an oar, or a harpoon with a barb
+  if (v === 0) {
+    p.rect(15, 3, 5, 1, '#c08a4a').rect(15, 0, 1, 3, '#d8a860').rect(17, 0, 1, 3, '#e8c080').rect(19, 0, 1, 3, '#d8a860');
+    p.px(15, 0, '#fff0c0').px(17, 0, '#fff6d8').px(19, 0, '#fff0c0');
+  }
+  if (v === 1) p.rect(16, 0, 3, 6, WOOD.l).rect(16, 0, 1, 6, WOOD.l2).rect(18, 1, 1, 5, WOOD.b).px(16, 5, WOOD.b);
+  if (v === 2) p.rect(17, 0, 1, 3, IRON.l2).px(18, 1, IRON.l).px(19, 2, IRON.b).px(16, 2, IRON.b).px(17, 0, '#ffffff');
+  p.rect(15, 12, 3, 1, '#8a5a2a');
   // the skull with a starfish on top and kelp for hair
   skull(p, 7, 2, 9, 8, SEAEYE);
-  for (let i = 0; i < 6; i++) p.px(7 - (i % 2), 3 + i, i % 2 ? KELP.d : KELP.b);
-  p.tpl(9, 0, ['.#.', '###', '#.#'], { '#': '#f08a5a' }).px(10, 1, '#ffc0a0');
+  for (let i = 0; i < 6; i++) p.px(7 - (i % 2), 3 + i, i % 2 ? kelp.d : kelp.b);
+  // a starfish for a hat, a shell, or a crown of coral
+  if (v === 0) p.tpl(9, 0, ['.#.', '###', '#.#'], { '#': '#f08a5a' }).px(10, 1, '#ffc0a0');
+  if (v === 1) p.rect(8, 0, 6, 3, '#e8c8d8').rect(9, 0, 4, 1, '#fff0f6').px(10, 1, '#c890a8').px(12, 2, '#c890a8').px(8, 2, '#c890a8');
+  if (v === 2) for (const x of [8, 10, 12, 14]) p.rect(x, x % 4 ? 0 : 1, 1, 3, '#f07a90').px(x, x % 4 ? 0 : 1, '#ffd8e0');
 }
 
-function jattekrabba(p: Px, f: number): void {
+function jattekrabba(p: Px, f: number, v = 0): void {
   // a giant crab: a round red shell, eyes up on stalks, one big claw held high and snapping, little pointy legs
-  const shell = pal('#5a1408', '#9a2a14', '#d8482a', '#f07a4a', '#ffb08a');
+  const shell = by(v, pal('#5a1408', '#9a2a14', '#d8482a', '#f07a4a', '#ffb08a'), pal('#142a5a', '#24489a', '#3e70d0', '#6e9cec', '#a8c8ff'), pal('#5a3a10', '#94661c', '#cc962e', '#ecc05a', '#fde6a0'));
   for (let i = 0; i < 4; i++) {
     const x = 5 + i * 3;
     const up = (i + f) % 2;
@@ -1238,9 +1288,20 @@ function jattekrabba(p: Px, f: number): void {
   if (f) p.clear(24, 2, 3, 2);
   else p.clear(24, 3, 3, 1);
   p.px(26, 1, shell.l2);
+  // barnacles and a second big claw; or spikes on its shell
+  if (v === 1) {
+    for (const [x, y] of [[5, 7], [9, 5], [13, 8], [7, 10]] as const) p.rect(x, y, 2, 2, '#e8ecf0').px(x, y, '#ffffff');
+    lump(p, 20, 8, 7, 6, shell, 0.1, 294, 0.4);
+    p.clear(24, 10, 3, 1);
+  }
+  if (v === 2) {
+    shard(p, 6, 5, 2, 4, -1, shell);
+    shard(p, 10, 4, 2, 4, 0, shell);
+    shard(p, 3, 7, 2, 3, -1, shell);
+  }
 }
 
-export function jelly(p: Px, f: number, x0: number, w: number, h: number, a: number): void {
+export function jelly(p: Px, f: number, x0: number, w: number, h: number, a: number, col: readonly string[] = ['#ffd0ff', '#ffe8ff', '#b064d8', '#e098f4', '#f0a8ff', '#c880f0', '#3a1a4a', '#7a3a8a']): void {
   // a see-through bell with a lighter rim, a sleepy smile, and tentacles that wave
   const bob = f ? 0 : 1;
   const bell = Math.round(h * 0.45);
@@ -1250,7 +1311,7 @@ export function jelly(p: Px, f: number, x0: number, w: number, h: number, a: num
       const dx = (x + 0.5 - cx) / (w / 2);
       const dy = (y + 0.5 - bell) / bell;
       if (dx * dx + dy * dy > 1) continue;
-      const c = y === bell - 1 ? '#ffd0ff' : dx < -0.4 && dy < -0.3 ? '#ffe8ff' : dx > 0.5 ? '#b064d8' : '#e098f4';
+      const c = y === bell - 1 ? col[0]! : dx < -0.4 && dy < -0.3 ? col[1]! : dx > 0.5 ? col[2]! : col[3]!;
       p.px(x, y + bob, glass(c, a));
     }
   const n = Math.max(3, Math.round(w / 3));
@@ -1258,15 +1319,27 @@ export function jelly(p: Px, f: number, x0: number, w: number, h: number, a: num
     const tx = x0 + 1.5 + (i * (w - 3)) / (n - 1);
     for (let y = bell; y < h - 1; y++) {
       const sway = Math.round(Math.sin((y - bell) * 0.8 + i + f * 2) * 0.9);
-      p.px(tx + sway, y + bob, glass(i % 2 ? '#f0a8ff' : '#c880f0', a * 0.9));
+      p.px(tx + sway, y + bob, glass(i % 2 ? col[4]! : col[5]!, a * 0.9));
     }
   }
   const es = w >= 14 ? 2 : 1;
   const ey = Math.round(bell * 0.55) + bob;
-  p.rect(Math.round(cx) + 1, ey, es, es + (es > 1 ? 0 : 1), '#3a1a4a').rect(Math.round(cx) + 3 + es, ey, es, es + (es > 1 ? 0 : 1), '#3a1a4a');
-  p.px(Math.round(cx) + 2, ey + es + 1, '#7a3a8a').px(Math.round(cx) + 3, ey + es + 2, '#7a3a8a').px(Math.round(cx) + 4, ey + es + 1, '#7a3a8a');
+  p.rect(Math.round(cx) + 1, ey, es, es + (es > 1 ? 0 : 1), col[6]!).rect(Math.round(cx) + 3 + es, ey, es, es + (es > 1 ? 0 : 1), col[6]!);
+  p.px(Math.round(cx) + 2, ey + es + 1, col[7]!).px(Math.round(cx) + 3, ey + es + 2, col[7]!).px(Math.round(cx) + 4, ey + es + 1, col[7]!);
 }
-const manet = (p: Px, f: number) => jelly(p, f, 0, 16, 20, 0.85);
+function manet(p: Px, f: number, v = 0): void {
+  // lilac; blue, narrow and long, with spots; green, wide and flat with a frill
+  if (v === 0) return jelly(p, f, 0, 16, 20, 0.85);
+  if (v === 1) {
+    jelly(p, f, 2, 12, 20, 0.85, ['#c8e8ff', '#e8f6ff', '#3a6ad0', '#7ab0f4', '#a8d0ff', '#5a8ae8', '#14244a', '#2a4a8a']);
+    for (const [x, y] of [[5, 3], [8, 2], [10, 5]] as const) p.px(x, y + (f ? 0 : 1), '#f0faff');
+    return;
+  }
+  const q = new Px(16, 14);
+  jelly(q, f, 0, 16, 14, 0.85, ['#e0ffd0', '#f2ffe8', '#3aa864', '#8ae09a', '#c0f4a8', '#5ac878', '#143a24', '#2a6a44']);
+  p.blit(q, 0, 5);
+  for (const x of [1, 4, 7, 10, 13]) p.px(x, 11 + (f ? 0 : 1), '#f2ffe8');
+}
 const manetTam = (p: Px, f: number) => jelly(p, f, 0, 12, 15, 0.85);
 
 function blackis(p: Px, f: number): void {
@@ -1348,10 +1421,10 @@ function jormungand(p: Px, f: number): void {
 
 export const ELFEYE = '#e08aff';
 
-function skuggalv(p: Px, f: number): void {
+function skuggalv(p: Px, f: number, v = 0): void {
   // a shadow elf archer: violet-grey skin, long white hair, a pointed ear, a dark cloak, a silver bow, glowing eyes
   const skin = pal('#3e3456', '#5a4e78', '#7a6e9a', '#9a90ba', '#bcb4d8');
-  const cloth = pal('#120c1e', '#1e1630', '#2e2248', '#443464', '#5c4a82');
+  const cloth = by(v, pal('#120c1e', '#1e1630', '#2e2248', '#443464', '#5c4a82'), pal('#0e1a12', '#182c1e', '#26442e', '#386042', '#507e5a'), pal('#1e0a10', '#34121c', '#501e2c', '#702e40', '#92465a'));
   const [b, fr] = stride(f, 7, 11);
   p.rect(b, 16, 2, 6, cloth.d).rect(fr, 16, 2, 6, cloth.b).rect(b - 1, 22, 3, 1, cloth.d2).rect(fr, 22, 4, 1, cloth.d2);
   // the cloak behind
@@ -1371,23 +1444,35 @@ function skuggalv(p: Px, f: number): void {
     const dy = (y + 0.5 - 6.5) / 4.8;
     const onHead = dx * dx + dy * dy <= 1 && (y <= 2 || x <= 7 || (y === 3 && x <= 13));
     const down = x >= 5 && x <= 9 && y >= 5 && y <= 12 - ((x + 1) % 2) && x >= 6 - (y < 9 ? 1 : 0);
-    if (!onHead && !down) return null;
+    if (!onHead && !(down && v !== 2)) return null;
+    // white hair to the shoulders; a hood pulled up; or dark hair cut short and tied in a knot
+    if (v === 1) return y <= 1 && x < 11 ? cloth.l2 : x < 7 ? cloth.l : cloth.b;
+    if (v === 2) return y <= 1 && x < 11 ? '#5a5a7a' : '#2e2e48';
     return y <= 1 && x < 11 ? '#ffffff' : x % 3 === 0 && y > 3 ? '#c4c0d8' : '#e8e6f2';
   });
+  if (v === 1) p.px(5, 0, cloth.l).px(4, 1, cloth.b).px(3, 2, cloth.b);
+  if (v === 2) p.rect(7, -1, 3, 2, '#2e2e48').px(8, -1, '#5a5a7a').rect(10, 5, 6, 1, '#1e0a10');
   p.line(9, 6, 6, 3, skin.b).px(6, 3, skin.l).px(7, 5, skin.l);
-  eye(p, 12, 5, 2, ELFEYE);
+  eye(p, 12, 5, 2, by(v, ELFEYE, '#8aff9a', '#ffb04a'));
   p.px(14, 9, skin.d2).px(15, 8, skin.d2);
 }
 
-function jattespindel(p: Px, f: number): void {
-  // a big furry spider, plum-dark with big round eyes (and a few small ones), a tuft of fur on top
-  spider(p, f, 1, { body: pal('#1a0e1e', '#2c1832', '#44264c', '#603868', '#7e528a'), legs: pal('#140a18', '#22142a', '#36203e', '#4a2e54', '#604070') });
-  for (const x of [7, 10, 13]) p.px(x, 3, '#7e528a');
+function jattespindel(p: Px, f: number, v = 0): void {
+  // a big furry spider with big round eyes (and a few small ones): plum-dark with a tuft of fur, moss-green with yellow
+  // stripes and spines, or pale as a web with a mark on its back
+  const body = by(v, pal('#1a0e1e', '#2c1832', '#44264c', '#603868', '#7e528a'), pal('#141e0c', '#243416', '#3a5224', '#567436', '#78984e'), pal('#6a6a7a', '#9494a4', '#c0c0cc', '#e0e0e8', '#ffffff'));
+  const legs = by(v, pal('#140a18', '#22142a', '#36203e', '#4a2e54', '#604070'), pal('#0e160a', '#1a2810', '#2c401c', '#40582a', '#58743c'), pal('#4a4a5a', '#70707e', '#9a9aa8', '#c0c0cc', '#e4e4ec'));
+  spider(p, f, 1, { body, legs, ...(v === 2 ? { mark: '#c83a5a' } : {}) });
+  if (v === 0) for (const x of [7, 10, 13]) p.px(x, 3, '#7e528a');
+  if (v === 1) {
+    for (const x of [6, 9, 12]) p.rect(x, 2, 1, 2, '#e8c040').px(x, 1, '#fff0a0');
+    p.rect(6, 7, 9, 1, '#e8c040').rect(7, 10, 7, 1, '#c8a030');
+  }
 }
 
-function svampvakt(p: Px, f: number): void {
+function svampvakt(p: Px, f: number, v = 0): void {
   // a walking mushroom on guard: a red cap with white spots, a face on its stem, a twig spear and a wooden shield
-  const cap = pal('#5a0e0e', '#981c1c', '#d0342a', '#f0604a', '#ff9a80');
+  const cap = by(v, pal('#5a0e0e', '#981c1c', '#d0342a', '#f0604a', '#ff9a80'), pal('#3e2410', '#64401c', '#8e622e', '#b48848', '#d8b070'), pal('#2a1450', '#44247e', '#643aac', '#8a5cd4', '#b88cf4'));
   const stem = pal('#8a7a60', '#b8a888', '#e0d4b8', '#f4ecd8', '#fffaf0');
   const [b, fr] = stride(f, 6, 12, 1);
   p.rect(b, 22, 3, 3, stem.d).rect(fr, 22, 3, 3, stem.b).rect(b - 1, 24, 4, 2, stem.d2).rect(fr, 24, 4, 2, stem.d);
@@ -1401,17 +1486,21 @@ function svampvakt(p: Px, f: number): void {
   // the cap
   paint(p, 0, 0, 21, 12, (x, y) => {
     const dx = (x + 0.5 - 10.5) / 10.5;
-    const dy = (y + 0.5 - 11) / 10;
-    if (dx * dx + dy * dy > 1) return null;
+    const dy = (y + 0.5 - 11) / (v === 1 ? 6.5 : 10);
+    // a round fly agaric with white spots, a flat brown cap, or a pointed one with spots that glow
+    if (v === 2 ? Math.abs(dx) > (y + 1.5) / 12.5 : dx * dx + dy * dy > 1) return null;
     if (y >= 10) return y === 11 ? '#c8b088' : '#a89068';
-    const spot = [[5, 4], [11, 2], [15, 6], [8, 8], [2, 8]].some(([sx, sy]) => Math.hypot(x - sx!, y - sy!) < 1.3);
-    if (spot) return '#fff6ec';
+    const spot = v !== 1 && [[5, 4], [11, 2], [15, 6], [8, 8], [2, 8]].some(([sx, sy]) => Math.hypot(x - sx!, y - sy!) < (v === 2 ? 1 : 1.3));
+    if (spot && (v === 0 || Math.abs(dx) < (y - 0.5) / 12.5)) return v === 2 ? '#a8ffe0' : '#fff6ec';
     return dx < -0.4 && dy < -0.5 ? cap.l : dx > 0.6 || y > 8 ? cap.d : cap.b;
   });
   // the arm and the spear of a twig with a leaf for a blade
   p.rect(15, 16, 3, 2, stem.l);
   p.rect(18, 6, 1, 19, WOOD.b).rect(18, 6, 1, 1, WOOD.l);
-  p.tpl(17, 1, ['.#.', '###', '###', '.#.', '.#.'], { '#': '#5aa040' }).px(17, 2, '#8ad064');
+  // a leaf for a blade, a knob of wood (a club), or a little lantern hung on it
+  if (v === 0) p.tpl(17, 1, ['.#.', '###', '###', '.#.', '.#.'], { '#': '#5aa040' }).px(17, 2, '#8ad064');
+  if (v === 1) lump(p, 16, 1, 5, 6, WOOD, 0.2, 332, 0.35);
+  if (v === 2) p.rect(17, 2, 3, 4, IRON.b).rect(18, 3, 1, 2, '#a8ffe0').rect(17, 2, 3, 1, IRON.l).px(18, 1, IRON.l);
 }
 
 function spindeldrottning(p: Px, f: number): void {
@@ -1440,26 +1529,46 @@ function nattmara(p: Px, f: number): void {
 
 export const WOLF = pal('#2a2c34', '#464a56', '#6a707e', '#9298a6', '#c0c6d2');
 
-function ulv(p: Px, f: number): void {
-  // a big grey wolf with a pale belly and amber eyes
-  canine(p, f, 1.1, { fur: WOLF, glow: '#ffc040', belly: '#c0c6d2' });
+function ulv(p: Px, f: number, v = 0): void {
+  // a big grey wolf with a pale belly and amber eyes; a black one with a shaggy ruff and a torn ear; a brown one with
+  // frost on its back and fangs showing
+  if (v === 0) return canine(p, f, 1.1, { fur: WOLF, glow: '#ffc040', belly: '#c0c6d2' });
+  if (v === 1) {
+    canine(p, f, 1.1, { fur: pal('#08080c', '#16161c', '#28282f', '#3e3e48', '#585864'), glow: '#ff6a3a', ruff: pal('#1a1a22', '#2e2e3a', '#484856', '#666676', '#888898') });
+    p.clear(20, 0, 2, 2);
+    for (const x of [14, 16, 18]) p.px(x, 3, '#888898');
+    return;
+  }
+  canine(p, f, 1.1, { fur: pal('#2a1c12', '#48301e', '#6c4a30', '#906a48', '#b48e68'), glow: '#8ae0ff', belly: '#e8dcc8', fangs: true });
+  for (const [x, h] of [[6, 2], [9, 3], [12, 2]] as const) p.rect(x, 5 - h, 1, h + 1, '#dcecf8').px(x, 5 - h, '#ffffff');
+  p.rect(5, 6, 9, 1, '#eef6fc');
 }
 
-function rimtroll(p: Px, f: number): void {
+function rimtroll(p: Px, f: number, v = 0): void {
   // a rime troll: lilac-grey skin crusted with frost, ice spikes on its hunched back, an icicle beard, a snowball
-  const skin = pal('#323652', '#4c5276', '#6c7498', '#929ab8', '#bcc2da');
+  const skin = by(v, pal('#323652', '#4c5276', '#6c7498', '#929ab8', '#bcc2da'), pal('#1e3e4e', '#325c70', '#4c8094', '#74a6b8', '#a4ccd8'), pal('#3e3440', '#5c4e5e', '#807082', '#a696a8', '#ccbece'));
   const [b, fr] = stride(f, 6, 14, 2);
   p.rect(b, 21, 4, 5, skin.d).rect(fr, 21, 4, 5, skin.b).rect(b - 1, 25, 6, 3, skin.d2).rect(fr, 25, 6, 3, skin.d);
   lump(p, 1, 12, 7, 11, skin, 0.1, 341, 0.3);
   lump(p, 3, 8, 17, 16, skin, 0.15, 342, 0.3);
   // frost on the back and the shoulders, ice spikes sticking up
   paint(p, 3, 7, 12, 8, (x, y) => (y < 10 + Math.abs(x - 9) * 0.3 && (x * 5 + y) % 4 !== 0 ? (y < 9 ? '#ffffff' : '#dcecf8') : null));
-  shard(p, 6, 8, 2, 5, -1, FROST);
-  shard(p, 10, 7, 2, 6, 0, FROST);
-  shard(p, 14, 8, 2, 4, 1, FROST);
-  // the near arm holding a snowball
+  // three ice spikes; two great ones; or none, and a hood of white fur instead
+  if (v === 0) {
+    shard(p, 6, 8, 2, 5, -1, FROST);
+    shard(p, 10, 7, 2, 6, 0, FROST);
+    shard(p, 14, 8, 2, 4, 1, FROST);
+  }
+  if (v === 1) {
+    shard(p, 6, 9, 4, 9, -2, FROST);
+    shard(p, 12, 8, 4, 8, 1, FROST);
+  }
+  // the near arm holding a snowball (the third holds an icicle like a dagger)
   lump(p, 15, 13, 6, 9, skin, 0.1, 343, 0.3);
-  lump(p, 17, 17, 7, 7, SNOWFUR, 0.15, 344, 0.35);
+  if (v === 2) {
+    shard(p, 21, 22, 3, 9, 1, FROST);
+    lump(p, 18, 20, 5, 4, skin, 0.1, 344, 0.4);
+  } else lump(p, 17, 17, 7, 7, SNOWFUR, 0.15, 344, 0.35);
   // the head, low between the shoulders: a frosty brow, small glowing eyes, a big nose, icicles for a beard
   const face = pal('#3e4466', '#5e668e', '#828cb2', '#a8b0cc', '#d0d6ea');
   lump(p, 11, 5, 11, 10, face, 0.12, 345, 0.35);
@@ -1469,12 +1578,18 @@ function rimtroll(p: Px, f: number): void {
   eye(p, 17, 8, 2);
   p.rect(15, 13, 6, 1, face.d2).px(16, 12, '#fffaf0').px(19, 12, '#fffaf0');
   for (const [x, h] of [[15, 2], [17, 3], [19, 2]] as const) p.rect(x, 14, 1, h, '#e4f6ff').px(x, 14 + h - 1, '#a8d4f0');
+  if (v === 1) p.line(13, 6, 11, 3, BONE.l).px(11, 2, BONE.l2).line(20, 6, 22, 3, BONE.l).px(22, 2, BONE.l2);
+  if (v === 2) {
+    lump(p, 9, 2, 13, 7, SNOWFUR, 0.3, 347, 0.3);
+    p.rect(14, 7, 7, 1, SNOWFUR.b);
+    eye(p, 17, 8, 2);
+  }
 }
 
-function bergsjatte(p: Px, f: number): void {
+function bergsjatte(p: Px, f: number, v = 0): void {
   // a mountain giant (a small one, as giants go): skin like brown stone, a beard of moss, a fur kilt, and a boulder
   // carried on its shoulder
-  const skin = pal('#3a3026', '#5a4a3a', '#7e6a54', '#a08a70', '#c4ae92');
+  const skin = by(v, pal('#3a3026', '#5a4a3a', '#7e6a54', '#a08a70', '#c4ae92'), pal('#2e3034', '#484c52', '#686e76', '#8a929a', '#b0b8c0'), pal('#4a2a1e', '#70442e', '#986444', '#bc8a66', '#dcb490'));
   const fur = pal('#2a2018', '#40322a', '#5a4838', '#76604c', '#927a62');
   const stone = pal('#2a2a2e', '#44444a', '#62626a', '#84848c', '#a8a8b0');
   const [b, fr] = stride(f, 8, 17, 2);
@@ -1484,8 +1599,15 @@ function bergsjatte(p: Px, f: number): void {
   paint(p, 5, 23, 19, 6, (x, y) => (y === 28 && x % 2 === 0 ? null : y === 23 ? fur.l : (x + y) % 3 === 0 ? fur.d : fur.b));
   // the boulder on the near shoulder, held up by the near arm
   lump(p, 20, 13, 7, 11, skin, 0.1, 353, 0.3);
-  lump(p, 15, 0, 15, 12, stone, 0.3, 354, 0.3);
-  p.rect(18, 5, 2, 2, '#4a7a3a').px(25, 3, '#4a7a3a');
+  // a boulder; a tree trunk; a boulder with a cap of snow
+  if (v === 1) {
+    paint(p, 12, 1, 18, 8, (x, y) => (y === 1 ? WOOD.l : y > 6 ? WOOD.d : (x + y * 2) % 5 === 0 ? WOOD.d : WOOD.b));
+    p.rect(28, 1, 2, 8, '#d8b888').px(28, 4, '#a47e4e').px(29, 5, '#a47e4e').rect(16, 0, 2, 1, WOOD.b).px(21, 0, '#5aa040').px(22, 0, '#8ad064');
+  } else {
+    lump(p, 15, 0, 15, 12, stone, 0.3, 354, 0.3);
+    p.rect(18, 5, 2, 2, '#4a7a3a').px(25, 3, '#4a7a3a');
+    if (v === 2) paint(p, 15, 0, 15, 5, (x, y) => (Math.hypot((x + 0.5 - 22.5) / 7.5, (y + 0.5 - 6) / 6) > 1 || y > 2 + ((x * 3) % 3) ? null : y === 0 ? '#ffffff' : '#e6f0f8'));
+  }
   lump(p, 22, 9, 6, 5, skin, 0.1, 355, 0.4);
   // the head: a heavy brow, small eyes, a big nose, a beard of moss
   const face = pal('#4a3e30', '#6e5c48', '#94806a', '#b6a088', '#d6c2a8');
@@ -1496,9 +1618,13 @@ function bergsjatte(p: Px, f: number): void {
   for (let i = 0; i < 6; i++) {
     const x = 12 + i * 2;
     const len = 7 - Math.abs(i - 2.5) * 1.6;
-    for (let y = 0; y < len; y++) p.px(x + ((y + i + f) % 3 === 0 ? 1 : 0), 12 + y, y === 0 ? MOSSPAL.d : y % 2 ? MOSSPAL.b : MOSSPAL.l);
+    const beard = by(v, MOSSPAL, pal('#5a3a10', '#86581c', '#b47c2e', '#d8a44e', '#f4cc80'), SNOWFUR);
+    for (let y = 0; y < len; y++) p.px(x + ((y + i + f) % 3 === 0 ? 1 : 0), 12 + y, y === 0 ? beard.d : y % 2 ? beard.b : beard.l);
   }
   p.rect(15, 11, 5, 1, face.d2);
+  // (the second has a bald head with one horn, the third a headband of fur)
+  if (v === 1) p.line(13, 3, 11, 0, BONE.l).px(12, 3, BONE.b).px(11, 0, BONE.l2);
+  if (v === 2) p.rect(9, 4, 12, 2, fur.b).rect(9, 4, 12, 1, fur.l);
 }
 
 function skoll(p: Px, f: number): void {
@@ -2099,19 +2225,21 @@ const AFTER: Record<string, Draw> = {
   },
   isblock: (p, f) => twinkle(p, f ? 4 : 17, f ? 8 : 5, '#ffffff'),
   // Lokes list
-  gengangare: (p, f) => {
+  gengangare: (p, f, v = 0) => {
     const bob = f ? 1 : 0;
-    p.rect(15, 18 + bob, 2, 2, '#7aff6a').px(16, 17 + bob, '#e8ffd8');
-    halo(p, 16, 18 + bob, 6, '#9cff8a', 0.22);
+    const light = by(v, '#7aff6a', '#6ac8ff', '#ffd060');
+    p.rect(15, 18 + bob, 2, 2, light).px(16, 17 + bob, '#f4fff0');
+    halo(p, 16, 18 + bob, 6, light, 0.22);
   },
-  helhund: (p) => halo(p, 18, 6, 5, '#7aff6a', 0.12),
-  gruvtroll: (p, f) => {
-    halo(p, 18, 2, 6, '#fff0a0', f ? 0.3 : 0.24);
-    p.px(18, 2, '#ffffff');
+  helhund: (p, _f, v = 0) => halo(p, 18, 6, 5, by(v, '#7aff6a', '#ffb040', '#6ac8ff'), 0.12),
+  gruvtroll: (p, f, v = 0) => {
+    if (v === 2) return;
+    halo(p, by(v, 18, 16, 0), by(v, 2, 0, 0), by(v, 6, 4, 0), '#fff0a0', f ? 0.3 : 0.24);
+    if (v === 0) p.px(18, 2, '#ffffff');
   },
   guldbagge: (p, f) => twinkle(p, f ? 4 : 8, f ? 4 : 3, '#fff6c0'),
   guldbagge_tam: (p, f) => twinkle(p, f ? 3 : 9, f ? 5 : 4, '#fff6c0'),
-  stengolem: (p, f) => halo(p, 14, 10, 9, '#6ad8ff', f ? 0.14 : 0.1),
+  stengolem: (p, f, v = 0) => halo(p, 14, 10, 9, by(v, '#6ad8ff', '#ff9a3a', '#ffe27a'), f ? 0.14 : 0.1),
   jarnvakten: (p, f) => {
     halo(p, 17, 24, 10, '#ff8a3a', f ? 0.2 : 0.15);
     // puffs of steam from the shoulders
@@ -2123,7 +2251,7 @@ const AFTER: Record<string, Draw> = {
     // a lazy puff of smoke from the nostril
     p.circle(50 - (f ? 1 : 2), 5 - f * 2, 1.5, glass('#d8d0c8', 0.6)).px(48, 7, glass('#e8e0d8', 0.6));
   },
-  manet: (p, f) => halo(p, 8, 6 + (f ? 0 : 1), 9, '#f0a0ff', 0.22),
+  manet: (p, f, v = 0) => halo(p, 8, by(v, 6, 6, 9) + (f ? 0 : 1), by(v, 9, 7, 8), by(v, '#f0a0ff', '#a0c8ff', '#a0f0b0'), 0.22),
   manet_tam: (p, f) => halo(p, 6, 4 + (f ? 0 : 1), 7, '#f0a0ff', 0.22),
   blackis: (p, f) => twinkle(p, 17, f ? 2 : 3, '#ffffff', '#ffffff'),
   spindeldrottning: (p, f) => {
