@@ -596,7 +596,7 @@ function tickPet(h: Here, a: AnimalState, owner: PlayerState, def: PetDef, party
       pf.cd = now + t.cd;
       act('pet_ram', m);
       hurtMob(h, m, owner.id, t.dmg * mul, 0.2, false, ctx, out);
-      if (h.inst.mobs[m.id] && (m.kind === 'mob' || m.kind === 'add')) stun(h, m, t.stunMs * mul, now, out);
+      if (h.inst.mobs[m.id] && (m.kind === 'mob' || m.kind === 'add')) stun(h, m, t.stunMs * mul, now, out, `pet:${owner.id}`);
       return;
     }
   }

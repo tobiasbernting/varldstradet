@@ -16,6 +16,7 @@ import {
   newSagaProgress,
   type ClassId,
   type DungeonId,
+  type SagaInstance,
 } from './saga.ts';
 import { sagaCheckpoint } from './sagamap.ts';
 import { CLEARED_STAT } from './sagasim.ts';
@@ -65,6 +66,9 @@ import {
   type RunPhase,
   type RunSave,
   type RunSnap,
+  MEDAL_SILVER,
+  medalFor,
+  type Medal,
 } from './run.ts';
 import { defaultPath, pathDef, pathsOf } from './paths.ts';
 import { canSharpen, heldEffect, offerFor, partyRuna, runa, runaOfRarity, setEffect, tagCounts, type OfferSource, type RunRarity, type RunTag, type RunaHeld } from './runor.ts';
@@ -152,6 +156,9 @@ export interface RunState {
   /** The fraction of a sagafrö each player is owed by the bonuses (whole seeds are paid; never saved). */
   carry: Record<string, number>;
   paid: Set<string>;
+  /** Runmärken: the medal of each fight stop cleared, and the run time when the stop now was entered. */
+  medals: Record<number, Medal>;
+  stopAt: number;
   /** Players who joined while the cards were out: they enter the next stop. */
   waiting: string[];
   victoryAt?: number;
@@ -418,6 +425,7 @@ function snap(farm: WorldState, run: RunState): RunSnap {
     ...(run.event && run.phase === 'event' ? { event: { id: run.event.id, choices: eventDef(run.event.id)!.choices.map((c) => ({ id: c.id, cost: c.cost ?? 0 })), votes: { ...run.event.votes }, left: Math.max(0, Math.round(run.event.until - run.elapsed)) } } : {}),
     hold: Object.fromEntries(Object.entries(run.hold).map(([id, hs]) => [id, hs.map((h) => ({ ...h }))])),
     earned: { ...run.earned },
+    medals: { ...run.medals },
     paths: { ...run.paths },
     ...(run.phase === 'path' ? { pick: { kind: 'path' as const, left: Math.max(0, Math.round((run.pathUntil ?? run.elapsed) - run.elapsed)), done: Object.keys(run.paths).filter((id) => run.party.includes(id)) } } : {}),
     ...(run.phase === 'pick' ? { pick: { kind: 'runa' as const, left: Math.max(0, Math.round((run.offerUntil ?? run.elapsed) - run.elapsed)), done: Object.entries(run.offers).filter(([, o]) => o.picked !== undefined).map(([id]) => id) } } : {}),
@@ -579,6 +587,8 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
     earned: {},
     carry: {},
     paid: new Set(),
+    medals: {},
+    stopAt: 0,
     waiting: [],
     minds: new Map(),
     statePing: 0,
@@ -670,12 +680,14 @@ export function enterStop(farm: WorldState, run: RunState, node: number, ctx: Si
     level: run.level,
     mark: def.mark,
     ...(run.level <= 1 ? { easy: true } : {}),
+    ...(run.level === 1 ? { ring: true } : {}),
   };
   (farm.areas ??= {})[key] = world;
   getArea(farm, key);
   run.key = key;
   run.node = node;
   run.path.push(node);
+  run.stopAt = run.elapsed;
   run.phase = 'stop';
   run.offers = {};
   delete run.offerUntil;
@@ -1406,11 +1418,15 @@ function watchStop(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
       pay(farm, run, z.kind === 'elite' ? RUN_SEEDS.zone * 2 : RUN_SEEDS.zone, out);
       if (z.kind === 'elite') run.purse += silverFor(run, SILVER.elite);
       if (z.kind === 'treasure') run.purse += silverFor(run, SILVER.treasure);
+      awardMedal(farm, run, inst, out);
     }
     out.push(...stopCleared(farm, run, ctx));
     return out;
   }
-  if (inst.bossDown && run.phase === 'stop') out.push(...victory(farm, run));
+  if (inst.bossDown && run.phase === 'stop') {
+    awardMedal(farm, run, inst, out);
+    out.push(...victory(farm, run));
+  }
   if (run.phase === 'victory' && run.victoryAt !== undefined && run.elapsed - run.victoryAt >= RUN_VICTORY_MS) return [...out, ...endRun(farm, run, 'win', ctx)];
   if (inst.wipeAt !== undefined && ctx.now >= inst.wipeAt && !inst.run?.revive) return [...out, ...endRun(farm, run, 'wipe', ctx)];
   return out;
@@ -1450,6 +1466,17 @@ function victory(farm: WorldState, run: RunState): Change[] {
   return out;
 }
 
+/** Runmärken: the party's medal for the stop just cleared (once), its hacksilver, and a banner. Never per player. */
+function awardMedal(farm: WorldState, run: RunState, inst: SagaInstance, out: Change[]): void {
+  const z = run.plan.stops[run.node]!;
+  if (run.medals[run.node] !== undefined || !(isFlockLike(z.kind) || z.kind === 'mini' || z.kind === 'boss')) return;
+  const fighters = Object.keys(inst.fighters).length;
+  const medal = medalFor({ markHits: inst.markHits, mobHeals: inst.mobHeals, ms: run.elapsed - run.stopAt, kind: z.kind, level: run.level, fighters });
+  run.medals[run.node] = medal;
+  run.purse += silverFor(run, MEDAL_SILVER[medal]);
+  for (const p of humans(farm, run)) out.push(toast(p.id, fmt(RUN_T.medal, { medal: RUN_T.medalNames[medal]!, icon: RUN_T.medalIcons[medal]! }) + (MEDAL_SILVER[medal] ? ` ${fmt(RUN_T.medalSilver, { n: silverFor(run, MEDAL_SILVER[medal]) })}` : '')));
+}
+
 /** The end of a run, for any reason: everyone home in front of the arch with everything, the stop and the companion gone. */
 export function endRun(farm: WorldState, run: RunState, outcome: RunOutcome, ctx: SimCtx, except?: string): Change[] {
   const out: Change[] = [];
@@ -1473,7 +1500,7 @@ export function endRun(farm: WorldState, run: RunState, outcome: RunOutcome, ctx
     sendHome(farm, p, out);
     if (p.id !== except)
       out.push(
-        { t: 'run', ev: 'ended', to: p.id, outcome: run.outcome, ms: Math.round(run.elapsed), seeds: run.earned[p.id] ?? 0, zones: s.zones, runor: [...run.runor, ...(run.hold[p.id] ?? []).map((h) => h.id)], level: run.level, spiritUsed: run.spiritUsed, path: run.path.map((n) => run.plan.route.nodes[n]!.kind), silver, ...(run.trophies?.[p.id] ? { trophy: run.trophies[p.id]!.item, trophyWhere: run.trophies[p.id]!.where } : {}) },
+        { t: 'run', ev: 'ended', to: p.id, outcome: run.outcome, ms: Math.round(run.elapsed), seeds: run.earned[p.id] ?? 0, zones: s.zones, runor: [...run.runor, ...(run.hold[p.id] ?? []).map((h) => h.id)], level: run.level, spiritUsed: run.spiritUsed, path: run.path.map((n) => run.plan.route.nodes[n]!.kind), silver, medals: [1, 2, 3].map((m) => Object.values(run.medals).filter((x) => x === m).length) as [number, number, number], ...(run.trophies?.[p.id] ? { trophy: run.trophies[p.id]!.item, trophyWhere: run.trophies[p.id]!.where } : {}) },
         toast(p.id, fmt(RUN_T.summary, { time: fmtDuration(run.elapsed), seeds: run.earned[p.id] ?? 0 })),
         playerChange(p),
       );

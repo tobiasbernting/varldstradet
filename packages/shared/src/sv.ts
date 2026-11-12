@@ -236,6 +236,15 @@ export const T = {
   // Öppning: the word over a monster whose cast was stopped, and what it means (an info card, the journal)
   sagaOpen: 'Öppning!',
   sagaOpenText: 'Monstret ser stjärnor i 4 sekunder och tar mycket mer skada. Slå nu!',
+  sagaRing: '⭐ En gyllene ring! Spring IN i den allihop!',
+  sagaRingWon: '⭐ Ni stod i ringen! Bossen ser stjärnor i 6 sekunder. Slå nu!',
+  sagaRingLost: 'Aj! Nästa gång: guld = spring IN, rött = spring UT.',
+  sagaSkull: 'Märke',
+  sagaSkullText: 'Tryck på ett monster för att märka det med en dödskalle. Då slår alla på samma monster. Märket kan bytas efter 2 sekunder.',
+  sagaSamslag: 'Samslag!',
+  sagaSamslagText: '{a} och {b} slog ihop! Ett stort slag på ett monster som en vän har gjort yrt eller långsamt slår 50 % hårdare.',
+  sagaOrb: 'Kraftklot',
+  sagaOrbText: 'Särskilda monster tappar ett klot som ligger kvar i 5 sekunder. Spring över det, så får du 3 prickar direkt!',
   sagaHitMark: 'Aj! Spring ut ur märket nästa gång!',
   sagaNoPips: 'Slå laddas av dina vanliga slag. Vänta lite!',
   sagaAutoName: 'Vanligt slag',
@@ -906,6 +915,12 @@ export const EVENT_CHOICES: Record<string, Record<string, [string, string]>> = {
 };
 
 export const RUN_T = {
+  // Runmärken: the party's medal for a stop (never who was hit)
+  medal: '{icon} Runmärke: {medal}!',
+  medalSilver: '+{n} hacksilver.',
+  medalNames: { 1: 'brons', 2: 'silver', 3: 'guld' } as Record<number, string>,
+  medalIcons: { 1: '🥉', 2: '🥈', 3: '🥇' } as Record<number, string>,
+  medalText: 'Guld får ni om ni springer ur märkena (högst 1 träff var), inte låter något monster läka sig och är snabba.',
   started: 'Färden börjar! Tio steg till bossen.',
   needPort: 'Gå fram till färdporten först.',
   already: 'Det pågår redan en färd. Hänga på?',
