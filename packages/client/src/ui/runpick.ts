@@ -5,6 +5,7 @@ import {
   PATHS,
   PATH_NAMES,
   PATH_SPELLS,
+  classSpells,
   PATH_TEXT,
   RUNA_NAMES,
   RUNA_RARITY_NAMES,
@@ -61,7 +62,7 @@ export function renderPathWindow(host: PickHost, body: HTMLElement, run: RunSnap
       h(
         'ul',
         { class: 'path-spells' },
-        ...CLASSES[path.cls].spells.map((sid, k) => h('li', null, h('span', { class: 'si' }, SPELLS[sid]!.icon), h('span', null, PATH_SPELLS[path.id]![k]))),
+        ...classSpells(path.cls).map((sid) => h('li', null, h('span', { class: 'si' }, SPELLS[sid]!.icon), h('span', null, PATH_SPELLS[path.id]![sid]))),
       ),
       h('span', { class: 'for' }, chosen ? `✔ ${RUN_UI.pathDone}` : mine ? '' : RUN_UI.pathPick),
     );

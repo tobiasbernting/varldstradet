@@ -58,7 +58,7 @@ export function sagaSnap(): SagaSnap | null {
 }
 
 /** A player's health, max and flags in the dungeon you are in. */
-export const fighterOf = (id: string): [number, number, number] | null => sagaSnap()?.f[id] ?? null;
+export const fighterOf = (id: string): [number, number, number, number] | null => sagaSnap()?.f[id] ?? null;
 export const flagsOf = (id: string): number => fighterOf(id)?.[2] ?? 0;
 
 export const classOf = (p: PlayerState | undefined): ClassDef | null => {
@@ -121,6 +121,8 @@ export const getTarget = (): number | string | null => target;
 export function setTarget(t: number | string | null): void {
   if (t === target) return;
   target = t;
+  // the server's auto-attack follows the monster you have chosen
+  if (t === null || typeof t === 'number') net.send({ t: 'target', id: t });
   bus.emit('target', undefined);
 }
 
@@ -188,7 +190,8 @@ export const pressedAt: Record<string, number> = {};
 export function cooldown(spell: string): { left: number; total: number } {
   const now = serverNow();
   const own = Math.max(0, (ready[spell] ?? 0) - now);
-  const gcd = Math.max(0, gcdUntil - now);
+  // (the reactions are off the shared pause)
+  const gcd = SPELLS[spell]?.offGcd ? 0 : Math.max(0, gcdUntil - now);
   return own >= gcd ? { left: own, total: SPELLS[spell]?.cd ?? 1 } : { left: gcd, total: GCD_MS };
 }
 
@@ -282,8 +285,10 @@ bus.on('change', (c) => {
   const sp = SPELLS[c.spell];
   if (!sp) return;
   ready[c.spell] = now + sp.cd;
-  gcdUntil = now + GCD_MS;
-  inFlight = 0;
+  // the auto-attack and the reactions neither wait for the shared pause nor start it
+  const auto = myClass()?.auto === c.spell;
+  if (!auto && !sp.offGcd) gcdUntil = now + GCD_MS;
+  if (!auto) inFlight = 0;
   // the monster the server picked becomes your target, so you can see its health
   if (typeof c.on === 'number' && liveTarget() === null) setTarget(c.on);
 });

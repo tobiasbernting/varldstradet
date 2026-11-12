@@ -160,7 +160,7 @@ class UnitView {
   constructor(cls: string) {
     this.el = h('div', { class: cls }, this.em, h('div', { class: 'col' }, h('div', { class: 'nm' }, this.nm, this.fl), this.meter.el));
   }
-  set(emoji: string, name: string, f: [number, number, number] | null, color: string, numbers = true): void {
+  set(emoji: string, name: string, f: [number, number, number, ...number[]] | null, color: string, numbers = true): void {
     const k = f ? Math.max(0, f[0] / Math.max(1, f[1])) : 1;
     if (this.em.textContent !== emoji) this.em.textContent = emoji;
     if (this.nm.textContent !== name) this.nm.textContent = name;
