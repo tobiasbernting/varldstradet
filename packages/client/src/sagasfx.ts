@@ -2,6 +2,7 @@
 // swipes and arrows, a boss winding up a big attack and landing it, a boss's shout, falling and getting up, and
 // the fanfare of a treasure chest. Kept short and friendly: the players are small.
 import { ensure, noise, tone } from './sound.ts';
+import { PIP_NOTES } from './fight.ts';
 
 /** Noise through a filter that sweeps from one pitch to another (whooshes, wind, fire). */
 function sweep(dur: number, from: number, to: number, vol = 0.05, type: BiquadFilterType = 'bandpass', q = 1.2): void {
@@ -209,11 +210,127 @@ export function bossLand(move: string): void {
   } else boom(move === 'nova' ? 1.4 : 1);
 }
 
+/** The heroes' auto-attacks, swung about once a second: the same voices as the spells, much quieter and shorter. */
+const AUTO_SOUNDS: Record<string, (v: number) => void> = {
+  hugg: (v) => sweep(0.08, 2400, 900, 0.03 * v, 'highpass', 0.7),
+  yxhugg: (v) => {
+    sweep(0.09, 1700, 600, 0.03 * v, 'highpass', 0.7);
+    tone(120, 0.06, 'square', 0.018 * v, -40);
+  },
+  eldboll: (v) => sweep(0.16, 400, 1300, 0.026 * v, 'lowpass', 0.6),
+  ljuspil: (v) => tone(1100, 0.09, 'triangle', 0.02 * v, 700),
+};
+
+/** The four spenders, heavier with every pip (1..3): Jättehugg, Runsmäll, Dunderslag, Solstråle. */
+function spendSound(id: string, pips: number): void {
+  const k = Math.max(1, Math.min(3, pips));
+  const big = (k - 1) / 2; // 0, 0.5, 1
+  if (id === 'jattehugg') {
+    slash(0.62 - big * 0.12);
+    later(40, () => boom(0.2 + big * 0.9));
+    if (k === 3) later(70, () => sweep(0.3, 2600, 500, 0.06, 'highpass', 0.8));
+  } else if (id === 'runsmall') {
+    sweep(0.18, 500, 2200 + big * 900, 0.05, 'bandpass', 2);
+    later(120, () => {
+      boom(0.2 + big * 0.9);
+      notes([988, 1319, 1976].slice(0, k), 35, 0.12, 'triangle', 0.035);
+    });
+  } else if (id === 'dunderslag') {
+    thud();
+    later(30, () => boom(0.3 + big * 0.9));
+    if (k >= 2) later(60, () => tone(1250 - big * 300, 0.16, 'triangle', 0.04, -400));
+    if (k === 3) later(150, () => tone(196, 0.45, 'triangle', 0.05, 98));
+  } else if (id === 'solstrale') {
+    notes([784, 988, 1175, 1568].slice(0, k + 1), 55, 0.22 + big * 0.2, 'sine', 0.04);
+    if (k === 3) later(160, () => tone(392, 0.6, 'sine', 0.035));
+  }
+}
+
 export const SAGA_SFX = {
   /** A spell or an attack, by the server's spell id (unknown ones are quiet). */
   spell(id: string): void {
     if (id.startsWith('land_')) bossLand(id.slice(5));
     else if (!id.startsWith('cast_')) SPELL_SOUNDS[id]?.();
+  },
+  /** An auto-attack (about one a second for every hero): quiet, and quieter still for a friend's. True if it was one. */
+  auto(id: string, mine: boolean): boolean {
+    const f = AUTO_SOUNDS[id];
+    f?.(mine ? 1 : 0.5);
+    return !!f;
+  },
+  /** A spender going off with this many pips. */
+  spend: spendSound,
+  /** A pip fills: a pop and a note, one step higher for each (0, 1, 2). */
+  pip: (i: number) => {
+    const f = PIP_NOTES[Math.max(0, Math.min(PIP_NOTES.length - 1, i))]!;
+    tone(f, 0.11, 'triangle', 0.05);
+    tone(f * 2, 0.05, 'sine', 0.02);
+    // the last one rings: the row is full
+    if (i >= PIP_NOTES.length - 1) later(70, () => tone(f * 1.5, 0.3, 'sine', 0.03));
+  },
+  /** A combo: the spender landed at the right moment. One bright chord. */
+  combo: () => {
+    for (const f of [523, 659, 784, 1047]) tone(f, 0.38, 'triangle', 0.028);
+    later(90, () => tone(1568, 0.3, 'sine', 0.025));
+  },
+  /** A hit from a ground mark: a heavy, low thud that nothing else makes (quieter when it is a friend). */
+  mark: (mine: boolean) => {
+    const v = mine ? 1 : 0.45;
+    tone(70, 0.34, 'sine', 0.11 * v, -28);
+    tone(104, 0.2, 'square', 0.045 * v, -50);
+    noise(0.12, 0.08 * v);
+  },
+  /** A cast was stopped: a sharp crack, then a small chord of relief. */
+  crack: () => {
+    noise(0.05, 0.11);
+    sweep(0.1, 5200, 900, 0.09, 'highpass', 0.6);
+    tone(180, 0.1, 'square', 0.05, -90);
+    later(70, () => notes([784, 1175], 70, 0.15, 'triangle', 0.045));
+  },
+  /** A Sköldbärare's dome breaks: glass cracking. */
+  domeCrack: () => {
+    notes([2349, 1865, 2794], 28, 0.07, 'triangle', 0.035);
+    sweep(0.14, 6000, 1800, 0.06, 'highpass', 0.9);
+    later(50, () => noise(0.08, 0.05));
+  },
+  /** A Skytt draws its bow: a creak that tightens. */
+  creak: () => {
+    const c = ensure();
+    if (!c) return;
+    const o = c.createOscillator();
+    const lfo = c.createOscillator();
+    const lg = c.createGain();
+    const g = c.createGain();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(95, c.currentTime);
+    o.frequency.exponentialRampToValueAtTime(210, c.currentTime + 0.42);
+    lfo.frequency.setValueAtTime(34, c.currentTime);
+    lfo.frequency.linearRampToValueAtTime(58, c.currentTime + 0.42);
+    lg.gain.value = 26;
+    lfo.connect(lg).connect(o.frequency);
+    g.gain.setValueAtTime(0.001, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.035, c.currentTime + 0.08);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.45);
+    o.connect(g).connect(c.destination);
+    o.start();
+    lfo.start();
+    o.stop(c.currentTime + 0.46);
+    lfo.stop(c.currentTime + 0.46);
+  },
+  /** Öppning: a shimmer that rises. */
+  open: () => {
+    notes([784, 988, 1175, 1568, 1976], 45, 0.2, 'sine', 0.035);
+    sweep(0.4, 1500, 6500, 0.025, 'bandpass', 3);
+  },
+  /** "Now!": something that can be stopped is in reach of your interrupt. Two quick high ticks. */
+  now: () => {
+    tone(1760, 0.045, 'square', 0.03);
+    later(70, () => tone(2349, 0.07, 'square', 0.03));
+  },
+  /** A monster beaten: a soft pop (heavier after a big blow). */
+  kill: (big: boolean) => {
+    noise(0.1, big ? 0.07 : 0.045);
+    tone(big ? 150 : 220, 0.14, 'triangle', big ? 0.06 : 0.04, -90);
   },
   /** You were hit. */
   hurt: () => tone(300, 0.09, 'square', 0.045, -120),
@@ -299,3 +416,15 @@ export const SAGA_SFX = {
     if (best >= 4) later(650, () => notes([1047, 1319, 1568, 2093, 2637], 60, 0.6, 'triangle', 0.035));
   },
 };
+
+/** For checks from outside (a script sets `window.__sfxLog = []`): every fight sound asked for is written down there. */
+{
+  const all = SAGA_SFX as unknown as Record<string, (...a: unknown[]) => unknown>;
+  for (const k of Object.keys(all)) {
+    const f = all[k]!;
+    all[k] = (...a: unknown[]) => {
+      (globalThis as { __sfxLog?: string[] }).__sfxLog?.push(a.length ? `${k}:${a.join(',')}` : k);
+      return f(...a);
+    };
+  }
+}

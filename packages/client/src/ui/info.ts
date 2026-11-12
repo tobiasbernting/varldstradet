@@ -108,6 +108,8 @@ class InfoCards {
   private listeners: Listener[] = [];
   /** True while a window moves the focus by itself, so no card pops up for that. */
   quiet = false;
+  /** Pictures under a card's sentence, for a thing marked with `data-info-pic` (the spender's "how you fight" strip). */
+  picture: ((key: string) => HTMLElement | null) | null = null;
   private ready = false;
 
   get mode(): boolean {
@@ -221,6 +223,9 @@ class InfoCards {
     this.el.append(img ? h('span', { class: 'ic pic' }, img.cloneNode()) : h('span', { class: 'ic' }, el.dataset.infoIcon ?? ''), h('div', { class: 'tx' }, h('b', null, name), text ? h('span', null, text) : null));
     if (sp) this.el.append(sp);
     this.el.append(h('span', { class: 'dismiss', 'aria-hidden': 'true' }, '✕'));
+    const pic = el.dataset.infoPic ? this.picture?.(el.dataset.infoPic) : null;
+    this.el.classList.toggle('with-pic', !!pic);
+    if (pic) this.el.querySelector('.tx')?.append(pic);
     // in a window the card sits in the window above the buttons (it never covers one); in the HUD it floats beside the thing
     const panel = document.querySelector('.modal .panel');
     const host = document.getElementById('ui')!;

@@ -1534,3 +1534,46 @@ export const LOG_T = {
   voteSameInfo: 'De två vägarna ser likadana ut hela vägen. Välj vilken ni vill.',
   voteDiffInfo: 'Titta på bilderna efter pilen: de visar vad som kommer efter.',
 };
+
+// ---------------------------------------------------------------------------
+// The fight on the screen (the client's HUD and world): the pip row, the glowing "Slå", reactions, casts, the special
+// monsters' markers, marks, and the two hints. Kept in ONE block so that it merges without trouble.
+// ---------------------------------------------------------------------------
+export const FIGHT_UI = {
+  /** On the spender's button and the big "Slå" button: no pips yet, and "this is the right press now". */
+  spendEmpty: 'Laddar',
+  spendNow: 'Nu!',
+  /** What a screen reader says about the spender: its pips, and why it glows. */
+  pipsAre: '{n} av 3 {pips}',
+  glowFull: 'Full kraft! 4 gånger så starkt.',
+  glowOpen: 'Monstret ser stjärnor. Slå nu!',
+  glowCombo: 'Kombo! Slå nu!',
+  /** The pip row's info card. */
+  pipsCard: 'Dina vanliga slag fyller de 3 rutorna. Fulla rutor gör {spell} 4 gånger så starkt!',
+  /** The button that sets up the class's combo. */
+  primeFirst: 'Först',
+  /** A reaction: it never waits for the other buttons. */
+  reaction: 'Går alltid',
+  reactionText: 'Den här knappen väntar inte på de andra. Tryck när du behöver den!',
+  /** A cast that can be stopped is within reach. */
+  kickNow: 'Avbryt nu!',
+  /** Over a monster. */
+  castHeal: 'Läker en vän',
+  castShot: 'Siktar',
+  canStop: 'Kan avbrytas!',
+  shielded: 'Skyddad av en Sköldbärare',
+  domeDown: 'Skölden sprack!',
+  combo: 'Kombo!',
+  /** The class card, the run's start and the path picker: how a fight goes, in three pictures. */
+  howTitle: 'Så slåss du',
+  howAuto: 'Av sig själv',
+  howPips: '3 {pips}',
+  howBig: 'Stort slag ×4',
+  howCombo: 'Kombo',
+  /** The journal's page about Öppning. */
+  openTitle: 'Öppning',
+  /** The two hints (once on each device). */
+  hintPips: 'Du har 3 {pips}! Tryck på {spell} eller Slå för ett slag som är 4 gånger så starkt.',
+  hintCaster: 'En Besvärjare läker sin vän om {s} sekunder! Avbryt med {spell}.',
+  hintCasterNone: 'En Besvärjare läker sin vän om {s} sekunder! Slå den först.',
+};

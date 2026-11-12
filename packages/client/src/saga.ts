@@ -7,6 +7,8 @@ import {
   BLOCK_SPECIES,
   CLASSES,
   GCD_MS,
+  MOB_FLAG,
+  PIP_MAX,
   POTION_CD,
   SAGA_BOSSES,
   SAGA_CHAPTERS,
@@ -31,6 +33,7 @@ import {
   type PlayerState,
   type SagaSnap,
 } from '@varldstradet/shared';
+import { castToStop, isInterrupt, spendView, waitOf, type SpendCtx, type SpendView, type Wait } from './fight.ts';
 import { net } from './net.ts';
 import { activeWorld, bus, client, myPlayer, serverNow } from './state.ts';
 
@@ -60,6 +63,8 @@ export function sagaSnap(): SagaSnap | null {
 /** A player's health, max and flags in the dungeon you are in. */
 export const fighterOf = (id: string): [number, number, number, number] | null => sagaSnap()?.f[id] ?? null;
 export const flagsOf = (id: string): number => fighterOf(id)?.[2] ?? 0;
+/** A hero's pips (0..PIP_MAX) in the dungeon you are in. */
+export const pipsOf = (id: string): number => Math.max(0, Math.min(PIP_MAX, fighterOf(id)?.[3] ?? 0));
 
 export const classOf = (p: PlayerState | undefined): ClassDef | null => {
   const cls = readProgress(p).cls;
@@ -186,16 +191,43 @@ const QUEUE_MS = 1500;
 /** When each spell was last pressed (performance.now), for the button's flash. */
 export const pressedAt: Record<string, number> = {};
 
-/** Time left before a spell can go again, and how long that wait is in all (ms). */
-export function cooldown(spell: string): { left: number; total: number } {
-  const now = serverNow();
-  const own = Math.max(0, (ready[spell] ?? 0) - now);
-  // (the reactions are off the shared pause)
-  const gcd = SPELLS[spell]?.offGcd ? 0 : Math.max(0, gcdUntil - now);
-  return own >= gcd ? { left: own, total: SPELLS[spell]?.cd ?? 1 } : { left: gcd, total: GCD_MS };
+/** Time left before a spell can go again, and how long that wait is in all (ms); `shared`: it is the pause after another spell. */
+export function cooldown(spell: string): Wait {
+  return waitOf(spell, ready[spell] ?? 0, gcdUntil, serverNow());
+}
+/** Is the shared pause running (the buttons outside it look different meanwhile)? */
+export const inSharedPause = (): boolean => gcdUntil > serverNow();
+
+/** When you last cast each spell (server ms): your own Utmana! and Läkekrets decide the combo. */
+const castAt: Record<string, number> = {};
+const castWithin = (spell: string, extra = 0): boolean => serverNow() - (castAt[spell] ?? -Infinity) <= (SPELLS[spell]?.ms ?? 0) + extra;
+
+/** The monster your spender would go for: the one you chose, else the nearest one that is fighting. */
+export function spendTarget(): number | null {
+  const t = liveTarget();
+  if (typeof t === 'number') return t;
+  const snap = sagaSnap();
+  return nearbyMonsters(9).find((id) => !!snap?.m[id]) ?? null;
 }
 
-export const potionCooldown = (): { left: number; total: number } => ({ left: Math.max(0, potionAt - serverNow()), total: POTION_CD });
+/** What your spender is looking at now (fight.ts decides the glow from it). Null outside a dungeon or without a class. */
+export function spendCtx(): SpendCtx | null {
+  const cls = myClass();
+  const snap = sagaSnap();
+  if (!cls || !snap) return null;
+  const t = spendTarget();
+  const mobs = Object.values(snap.m);
+  // (the snapshot does not say whose Utmana! or Läkekrets it is: yours counts while the one you cast still lasts)
+  const taunted = castWithin('utmana', 500) && mobs.some((m) => m[2] & MOB_FLAG.taunted);
+  const ringFriend = castWithin('lakekrets', 500) && Object.values(snap.f).some((f) => f[2] & FLAG.hot && !(f[2] & FLAG.down) && f[0] < f[1]);
+  return { cls: cls.id, pips: pipsOf(client.me), targetFlags: t !== null ? (snap.m[t]?.[2] ?? 0) : 0, taunted, ringFriend };
+}
+export const mySpend = (): SpendView | null => {
+  const c = spendCtx();
+  return c ? spendView(c) : null;
+};
+
+export const potionCooldown = (): Wait => ({ left: Math.max(0, potionAt - serverNow()), total: POTION_CD, shared: false });
 export const potionCount = (): number => countItem(myPlayer()?.inventory ?? [], 'healing_potion');
 
 function canAct(): boolean {
@@ -208,9 +240,19 @@ export function castSlot(slot: number): void {
   if (spell) cast(spell);
 }
 
+let noPipsSaid = 0;
+
 export function cast(spell: string): void {
   if (!canAct()) return;
   pressedAt[spell] = performance.now();
+  // the spender needs a pip: say why nothing happens (not on every press of a mashed key)
+  if (SPELLS[spell]?.kind === 'spend' && inSaga() && pipsOf(client.me) < 1) {
+    if (performance.now() - noPipsSaid > 6000 && Object.keys(sagaSnap()?.m ?? {}).length) {
+      noPipsSaid = performance.now();
+      bus.emit('toast', T.sagaNoPips);
+    }
+    return;
+  }
   const { left } = cooldown(spell);
   if (left > 0 || performance.now() < inFlight) {
     // mashing keys still works: a press while the spell is cooling waits for it
@@ -220,15 +262,19 @@ export function cast(spell: string): void {
   send(spell);
 }
 
+/** Is this monster of the dungeon still waiting with its pack (not woken, not hurt)? Out in the world every foe counts as waiting. */
+export const isWaiting = (id: number): boolean => !sagaSnap()?.m[id];
+
 /**
- * A click or tap on a monster: your everyday attack at it, when it is in reach (aiming at a far monster is quiet).
- * True if a spell went.
+ * A click or tap on a monster (it is the target already): the hero swings by themselves at a monster that is fighting, so
+ * nothing more is sent for one; a monster still WAITING with its pack gets the everyday attack when it is in reach, which
+ * wakes the pack (aiming at a far one is quiet). True if a spell went.
  */
 export function attackTarget(): boolean {
   const cls = myClass();
   const me = myPlayer();
   const t = liveTarget();
-  if (!cls || !me || typeof t !== 'number' || !canAct()) return false;
+  if (!cls || !me || typeof t !== 'number' || !canAct() || !isWaiting(t)) return false;
   const spell = attackSpellOf(cls.id);
   const sp = SPELLS[spell];
   const at = posOf(t);
@@ -238,10 +284,26 @@ export function attackTarget(): boolean {
   return true;
 }
 
+/** How far a monster is from you, in tiles (null if it is gone). */
+export function tilesTo(id: number): number | null {
+  const me = myPlayer();
+  const at = posOf(id);
+  return me && at ? Math.hypot(at.x - me.x, at.y - me.y) / TILE : null;
+}
+
+/** The monster this interrupt would stop now: one casting something stoppable within its reach (null: none). */
+export function stopTarget(spell: string): number | null {
+  const sp = SPELLS[spell];
+  if (!sp || !isInterrupt(spell)) return null;
+  const t = liveTarget();
+  return castToStop(sagaSnap(), tilesTo, sp.range, serverNow(), typeof t === 'number' ? t : null);
+}
+
 function send(spell: string): void {
   queued = null;
   inFlight = performance.now() + 350;
-  const t = liveTarget();
+  // an interrupt goes for the monster that is casting, whatever is chosen (a cast lasts a breath: no time to change target)
+  const t = stopTarget(spell) ?? liveTarget();
   net.send(t === null ? { t: 'cast', spell } : { t: 'cast', spell, target: t });
 }
 
@@ -285,12 +347,14 @@ bus.on('change', (c) => {
   const sp = SPELLS[c.spell];
   if (!sp) return;
   ready[c.spell] = now + sp.cd;
+  castAt[c.spell] = now;
   // the auto-attack and the reactions neither wait for the shared pause nor start it
   const auto = myClass()?.auto === c.spell;
   if (!auto && !sp.offGcd) gcdUntil = now + GCD_MS;
   if (!auto) inFlight = 0;
   // the monster the server picked becomes your target, so you can see its health
-  if (typeof c.on === 'number' && liveTarget() === null) setTarget(c.on);
+  // (a button aimed at a monster makes it the hero's target on the server too: Stormsteg at a caster, say)
+  if (typeof c.on === 'number' && (liveTarget() === null || (!auto && typeof liveTarget() === 'number'))) setTarget(c.on);
 });
 
 bus.on('change', (c) => {
@@ -301,6 +365,7 @@ bus.on('change', (c) => {
 bus.on('area', () => {
   // a new dungeon (or none): a fresh fighter, nothing aimed at
   for (const k of Object.keys(ready)) delete ready[k];
+  for (const k of Object.keys(castAt)) delete castAt[k];
   gcdUntil = 0;
   potionAt = 0;
   queued = null;
@@ -335,4 +400,23 @@ export function sagaMarker(npcId: string): { text: string; cls: string } | null 
   if (offer) return { text: '!', cls: 'bubble marker saga' };
   if (busy) return { text: '?', cls: 'bubble marker saga busy' };
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Hints shown once on each device (like the help window's flag)
+// ---------------------------------------------------------------------------
+
+const hintKey = (id: string): string => `varldstradet.hint.${id}`;
+const hintsShown = new Set<string>();
+/** True the first time it is asked on this device (and never again): the hint may be shown. */
+export function firstTime(id: string): boolean {
+  if (hintsShown.has(id)) return false;
+  hintsShown.add(id);
+  try {
+    if (localStorage.getItem(hintKey(id)) === '1') return false;
+    localStorage.setItem(hintKey(id), '1');
+  } catch {
+    /* no storage: once a visit */
+  }
+  return true;
 }
