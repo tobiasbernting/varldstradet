@@ -206,9 +206,8 @@ body.touch .menu-tile .kb {
   }
   .menu-panel .body {
     gap: 12px;
-  }
-  .menu-panel h2 {
-    margin: -2px 0;
+    /* (the close button is 56 px: the first row of tiles stays 8 px under it) */
+    padding-top: 6px;
   }
 }
 /* strong contrast: the tiles are white on blue like every button of a window (a11y.css); the tick follows */
