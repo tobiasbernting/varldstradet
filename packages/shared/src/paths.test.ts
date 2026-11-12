@@ -1,7 +1,7 @@
 // Vägar (paths): after the Mellanboss each hero chooses one of their class's paths. Every path changes every one of its class's four
 // spells in a way the fight can measure, the traits work, the choice is personal and has a default on the clock, bots choose too.
 import { describe, expect, it } from 'vitest';
-import { CLASSES, CLASS_IDS, PATHS, PATH_NAMES, PATH_SPELLS, PATH_TEXT, SPELLS, TILE, buffsOf, castSpell, choosePath, defaultPath, pathDef, pathsOf, runOf, runPickMs, spawnSagaMob, startRun, tick, type ClassId, type SpellMod } from './index.ts';
+import { CLASSES, CLASS_IDS, classSpells, PATHS, PATH_NAMES, PATH_SPELLS, PATH_TEXT, SPELLS, TILE, buffsOf, castSpell, choosePath, defaultPath, pathDef, pathsOf, runOf, runPickMs, spawnSagaMob, startRun, tick, type ClassId, type SpellMod } from './index.ts';
 import { makeParty, step } from './runplay.ts';
 import type { Change } from './protocol.ts';
 
@@ -31,6 +31,8 @@ function arena(cls: ClassId, pathId: string | undefined, other: ClassId = cls ==
     return out;
   };
   go(100);
+  // (the auto-attacks are switched off, so a test measures only the spell it casts; `swing` presses the auto-attack itself)
+  for (const ff of Object.values(inst.fighters)) ff.cd[CLASSES[ff.cls].auto] = Number.MAX_SAFE_INTEGER;
   // the friend stands beside the hero; the hero faces right
   q.x = p.x + TILE;
   q.y = p.y;
@@ -48,7 +50,7 @@ function arena(cls: ClassId, pathId: string | undefined, other: ClassId = cls ==
 function fingerprint(cls: ClassId, pathId: string | undefined, spell: string): string {
   const kind = SPELLS[spell]!.kind;
   // melee and shield bashes reach 1.8 tiles, a whirl is round the caster: the monsters stand where the spell can just reach them (and one beyond the base area)
-  const dists = kind === 'melee' || kind === 'bash' ? [1.4, 2.2, 3.0] : kind === 'whirl' ? [1.5, 2.5, 3.0] : [3, 4, 6.1];
+  const dists = kind === 'melee' || kind === 'bash' || (kind === 'spend' && SPELLS[spell]!.range < 3) ? [1.4, 2.2, 3.0] : kind === 'whirl' ? [1.5, 2.5, 3.0] : [3, 4, 6.1];
   const scenes = [0, 1].map((scene) => {
     const a = arena(cls, pathId, undefined, dists);
     for (const m of a.mobs) m.state = 'fight';
@@ -60,8 +62,11 @@ function fingerprint(cls: ClassId, pathId: string | undefined, spell: string): s
       a.q.x = a.p.x + 4.2 * TILE;
     }
     a.f.hp = Math.round(a.f.max * 0.4);
+    a.f.cd = {};
+    // a spender is measured with three pips (its bonus shows too)
+    if (kind === 'spend') a.f.pips = 3;
     const x0 = a.p.x;
-    const out = castSpell(a.party.world, a.p.id, spell, spell === 'lakerunan' ? a.q.id : a.mobs[0]!.id, a.ctx());
+    const out = castSpell(a.party.world, a.p.id, spell, spell === 'lakerunan' || spell === 'solstrale' ? a.q.id : a.mobs[0]!.id, a.ctx());
     const shield = (f: typeof a.f): number => Math.round(f.shield && now < f.shield.until ? f.shield.hp : 0);
     return {
       cast: out.some((c) => c.t !== 'toast'),
@@ -74,17 +79,17 @@ function fingerprint(cls: ClassId, pathId: string | undefined, spell: string): s
 }
 
 describe('paths: the data', () => {
-  it('every class has two or three paths, each with a name, a sentence and a line for each of its four spells', () => {
+  it('every class has two or three paths, each with a name, a sentence and a line for each of its five spells (the auto-attack and the four buttons)', () => {
     for (const cls of CLASS_IDS) expect(pathsOf(cls).length, cls).toBeGreaterThanOrEqual(2);
     for (const cls of CLASS_IDS) expect(pathsOf(cls).length).toBeLessThanOrEqual(3);
     for (const path of PATHS) {
       expect(PATH_NAMES[path.id], path.id).toBeTruthy();
       expect(PATH_TEXT[path.id]).toBeTruthy();
-      expect(PATH_SPELLS[path.id]).toHaveLength(4);
-      for (const line of PATH_SPELLS[path.id]!) expect(line.length).toBeGreaterThan(8);
+      expect(Object.keys(PATH_SPELLS[path.id]!).sort()).toEqual(classSpells(path.cls).sort());
+      for (const line of Object.values(PATH_SPELLS[path.id]!)) expect(line.length).toBeGreaterThan(8);
       expect(PATH_TEXT[path.id]!.length).toBeLessThanOrEqual(60);
       // every spell of the class has an entry, and nothing else does
-      expect(Object.keys(path.mods).sort()).toEqual([...CLASSES[path.cls].spells].sort());
+      expect(Object.keys(path.mods).sort()).toEqual(classSpells(path.cls).sort());
       for (const [id, mod] of Object.entries(path.mods)) expect(Object.keys(mod as SpellMod).length, `${path.id}/${id}`).toBeGreaterThan(0);
     }
     expect(new Set(PATHS.map((p) => p.id)).size).toBe(PATHS.length);
@@ -102,7 +107,7 @@ describe('paths: the data', () => {
 
 describe('every path changes every one of its class’s spells (measured in a fight)', () => {
   for (const path of PATHS) {
-    for (const spell of CLASSES[path.cls].spells) {
+    for (const spell of classSpells(path.cls)) {
       it(`${PATH_NAMES[path.id]}: ${SPELLS[spell]!.name}`, () => {
         expect(fingerprint(path.cls, path.id, spell)).not.toBe(fingerprint(path.cls, undefined, spell));
       });
@@ -122,6 +127,7 @@ describe('paths: traits', () => {
       b.mods = {};
       b.traits = pathDef(path)!.traits;
       a.inst.run!.buffs[a.p.id] = b;
+      a.f.cd = {};
       castSpell(a.party.world, a.p.id, 'yxhugg', a.mobs[0]!.id, a.ctx());
       return before - a.mobs[0]!.hp;
     };
@@ -173,7 +179,9 @@ describe('paths: traits', () => {
 
   it('burning ticks once a second and then stops; lightning jumps to the neighbours', () => {
     const a = arena('magiker', 'eld');
+    a.f.cd = {};
     castSpell(a.party.world, a.p.id, 'eldboll', a.mobs[0]!.id, a.ctx());
+    a.f.cd.eldboll = Number.MAX_SAFE_INTEGER;
     const first = a.mobs[0]!.hp;
     a.go(1100);
     expect(a.mobs[0]!.hp).toBeLessThan(first);
@@ -183,6 +191,7 @@ describe('paths: traits', () => {
     a.go(2000);
     expect(a.mobs[0]!.hp).toBe(after);
     const b = arena('magiker', 'aska');
+    b.f.cd = {};
     castSpell(b.party.world, b.p.id, 'eldboll', b.mobs[0]!.id, b.ctx());
     expect(b.mobs[1]!.hp).toBeLessThan(b.mobs[1]!.max);
     expect(b.mobs[2]!.hp).toBe(b.mobs[2]!.max);

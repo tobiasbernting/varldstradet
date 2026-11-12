@@ -67,6 +67,8 @@ export interface RunLevelDef {
   hp: number;
   dmg: number;
   warn: number;
+  /** A mark (a boss's telegraphed move, a Skytt's shot) takes this fraction of the victim's max health (saga.ts `MARK_*` for the nova, the burning ground and the shot). */
+  mark: number;
   /** Sagafrön multiplier on everything a run pays. */
   seeds: number;
   /** Sagoandar: how many a run starts with, how many more each stop after the first brings, and the most at a time. */
@@ -85,11 +87,11 @@ export interface RunLevelDef {
 }
 
 export const RUN_LEVELS: Record<RunLevel, RunLevelDef> = {
-  0: { id: 0, hp: 0.4, dmg: 0.3, warn: 1.8, seeds: 0.35, spirit: 5, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 0.6, rank: 0, affixes: 0 },
-  1: { id: 1, hp: 0.6, dmg: 0.5, warn: 1.4, seeds: 0.5, spirit: 3, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 1, rank: 0, affixes: 0 },
-  2: { id: 2, hp: 1, dmg: 1, warn: 1, seeds: 1, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1, rank: 0, affixes: 0 },
-  3: { id: 3, hp: 1.75, dmg: 1.6, warn: 0.8, seeds: 1.5, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1.5, rank: 0.5, affixes: 1 },
-  4: { id: 4, hp: 1.9, dmg: 1.6, warn: 0.65, seeds: 2, spirit: 0, spiritPerStop: 0, spiritMax: 0, soft: false, bossMoves: 0, rare: 2, rank: 1, affixes: 2 },
+  0: { id: 0, hp: 0.4, dmg: 0.3, warn: 1.8, mark: 0.08, seeds: 0.35, spirit: 5, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 0.6, rank: 0, affixes: 0 },
+  1: { id: 1, hp: 0.6, dmg: 0.5, warn: 1.4, mark: 0.15, seeds: 0.5, spirit: 3, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 1, rank: 0, affixes: 0 },
+  2: { id: 2, hp: 1, dmg: 1, warn: 1, mark: 0.35, seeds: 1, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1, rank: 0, affixes: 0 },
+  3: { id: 3, hp: 1.75, dmg: 1.6, warn: 0.8, mark: 0.45, seeds: 1.5, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1.5, rank: 0.5, affixes: 1 },
+  4: { id: 4, hp: 1.9, dmg: 1.6, warn: 0.65, mark: 0.55, seeds: 2, spirit: 0, spiritPerStop: 0, spiritMax: 0, soft: false, bossMoves: 0, rare: 2, rank: 1, affixes: 2 },
 };
 /** The boss attacks the easiest levels allow: its first two, whatever a first run's plan has locked. */
 export const LATT = { bossMoves: 2 } as const;
@@ -453,6 +455,19 @@ export const ELITE_PACKS = { a: [1, 2], b: [2, 2], size: [4, 5], big: 2 } as con
 export const ELITE_HP = 1.25;
 export const TREASURE_PACKS = { a: [1, 1], b: [1, 2], size: [3, 4], big: 0 } as const;
 export const BOSS_PACKS = { count: [3, 3], size: [3, 4] } as const;
+/**
+ * Special pack monsters (saga.ts `MobRole`) by level: how many a pack gets (`perPack`), or, on Lätt, how many the whole stop gets
+ * (`perStop`, in their harmless form). On Medel the very first pack of the run (the first pack of the first stop) has none, so it
+ * teaches nothing new. A Stark vakt has at least `ELITE_ROLES` per pack. Never two Besvärjare in a pack. Chosen by the seed.
+ */
+export const PACK_ROLES: Record<RunLevel, { perPack: number; perStop: number }> = {
+  0: { perPack: 0, perStop: 0 },
+  1: { perPack: 0, perStop: 1 },
+  2: { perPack: 1, perStop: 0 },
+  3: { perPack: 2, perStop: 0 },
+  4: { perPack: 2, perStop: 0 },
+};
+export const ELITE_ROLES = 2;
 /**
  * Lätt's packs (DESIGN.md section 5.3 wants a child through the route in about 20-28 minutes): fewer, smaller packs in a Flock and in the
  * rooms before the mid-boss and the boss, on top of the softer monsters. The same shape as above.

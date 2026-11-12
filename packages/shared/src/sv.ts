@@ -1,5 +1,5 @@
 // All player-facing Swedish strings.
-import { SAGA_BOSSES, SAGA_ITEMS, SAGA_MOBS } from './saga.ts';
+import { SAGA_BOSSES, SAGA_ITEMS, SAGA_MOBS, type ClassId, type MobRole } from './saga.ts';
 
 export const ITEM_NAMES: Record<string, string> = {
   clock: 'Klocka',
@@ -211,7 +211,7 @@ export const T = {
   lobbyName: 'Hemma',
   sagaNeedClass: 'Du behöver välja en väg först. Prata med Völvan Sigrun här i Gården!',
   sagaClassChange: 'Du kan bara byta väg utanför fängelsehålorna.',
-  sagaClassChosen: 'Du är nu {cls}! Dina besvärjelser ligger på knapparna 1–4.',
+  sagaClassChosen: 'Du är nu {cls}! Du slår av dig själv. Dina 4 besvärjelser ligger på knapparna 1–4.',
   sagaAllDone: 'Sagan är slut, och Världsträdet är räddat. Tack, hjälte!',
   sagaChapter: 'Kapitel {n}: {title}',
   sagaChapterDone: '{title}: klart!',
@@ -233,6 +233,14 @@ export const T = {
   sagaDown: '💀 {name} har fallit!',
   sagaUp: '🌅 {name} är uppe igen!',
   sagaInterrupt: '🛡️ {move} avbröts!',
+  // Öppning: the word over a monster whose cast was stopped, and what it means (an info card, the journal)
+  sagaOpen: 'Öppning!',
+  sagaOpenText: 'Monstret ser stjärnor i 4 sekunder och tar mycket mer skada. Slå nu!',
+  sagaHitMark: 'Aj! Spring ut ur märket nästa gång!',
+  sagaNoPips: 'Slå laddas av dina vanliga slag. Vänta lite!',
+  sagaAutoName: 'Vanligt slag',
+  sagaAutoText: 'Du gör det av dig själv ungefär 1 gång i sekunden när ett monster är nära.',
+  sagaRolesTitle: 'Särskilda monster',
   sagaBossDown: '{boss} är besegrad!',
   sagaGateOpen: 'Porten har öppnats. Vägen fortsätter!',
   sagaCleared: '{dungeon} är klarad! Öppna kistan, och gå sedan tillbaka till Völvan Sigrun.',
@@ -331,8 +339,8 @@ export const T = {
   sagaFrozenTitle: 'Du är infrusen!',
   sagaFrozenSub: 'Vänta! Dina vänner slår sönder isen.',
   sagaPotionKey: 'Läkedryck (5)',
-  sagaTargetHint: 'Klicka på ett monster för att slå! E eller mellanslag slår också, 1–4 är dina besvärjelser och Tab byter mål.',
-  sagaTargetHintTouch: 'Tryck på ett monster för att slå! ✋ slår mot det närmaste monstret.',
+  sagaTargetHint: 'Du slår av dig själv när ett monster är nära! Klicka på ett monster för att välja det. När Slå lyser trycker du E eller mellanslag för ditt stora slag. 1–4 är dina besvärjelser och Tab byter mål.',
+  sagaTargetHintTouch: 'Du slår av dig själv när ett monster är nära! Tryck på ett monster för att välja det. När Slå lyser trycker du på den för ditt stora slag.',
   sagaAimName: 'Nästa monster',
   sagaAimText: 'Siktar på nästa monster nära dig.',
   familyTitle: 'Familjen',
@@ -551,7 +559,7 @@ export const A11Y_T = {
   potion: 'Dryck',
   aim: 'Sikta',
   hit: 'Slå',
-  hitText: 'Slår mot det närmaste monstret, eller pratar med den som står framför dig.',
+  hitText: 'Ditt stora slag när knappen lyser. Annars slår den mot det närmaste monstret, eller pratar med den som står framför dig.',
   run: 'Spring',
   far: 'Långt bort',
   kick: 'Avbryt!',
@@ -678,7 +686,9 @@ export const HELP: HelpTopic[] = [
     steps: [
       { icon: 'saga_stone', text: 'Välj din väg vid Kämpastenen bredvid Völvan: Väktare (tank), Helare, Krigare eller Magiker. Du får klassens kläder, och kan byta när du vill.' },
       { icon: 'emoji:⚔️', text: 'Fängelsehålorna klaras i ordning, en färd i taget: Draugkryptan, Frostjättens borg och Surts smedja. Du kommer in genom färdporten, bågen vid Världsträdets skott. Sedan fortsätter sagan med Lokes list.' },
-      { icon: 'emoji:🔢', text: 'Inne i en fängelsehåla är knapparna 1–4 dina besvärjelser och 5 en läkedryck. Klicka på ett monster för att sikta på det.' },
+      { icon: 'emoji:🔢', text: 'Inne i en fängelsehåla slår du av dig själv när ett monster är nära. Knapparna 1–4 är dina besvärjelser och 5 en läkedryck. Klicka på ett monster för att sikta på det.' },
+      { icon: 'emoji:✨', text: 'Varje vanligt slag ger 1 prick, och knapp 2 och 3 ger också 1. Med 3 prickar lyser Slå (knapp 1), och då är den som starkast!' },
+      { icon: 'emoji:⭐', text: 'Vissa monster är särskilda: Besvärjaren läker de andra, Skytten siktar en rand på marken och Sköldbäraren skyddar sina vänner. Avbryt dem, så ser de stjärnor i 4 sekunder!' },
       { icon: 'emoji:🎮', text: 'Med handkontroll i en fängelsehåla: X, Y, B och RB är besvärjelserna, LB en läkedryck, styrkorset vänster/höger byter monster och Select öppnar ryggsäcken.' },
       { icon: 'emoji:🛡️', text: 'Väktaren håller monstren borta från de andra, helaren läker, och krigaren och magikern gör skada. Det går att spela ensam, men det är roligare tillsammans!' },
       { icon: 'emoji:🔴', text: 'Bossarnas stora attacker syns på marken innan de träffar. Spring ut ur det röda! Vissa kan avbrytas med Sköldslag, Stormsteg eller Isspjut.' },
@@ -796,7 +806,7 @@ export const WEATHER_NEWS: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 export const RUNA_NAMES: Record<string, string> = {
-  v_tjock: 'Tjock sköld', v_hugg: 'Tyngre hugg', v_ropet: 'Högt rop', v_mur: 'Järnmur', v_slag: 'Dunderslag', v_hjarta: 'Stort hjärta', v_trots: 'Trotsig', v_lugn: 'Lugn i stormen',
+  v_tjock: 'Tjock sköld', v_hugg: 'Tyngre hugg', v_ropet: 'Högt rop', v_mur: 'Järnmur', v_slag: 'Hård sköld', v_hjarta: 'Stort hjärta', v_trots: 'Trotsig', v_lugn: 'Lugn i stormen',
   h_runa: 'Starkare läkerunor', h_ring: 'Större ring', h_pil: 'Skinande pil', h_vack: 'Mjuk väckning', h_snabb: 'Snabba händer', h_flod: 'Läkeflod', h_ro: 'Inre ro', h_skydd: 'Skyddande ljus',
   k_yx: 'Vässad yxa', k_storm: 'Stormigare steg', k_virvel: 'Vildare virvel', k_raseri: 'Längre raseri', k_glupsk: 'Glupsk yxa', k_hjarta: 'Bärsärkens hjärta', k_kraft: 'Bärsärkens kraft', k_egg: 'Skarp egg',
   m_eld: 'Hetare eld', m_is: 'Kallare is', m_ask: 'Åskmoln', m_blink: 'Kvickt hopp', m_snabb: 'Snabb magi', m_kraft: 'Runkraft', m_tur: 'Lyckoträff', m_skal: 'Magiskt skal',
@@ -805,14 +815,14 @@ export const RUNA_NAMES: Record<string, string> = {
   v_taggar: 'Taggig sköld', v_skyddar: 'Skyddande rop', v_skjuts: 'Krossande slag', v_eko: 'Ekande hugg', v_vakt: 'Murvaktens kåpa', v_titan: 'Titanens vilja',
   h_ranka: 'Rankor', h_efter: 'Efterläkning', h_stjarna: 'Stjärnring', h_skal: 'Ljusskal', h_under: 'Underbar väckning', h_livsflod: 'Livets flod',
   k_hammare: 'Hammarsteg', k_skar: 'Skärande virvel', k_eldyxa: 'Eldyxan', k_dubbel: 'Dubbelhugg', k_mod: 'Lejonmod', k_ragnarok: 'Ragnarök',
-  m_glod: 'Glöd', m_frost: 'Frostbrand', m_kedja: 'Kedjeeld', m_sprak: 'Åskspraket', m_isskal: 'Isskal', m_stormen: 'Stormens öga',
+  m_glod: 'Eftereld', m_frost: 'Frostbrand', m_kedja: 'Kedjeeld', m_sprak: 'Åskspraket', m_isskal: 'Isskal', m_stormen: 'Stormens öga',
   p_mod: 'Gemensamt mod', p_hast: 'Sagans fart', p_lycka: 'Tursamma', p_sang: 'Läkande sång', p_djur: 'Djurens kall', p_yggdrasil: 'Yggdrasils gåva',
 };
 export const RUNA_TEXT: Record<string, string> = {
-  v_tjock: 'Skydd +8 %', v_hugg: 'Svärdshugg +25 %', v_ropet: 'Utmana laddar 30 % snabbare', v_mur: 'Sköldmur laddar 25 % snabbare', v_slag: 'Sköldslag +40 %', v_hjarta: 'Hälsa +15 %', v_trots: 'Monstren vill slåss med dig +30 %', v_lugn: 'Du tar 10 % mindre skada',
-  h_runa: 'Läkerunan läker 25 % mer', h_ring: 'Läkekretsen läker 35 % mer', h_pil: 'Ljuspilen +40 %', h_vack: 'Väck upp! ger 25 % mer hälsa', h_snabb: 'Trollformler laddar 12 % snabbare', h_flod: 'All läkning +15 %', h_ro: 'Hälsan kommer 50 % fortare', h_skydd: 'Skydd +6 %',
-  k_yx: 'Yxhugg +30 %', k_storm: 'Stormsteg laddar 35 % snabbare', k_virvel: 'Virvelvind +35 %', k_raseri: 'Raseriet laddar 30 % snabbare', k_glupsk: 'Du läker 8 % av din skada', k_hjarta: 'Hälsa +12 %', k_kraft: 'Trollformler +10 %', k_egg: 'Fler kritiska träffar +10 %',
-  m_eld: 'Eldboll +30 %', m_is: 'Isspjut +35 %', m_ask: 'Åskregn +35 %', m_blink: 'Blink laddar 40 % snabbare', m_snabb: 'Trollformler laddar 12 % snabbare', m_kraft: 'Trollformler +10 %', m_tur: 'Fler kritiska träffar +12 %', m_skal: 'Du tar 8 % mindre skada',
+  v_tjock: 'Skydd +8 %', v_hugg: 'Hugg och Dunderslag +25 %', v_ropet: 'Utmana laddar 30 % snabbare', v_mur: 'Sköldmur laddar 25 % snabbare', v_slag: 'Sköldslag +40 %', v_hjarta: 'Hälsa +15 %', v_trots: 'Monstren vill slåss med dig +30 %', v_lugn: 'Du tar 10 % mindre skada',
+  h_runa: 'Läkerunan och Solstrålen +25 %', h_ring: 'Läkekretsen läker 35 % mer', h_pil: 'Ljuspilen +40 %', h_vack: 'Väck upp! ger 25 % mer hälsa', h_snabb: 'Trollformler laddar 12 % snabbare', h_flod: 'All läkning +15 %', h_ro: 'Hälsan kommer 50 % fortare', h_skydd: 'Skydd +6 %',
+  k_yx: 'Yxhugg och Jättehugg +30 %', k_storm: 'Stormsteg laddar 35 % snabbare', k_virvel: 'Virvelvind +35 %', k_raseri: 'Raseriet laddar 30 % snabbare', k_glupsk: 'Du läker 8 % av din skada', k_hjarta: 'Hälsa +12 %', k_kraft: 'Trollformler +10 %', k_egg: 'Fler kritiska träffar +10 %',
+  m_eld: 'Eldboll och Runsmäll +30 %', m_is: 'Isspjut +35 %', m_ask: 'Åskregn +35 %', m_blink: 'Blink laddar 40 % snabbare', m_snabb: 'Trollformler laddar 12 % snabbare', m_kraft: 'Trollformler +10 %', m_tur: 'Fler kritiska träffar +12 %', m_skal: 'Du tar 8 % mindre skada',
   p_hjarta: 'Allas hälsa +10 %', p_vila: 'Vilostenar läker 60 % fortare', p_kraft: 'Allas trollformler +8 %', p_flaska: '2 läkedrycker var, dryck +15 %', p_vakna: 'Fallna vaknar 40 % fortare', p_fro: 'Sagafrön +25 %',
   v_taggar: 'Den som slår dig får 30 % tillbaka', v_skyddar: 'Utmana! ger de nära 6 % skydd', v_skjuts: 'Sköldslag +30 % och yr 0,8 s längre', v_eko: 'Hugget träffar 1 fiende till', v_vakt: 'Hälsa +8 %, skydd +3 %', v_titan: 'Sköldmur 4 s längre, skyddar alla',
   h_ranka: 'Ljuspilen saktar ner i 2 s', h_efter: 'Läkerunan läker 50 % till efteråt', h_stjarna: 'Läkekretsen når 1 steg längre', h_skal: 'Läkekretsen ger alla 6 % skydd', h_under: 'Väck upp! 40 % snabbare, +25 % hälsa', h_livsflod: 'Läkekretsen +50 % och mycket större',
@@ -970,17 +980,50 @@ export const PATH_TEXT: Record<string, string> = {
   ljus: 'Stora läkningar och en snabbare väckning.',
   natur: 'Läker hela tiden och snärjer med rankor.',
 };
-export const PATH_SPELLS: Record<string, [string, string, string, string]> = {
-  eld: ['Eldbollen brinner kvar.', 'Isspjutet bränner också.', 'Åskregnet blir större och brinner.', 'Blink laddar snabbare och hoppar längre.'],
-  frost: ['Eldbollen gör monstret långsamt.', 'Isspjutet fryser fast monstret och ger dig skydd.', 'Åskregnet saktar ner alla.', 'Blink ger dig ett isskal.'],
-  aska: ['Eldbollen hoppar till ett monster till och laddar snabbare.', 'Isspjutet hoppar till två till.', 'Åskregnet är större och laddar snabbare.', 'Blink laddar snabbt och hoppar långt.'],
-  barsark: ['Yxhugget är starkare och snabbare.', 'Stormsteget slår hårdare och laddar snabbare.', 'Virvelvinden når längre och slår hårdare.', 'Raseriet varar längre och laddar snabbare.'],
-  vapen: ['Yxhugget är mycket starkare, men långsammare.', 'Stormsteget stoppar länge och slår hårt.', 'Virvelvinden gör fienderna yra.', 'Raseriet är kortare men laddar mycket snabbare.'],
-  murvakt: ['Hugget är starkare och ger dig skydd.', 'Utmana! räcker längre och skyddar de nära.', 'Sköldslaget ger dig skydd.', 'Sköldmuren varar längre och skyddar alla nära.'],
-  hamnare: ['Hugget är mycket starkare.', 'Utmana! gör ont och når längre.', 'Sköldslaget slår hårt.', 'Sköldmuren laddar snabbare och varar längre.'],
-  ljus: ['Läkerunan läker mycket mer, men laddar långsammare.', 'Ljuspilen slår hårdare.', 'Läkekretsen är större och läker mer.', 'Väck upp! laddar snabbt, når långt och ger mer hälsa.'],
-  natur: ['Läkerunan läker lite mindre med en gång, och sen mer efteråt.', 'Ljuspilen snärjer monstret med rankor.', 'Läkekretsen varar längre och läker mer.', 'Väck upp! laddar snabbare och läker efteråt.'],
+/** What a path does to each of its class's five spells (the auto-attack and the four buttons), by spell id: one short line each. */
+export const PATH_SPELLS: Record<string, Record<string, string>> = {
+  eld: { eldboll: 'Eldbollen brinner kvar.', runsmall: 'Runsmällen bränner också.', isspjut: 'Isspjutet bränner också.', askregn: 'Åskregnet blir större och brinner.', blink: 'Blink laddar snabbare och hoppar längre.' },
+  frost: { eldboll: 'Eldbollen gör monstret långsamt.', runsmall: 'Runsmällen gör monstren långsamma.', isspjut: 'Isspjutet fryser fast monstret och ger dig skydd.', askregn: 'Åskregnet saktar ner alla.', blink: 'Blink ger dig ett isskal.' },
+  aska: { eldboll: 'Eldbollen hoppar till ett monster till och laddar snabbare.', runsmall: 'Runsmällen hoppar till ett monster till.', isspjut: 'Isspjutet hoppar till två till.', askregn: 'Åskregnet är större och laddar snabbare.', blink: 'Blink laddar snabbt och hoppar långt.' },
+  barsark: { yxhugg: 'Yxhugget är starkare och snabbare.', jattehugg: 'Jättehugget slår hårdare.', stormsteg: 'Stormsteget slår hårdare och laddar snabbare.', virvelvind: 'Virvelvinden når längre och slår hårdare.', raseri: 'Raseriet varar längre och laddar snabbare.' },
+  vapen: { yxhugg: 'Yxhugget är mycket starkare, men långsammare.', jattehugg: 'Jättehugget når längre och slår hårdare.', stormsteg: 'Stormsteget stoppar länge och slår hårt.', virvelvind: 'Virvelvinden gör fienderna yra.', raseri: 'Raseriet är kortare men laddar mycket snabbare.' },
+  murvakt: { hugg: 'Hugget är starkare och ger dig skydd.', dunderslag: 'Dunderslaget slår hårdare och ger dig skydd.', utmana: 'Utmana! räcker längre och skyddar de nära.', skoldslag: 'Sköldslaget ger dig skydd.', skoldmur: 'Sköldmuren varar längre och skyddar alla nära.' },
+  hamnare: { hugg: 'Hugget är mycket starkare.', dunderslag: 'Dunderslaget slår mycket hårdare.', utmana: 'Utmana! gör ont och når längre.', skoldslag: 'Sköldslaget slår hårt.', skoldmur: 'Sköldmuren laddar snabbare och varar längre.' },
+  ljus: { ljuspil: 'Ljuspilen slår hårdare.', solstrale: 'Solstrålen läker mer.', lakerunan: 'Läkerunan läker mycket mer, men laddar långsammare.', lakekrets: 'Läkekretsen är större och läker mer.', vackupp: 'Väck upp! laddar snabbt, når långt och ger mer hälsa.' },
+  natur: { ljuspil: 'Ljuspilen snärjer monstret med rankor.', solstrale: 'Solstrålen läker lite till efteråt.', lakerunan: 'Läkerunan läker lite mindre med en gång, och sen mer efteråt.', lakekrets: 'Läkekretsen varar längre och läker mer.', vackupp: 'Väck upp! laddar snabbare och läker efteråt.' },
 };
+
+// ---------------------------------------------------------------------------
+// The fight: pips, combos and the special pack monsters
+// ---------------------------------------------------------------------------
+
+/** What each class's pips are called, their picture, and one sentence about them (the HUD's pip row and its info card). */
+export const PIP_NAMES: Record<ClassId, string> = { krigare: 'Glöd', magiker: 'Gnistor', vaktare: 'Sköldkraft', helare: 'Ljus' };
+export const PIP_ICONS: Record<ClassId, string> = { krigare: '🔥', magiker: '✨', vaktare: '🛡️', helare: '☀️' };
+export const PIP_TEXT: Record<ClassId, string> = {
+  krigare: 'Varje hugg ger 1 Glöd. Med 3 Glöd är Jättehugg 4 gånger så starkt!',
+  magiker: 'Varje eldboll ger 1 Gnista. Med 3 Gnistor är Runsmäll 4 gånger så stark!',
+  vaktare: 'Varje hugg ger 1 Sköldkraft. Med 3 är Dunderslag 4 gånger så starkt!',
+  helare: 'Varje ljuspil ger 1 Ljus. Med 3 Ljus läker Solstråle 4 gånger så mycket!',
+};
+/** Each class's combo, "the right moment" for its spender: one sentence with a number (the class card, the spender's info card, the journal). */
+export const COMBO_TEXT: Record<ClassId, string> = {
+  krigare: 'Gör monstret yrt med Stormsteg först. Då slår Jättehugg 2 gånger så hårt!',
+  magiker: 'Frys monstret med Isspjut först. Då slår Runsmäll 1,5 gånger så hårt och träffar alla nära!',
+  vaktare: 'Ropa Utmana! först. Då träffar Dunderslag alla monster du har utmanat, hela 5 steg bort!',
+  helare: 'Lägg Läkekrets först. Då läker Solstråle 1,5 gånger så mycket på dem som står i ringen!',
+};
+
+/** The special pack monsters: the word, a picture, and what to do about them in one sentence (the journal "Dagboken", the marker's info card). */
+export const ROLE_NAMES: Record<MobRole, string> = { healer: 'Besvärjare', archer: 'Skytt', shield: 'Sköldbärare' };
+export const ROLE_ICONS: Record<MobRole, string> = { healer: '💗', archer: '🎯', shield: '🛡️' };
+export const ROLE_TEXT: Record<MobRole, string> = {
+  healer: 'Läker en vän var 8:e sekund. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller ta den först!',
+  archer: 'Siktar en rand på marken i 1,5 sekunder och skjuter sedan. Gå åt sidan, eller avbryt den!',
+  shield: 'Vännerna inom 3 steg tar hälften så mycket skada. Ta den först, eller gör den yr!',
+};
+/** A special pack monster's name: its species and its role ("Skelettkrigare · Besvärjare"). */
+export const mobRoleName = (name: string, role: MobRole): string => `${name} · ${ROLE_NAMES[role]}`;
 export const treeName = (id: string): string => TREE_NAMES[id] ?? id;
 
 /** The run's windows and HUD (ui/run.ts). Short words, every one with a picture next to it in the window. */

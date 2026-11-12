@@ -4,7 +4,8 @@
 // dungeon starts over, so nothing of it is saved. Every dungeon is drawn for a 64×64 map (STANDARD_MAP).
 import { addObject, emptyWorld, inBounds, tileIndex } from './map.ts';
 import { mulberry32, randInt } from './rng.ts';
-import { DUNGEONS, SAGA_BOSSES, SAGA_MOBS, sagaKey, type DungeonId, type SagaDungeonDef, type SagaInstance, type SagaMob, type SagaRoom } from './saga.ts';
+import { DUNGEONS, SAGA_BOSSES, SAGA_MOBS, sagaKey, type DungeonId, type SagaDungeonDef, type SagaInstance, type MobRole, type SagaMob, type SagaRoom } from './saga.ts';
+import { mobRoleName } from './sv.ts';
 import { MAP_H, MAP_W, STANDARD_MAP, TILE, type AnimalState, type Terrain, type WorldState } from './types.ts';
 
 /** What is outside the rooms: rock nobody walks on (the sea around the temple, the starry sky under Bifrost). */
@@ -108,7 +109,7 @@ function route(from: { x: number; y: number }, to: { x: number; y: number }, blo
 }
 
 /** Puts a monster (or a boss) on the map and gives it its fight record. */
-export function spawnSagaMob(world: WorldState, inst: SagaInstance, species: string, x: number, y: number, kind: SagaMob['kind'], pack: number): AnimalState {
+export function spawnSagaMob(world: WorldState, inst: SagaInstance, species: string, x: number, y: number, kind: SagaMob['kind'], pack: number, role?: MobRole | null): AnimalState {
   const boss = SAGA_BOSSES[species];
   const def = SAGA_MOBS[species];
   const a: AnimalState = {
@@ -132,9 +133,14 @@ export function spawnSagaMob(world: WorldState, inst: SagaInstance, species: str
   };
   // in Loke's dungeon the monsters are illusions (drawn ghostly); Loke and his shadow are real enough
   if (DUNGEONS[inst.id].illusions && !boss && kind !== 'ice') a.variant = 1;
+  // a special pack monster: the role is on the animal too (so it shows before the pack is pulled) and in its name
+  if (role) {
+    a.role = role;
+    a.name = mobRoleName(a.name, role);
+  }
   world.animals[a.id] = a;
   const hp = boss?.hp ?? def?.hp ?? 1;
-  inst.mobs[a.id] = { id: a.id, species, kind, hp, max: hp, home: { x, y }, pack, state: 'idle', threat: {}, atkAt: 0 };
+  inst.mobs[a.id] = { id: a.id, species, kind, hp, max: hp, home: { x, y }, pack, state: 'idle', threat: {}, atkAt: 0, ...(role ? { role } : {}) };
   return a;
 }
 
@@ -249,6 +255,8 @@ export function buildDungeon(def: SagaDungeonDef, rnd: () => number, solid: Terr
     puzzleGate: [],
     puzzleOpen: !def.rooms.some((r) => r.kind === 'puzzle'),
     seq: 1,
+    markHits: 0,
+    mobHeals: 0,
   };
   world.saga = inst;
 
@@ -353,7 +361,7 @@ export function buildDungeon(def: SagaDungeonDef, rnd: () => number, solid: Terr
       inst.packs.push(pack);
       members.forEach((species, mi) => {
         const [ox, oy] = PACK_SPOTS[mi % PACK_SPOTS.length]!;
-        pack.members.push(spawnSagaMob(world, inst, species, px(mx + ox), px(my + oy), 'mob', index).id);
+        pack.members.push(spawnSagaMob(world, inst, species, px(mx + ox), px(my + oy), 'mob', index, r.roles?.[pi]?.[mi]).id);
       });
     });
   });

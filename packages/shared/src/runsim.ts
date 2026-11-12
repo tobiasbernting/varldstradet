@@ -668,6 +668,8 @@ export function enterStop(farm: WorldState, run: RunState, node: number, ctx: Si
     wipeSub: RUN_T.wipeSub,
     required: z.required,
     level: run.level,
+    mark: def.mark,
+    ...(run.level <= 1 ? { easy: true } : {}),
   };
   (farm.areas ??= {})[key] = world;
   getArea(farm, key);

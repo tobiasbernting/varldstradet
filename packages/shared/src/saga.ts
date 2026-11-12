@@ -17,18 +17,18 @@ export const CLASS_IDS: readonly ClassId[] = ['vaktare', 'helare', 'krigare', 'm
 export const isClassId = (s: unknown): s is ClassId => typeof s === 'string' && (CLASS_IDS as readonly string[]).includes(s);
 export type Role = 'tank' | 'healer' | 'dps';
 
-export type SpellKind = 'melee' | 'bolt' | 'heal' | 'hot' | 'taunt' | 'bash' | 'wall' | 'revive' | 'charge' | 'whirl' | 'rage' | 'lance' | 'storm' | 'blink';
+export type SpellKind = 'melee' | 'bolt' | 'heal' | 'hot' | 'taunt' | 'bash' | 'wall' | 'revive' | 'charge' | 'whirl' | 'rage' | 'lance' | 'storm' | 'blink' | 'spend';
 
 export interface SpellDef {
   id: string;
   name: string;
   icon: string;
   kind: SpellKind;
-  /** Cooldown (ms). */
+  /** Cooldown (ms). For a class's auto-attack: the time between two swings (`AUTO_MS`). */
   cd: number;
   /** Reach in tiles from the caster (0: around the caster). */
   range: number;
-  /** Damage, or healing (a heal over time: the whole amount). */
+  /** Damage, or healing (a heal over time: the whole amount). A spender (`spend`): what it does at one pip. */
   power: number;
   /** Area in tiles. */
   radius?: number;
@@ -36,31 +36,42 @@ export interface SpellDef {
   ms?: number;
   /** Threat per point of damage (the tank's spells make more, so the monsters keep to the tank). */
   threat?: number;
+  /** A reaction: it neither waits for the shared pause (`GCD_MS`) nor starts it. */
+  offGcd?: boolean;
+  /** A spender that is aimed at a friend (the healer's Solstråle); the other spenders are aimed at a monster. */
+  friend?: boolean;
   /** One line for the spell button and the class card. */
   text: string;
 }
 
+/** Time between two swings of each class's auto-attack (ms). The swing is the class's `auto` spell; its `cd` is this number. */
+export const AUTO_MS: Record<ClassId, number> = { vaktare: 1200, helare: 1200, krigare: 1200, magiker: 1200 };
+
 export const SPELLS: Record<string, SpellDef> = {
   // Väktare (tank)
-  hugg: { id: 'hugg', name: 'Svärdshugg', icon: '🗡️', kind: 'melee', cd: 800, range: 1.8, power: 14, threat: 4, text: 'Ett hugg som får monstren att vilja slåss med dig.' },
-  utmana: { id: 'utmana', name: 'Utmana!', icon: '📣', kind: 'taunt', cd: 8000, range: 0, power: 0, radius: 5, ms: 4000, text: 'Alla monster runt dig måste slåss med dig en stund.' },
-  skoldslag: { id: 'skoldslag', name: 'Sköldslag', icon: '🛡️', kind: 'bash', cd: 6000, range: 1.8, power: 20, ms: 1500, threat: 4, text: 'Slår med skölden så monstret blir yrt. Avbryter bossens stora attacker!' },
-  skoldmur: { id: 'skoldmur', name: 'Sköldmur', icon: '🧱', kind: 'wall', cd: 20000, range: 0, power: 60, ms: 6000, text: 'Du tar mycket mindre skada en stund och får lite hälsa tillbaka.' },
+  hugg: { id: 'hugg', name: 'Svärdshugg', icon: '🗡️', kind: 'melee', cd: AUTO_MS.vaktare, range: 1.8, power: 21, threat: 4, text: 'Du hugger av dig själv när ett monster är nära. Varje träff ger 1 Sköldkraft.' },
+  dunderslag: { id: 'dunderslag', name: 'Dunderslag', icon: '🔨', kind: 'spend', cd: 1000, range: 1.8, power: 22, threat: 6, text: 'Ett dundrande slag som blir starkare av Sköldkraft. Med 3 får du en sköld!' },
+  utmana: { id: 'utmana', name: 'Utmana!', icon: '📣', kind: 'taunt', cd: 8000, range: 0, power: 0, radius: 5, ms: 4000, text: 'Alla monster runt dig måste slåss med dig i 4 sekunder.' },
+  skoldslag: { id: 'skoldslag', name: 'Sköldslag', icon: '🛡️', kind: 'bash', cd: 6000, range: 1.8, power: 20, ms: 1500, threat: 4, offGcd: true, text: 'Slår med skölden så monstret blir yrt. Avbryter bossens stora attacker!' },
+  skoldmur: { id: 'skoldmur', name: 'Sköldmur', icon: '🧱', kind: 'wall', cd: 20000, range: 0, power: 60, ms: 6000, offGcd: true, text: 'Du tar mycket mindre skada en stund och får lite hälsa tillbaka.' },
   // Helare (healer)
+  ljuspil: { id: 'ljuspil', name: 'Ljuspil', icon: '✨', kind: 'bolt', cd: AUTO_MS.helare, range: 7, power: 13, text: 'Du skjuter pilar av ljus av dig själv. Varje träff ger 1 Ljus.' },
+  solstrale: { id: 'solstrale', name: 'Solstråle', icon: '☀️', kind: 'spend', cd: 1000, range: 7, power: 45, friend: true, text: 'En varm stråle som läker mer ju mer Ljus du har. Med 3 Ljus läker den alla nära!' },
   lakerunan: { id: 'lakerunan', name: 'Läkerunan', icon: '💚', kind: 'heal', cd: 1500, range: 7, power: 32, text: 'Läker den som har ont, eller den du pekar på.' },
-  ljuspil: { id: 'ljuspil', name: 'Ljuspil', icon: '✨', kind: 'bolt', cd: 1100, range: 7, power: 12, text: 'Skjuter en pil av ljus.' },
-  lakekrets: { id: 'lakekrets', name: 'Läkekrets', icon: '🌿', kind: 'hot', cd: 12000, range: 0, power: 60, radius: 4, ms: 6000, text: 'En ring av runor läker alla nära dig en stund.' },
+  lakekrets: { id: 'lakekrets', name: 'Läkekrets', icon: '🌿', kind: 'hot', cd: 12000, range: 0, power: 60, radius: 4, ms: 6000, text: 'En ring av runor läker alla nära dig i 6 sekunder.' },
   vackupp: { id: 'vackupp', name: 'Väck upp!', icon: '🌅', kind: 'revive', cd: 15000, range: 4, power: 50, text: 'Väcker en kompis som har fallit.' },
   // Krigare (melee damage)
-  yxhugg: { id: 'yxhugg', name: 'Yxhugg', icon: '🪓', kind: 'melee', cd: 900, range: 1.8, power: 20, text: 'Ett kraftigt hugg med yxan.' },
-  stormsteg: { id: 'stormsteg', name: 'Stormsteg', icon: '💨', kind: 'charge', cd: 9000, range: 7, power: 14, ms: 1000, text: 'Rusar fram till monstret och gör det yrt.' },
+  yxhugg: { id: 'yxhugg', name: 'Yxhugg', icon: '🪓', kind: 'melee', cd: AUTO_MS.krigare, range: 1.8, power: 27, text: 'Du hugger av dig själv när ett monster är nära. Varje träff ger 1 Glöd.' },
+  jattehugg: { id: 'jattehugg', name: 'Jättehugg', icon: '⚒️', kind: 'spend', cd: 1000, range: 1.8, power: 30, text: 'Ett jättehugg som slår hårdare ju mer Glöd du har. Med 3 Glöd träffar det alla framför dig!' },
+  stormsteg: { id: 'stormsteg', name: 'Stormsteg', icon: '💨', kind: 'charge', cd: 9000, range: 7, power: 14, ms: 1000, offGcd: true, text: 'Rusar fram till monstret och gör det yrt i 1 sekund.' },
   virvelvind: { id: 'virvelvind', name: 'Virvelvind', icon: '🌪️', kind: 'whirl', cd: 6000, range: 0, power: 16, radius: 2.2, text: 'Snurrar runt och träffar alla monster nära dig.' },
-  raseri: { id: 'raseri', name: 'Bärsärkaraseri', icon: '🔥', kind: 'rage', cd: 24000, range: 0, power: 50, ms: 8000, text: 'Du slår hårdare, springer fortare och läker lite av varje hugg en stund.' },
+  raseri: { id: 'raseri', name: 'Bärsärkaraseri', icon: '🔥', kind: 'rage', cd: 24000, range: 0, power: 50, ms: 8000, text: 'Du slår hårdare, springer fortare och läker lite av varje hugg i 8 sekunder.' },
   // Magiker (ranged damage)
-  eldboll: { id: 'eldboll', name: 'Eldboll', icon: '☄️', kind: 'bolt', cd: 1300, range: 8, power: 24, text: 'Kastar en eldboll.' },
-  isspjut: { id: 'isspjut', name: 'Isspjut', icon: '❄️', kind: 'lance', cd: 4000, range: 8, power: 14, ms: 3000, text: 'Ett spjut av is som gör monstret långsamt. Avbryter bossens stora attacker!' },
+  eldboll: { id: 'eldboll', name: 'Eldboll', icon: '☄️', kind: 'bolt', cd: AUTO_MS.magiker, range: 8, power: 22, text: 'Du kastar eldbollar av dig själv. Varje träff ger 1 Gnista.' },
+  runsmall: { id: 'runsmall', name: 'Runsmäll', icon: '💥', kind: 'spend', cd: 1000, range: 8, power: 34, radius: 2, text: 'En smäll av runkraft som blir större av Gnistor. Med 3 Gnistor träffar den alla nära!' },
+  isspjut: { id: 'isspjut', name: 'Isspjut', icon: '❄️', kind: 'lance', cd: 8000, range: 8, power: 14, ms: 3000, offGcd: true, text: 'Ett spjut av is som gör monstret långsamt i 3 sekunder. Avbryter bossens stora attacker!' },
   askregn: { id: 'askregn', name: 'Åskregn', icon: '⚡', kind: 'storm', cd: 9000, range: 8, power: 28, radius: 2.4, text: 'Blixtar slår ner på ett ställe och träffar alla där.' },
-  blink: { id: 'blink', name: 'Blink', icon: '🌀', kind: 'blink', cd: 10000, range: 4, power: 0, text: 'Hoppar några steg framåt. Bra för att komma undan.' },
+  blink: { id: 'blink', name: 'Blink', icon: '🌀', kind: 'blink', cd: 10000, range: 4, power: 0, offGcd: true, text: 'Hoppar några steg framåt. Bra för att komma undan.' },
 };
 
 export interface ClassDef {
@@ -74,27 +85,97 @@ export interface ClassDef {
   hp: number;
   color: string;
   blurb: string;
+  /** The four buttons. Slot 1 is the class's spender (`mainSpellOf`), slots 2 and 3 give a pip when they land, slot 4 is the big cooldown. */
   spells: [string, string, string, string];
+  /** The auto-attack: swung by itself at the hero's target every `AUTO_MS` while in a fight. Not a button. */
+  auto: string;
   /** Clothes that come with the class (they go to the wardrobe and are put on). */
   outfit: { hat: string; shirt: string };
 }
 
 export const CLASSES: Record<ClassId, ClassDef> = {
-  vaktare: { id: 'vaktare', name: 'Väktare', role: 'tank', roleName: 'Tank', emoji: '🛡️', hp: 200, color: '#4f8fe8', blurb: 'Står längst fram med sköld och svärd och ser till att monstren slåss med dig, inte med dina vänner.', spells: ['hugg', 'utmana', 'skoldslag', 'skoldmur'], outfit: { hat: 'hat_vaktarhjalm', shirt: 'shirt_vaktarrustning' } },
-  helare: { id: 'helare', name: 'Helare', role: 'healer', roleName: 'Helare', emoji: '🌿', hp: 120, color: '#5fd38d', blurb: 'Völvans runor läker dina vänner och väcker den som har fallit. Utan dig klarar sig ingen länge!', spells: ['lakerunan', 'ljuspil', 'lakekrets', 'vackupp'], outfit: { hat: 'hat_volvakrans', shirt: 'shirt_volvadrakt' } },
-  krigare: { id: 'krigare', name: 'Krigare', role: 'dps', roleName: 'Skada', emoji: '🪓', hp: 150, color: '#e8613b', blurb: 'En bärsärk med yxa som rusar in och gör stor skada på nära håll.', spells: ['yxhugg', 'stormsteg', 'virvelvind', 'raseri'], outfit: { hat: 'hat_hornhjalm', shirt: 'shirt_bjornskinn' } },
-  magiker: { id: 'magiker', name: 'Magiker', role: 'dps', roleName: 'Skada', emoji: '⚡', hp: 110, color: '#b06ef0', blurb: 'Runmagi på avstånd: eld, is och åska. Håll dig bakom tanken!', spells: ['eldboll', 'isspjut', 'askregn', 'blink'], outfit: { hat: 'hat_runhatt', shirt: 'shirt_runmantel' } },
+  vaktare: { id: 'vaktare', name: 'Väktare', role: 'tank', roleName: 'Tank', emoji: '🛡️', hp: 200, color: '#4f8fe8', blurb: 'Står längst fram med sköld och svärd och ser till att monstren slåss med dig, inte med dina vänner. Du hugger av dig själv, och med 3 Sköldkraft dundrar Dunderslag!', spells: ['dunderslag', 'utmana', 'skoldslag', 'skoldmur'], auto: 'hugg', outfit: { hat: 'hat_vaktarhjalm', shirt: 'shirt_vaktarrustning' } },
+  helare: { id: 'helare', name: 'Helare', role: 'healer', roleName: 'Helare', emoji: '🌿', hp: 120, color: '#5fd38d', blurb: 'Völvans runor läker dina vänner och väcker den som har fallit. Dina ljuspilar flyger av sig själva, och med 3 Ljus läker Solstråle alla nära!', spells: ['solstrale', 'lakerunan', 'lakekrets', 'vackupp'], auto: 'ljuspil', outfit: { hat: 'hat_volvakrans', shirt: 'shirt_volvadrakt' } },
+  krigare: { id: 'krigare', name: 'Krigare', role: 'dps', roleName: 'Skada', emoji: '🪓', hp: 150, color: '#e8613b', blurb: 'En bärsärk med yxa som rusar in och gör stor skada på nära håll. Du hugger av dig själv, och med 3 Glöd slår Jättehugg alla framför dig!', spells: ['jattehugg', 'stormsteg', 'virvelvind', 'raseri'], auto: 'yxhugg', outfit: { hat: 'hat_hornhjalm', shirt: 'shirt_bjornskinn' } },
+  magiker: { id: 'magiker', name: 'Magiker', role: 'dps', roleName: 'Skada', emoji: '⚡', hp: 110, color: '#b06ef0', blurb: 'Runmagi på avstånd: eld, is och åska. Eldbollarna flyger av sig själva, och med 3 Gnistor smäller Runsmäll! Håll dig bakom tanken!', spells: ['runsmall', 'isspjut', 'askregn', 'blink'], auto: 'eldboll', outfit: { hat: 'hat_runhatt', shirt: 'shirt_runmantel' } },
 };
 
-/** Spells aimed at a monster, and at a friend (the rest work around the caster). */
+/** Spells aimed at a monster, and at a friend (the rest work around the caster). A spender (`spend`) is aimed by `aimOf`. */
 export const ATTACK_KINDS: ReadonlySet<string> = new Set(['melee', 'bolt', 'lance', 'bash', 'charge', 'storm']);
 export const FRIEND_KINDS: ReadonlySet<string> = new Set(['heal', 'revive']);
+/** What a spell is aimed at: a monster, a friend, or nothing (it works around the caster). */
+export const aimOf = (spellId: string): 'mob' | 'friend' | 'self' => {
+  const sp = SPELLS[spellId];
+  if (!sp) return 'self';
+  if (sp.kind === 'spend') return sp.friend ? 'friend' : 'mob';
+  return ATTACK_KINDS.has(sp.kind) ? 'mob' : FRIEND_KINDS.has(sp.kind) ? 'friend' : 'self';
+};
 
-/** A class's everyday attack: its first spell aimed at a monster (the healer's light arrow). The use key swings it. */
-export const attackSpellOf = (cls: ClassId): string => CLASSES[cls].spells.find((id) => ATTACK_KINDS.has(SPELLS[id]?.kind ?? '')) ?? CLASSES[cls].spells[0]!;
+/** A class's auto-attack (hugg, ljuspil, yxhugg, eldboll): swung by the sim, not a button. */
+export const attackSpellOf = (cls: ClassId): string => CLASSES[cls].auto;
+/** A class's main button (slot 1, the big "Slå" button, E and space): its spender. */
+export const mainSpellOf = (cls: ClassId): string => CLASSES[cls].spells[0];
+/** Every spell a class has: the four buttons and the auto-attack (a path changes all five). */
+export const classSpells = (cls: ClassId): string[] => [CLASSES[cls].auto, ...CLASSES[cls].spells];
 
-/** Small pause between any two spells, so mashing keys doesn't fire everything at once. */
-export const GCD_MS = 400;
+/** The shared pause after a spell (ms). Spells with `offGcd` (the reactions) and potions neither wait for it nor start it; the auto-attack is outside it too. */
+export const GCD_MS = 1000;
+
+/**
+ * Pips (build and spend). A fighter has 0..`PIP_MAX` pips: +1 for every auto-attack hit that lands and +1 when their slot 2 or
+ * slot 3 spell lands on at least one target (a monster or a friend); more than the maximum is wasted. The spender (slot 1) needs
+ * at least one, uses them all and is `SPEND_MUL[pips]` times as strong; at `PIP_MAX` it also gets its class bonus. Pips fade
+ * `PIP_FADE_MS` after the stop's last fight ended.
+ */
+export const PIP_MAX = 3;
+export const SPEND_MUL: readonly number[] = [0, 1, 2.2, 4];
+export const PIP_FADE_MS = 6_000;
+/** What each class's spender does besides the scaled blow (the numbers the texts in sv.ts quote). */
+export const SPEND = {
+  /** Jättehugg: a stunned ("yr") monster takes this many times the blow; at 3 pips every monster within `arc` tiles in a cone of `deg` degrees in front is hit too. */
+  jattehugg: { combo: 2, arc: 2, deg: 120 },
+  /** Runsmäll: a slowed or frozen target takes this many times the blow; at 3 pips (or on such a target) it splashes `radius` tiles round the target for `splash` of it. */
+  runsmall: { combo: 1.5, radius: 2, splash: 0.5 },
+  /** Dunderslag: at 3 pips a shield of `shield` of max health for `shieldMs`; it hits every monster under the hero's Utmana!. */
+  dunderslag: { shield: 0.15, shieldMs: 4000 },
+  /** Solstråle: a friend in the healer's own Läkekrets gets this many times the heal; at 3 pips everyone within `radius` tiles of the healer is healed. */
+  solstrale: { combo: 1.5, radius: 5 },
+} as const;
+
+/** Öppning: interrupting a boss's nova or mend, or a Besvärjare's or Skytt's cast, leaves the monster open this long; it takes this much more damage from everyone. */
+export const OPEN_MS = 4_000;
+export const OPEN_BONUS = 0.5;
+
+/**
+ * Marks (telegraphed hits): a boss's move that lands from a ground mark, and a Skytt's shot, takes a fraction of the VICTIM'S max
+ * health (the level's `RUN_LEVELS[l].mark`, times the move's weight `BossAbility.dmg`), whatever the party size, the armor and the
+ * level's damage. An uninterrupted nova is `MARK_NOVA` times that, burning ground `MARK_POOL` a second, a Skytt's shot `MARK_SHOT`.
+ * Runor and paths that make a hero "take less" count, but together at most `MARK_TAKEN_CAP`. Outside a run the fraction is `MARK_DEFAULT`.
+ */
+export const MARK_DEFAULT = 0.35;
+export const MARK_NOVA = 1.7;
+export const MARK_POOL = 0.35;
+export const MARK_SHOT = 0.85;
+export const MARK_TAKEN_CAP = 0.3;
+
+/**
+ * Special pack monsters. A member of a pack may carry a role (on the dungeon's own species; the client draws a marker):
+ * - `healer` (Besvärjare): every `every` ms starts a cast of `cast` ms on its most hurt packmate; unless stunned or interrupted it heals `heal` of the packmate's max health.
+ * - `archer` (Skytt): every `every` ms aims a line `length` by `width` tiles at a random hero for `warn` ms (times the level's warning multiplier), then everyone on it takes a mark hit times `MARK_SHOT`.
+ * - `shield` (Sköldbärare): while it lives and is not stunned, its packmates within `radius` tiles take `cut` less damage (not itself).
+ * `easy` holds the harmless numbers of Lätt.
+ */
+export type MobRole = 'healer' | 'archer' | 'shield';
+export const MOB_ROLES: readonly MobRole[] = ['healer', 'archer', 'shield'];
+export const ROLE = {
+  healer: { every: 8000, first: 4000, cast: 2500, heal: 0.3, easy: { cast: 4000, heal: 0.1 } },
+  archer: { every: 7000, first: 3000, warn: 1500, length: 9, width: 1.2 },
+  shield: { radius: 3, cut: 0.5, easy: { cut: 0.25 } },
+} as const;
+
+/** The Hirdmannen heals at a human-ish pace: his Läkerunan's cooldown is this many times the spell's (and he holds his Solstråle for 3 pips, runbot.ts). */
+export const COMPANION_HEAL_CD = 2;
+
 /** A fallen player gets up at the last rest stone after this long (unless a healer is quicker). */
 export const DOWN_MS = 10_000;
 /** Everyone fell: after this long the party gets up at the last rest stone and the monsters reset. */
@@ -191,6 +272,10 @@ export interface BossAbility {
   radius: number;
   /** Cone width in degrees (cleave). */
   arc?: number;
+  /**
+   * The weight of its hit, around 1 (0: it hurts nobody). The hit is a mark: the level's fraction of the victim's max health times
+   * this (see `MARK_DEFAULT`), so a slam can still be bigger than a rain. A pull's hit is about half, an ice prison's a third.
+   */
   dmg: number;
   /** Rain: extra circles besides one under each player. Summon: how many. */
   count?: number;
@@ -198,7 +283,7 @@ export interface BossAbility {
   phase?: number;
   /** Summon: which monster. */
   add?: string;
-  /** Pools: how long the burning ground stays (ms), damage per second. */
+  /** Pools: how long the burning ground stays (ms); it burns `MARK_POOL` of a mark every second. */
   linger?: number;
   /** A tank's Sköldslag (any stun) during the warning cancels it. */
   interrupt?: boolean;
@@ -244,7 +329,7 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     speed: 2,
     phases: [0.5],
     phaseAdds: { species: 'gravrotta', count: 3 },
-    moves: [{ move: 'slam', name: 'Gravslaget', every: 8000, first: 4000, warn: 1500, radius: 2.6, dmg: 28, text: 'Slår i marken så det skakar runt honom. Spring ut ur cirkeln!' }],
+    moves: [{ move: 'slam', name: 'Gravslaget', every: 8000, first: 4000, warn: 1500, radius: 2.6, dmg: 0.95, text: 'Slår i marken så det skakar runt honom. Spring ut ur cirkeln!' }],
     yells: { pull: 'Ingen stör kungens sömn!', phase: ['Råttor! Till mig!'], kill: 'Vila i frid…', death: 'Kungen… kommer att… vakna…', wipe: 'Kryptan behåller sina gäster.' },
     mini: true,
     lore: 'En jättelik skelettkrigare som har vaktat kryptans port i tusen år.',
@@ -261,9 +346,9 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     phases: [0.66, 0.33],
     phaseAdds: { species: 'skelett', count: 2 },
     moves: [
-      { move: 'cleave', name: 'Kungasvärdet', every: 9000, first: 5000, warn: 1300, radius: 3.4, arc: 100, dmg: 34, text: 'Svingar svärdet i en stor båge framför sig. Ställ dig bakom honom!' },
-      { move: 'rain', name: 'Gravfrost', every: 12000, first: 8000, warn: 1600, radius: 1.5, count: 2, dmg: 26, phase: 1, text: 'Frost kryper upp ur graven under er. Flytta på er!' },
-      { move: 'nova', name: 'Draugropet', every: 16000, first: 14000, warn: 2600, radius: 7, dmg: 30, interrupt: true, text: 'Han samlar kraft till ett skrik som träffar alla nära. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!' },
+      { move: 'cleave', name: 'Kungasvärdet', every: 9000, first: 5000, warn: 1300, radius: 3.4, arc: 100, dmg: 0.85, text: 'Svingar svärdet i en stor båge framför sig. Ställ dig bakom honom!' },
+      { move: 'rain', name: 'Gravfrost', every: 12000, first: 8000, warn: 1600, radius: 1.5, count: 2, dmg: 0.95, phase: 1, text: 'Frost kryper upp ur graven under er. Flytta på er!' },
+      { move: 'nova', name: 'Draugropet', every: 16000, first: 14000, warn: 2600, radius: 7, dmg: 0.8, interrupt: true, text: 'Han samlar kraft till ett skrik som träffar alla nära. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!' },
     ],
     yells: { pull: 'Vem vågar väcka Draugkungen?!', phase: ['Mina krigare, res er!', 'Solrunan är MIN!'], kill: 'Ännu en till min krypta!', death: 'Solen… den lyser igen…', wipe: 'Kom tillbaka när ni har blivit modigare!' },
     lore: 'Hrolf var en girig hövding för länge sedan. Nu har han vaknat som en draug och stulit Solrunan, som håller vintern borta från Midgård.',
@@ -279,7 +364,7 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     speed: 2.6,
     phases: [0.5],
     phaseAdds: { species: 'isvarg', count: 2 },
-    moves: [{ move: 'charge', name: 'Isrusning', every: 9000, first: 5000, warn: 1400, radius: 1.8, dmg: 30, text: 'Rusar mot någon av er och landar med en smäll. Hoppa undan från cirkeln!' }],
+    moves: [{ move: 'charge', name: 'Isrusning', every: 9000, first: 5000, warn: 1400, radius: 1.8, dmg: 0.85, text: 'Rusar mot någon av er och landar med en smäll. Hoppa undan från cirkeln!' }],
     yells: { pull: 'GRRRAAAH!', phase: ['AAAOOOOO!'], kill: 'Grrr…', death: 'Grr… mmm…', wipe: 'Grrrrr.' },
     mini: true,
     lore: 'Rimturs egen björn, stor som en lada och med päls av rimfrost.',
@@ -296,10 +381,10 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     phases: [0.5],
     phaseAdds: { species: 'isande', count: 2 },
     moves: [
-      { move: 'cleave', name: 'Frostandedräkt', every: 10000, first: 5000, warn: 1500, radius: 4.2, arc: 70, dmg: 34, text: 'Andas iskall luft rakt fram. Gå åt sidan!' },
-      { move: 'rain', name: 'Istappar', every: 11000, first: 8000, warn: 1400, radius: 1.3, count: 3, dmg: 24, text: 'Istappar faller från taket där ni står. Flytta på er!' },
-      { move: 'freeze', name: 'Isfängelse', every: 16000, first: 11000, warn: 800, radius: 1, dmg: 15, text: 'Fryser in någon i ett isblock. Slå sönder isen för att rädda din vän!' },
-      { move: 'nova', name: 'Snöstorm', every: 15000, first: 6000, warn: 2600, radius: 8, dmg: 32, phase: 1, interrupt: true, text: 'Kallar på en snöstorm runt sig. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!' },
+      { move: 'cleave', name: 'Frostandedräkt', every: 10000, first: 5000, warn: 1500, radius: 4.2, arc: 70, dmg: 0.85, text: 'Andas iskall luft rakt fram. Gå åt sidan!' },
+      { move: 'rain', name: 'Istappar', every: 11000, first: 8000, warn: 1400, radius: 1.3, count: 3, dmg: 0.85, text: 'Istappar faller från taket där ni står. Flytta på er!' },
+      { move: 'freeze', name: 'Isfängelse', every: 16000, first: 11000, warn: 800, radius: 1, dmg: 0.3, text: 'Fryser in någon i ett isblock. Slå sönder isen för att rädda din vän!' },
+      { move: 'nova', name: 'Snöstorm', every: 15000, first: 6000, warn: 2600, radius: 8, dmg: 0.8, phase: 1, interrupt: true, text: 'Kallar på en snöstorm runt sig. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!' },
     ],
     yells: { pull: 'Små varma varelser i MIN borg? Ni ska bli istappar!', phase: ['Känn vinterns vrede!'], kill: 'Frys!', death: 'Våren… kommer… ändå…', wipe: 'Vintern vinner alltid.' },
     lore: 'Rimtursen är en frostjätte från Jötunheim. Han vill att det ska vara vinter för alltid, och har frusit alla källor i norr.',
@@ -316,8 +401,8 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     phases: [0.5],
     phaseAdds: { species: 'eldimp', count: 3 },
     moves: [
-      { move: 'slam', name: 'Städslaget', every: 7000, first: 4000, warn: 1300, radius: 2.8, dmg: 30, text: 'Slår hammaren i städet så golvet sprakar. Spring ut ur cirkeln!' },
-      { move: 'pools', name: 'Glödande slagg', every: 11000, first: 7000, warn: 1000, radius: 1.4, dmg: 8, linger: 8000, text: 'Kastar glödande slagg som brinner kvar på golvet. Stå inte i elden!' },
+      { move: 'slam', name: 'Städslaget', every: 7000, first: 4000, warn: 1300, radius: 2.8, dmg: 1, text: 'Slår hammaren i städet så golvet sprakar. Spring ut ur cirkeln!' },
+      { move: 'pools', name: 'Glödande slagg', every: 11000, first: 7000, warn: 1000, radius: 1.4, dmg: 0.8, linger: 8000, text: 'Kastar glödande slagg som brinner kvar på golvet. Stå inte i elden!' },
     ],
     yells: { pull: 'Ingen kommer in i Surts smedja!', phase: ['Imparna! Hjälp mig!'], kill: 'Mer kol till ugnen!', death: 'Elden… slocknar…', wipe: 'Ha! Härdat i elden!' },
     mini: true,
@@ -335,9 +420,9 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     phases: [0.7, 0.4],
     phaseAdds: { species: 'eldimp', count: 3 },
     moves: [
-      { move: 'cleave', name: 'Eldsvärdet', every: 8000, first: 5000, warn: 1300, radius: 4.4, arc: 110, dmg: 40, text: 'Svingar det flammande svärdet i en stor båge. Ställ dig bakom honom!' },
-      { move: 'pools', name: 'Lavapölar', every: 12000, first: 8000, warn: 1200, radius: 1.6, dmg: 10, linger: 10000, text: 'Lava väller upp under er och brinner kvar. Flytta på er!' },
-      { move: 'nova', name: 'Muspels vrede', every: 14000, first: 4000, warn: 2800, radius: 7, dmg: 45, phase: 2, interrupt: true, text: 'Hela salen fylls av eld. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!' },
+      { move: 'cleave', name: 'Eldsvärdet', every: 8000, first: 5000, warn: 1300, radius: 4.4, arc: 110, dmg: 1, text: 'Svingar det flammande svärdet i en stor båge. Ställ dig bakom honom!' },
+      { move: 'pools', name: 'Lavapölar', every: 12000, first: 8000, warn: 1200, radius: 1.6, dmg: 1, linger: 10000, text: 'Lava väller upp under er och brinner kvar. Flytta på er!' },
+      { move: 'nova', name: 'Muspels vrede', every: 14000, first: 4000, warn: 2800, radius: 7, dmg: 1.05, phase: 2, interrupt: true, text: 'Hela salen fylls av eld. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!' },
     ],
     yells: { pull: 'Med det här svärdet ska jag bränna Världsträdet!', phase: ['Muspelheims eld brinner i mig!', 'NI KAN INTE STOPPA MIG!'], kill: 'Aska till aska!', death: 'Världsträdet… lever…', wipe: 'Ingen kan stå emot elden!' },
     lore: 'Surt är eldjätten från Muspelheim. I sin smedja under vulkanen smider han ett svärd av eld för att bränna Yggdrasil, Världsträdet som håller ihop alla världar.',
@@ -355,7 +440,7 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     phases: [0.5],
     phaseAdds: { species: 'helhund', count: 2 },
     moves: [
-      { move: 'charge', name: 'Helbett', every: 9000, first: 5000, warn: 1400, radius: 1.8, dmg: 34, text: 'Garm tar sats och hoppar på någon av er med gapet öppet. Hoppa undan från cirkeln!' },
+      { move: 'charge', name: 'Helbett', every: 9000, first: 5000, warn: 1400, radius: 1.8, dmg: 0.95, text: 'Garm tar sats och hoppar på någon av er med gapet öppet. Hoppa undan från cirkeln!' },
       { move: 'summon', name: 'Yla!', every: 14000, first: 7000, warn: 1500, radius: 0, count: 2, add: 'helhund', dmg: 0, text: 'Garm ylar och kallar på helhundarna. Ta hand om dem snabbt!' },
     ],
     yells: { pull: 'VOFF! VOFF! Ingen går förbi Garm!', phase: ['AOOOOO! Valpar, kom hit!'], kill: 'Voff!', death: 'Gnyy… ville bara… leka…', wipe: 'Voff voff! Garm vann!' },
@@ -374,9 +459,9 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     phases: [0.66, 0.33],
     phaseAdds: { species: 'gengangare', count: 2 },
     moves: [
-      { move: 'pull', name: 'Dödens famn', every: 15000, first: 9000, warn: 2200, radius: 7, dmg: 20, text: 'Hel sträcker ut sina kalla händer och drar alla nära sig. Akta er, för sedan kommer Helskriket!' },
-      { move: 'nova', name: 'Helskriket', every: 15000, first: 11500, warn: 2400, radius: 4, dmg: 44, interrupt: true, text: 'Hon skriker så det isar i hela salen. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring ut ur cirkeln!' },
-      { move: 'rain', name: 'Gravkyla', every: 11000, first: 6000, warn: 1500, radius: 1.5, count: 2, dmg: 28, phase: 1, text: 'Kall dimma stiger upp ur golvet där ni står. Flytta på er!' },
+      { move: 'pull', name: 'Dödens famn', every: 15000, first: 9000, warn: 2200, radius: 7, dmg: 0.5, text: 'Hel sträcker ut sina kalla händer och drar alla nära sig. Akta er, för sedan kommer Helskriket!' },
+      { move: 'nova', name: 'Helskriket', every: 15000, first: 11500, warn: 2400, radius: 4, dmg: 1.05, interrupt: true, text: 'Hon skriker så det isar i hela salen. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring ut ur cirkeln!' },
+      { move: 'rain', name: 'Gravkyla', every: 11000, first: 6000, warn: 1500, radius: 1.5, count: 2, dmg: 1, phase: 1, text: 'Kall dimma stiger upp ur golvet där ni står. Flytta på er!' },
     ],
     yells: { pull: 'Levande barn? Här nere? Jag får ju aldrig besök!', phase: ['Mina gengångare, vakna!', 'Pappa Loke lovade mig hela Midgård!'], kill: 'Välkommen till Helheim.', death: 'Ljuset… är så… varmt…', wipe: 'Helheim har gott om plats. Kom tillbaka när ni vill!' },
     lore: 'Hel är Lokes dotter och drottning över dödsriket. Ena halvan av henne är blek som snö och den andra mörk som natten, och Loke har lovat henne Midgård.',
@@ -393,8 +478,8 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     phases: [0.5],
     phaseAdds: { species: 'guldbagge', count: 3 },
     moves: [
-      { move: 'line', name: 'Ångstråle', every: 9000, first: 5000, warn: 1500, radius: 7, width: 1.6, dmg: 36, text: 'Het ånga sprutar ur hans mun i en lång rak stråle. Gå åt sidan!' },
-      { move: 'slam', name: 'Järnstamp', every: 8000, first: 3500, warn: 1300, radius: 2.6, dmg: 30, text: 'Han stampar med järnfoten så golvet skakar. Spring ut ur cirkeln!' },
+      { move: 'line', name: 'Ångstråle', every: 9000, first: 5000, warn: 1500, radius: 7, width: 1.6, dmg: 0.9, text: 'Het ånga sprutar ur hans mun i en lång rak stråle. Gå åt sidan!' },
+      { move: 'slam', name: 'Järnstamp', every: 8000, first: 3500, warn: 1300, radius: 2.6, dmg: 1, text: 'Han stampar med järnfoten så golvet skakar. Spring ut ur cirkeln!' },
     ],
     yells: { pull: 'KLONK. INKRÄKTARE. UPPTÄCKTA.', phase: ['KLONK KLONK. SKICKAR. BAGGAR.'], kill: 'INKRÄKTARE. BORTA. KLONK.', death: 'Pys… pys… äntligen… vila…', wipe: 'VAKTEN. KLAR. KLONK.' },
     mini: true,
@@ -412,8 +497,8 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     phases: [0.6, 0.3],
     phaseAdds: { species: 'guldbagge', count: 3 },
     moves: [
-      { move: 'cleave', name: 'Drakeld', every: 9000, first: 5000, warn: 1400, radius: 4.6, arc: 90, dmg: 40, text: 'Han sprutar eld rakt fram. Ställ dig bakom eller bredvid honom!' },
-      { move: 'pools', name: 'Smält guld', every: 12000, first: 8000, warn: 1200, radius: 1.5, dmg: 10, linger: 9000, text: 'Smält guld rinner ut på golvet och är hett länge. Stå inte i det!' },
+      { move: 'cleave', name: 'Drakeld', every: 9000, first: 5000, warn: 1400, radius: 4.6, arc: 90, dmg: 1, text: 'Han sprutar eld rakt fram. Ställ dig bakom eller bredvid honom!' },
+      { move: 'pools', name: 'Smält guld', every: 12000, first: 8000, warn: 1200, radius: 1.5, dmg: 1, linger: 9000, text: 'Smält guld rinner ut på golvet och är hett länge. Stå inte i det!' },
       { move: 'mend', name: 'Guldsömn', every: 20000, first: 15000, warn: 3000, radius: 1, dmg: 0, heal: 0.12, phase: 1, interrupt: true, text: 'Han kryper ihop på sitt guld och sover sig frisk. Väck honom med Sköldslag, Stormsteg eller Isspjut!' },
     ],
     yells: { pull: 'MITT guld! Allt är MITT! Inte ett enda litet mynt får ni!', phase: ['Baggar! Skydda skatten!', 'Loke lovade mig allt guld i hela världen!'], kill: 'Ännu en sak till högen.', death: 'Mitt… fina… guld…', wipe: 'Ha! Guldet stannar hos mig.' },
@@ -431,8 +516,8 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     phases: [0.5],
     phaseAdds: { species: 'manet', count: 2 },
     moves: [
-      { move: 'pools', name: 'Bläck', every: 10000, first: 5000, warn: 1100, radius: 1.6, dmg: 9, linger: 8000, text: 'Han sprutar svart bläck som ligger kvar på golvet. Stå inte i bläcket!' },
-      { move: 'line', name: 'Tentakelsvep', every: 9000, first: 7000, warn: 1500, radius: 6, width: 1.8, dmg: 34, text: 'En lång tentakel slår ner i en rak linje. Gå åt sidan!' },
+      { move: 'pools', name: 'Bläck', every: 10000, first: 5000, warn: 1100, radius: 1.6, dmg: 0.9, linger: 8000, text: 'Han sprutar svart bläck som ligger kvar på golvet. Stå inte i bläcket!' },
+      { move: 'line', name: 'Tentakelsvep', every: 9000, first: 7000, warn: 1500, radius: 6, width: 1.8, dmg: 0.85, text: 'En lång tentakel slår ner i en rak linje. Gå åt sidan!' },
     ],
     yells: { pull: 'Blubb! Vem har spårat in sand i MITT fina tempel?', phase: ['Blubb blubb! Maneter, hjälp till!'], kill: 'Blubb!', death: 'Blubb… blubb… bluuubb…', wipe: 'Hihi! Åtta armar är bättre än två!' },
     mini: true,
@@ -450,10 +535,10 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     phases: [0.66, 0.33],
     phaseAdds: { species: 'sjodraug', count: 2 },
     moves: [
-      { move: 'line', name: 'Svansslag', every: 8000, first: 4500, warn: 1500, radius: 8, width: 2, dmg: 42, text: 'Den väldiga svansen slår ner i en lång rak linje. Gå åt sidan!' },
-      { move: 'pull', name: 'Malström', every: 16000, first: 10000, warn: 2200, radius: 7, dmg: 18, text: 'Vattnet virvlar och drar alla nära ormen till honom. Akta er, för sedan kommer Gifteld!' },
-      { move: 'nova', name: 'Gifteld', every: 16000, first: 12500, warn: 2600, radius: 4.5, dmg: 44, interrupt: true, text: 'Ormen sprutar grönt gift runt sig. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring ut ur cirkeln!' },
-      { move: 'rain', name: 'Störtvåg', every: 12000, first: 6000, warn: 1600, radius: 1.6, count: 3, dmg: 30, phase: 1, text: 'Vågor störtar ner från taket där ni står. Flytta på er!' },
+      { move: 'line', name: 'Svansslag', every: 8000, first: 4500, warn: 1500, radius: 8, width: 2, dmg: 1.05, text: 'Den väldiga svansen slår ner i en lång rak linje. Gå åt sidan!' },
+      { move: 'pull', name: 'Malström', every: 16000, first: 10000, warn: 2200, radius: 7, dmg: 0.45, text: 'Vattnet virvlar och drar alla nära ormen till honom. Akta er, för sedan kommer Gifteld!' },
+      { move: 'nova', name: 'Gifteld', every: 16000, first: 12500, warn: 2600, radius: 4.5, dmg: 1.05, interrupt: true, text: 'Ormen sprutar grönt gift runt sig. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring ut ur cirkeln!' },
+      { move: 'rain', name: 'Störtvåg', every: 12000, first: 6000, warn: 1600, radius: 1.6, count: 3, dmg: 1.05, phase: 1, text: 'Vågor störtar ner från taket där ni står. Flytta på er!' },
     ],
     yells: { pull: 'Sssså. Små människor i mitt tempel. Vet ni att jag når runt hela Midgård?', phase: ['Sjödraugar, ssstig upp!', 'Sssnart släpper jag min svans, och då skakar hela världen!'], kill: 'Ssslurp.', death: 'Ssss… tillbaka… till havet…', wipe: 'Havet vinner alltid till sssist.' },
     lore: 'Jörmungandr är Midgårdsormen, Lokes son. Han är så lång att han ligger i havet runt hela världen och biter sig själv i svansen.',
@@ -470,8 +555,8 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     phases: [0.5],
     phaseAdds: { species: 'jattespindel', count: 2 },
     moves: [
-      { move: 'freeze', name: 'Spindelnät', block: 'spindelnat', every: 15000, first: 9000, warn: 900, radius: 1, dmg: 12, text: 'Hon spinner in någon i ett klibbigt nät. Slå sönder nätet för att rädda din vän!' },
-      { move: 'rain', name: 'Giftdroppar', every: 10000, first: 5000, warn: 1400, radius: 1.4, count: 2, dmg: 28, text: 'Gröna droppar faller från taket där ni står. Flytta på er!' },
+      { move: 'freeze', name: 'Spindelnät', block: 'spindelnat', every: 15000, first: 9000, warn: 900, radius: 1, dmg: 0.3, text: 'Hon spinner in någon i ett klibbigt nät. Slå sönder nätet för att rädda din vän!' },
+      { move: 'rain', name: 'Giftdroppar', every: 10000, first: 5000, warn: 1400, radius: 1.4, count: 2, dmg: 1, text: 'Gröna droppar faller från taket där ni står. Flytta på er!' },
     ],
     yells: { pull: 'Ssså fina små flugor som har flugit in i min lund!', phase: ['Mina barn! Middagen är serverad!'], kill: 'Insnärjd!', death: 'Mitt… vackra… nät…', wipe: 'Sov gott i mitt nät, små flugor.' },
     mini: true,
@@ -489,8 +574,8 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     phases: [0.6, 0.3],
     phaseAdds: { species: 'skuggalv', count: 2 },
     moves: [
-      { move: 'nova', name: 'Mardröm', every: 15000, first: 7000, warn: 2600, radius: 7, dmg: 46, interrupt: true, text: 'Hon fyller salen med en mardröm. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!' },
-      { move: 'pools', name: 'Skuggpölar', every: 11000, first: 5000, warn: 1200, radius: 1.5, dmg: 10, linger: 10000, text: 'Mörka pölar av skugga sprider sig på golvet. Stå inte i dem!' },
+      { move: 'nova', name: 'Mardröm', every: 15000, first: 7000, warn: 2600, radius: 7, dmg: 1.1, interrupt: true, text: 'Hon fyller salen med en mardröm. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!' },
+      { move: 'pools', name: 'Skuggpölar', every: 11000, first: 5000, warn: 1200, radius: 1.5, dmg: 1, linger: 10000, text: 'Mörka pölar av skugga sprider sig på golvet. Stå inte i dem!' },
       { move: 'mend', name: 'Drömsömn', every: 22000, first: 16000, warn: 3000, radius: 1, dmg: 0, heal: 0.1, phase: 1, interrupt: true, text: 'Hon somnar och drömmer sig frisk. Väck henne med Sköldslag, Stormsteg eller Isspjut!' },
       { move: 'summon', name: 'Skuggor!', every: 18000, first: 4000, warn: 1500, radius: 0, count: 2, add: 'skuggalv', dmg: 0, phase: 2, text: 'Hon kallar fram skuggalver ur mörkret. Ta hand om dem snabbt!' },
     ],
@@ -509,8 +594,8 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     phases: [0.5],
     phaseAdds: { species: 'ulv', count: 2 },
     moves: [
-      { move: 'charge', name: 'Språng', every: 8000, first: 4000, warn: 1300, radius: 1.8, dmg: 36, text: 'Sköll tar sats och hoppar på någon av er. Hoppa undan från cirkeln!' },
-      { move: 'nova', name: 'Ylande', every: 14000, first: 9000, warn: 2400, radius: 6, dmg: 40, interrupt: true, text: 'Han ylar så att isen spricker. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!' },
+      { move: 'charge', name: 'Språng', every: 8000, first: 4000, warn: 1300, radius: 1.8, dmg: 1, text: 'Sköll tar sats och hoppar på någon av er. Hoppa undan från cirkeln!' },
+      { move: 'nova', name: 'Ylande', every: 14000, first: 9000, warn: 2400, radius: 6, dmg: 0.95, interrupt: true, text: 'Han ylar så att isen spricker. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!' },
     ],
     yells: { pull: 'Grrr! Jag jagar solen över himlen varje dag. Er hinner jag ikapp!', phase: ['Flocken! Till mig!'], kill: 'Fångad!', death: 'Solen… kom undan… igen…', wipe: 'Ingen springer ifrån Sköll!' },
     mini: true,
@@ -528,10 +613,10 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     phases: [0.7, 0.4],
     phaseAdds: { species: 'ulv', count: 2 },
     moves: [
-      { move: 'charge', name: 'Käftarna', every: 9000, first: 5000, warn: 1400, radius: 2, dmg: 48, text: 'Han hoppar fram med gapet på vid gavel. Hoppa undan från cirkeln!' },
-      { move: 'cleave', name: 'Klorna', every: 9000, first: 8000, warn: 1300, radius: 4.2, arc: 100, dmg: 42, text: 'Han slår med klorna i en stor båge framför sig. Ställ dig bakom honom!' },
+      { move: 'charge', name: 'Käftarna', every: 9000, first: 5000, warn: 1400, radius: 2, dmg: 1.2, text: 'Han hoppar fram med gapet på vid gavel. Hoppa undan från cirkeln!' },
+      { move: 'cleave', name: 'Klorna', every: 9000, first: 8000, warn: 1300, radius: 4.2, arc: 100, dmg: 1.05, text: 'Han slår med klorna i en stor båge framför sig. Ställ dig bakom honom!' },
       { move: 'summon', name: 'Flocken!', every: 16000, first: 3000, warn: 1500, radius: 0, count: 2, add: 'ulv', dmg: 0, phase: 1, text: 'Han kallar på sin flock. Ta hand om ulvarna snabbt!' },
-      { move: 'nova', name: 'Vinterylet', every: 15000, first: 5000, warn: 2800, radius: 8, dmg: 50, interrupt: true, phase: 2, text: 'Han ylar så att hela klyftan fryser. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!' },
+      { move: 'nova', name: 'Vinterylet', every: 15000, first: 5000, warn: 2800, radius: 8, dmg: 1.2, interrupt: true, phase: 2, text: 'Han ylar så att hela klyftan fryser. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!' },
     ],
     yells: { pull: 'Loke har slitit av mina band! Nu är jag FRI!', phase: ['Flocken! Jakten börjar!', 'Inga band i världen kan hålla mig nu!'], kill: 'AOOOOO!', death: 'Gleipner… igen? Nåja… den var ju… mjuk…', wipe: 'Ingen binder Fenrisulven!' },
     lore: 'Fenrisulven är Lokes jättelika varg. Gudarna band honom med Gleipner, ett band mjukt som silke, men Loke har släppt honom fri.',
@@ -548,8 +633,8 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     phases: [0.5],
     phaseAdds: { species: 'skelett', count: 2 },
     moves: [
-      { move: 'rain', name: 'Falska stjärnor', every: 10000, first: 5000, warn: 1500, radius: 1.5, count: 3, dmg: 34, text: 'Stjärnor som inte ens är riktiga faller ner där ni står. Flytta på er!' },
-      { move: 'nova', name: 'Hånskratt', every: 15000, first: 9000, warn: 2400, radius: 6, dmg: 42, interrupt: true, text: 'Skuggan skrattar så det ekar. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!' },
+      { move: 'rain', name: 'Falska stjärnor', every: 10000, first: 5000, warn: 1500, radius: 1.5, count: 3, dmg: 1.2, text: 'Stjärnor som inte ens är riktiga faller ner där ni står. Flytta på er!' },
+      { move: 'nova', name: 'Hånskratt', every: 15000, first: 9000, warn: 2400, radius: 6, dmg: 1, interrupt: true, text: 'Skuggan skrattar så det ekar. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!' },
     ],
     yells: { pull: 'Buh! Trodde ni att jag var Loke? Fel! Jag är bara hans skugga. Hihi!', phase: ['Kom fram, gamla benrangel!'], kill: 'Hihi! Lurad!', death: 'Men… jag är ju bara… en skugga… puff!', wipe: 'Hahaha! Ni slogs mot en skugga och förlorade!' },
     mini: true,
@@ -568,13 +653,13 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     phaseAdds: { species: 'isvarg', count: 2 },
     // one move for every boss the family has beaten before, each from a later phase
     moves: [
-      { move: 'cleave', name: 'Kungasvärdet', every: 9000, first: 5000, warn: 1300, radius: 3.6, arc: 100, dmg: 44, text: 'Han härmar Draugkungen och svingar ett svärd i en stor båge. Ställ dig bakom honom!' },
-      { move: 'nova', name: 'Snöstorm', every: 16000, first: 6000, warn: 2600, radius: 8, dmg: 40, interrupt: true, phase: 1, text: 'Han härmar Rimtursen och kallar på en snöstorm. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!' },
-      { move: 'pools', name: 'Lavapölar', every: 12000, first: 8000, warn: 1200, radius: 1.6, dmg: 11, linger: 9000, phase: 2, text: 'Han härmar Surt, och lava väller upp under er. Flytta på er!' },
+      { move: 'cleave', name: 'Kungasvärdet', every: 9000, first: 5000, warn: 1300, radius: 3.6, arc: 100, dmg: 1.1, text: 'Han härmar Draugkungen och svingar ett svärd i en stor båge. Ställ dig bakom honom!' },
+      { move: 'nova', name: 'Snöstorm', every: 16000, first: 6000, warn: 2600, radius: 8, dmg: 0.95, interrupt: true, phase: 1, text: 'Han härmar Rimtursen och kallar på en snöstorm. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!' },
+      { move: 'pools', name: 'Lavapölar', every: 12000, first: 8000, warn: 1200, radius: 1.6, dmg: 1.1, linger: 9000, phase: 2, text: 'Han härmar Surt, och lava väller upp under er. Flytta på er!' },
       { move: 'mend', name: 'Lokes list', every: 22000, first: 16000, warn: 3000, radius: 1, dmg: 0, heal: 0.08, interrupt: true, phase: 2, text: 'Han låtsas sova och läker sig i smyg. Avbryt med Sköldslag, Stormsteg eller Isspjut!' },
-      { move: 'pull', name: 'Dödens famn', every: 15000, first: 9000, warn: 2200, radius: 7, dmg: 20, phase: 3, text: 'Han härmar Hel och drar alla nära sig. Akta er, för sedan kommer Helskriket!' },
-      { move: 'nova', name: 'Helskriket', every: 15000, first: 11500, warn: 2400, radius: 4, dmg: 44, interrupt: true, phase: 3, text: 'Han skriker som Hel. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring ut ur cirkeln!' },
-      { move: 'line', name: 'Svansslag', every: 8000, first: 4500, warn: 1500, radius: 8, width: 2, dmg: 48, phase: 4, text: 'Han trollar fram Midgårdsormens svans, som slår ner i en lång rak linje. Gå åt sidan!' },
+      { move: 'pull', name: 'Dödens famn', every: 15000, first: 9000, warn: 2200, radius: 7, dmg: 0.5, phase: 3, text: 'Han härmar Hel och drar alla nära sig. Akta er, för sedan kommer Helskriket!' },
+      { move: 'nova', name: 'Helskriket', every: 15000, first: 11500, warn: 2400, radius: 4, dmg: 1.05, interrupt: true, phase: 3, text: 'Han skriker som Hel. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring ut ur cirkeln!' },
+      { move: 'line', name: 'Svansslag', every: 8000, first: 4500, warn: 1500, radius: 8, width: 2, dmg: 1.2, phase: 4, text: 'Han trollar fram Midgårdsormens svans, som slår ner i en lång rak linje. Gå åt sidan!' },
     ],
     yells: {
       pull: 'Ni trodde Surt var farlig? Han var bara min hantlangare! Välkomna till min lilla bro. Hihi!',
@@ -607,6 +692,8 @@ export interface SagaRoom {
   kind: SagaRoomKind;
   /** Monster groups in the room: each one fights together. */
   packs?: string[][];
+  /** The special members of those packs: `roles[pack][member]` is that member's role (null: an ordinary one). Left out: none. */
+  roles?: (MobRole | null)[][];
   /** The way into this room is closed until the mid-boss falls. */
   gated?: boolean;
 }
@@ -1922,8 +2009,17 @@ export interface SagaMob {
   /** Bosses: the phase, when each move is ready, the move being cast. */
   phase?: number;
   next?: number[];
-  cast?: { move: number; at: number; zones: string[] };
+  /**
+   * The cast it is busy with. A boss: `move` is the index into its moves. A special pack monster: `move` is -1 and `role` says
+   * what it is doing ('heal': a Besvärjare healing packmate `on`; 'shot': a Skytt aiming). `start` and `at` are when it began and when it lands.
+   */
+  cast?: { move: number; at: number; zones: string[]; start: number; role?: 'heal' | 'shot'; on?: number };
   pulledAt?: number;
+  /** A special pack monster (see `MobRole`), and when its next cast is due. */
+  role?: MobRole;
+  roleAt?: number;
+  /** Öppning: it takes `OPEN_BONUS` more damage from everyone until then (its cast was interrupted). */
+  open?: number;
 }
 
 export interface SagaPack {
@@ -1939,6 +2035,8 @@ export interface SagaFighter {
   /** When each spell is ready again, and the short pause after any spell. */
   cd: Record<string, number>;
   gcd: number;
+  /** Pips (0..PIP_MAX): built by auto-attack hits and by slots 2 and 3, spent by slot 1. */
+  pips: number;
   /** Fell (time); gets up at the last rest stone after DOWN_MS unless a healer is quicker. */
   down?: number;
   /** Until when: shield wall, berserk rage, slowed. */
@@ -1947,8 +2045,8 @@ export interface SagaFighter {
   slow?: number;
   /** A shield from a path: points that take the damage first, until when. */
   shield?: { hp: number; until: number };
-  /** The healing ring: until when, and how much a second. */
-  hot?: { until: number; per: number };
+  /** The healing ring: until when, and how much a second; `by` is the healer whose Läkekrets it is (a path's or a runa's heal over time has none). */
+  hot?: { until: number; per: number; by?: string };
   /** Frozen in an ice block (its id): no walking or spells until it breaks. */
   frozen?: number;
   /** Last time they hit or were hit (health comes back by itself after CALM_MS). */
@@ -1976,12 +2074,14 @@ export interface SagaZone {
   dir?: number;
   arc?: number;
   w?: number;
-  /** When it lands (server ms); burning ground lasts until `until` and hurts `dmg` a second. */
+  /** When it lands (server ms); burning ground lasts until `until`. `dmg` is the fraction of the victim's max health it takes (burning ground: every second; 0: only a picture). */
   at: number;
   until?: number;
   dmg: number;
-  /** The boss that made it. */
+  /** The monster that made it. */
   by: number;
+  /** 'shot': a Skytt's Siktskott (the client stripes it differently from a boss's line). Left out: a boss's mark. */
+  kind?: 'shot';
 }
 
 /** A dungeon while the family is in it. Rebuilt from scratch when nobody has been inside for a while. */
@@ -2019,6 +2119,11 @@ export interface SagaInstance {
   /** A zone of a run (färd) rather than a dungeon: the run's numbers for this map (see runsim.ts). Not saved. */
   run?: SagaRunLink;
   seq: number;
+  /** Counted per stop for the Runmärken: mark hits that landed on a hero, and heals a Besvärjare completed. */
+  markHits: number;
+  mobHeals: number;
+  /** The last time a monster of the stop was fighting (pips fade `PIP_FADE_MS` after it). */
+  foughtAt?: number;
 }
 
 /**
@@ -2149,6 +2254,10 @@ export interface SagaRunLink {
   required: number[];
   /** The run's level (0 Mycket lätt .. 4 Extrem): a pet helps less on the hard ones (pets.ts). */
   level?: number;
+  /** The fraction of a hero's max health a mark takes on this level (`RUN_LEVELS[l].mark`); left out, `MARK_DEFAULT`. */
+  mark?: number;
+  /** The gentle levels: the special pack monsters are in their harmless form (`ROLE.*.easy`). */
+  easy?: boolean;
 }
 
 /** Nobody inside for this long: the dungeon starts over (monsters back, chests closed). */

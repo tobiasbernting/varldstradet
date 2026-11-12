@@ -361,6 +361,8 @@ export interface AnimalState {
   follow?: boolean;
   /** Vehicles (and some wild animals): colour variant. */
   variant?: number;
+  /** A special pack monster of a run's stop ('healer' Besvärjare, 'archer' Skytt, 'shield' Sköldbärare; `MobRole` in saga.ts): the client draws its marker, also before the pack is pulled. */
+  role?: 'healer' | 'archer' | 'shield';
   /** Mobs and predators: remaining hit points and next time it may attack. */
   hp?: number;
   /** Wander target (vehicles: the next corner of their route). */

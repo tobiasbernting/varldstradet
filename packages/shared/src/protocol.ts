@@ -50,7 +50,8 @@ export type Change =
   /** Dungeons: a spell or a monster's attack, for the picture. `by` is a player id or a monster's animal id. */
   | { t: 'spell'; area: string; by: string | number; spell: string; x: number; y: number; tx?: number; ty?: number; on?: string | number }
   /** Dungeons: a number floating up from a player (id) or a monster (animal id): damage, healing, or a stun or interrupt. */
-  | { t: 'hit'; area: string; on: string | number; n: number; kind: 'dmg' | 'heal' | 'crit' | 'block' | 'stun' | 'kick' | 'miss' }
+  /** `mark`: the hit came from a ground mark the hero did not leave (a boss's telegraphed move, burning ground, a Skytt's shot): a sound and a flash of its own. `kick`: a cast was stopped (the monster is now open, see SagaSnap). */
+  | { t: 'hit'; area: string; on: string | number; n: number; kind: 'dmg' | 'heal' | 'crit' | 'block' | 'stun' | 'kick' | 'miss'; mark?: true }
   /** Dungeons: a boss's attack marked on the ground until it lands, or burning ground; null when it is gone. */
   | { t: 'zone'; area: string; id: string; zone: SagaZone | null }
   /** Dungeons: a boss says something to everyone inside. */
@@ -103,6 +104,11 @@ export type ClientMsg =
   | { t: 'chat'; text: string }
   /** Dungeons: cast a spell at a monster (animal id) or a friend (player id); left out, the server picks. */
   | { t: 'cast'; spell: string; target?: number | string }
+  /**
+   * Dungeons: the monster I have chosen (a click, a tap, Tab; `id` is its animal id, null: none). My auto-attack and my spells
+   * without a target go for it while it is in reach. Send it whenever the chosen monster changes.
+   */
+  | { t: 'target'; id: number | null }
   /** Dungeons: drink a healing potion. */
   | { t: 'potion' }
   /** The saga: pick a class at Kämpastenen, hear or hand in Völvan's chapter, take or hand in a villager's quest. */

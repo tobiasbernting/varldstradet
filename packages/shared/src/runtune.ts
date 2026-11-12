@@ -1,5 +1,5 @@
 // A tuning script for the runs (DESIGN.md sections 5.6 and 8): plays bot runs of the route and prints the table of section 5.4.
-//   node --experimental-transform-types packages/shared/src/runtune.ts [--level 0..4] [--style clumsy|careful|kid7] [--seeds 20] [--from 1]
+//   node --experimental-transform-types packages/shared/src/runtune.ts [--level 0..4] [--style clumsy|careful|kid7|masher] [--seeds 20] [--from 1]
 //        [--dungeon draug] [--parties solo|duo|pair|all] [--lane safe|random] [--limit 60]
 // One row per party: wins, runs that ended on a wipe, Sagoandans used, minutes until the boss falls, and what the route held on
 // average (fights, Vilosten). Not part of the game.
@@ -14,7 +14,7 @@ const arg = (name: string, d: string): string => {
   return i >= 0 ? (process.argv[i + 1] ?? d) : d;
 };
 const level = Math.min(4, Math.max(0, Math.floor(Number(arg('level', '2'))))) as RunLevel;
-const style = (['careful', 'kid7'].includes(arg('style', 'clumsy')) ? arg('style', 'clumsy') : 'clumsy') as BotStyle;
+const style = (['careful', 'kid7', 'masher'].includes(arg('style', 'clumsy')) ? arg('style', 'clumsy') : 'clumsy') as BotStyle;
 const count = Number(arg('seeds', '20'));
 const from = Number(arg('from', '1'));
 const dungeon = arg('dungeon', 'draug') as DungeonId;

@@ -6,13 +6,17 @@
 // what a person at a keyboard can: it walks with `applyMove`, casts with `castSpell`, presses the use key with
 // `performAction`; it never touches the rules.
 import { applyMove, farmOf, isSolidForPlayer, lineOfSight, performAction, type SimCtx } from './sim.ts';
-import { SLOW_MUL, castSpell, drinkPotion, inZone } from './sagasim.ts';
+import { SLOW_MUL, castSpell, drinkPotion, inZone, setTarget } from './sagasim.ts';
 import { CLASSES, REST_RADIUS, SAGA_BOSSES, SPELLS, type ClassId, type SagaMob } from './saga.ts';
 import { PLAYER_SPEED, TILE, type AnimalState, type Facing, type PlayerState, type WorldState } from './types.ts';
 import type { Change } from './protocol.ts';
 
-/** `kid7` is a 7-year-old: clumsy with a 1.2 times longer think between moves and 40 % misses (DESIGN.md section 5.6). */
-export type BotStyle = 'careful' | 'clumsy' | 'kid7';
+/**
+ * `kid7` is a 7-year-old: clumsy with a 1.2 times longer think between moves and 40 % misses (DESIGN.md section 5.6).
+ * `masher` presses every button that is ready, in the order 4, 3, 2, 1, at nothing in particular, without pauses or misses; it
+ * never steps out of a mark, never chooses which monster first and takes a random lane.
+ */
+export type BotStyle = 'careful' | 'clumsy' | 'kid7' | 'masher';
 
 export interface BotMind {
   style: BotStyle;
@@ -30,6 +34,9 @@ export interface BotMind {
   lane: 'safe' | 'random';
   /** The väg-runa it chose in this stop (area key and the index into the link's exits), kept so it does not dither. */
   rune?: { key: string; at: number };
+  /** For the skill tests: a bot that plays its style but never steps out of a mark, and one that only presses these buttons (slots 0..3). */
+  noDodge?: boolean;
+  slots?: number[];
 }
 
 export const newMind = (style: BotStyle, rnd: () => number, lane?: 'safe' | 'random'): BotMind => ({ style, rnd, pause: 0, lane: lane ?? (style === 'careful' ? 'safe' : 'random') });
@@ -108,7 +115,10 @@ const marked = (area: WorldState, x: number, y: number, now: number): boolean =>
   (area.saga?.zones ?? []).some((z) => (z.until === undefined || now >= z.at) && inZone(z, { x, y }) && (z.dmg > 0 || z.until !== undefined));
 
 /** What a person would do: the healer's spell on the hurt one, etc. True if a spell went. */
-function cast(farm: WorldState, p: PlayerState, spell: string, target: number | string | undefined, ctx: SimCtx, out: Change[]): boolean {
+function cast(farm: WorldState, p: PlayerState, mind: BotMind, spell: string, target: number | string | undefined, ctx: SimCtx, out: Change[]): boolean {
+  // (a bot that only presses some of its buttons)
+  const slot = mind.slots && p.saga?.cls ? CLASSES[p.saga.cls].spells.indexOf(spell) : -1;
+  if (mind.slots && slot >= 0 && !mind.slots.includes(slot)) return false;
   const r = castSpell(farm, p.id, spell, target, ctx, { quiet: true });
   const did = r.some((c) => c.t !== 'toast');
   out.push(...r);
@@ -131,6 +141,7 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
   if (!p || !area || !inst || !f) return out;
   const now = ctx.now;
   const careful = mind.style === 'careful';
+  const clumsy = mind.style === 'clumsy' || mind.style === 'kid7';
   if (f.down !== undefined || f.frozen !== undefined) {
     p.moving = false;
     return out;
@@ -144,8 +155,8 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     .map(([id, ff]) => ({ id, ff, q: farm.players[id] }))
     .filter((x): x is { id: string; ff: typeof f; q: PlayerState } => !!x.q && x.q.area === p.area && x.id !== pid);
 
-  // 1. step out of the boss's marks (a person sees them on the floor)
-  if (careful && marked(area, p.x, p.y, now)) {
+  // 1. step out of the marks on the floor (a boss's, a Skytt's line: a person sees them)
+  if (careful && !mind.noDodge && marked(area, p.x, p.y, now)) {
     const here = { x: tileOf(p.x), y: tileOf(p.y) };
     const path = bfs(area, here, (x, y) => !marked(area, x * TILE + TILE / 2, y * TILE + TILE / 2, now + 600) && !marked(area, (x + 0.5) * TILE, (y + 0.5) * TILE, now), 12);
     const next = path?.[0];
@@ -156,13 +167,13 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
       const step = Math.min(d, (PLAYER_SPEED * (slowed ? SLOW_MUL : 1) * dtMs) / 1000);
       applyMove(area, p.id, p.x + ((tx - p.x) / d) * step, p.y + ((ty - p.y) / d) * step, facingOf(tx - p.x, ty - p.y), true);
       // a mage blinks out when it can
-      if (cls === 'magiker' && f.hp < f.max * 0.5) cast(farm, p, 'blink', undefined, ctx, out);
+      if (cls === 'magiker' && f.hp < f.max * 0.5) cast(farm, p, mind, 'blink', undefined, ctx, out);
       return out;
     }
   }
 
   // the clumsy bot is slow on the draw: it thinks for a moment between moves
-  if (!careful) {
+  if (clumsy) {
     mind.pause -= dtMs;
     if (mind.pause > 0) {
       p.moving = false;
@@ -180,51 +191,101 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
   const boss = mobs.find((m) => (m.kind === 'boss' || m.kind === 'mini') && m.state === 'fight');
   const bossMove = boss?.cast ? SAGA_BOSSES[boss.species]?.moves[boss.cast.move] : undefined;
   const ice = mobs.find((m) => m.kind === 'ice');
-  const target =
-    ice ??
-    mobs.find((m) => m.id === f.target) ??
-    [...fighting].sort((a, b) => dist(where(a), p) - dist(where(b), p))[0];
+  const open = (m: SagaMob): boolean => m.open !== undefined && now < m.open;
+  const dazed = (m: SagaMob): boolean => now < (m.stunUntil ?? 0);
+  const chilled = (m: SagaMob): boolean => dazed(m) || now < (m.slowUntil ?? 0);
+  // the careful bot's kill order: a monster that is open first, then Besvärjare, Sköldbärare, Skytt, the rest; the closest of a kind
+  const rank = (m: SagaMob): number => (m.kind === 'ice' ? 0 : open(m) ? 1 : m.role === 'healer' ? 2 : m.role === 'shield' ? 3 : m.role === 'archer' ? 4 : 5);
+  const current = mobs.find((m) => m.id === f.target && (m.state === 'fight' || !fighting.length));
+  let target: SagaMob | undefined;
+  if (careful) {
+    const best = [...fighting].sort((a, b) => rank(a) - rank(b) || dist(where(a), p) - dist(where(b), p))[0];
+    target = ice ?? (current && current.state === 'fight' && best && rank(current) <= rank(best) ? current : best) ?? current;
+    // (a person clicks the monster: the auto-attack follows)
+    if (target && f.target !== target.id) setTarget(farm, pid, target.id);
+  } else target = ice ?? current ?? [...fighting].sort((a, b) => dist(where(a), p) - dist(where(b), p))[0];
   const hurt = friends.filter((x) => x.ff.down === undefined && x.ff.hp < x.ff.max * 0.7).sort((a, b) => a.ff.hp / a.ff.max - b.ff.hp / b.ff.max);
   const fallen = friends.filter((x) => x.ff.down !== undefined);
+  const spells = CLASSES[cls].spells;
+  const ready = (id: string): boolean => now >= (f.cd[id] ?? 0) && (!!SPELLS[id]?.offGcd || now >= f.gcd) && (!mind.slots || mind.slots.includes(spells.indexOf(id)));
+  const go = (id: string, at?: number | string): boolean => cast(farm, p, mind, id, at, ctx, out);
+  // the class's interrupt, and whether to keep it: a boss's stoppable attack (a nova, a mend) is due before it would be ready again
+  const kick = cls === 'vaktare' ? 'skoldslag' : cls === 'krigare' ? 'stormsteg' : cls === 'magiker' ? 'isspjut' : undefined;
+  const kickReach = kick ? (SPELLS[kick]?.range ?? 0) + 0.4 : 0;
+  const unlocked = inst.run?.moves;
+  const keep =
+    careful &&
+    !!kick &&
+    !!boss &&
+    !!boss.next &&
+    (SAGA_BOSSES[boss.species]?.moves ?? []).some((mv, k) => mv.interrupt && (mv.phase ?? 0) <= (boss.phase ?? 0) && (!unlocked || unlocked.includes(k)) && boss.next![k]! - now < (SPELLS[kick]?.cd ?? 0));
   const casting = (): boolean => {
     if (!fighting.length && !(ice && cls)) return false;
-    const spells = CLASSES[cls].spells;
-    const has = (id: string): boolean => spells.includes(id);
-    // stopping the boss's big attack
-    if (careful && bossMove?.interrupt && boss) {
-      for (const id of ['skoldslag', 'isspjut', 'stormsteg']) if (has(id) && cast(farm, p, id, boss.id, ctx, out)) return true;
+    // the masher: every button that is ready, 4, 3, 2, 1, at nothing in particular
+    if (mind.style === 'masher') {
+      let any = false;
+      for (const k of [3, 2, 1, 0]) if (go(spells[k]!)) any = true;
+      return any;
     }
+    if (careful && kick && ready(kick)) {
+      // stopping the boss's big attack; else a Besvärjare's heal or a Skytt's shot (unless the interrupt is kept for the boss)
+      if (bossMove?.interrupt && boss && go(kick, boss.id)) return true;
+      const caster = keep ? undefined : fighting.find((m) => m.cast?.role && dist(where(m), p) <= kickReach);
+      if (caster && go(kick, caster.id)) return true;
+    }
+    // the spender (slot 1): the careful bot holds it for three pips, unless the moment is right (an Öppning, the class's combo)
+    const spend = spells[0]!;
+    const full = f.pips >= 3;
     if (cls === 'helare') {
-      if (fallen[0] && dist(fallen[0].q, p) <= 4 && cast(farm, p, 'vackupp', fallen[0].id, ctx, out)) return true;
-      if (hurt.length >= 2 && cast(farm, p, 'lakekrets', undefined, ctx, out)) return true;
-      if (hurt[0] && cast(farm, p, 'lakerunan', hurt[0].id, ctx, out)) return true;
-      if (f.hp < f.max * 0.5 && cast(farm, p, 'lakerunan', p.id, ctx, out)) return true;
-      return !!target && cast(farm, p, 'ljuspil', target.id, ctx, out);
+      if (fallen[0] && dist(fallen[0].q, p) <= 4 && go('vackupp', fallen[0].id)) return true;
+      const me = f.hp < f.max * 0.7 ? [{ id: pid, ff: f, q: p }] : [];
+      const worst = [...hurt, ...me].sort((a, b) => a.ff.hp / a.ff.max - b.ff.hp / b.ff.max)[0];
+      if (hurt.length + me.length >= 2 && go('lakekrets')) return true;
+      // (the hired Hirdmannen only ever spends three pips; a hero spends early when someone is about to fall)
+      if (worst && f.pips >= 1 && (full || !careful || (!p.bot && worst.ff.hp < worst.ff.max * 0.3)) && go(spend, worst.id)) return true;
+      if (hurt[0] && go('lakerunan', hurt[0].id)) return true;
+      if (f.hp < f.max * 0.5 && go('lakerunan', p.id)) return true;
+      return false;
     }
+    if (!target) return false;
+    const d = dist(where(target), p);
     if (cls === 'vaktare') {
       const near = fighting.filter((m) => dist(where(m), p) <= 5);
-      if (near.length >= 2 && cast(farm, p, 'utmana', undefined, ctx, out)) return true;
-      if (f.hp < f.max * 0.5 && cast(farm, p, 'skoldmur', undefined, ctx, out)) return true;
-      if (target && dist(where(target), p) <= 1.8 && cast(farm, p, 'skoldslag', target.id, ctx, out) && careful) return true;
-      return !!target && cast(farm, p, 'hugg', target.id, ctx, out);
+      if (near.length >= 2 && go('utmana')) return true;
+      if (f.hp < f.max * 0.5) go('skoldmur');
+      const taunted = fighting.filter((m) => m.tauntBy === pid && now < (m.tauntUntil ?? 0));
+      if (f.pips >= 1 && (full || !careful || open(target) || taunted.length >= 2) && (d <= 2.2 || taunted.length > 0) && go(spend, target.id)) return true;
+      if (d <= 1.8 && !keep && go('skoldslag', target.id)) return true;
+      return false;
     }
     if (cls === 'krigare') {
-      if (fighting.length && cast(farm, p, 'raseri', undefined, ctx, out)) return true;
+      if (go('raseri')) return true;
       const close = fighting.filter((m) => dist(where(m), p) <= 2.2);
-      if (close.length >= 2 && cast(farm, p, 'virvelvind', undefined, ctx, out)) return true;
-      if (target && dist(where(target), p) > 2.5 && cast(farm, p, 'stormsteg', target.id, ctx, out)) return true;
-      return !!target && cast(farm, p, 'yxhugg', target.id, ctx, out);
+      if (close.length >= 2 && go('virvelvind')) return true;
+      const big = target.kind === 'boss' || target.kind === 'mini';
+      if (f.pips >= 1 && d <= 2.2 && ready(spend) && (full || !careful || open(target) || dazed(target))) {
+        // the combo: daze it with Stormsteg first, then the Jättehugg hits double (a boss cannot be dazed)
+        if (careful && full && !keep && !big && !dazed(target) && ready('stormsteg')) go('stormsteg', target.id);
+        if (go(spend, target.id)) return true;
+      }
+      if (d > 2.5 && !keep && go('stormsteg', target.id)) return true;
+      return false;
     }
     // magiker
-    if (careful && target && dist(where(target), p) < 2 && f.hp < f.max * 0.6 && cast(farm, p, 'blink', undefined, ctx, out)) return true;
-    const clustered = target ? fighting.filter((m) => dist(where(m), where(target)) <= 2.4) : [];
-    if (target && clustered.length >= 2 && cast(farm, p, 'askregn', target.id, ctx, out)) return true;
-    if (target && target.kind !== 'ice' && target.hp > 150 && cast(farm, p, 'isspjut', target.id, ctx, out)) return true;
-    return !!target && cast(farm, p, 'eldboll', target.id, ctx, out);
+    if (careful && d < 2 && f.hp < f.max * 0.6 && go('blink')) return true;
+    const clustered = fighting.filter((m) => dist(where(m), where(target)) <= 2.4);
+    if (clustered.length >= 2 && go('askregn', target.id)) return true;
+    if (f.pips >= 1 && ready(spend) && (full || !careful || open(target) || chilled(target))) {
+      // the combo: Isspjut first, then the Runsmäll shatters the slowed monster
+      if (careful && full && !keep && target.kind !== 'ice' && !chilled(target) && ready('isspjut')) go('isspjut', target.id);
+      if (go(spend, target.id)) return true;
+    }
+    if (!careful && target.kind !== 'ice' && target.hp > 150 && go('isspjut', target.id)) return true;
+    return false;
   };
   // the clumsy bot misses a third of its chances (a kid of seven 40 %)
   if (fighting.length || ice) {
-    if (careful || mind.rnd() > (mind.style === 'kid7' ? 0.4 : 0.35)) casting();
+    if (!clumsy || mind.rnd() > (mind.style === 'kid7' ? 0.4 : 0.35)) casting();
   }
 
   // 4. where to go
@@ -236,7 +297,7 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     const a = where(t);
     if (!a) return out; // it fell to the spell just cast
     const d = dist(a, p);
-    const spell = SPELLS[CLASSES[cls].spells[0]!];
+    const spell = SPELLS[CLASSES[cls].auto];
     const want = isRanged(cls) ? Math.min(5.5, (cls === 'helare' ? 6 : (spell?.range ?? 8) - 2)) : 1.5;
     // the healer stays near whoever is hurt worst, or the tank
     const anchor = cls === 'helare' ? (hurt[0]?.q ?? friends.find((x) => x.ff.cls === 'vaktare')?.q) : undefined;
@@ -271,7 +332,7 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
   // a fallen friend: go and wake them
   if (cls === 'helare' && fallen[0]) {
     if (dist(fallen[0].q, p) > 3) walkTo(area, p, mind, { x: tileOf(fallen[0].q.x), y: tileOf(fallen[0].q.y) }, dtMs, now, slowed, 2.5);
-    else cast(farm, p, 'vackupp', fallen[0].id, ctx, out);
+    else cast(farm, p, mind, 'vackupp', fallen[0].id, ctx, out);
     return out;
   }
   // the boss is down: its chest, once
@@ -291,7 +352,7 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
   const owed = inst.run?.required.some((i) => !inst.packs[i]?.dead) ?? false;
   if (todo.length && (owed || inst.run?.kind === 'boss' || inst.run?.kind === 'mini')) {
     // the closest of them by the way there (not through the wall), and the same one until it is down
-    const spell = SPELLS[CLASSES[cls].spells[0]!];
+    const spell = SPELLS[CLASSES[cls].auto];
     const pull = isRanged(cls) ? Math.min(6, (spell?.range ?? 8) - 2) : 1.5;
     let m = todo.find((x) => x.id === mind.chase);
     if (!m) {
@@ -305,10 +366,9 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     const a = where(m);
     if (dist(a, p) > pull) walkTo(area, p, mind, { x: tileOf(a.x), y: tileOf(a.y) }, dtMs, now, slowed, pull > 2 ? pull - 0.5 : 1.2);
     else if (m.state === 'idle') {
-      // wake them with a first spell
-      const first = CLASSES[cls].spells.find((id) => ['melee', 'bolt', 'lance', 'storm'].includes(SPELLS[id]?.kind ?? '')) ?? CLASSES[cls].spells[0]!;
+      // wake them with a deliberate first blow (the everyday attack, pressed)
       // (no line of sight from out here: go closer)
-      if (!cast(farm, p, first, m.id, ctx, out)) walkTo(area, p, mind, { x: tileOf(a.x), y: tileOf(a.y) }, dtMs, now, slowed, 1.5);
+      if (!cast(farm, p, mind, CLASSES[cls].auto, m.id, ctx, out)) walkTo(area, p, mind, { x: tileOf(a.x), y: tileOf(a.y) }, dtMs, now, slowed, 1.5);
     }
     return out;
   }

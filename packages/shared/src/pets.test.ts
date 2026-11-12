@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ANIMALS,
+  CLASSES,
   DUNGEONS,
   DUNGEON_IDS,
   PETS,
@@ -319,6 +320,8 @@ function lab(pet: string, opts: { level?: number; classes?: ('krigare' | 'helare
     return out;
   };
   go(100);
+  // (these tests are about the pet: the heroes' own auto-attacks are switched off; a test that wants a hero's blow clears `f.cd`)
+  for (const ff of Object.values(inst.fighters)) ff.cd[CLASSES[ff.cls].auto] = Number.MAX_SAFE_INTEGER;
   const p = party.players[0]!;
   const q = party.players[1]!;
   const pa = (): AnimalState => Object.values(area.animals).find((a) => a.owner === p.id && a.petKind === pet)!;

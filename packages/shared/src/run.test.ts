@@ -2,6 +2,7 @@
 // the wipe, joining, the companion, the sagaträd, the farm's objects, saves) and whole runs played by bot parties.
 import { describe, expect, it } from 'vitest';
 import {
+  classSpells,
   RUN_LEVEL_MEDEL,
   BOSS_STOP,
   MINI_STOP,
@@ -424,7 +425,7 @@ describe('the data', () => {
       expect(Object.keys(r.effect).length).toBeGreaterThan(0);
       for (const k of Object.keys(r.effect)) expect(EFFECT_KEYS).toContain(k);
       // a class's runa only reaches for the class's own spells
-      for (const s of [...Object.keys(r.effect.spell ?? {}), ...Object.keys(r.effect.spellCd ?? {})]) expect(r.cls && CLASSES[r.cls].spells.includes(s), r.id).toBe(true);
+      for (const s of [...Object.keys(r.effect.spell ?? {}), ...Object.keys(r.effect.spellCd ?? {})]) expect(r.cls && classSpells(r.cls).includes(s), r.id).toBe(true);
     }
   });
 
@@ -532,12 +533,13 @@ describe('every effect', () => {
       castSpell(l.party.world, l.p.id, spell, mob.id, l.ctx());
       return l.f.cd[spell]! - t;
     };
-    expect(cd({})).toBe(1300);
-    expect(cd({ cd: 0.12 })).toBeCloseTo(1300 * 0.88);
-    expect(cd({ spellCd: { eldboll: 0.5 } })).toBeCloseTo(650);
-    expect(cd({ spellCd: { askregn: 0.5 } })).toBe(1300);
+    // (the Eldboll is the auto-attack now: its "cooldown" is the 1.2 s between two swings)
+    expect(cd({})).toBe(1200);
+    expect(cd({ cd: 0.12 })).toBeCloseTo(1200 * 0.88);
+    expect(cd({ spellCd: { eldboll: 0.5 } })).toBeCloseTo(600);
+    expect(cd({ spellCd: { askregn: 0.5 } })).toBe(1200);
     // never less than 40 % of it
-    expect(cd({ cd: 0.9 })).toBeCloseTo(1300 * 0.4);
+    expect(cd({ cd: 0.9 })).toBeCloseTo(1200 * 0.4);
   });
 
   it('hp, armor and taken make a fighter tougher', () => {
@@ -2221,7 +2223,7 @@ describe('Lätt and the Sagoandan (DESIGN.md 4.5 and 5.3)', () => {
       const before = f.hp;
       l.go(50);
       sk.mob.state = 'fight';
-      sk.mob.threat[l.p.id] = 5;
+      sk.mob.threat = { [l.p.id]: 5 }; // (the heroes auto-attack it meanwhile: it keeps to the mage)
       sk.mob.atkAt = 0;
       const pos = l.area.animals[sk.mob.id]!;
       l.p.x = pos.x + 4;
@@ -2309,6 +2311,8 @@ describe('Lätt and the Sagoandan (DESIGN.md 4.5 and 5.3)', () => {
     mob.state = 'fight';
     mob.threat[l.p.id] = 5;
     mob.hp = 5;
+    // (no auto-attacks: the monster stands near the stone and would be fought again as soon as everyone is up)
+    for (const ff of Object.values(l.inst.fighters)) ff.cd[CLASSES[ff.cls].auto] = Number.MAX_SAFE_INTEGER;
     const out = wipeIt(l);
     expect(runOf(l.party.world)).toBe(l.run);
     expect(out.some((c) => c.t === 'banner' && c.kind === 'level' && c.text === RUN_T.spirit && c.sub === fmt(RUN_T.spiritSub, { n: 0 }))).toBe(true);

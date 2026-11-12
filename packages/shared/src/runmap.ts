@@ -5,7 +5,7 @@
 // chapter's own look (floor, walls, light, decor, monsters), and the seven biome templates of v1 serve as the layouts of a Flock.
 // The väg-runor on the floor of the exit room are put there by runsim.ts when the stop is cleared.
 import { hashInts, mulberry32, randInt } from './rng.ts';
-import { DUNGEONS, DUNGEON_IDS, SAGA_BOSSES, SAGA_MOBS, type DungeonId, type SagaDungeonDef, type SagaRoom } from './saga.ts';
+import { DUNGEONS, DUNGEON_IDS, MOB_ROLES, SAGA_BOSSES, SAGA_MOBS, type DungeonId, type MobRole, type SagaDungeonDef, type SagaRoom } from './saga.ts';
 import { SOLID, buildDungeon } from './sagamap.ts';
 import { addObject, objectAt, removeObject } from './map.ts';
 import {
@@ -32,6 +32,8 @@ import {
   ELITE_HP,
   ELITE_PACKS,
   TREASURE_PACKS,
+  PACK_ROLES,
+  ELITE_ROLES,
   modifier,
   wingOf,
   type NodeKind,
@@ -230,6 +232,37 @@ function pack(mobs: ReturnType<typeof dungeonMobs>, wing: number, size: number, 
   return m;
 }
 
+/**
+ * The special members of a stop's packs (DESIGN.md: Besvärjare, Skytt, Sköldbärare), by the seed: writes `roles` beside `packs` on
+ * each room. Mycket lätt has none; Lätt has `perStop` in the whole stop; from Medel every pack has `perPack` (a Stark vakt at least
+ * ELITE_ROLES), except that on Medel the first pack of the first stop has none. Two roles in one pack are never the same, so never two Besvärjare.
+ */
+export function assignRoles(rooms: SagaRoom[], rnd: () => number, level: RunLevel, kind: NodeKind, row: number): void {
+  const spec = PACK_ROLES[level];
+  const perPack = spec.perPack > 0 && kind === 'elite' ? Math.max(spec.perPack, ELITE_ROLES) : spec.perPack;
+  const packs = rooms.flatMap((r) => (r.packs ?? []).map((members, pi) => ({ r, pi, members })));
+  if (!packs.length || (perPack <= 0 && spec.perStop <= 0)) return;
+  const give = (p: (typeof packs)[number], n: number): void => {
+    const roles = [...MOB_ROLES];
+    const free = p.members.map((_, i) => i);
+    const row: (MobRole | null)[] = p.members.map(() => null);
+    for (let k = 0; k < n && roles.length && free.length; k++) {
+      const role = roles.splice(Math.floor(rnd() * roles.length), 1)[0]!;
+      row[free.splice(Math.floor(rnd() * free.length), 1)[0]!] = role;
+    }
+    (p.r.roles ??= (p.r.packs ?? []).map((m) => m.map(() => null)))[p.pi] = row;
+  };
+  if (perPack > 0) {
+    // (Medel: the run's very first pack teaches nothing new)
+    packs.forEach((p, k) => {
+      if (!(level === 2 && row === 1 && k === 0)) give(p, perPack);
+    });
+    return;
+  }
+  const pool = packs.length > 1 && row === 1 ? packs.slice(1) : [...packs];
+  for (let k = 0; k < spec.perStop && pool.length; k++) give(pool.splice(Math.floor(rnd() * pool.length), 1)[0]!, 1);
+}
+
 /** Chooses the modifiers of a run: the caller's, or one more for every earlier clear (up to three), by the seed. */
 function pickModifiers(rnd: () => number, opts: RunOptions): string[] {
   if (opts.modifiers) return opts.modifiers.filter((id) => !!modifier(id)).slice(0, MAX_MODIFIERS);
@@ -371,6 +404,8 @@ function planStop(seed: number, node: RouteNode, boss: DungeonId, mods: string[]
       break;
     }
   }
+  // the special pack monsters, from a stream of their own (so the rooms and packs of a seed are what they were)
+  assignRoles(rooms, mulberry32(hashInts(seed, node.id, 0x401e)), level, node.kind, node.row);
   const def: SagaDungeonDef = { ...d, rooms, links };
   const fog = mod.some((m) => m.fog);
   return {
