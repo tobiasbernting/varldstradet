@@ -1,5 +1,5 @@
 // "Inställningar": text size, strong contrast, effects, calm screen, shaking, colour-blind-safe warnings, how long to hold to read,
-// left-handed buttons and reading aloud. Opened from the HUD's ⚙️, the help window and the character picker (event 'vt:settings').
+// left-handed buttons and reading aloud. Opened from the menu (ui/hudmenu.ts), the help window and the character picker (event 'vt:settings').
 // Every change is applied at once and saved on the device (a11y.ts, fxprefs.ts). A window like the others: a dialog, Escape and the
 // gamepad's B close it, the focus comes back to what opened it.
 import { A11Y_T } from '@varldstradet/shared';
