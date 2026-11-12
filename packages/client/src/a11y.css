@@ -73,16 +73,12 @@ button.close,
 .chip.level {
   cursor: pointer;
 }
+/* three round buttons at the top right (Logg, the map, ☰), in the lobby and in a run alike: one row, never wrapped */
 .hud-right {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
-  max-width: calc(100% - 330px);
+  align-items: center;
   gap: 8px;
-}
-@media (max-width: 820px) {
-  .hud-right {
-    max-width: calc(100% - 200px);
-  }
 }
 .slot {
   width: max(var(--tap), calc(18 * var(--u)));
@@ -544,19 +540,10 @@ button.chip {
   }
 }
 
-@media (max-width: 820px) {
-  .hud-right {
-    max-width: calc(100% - 330px);
-  }
-}
 @media (max-width: 700px) {
   .round {
     width: var(--tap);
     height: var(--tap);
-  }
-  .hud-right {
-    max-width: calc(100% - 270px);
-    gap: 8px;
   }
 }
 
@@ -700,33 +687,10 @@ button.pick:disabled {
   background: color-mix(in srgb, var(--c) 62%, #000);
 }
 
-/* a phone held sideways in a run: the bar is one scrolling row (no step rail, no level and seed chips: the map window has them), the party
-   and the target hang under it, and the second row of round buttons keeps the right edge */
+/* a phone held sideways in a run: the party and the target hang under the run bar (the bar itself is in ui/run.css) */
 @media (max-height: 480px) {
   :root {
     --run-top: 132px;
-  }
-  body.in-run .run-bar {
-    width: calc(100vw - 16px - 176px);
-    top: 56px;
-  }
-  body.in-run .run-bar .line1 {
-    overflow-x: auto;
-    flex-wrap: nowrap;
-  }
-  /* the three buttons come first so they are never scrolled away */
-  body.in-run .run-bar .line1 .round-btn {
-    order: -1;
-    flex: none;
-  }
-  body.in-run .run-bar .line1 > * {
-    flex-shrink: 0;
-  }
-  body.in-run .run-bar .rail,
-  body.in-run .run-bar .clockbar,
-  body.in-run .run-bar .chip-btn.level,
-  body.in-run .run-bar .chip-btn.seeds {
-    display: none;
   }
   body.in-run .saga-party,
   body.in-run .minimap[hidden] ~ .saga-party {
