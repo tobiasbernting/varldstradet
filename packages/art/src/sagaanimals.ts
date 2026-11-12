@@ -19,6 +19,8 @@ export const EMBER = { d: '#7a2210', m: '#d8481a', h: '#ffa040', hot: '#fff0a0' 
 export const FIREPAL = pal('#8e1a0a', '#d8401a', '#ff8a2a', '#ffd060', '#fff6c8');
 export const GHOST = '#9cff8a';
 export const K = '#1e1a22';
+/** One of three by a monster's skin (sagamobs2.ts hands every ordinary monster's draw function its skin, 0 to 2). */
+const by = <T>(v: number, a: T, b: T, c: T): T => (v === 1 ? b : v === 2 ? c : a);
 
 /** A round skull facing right at (x, y), w×h: a big dark eye with a light in it, a nose hole, a toothy grin. */
 export function skull(p: Px, x: number, y: number, w: number, h: number, eye: string): void {
@@ -49,11 +51,12 @@ export const stride = (f: number, back: number, front: number, reach = 1): [numb
 // Draugkryptan: skeleton warriors and archers, grave rats; the grave guard and the draug king
 // ---------------------------------------------------------------------------
 
-function skelett(p: Px, f: number): void {
-  // a round shield on the far arm, behind
+function skelett(p: Px, f: number, v = 0): void {
+  // a round shield on the far arm, behind (each skin has its own colours, weapon and headgear)
+  const [sa, sb] = by(v, ['#b8402e', '#e8dcc0'], ['#2e5a9a', '#e8c040'], ['#3e7a3a', '#e8dcc0']);
   paint(p, 0, 8, 8, 8, (x, y) => {
     const r = Math.hypot(x + 0.5 - 4, y + 0.5 - 12);
-    return r > 3.9 ? null : r > 3 ? IRON.b : r < 1.1 ? IRON.l : Math.floor(Math.atan2(y + 0.5 - 12, x + 0.5 - 4) / (Math.PI / 2) + 4) % 2 ? '#b8402e' : '#e8dcc0';
+    return r > 3.9 ? null : r > 3 ? IRON.b : r < 1.1 ? IRON.l : v === 1 ? (r > 1.6 && r < 2.4 ? sb : sa) : Math.floor(Math.atan2(y + 0.5 - 12, x + 0.5 - 4) / (Math.PI / 2) + 4) % 2 ? sa : sb;
   });
   // legs, pelvis, spine and ribs
   const [b, fr] = stride(f, 7, 11);
@@ -66,16 +69,22 @@ function skelett(p: Px, f: number): void {
   // the near arm holding the sword out in front
   bone(p, 11, 10, 13, 12);
   bone(p, 13, 12, 15, 11);
-  p.line(15, 11, 17, 3, '#c4ccd8').line(16, 11, 17, 6, '#8a94a4').rect(14, 11, 3, 1, GOLD.b).px(15, 12, WOOD.d);
-  // the skull under a dented iron cap
-  skull(p, 7, 1, 9, 8, GHOST);
-  p.rect(7, 1, 9, 2, IRON.b).rect(8, 0, 7, 1, IRON.l).rect(7, 3, 9, 1, IRON.d).px(9, 0, IRON.l2);
+  // a sword, an axe or a spear
+  if (v === 0) p.line(15, 11, 17, 3, '#c4ccd8').line(16, 11, 17, 6, '#8a94a4').rect(14, 11, 3, 1, GOLD.b).px(15, 12, WOOD.d);
+  if (v === 1) p.line(15, 13, 16, 2, WOOD.b).rect(14, 2, 2, 4, IRON.l).rect(13, 3, 1, 2, '#e4e8ee').px(17, 3, IRON.b).px(17, 4, IRON.b);
+  if (v === 2) p.line(15, 14, 17, 2, WOOD.b).px(17, 1, IRON.l2).px(17, 0, '#e4e8ee').px(16, 2, IRON.l).px(16, 4, '#b8402e');
+  // the skull under a dented iron cap, a horned helmet, or a rag tied round it
+  skull(p, 7, 1, 9, 8, by(v, GHOST, '#8ae0ff', '#ffd23a'));
+  if (v !== 2) p.rect(7, 1, 9, 2, IRON.b).rect(8, 0, 7, 1, IRON.l).rect(7, 3, 9, 1, IRON.d).px(9, 0, IRON.l2);
+  if (v === 1) p.px(7, 1, BONE.l).px(6, 0, BONE.l2).px(15, 1, BONE.l).px(16, 0, BONE.l2).rect(11, 3, 1, 2, IRON.b);
+  if (v === 2) p.rect(7, 2, 9, 2, '#b8402e').rect(7, 2, 9, 1, '#d86a4a').px(6, 3, '#b8402e').px(5, 4, '#8a2a1e').px(6, 5, '#b8402e');
 }
 
-function draugbage(p: Px, f: number): void {
+function draugbage(p: Px, f: number, v = 0): void {
   // a quiver of arrows on the back, a tattered green-grey hood and cape
-  p.rect(3, 6, 3, 8, WOOD.b).rect(3, 6, 1, 8, WOOD.l).px(3, 4, '#e8e0d0').px(4, 3, '#e8e0d0').px(5, 4, '#d84a3a').px(4, 5, '#e8e0d0');
-  const cloth = pal('#1e2a22', '#2e4034', '#46604c', '#5e7e64', '#7a9a7e');
+  const fletch = by(v, '#d84a3a', '#e8c040', '#5ab0e8');
+  p.rect(3, 6, 3, 8, WOOD.b).rect(3, 6, 1, 8, WOOD.l).px(3, 4, '#e8e0d0').px(4, 3, '#e8e0d0').px(5, 4, fletch).px(4, 5, '#e8e0d0');
+  const cloth = by(v, pal('#1e2a22', '#2e4034', '#46604c', '#5e7e64', '#7a9a7e'), pal('#2a1810', '#48281c', '#6e3e2a', '#905a40', '#b07c5e'), pal('#1a2030', '#2a344c', '#40506e', '#5a6e90', '#7c90b0'));
   const [b, fr] = stride(f, 7, 11);
   bone(p, 9, 16, b, 20);
   bone(p, 10, 16, fr, 20);
@@ -87,21 +96,28 @@ function draugbage(p: Px, f: number): void {
   // the bow held out in front, its string drawn
   p.line(15, 3, 17, 7, WOOD.l).line(17, 7, 17, 13, WOOD.b).line(17, 13, 15, 17, WOOD.l);
   p.line(15, 3, 13, 10, '#e8e0d0').line(13, 10, 15, 17, '#e8e0d0');
-  p.line(11, 10, 17, 10, WOOD.l).px(17, 10, IRON.l).px(11, 10, '#d84a3a');
+  p.line(11, 10, 17, 10, WOOD.l).px(17, 10, IRON.l).px(11, 10, fletch);
   bone(p, 11, 10, 13, 10);
   // the skull in its hood
-  skull(p, 7, 2, 8, 7, GHOST);
+  skull(p, 7, 2, 8, 7, by(v, GHOST, '#ffd23a', '#8ae0ff'));
+  if (v === 2) {
+    // no hood: a headband with a feather in it
+    p.rect(7, 3, 8, 1, WOOD.b).px(7, 3, WOOD.l).rect(8, 0, 1, 3, fletch).px(9, 1, '#e8f4ff').px(7, 1, shade(fletch, 0.7));
+    return;
+  }
   paint(p, 5, 0, 10, 9, (x, y) => {
     const dx = (x + 0.5 - 10) / 5;
     const dy = (y + 0.5 - 5) / 5;
     if (dx * dx + dy * dy > 1) return null;
     return x > 10 && y > 2 ? null : y < 2 ? cloth.l : x < 8 ? cloth.b : cloth.d;
   });
+  // (the second skin's hood has a long tip that hangs down its back)
+  if (v === 1) p.px(5, 2, cloth.l).px(4, 3, cloth.b).px(3, 4, cloth.b).px(2, 5, cloth.d).px(2, 6, cloth.d);
 }
 
-function gravrotta(p: Px, f: number): void {
+function gravrotta(p: Px, f: number, v = 0): void {
   // a big, round grave rat: grey-brown fur, a long pink tail, round ears, a pink nose and two big front teeth
-  const fur = pal('#3a3230', '#54484a', '#73666a', '#93878a', '#b0a6a8');
+  const fur = by(v, pal('#3a3230', '#54484a', '#73666a', '#93878a', '#b0a6a8'), pal('#141216', '#262228', '#3a3640', '#524e5a', '#6e6a76'), pal('#9a8e84', '#c4bab0', '#e8e2da', '#f8f4ee', '#ffffff'));
   p.line(0, 5, 3, 8, '#d8909a').line(3, 8, 5, 9, '#d8909a').px(0, 4, '#d8909a');
   const [b, fr] = stride(f, 6, 13);
   p.rect(b, 10, 2, 3, fur.d).rect(fr, 10, 2, 3, fur.b).px(b + 1, 12, '#d8909a').px(fr + 1, 12, '#e8a8b0');
@@ -111,6 +127,12 @@ function gravrotta(p: Px, f: number): void {
   p.rect(16, 4, 2, 2, K).px(17, 4, '#ffffff');
   p.px(19, 6, '#e8a0b0').px(18, 7, '#ffffff').px(18, 8, '#ffffff');
   p.px(15, 7, fur.l2).px(16, 8, fur.l2);
+  // big round ears and a white bib; or a ridge of spiky fur, pink eyes and a kink in the tail
+  if (v === 1) p.rect(10, 0, 5, 3, fur.b).rect(11, 1, 3, 2, '#d8909a').px(10, 0, fur.l).rect(13, 9, 3, 2, '#e8e2da');
+  if (v === 2) {
+    for (const x of [4, 6, 8, 10]) p.px(x, 2, fur.l).px(x + 1, 3, fur.b);
+    p.rect(16, 4, 2, 2, '#c83a5a').px(17, 4, '#ffd0d8').px(0, 3, '#d8909a').px(1, 2, '#d8909a');
+  }
 }
 
 function gravvaktare(p: Px, f: number): void {
