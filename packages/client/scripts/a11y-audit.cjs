@@ -212,6 +212,8 @@ async function scenarios(browser, v, res) {
     await page.waitForTimeout(800);
     await tag(page, 'run-hud');
     // the party's horn beside the hero's frame (and its info card)
+    await page.evaluate(() => window.varldstradet.hugin?.thank());
+    await page.waitForTimeout(900);
     if (await page.evaluate(() => { const b = document.querySelector('.saga-horn'); return !!b && !b.hidden; })) {
       await page.evaluate(() => document.querySelector('.saga-horn').focus());
       await page.waitForTimeout(400);

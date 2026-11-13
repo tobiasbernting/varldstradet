@@ -1041,7 +1041,7 @@ body.dev-mouse .saga-horn .key {
   white-space: nowrap;
 }
 .run-panel .tile .weak .dn {
-  font-size: 0.7em;
+  font-size: var(--fs);
   margin-right: 1px;
 }
 .run-panel .tile:has(.weak) {
@@ -1085,4 +1085,11 @@ body.dev-mouse .saga-horn .key {
 }
 .run-panel .power-none {
   font-size: var(--fs);
+}
+
+/* a short screen: the name comes first on a party frame (what the hero brought is in the arch window and the horn button) */
+@media (max-height: 480px) {
+  .saga-member .br {
+    display: none;
+  }
 }
