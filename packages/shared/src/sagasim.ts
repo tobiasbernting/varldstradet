@@ -802,6 +802,8 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
       break;
     }
     case 'revive': {
+      // (everyone who counts has fallen: it is a wipe, and nobody is woken out of it)
+      if (h.inst.wipeAt !== undefined) return [];
       const q = pickFriend(h, p, reach, wantFriend, true);
       if (!q) return [toast(p.id, T.sagaNoneDown)];
       const qf = h.inst.fighters[q.id]!;
@@ -1588,10 +1590,9 @@ function tickMob(h: Here, m: SagaMob, dtMs: number, ctx: SimCtx, fields: Map<str
     m.farAt ??= now + far.every;
     if (now >= m.farAt) {
       m.farAt = now + far.every;
-      const t = partyOf(h)
-        .filter((p) => upright(h, p))
-        .sort((x, y) => dist(y, a) - dist(x, a))[0];
-      if (t && dist(t, a) > FAR.beyond) {
+      // (the furthest hero, and any other hero who also stands far off: the hired Hirdmannen is often the furthest of two)
+      for (const t of partyOf(h)) {
+        if (!upright(h, t) || dist(t, a) <= FAR.beyond) continue;
         addZone(h, m, { shape: 'circle', x: t.x, y: t.y, r: FAR.radius, at: now + Math.round(FAR.warn * (h.inst.run?.warnMul ?? 1)), dmg: markOf(h) * far.weight, auto: true }, out);
         out.push(spellFx(h, m.id, 'cast_far', a, t, t.id));
       }

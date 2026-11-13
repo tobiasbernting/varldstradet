@@ -5,6 +5,9 @@ import {
   COMBO_CAP,
   DUNGEONS,
   MARK_LOCK_MS,
+  ADULT,
+  FAR,
+  farName,
   MOB_ARCHETYPE,
   SAGA_QUESTS,
   generateRun,
@@ -293,7 +296,7 @@ describe('Guldringen', () => {
     // three fighters: all but one is enough
     expect(scene('one', ['krigare', 'helare', 'magiker']).lost).toEqual([0, 0, 0]);
     // Lätt: a failed ring is harmless (half a small mark)
-    for (const part of scene('one', ['krigare', 'helare'], 1).lost) expect(part).toBeCloseTo(0.15 * RING.easyWeight, 2);
+    for (const part of scene('one', ['krigare', 'helare'], 1).lost) expect(part).toBeCloseTo(RUN_LEVELS[1].mark * RING.easyWeight, 2);
   });
 
   it('Mycket lätt never sees it, Lätt does (beside the first two attacks); the careful and the clumsy bot walk in, the masher does not', () => {
@@ -429,5 +432,101 @@ describe('the new species and the old rules', () => {
     expect(share(1, 0)).toBeGreaterThan(0.2);
     expect(share(0, 0)).toBeGreaterThan(0.08);
     expect(share(0, 0)).toBeLessThan(share(2, 0));
+  });
+});
+
+describe('ranged pressure: nobody ignores the marks by standing far off', () => {
+  const scene = (level: RunLevel) => {
+    const l = lab(['magiker', 'krigare'], { level });
+    l.mute();
+    // the boss four tiles to the left, the Krigare beside it, the mage where she is (and then further off)
+    const m = l.place('gravvaktare', -4, { kind: 'mini' });
+    m.next = SAGA_BOSSES.gravvaktare!.moves.map(() => Infinity);
+    m.phase = 0;
+    m.threat = { [l.q!.id]: 50 }; // (it keeps to the Krigare beside it)
+    const a = l.area.animals[m.id]!;
+    l.q!.x = a.x + TILE;
+    l.q!.y = a.y;
+    l.p.x = a.x + 6 * TILE;
+    return { l, m };
+  };
+  it('Medel: every 10 s a circle lands under each hero more than 4 tiles from the boss: a mark of the level, by itself, whatever the boss is doing', () => {
+    const { l, m } = scene(2);
+    l.go(RUN_LEVELS[2].far!.every - 200);
+    expect(l.inst.zones.filter((z) => z.auto)).toHaveLength(0);
+    l.go(400);
+    const zones = l.inst.zones.filter((z) => z.auto);
+    expect(zones).toHaveLength(1); // (the mage; the Krigare stands by the boss)
+    expect(zones[0]).toMatchObject({ shape: 'circle', r: FAR.radius, by: m.id });
+    expect(Math.hypot(zones[0]!.x - l.p.x, zones[0]!.y - l.p.y)).toBeLessThan(2);
+    expect(zones[0]!.dmg).toBeCloseTo(RUN_LEVELS[2].mark);
+    const hp = l.f.hp;
+    const out = l.go(FAR.warn + 100);
+    expect(hp - l.f.hp).toBe(Math.round(l.f.max * RUN_LEVELS[2].mark));
+    expect(out.some((c) => c.t === 'hit' && c.on === l.p.id && c.mark)).toBe(true);
+    expect(l.inst.zones.some((z) => z.auto)).toBe(false);
+    // the next one: she steps out of it
+    l.f.hp = l.f.max;
+    l.go(RUN_LEVELS[2].far!.every - FAR.warn - 100);
+    expect(l.inst.zones.some((z) => z.auto)).toBe(true);
+    l.p.y += 3 * TILE;
+    l.go(FAR.warn + 100);
+    expect(l.f.hp).toBe(l.f.max);
+  });
+  it('Mycket lätt has none, Lätt one every 25 s and harmless; a boss with a rain of its own lends its name', () => {
+    expect([0, 1, 2, 3, 4].map((lv) => RUN_LEVELS[lv as RunLevel].far)).toEqual([null, { every: 25_000, weight: 0.5 }, { every: 10_000, weight: 1 }, { every: 10_000, weight: 1 }, { every: 10_000, weight: 1 }]);
+    const never = scene(0);
+    never.l.go(30_000);
+    expect(never.l.inst.zones.some((z) => z.auto)).toBe(false);
+    const easy = scene(1);
+    easy.l.go(25_200);
+    expect(easy.l.inst.zones.find((z) => z.auto)!.dmg).toBeCloseTo(RUN_LEVELS[1].mark * 0.5);
+    expect(farName('draugkung')).toBe('Gravfrost');
+    expect(farName('gravvaktare')).toBe(T.sagaFarName);
+    expect(T.sagaFarText).toMatch(/10/);
+  });
+});
+
+describe('the adult bot and the wipe rule', () => {
+  it('the adult is the careful bot with a reaction time: it starts to leave a mark 350 ms later', () => {
+    expect(newMind('adult', () => 0.5).lane).toBe('safe');
+    const leaves = (style: 'careful' | 'adult'): number => {
+      const l = lab(['krigare'], { level: 2 });
+      l.mute();
+      const m = l.place('gravvaktare', 1.5, { kind: 'boss' });
+      m.phase = 0;
+      m.next = SAGA_BOSSES.gravvaktare!.moves.map((_, k) => (k === 0 ? l.party.now : Infinity));
+      l.go(100);
+      const x = l.p.x;
+      const y = l.p.y;
+      const mind = newMind(style, () => 0.5);
+      for (let t = 0; t < 1500; t += 50) {
+        botStep(l.party.world, l.p.id, mind, l.ctx(), 50);
+        l.go(50);
+        if (Math.hypot(l.p.x - x, l.p.y - y) > 2) return t;
+      }
+      return Infinity;
+    };
+    expect(leaves('adult') - leaves('careful')).toBe(ADULT.react);
+  });
+
+  it('from Medel every human down is a wipe though the Hirdmannen stands, and the banner says so; on Lätt he fights on', () => {
+    const fall = (level: RunLevel) => {
+      const l = lab(['krigare'], { level, companion: true });
+      l.mute();
+      l.place('skelett', 1.5);
+      l.f.hp = 0;
+      l.f.down = l.party.now;
+      const out = l.go(300);
+      return { l, out };
+    };
+    const medel = fall(2);
+    expect(medel.l.inst.wipeAt).toBeDefined();
+    const banner = medel.out.find((c) => c.t === 'banner' && c.to === medel.l.p.id);
+    expect(banner && banner.t === 'banner' ? banner.sub : '').toContain(RUN_T.wipeHird);
+    expect(RUN_T.wipeRule).toMatch(/1/);
+    const latt = fall(1);
+    expect(latt.l.inst.wipeAt).toBeUndefined();
+    expect(latt.out.some((c) => c.t === 'banner' && c.to === latt.l.p.id)).toBe(false);
   });
 });

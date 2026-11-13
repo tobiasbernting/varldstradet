@@ -720,7 +720,7 @@ describe('every effect', () => {
       return l.f.hp - 50;
     };
     expect(leech({})).toBe(0);
-    expect(leech({ leech: 0.5 })).toBeGreaterThan(5);
+    expect(leech({ leech: 0.5 })).toBeGreaterThan(3);
   });
 
   it('a run’s monsters’ health, damage, sight, leash and unlocked boss moves come from the plan', () => {

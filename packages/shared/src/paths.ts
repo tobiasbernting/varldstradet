@@ -46,7 +46,7 @@ export const PATHS: PathDef[] = [
   },
   {
     id: 'hamnare', cls: 'vaktare', icon: '🌵', effect: { threat: 0.08 }, traits: { thorns: 0.3 },
-    mods: { hugg: { power: 0.05 }, dunderslag: { power: 0.075 }, utmana: { base: 8, radius: 1 }, skoldslag: { power: 0.075 }, skoldmur: { cd: 0.075, ms: 600 } },
+    mods: { hugg: { power: 0.15 }, dunderslag: { power: 0.075 }, utmana: { base: 8, radius: 1 }, skoldslag: { power: 0.075 }, skoldmur: { cd: 0.075, ms: 600 } },
   },
   // Helare: ljus, natur
   {

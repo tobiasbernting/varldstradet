@@ -148,29 +148,36 @@ describe('the classes: four buttons, slot 1 the spender, and an auto-attack', ()
       for (const text of [PIP_TEXT[c], COMBO_TEXT[c], SPELLS[mainSpellOf(c)]!.text, SPELLS[attackSpellOf(c)]!.text]) expect(text).toMatch(/\d/);
     }
     expect([PIP_NAMES.krigare, PIP_NAMES.magiker, PIP_NAMES.vaktare, PIP_NAMES.helare]).toEqual(['Glöd', 'Gnistor', 'Sköldkraft', 'Ljus']);
-    expect([SPELLS.jattehugg!.power, SPELLS.runsmall!.power, SPELLS.dunderslag!.power, SPELLS.solstrale!.power]).toEqual([6, 7, 6, 14]);
+    expect([SPELLS.jattehugg!.power, SPELLS.runsmall!.power, SPELLS.dunderslag!.power, SPELLS.solstrale!.power]).toEqual([9, 11, 10, 11]);
     expect(SPELLS.isspjut!.cd).toBe(8000);
-    expect([PIP_MAX, [...SPEND_MUL]]).toEqual([3, [0, 1, 2.2, 4]]);
+    expect([PIP_MAX, [...SPEND_MUL]]).toEqual([3, [0, 1, 2.5, 6]]);
+    // the spender is the big blow: with three pips it is worth more than four auto-attacks of the same hero, before any combo
+    for (const c of ['vaktare', 'krigare', 'magiker'] as ClassId[]) expect((SPELLS[mainSpellOf(c)]!.power * SPEND_MUL[3]!) / SPELLS[attackSpellOf(c)]!.power, c).toBeGreaterThanOrEqual(4);
+    expect((SPELLS.solstrale!.power * SPEND_MUL[3]!) / SPELLS.lakerunan!.power).toBeGreaterThanOrEqual(3);
   });
 
-  it('the auto-attack does about 60 % of the damage per second the old button did (the spender, played well, supplies the rest)', () => {
+  it('the auto-attack does 35 to 45 % of the damage per second the old button did (the spender, played well, supplies the rest)', () => {
     // (what the filler did per second when it was pressed on cooldown: hugg 14 / 0.8 s, ljuspil 12 / 1.1 s, yxhugg 20 / 0.9 s, eldboll 24 / 1.3 s)
     const old: Record<ClassId, number> = { vaktare: 14 / 0.8, helare: 12 / 1.1, krigare: 20 / 0.9, magiker: 24 / 1.3 };
-    for (const c of CLASS_IDS) expect(SPELLS[CLASSES[c].auto]!.power / (AUTO_MS[c] / 1000) / old[c], c).toBeCloseTo(0.6, 1);
+    const share = (c: ClassId): number => SPELLS[CLASSES[c].auto]!.power / (AUTO_MS[c] / 1000) / old[c]!;
+    for (const c of CLASS_IDS) {
+      expect(share(c), c).toBeGreaterThan(0.34);
+      expect(share(c), c).toBeLessThan(0.47);
+    }
   });
 });
 
 describe('the auto-attack', () => {
-  it('swings by itself about every 1.2 s at a fighting monster in reach, shows as the same spell and hit, and each hit is a pip', () => {
+  it('swings by itself about every 1.2 s at a fighting monster in reach, shows as the same spell and hit, and every second hit is a pip', () => {
     const l = lab(['krigare']);
     const m = l.place('skelett', 1.5);
     const out = l.go(3700);
     const swings = out.filter((c) => c.t === 'spell' && c.by === l.p.id && c.spell === 'yxhugg');
     expect(swings.length).toBe(Math.ceil(3700 / AUTO_MS.krigare));
     expect(hitsOn(out, m.id)).toHaveLength(swings.length);
-    expect(l.f.pips).toBe(3);
-    // more hits than three are wasted
-    l.go(1300);
+    expect(l.f.pips).toBe(2); // (four swings)
+    // more than three are wasted
+    l.go(6000);
     expect(l.f.pips).toBe(PIP_MAX);
     // it neither waits for the shared pause nor starts it
     expect(l.f.gcd).toBe(0);
@@ -260,7 +267,7 @@ describe('the auto-attack', () => {
   it('pips fade 6 s after the fight has ended, and are gone when the hero falls', () => {
     const l = lab(['krigare']);
     const m = l.place('skelett', 1.5);
-    l.go(2600);
+    l.go(5000);
     expect(l.f.pips).toBeGreaterThanOrEqual(2);
     delete l.inst.mobs[m.id];
     delete l.area.animals[m.id];
@@ -302,7 +309,7 @@ describe('pips and the spender', () => {
     expect(v.f.pips).toBe(1);
   });
 
-  it('the spender needs a pip, uses them all, and hits 1, 2.2 and 4 times as hard at 1, 2 and 3', () => {
+  it('the spender needs a pip, uses them all, and hits 1, 2.5 and 6 times as hard at 1, 2 and 3', () => {
     const l = lab(['magiker']);
     l.mute();
     l.strong();
@@ -313,8 +320,8 @@ describe('pips and the spender', () => {
       expect(l.f.pips).toBe(0);
       return hitsOn(out, m.id)[0]!;
     });
-    expect(n[1]! / n[0]!).toBeCloseTo(2.2, 1);
-    expect(n[2]! / n[0]!).toBeCloseTo(4, 1);
+    expect(n[1]! / n[0]!).toBeCloseTo(2.5, 1);
+    expect(n[2]! / n[0]!).toBeCloseTo(6, 1);
     // it is on the shared pause, with a cooldown of 1 s
     expect(l.f.gcd).toBe(l.party.now + GCD_MS);
     expect(l.f.cd.runsmall).toBe(l.party.now + 1000);
@@ -406,10 +413,10 @@ describe('pips and the spender', () => {
     expect(base).toBe(Math.round(SPELLS.solstrale!.power * 1.05 * 1.03 * 20));
     expect(one.fm.hp).toBe(100);
     const two = scene();
-    expect(healsOn(press(two.l, 'solstrale', two.k.id, 2), two.k.id)[0]! / base).toBeCloseTo(2.2, 1);
+    expect(healsOn(press(two.l, 'solstrale', two.k.id, 2), two.k.id)[0]! / base).toBeCloseTo(2.5, 1);
     const three = scene();
     const all = press(three.l, 'solstrale', three.k.id, 3);
-    for (const id of [three.k.id, three.m.id, three.l.p.id]) expect(healsOn(all, id)[0]! / base, id).toBeCloseTo(4, 1);
+    for (const id of [three.k.id, three.m.id, three.l.p.id]) expect(healsOn(all, id)[0]! / base, id).toBeCloseTo(6, 1);
     // someone further than 5 tiles is not reached
     const far = scene();
     far.m.y = far.l.p.y + 4 * TILE; // (4 across and 4 down: 5.7 tiles)
@@ -437,7 +444,8 @@ describe('pips and the spender', () => {
     expect(first.some((c) => c.t === 'spell' && c.spell === 'yxhugg')).toBe(true);
     expect(m.state).toBe('fight');
     m.atkAt = NEVER;
-    expect(l.f.pips).toBe(1);
+    expect(l.f.pips).toBe(0); // (one swing: the pip comes with the second)
+    l.f.pips = 1;
     l.f.gcd = 0;
     const second = performAction(l.area, l.p.id, tx + 1, ty, l.ctx());
     expect(second.some((c) => c.t === 'spell' && c.spell === 'jattehugg')).toBe(true);
@@ -838,15 +846,15 @@ describe('special pack monsters', () => {
 });
 
 describe('the Hirdmannen', () => {
-  it('his Läkerunan recharges 2.2 times as slowly as a hero’s (32 a 5.5 s), and Hirdens lön still makes him 20 % stronger', () => {
-    expect(COMPANION_HEAL_CD).toBe(2.2);
+  it('his Läkerunan recharges 1.6 times as slowly as a hero’s (a 4 s cooldown), and Hirdens lön still makes him 20 % stronger', () => {
+    expect(COMPANION_HEAL_CD).toBe(1.6);
     const l = lab(['krigare'], { companion: true });
     const c = Object.values(l.area.players).find((x) => x.bot)!;
     const fc = l.inst.fighters[c.id]!;
     expect(fc.cls).toBe('helare');
     l.f.hp = 10;
     const out = castSpell(l.party.world, c.id, 'lakerunan', l.p.id, l.ctx());
-    expect(healsOn(out, l.p.id)).toEqual([Math.round(32 * 1.05 * 1.03)]);
+    expect(healsOn(out, l.p.id)).toEqual([Math.round(SPELLS.lakerunan!.power * 1.05 * 1.03)]);
     expect(fc.cd.lakerunan! - l.party.now).toBe(SPELLS.lakerunan!.cd * COMPANION_HEAL_CD);
     // a hero healer's is the spell's own
     const h = lab(['helare', 'krigare']);
@@ -858,10 +866,10 @@ describe('the Hirdmannen', () => {
     fc.cd = {};
     fc.gcd = 0;
     l.f.hp = 10;
-    expect(healsOn(castSpell(l.party.world, c.id, 'lakerunan', l.p.id, l.ctx()), l.p.id)[0]).toBe(Math.round(32 * 1.05 * 1.03 * 1.2));
+    expect(healsOn(castSpell(l.party.world, c.id, 'lakerunan', l.p.id, l.ctx()), l.p.id)[0]).toBe(Math.round(SPELLS.lakerunan!.power * 1.05 * 1.03 * 1.2));
   });
 
-  it('his throughput on a hero who is being hit is about 10 to 12 health a second: a Läkerunan every 5.5 s, a Solstråle only with three pips, and no pips from his auto-attack', () => {
+  it('his throughput on a hero who is being hit is about 10 to 12 health a second: a Läkerunan every 4 s, a Solstråle only with three pips, and no pips from his auto-attack', () => {
     const l = lab(['krigare'], { companion: true, level: 2 });
     const c = Object.values(l.area.players).find((x) => x.bot)!;
     c.x = l.p.x;
@@ -882,10 +890,10 @@ describe('the Hirdmannen', () => {
       if (by('lakerunan')) runor++;
       if (by('solstrale')) rays.push(got);
     }
-    // one Läkerunan every 5.5 s; his Ljuspil hits all the while and gives him no pip, so a Solstråle comes with every third Läkerunan
-    expect(Math.abs(runor - SECS / 5.5)).toBeLessThanOrEqual(2);
+    // one Läkerunan every 4 s; his Ljuspil hits all the while and gives him no pip, so a Solstråle comes with every third Läkerunan
+    expect(Math.abs(runor - SECS / 4)).toBeLessThanOrEqual(2);
     expect(Math.abs(rays.length - runor / 3)).toBeLessThanOrEqual(1.5);
-    for (const n of rays) expect(n).toBeGreaterThanOrEqual(Math.round(SPELLS.solstrale!.power * 4 * 1.05 * 1.03));
+    for (const n of rays) expect(n).toBeGreaterThanOrEqual(Math.round(SPELLS.solstrale!.power * 6 * 1.05 * 1.03));
     // (DESIGN.md 4.3: enough for a boss's ordinary blows on a hero who dodges, not for standing in marks)
     const perSec = healed / SECS;
     expect(perSec).toBeGreaterThanOrEqual(9);
@@ -962,7 +970,7 @@ describe('the masher bot', () => {
     const solo = lab(['krigare'], { level: 2 });
     quiet(solo);
     solo.place('skelett', 1.5);
-    const combo = play(solo, newMind('careful', () => 0.5), 6000);
+    const combo = play(solo, newMind('careful', () => 0.5), 12_000);
     const spends = combo.filter(([s]) => s === 'jattehugg');
     expect(spends.length).toBeGreaterThan(0);
     for (const [, pips] of spends) expect(pips).toBe(3);
@@ -975,7 +983,7 @@ describe('the masher bot', () => {
     const plain = l.place('skelett', 1.5, { pack: pk });
     const healer = l.place('skelett', 2.5, { pack: pk, role: 'healer' });
     healer.roleAt = NEVER;
-    const before = play(l, mind, 5000);
+    const before = play(l, mind, 9000);
     expect(l.f.target).toBe(healer.id);
     // (the other one gets the swings on the way over and the three-pip arc; the Besvärjare gets the most)
     expect(healer.max - healer.hp).toBeGreaterThan((plain.max - plain.hp) * 1.5);
