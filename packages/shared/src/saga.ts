@@ -50,26 +50,26 @@ export const AUTO_MS: Record<ClassId, number> = { vaktare: 1200, helare: 1200, k
 
 export const SPELLS: Record<string, SpellDef> = {
   // Väktare (tank)
-  hugg: { id: 'hugg', name: 'Svärdshugg', icon: '🗡️', kind: 'melee', cd: AUTO_MS.vaktare, range: 1.8, power: 13, threat: 4, text: 'Du hugger av dig själv när ett monster är nära. Varje träff ger 1 Sköldkraft.' },
-  dunderslag: { id: 'dunderslag', name: 'Dunderslag', icon: '🔨', kind: 'spend', cd: 1000, range: 1.8, power: 6, threat: 6, text: 'Ett dundrande slag som blir starkare av Sköldkraft. Med 3 får du en sköld!' },
+  hugg: { id: 'hugg', name: 'Svärdshugg', icon: '🗡️', kind: 'melee', cd: AUTO_MS.vaktare, range: 1.8, power: 8, threat: 4, text: 'Du hugger av dig själv när ett monster är nära. Varannan träff ger 1 Sköldkraft.' },
+  dunderslag: { id: 'dunderslag', name: 'Dunderslag', icon: '🔨', kind: 'spend', cd: 1000, range: 1.8, power: 10, threat: 6, text: 'Ett dundrande slag som blir starkare av Sköldkraft. Med 3 får du en sköld!' },
   utmana: { id: 'utmana', name: 'Utmana!', icon: '📣', kind: 'taunt', cd: 8000, range: 0, power: 0, radius: 5, ms: 4000, text: 'Alla monster runt dig måste slåss med dig i 4 sekunder.' },
   skoldslag: { id: 'skoldslag', name: 'Sköldslag', icon: '🛡️', kind: 'bash', cd: 6000, range: 1.8, power: 20, ms: 1500, threat: 4, offGcd: true, text: 'Slår med skölden så monstret blir yrt. Avbryter bossens stora attacker!' },
   skoldmur: { id: 'skoldmur', name: 'Sköldmur', icon: '🧱', kind: 'wall', cd: 20000, range: 0, power: 60, ms: 6000, offGcd: true, text: 'Du tar mycket mindre skada en stund och får lite hälsa tillbaka.' },
   // Helare (healer)
-  ljuspil: { id: 'ljuspil', name: 'Ljuspil', icon: '✨', kind: 'bolt', cd: AUTO_MS.helare, range: 7, power: 8, text: 'Du skjuter pilar av ljus av dig själv. Varje träff ger 1 Ljus.' },
-  solstrale: { id: 'solstrale', name: 'Solstråle', icon: '☀️', kind: 'spend', cd: 1000, range: 7, power: 14, friend: true, text: 'En varm stråle som läker mer ju mer Ljus du har. Med 3 Ljus läker den alla nära!' },
-  lakerunan: { id: 'lakerunan', name: 'Läkerunan', icon: '💚', kind: 'heal', cd: 2500, range: 7, power: 32, text: 'Läker den som har ont, eller den du pekar på.' },
+  ljuspil: { id: 'ljuspil', name: 'Ljuspil', icon: '✨', kind: 'bolt', cd: AUTO_MS.helare, range: 7, power: 6, text: 'Du skjuter pilar av ljus av dig själv. Varannan träff ger 1 Ljus.' },
+  solstrale: { id: 'solstrale', name: 'Solstråle', icon: '☀️', kind: 'spend', cd: 1000, range: 7, power: 11, friend: true, text: 'En varm stråle som läker mer ju mer Ljus du har. Med 3 Ljus läker den alla nära!' },
+  lakerunan: { id: 'lakerunan', name: 'Läkerunan', icon: '💚', kind: 'heal', cd: 2500, range: 7, power: 20, text: 'Läker den som har ont, eller den du pekar på.' },
   lakekrets: { id: 'lakekrets', name: 'Läkekrets', icon: '🌿', kind: 'hot', cd: 12000, range: 0, power: 60, radius: 4, ms: 6000, text: 'En ring av runor läker alla nära dig i 6 sekunder.' },
   vackupp: { id: 'vackupp', name: 'Väck upp!', icon: '🌅', kind: 'revive', cd: 15000, range: 4, power: 50, text: 'Väcker en kompis som har fallit.' },
   // Krigare (melee damage)
-  yxhugg: { id: 'yxhugg', name: 'Yxhugg', icon: '🪓', kind: 'melee', cd: AUTO_MS.krigare, range: 1.8, power: 16, text: 'Du hugger av dig själv när ett monster är nära. Varje träff ger 1 Glöd.' },
-  jattehugg: { id: 'jattehugg', name: 'Jättehugg', icon: '⚒️', kind: 'spend', cd: 1000, range: 1.8, power: 6, text: 'Ett jättehugg som slår hårdare ju mer Glöd du har. Med 3 Glöd träffar det alla framför dig!' },
+  yxhugg: { id: 'yxhugg', name: 'Yxhugg', icon: '🪓', kind: 'melee', cd: AUTO_MS.krigare, range: 1.8, power: 10, text: 'Du hugger av dig själv när ett monster är nära. Varannan träff ger 1 Glöd.' },
+  jattehugg: { id: 'jattehugg', name: 'Jättehugg', icon: '⚒️', kind: 'spend', cd: 1000, range: 1.8, power: 9, text: 'Ett jättehugg som slår hårdare ju mer Glöd du har. Med 3 Glöd träffar det alla framför dig!' },
   stormsteg: { id: 'stormsteg', name: 'Stormsteg', icon: '💨', kind: 'charge', cd: 9000, range: 7, power: 14, ms: 1000, offGcd: true, text: 'Rusar fram till monstret och gör det yrt i 1 sekund.' },
   virvelvind: { id: 'virvelvind', name: 'Virvelvind', icon: '🌪️', kind: 'whirl', cd: 6000, range: 0, power: 16, radius: 2.2, text: 'Snurrar runt och träffar alla monster nära dig.' },
   raseri: { id: 'raseri', name: 'Bärsärkaraseri', icon: '🔥', kind: 'rage', cd: 24000, range: 0, power: 50, ms: 8000, text: 'Du slår hårdare, springer fortare och läker lite av varje hugg i 8 sekunder.' },
   // Magiker (ranged damage)
-  eldboll: { id: 'eldboll', name: 'Eldboll', icon: '☄️', kind: 'bolt', cd: AUTO_MS.magiker, range: 8, power: 13, text: 'Du kastar eldbollar av dig själv. Varje träff ger 1 Gnista.' },
-  runsmall: { id: 'runsmall', name: 'Runsmäll', icon: '💥', kind: 'spend', cd: 1000, range: 8, power: 7, radius: 2, text: 'En smäll av runkraft som blir större av Gnistor. Med 3 Gnistor träffar den alla nära!' },
+  eldboll: { id: 'eldboll', name: 'Eldboll', icon: '☄️', kind: 'bolt', cd: AUTO_MS.magiker, range: 8, power: 8, text: 'Du kastar eldbollar av dig själv. Varannan träff ger 1 Gnista.' },
+  runsmall: { id: 'runsmall', name: 'Runsmäll', icon: '💥', kind: 'spend', cd: 1000, range: 8, power: 11, radius: 2, text: 'En smäll av runkraft som blir större av Gnistor. Med 3 Gnistor träffar den alla nära!' },
   isspjut: { id: 'isspjut', name: 'Isspjut', icon: '❄️', kind: 'lance', cd: 8000, range: 8, power: 14, ms: 3000, offGcd: true, text: 'Ett spjut av is som gör monstret långsamt i 3 sekunder. Avbryter bossens stora attacker!' },
   askregn: { id: 'askregn', name: 'Åskregn', icon: '⚡', kind: 'storm', cd: 9000, range: 8, power: 28, radius: 2.4, text: 'Blixtar slår ner på ett ställe och träffar alla där.' },
   blink: { id: 'blink', name: 'Blink', icon: '🌀', kind: 'blink', cd: 10000, range: 4, power: 0, offGcd: true, text: 'Hoppar några steg framåt. Bra för att komma undan.' },
@@ -123,13 +123,15 @@ export const classSpells = (cls: ClassId): string[] => [CLASSES[cls].auto, ...CL
 export const GCD_MS = 1000;
 
 /**
- * Pips (build and spend). A fighter has 0..`PIP_MAX` pips: +1 for every auto-attack hit that lands and +1 when their slot 2 or
+ * Pips (build and spend). A fighter has 0..`PIP_MAX` pips: +1 for every second auto-attack hit that lands (`PIP_AUTO_EVERY`) and +1 when their slot 2 or
  * slot 3 spell lands on at least one target (a monster or a friend); more than the maximum is wasted. The spender (slot 1) needs
  * at least one, uses them all and is `SPEND_MUL[pips]` times as strong; at `PIP_MAX` it also gets its class bonus. Pips fade
  * `PIP_FADE_MS` after the stop's last fight ended.
  */
 export const PIP_MAX = 3;
-export const SPEND_MUL: readonly number[] = [0, 1, 2.2, 4];
+export const SPEND_MUL: readonly number[] = [0, 1, 2.5, 6];
+/** Only every so many auto-attack hits give a pip (slots 2 and 3 give one each time they land, so pressing them matters). */
+export const PIP_AUTO_EVERY = 2;
 export const PIP_FADE_MS = 6_000;
 /** What each class's spender does besides the scaled blow (the numbers the texts in sv.ts quote). */
 export const SPEND = {
@@ -174,6 +176,8 @@ export const ROLE = {
   shield: { radius: 3, cut: 0.5, easy: { cut: 0.25 } },
 } as const;
 
+/** Ranged pressure: the circle's radius and warning (ms, times the level's warning), and how far from the boss the furthest hero must be (tiles). */
+export const FAR = { radius: 1.6, warn: 1500, beyond: 4 } as const;
 /** Märke: another player cannot replace a mark for this long. */
 export const MARK_LOCK_MS = 2_000;
 /** Samslag: a spender on a monster dazed or slowed by ANOTHER hero (the Hirdmannen, a pet) does this much more; with the class combo at most `COMBO_CAP` times the pip-scaled blow. */
@@ -183,7 +187,7 @@ export const COMBO_CAP = 3;
 export const ORB = { ms: 5_000, easyMs: 10_000, radius: 0.8 } as const;
 
 /** The Hirdmannen heals at a human-ish pace: his Läkerunan's cooldown is this many times the spell's (and he holds his Solstråle for 3 pips, runbot.ts). */
-export const COMPANION_HEAL_CD = 2.2;
+export const COMPANION_HEAL_CD = 1.6;
 
 /** A fallen player gets up at the last rest stone after this long (unless a healer is quicker). */
 export const DOWN_MS = 10_000;
@@ -2044,6 +2048,8 @@ export interface SagaMob {
   stunBy?: string;
   slowBy?: string;
   pulledAt?: number;
+  /** A boss: when its next ranged pressure comes. */
+  farAt?: number;
   /** A special pack monster (see `MobRole`), and when its next cast is due. */
   role?: MobRole;
   roleAt?: number;
@@ -2064,8 +2070,9 @@ export interface SagaFighter {
   /** When each spell is ready again, and the short pause after any spell. */
   cd: Record<string, number>;
   gcd: number;
-  /** Pips (0..PIP_MAX): built by auto-attack hits and by slots 2 and 3, spent by slot 1. */
+  /** Pips (0..PIP_MAX): built by auto-attack hits and by slots 2 and 3, spent by slot 1. `autoHits` counts the auto-attack hits towards the next pip. */
   pips: number;
+  autoHits?: number;
   /** Fell (time); gets up at the last rest stone after DOWN_MS unless a healer is quicker. */
   down?: number;
   /** Until when: shield wall, berserk rage, slowed. */
@@ -2114,6 +2121,8 @@ export interface SagaZone {
    * 'orb': a Kraftklot on the floor from `at` until `until` (walk over it: full pips; `dmg` is 0). Left out: a boss's mark.
    */
   kind?: 'shot' | 'gold' | 'orb';
+  /** It lands by itself at `at` (a boss's ranged pressure: a circle under the hero furthest away), whatever the boss is doing. Drawn like any mark. */
+  auto?: true;
 }
 
 /** A dungeon while the family is in it. Rebuilt from scratch when nobody has been inside for a while. */
@@ -2294,6 +2303,8 @@ export interface SagaRunLink {
   easy?: boolean;
   /** A boss's plain marks come this much more often (a multiplier on their `every`; left out, 1). */
   markEvery?: number;
+  /** Ranged pressure (`RUN_LEVELS[l].far`): a circle under the hero furthest from a boss, every so often. */
+  far?: { every: number; weight: number };
   /** Medel and up: a wipe is every HUMAN hero down, even while the hired Hirdmannen stands. */
   humansOnly?: boolean;
   /** Lätt: the boss also uses its Guldring, though `moves` holds only its first two attacks. */

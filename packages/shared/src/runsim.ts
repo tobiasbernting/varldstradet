@@ -685,6 +685,7 @@ export function enterStop(farm: WorldState, run: RunState, node: number, ctx: Si
     ...(run.level <= 1 ? { easy: true } : {}),
     ...(run.level === 1 ? { ring: true } : {}),
     ...(def.humansOnly ? { humansOnly: true } : {}),
+    ...(def.far ? { far: def.far } : {}),
     ...(def.markEvery !== 1 ? { markEvery: def.markEvery } : {}),
   };
   (farm.areas ??= {})[key] = world;

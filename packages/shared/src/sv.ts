@@ -239,6 +239,9 @@ export const T = {
   sagaRing: '⭐ En gyllene ring! Spring IN i den allihop!',
   sagaRingWon: '⭐ Ni stod i ringen! Bossen ser stjärnor i 6 sekunder. Slå nu!',
   sagaRingLost: 'Aj! Nästa gång: guld = spring IN, rött = spring UT.',
+  // ranged pressure (a boss's circle under the hero furthest away): its name where the boss has no rain of its own (`farName`), and the journal's sentence
+  sagaFarName: 'Fjärrslag',
+  sagaFarText: 'Var 10:e sekund siktar bossen på den som står längst bort. Spring ut ur cirkeln!',
   sagaSkull: 'Märke',
   sagaSkullText: 'Tryck på ett monster för att märka det med en dödskalle. Då slår alla på samma monster. Märket kan bytas efter 2 sekunder.',
   sagaSamslag: 'Samslag!',
@@ -695,7 +698,7 @@ export const HELP: HelpTopic[] = [
       { icon: 'saga_stone', text: 'Välj din väg vid Kämpastenen bredvid Völvan: Väktare (tank), Helare, Krigare eller Magiker. Du får klassens kläder, och kan byta när du vill.' },
       { icon: 'emoji:⚔️', text: 'Fängelsehålorna klaras i ordning, en färd i taget: Draugkryptan, Frostjättens borg och Surts smedja. Du kommer in genom färdporten, bågen vid Världsträdets skott. Sedan fortsätter sagan med Lokes list.' },
       { icon: 'emoji:🔢', text: 'Inne i en fängelsehåla slår du av dig själv när ett monster är nära. Knapparna 1–4 är dina besvärjelser och 5 en läkedryck. Klicka på ett monster för att sikta på det.' },
-      { icon: 'emoji:✨', text: 'Varje vanligt slag ger 1 prick, och knapp 2 och 3 ger också 1. Med 3 prickar lyser Slå (knapp 1), och då är den som starkast!' },
+      { icon: 'emoji:✨', text: 'Vartannat vanligt slag ger 1 prick, och knapp 2 och 3 ger 1 var. Med 3 prickar lyser Slå (knapp 1), och då är den som starkast!' },
       { icon: 'emoji:⭐', text: 'Vissa monster är särskilda: Besvärjaren läker de andra, Skytten siktar en rand på marken och Sköldbäraren skyddar sina vänner. Avbryt dem, så ser de stjärnor i 4 sekunder!' },
       { icon: 'emoji:🎮', text: 'Med handkontroll i en fängelsehåla: X, Y, B och RB är besvärjelserna, LB en läkedryck, styrkorset vänster/höger byter monster och Select öppnar ryggsäcken.' },
       { icon: 'emoji:🛡️', text: 'Väktaren håller monstren borta från de andra, helaren läker, och krigaren och magikern gör skada. Det går att spela ensam, men det är roligare tillsammans!' },
@@ -919,6 +922,9 @@ export const RUN_T = {
   medalSilver: '+{n} hacksilver.',
   medalNames: { 1: 'brons', 2: 'silver', 3: 'guld' } as Record<number, string>,
   medalIcons: { 1: '🥉', 2: '🥈', 3: '🥇' } as Record<number, string>,
+  // from Medel up every human hero down is a wipe, though the Hirdmannen still stands: the rule (the level's info card, the journal) and the line added to the wipe banner
+  wipeRule: 'På Medel och uppåt: om alla hjältar faller behöver ni en Sagoande för att komma upp. Hirdmannen klarar inte färden ensam, och ni har bara 1 Sagoande!',
+  wipeHird: 'Hirdmannen klarar det inte ensam.',
   medalText: 'Guld får ni om ni springer ur märkena (högst 1 träff var), inte låter något monster läka sig och är snabba.',
   started: 'Färden börjar! Tio steg till bossen.',
   needPort: 'Gå fram till färdporten först.',
@@ -1015,10 +1021,10 @@ export const PATH_SPELLS: Record<string, Record<string, string>> = {
 export const PIP_NAMES: Record<ClassId, string> = { krigare: 'Glöd', magiker: 'Gnistor', vaktare: 'Sköldkraft', helare: 'Ljus' };
 export const PIP_ICONS: Record<ClassId, string> = { krigare: '🔥', magiker: '✨', vaktare: '🛡️', helare: '☀️' };
 export const PIP_TEXT: Record<ClassId, string> = {
-  krigare: 'Varje hugg ger 1 Glöd. Med 3 Glöd är Jättehugg 4 gånger så starkt!',
-  magiker: 'Varje eldboll ger 1 Gnista. Med 3 Gnistor är Runsmäll 4 gånger så stark!',
-  vaktare: 'Varje hugg ger 1 Sköldkraft. Med 3 är Dunderslag 4 gånger så starkt!',
-  helare: 'Varje ljuspil ger 1 Ljus. Med 3 Ljus läker Solstråle 4 gånger så mycket!',
+  krigare: 'Vartannat hugg ger 1 Glöd, och knapp 2 och 3 ger 1 var. Med 3 Glöd är Jättehugg 6 gånger så starkt!',
+  magiker: 'Varannan eldboll ger 1 Gnista, och knapp 2 och 3 ger 1 var. Med 3 Gnistor är Runsmäll 6 gånger så stark!',
+  vaktare: 'Vartannat hugg ger 1 Sköldkraft, och knapp 2 och 3 ger 1 var. Med 3 är Dunderslag 6 gånger så starkt!',
+  helare: 'Varannan ljuspil ger 1 Ljus, och knapp 2 och 3 ger 1 var. Med 3 Ljus läker Solstråle 6 gånger så mycket!',
 };
 /** Each class's combo, "the right moment" for its spender: one sentence with a number (the class card, the spender's info card, the journal). */
 export const COMBO_TEXT: Record<ClassId, string> = {
@@ -1036,6 +1042,8 @@ export const ROLE_TEXT: Record<MobRole, string> = {
   archer: 'Siktar en rand på marken i 1,5 sekunder och skjuter sedan. Gå åt sidan, eller avbryt den!',
   shield: 'Vännerna inom 3 steg tar hälften så mycket skada. Ta den först, eller gör den yr!',
 };
+/** What a boss's ranged pressure is called: its own rain where it has one, else the generic word. */
+export const farName = (species: string): string => SAGA_BOSSES[species]?.moves.find((mv) => mv.move === 'rain')?.name ?? T.sagaFarName;
 /** A special pack monster's name: its species and its role ("Skelettkrigare · Besvärjare"). */
 export const mobRoleName = (name: string, role: MobRole): string => `${name} · ${ROLE_NAMES[role]}`;
 export const treeName = (id: string): string => TREE_NAMES[id] ?? id;
