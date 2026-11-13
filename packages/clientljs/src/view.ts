@@ -302,7 +302,7 @@ export class View implements HudTarget {
     gameEl.addEventListener('pointerdown', (e) => {
       if (this.uiOpen || (e.pointerType === 'mouse' && e.button !== 0)) return;
       const w = this.screenToWorld(e.clientX, e.clientY);
-      // in a dungeon a click on a monster (or a friend) aims at it, and hits a monster in reach
+      // in a dungeon a click on a monster (or a friend) chooses it (the hero swings by themselves); a waiting one in reach is woken
       if (this.sagaFx?.pick(w.x, w.y)) {
         attackTarget();
         return;
@@ -324,6 +324,11 @@ export class View implements HudTarget {
     new LightPainter(() => this.paintLight());
     this.fx = new Effects(this.art);
     this.sagaFx = new SagaView(this.art, this.labels, this.fx, (id) => this.spotOf(id));
+    // a hit body squashes (the fight's juice decides how hard, under the settings)
+    this.sagaFx.onPunch = (id, power) => {
+      const a = typeof id === 'number' ? this.animals.get(id) : this.players.get(id);
+      if (a) a.squashV += power;
+    };
     this.looksFx = new LooksFx(this.art);
     (window as unknown as { __looksFx?: LooksFx }).__looksFx = this.looksFx; // (for the frame cost check)
     this.weather = new WeatherView(this.art);
@@ -757,7 +762,7 @@ export class View implements HudTarget {
     this.actFacing();
   }
 
-  /** A quick tap on the joystick's side of a touch screen: in a dungeon, a monster there becomes the target and is hit if in reach. */
+  /** A quick tap on the joystick's side of a touch screen: in a dungeon, a monster there becomes the target (and a waiting one in reach is woken). */
   tap(clientX: number, clientY: number): void {
     if (this.uiOpen) return;
     const w = this.screenToWorld(clientX, clientY);
@@ -874,7 +879,8 @@ export class View implements HudTarget {
         const snap = client.snaps.players.get(id);
         if (snap) follow(actor, snap.x, snap.y, 64);
       }
-      this.animateActor(actor, p.facing, p.moving, dt, id === me.id && (running || boost > 1) && p.riding === undefined);
+      // (a hit-stop holds the picture for a blink: the swing, the step and the squash wait; where the hero stands never does)
+      if (!this.sagaFx.held(id)) this.animateActor(actor, p.facing, p.moving, dt, id === me.id && (running || boost > 1) && p.riding === undefined);
       if (p.sleeping) actor.squash = 0;
     }
     for (const [id, actor] of this.animals) {
@@ -889,6 +895,7 @@ export class View implements HudTarget {
         this.animateActor(actor, rider.facing, rider.moving, dt, false);
         continue;
       }
+      if (this.sagaFx.held(id)) continue; // (a hit-stop: the hit monster stands still for a blink)
       const snap = client.snaps.animals.get(id);
       if (snap) follow(actor, snap.x, snap.y, 48);
       this.animateActor(actor, a.facing, a.moving, dt, false);
@@ -1563,7 +1570,9 @@ export class View implements HudTarget {
         q.push(a.y + 4, s, a.x + dx, a.y + 4 - hop - sh / 2 + dy, sw, sh, ang, tint);
         continue;
       }
-      q.push(a.y + 4, s, a.x, a.y + 4 - hop - h / 2, w, h);
+      // a hit monster flashes white for a moment
+      const fl = this.sagaFx.flashOf(id);
+      q.push(a.y + 4, s, a.x, a.y + 4 - hop - h / 2, w, h, 0, undefined, fl > 0 ? rgba(fl, fl, fl, 0) : 0);
     }
     for (const r of this.roofs) if (r.alpha > 0.01 && inView(r.x, r.y, r.sprite.w, r.sprite.h)) q.push(r.depth, r.sprite, r.x + r.sprite.w / 2, r.y + r.sprite.h / 2, r.sprite.w, r.sprite.h, 0, alpha(r.alpha));
     // the cursor on the tile you would use

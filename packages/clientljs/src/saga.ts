@@ -6,8 +6,11 @@
 // glowing on top. Out in the world a hero's spells and hits are drawn the same way (the telegraphs, bars and the
 // fallen and frozen are the dungeons' only).
 import { cameraShake, drawEllipse, drawLine, drawLineList, drawPoly, rgb, setAdditiveBlendMode, vec2, type Color, type Vector2 } from 'littlejsengine';
-import { BLOCK_SPECIES, SAGA_BOSSES, SAGA_MOBS, SPELLS, T, TILE, fmt, isSagaKey, type Change, type SagaZone } from '@varldstradet/shared';
-import { FLAG, fightMode, flagsOf, isFoe, liveTarget, sagaSnap, setTarget, webbed } from '@v1/saga.ts';
+import { BLOCK_SPECIES, CLASSES, CLASS_IDS, FIGHT_UI, MOB_FLAG, PIP_MAX, ROLE, SAGA_BOSSES, SAGA_MOBS, SPELLS, SPEND, T, TILE, fmt, isSagaKey, mobRoleName, type Change, type MobRole, type SagaZone } from '@varldstradet/shared';
+import { FLAG, classOf, fightMode, flagsOf, isFoe, liveTarget, sagaSnap, setTarget, webbed } from '@v1/saga.ts';
+import { castFill, hitStopMs, juiceOf, poofCount, shakeOf, spendClass, type Juice } from '@v1/fight.ts';
+import { effectiveFx } from '@v1/fxprefs.ts';
+import { castRing, pipRow, roleMarker, setPips } from '@v1/ui/fightcard.ts';
 import { SAGA_SFX, bossWindup } from '@v1/sagasfx.ts';
 import { activeWorld, bus, client, myPlayer, serverNow } from '@v1/state.ts';
 import { zoomPx } from '@v1/ui/hud.ts';
@@ -55,6 +58,26 @@ interface Floater {
 }
 
 const TAU = Math.PI * 2;
+/** The heroes' auto-attacks (swung about once a second: a quiet sound) and their spenders (slot 1: as big as its pips). */
+const AUTOS: ReadonlySet<string> = new Set(CLASS_IDS.map((c) => CLASSES[c].auto));
+const SPENDERS: ReadonlySet<string> = new Set(CLASS_IDS.map((c) => CLASSES[c].spells[0]));
+/** What a monster's label shows over its bar: its role's marker, a cast's circle, a hero's pips. */
+interface BarTop {
+  role?: MobRole;
+  /** A cast in progress: [kind, started, lands at, stoppable]. */
+  cast?: readonly [string, number, number, 0 | 1];
+  flags?: number;
+  /** A hero's pips, in their class's colour. */
+  pips?: { cls: keyof typeof CLASSES; n: number };
+  mine?: boolean;
+}
+interface BarParts {
+  role: string;
+  castKey: string;
+  ring: HTMLElement | null;
+  pips: HTMLElement | null;
+  pipsCls: string;
+}
 /** The warning colour of a wind-up on the ground: red, or (colour-blind-safe) the orange of the Okabe-Ito palette, which keeps its light-
  *  ness against dark floors and is not mixed up with green or brown; the stripes and the white edge carry the meaning in both. */
 const warnColour = (): [number, number, number] => (prefs().cb ? [0.9, 0.62, 0] : [0.85, 0.08, 0.06]);
@@ -130,6 +153,25 @@ export class SagaView {
   private windups = new Map<number, Fx>();
   private lastHurtSound = 0;
   private lastCritSound = 0;
+  private lastMarkSound = 0;
+  private barParts = new Map<string, BarParts>();
+  /** Every hero's pips at the last look (a spender's blow is as big as the pips it used). */
+  private pipsSeen = new Map<string, number>();
+  /** The spender that just went off: the hits that come with it are its numbers. */
+  private spent: { until: number; pips: number; by: string } | null = null;
+  /** Monsters that see stars (Öppning) and Sköldbärare whose dome is up, to notice the change. */
+  private openSeen = new Set<number>();
+  private domeUp = new Map<number, { x: number; y: number }>();
+  private castSeen = new Map<number, string>();
+  /** Where each monster stood last (a beaten one's poof). */
+  private lastSpot = new Map<number, Spot>();
+  /** Hit-stop: until when (performance.now) the fight's pictures stand still, and who is frozen. */
+  private stopUntil = 0;
+  private stopped_ = new Set<string | number>();
+  /** A hit monster flashes white: when (this.t) and how hard. */
+  private flashes = new Map<number, { at: number; power: number }>();
+  /** The view's hook: a hit body squashes. */
+  onPunch: ((id: string | number, power: number) => void) | null = null;
 
   constructor(
     private art: Sprites,
@@ -162,8 +204,63 @@ export class SagaView {
     this.delay = null;
     this.castMove.clear();
     this.zoneMove.clear();
+    this.barParts.clear();
+    this.pipsSeen.clear();
+    this.openSeen.clear();
+    this.domeUp.clear();
+    this.castSeen.clear();
+    this.lastSpot.clear();
+    this.flashes.clear();
+    this.stopped_.clear();
+    this.spent = null;
     this.on = false;
     this.live = false;
+  }
+
+  // ------------------------------------------------------------------ juice, under the settings
+
+  private juice(): Juice {
+    return juiceOf(prefs(), effectiveFx());
+  }
+
+  private shake(what: Parameters<typeof shakeOf>[0]): void {
+    const v = shakeOf(what, this.juice());
+    if (v > 0) cameraShake(v);
+  }
+
+  /** A blink of stillness: the fight's effects and the bodies named stop moving (never the input, the camera or the network). */
+  private hitStop(what: Parameters<typeof hitStopMs>[0], who: (string | number | undefined)[]): void {
+    const ms = hitStopMs(what, this.juice());
+    (globalThis as { __juiceLog?: string[] }).__juiceLog?.push(`stop:${what}:${ms}`);
+    if (ms <= 0) return;
+    const now = performance.now();
+    if (now >= this.stopUntil) this.stopped_.clear();
+    this.stopUntil = Math.max(this.stopUntil, now + ms);
+    for (const id of who) if (id !== undefined) this.stopped_.add(id);
+  }
+
+  /** Is this body held still by a hit-stop right now? (The view skips its animation meanwhile.) */
+  held(id: string | number): boolean {
+    return performance.now() < this.stopUntil && this.stopped_.has(id);
+  }
+
+  /** How white a hit monster is right now (0..1), for the view's additive tint. */
+  flashOf(id: number): number {
+    const f = this.flashes.get(id);
+    if (!f) return 0;
+    const k = (this.t - f.at) / 0.14;
+    if (k >= 1 || k < 0) {
+      this.flashes.delete(id);
+      return 0;
+    }
+    return (1 - k) * f.power;
+  }
+
+  /** A monster was hit: a white flash and a squash (bigger for a big blow), as the settings allow. */
+  private punch(id: number, power: number): void {
+    const j = this.juice();
+    if (j.flash) this.flashes.set(id, { at: this.t, power: Math.min(1, 0.55 + power * 0.15) });
+    if (j.squash) this.onPunch?.(id, 1.2 + power * 0.9);
   }
 
   /** Fallen (lying down) or frozen (in the ice), for drawing a player. */
@@ -210,6 +307,7 @@ export class SagaView {
     // experience for you, on the map you are on (the farm's has no area)
     if (c.t === 'xp' && c.to === client.me && (c.area ?? 'farm') === this.area) return this.xp(c.n);
     if (!this.on) return;
+    if (c.t === 'animal' && !c.animal && (c.area ?? '') === this.area) return this.gone(c.id);
     if (c.t === 'object' && c.obj?.kind === 'saga_plate' && c.obj.variant === 1 && (c.area ?? '') === this.area) return this.plateLit(c.obj.x, c.obj.y);
     if (c.t === 'zone') {
       if (c.zone && !this.born.has(c.id)) {
@@ -218,7 +316,10 @@ export class SagaView {
         if (move && c.zone.at > serverNow()) this.zoneMove.set(c.id, move);
         const me = myPlayer();
         // something is about to land near you
-        if (me && serverNow() < c.zone.at && Math.hypot(me.x - c.zone.x, me.y - c.zone.y) / TILE < c.zone.r + 2.5) SAGA_SFX.warn();
+        // (a Skytt's line: its bow creaks as it is drawn)
+        if (c.zone.kind === 'shot') {
+          if (me && Math.hypot(me.x - c.zone.x, me.y - c.zone.y) / TILE < 14) SAGA_SFX.creak();
+        } else if (me && serverNow() < c.zone.at && Math.hypot(me.x - c.zone.x, me.y - c.zone.y) / TILE < c.zone.r + 2.5) SAGA_SFX.warn();
       } else if (!c.zone)
         setTimeout(() => {
           this.born.delete(c.id);
@@ -272,7 +373,9 @@ export class SagaView {
         const a = typeof c.by === 'number' ? activeWorld()?.animals[c.by] : undefined;
         const move = c.spell.slice(5);
         bossWindup(move, SAGA_BOSSES[a?.species ?? '']?.moves.find((m) => m.move === move)?.warn ?? 1500);
-      } else SAGA_SFX.spell(c.spell);
+      } else if (typeof c.by === 'string' && SPENDERS.has(c.spell)) {
+        /* (its sound is as big as its pips: spend()) */
+      } else if (!(typeof c.by === 'string' && AUTOS.has(c.spell) && this.on && SAGA_SFX.auto(c.spell, mine))) SAGA_SFX.spell(c.spell);
     }
     const from = { x: c.x, y: c.y };
     const to = c.tx !== undefined && c.ty !== undefined ? { x: c.tx, y: c.ty } : null;
@@ -296,6 +399,7 @@ export class SagaView {
       return this.windup(move, c.by, from);
     }
     if (s.startsWith('land_')) return this.land(s.slice(5), from, c.by);
+    if (typeof c.by === 'string' && SPENDERS.has(s)) return this.spend(c, from, to ?? from, mine || near);
     switch (s) {
       case 'hugg':
         return this.slash(c.on, to ?? from, [0.9, 0.95, 1], 10, 1);
@@ -488,7 +592,7 @@ export class SagaView {
   private bash(on: string | number | undefined, at: { x: number; y: number }): void {
     const ms = (SPELLS.skoldslag?.ms ?? 1500) / 1000;
     this.burstRing(on, at, [0.5, 0.75, 1], 16, 0.35);
-    this.stars(on, at, ms);
+    if (!this.on) this.stars(on, at, ms); // (in a dungeon the stars follow the monster's dazed state: drawAuras)
   }
 
   private stars(on: string | number | undefined, at: { x: number; y: number }, dur: number): void {
@@ -602,7 +706,7 @@ export class SagaView {
       }
     }, from, to);
     this.burstRing(on, to, [1, 1, 1], 18, 0.35);
-    this.stars(on, to, (SPELLS.stormsteg?.ms ?? 1000) / 1000);
+    if (!this.on) this.stars(on, to, (SPELLS.stormsteg?.ms ?? 1000) / 1000);
     cameraShake(0.15);
   }
 
@@ -849,6 +953,7 @@ export class SagaView {
     if (move === 'summon') return this.poofRing(by, at, [cr, cg, cb]);
     // slam, nova, charge, summon: a shockwave out to the edge of the mark
     const big = move === 'nova';
+    if (move === 'slam') this.hitStop('slam', [by, client.me]);
     this.add(big ? 0.8 : 0.55, (layer, f, k) => {
       const e = easeOutCubic(k);
       if (layer === 'light') {
@@ -977,6 +1082,18 @@ export class SagaView {
     else if (c.kind === 'miss') text = T.sagaHitMiss;
     if (c.kind === 'crit' && !monster) cls = 'crit heal';
     if (c.on === client.me && (c.kind === 'dmg' || c.kind === 'block')) cls += ' me';
+    const hurt = c.kind === 'dmg' || c.kind === 'crit' || c.kind === 'block';
+    // a spender's blow is as big as its pips; a monster that sees stars takes gold numbers; a body that is hit flashes and squashes
+    const spent = monster && hurt && this.spent && performance.now() < this.spent.until ? this.spent : null;
+    if (spent) cls += ` ${spendClass(spent.pips)}`;
+    if (monster && hurt && (sagaSnap()?.m[c.on as number]?.[2] ?? 0) & MOB_FLAG.open) cls += ' onopen';
+    if (monster && hurt) this.punch(c.on as number, spent ? spent.pips : 0);
+    // a ground mark hit a hero: a heavy number, and the lost piece stays on their bar a moment
+    const marked = !!c.mark && !monster && (c.kind === 'dmg' || c.kind === 'block');
+    if (marked) {
+      cls += ' mark';
+      this.ghost(String(c.on), c.n);
+    }
     // healing someone already well (a lucky heal on full health) shows nothing
     if ((c.kind === 'heal' || (c.kind === 'crit' && !monster)) && c.n <= 0) return;
     const el = document.createElement('div');
@@ -989,11 +1106,18 @@ export class SagaView {
     // numbers that come together on the same body rise beside and above each other; healing rises to the right
     const n = this.floaters.filter((f) => f.on === c.on && Math.abs(f.born - at) < 0.4).length % 3;
     const side = cls.includes('heal') ? 10 : 0;
-    const life = c.kind === 'kick' ? 1.5 : c.kind === 'crit' ? 1.25 : 1.1;
+    const life = c.kind === 'kick' ? 1.5 : marked || spent?.pips === PIP_MAX ? 1.4 : c.kind === 'crit' ? 1.25 : 1.1;
     this.floaters.push({ el, on: c.on, x: s.x, y: s.y + 4 - s.h, dx: side + [0, 9, -9][n]! + (Math.random() - 0.5) * 3, dy: -6 * n, born: at, life, at });
     // sounds for what matters to you
     const t = performance.now();
-    if (c.on === client.me && c.kind === 'dmg' && t - this.lastHurtSound > 180) {
+    if (marked) {
+      // its own thud (quieter for a friend), and for you a shake
+      if (t - this.lastMarkSound > 150) {
+        this.lastMarkSound = t;
+        SAGA_SFX.mark(c.on === client.me);
+      }
+      if (c.on === client.me) this.shake('mark');
+    } else if (c.on === client.me && c.kind === 'dmg' && t - this.lastHurtSound > 180) {
       this.lastHurtSound = t;
       SAGA_SFX.hurt();
     } else if (monster && c.kind === 'crit' && t - this.lastCritSound > 150) {
@@ -1001,8 +1125,221 @@ export class SagaView {
       SAGA_SFX.crit();
     } else if (c.kind === 'stun') SAGA_SFX.stun();
     else if (c.kind === 'kick') {
-      SAGA_SFX.kick();
+      SAGA_SFX.crack();
       if (typeof c.on === 'number') this.stopped(c.on);
+    }
+  }
+
+  /** A word rising from someone ("Öppning!", "Kombo!"). */
+  private word(on: string | number, text: string, extra = ''): void {
+    const s = this.find(on);
+    if (!s) return;
+    const el = document.createElement('div');
+    el.className = `label saga-fct word${extra ? ` ${extra}` : ''}`;
+    el.textContent = text;
+    this.labels.appendChild(el);
+    this.floaters.push({ el, on, x: s.x, y: s.y + 4 - s.h, dx: 0, dy: -14, born: this.t, life: 1.6, at: this.t });
+  }
+
+  /** The piece of health a mark took stays on the hero's bar over their head for a moment. */
+  private ghost(id: string, n: number): void {
+    const f = sagaSnap()?.f[id];
+    const b = this.bars.get(`p${id}`)?.querySelector('b');
+    if (!f || !b) return;
+    const from = Math.max(0, Math.min(1, f[0] / Math.max(1, f[1])));
+    const to = Math.max(0, from - n / Math.max(1, f[1]));
+    b.querySelector('u')?.remove();
+    const u = document.createElement('u');
+    u.style.left = `${to * 100}%`;
+    u.style.width = `${(from - to) * 100}%`;
+    u.className = 'go';
+    b.appendChild(u);
+    setTimeout(() => u.remove(), 1300);
+  }
+
+  // ------------------------------------------------------------------ spenders, kills
+
+  /**
+   * A spender (slot 1) goes off: as big as the pips it used, with its class's look. Three pips freeze the blow for a blink
+   * and shake the camera; a combo (a dazed, frozen or challenged monster, a friend in the ring) gets its chord and its word.
+   */
+  private spend(c: Extract<Change, { t: 'spell' }>, from: { x: number; y: number }, to: { x: number; y: number }, heard: boolean): void {
+    const by = String(c.by);
+    const mine = by === client.me;
+    // (Solstråle sends one for every friend it heals: they are all the same blow)
+    const again = this.spent && this.spent.by === by && performance.now() < this.spent.until;
+    const pips = again ? this.spent!.pips : Math.max(1, Math.min(PIP_MAX, this.pipsSeen.get(by) ?? 1));
+    this.pipsSeen.set(by, 0);
+    this.spent = { until: performance.now() + 40, pips, by };
+    const snap = sagaSnap();
+    const fl = typeof c.on === 'number' ? (snap?.m[c.on]?.[2] ?? 0) : 0;
+    const s = c.spell;
+    const combo =
+      s === 'jattehugg' ? !!(fl & MOB_FLAG.dazed) : s === 'runsmall' ? !!(fl & (MOB_FLAG.slowed | MOB_FLAG.dazed)) : s === 'dunderslag' ? Object.values(snap?.m ?? {}).some((m) => m[2] & MOB_FLAG.taunted) : typeof c.on === 'string' && !!((snap?.f[c.on]?.[2] ?? 0) & FLAG.hot);
+    const full = pips >= PIP_MAX;
+    if (!again) {
+      if (heard) SAGA_SFX.spend(s, pips);
+      if (combo) {
+        if (mine) setTimeout(() => SAGA_SFX.combo(), 60);
+        if (c.on !== undefined) this.word(c.on, `⭐ ${FIGHT_UI.combo}`);
+      }
+      if (full) {
+        this.hitStop('spend', [c.by, c.on]);
+        if (mine || heard) this.shake('spend');
+      }
+    }
+    const k = (pips - 1) / (PIP_MAX - 1); // 0, 0.5, 1
+    if (s === 'jattehugg') {
+      this.fx.spawn(to.x, to.y, 'chop');
+      this.slash(c.on, to, [1, 0.55, 0.25], 12 + 6 * k, 1.6 + 1.2 * k);
+      if (full) this.arc(from, to, SPEND.jattehugg.arc * TILE, (SPEND.jattehugg.deg * Math.PI) / 180, [1, 0.6, 0.2]);
+    } else if (s === 'runsmall') {
+      this.explode(to, [0.78, 0.5, 1], 14 + 12 * k, c.on);
+      if (combo) this.shatter(this.body(c.on, to), [0.7, 0.9, 1], c.on);
+      if (full || combo) this.groundBurst(to, (SPELLS.runsmall?.radius ?? SPEND.runsmall.radius) * TILE, [0.78, 0.5, 1]);
+    } else if (s === 'dunderslag') {
+      this.burstRing(c.on, to, [1, 0.85, 0.4], 14 + 10 * k, 0.4);
+      this.thunder(c.on, to, 0.6 + k);
+      if (full) this.burstRing(c.by, from, [0.5, 0.75, 1], 24, 0.6);
+    } else {
+      this.beam(c.by, from, c.on, to, [1, 0.9, 0.45], 2 + 3 * k);
+      this.healRune(c.on ?? c.by, to, 14 + 6 * k, 0.9);
+    }
+  }
+
+  /** Jättehugg at three pips: the blade's sweep through everything in front. */
+  private arc(from: { x: number; y: number }, to: { x: number; y: number }, r: number, wide: number, c: [number, number, number]): void {
+    const [cr, cg, cb] = c;
+    const dir = Math.atan2(to.y - from.y, to.x - from.x);
+    this.add(0.38, (layer, f, k) => {
+      if (layer === 'light') {
+        drawSprite(this.art.glow, from.x + Math.cos(dir) * r * 0.5, from.y + Math.sin(dir) * r * 0.5, r * 2.4, r * 2.4, 0, light(cr, cg, cb, 0.6 * (1 - k)));
+        return;
+      }
+      if (layer !== 'bright') return;
+      const sweep = easeOutCubic(Math.min(1, k * 1.8));
+      for (let i = 0; i < 12; i++) {
+        const u = i / 11;
+        if (u > sweep) break;
+        const a = dir - wide / 2 + wide * u;
+        for (const d of [0.55, 0.8, 1]) drawSprite(this.art.glow, from.x + Math.cos(a) * r * d, from.y - 6 + Math.sin(a) * r * d, 9, 9, 0, rgba(cr, cg, cb, 0.8 * (1 - k)));
+      }
+    }, from);
+  }
+
+  /** A ring bursting out along the ground (Runsmäll's splash). */
+  private groundBurst(at: { x: number; y: number }, r: number, c: [number, number, number]): void {
+    const [cr, cg, cb] = c;
+    this.add(0.45, (layer, f, k) => {
+      const e = easeOutCubic(k);
+      if (layer === 'ground') {
+        drawEllipse(P(at.x, at.y), vec2(W(r * 2 * e), W(r * 2 * e)), col(cr, cg, cb, 0.22 * (1 - k)));
+        return;
+      }
+      if (layer !== 'bright') return;
+      this.ring(at.x, at.y, r * e, 2.5 * (1 - k) + 0.4, col(cr, cg, cb, 1 - k));
+    }, at);
+  }
+
+  /** Dunderslag: a bolt from above onto the monster. */
+  private thunder(on: string | number | undefined, at: { x: number; y: number }, size: number): void {
+    const jag = [...Array(6)].map((_, j) => (j > 0 && j < 5 ? (Math.random() - 0.5) * 9 : 0));
+    this.add(0.22, (layer, f, k) => {
+      const m = this.body(f.on, at);
+      if (layer === 'light') {
+        drawSprite(this.art.glow, m.x, m.y, 90 * size, 90 * size, 0, light(1, 0.9, 0.5, 0.9 * (1 - k)));
+        return;
+      }
+      if (layer !== 'bright') return;
+      const pts = jag.map((dx, j) => P(m.x + dx, lerp(m.y - 60, m.y, j / 5)));
+      drawLineList(pts, W(3 * size), col(1, 0.8, 0.3, 0.6 * (1 - k)));
+      drawLineList(pts, W(1.1 * size), col(1, 1, 1, 1 - k));
+    }, at, undefined, on);
+  }
+
+  /** Solstråle: a warm beam from the healer to the friend. */
+  private beam(by: string | number, from: { x: number; y: number }, on: string | number | undefined, to: { x: number; y: number }, c: [number, number, number], width: number): void {
+    const [r, g, b] = c;
+    this.add(0.45, (layer, f, k) => {
+      if (layer !== 'bright') return;
+      const a = this.body(by, from);
+      const z = this.body(on, to);
+      const fade = 1 - k;
+      drawLine(P(a.x, a.y), P(z.x, z.y), W(width * 1.8), col(r, g, b, 0.45 * fade));
+      drawLine(P(a.x, a.y), P(z.x, z.y), W(width * 0.6), col(1, 1, 0.9, 0.9 * fade));
+      drawSprite(this.art.glow, z.x, z.y, 26, 26, 0, rgba(r, g, b, 0.7 * fade));
+    }, from, to, on);
+  }
+
+  /** A monster is gone: a bigger poof than the server's own, a pop, a small shake and a blink of stillness. A Sköldbärare's dome breaks with it. */
+  private gone(id: number): void {
+    const s = this.lastSpot.get(id);
+    this.lastSpot.delete(id);
+    this.openSeen.delete(id);
+    this.castSeen.delete(id);
+    if (this.domeUp.has(id)) this.domeBreak(id);
+    if (!s) return;
+    const j = this.juice();
+    const big = !!this.spent && performance.now() < this.spent.until + 120 && this.spent.pips >= PIP_MAX;
+    const at = { x: s.x, y: s.y + 4 - s.h * 0.5 };
+    const n = poofCount(j, big);
+    (globalThis as { __juiceLog?: string[] }).__juiceLog?.push(`kill:${n}`);
+    const bits = [...Array(n)].map((_, i) => ({ a: (i / Math.max(1, n)) * TAU + Math.random() * 0.5, v: 16 + Math.random() * 14 }));
+    this.add(0.5, (layer, f, k) => {
+      if (layer !== 'bright') return;
+      const e = easeOutCubic(k);
+      drawSprite(this.art.glow, at.x, at.y, s.w * (0.8 + e), s.h * (0.8 + e), 0, rgba(1, 1, 1, 0.5 * (1 - k)));
+      for (const b of bits) drawSprite(this.art.glow, at.x + Math.cos(b.a) * b.v * e, at.y + Math.sin(b.a) * b.v * e - 5 * e, 5 * (1 - k) + 1.5, 5 * (1 - k) + 1.5, 0, rgba(1, 0.95, 0.75, 1 - k));
+    }, at);
+    if (n > 0) this.fx.dust(s.x, s.y + 2, Math.min(3, n));
+    SAGA_SFX.kill(big);
+    this.shake('kill');
+    this.hitStop('kill', this.spent && performance.now() < this.spent.until + 120 ? [this.spent.by] : []);
+  }
+
+  /** A Sköldbärare's dome breaks (it fell, or it is dazed): glass cracking, shards, and a word. */
+  private domeBreak(id: number): void {
+    const at = this.domeUp.get(id);
+    this.domeUp.delete(id);
+    if (!at) return;
+    SAGA_SFX.domeCrack();
+    this.shatter(at, [0.6, 0.8, 1]);
+    const s = this.find(id);
+    if (s) this.word(id, `🛡️ ${FIGHT_UI.domeDown}`, 'blue');
+  }
+
+  /** Every frame in a dungeon: who has how many pips, who sees stars, whose dome is up, who starts a cast. */
+  private watch(): void {
+    const snap = sagaSnap();
+    if (!snap) return;
+    for (const [id, f] of Object.entries(snap.f)) this.pipsSeen.set(id, f[3] ?? 0);
+    // Öppning: a shimmer and the word, once
+    for (const ids of Object.keys(snap.o ?? {})) {
+      const id = Number(ids);
+      if (this.openSeen.has(id)) continue;
+      this.openSeen.add(id);
+      SAGA_SFX.open();
+      this.word(id, `💫 ${T.sagaOpen}`);
+    }
+    for (const id of this.openSeen) if (!snap.o?.[id]) this.openSeen.delete(id);
+    // a Besvärjare starts to heal: a small chant
+    for (const [ids, c] of Object.entries(snap.c ?? {})) {
+      const id = Number(ids);
+      const key = `${c[0]}:${c[1]}`;
+      if (this.castSeen.get(id) === key) continue;
+      this.castSeen.set(id, key);
+      if (c[0] === 'heal') SAGA_SFX.chant(c[2] - c[1]);
+    }
+    for (const id of this.castSeen.keys()) if (!snap.c?.[id]) this.castSeen.delete(id);
+    // the Sköldbärare's dome: up while it fights and is not dazed
+    const animals = activeWorld()?.animals ?? {};
+    for (const [ids, m] of Object.entries(snap.m)) {
+      const id = Number(ids);
+      if (animals[id]?.role !== 'shield') continue;
+      const s = this.find(id);
+      if (m[2] & MOB_FLAG.dazed) {
+        if (this.domeUp.has(id)) this.domeBreak(id);
+      } else if (s) this.domeUp.set(id, { x: s.x, y: s.y + 4 - s.h * 0.5 });
     }
   }
 
@@ -1024,7 +1361,8 @@ export class SagaView {
   update(dt: number): void {
     if (!this.live) return;
     this.t += dt;
-    for (const f of this.list) f.t += dt;
+    // (a hit-stop holds the fight's effects still for a blink; the numbers and everything else go on)
+    if (performance.now() >= this.stopUntil) for (const f of this.list) f.t += dt;
     if (this.list.some((f) => f.t >= f.dur)) this.list = this.list.filter((f) => f.t < f.dur);
     if (this.delay && this.t > this.delay.until + 0.05) this.delay = null;
     for (const f of this.floaters) {
@@ -1038,6 +1376,7 @@ export class SagaView {
       this.floaters = this.floaters.filter((f) => this.t - f.born <= f.life + 0.05);
     }
     for (const [id, w] of this.windups) if (w.t >= w.dur) this.windups.delete(id);
+    if (this.on) this.watch();
   }
 
   /** Telegraphs and runes on the ground, under everyone (lit with the scene). */
@@ -1141,6 +1480,7 @@ export class SagaView {
       return;
     }
     const k = this.fill(z, now);
+    if (z.kind === 'shot') return this.drawShot(z, r, k);
     // blinking stays under 3 times a second, and stops when the screen is calm (the filling-up ring tells the time)
     const blink = calm() ? 0.5 : 0.5 + 0.5 * Math.sin(this.t * (6 + k * 11));
     const [fr, fg, fb] = warnColour();
@@ -1149,6 +1489,31 @@ export class SagaView {
     this.zoneShape(z, r * k, col(fr, fg, fb, 0.3 + 0.1 * k));
     // stripes over the whole danger, so it reads without any colour at all
     this.hatch(z, r, col(1, 1, 1, 0.55));
+  }
+
+  /**
+   * A Skytt's line: narrow, red, and striped ACROSS like a ladder with arrowheads flying along it (a boss's line has slanting
+   * stripes), so the two are told apart without colour. It fills from the bow outwards until the arrow flies.
+   */
+  private drawShot(z: SagaZone, r: number, k: number): void {
+    const [fr, fg, fb] = warnColour();
+    const dir = z.dir ?? 0;
+    const wide = (z.w ?? 1.2) * TILE;
+    const ux = Math.cos(dir);
+    const uy = Math.sin(dir);
+    const nx = -uy * (wide / 2);
+    const ny = ux * (wide / 2);
+    this.strip(z.x, z.y, dir, r, wide, col(fr, fg, fb, 0.2));
+    this.strip(z.x, z.y, dir, r * k, wide, col(fr, fg, fb, 0.4));
+    // rungs across, and arrowheads that slide towards where it will hit (still when the screen is calm)
+    const gap = 10;
+    const slide = calm() ? 0 : (this.t * 1.2) % 1;
+    for (let d = gap * 0.5; d < r; d += gap) drawLine(P(z.x + ux * d + nx, z.y + uy * d + ny), P(z.x + ux * d - nx, z.y + uy * d - ny), W(0.9), col(1, 1, 1, 0.5));
+    for (let d = gap * 2 * slide; d < r - 4; d += gap * 2) {
+      const tx = z.x + ux * (d + 4);
+      const ty = z.y + uy * (d + 4);
+      drawLineList([P(z.x + ux * d + nx * 0.7, z.y + uy * d + ny * 0.7), P(tx, ty), P(z.x + ux * d - nx * 0.7, z.y + uy * d - ny * 0.7)], W(1.3), col(1, 1, 1, 0.9));
+    }
   }
 
   private drawZoneEdge(z: SagaZone, now: number): void {
@@ -1328,15 +1693,20 @@ export class SagaView {
     const ry = rx * 0.5;
     const c = friend ? col(0.45, 1, 0.5, 0.95) : col(1, 0.82, 0.25, 0.95);
     const segs = 8;
+    const turn = calm() ? 0 : this.t * 1.6;
+    // a dark ring under the bright one: it shows on any floor
+    const under: Vector2[] = [];
+    for (let j = 0; j < 28; j++) under.push(P(s.x + Math.cos((j / 28) * TAU) * rx, s.y + 4 + Math.sin((j / 28) * TAU) * ry));
+    drawLineList(under, W(2.6), col(0.05, 0.03, 0.08, 0.7), true);
     for (let i = 0; i < segs; i++) {
-      const a0 = this.t * 1.6 + (i / segs) * TAU;
+      const a0 = turn + (i / segs) * TAU;
       const a1 = a0 + (TAU / segs) * 0.6;
       const pts: Vector2[] = [];
       for (let j = 0; j <= 4; j++) {
         const a = lerp(a0, a1, j / 4);
         pts.push(P(s.x + Math.cos(a) * rx, s.y + 4 + Math.sin(a) * ry));
       }
-      drawLineList(pts, W(1.3), c);
+      drawLineList(pts, W(1.8), c);
     }
   }
 
@@ -1389,6 +1759,7 @@ export class SagaView {
         drawSprite(this.art.glow, cx - 5, cy - 9, 6 * tw, 6 * tw, 0, rgba(1, 1, 1, tw));
       }
     }
+    this.drawMobAuras();
     // the boss winding up something that can be stopped: a blue shield over its head
     const b = snap.b;
     if (b?.cast?.kick) {
@@ -1398,6 +1769,88 @@ export class SagaView {
         drawSprite(this.art.glow, s.x, s.y + 4 - s.h - 10, 22, 22, 0, rgba(0.5, 0.85, 1, 0.6 * pulse));
       }
     }
+  }
+
+  /**
+   * The monsters' lasting looks: stars round a dazed head; a gold outline and bigger stars on one that sees stars (Öppning);
+   * frost under a slowed one; a blue dome over a Sköldbärare with links to the packmates it protects.
+   */
+  private drawMobAuras(): void {
+    const snap = sagaSnap();
+    if (!snap) return;
+    const still = calm();
+    const animals = activeWorld()?.animals ?? {};
+    const domes: { id: number; s: Spot }[] = [];
+    for (const [ids, m] of Object.entries(snap.m)) {
+      const id = Number(ids);
+      const fl = m[2];
+      const a = animals[id];
+      const s = a ? this.find(id) : null;
+      if (!a || !s) continue;
+      this.lastSpot.set(id, s);
+      const top = s.y + 4 - s.h - 2;
+      const cy = s.y + 4 - s.h * 0.5;
+      if (fl & MOB_FLAG.open) {
+        // a gold outline round the whole body, and five stars turning over the head
+        const pulse = still ? 1 : 0.75 + 0.25 * Math.sin(this.t * 9);
+        const pts: Vector2[] = [];
+        for (let j = 0; j < 28; j++) pts.push(P(s.x + Math.cos((j / 28) * TAU) * (s.w * 0.6 + 2), cy + Math.sin((j / 28) * TAU) * (s.h * 0.58 + 2)));
+        drawLineList(pts, W(1.6), col(1, 0.84, 0.25, 0.95 * pulse), true);
+        drawSprite(this.art.glow, s.x, cy, s.w * 1.8, s.h * 1.6, 0, rgba(1, 0.8, 0.2, 0.16 * pulse));
+        for (let i = 0; i < 5; i++) {
+          const ang = (still ? 0 : this.t * 5) + (i / 5) * TAU;
+          this.star(s.x + Math.cos(ang) * (s.w * 0.45 + 3), top - 2 + Math.sin(ang) * 2.5, 3.2, col(1, 0.92, 0.35, 1));
+        }
+      } else if (fl & MOB_FLAG.dazed) {
+        for (let i = 0; i < 3; i++) {
+          const ang = (still ? 0.5 : this.t * 7) + (i / 3) * TAU;
+          this.star(s.x + Math.cos(ang) * 6, top + Math.sin(ang) * 2, 2.2, col(1, 0.95, 0.4, 1));
+        }
+      }
+      if (fl & MOB_FLAG.slowed) drawSprite(this.art.glow, s.x, s.y + 2, s.w * 1.1, 8, 0, rgba(0.5, 0.8, 1, 0.5));
+      if (a.role === 'shield' && !(fl & MOB_FLAG.dazed)) domes.push({ id, s });
+    }
+    for (const d of domes) {
+      const s = d.s;
+      const cy = s.y + 4 - s.h * 0.5;
+      const rx = s.w * 0.75 + 4;
+      const ry = s.h * 0.68 + 4;
+      const breathe = still ? 1 : 0.85 + 0.15 * Math.sin(this.t * 3);
+      drawSprite(this.art.glow, s.x, cy, rx * 2.6, ry * 2.6, 0, rgba(0.35, 0.6, 1, 0.22 * breathe));
+      // the dome: an arch over the monster, standing on the ground
+      const arch: Vector2[] = [];
+      for (let j = 0; j <= 20; j++) {
+        const ang = Math.PI + (j / 20) * Math.PI;
+        arch.push(P(s.x + Math.cos(ang) * rx, s.y + 4 + Math.sin(ang) * ry * 1.7));
+      }
+      drawLineList(arch, W(1.6), col(0.6, 0.82, 1, 0.95 * breathe));
+      drawLine(P(s.x - rx, s.y + 4), P(s.x + rx, s.y + 4), W(1), col(0.6, 0.82, 1, 0.6 * breathe));
+      // thin links to every packmate behind the shield
+      for (const [ids, m] of Object.entries(snap.m)) {
+        const id = Number(ids);
+        if (id === d.id || !(m[2] & MOB_FLAG.shielded)) continue;
+        const o = this.find(id);
+        if (!o || Math.hypot(o.x - s.x, o.y - s.y) / TILE > ROLE.shield.radius + 1) continue;
+        const oy = o.y + 4 - o.h * 0.5;
+        const len = Math.hypot(o.x - s.x, oy - cy);
+        const n = Math.max(2, Math.floor(len / 5));
+        const slide = still ? 0 : (this.t * 0.8) % 1;
+        for (let i = 0; i < n; i++) {
+          const u0 = (i + slide) / n;
+          const u1 = Math.min(1, u0 + 0.55 / n);
+          if (u0 >= 1) continue;
+          drawLine(P(lerp(s.x, o.x, u0), lerp(cy, oy, u0)), P(lerp(s.x, o.x, u1), lerp(cy, oy, u1)), W(1.1), col(0.7, 0.88, 1, 0.85));
+        }
+        drawSprite(this.art.glow, o.x, oy, o.w * 1.3, o.h * 1.2, 0, rgba(0.35, 0.6, 1, 0.14));
+      }
+    }
+  }
+
+  /** A little four-pointed star (two crossed lines and a bright middle). */
+  private star(x: number, y: number, r: number, c: Color): void {
+    drawLine(P(x - r, y), P(x + r, y), W(1), c);
+    drawLine(P(x, y - r), P(x, y + r), W(1), c);
+    drawSprite(this.art.glow, x, y, r * 2.2, r * 2.2, 0, rgba(1, 0.95, 0.5, 0.8));
   }
 
   // ------------------------------------------------------------------ labels
@@ -1428,18 +1881,21 @@ export class SagaView {
     const snap = sagaSnap();
     const seen = new Set<string>();
     const t = liveTarget();
-    const bar = (key: string, s: Spot, k: number, cls: string, name: string | null): void => {
+    const bar = (key: string, s: Spot, k: number, cls: string, name: string | null, top: BarTop = {}): void => {
       seen.add(key);
       let el = this.bars.get(key);
       if (!el) {
         el = document.createElement('div');
-        el.innerHTML = '<span></span><b><i></i></b>';
+        el.innerHTML = '<em></em><span></span><b><i></i></b>';
         this.labels.appendChild(el);
         this.bars.set(key, el);
+        this.barParts.set(key, { role: '', castKey: '', ring: null, pips: null, pipsCls: '' });
       }
-      const want = `label saga-bar-${cls}`;
+      const fl = top.flags ?? 0;
+      const want = `label saga-bar-${cls}${fl & MOB_FLAG.shielded ? ' shielded' : ''}${fl & MOB_FLAG.open ? ' opened' : ''}${top.mine ? ' mine' : ''}`;
       if (el.className !== want) el.className = want;
-      const nm = el.firstElementChild as HTMLElement;
+      this.barTop(el, this.barParts.get(key)!, top);
+      const nm = el.children[1] as HTMLElement;
       if (nm.textContent !== (name ?? '')) nm.textContent = name ?? '';
       const fill = el.querySelector('i')!;
       const w = `${Math.max(0, Math.min(1, k)) * 100}%`;
@@ -1447,30 +1903,68 @@ export class SagaView {
       fill.style.background = cls === 'friend' ? (k > 0.5 ? '#4fcf5a' : k > 0.25 ? '#f2c33a' : '#e8473a') : '';
       place(el, s.x, s.y + 4 - s.h - (cls === 'friend' ? 1 : 2));
     };
+    const animals = activeWorld()?.animals ?? {};
     if (snap) {
       for (const [ids, m] of Object.entries(snap.m)) {
         const id = Number(ids);
-        const a = activeWorld()?.animals[id];
+        const a = animals[id];
         const s = a ? this.find(id) : null;
         if (!a || !s || id === snap.b?.id) continue;
         const boss = SAGA_BOSSES[a.species];
-        bar(`m${id}`, s, m[0] / Math.max(1, m[1]), boss ? 'boss' : BLOCK_SPECIES.has(a.species) ? 'ice' : t === id ? 'target' : 'mob', boss || t === id || BLOCK_SPECIES.has(a.species) ? a.name : null);
+        const named = boss || t === id || BLOCK_SPECIES.has(a.species);
+        bar(`m${id}`, s, m[0] / Math.max(1, m[1]), boss ? 'boss' : BLOCK_SPECIES.has(a.species) ? 'ice' : t === id ? 'target' : 'mob', named ? (a.role ? mobRoleName(a.name, a.role) : a.name) : null, { role: a.role, cast: snap.c?.[id], flags: m[2] });
       }
       for (const [id, f] of Object.entries(snap.f)) {
         const s = this.find(id);
-        if (s && !(f[2] & FLAG.down)) bar(`p${id}`, s, f[0] / Math.max(1, f[1]), 'friend', null);
+        const c = classOf(client.world?.players[id]);
+        if (s && !(f[2] & FLAG.down)) bar(`p${id}`, s, f[0] / Math.max(1, f[1]), 'friend', null, { pips: c ? { cls: c.id, n: f[3] ?? 0 } : undefined, mine: id === client.me });
       }
     }
     // a waiting monster you aim at shows its name too
     if (typeof t === 'number' && t !== snap?.b?.id && !seen.has(`m${t}`)) {
-      const a = activeWorld()?.animals[t];
+      const a = animals[t];
       const s = a ? this.find(t) : null;
-      if (a && s) bar(`m${t}`, s, 1, 'target', a.name);
+      if (a && s) bar(`m${t}`, s, 1, 'target', a.role ? mobRoleName(a.name, a.role) : a.name, { role: a.role });
+    }
+    // the special monsters show their marker before their pack is woken, so the party can plan
+    for (const a of Object.values(animals)) {
+      if (!a.role || seen.has(`m${a.id}`) || !SAGA_MOBS[a.species]) continue;
+      const s = this.find(a.id);
+      if (s) bar(`m${a.id}`, s, 1, 'idle', null, { role: a.role });
     }
     for (const [key, el] of this.bars)
       if (!seen.has(key)) {
         el.remove();
         this.bars.delete(key);
+        this.barParts.delete(key);
       }
+  }
+
+  /** What stands over a bar: a special monster's marker, the circle of its cast (filling), a hero's pips. */
+  private barTop(el: HTMLElement, p: BarParts, top: BarTop): void {
+    const row = el.firstElementChild as HTMLElement;
+    const role = top.role ?? '';
+    const castKey = top.cast ? `${top.cast[0]}:${top.cast[1]}` : '';
+    if (role !== p.role || castKey !== p.castKey) {
+      p.role = role;
+      p.castKey = castKey;
+      row.querySelector('.role-mark:not(.in)')?.remove();
+      p.ring?.remove();
+      p.ring = null;
+      // while it casts, the circle (with its leaf or arrow in the middle) stands in the marker's place
+      if (top.cast) {
+        p.ring = castRing(top.cast[0], !!top.cast[3]);
+        row.prepend(p.ring);
+      } else if (top.role) row.prepend(roleMarker(top.role));
+    }
+    if (p.ring && top.cast) p.ring.style.setProperty('--k', castFill(top.cast, serverNow()).toFixed(3));
+    const pipsCls = top.pips?.cls ?? '';
+    if (pipsCls !== p.pipsCls) {
+      p.pipsCls = pipsCls;
+      p.pips?.remove();
+      p.pips = top.pips ? pipRow(top.pips.cls, 'over') : null;
+      if (p.pips) row.append(p.pips);
+    }
+    if (p.pips && top.pips) setPips(p.pips, top.pips.n, !this.juice().loops);
   }
 }

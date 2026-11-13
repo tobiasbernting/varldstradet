@@ -317,6 +317,8 @@ export const SAGA_SFX = {
     o.stop(c.currentTime + 0.46);
     lfo.stop(c.currentTime + 0.46);
   },
+  /** A Besvärjare starts to heal a packmate: a small chant climbing as long as the cast. */
+  chant: (ms: number) => notes([330, 392, 440, 523], Math.max(120, Math.min(900, ms / 4.5)), 0.32, 'sine', 0.028),
   /** Öppning: a shimmer that rises. */
   open: () => {
     notes([784, 988, 1175, 1568, 1976], 45, 0.2, 'sine', 0.035);

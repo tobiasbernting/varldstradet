@@ -53,6 +53,8 @@ import {
   type TreeNode,
 } from '@varldstradet/shared';
 import { CLASS_IDS, LOOK_T, PETS, PET_T, activePet, ownedPetIds } from '@varldstradet/shared';
+import { COMBO_TEXT, FIGHT_UI, PIP_ICONS, PIP_NAMES, PIP_TEXT } from '@varldstradet/shared';
+import { fightStrip, fightWords } from './fightcard.ts';
 import { lookSummary } from './looks.ts';
 import { portraitUrl } from '@art/textures.ts';
 import { net } from '../net.ts';
@@ -846,6 +848,9 @@ export class RunUi {
       spells.append(this.info(b, sp.icon, sp.name, sp.text));
     }
     body.append(spells);
+    // how a fight goes, in pictures: the auto-attack fills the pips, the pips make the first button big, and the class's combo
+    const how = h('div', { class: 'fight-how', role: 'img', 'aria-label': fightWords(look) }, fightStrip(look));
+    body.append(this.info(how, PIP_ICONS[look], `${FIGHT_UI.howTitle}: ${PIP_NAMES[look]}`, `${PIP_TEXT[look]} ${COMBO_TEXT[look]}`));
 
     // which animal comes along (pets.ts): one on a run, chosen here (or in the lobby at the kennel)
     this.petRow(body, me);

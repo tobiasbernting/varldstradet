@@ -343,6 +343,10 @@ body.saga-fight .act-btn.spend-glow {
 .label.saga-bar-friend.mine .pips-row.over {
   --pip: max(13px, calc(3.6 * var(--u)));
 }
+/* a special monster whose pack still waits: only its marker */
+.label.saga-bar-idle > b {
+  display: none;
+}
 /* the special monsters: a leaf in a circle, an arrow in a diamond, a boss in a shield */
 .role-mark {
   display: inline-block;

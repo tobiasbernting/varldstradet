@@ -1,5 +1,6 @@
 // The personal choices of a run, in windows of their own so ui/run.ts stays what it was: the path (väg) every hero picks after the
 // Mellanboss. Everyone picks at once, nobody waits for a slow friend longer than the clock, and a choice can be explained by touch.
+import { fightStrip, fightWords } from './fightcard.ts';
 import {
   CLASSES,
   PATHS,
@@ -72,6 +73,8 @@ export function renderPathWindow(host: PickHost, body: HTMLElement, run: RunSnap
     cards.append(card);
   });
   body.append(cards);
+  // how the class fights, whatever the path: the auto-attack, the pips and the combo, in pictures
+  if (cls) body.append(h('div', { class: 'fight-how', role: 'img', 'aria-label': fightWords(cls) }, fightStrip(cls)));
   // who has chosen already (a word and a check, not only a colour)
   const done = new Set(run.pick?.kind === 'path' ? run.pick.done : Object.keys(run.paths));
   const humans = run.party.filter((p) => !p.bot);
