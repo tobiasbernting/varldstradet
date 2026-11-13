@@ -661,7 +661,7 @@ export function enterStop(farm: WorldState, run: RunState, node: number, ctx: Si
     intro: z.intro,
     hpMul: z.hpMul * (solo ? SOLO_MERCY : 1) * lvl.hp,
     dmgMul: z.dmgMul * lvl.dmg,
-    bossMul: z.bossMul * (solo ? SOLO_MERCY : 1) * lvl.hp,
+    bossMul: z.bossMul * (solo ? SOLO_MERCY : 1) * lvl.hp * def.bossHp,
     sight: z.sight,
     leash: z.leash,
     ...(moves ? { moves } : {}),
@@ -681,6 +681,8 @@ export function enterStop(farm: WorldState, run: RunState, node: number, ctx: Si
     mark: def.mark,
     ...(run.level <= 1 ? { easy: true } : {}),
     ...(run.level === 1 ? { ring: true } : {}),
+    ...(def.humansOnly ? { humansOnly: true } : {}),
+    ...(def.markEvery !== 1 ? { markEvery: def.markEvery } : {}),
   };
   (farm.areas ??= {})[key] = world;
   getArea(farm, key);

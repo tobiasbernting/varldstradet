@@ -49,26 +49,26 @@ export const AUTO_MS: Record<ClassId, number> = { vaktare: 1200, helare: 1200, k
 
 export const SPELLS: Record<string, SpellDef> = {
   // Väktare (tank)
-  hugg: { id: 'hugg', name: 'Svärdshugg', icon: '🗡️', kind: 'melee', cd: AUTO_MS.vaktare, range: 1.8, power: 21, threat: 4, text: 'Du hugger av dig själv när ett monster är nära. Varje träff ger 1 Sköldkraft.' },
-  dunderslag: { id: 'dunderslag', name: 'Dunderslag', icon: '🔨', kind: 'spend', cd: 1000, range: 1.8, power: 22, threat: 6, text: 'Ett dundrande slag som blir starkare av Sköldkraft. Med 3 får du en sköld!' },
+  hugg: { id: 'hugg', name: 'Svärdshugg', icon: '🗡️', kind: 'melee', cd: AUTO_MS.vaktare, range: 1.8, power: 13, threat: 4, text: 'Du hugger av dig själv när ett monster är nära. Varje träff ger 1 Sköldkraft.' },
+  dunderslag: { id: 'dunderslag', name: 'Dunderslag', icon: '🔨', kind: 'spend', cd: 1000, range: 1.8, power: 6, threat: 6, text: 'Ett dundrande slag som blir starkare av Sköldkraft. Med 3 får du en sköld!' },
   utmana: { id: 'utmana', name: 'Utmana!', icon: '📣', kind: 'taunt', cd: 8000, range: 0, power: 0, radius: 5, ms: 4000, text: 'Alla monster runt dig måste slåss med dig i 4 sekunder.' },
   skoldslag: { id: 'skoldslag', name: 'Sköldslag', icon: '🛡️', kind: 'bash', cd: 6000, range: 1.8, power: 20, ms: 1500, threat: 4, offGcd: true, text: 'Slår med skölden så monstret blir yrt. Avbryter bossens stora attacker!' },
   skoldmur: { id: 'skoldmur', name: 'Sköldmur', icon: '🧱', kind: 'wall', cd: 20000, range: 0, power: 60, ms: 6000, offGcd: true, text: 'Du tar mycket mindre skada en stund och får lite hälsa tillbaka.' },
   // Helare (healer)
-  ljuspil: { id: 'ljuspil', name: 'Ljuspil', icon: '✨', kind: 'bolt', cd: AUTO_MS.helare, range: 7, power: 13, text: 'Du skjuter pilar av ljus av dig själv. Varje träff ger 1 Ljus.' },
-  solstrale: { id: 'solstrale', name: 'Solstråle', icon: '☀️', kind: 'spend', cd: 1000, range: 7, power: 45, friend: true, text: 'En varm stråle som läker mer ju mer Ljus du har. Med 3 Ljus läker den alla nära!' },
-  lakerunan: { id: 'lakerunan', name: 'Läkerunan', icon: '💚', kind: 'heal', cd: 1500, range: 7, power: 32, text: 'Läker den som har ont, eller den du pekar på.' },
+  ljuspil: { id: 'ljuspil', name: 'Ljuspil', icon: '✨', kind: 'bolt', cd: AUTO_MS.helare, range: 7, power: 8, text: 'Du skjuter pilar av ljus av dig själv. Varje träff ger 1 Ljus.' },
+  solstrale: { id: 'solstrale', name: 'Solstråle', icon: '☀️', kind: 'spend', cd: 1000, range: 7, power: 14, friend: true, text: 'En varm stråle som läker mer ju mer Ljus du har. Med 3 Ljus läker den alla nära!' },
+  lakerunan: { id: 'lakerunan', name: 'Läkerunan', icon: '💚', kind: 'heal', cd: 2500, range: 7, power: 32, text: 'Läker den som har ont, eller den du pekar på.' },
   lakekrets: { id: 'lakekrets', name: 'Läkekrets', icon: '🌿', kind: 'hot', cd: 12000, range: 0, power: 60, radius: 4, ms: 6000, text: 'En ring av runor läker alla nära dig i 6 sekunder.' },
   vackupp: { id: 'vackupp', name: 'Väck upp!', icon: '🌅', kind: 'revive', cd: 15000, range: 4, power: 50, text: 'Väcker en kompis som har fallit.' },
   // Krigare (melee damage)
-  yxhugg: { id: 'yxhugg', name: 'Yxhugg', icon: '🪓', kind: 'melee', cd: AUTO_MS.krigare, range: 1.8, power: 27, text: 'Du hugger av dig själv när ett monster är nära. Varje träff ger 1 Glöd.' },
-  jattehugg: { id: 'jattehugg', name: 'Jättehugg', icon: '⚒️', kind: 'spend', cd: 1000, range: 1.8, power: 30, text: 'Ett jättehugg som slår hårdare ju mer Glöd du har. Med 3 Glöd träffar det alla framför dig!' },
+  yxhugg: { id: 'yxhugg', name: 'Yxhugg', icon: '🪓', kind: 'melee', cd: AUTO_MS.krigare, range: 1.8, power: 16, text: 'Du hugger av dig själv när ett monster är nära. Varje träff ger 1 Glöd.' },
+  jattehugg: { id: 'jattehugg', name: 'Jättehugg', icon: '⚒️', kind: 'spend', cd: 1000, range: 1.8, power: 6, text: 'Ett jättehugg som slår hårdare ju mer Glöd du har. Med 3 Glöd träffar det alla framför dig!' },
   stormsteg: { id: 'stormsteg', name: 'Stormsteg', icon: '💨', kind: 'charge', cd: 9000, range: 7, power: 14, ms: 1000, offGcd: true, text: 'Rusar fram till monstret och gör det yrt i 1 sekund.' },
   virvelvind: { id: 'virvelvind', name: 'Virvelvind', icon: '🌪️', kind: 'whirl', cd: 6000, range: 0, power: 16, radius: 2.2, text: 'Snurrar runt och träffar alla monster nära dig.' },
   raseri: { id: 'raseri', name: 'Bärsärkaraseri', icon: '🔥', kind: 'rage', cd: 24000, range: 0, power: 50, ms: 8000, text: 'Du slår hårdare, springer fortare och läker lite av varje hugg i 8 sekunder.' },
   // Magiker (ranged damage)
-  eldboll: { id: 'eldboll', name: 'Eldboll', icon: '☄️', kind: 'bolt', cd: AUTO_MS.magiker, range: 8, power: 22, text: 'Du kastar eldbollar av dig själv. Varje träff ger 1 Gnista.' },
-  runsmall: { id: 'runsmall', name: 'Runsmäll', icon: '💥', kind: 'spend', cd: 1000, range: 8, power: 34, radius: 2, text: 'En smäll av runkraft som blir större av Gnistor. Med 3 Gnistor träffar den alla nära!' },
+  eldboll: { id: 'eldboll', name: 'Eldboll', icon: '☄️', kind: 'bolt', cd: AUTO_MS.magiker, range: 8, power: 13, text: 'Du kastar eldbollar av dig själv. Varje träff ger 1 Gnista.' },
+  runsmall: { id: 'runsmall', name: 'Runsmäll', icon: '💥', kind: 'spend', cd: 1000, range: 8, power: 7, radius: 2, text: 'En smäll av runkraft som blir större av Gnistor. Med 3 Gnistor träffar den alla nära!' },
   isspjut: { id: 'isspjut', name: 'Isspjut', icon: '❄️', kind: 'lance', cd: 8000, range: 8, power: 14, ms: 3000, offGcd: true, text: 'Ett spjut av is som gör monstret långsamt i 3 sekunder. Avbryter bossens stora attacker!' },
   askregn: { id: 'askregn', name: 'Åskregn', icon: '⚡', kind: 'storm', cd: 9000, range: 8, power: 28, radius: 2.4, text: 'Blixtar slår ner på ett ställe och träffar alla där.' },
   blink: { id: 'blink', name: 'Blink', icon: '🌀', kind: 'blink', cd: 10000, range: 4, power: 0, offGcd: true, text: 'Hoppar några steg framåt. Bra för att komma undan.' },
@@ -182,7 +182,7 @@ export const COMBO_CAP = 3;
 export const ORB = { ms: 5_000, easyMs: 10_000, radius: 0.8 } as const;
 
 /** The Hirdmannen heals at a human-ish pace: his Läkerunan's cooldown is this many times the spell's (and he holds his Solstråle for 3 pips, runbot.ts). */
-export const COMPANION_HEAL_CD = 2;
+export const COMPANION_HEAL_CD = 2.2;
 
 /** A fallen player gets up at the last rest stone after this long (unless a healer is quicker). */
 export const DOWN_MS = 10_000;
@@ -2289,6 +2289,10 @@ export interface SagaRunLink {
   mark?: number;
   /** The gentle levels: the special pack monsters are in their harmless form (`ROLE.*.easy`). */
   easy?: boolean;
+  /** A boss's plain marks come this much more often (a multiplier on their `every`; left out, 1). */
+  markEvery?: number;
+  /** Medel and up: a wipe is every HUMAN hero down, even while the hired Hirdmannen stands. */
+  humansOnly?: boolean;
   /** Lätt: the boss also uses its Guldring, though `moves` holds only its first two attacks. */
   ring?: boolean;
 }

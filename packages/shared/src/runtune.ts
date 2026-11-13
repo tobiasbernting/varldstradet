@@ -37,8 +37,11 @@ const PAIR: [string, ClassId[]][] = [
   ['helare + magiker', ['helare', 'magiker']],
   ['krigare + magiker', ['krigare', 'magiker']],
 ];
-// try numbers without editing the table: --hp 1.6 --dmg 1.5 --warn 0.8 (this level only)
-for (const k of ['hp', 'dmg', 'warn', 'seeds'] as const) if (arg(k, '') !== '') RUN_LEVELS[level][k] = Number(arg(k, ''));
+// try numbers without editing the table: --hp 1.6 --dmg 1.5 --warn 0.8 --bossHp 2 --mark 0.4 (this level only)
+// the skill tests' bots: --nododge (plays its style but never leaves a mark), --slots 0 (only presses these buttons, e.g. 0 or 0,1)
+const noDodge = process.argv.includes('--nododge');
+const slots = arg('slots', '') === '' ? undefined : arg('slots', '').split(',').map(Number);
+for (const k of ['hp', 'dmg', 'warn', 'seeds', 'bossHp', 'mark', 'markEvery'] as const) if (arg(k, '') !== '') RUN_LEVELS[level][k] = Number(arg(k, ''));
 const only = arg('only', '');
 const PARTIES0 = which === 'solo' ? SOLO : which === 'duo' ? DUO : which === 'pair' ? PAIR : [...SOLO, ...DUO];
 const PARTIES = only === '' ? PARTIES0 : PARTIES0.filter((_, i) => String(i) === only);
@@ -50,12 +53,18 @@ for (const [label, classes] of PARTIES) {
   let spirits = 0;
   let fights = 0;
   let rests = 0;
+  let spiritRuns = 0;
+  const medals = [0, 0, 0];
   const mins: number[] = [];
   const others: string[] = [];
   for (let seed = from; seed < from + count; seed++) {
     const party = makeParty(classes, { style, seed, level: 3, ...(lane ? { lane } : {}) });
     // (the chapters before it are cleared, so it is the next one to run)
     for (const p of party.players) p.saga!.cleared = DUNGEON_IDS.slice(0, DUNGEON_IDS.indexOf(dungeon));
+    for (const mind of party.minds.values()) {
+      if (noDodge) mind.noDodge = true;
+      if (slots) mind.slots = slots;
+    }
     const r = playRun(party, { seed, level, dungeon }, limitMin * 60_000);
     if (r.outcome === 'win') {
       wins++;
@@ -65,6 +74,8 @@ for (const [label, classes] of PARTIES) {
     const ended = r.changes.find((c) => c.t === 'run' && c.ev === 'ended' && c.to === party.players[0]!.id);
     if (ended && ended.t === 'run' && ended.ev === 'ended') {
       spirits += ended.spiritUsed ?? 0;
+      if (ended.spiritUsed) spiritRuns++;
+      (ended.medals ?? []).forEach((n, i) => (medals[i]! += n));
       fights += (ended.path ?? []).filter((k) => k === 'flock').length;
       rests += (ended.path ?? []).filter((k) => k === 'rest').length;
     }
@@ -72,6 +83,6 @@ for (const [label, classes] of PARTIES) {
   }
   const avg = mins.reduce((a, b) => a + b, 0) / Math.max(1, mins.length);
   console.log(
-    `${label.padEnd(20)} wins ${wins}/${count}  wipe-ends ${wipes}  Sagoandan/run ${(spirits / count).toFixed(2)}  flocks ${(fights / count).toFixed(1)} vilor ${(rests / count).toFixed(1)}  min avg ${avg.toFixed(1)} (min ${Math.min(...mins).toFixed(1)}, max ${Math.max(...mins).toFixed(1)})${others.length ? `  not won: ${others.join(' ')}` : ''}`,
+    `${label.padEnd(20)} wins ${wins}/${count}  wipe-ends ${wipes}  Sagoandan/run ${(spirits / count).toFixed(2)}  (in ${spiritRuns} runs)  gold ${Math.round((100 * medals[2]!) / Math.max(1, medals[0]! + medals[1]! + medals[2]!))}% silver ${Math.round((100 * medals[1]!) / Math.max(1, medals[0]! + medals[1]! + medals[2]!))}%  flocks ${(fights / count).toFixed(1)} vilor ${(rests / count).toFixed(1)}  min avg ${avg.toFixed(1)} (min ${Math.min(...mins).toFixed(1)}, max ${Math.max(...mins).toFixed(1)})${others.length ? `  not won: ${others.join(' ')}` : ''}`,
   );
 }

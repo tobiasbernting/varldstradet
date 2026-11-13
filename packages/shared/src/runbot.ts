@@ -261,7 +261,7 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     const d = dist(where(target), p);
     if (cls === 'vaktare') {
       const near = fighting.filter((m) => dist(where(m), p) <= 5);
-      if (near.length >= 2 && go('utmana')) return true;
+      if (near.length >= (careful ? 1 : 2) && go('utmana')) return true;
       if (f.hp < f.max * 0.5) go('skoldmur');
       const taunted = fighting.filter((m) => m.tauntBy === pid && now < (m.tauntUntil ?? 0));
       if (f.pips >= 1 && (full || !careful || open(target) || taunted.length >= 2) && (d <= 2.2 || taunted.length > 0) && go(spend, target.id)) return true;
@@ -271,7 +271,7 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     if (cls === 'krigare') {
       if (go('raseri')) return true;
       const close = fighting.filter((m) => dist(where(m), p) <= 2.2);
-      if (close.length >= 2 && go('virvelvind')) return true;
+      if (close.length >= (careful ? 1 : 2) && go('virvelvind')) return true;
       const big = target.kind === 'boss' || target.kind === 'mini';
       if (f.pips >= 1 && d <= 2.2 && ready(spend) && (full || !careful || open(target) || dazed(target))) {
         // the combo: daze it with Stormsteg first, then the Jättehugg hits double (a boss cannot be dazed)
@@ -284,7 +284,7 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     // magiker
     if (careful && d < 2 && f.hp < f.max * 0.6 && go('blink')) return true;
     const clustered = fighting.filter((m) => dist(where(m), where(target)) <= 2.4);
-    if (clustered.length >= 2 && go('askregn', target.id)) return true;
+    if (clustered.length >= (careful ? 1 : 2) && go('askregn', target.id)) return true;
     if (f.pips >= 1 && ready(spend) && (full || !careful || open(target) || chilled(target))) {
       // the combo: Isspjut first, then the Runsmäll shatters the slowed monster
       if (careful && full && !save && target.kind !== 'ice' && !chilled(target) && ready('isspjut')) go('isspjut', target.id);

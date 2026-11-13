@@ -896,7 +896,8 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
     }
   }
   // pips: a landed auto-attack, and slots 2 and 3 when they land on someone
-  if (landed > 0 && (isAuto || spellId === cdef.spells[1] || spellId === cdef.spells[2])) f.pips = Math.min(PIP_MAX, f.pips + 1);
+  // (the hired Hirdmannen's auto-attacks give him none: his pips come from his slot 2 and 3 only, so he heals at a human-ish pace)
+  if (landed > 0 && ((isAuto && !p.bot) || spellId === cdef.spells[1] || spellId === cdef.spells[2])) f.pips = Math.min(PIP_MAX, f.pips + 1);
   // a path's shields: for the caster, and for the friends near
   if (mod.shield) giveShield(f, mod.shield, now);
   if (mod.partyShield)
@@ -1660,7 +1661,9 @@ function startCast(h: Here, m: SagaMob, a: { x: number; y: number; facing: strin
   const mv = boss.moves[i]!;
   // Lätt: the warning lasts longer (the zones, the cast and the snapshot all use this)
   const warn = Math.round(mv.warn * (h.inst.run?.warnMul ?? 1));
-  m.next![i] = now + mv.every + warn;
+  // (the level makes the plain marks come more often: they, not the boss's blows, are the danger)
+  const plain = mv.move === 'cleave' || mv.move === 'slam' || mv.move === 'rain' || mv.move === 'charge' || mv.move === 'line' || mv.move === 'pools';
+  m.next![i] = now + mv.every * (plain ? (h.inst.run?.markEvery ?? 1) : 1) + warn;
   const party = partyOf(h).filter((p) => upright(h, p));
   // the ice prison needs a friend to break it: never on someone alone
   if (!party.length || (mv.move === 'freeze' && party.length < 2)) return false;
@@ -2071,7 +2074,9 @@ export function tickSaga(area: WorldState, key: string, dtMs: number, ctx: SimCt
   }
   // everyone fell: a short pause, then up at the last rest stone, and the monsters go home. In a run that happens only with
   // a Sagoandan (or on Lätt, where a wipe never ends the run); otherwise runsim.ts ends the run when the pause is over.
-  if (party.length && party.every((p) => !upright(h, p))) {
+  // (Medel and up: the hired Hirdmannen cannot carry the run alone: every human down is a wipe)
+  const holders = inst.run?.humansOnly && party.some((p) => !p.bot) ? party.filter((p) => !p.bot) : party;
+  if (party.length && holders.every((p) => !upright(h, p))) {
     const link = inst.run;
     if (inst.wipeAt === undefined) {
       inst.wipeAt = now + WIPE_MS;
