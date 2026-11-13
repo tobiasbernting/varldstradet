@@ -15,10 +15,10 @@ describe('bot parties play whole runs', () => {
   // DESIGN.md section 5.4 with about a third on either side. Medel is pinned by the careful bot (a clumsy one is a child, and a child's
   // level is Lätt); the pair of a tank and a healer has no one to hurt anything (no follower), so it is the slow one
   const FAMILIES: [string, ClassId[], [number, number], [number, number]][] = [
-    ['en spelare + Hirdmannen', ['krigare'], [8, 16], [12, 23]],
-    ['två spelare', ['vaktare', 'helare'], [13, 24], [17, 31]],
+    ['en spelare + Hirdmannen', ['krigare'], [8, 16], [13, 26]],
+    ['två spelare', ['vaktare', 'helare'], [12, 23], [17, 33]],
     ['tre spelare', ['vaktare', 'helare', 'magiker'], [9, 17], [14, 27]],
-    ['fyra spelare', ['vaktare', 'helare', 'krigare', 'magiker'], [8, 15], [14, 26]],
+    ['fyra spelare', ['vaktare', 'helare', 'krigare', 'magiker'], [8, 15], [15, 29]],
   ];
   const rows: string[] = [];
   const SEEDS = [1, 2, 3];

@@ -101,8 +101,8 @@ export const RUN_LEVELS: Record<RunLevel, RunLevelDef> = {
   0: { id: 0, hp: 0.4, dmg: 0.3, warn: 1.8, mark: 0.08, bossHp: 1, markEvery: 1, far: null, humansOnly: false, seeds: 0.35, spirit: 5, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 0.6, rank: 0, affixes: 0 },
   1: { id: 1, hp: 0.6, dmg: 0.5, warn: 1.4, mark: 0.2, bossHp: 1, markEvery: 0.8, far: { every: 25_000, weight: 0.5 }, humansOnly: false, seeds: 0.5, spirit: 3, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 1, rank: 0, affixes: 0 },
   2: { id: 2, hp: 1, dmg: 0.6, warn: 1, mark: 0.5, bossHp: 2.3, markEvery: 0.35, far: { every: 10_000, weight: 1 }, humansOnly: true, seeds: 1, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1, rank: 0, affixes: 0 },
-  3: { id: 3, hp: 1.75, dmg: 1.15, warn: 0.8, mark: 0.6, bossHp: 2.3, markEvery: 0.35, far: { every: 10_000, weight: 1 }, humansOnly: true, seeds: 1.5, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1.5, rank: 0.5, affixes: 1 },
-  4: { id: 4, hp: 1.9, dmg: 1.15, warn: 0.65, mark: 0.7, bossHp: 2.3, markEvery: 0.35, far: { every: 10_000, weight: 1 }, humansOnly: true, seeds: 2, spirit: 0, spiritPerStop: 0, spiritMax: 0, soft: false, bossMoves: 0, rare: 2, rank: 1, affixes: 2 },
+  3: { id: 3, hp: 1.6, dmg: 1.1, warn: 0.8, mark: 0.6, bossHp: 2.3, markEvery: 0.35, far: { every: 10_000, weight: 1 }, humansOnly: true, seeds: 1.5, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1.5, rank: 0.5, affixes: 1 },
+  4: { id: 4, hp: 1.7, dmg: 1.1, warn: 0.65, mark: 0.7, bossHp: 2.3, markEvery: 0.35, far: { every: 10_000, weight: 1 }, humansOnly: true, seeds: 2, spirit: 0, spiritPerStop: 0, spiritMax: 0, soft: false, bossMoves: 0, rare: 2, rank: 1, affixes: 2 },
 };
 /** The boss attacks the easiest levels allow: its first two, whatever a first run's plan has locked. */
 export const LATT = { bossMoves: 2 } as const;

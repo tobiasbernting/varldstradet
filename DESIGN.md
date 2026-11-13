@@ -336,25 +336,27 @@ wardrobe per class. A class is an **auto-attack**, four buttons (5 is a healing 
 - **Auto-attack.** In a fight every hero swings their everyday attack by themselves every 1.2 s at their target: the party's
   Märke (5.8), else the monster they chose (a tap, Tab: the `target` intent), else the nearest fighting monster in reach and in
   sight. It never wakes a waiting pack; the first blow is a deliberate press (the big "Slå" button, E, space, a tap on the monster)
-  or walking into the pack's sight. It does about 60 % of the damage the old button did; the rest comes from the spender.
-- **Pips** (0 to 3; Glöd, Gnistor, Sköldkraft, Ljus). +1 for every auto-attack hit and +1 when button 2 or 3 lands on someone;
-  more than three is wasted; they fade 6 s after the stop's fight has ended.
-- **The spender** is button 1 (and "Slå"). It needs a pip, uses them all and is 1, 2.2 and 4 times as strong at one, two and three
-  pips; at three it also gets the class's bonus, and at the right moment its combo. Holding for three and setting the combo up
-  is the skill of every class.
+  or walking into the pack's sight. It does about 40 % of the damage the old button did; the rest comes from the spender.
+- **Pips** (0 to 3; Glöd, Gnistor, Sköldkraft, Ljus). +1 for every second auto-attack hit (`PIP_AUTO_EVERY`) and +1 every time
+  button 2 or 3 lands on someone, so pressing those matters; more than three is wasted; they fade 6 s after the stop's fight has ended.
+- **The spender** is button 1 (and "Slå"), the big blow. It needs a pip, uses them all and is 1, 2.5 and 6 times as strong at one,
+  two and three pips, so three pips at once are worth twice three single ones; at three it also gets the class's bonus, and at the
+  right moment its combo. With three pips it is worth 5 to 8 of the hero's own auto-attacks before any combo (a test holds it at 4
+  or more). Holding for three and setting the combo up is the skill of every class.
 - **The shared pause** between two spells is 1 s (`GCD_MS`). The reactions are outside it (they neither wait for it nor start it):
   Sköldslag, Stormsteg, Isspjut, Blink, Sköldmur, and potions.
 
 | Class | Role | Health | Auto-attack | 1 Spender (at 1 pip) | Bonus at 3 pips | Combo | 2 | 3 | 4 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Väktare | tank | 200 | Svärdshugg 13 | Dunderslag 6, high threat | a shield of 15 % of max health for 4 s | hits every monster under his own Utmana! | Utmana! (8 s: every monster within 5 tiles must fight you for 4 s) | Sköldslag (6 s: stuns 1.5 s, interrupts) | Sköldmur (20 s: much less damage for 6 s) |
-| Helare | healer | 120 | Ljuspil 8 | Solstråle heals a friend 14 | heals everyone within 5 tiles | a friend in her own Läkekrets gets 1.5 times | Läkerunan (2.5 s: heals a friend 32) | Läkekrets (12 s: heals everyone near for 6 s) | Väck upp! (15 s: gets a fallen friend up) |
-| Krigare | melee damage | 150 | Yxhugg 16 | Jättehugg 6 | also hits everything within 2 tiles in a 120° arc in front | a dazed ("yr") monster takes double | Stormsteg (9 s: charges, stuns 1 s, interrupts) | Virvelvind (6 s: hits everything near) | Bärsärkaraseri (24 s: harder, faster, 10 % life steal for 8 s) |
-| Magiker | ranged damage | 110 | Eldboll 13 | Runsmäll 7 | splashes 2 tiles for half | a slowed or frozen monster shatters: 1.5 times, and the splash at any pips | Isspjut (8 s: slows 3 s, interrupts) | Åskregn (9 s: area) | Blink (10 s: jump a few steps) |
+| Väktare | tank | 200 | Svärdshugg 8 | Dunderslag 10, high threat | a shield of 15 % of max health for 4 s | hits every monster under his own Utmana! | Utmana! (8 s: every monster within 5 tiles must fight you for 4 s) | Sköldslag (6 s: stuns 1.5 s, interrupts) | Sköldmur (20 s: much less damage for 6 s) |
+| Helare | healer | 120 | Ljuspil 6 | Solstråle heals a friend 11 | heals everyone within 5 tiles | a friend in her own Läkekrets gets 1.5 times | Läkerunan (2.5 s: heals a friend 20) | Läkekrets (12 s: heals everyone near for 6 s) | Väck upp! (15 s: gets a fallen friend up) |
+| Krigare | melee damage | 150 | Yxhugg 10 | Jättehugg 9 | also hits everything within 2 tiles in a 120° arc in front | a dazed ("yr") monster takes double | Stormsteg (9 s: charges, stuns 1 s, interrupts) | Virvelvind (6 s: hits everything near) | Bärsärkaraseri (24 s: harder, faster, 10 % life steal for 8 s) |
+| Magiker | ranged damage | 110 | Eldboll 8 | Runsmäll 11 | splashes 2 tiles for half | a slowed or frozen monster shatters: 1.5 times, and the splash at any pips | Isspjut (8 s: slows 3 s, interrupts) | Åskregn (9 s: area) | Blink (10 s: jump a few steps) |
 
-The spender's base numbers are small on purpose: pips come every 1.2 s, and the whole of a careful hero's damage is meant to be
-about 1.15 to 1.2 times what it was before the redesign (measured with `scripts/dps.ts`: Krigare 36.7 a second on one dummy
-against 30.1, Magiker 29.4 against 25.0, Väktare 26.5 against 22.6).
+The whole of a careful hero's damage is meant to be 1.1 to 1.2 times what it was before the redesign, and a masher's (one pip at a
+time, no combo) at most 85 % of the careful hero's. Measured with `scripts/dps.ts` on one dummy, a second: Krigare 34.8 (30.1 before;
+masher 28.4, 82 %), Magiker 28.6 (25.0; masher 24.3, 85 %), Väktare 26.0 (22.6; masher 21.1, 81 %). In a pack the lead is larger
+(three dummies: Krigare 65 against the masher's 38).
 
 A fighter who falls lies down (`DOWN_MS`, 10 s) and gets up at the last rest stone, sooner with a Helare's Väck upp!. A hero
 standing out of a fight regains health on its own after 5 s (`CALM_MS`), and much faster by a rest stone.
@@ -393,7 +395,7 @@ the hero level of the first human (`hireCompanion`, `companionClass`):
 | 2 | a Helare if the pair has none, else a Väktare if it has none, else nobody |
 | 3 | nobody |
 
-**His healing is paced like a person's** (`COMPANION_HEAL_CD` 2.2: a Läkerunan every 5.5 s; his auto-attacks give him no pips, so a
+**His healing is paced like a person's** (`COMPANION_HEAL_CD` 1.6: a Läkerunan every 4 s; his auto-attacks give him no pips, so a
 three-pip Solstråle comes with every third Läkerunan): about 10 to 12 health a second on a hurt hero, enough for a boss's ordinary
 blows on a hero who dodges and not for standing in marks. A hero Helare played carefully heals about 20 to 25 a second. Both are
 pinned in `fight.test.ts`. He follows the party's Märke and always runs into a Guldring.
@@ -415,8 +417,9 @@ around the hero from level 10 and a rainbow glow at 20 (`auraOf`).
 ### 4.5 The Sagoandan and wipes
 
 When every fighter is down (after a 4 s pause, `WIPE_MS`), a **Sagoandan** ("a spirit") can save the run. From Medel up the hired
-Hirdmannen cannot carry the run alone: every HUMAN hero down is a wipe though he still stands (`RUN_LEVELS[l].humansOnly`); on
-Mycket lätt and Lätt he fights on and wakes the child. The Sagoandan: everyone is up at the
+Hirdmannen cannot carry the run alone: every HUMAN hero down is a wipe though he still stands (`RUN_LEVELS[l].humansOnly`), nobody is
+woken out of a wipe, and the players are told (`RUN_T.wipeRule` for the level's card and the journal, `RUN_T.wipeHird` added to the
+wipe banner's line); on Mycket lätt and Lätt he fights on and wakes the child. The Sagoandan: everyone is up at the
 last rest stone with 50 % health (`SAGOANDAN_HP`), the stop's fighting monsters reset, and the count goes down. The star on the HUD
 shows how many are left. After the boss has fallen no spirit is used. The levels differ (5.7): on Mycket lätt and Lätt a wipe never
 ends the run (with none left everyone just gets up, at full health, free); on Medel and Svår the wipe after the last spirit ends
@@ -459,8 +462,17 @@ the move's weight (`BossAbility.dmg`, 0.8 to 1.2; a pull about half, an ice pris
 level's damage and the särdrag. An uninterrupted nova is 1.7 marks (`MARK_NOVA`), burning ground 0.35 of one every second
 (`MARK_POOL`), a Skytt's shot 0.85 (`MARK_SHOT`). Runor and the Murvakt aura that make a hero take less count, together at most 30 %
 (`MARK_TAKEN_CAP`); Sköldmur and shields work as on any blow. One mark from full health never downs anyone. The `hit` change is
-tagged `mark` and the stop counts them (`inst.markHits`). From Medel a boss's plain marks come about three times as often
-(`markEvery`) and bosses have 2.3 times the health (`bossHp`), so a boss fight is decided by the marks.
+tagged `mark` and the stop counts them (`inst.markHits`). From Medel a boss's plain marks (cleave, slam, rain, charge, line; not
+burning ground, which lingers) come about three times as often (`markEvery`) and bosses have 2.3 times the health (`bossHp`), so a
+boss fight is decided by the marks. Every boss and mid-boss also has **ranged pressure** (`RUN_LEVELS[l].far`, `FAR`): every 10 s a
+circle of radius 1.6 (a mark of weight 1, the level's warning on 1.5 s) lands under each hero who stands more than 4 tiles from
+it, whatever the boss is doing, so nobody ignores the marks by standing far off (Lätt: every 25 s and half a small mark; never on
+Mycket lätt). It is called by the boss's own rain where it has one, else "Fjärrslag" (`farName`).
+
+**Per dungeon** (`DUNGEON_TUNE`). A hero is as strong in every chapter, the later dungeons' monsters hit harder and their bosses
+have more health, and a fall costs a Sagoande, so a run multiplies the ordinary blows and the health of the boss and mid-boss by
+dungeon: Draugkryptan 1 / 1, Frostjättens borg 0.9 / 1, Surts smedja 0.8 / 0.85, Helheim 0.85 / 0.9, Svartalfheims gruvor 0.85 / 0.85,
+Havsormens tempel 0.9 / 0.8, Alvernas lund 0.7 / 0.75, Fenrisklyftan 0.6 / 0.7, Bifrost 0.8 / 0.65. Burning ground has weight 0.5.
 
 ### 5.2 Pack sizes
 
@@ -472,7 +484,7 @@ the size or the slots; the special members (5.8) are chosen last, with dice of t
 ### 5.3 The gentle levels
 
 Mycket lätt and Lätt (`isEasy`) have fewer and smaller packs (2.3), no Stark vakt, only the first two attacks of a boss, small
-marks (8 % and 15 %) that come no more often than written, no special monsters (Mycket lätt) or one harmless one a stop (Lätt), a
+marks (8 % and 20 %; Lätt's come a little more often than written, ×0.8), no special monsters (Mycket lätt) or one harmless one a stop (Lätt), a
 Hirdmannen who carries on when the child has fallen, a boss
 warning time 1.8 or 1.4 times as long, 60 s to choose instead of 30, 1.5 times the hacksilver, and a wipe that never ends the run
 (4.5). They pay less sagafrön (×0.35 and ×0.5), so they are a place to learn and not a way to farm; the first clear still counts for
@@ -488,27 +500,44 @@ the averages at the time of writing.
 
 | Party | Level | Bot | Target (test) | Measured |
 | --- | --- | --- | --- | --- |
-| One hero alone (any class) or Krigare + Magiker | Mycket lätt | `kid7` | every run won (6 seeds), none ends on a wipe, average win 14 to 40 min (`run.latt.test.ts`) | 19 to 23 min |
-| same | Lätt | clumsy | same, 14 to 34 min | 19 to 22 min |
-| One hero + Hirdmannen (any class) or Krigare + Magiker | Medel | careful | all 6 won, average win 10 to 20 min, the lone Helare 15 to 29 (`run.solo.test.ts`) | Väktare 15.3, Helare 22.6, Krigare 12.0, Magiker 14.5, pair 12.9 |
-| Krigare + Hirdmannen / Väktare + Helare / three / four heroes | Medel | careful | all 3 won; 8 to 16 / 13 to 24 / 9 to 17 / 8 to 15 min (`run.bots.test.ts`) | 11.4 / 18.0 / 12.8 / 10.9 |
-| same four parties | Lätt | clumsy | all 3 won; 12 to 23 / 17 to 31 / 14 to 27 / 14 to 26 min | 17.4 / 23.8 / 20.2 / 19.5 |
-| Krigare + Magiker | Svår | careful | 8 to 12 of 16 won (`run.hard.test.ts`) | 11 |
-| Krigare + Magiker | Extrem | careful | 3 to 6 of 16 won | 3 |
+| One hero alone (any class) or Krigare + Magiker | Mycket lätt | `kid7` | every run won (6 seeds), none ends on a wipe, average win 14 to 40 min (`run.latt.test.ts`) | 20 to 25 min |
+| same | Lätt | clumsy | same, 14 to 34 min | 19 to 23 min |
+| One hero + Hirdmannen (any class) or Krigare + Magiker | Medel | careful | all 6 won, average win 10 to 20 min, the lone Helare 15 to 29 (`run.solo.test.ts`) | Väktare 13.6, Helare 19.8, Krigare 12.6, Magiker 16.2, pair 12.7 |
+| Krigare + Hirdmannen / Väktare + Helare / three / four heroes | Medel | careful | all 3 won; 8 to 16 / 12 to 23 / 9 to 17 / 8 to 15 min (`run.bots.test.ts`) | 12.0 / 16.7 / 12.2 / 10.8 |
+| same four parties | Lätt | clumsy | all 3 won; 13 to 26 / 17 to 33 / 14 to 27 / 15 to 29 min | 19.5 / 25.3 / 20.6 / 22.0 |
+| Krigare + Magiker | Svår | careful | 8 to 12 of 16 won (`run.hard.test.ts`) | HARD3 |
+| Krigare + Magiker | Extrem | careful | 3 to 6 of 16 won | HARD4 |
 | Any chapter, one Krigare | Medel | careful | no stall: every dungeon ends in a win or a wipe inside 60 min | passes |
 
 **The skill gap** (`run.skill.test.ts`: Medel, one Krigare or one Magiker with the Hirdmannen, six seeds, everyone on the safe lane):
 
 | Bot | Target | Krigare | Magiker |
 | --- | --- | --- | --- |
-| careful | wins all in 10 to 20 min, gold Runmärke on at least 60 % of its fight stops | 6/6, 12.0 min, 64 % | 6/6, 14.5 min, 73 % |
-| masher | loses its Sagoande in at least half its runs, gold on at most 20 %, and wins at most half or is 25 % slower | 1/6, Sagoande in 5, 6 % | 1/6, Sagoande in 6, 15 % |
-| careful, never leaves a mark (`noDodge`) | wins at most 2 of 6 | 0/6 | **5/6: not reached** |
-| careful, button 1 only (`slots: [0]`) | wins at most 1 of 6 | **6/6: not reached** | **5/6: not reached** |
+| careful | wins all in 10 to 20 min, gold Runmärke on at least 60 % of its fight stops | 6/6, 12.6 min, 62 % | 6/6, 16.2 min, 69 % |
+| adult (careful, but no machine: 5.6) | wins at least 5 of 6 in 12 to 25 min, a Sagoande in at most half its runs | 6/6, 13.0 min, none | 6/6, 18.1 min, none |
+| masher | loses its Sagoande in at least half its runs, gold on at most 20 %, and wins at most half or is 25 % slower | 0/6, 11 % | 0/6, 14 % |
+| careful, never leaves a mark (`noDodge`) | wins at most 2 of 6 | 0/6 | 0/6 |
+| careful, button 1 only (`slots: [0]`) | at least 35 % slower than careful, gold on at most 30 % | 6/6, 21.5 min (+71 %), 27 % | 6/6, 26.4 min (+63 %), 16 % |
 | masher on Lätt | wins at least 5 of 6 | 6/6 | 6/6 |
 | seven-year-old masher on Mycket lätt (`kid`) | wins every run | 6/6 | 6/6 |
 
-The three that are not reached are kept in the test as `it.fails` with the reason (section 12).
+The clumsy bot (a nine-year-old's proxy) wins 0 of 6 on Medel with either hero, and everything on Lätt: Medel is for people who
+leave marks; the step from Lätt is large on purpose and not pinned.
+
+**Every dungeon** (one Krigare with the Hirdmannen, Medel, three seeds, the safe lane; `scripts/dungeons.sh`; not pinned by a test
+beyond the no-stall one): the careful bot wins 3 of 3 in every dungeon, the adult at least 2 of 3, the masher none.
+
+| Dungeon | careful | adult | masher |
+| --- | --- | --- | --- |
+| Draugkryptan | 3/3, 12.0 min | 3/3, 12.6 | 0/3 |
+| Frostjättens borg | 3/3, 13.9 | 2/3, 14.4 | 0/3 |
+| Surts smedja | 3/3, 15.3 | 3/3, 16.8 | 0/3 |
+| Helheim | 3/3, 14.3 | 3/3, 15.7 | 0/3 |
+| Svartalfheims gruvor | 3/3, 18.2 | 3/3, 20.2 | 0/3 |
+| Havsormens tempel | 3/3, 16.8 | 3/3, 16.3 | 0/3 |
+| Alvernas lund | 3/3, 19.8 | 2/3, 20.9 | 0/3 |
+| Fenrisklyftan | 3/3, 21.2 | 2/3, 24.0 | 0/3 |
+| Bifrost | 3/3, 17.1 | 2/3, 17.8 | 0/3 |
 
 The hard-level bands are for a party without a tank; parties with a Väktare are not pinned by a test. A test also asserts that a run is
 different each time (three seeds give three routes, three sets of stops and three card offers). The soft 30 minutes (2.6) are the
@@ -537,8 +566,12 @@ and played with `playRun`. Styles (`BotStyle`):
 - `masher`: every button that is ready, in the order 4, 3, 2, 1, at nothing in particular, without pauses; it never leaves a mark, never
   chooses a monster, never backs away, ignores the Guldring and the Kraftklot (`lane` chooses its lane; the skill test gives it the safe one).
 
-`BotMind` has three switches for the skill test: `noDodge` (never leaves a mark), `slots` (only these buttons), `kid` (a masher with a
-seven-year-old's pauses and misses). The same brain runs the Hirdmannen (careful).
+- `adult`: a grown-up who plays well but is no machine: the careful bot with 350 ms before it starts to leave a mark, to interrupt or to
+  walk into a Guldring, one press in ten missed (the next comes a second late), and no kill order (it turns to a Besvärjare when its
+  cast starts) (`ADULT`).
+
+`BotMind` has three switches for the skill test: `noDodge` (never leaves a mark, and does not back away from what is close, which is
+how a mage leaves most marks), `slots` (only these buttons), `kid` (a masher with a seven-year-old's pauses and misses). The same brain runs the Hirdmannen (careful).
 
 ### 5.7 The five levels
 
@@ -548,14 +581,15 @@ Chosen at the arch and fixed for the run (`RUN_LEVELS` in `run.ts`; names, blurb
 | Level | Hp | Blows | Mark | Marks come | Boss hp | Boss warning | Special monsters | Sagoandar (start, +per stop, max) | Wipe | Sagafrön | Rare finds / rarer gear | Särdrag |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 0 Mycket lätt | ×0.4 | ×0.3 | 8 % | as written | ×1 | ×1.8 | none | 5, +1, 5 | never ends the run | ×0.35 | ×0.6 / none | 0 |
-| 1 Lätt | ×0.6 | ×0.5 | 15 % | as written | ×1 | ×1.4 | one a stop, harmless | 3, +1, 5 | never ends the run | ×0.5 | ×1 / none | 0 |
+| 1 Lätt | ×0.6 | ×0.5 | 20 % | ×0.8 the wait | ×1 | ×1.4 | one a stop, harmless | 3, +1, 5 | never ends the run | ×0.5 | ×1 / none | 0 |
 | 2 Medel | ×1 | ×0.6 | 50 % | ×0.35 the wait | ×2.3 | ×1 | one a pack | 1 | every human down; ends the run after the one | ×1 | ×1 / none | 0 |
-| 3 Svår | ×1.75 | ×1.15 | 60 % | ×0.35 | ×2.3 | ×0.8 | two a pack | 1 | as Medel | ×1.5 | ×1.5 / +0.5 weight per rarity step | 1 |
-| 4 Extrem | ×1.9 | ×1.15 | 70 % | ×0.35 | ×2.3 | ×0.65 | two a pack | none | the first wipe ends it | ×2 | ×2 / +1.0 weight per rarity step | 2 |
+| 3 Svår | ×1.6 | ×1.1 | 60 % | ×0.35 | ×2.3 | ×0.8 | two a pack | 1 | as Medel | ×1.5 | ×1.5 / +0.5 weight per rarity step | 1 |
+| 4 Extrem | ×1.7 | ×1.1 | 70 % | ×0.35 | ×2.3 | ×0.65 | two a pack | none | the first wipe ends it | ×2 | ×2 / +1.0 weight per rarity step | 2 |
 
-"Hp" multiplies a monster's, a boss's and what a boss calls in; "blows" the ordinary attacks (never the marks); "mark" is the
+Ranged pressure (5.1): never on Mycket lätt, every 25 s at half weight on Lätt, every 10 s from Medel. "Hp" multiplies a monster's, a
+boss's and what a boss calls in; "blows" the ordinary attacks (never the marks; times the dungeon's own factor, 5.1); "mark" is the
 fraction of a hero's max health a mark of weight 1 takes (5.1); "marks come" multiplies the time between two uses of a boss's
-plain marks (cleave, slam, rain, charge, line, pools); "boss hp" is on top of "hp" for bosses and mid-bosses. "Rare finds"
+plain marks (cleave, slam, rain, charge, line); "boss hp" is on top of "hp" for bosses and mid-bosses. "Rare finds"
 multiplies the chance of a chest's rare items (including pets); "rarer gear" adds weight to a chest's better pieces. Nothing
 anybody owns is ever lost on any level. A parent can cap the highest level per character (section 10). Svår and Extrem also
 unlock the colourway and title of the dungeon (7.3), and pets help less there (7.4).
@@ -741,7 +775,7 @@ many runs), the share of gold and silver Runmärken, the Flocks and Vilosten the
 
 ```
 node --experimental-transform-types packages/shared/src/runtune.ts --level 2 --style careful --seeds 20 [--from 1]
-     [--style clumsy|careful|kid7|masher] [--dungeon draug] [--parties solo|duo|pair|fam|all] [--only 2] [--lane safe|random] [--limit 60]
+     [--style clumsy|careful|adult|kid7|masher] [--dungeon draug] [--parties solo|duo|pair|fam|all] [--only 2] [--lane safe|random] [--limit 60]
      [--nododge] [--slots 0] [--kid] [--pars] [--hp 1 --dmg 0.6 --warn 1 --mark 0.5 --markEvery 0.35 --bossHp 2.3]
 ```
 
@@ -749,7 +783,7 @@ node --experimental-transform-types packages/shared/src/runtune.ts --level 2 --s
 source of `STOP_PAR`); the last group tries a level's numbers without editing the table. Three more aids are in
 `packages/shared/scripts`: `dps.ts` (what each bot style does per second to a training dummy, and what the Hirdmannen and a hero
 Helare heal), `diag.ts` (one run, per stop: marks, blows, healing, falls, the medal) and `boss.ts` (one boss fight, every cast and
-mark with the time and the hero's health); `skill.sh` prints the skill rows of 5.4.
+mark with the time and the hero's health); `skill.sh` prints the skill rows of 5.4 and `dungeons.sh` the table of every dungeon.
 
 The loop for a change to a number (a spell, `WING_HP`, the pack tables, a level's multipliers, a runa): `dps.ts` if it is a spell or a
 heal; `runtune` at the levels it touches with `careful` (Medel and up) and `clumsy` and `kid7` (Lätt and Mycket lätt); `skill.sh`; check
@@ -897,18 +931,14 @@ Code: `access.ts` (rules and state), `http.ts` (routes, cookies, the WebSocket u
 - **One run at a time per server.** A second party waits (`RUN_T.already`). Fine for one family; a household with two groups needs more.
 - **Four särdrag.** More would need new ground effects in the fight sim (a periodic circle under each player, orbs to pop, a slow that
   stacks, a puddle where monsters fall).
-- **The skill gap has three holes** (`run.skill.test.ts`, kept as `it.fails`). (1) A bot that only presses button 1 still wins on Medel
-  (Krigare 6 of 6 in 18.5 min, Magiker 5 of 6 in 21.8): it dodges everything, and nothing in a fight punishes being slow (no enrage, by
-  design). A rule that would close it: a boss's marks come faster the longer the fight lasts, or a Besvärjare's heal grows with each one
-  completed. (2) A ranged hero who never leaves a mark on purpose still wins (Magiker 5 of 6): it backs away from what is close and so
-  out of most of Draugkryptan's marks, which are centred on the boss; marks aimed at the furthest hero would close it. (3) Holding for
-  three pips is worth little by itself: `SPEND_MUL` 1 / 2.2 / 4 is 1, 1.1 and 1.33 a pip, so on one dummy a masher does 92 to 99 % of a
-  careful hero's damage; the careful hero's lead is in packs (the three-pip bonus) and in not being hit. A steeper curve (say 1 / 2.5 / 6)
-  would make the hold itself matter.
-- **The spender is a small blow.** For the damage targets of 4.1 its base is 6 or 7, so a three-pip Jättehugg is about one and a half
-  auto-attacks (three with the combo). If it should feel bigger, pips must come slower (for example one for every second auto-attack).
-- **Every human down is a wipe from Medel** (4.5). This was needed for marks to cost anything with a Hirdmannen who dodges perfectly and
-  wakes the hero; it also means his Väck upp! is only ever used in parties of two or more humans there.
+- **The skill bots are bots.** The `noDodge` bot also does not back away (a mage that backs away leaves most marks without meaning
+  to), and the button-1-only bot still dodges everything, so it wins slowly (5.4); nothing in a fight punishes being slow (no enrage,
+  by design).
+- **The clumsy bot cannot win Medel** (0 of 6), while it wins everything on Lätt. There is no level between them.
+- **Every human down is a wipe from Medel** (4.5), and nobody is woken out of it. This was needed for marks to cost anything with a
+  Hirdmannen who dodges perfectly; his Väck upp! is only ever used there while another human still stands.
+- **Only Draugkryptan is pinned.** The other dungeons are held by `DUNGEON_TUNE` and three seeds of one Krigare (5.4); no other class,
+  party or level has been run through them.
 - **Pack roles.** The art for role gear exists (`packages/art/src/rolegear.ts`). The snapshot does not say whom a monster chases, so the
   client draws no line to show it. There is no patrol.
 - **Balance is only bots.** Nobody has timed a real 7-year-old; the bands in 5.4 are proxies. Only Draugkryptan is tuned and pinned; the other eight dungeons are only run

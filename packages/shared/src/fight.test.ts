@@ -507,8 +507,8 @@ function bossCast(l: Lab, species: string, i: number) {
 }
 
 describe('marks: a telegraphed hit is a fraction of the victim’s max health', () => {
-  it('the levels: 8, 15, 50, 60 and 70 %', () => {
-    expect([0, 1, 2, 3, 4].map((lv) => RUN_LEVELS[lv as RunLevel].mark)).toEqual([0.08, 0.15, 0.5, 0.6, 0.7]);
+  it('the levels: 8, 20, 50, 60 and 70 %', () => {
+    expect([0, 1, 2, 3, 4].map((lv) => RUN_LEVELS[lv as RunLevel].mark)).toEqual([0.08, 0.2, 0.5, 0.6, 0.7]);
     expect([MARK_NOVA, MARK_POOL, MARK_SHOT, MARK_TAKEN_CAP]).toEqual([1.7, 0.35, 0.85, 0.3]);
   });
 
@@ -760,7 +760,7 @@ describe('special pack monsters', () => {
     // Lätt: the warning is 1.4 times as long and the shot a small one
     const easy = shot(false, 1);
     expect(easy.zone.at - easy.archer.cast!.start).toBe(Math.round(ROLE.archer.warn * 1.4));
-    expect(easy.zone.dmg).toBeCloseTo(0.15 * MARK_SHOT);
+    expect(easy.zone.dmg).toBeCloseTo(RUN_LEVELS[1].mark * MARK_SHOT);
   });
 
   it('Sköldbärare: packmates within 3 tiles take half (not itself, not when it is dazed, far away or dead); a quarter on Lätt', () => {
