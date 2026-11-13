@@ -152,6 +152,7 @@ export interface RunState {
   powers: Record<string, DungeonId>;
   horn: boolean;
   dishes: Record<string, string>;
+  forceDish?: string;
   /** Skogen rör sig: the waves so far, when the next comes (run time), and the monsters of the wave now. */
   ambush?: { wave: number; count: number; nextAt: number; mobs: number[] };
   metEvents: string[];
@@ -524,6 +525,8 @@ export interface StartOptions {
   level?: RunLevel;
   /** The dungeon (chapter) to run: the one the starter has cleared or the next one; left out, the next one (DESIGN.md section 2). */
   dungeon?: DungeonId;
+  /** Tuning and tests only: every hero eats this dish, whatever the run's three are (never set by a message). */
+  dish?: string;
 }
 
 /** Which dungeons a player may run: the ones they have cleared and the next one in the saga's order. */
@@ -606,7 +609,7 @@ function bring(farm: WorldState, run: RunState, p: PlayerState, out: Change[]): 
   const e = farmEffect(farm, p);
   // Gillet: the dish the hero picked at the arch out of the run's three (none picked, or one that is not served: the first)
   const offer = dishOffer(run.seed);
-  const dish = GILLET.on ? dishDef(offer.includes(p.runPrefs?.dish ?? '') ? p.runPrefs!.dish : offer[0]) : undefined;
+  const dish = GILLET.on ? dishDef(run.forceDish ?? (offer.includes(p.runPrefs?.dish ?? '') ? p.runPrefs!.dish : offer[0])) : undefined;
   if (dish) {
     run.dishes[p.id] = dish.id;
     addEffect(e, dish.effect);
@@ -685,6 +688,7 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
     powers: {},
     horn: false,
     dishes: {},
+    ...(opts.dish ? { forceDish: opts.dish } : {}),
     blessed: {},
     runor: [],
     hold: {},
@@ -1621,6 +1625,9 @@ function tickAmbush(farm: WorldState, run: RunState, area: WorldState, inst: Sag
     out.push(stateChange(farm, run), ...startRoute(farm, run));
     return out;
   }
+  // (after a wipe the wave has gone back to the edge and waits: it comes again as soon as a hero is on their feet)
+  const up = humans(farm, run).find((q) => q.area === run.key && inst.fighters[q.id]?.down === undefined);
+  if (up && !inst.wipeAt) for (const id of amb.mobs) if (inst.mobs[id]?.state === 'idle') wakeMob(farm, run.key, id, up.id, ctx.now, out);
   if (amb.wave >= amb.count || (alive && run.elapsed < amb.nextAt)) return out;
   // the next wave: three or four of the dungeon's monsters (two on Mycket lätt), one of the big ones in the last, a special or a starred one from the second
   amb.wave++;

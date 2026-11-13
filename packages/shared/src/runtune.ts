@@ -4,7 +4,7 @@
 // One row per party: wins, runs that ended on a wipe, Sagoandans used, minutes until the boss falls, and what the route held on
 // average (fights, Vilosten). Not part of the game.
 import { T } from './sv.ts';
-import { DUNGEON_IDS, type ClassId, type DungeonId } from './saga.ts';
+import { DUNGEONS, DUNGEON_IDS, type ClassId, type DungeonId } from './saga.ts';
 import { RUN_LEVELS, type RunLevel } from './run.ts';
 import type { BotStyle } from './runbot.ts';
 import { makeParty, playRun } from './runplay.ts';
@@ -68,12 +68,17 @@ for (const [label, classes] of PARTIES) {
     if (process.argv.includes('--where')) (globalThis as { where?: string[] }).where = others;
     // (the chapters before it are cleared, so it is the next one to run)
     for (const p of party.players) p.saga!.cleared = DUNGEON_IDS.slice(0, DUNGEON_IDS.indexOf(dungeon));
+    // --power draug: every hero has that boss's trophy and brings its power; --dish kottgryta: every hero eats that dish
+    if (arg('power', '')) for (const p of party.players) {
+      p.trophies = { [DUNGEONS[arg('power', '') as DungeonId].boss]: 2 };
+      p.runPrefs = { ...p.runPrefs, power: arg('power', '') };
+    }
     for (const mind of party.minds.values()) {
       if (noDodge) mind.noDodge = true;
       if (slots) mind.slots = slots;
       if (process.argv.includes('--kid')) mind.kid = true;
     }
-    const r = playRun(party, { seed, level, dungeon }, limitMin * 60_000);
+    const r = playRun(party, { seed, level, dungeon, ...(arg('dish', '') ? { dish: arg('dish', '') } : {}) }, limitMin * 60_000);
     if (r.outcome === 'win') {
       wins++;
       mins.push(r.winMs! / 60_000);

@@ -189,6 +189,11 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
   }
   // 1. step out of the marks on the floor (a boss's, a Skytt's line: a person sees them)
   // Perfekt block: a careful Väktare whose Sköldmur is ready stays in a boss's sweep and raises it just before the sweep lands
+  if (mind.style === 'careful' && cls === 'vaktare' && f.parryAt !== undefined && now - f.parryAt <= 600) {
+    // (the shield is up for the sweep: stand)
+    p.moving = false;
+    return out;
+  }
   if (mind.style === 'careful' && !mind.noDodge && cls === 'vaktare' && now >= (f.cd.skoldmur ?? 0)) {
     const sweep = inst.zones.find((z) => z.shape === 'cone' && inZone(z, p) && now < z.at);
     if (sweep) {

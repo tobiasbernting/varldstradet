@@ -54,7 +54,8 @@ import {
   type RunLevel,
   type SagaMob,
 } from './index.ts';
-import { makeParty } from './runplay.ts';
+import { makeParty, step } from './runplay.ts';
+import { botStep, newMind, enterStop } from './index.ts';
 
 const NEVER = Number.MAX_SAFE_INTEGER;
 
@@ -599,5 +600,111 @@ describe('F6 Skogen rör sig', () => {
         delete l.area.animals[m.id];
       }
     }
+  });
+});
+
+describe('the bots and the new rules', () => {
+  const trophy = (players: PlayerState[]): void => {
+    for (const pl of players) pl.trophies = { [DUNGEONS.draug.boss]: 2 };
+  };
+  it('the horn: the masher blows it as soon as it fights; the careful bot keeps it for a boss’s new phase or the stop’s last pack; the Hirdmannen never', () => {
+    const scene = () => {
+      const l = lab(['krigare'], { before: trophy, companion: true });
+      l.mute();
+      l.place('gravrotta', 1.5);
+      return l;
+    };
+    const m = scene();
+    botStep(m.party.world, m.p.id, newMind('masher', () => 0.5), m.ctx(), 50);
+    expect(m.run.horn).toBe(false);
+    const c = scene();
+    const mind = newMind('careful', () => 0.5);
+    botStep(c.party.world, c.p.id, mind, c.ctx(), 50);
+    expect(c.run.horn).toBe(true);
+    // the companion's own brain runs in the tick: the horn stays
+    c.go(500);
+    expect(c.run.horn).toBe(true);
+    // a boss enters a new phase
+    const boss = c.place('gravvaktare', 2, { kind: 'mini' });
+    boss.phase = 0;
+    boss.next = SAGA_BOSSES.gravvaktare!.moves.map(() => Infinity);
+    botStep(c.party.world, c.p.id, mind, c.ctx(), 50);
+    expect(c.run.horn).toBe(true);
+    boss.phase = 1;
+    botStep(c.party.world, c.p.id, mind, c.ctx(), 50);
+    expect(c.run.horn).toBe(false);
+    // the last pack of the stop
+    const last = scene();
+    for (const pk of last.inst.packs) pk.dead = true;
+    botStep(last.party.world, last.p.id, newMind('careful', () => 0.5), last.ctx(), 50);
+    expect(last.run.horn).toBe(false);
+  });
+
+  it('the careful Väktare stays in a boss’s sweep and raises Sköldmur just before it lands: a Perfekt block', () => {
+    const l = lab(['vaktare'], { level: 2 });
+    l.mute();
+    const m = l.place('draugkung', 1.5, { kind: 'boss' });
+    m.phase = 0;
+    m.threat = { [l.p.id]: 99 };
+    m.next = SAGA_BOSSES.draugkung!.moves.map((mv, k) => (k === 0 ? l.party.now : Infinity));
+    l.f.cd.utmana = l.f.cd.skoldslag = NEVER;
+    const mind = newMind('careful', () => 0.5);
+    const out: Change[] = [];
+    for (let t = 0; t < SAGA_BOSSES.draugkung!.moves[0]!.warn + 300; t += 50) {
+      out.push(...botStep(l.party.world, l.p.id, mind, l.ctx(), 50));
+      out.push(...l.go(50));
+    }
+    expect(out.some((c) => c.t === 'spell' && c.by === l.p.id && c.spell === 'skoldmur')).toBe(true);
+    expect(out.some((c) => c.t === 'hit' && c.on === l.p.id && c.kind === 'parry')).toBe(true);
+    expect(l.inst.markHits).toBe(0);
+    expect(m.open).toBeDefined();
+  });
+
+  const atAmbush = (style: 'careful' | 'masher' | 'adult', hurt: boolean) => {
+    const seed = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].find((sd) => generateRun(sd, { boss: 'draug', level: 2 }).route.nodes.some((n) => n.kind === 'event'))!;
+    const party = makeParty(['krigare'], { seed, style });
+    startRun(party.world, party.players[0]!.id, { seed, level: 2, dungeon: 'draug' }, party.ctx());
+    const run = runOf(party.world)!;
+    enterStop(party.world, run, run.plan.route.nodes.find((n) => n.kind === 'event')!.id, party.ctx());
+    for (let i = 0; i < 4; i++) step(party, false, []);
+    run.phase = 'event';
+    run.event = { id: 'bakhall', votes: {}, until: run.elapsed + 60_000 };
+    const inst = party.world.areas![run.key]!.saga!;
+    if (hurt) for (const f of Object.values(inst.fighters)) f.hp = Math.round(f.max * 0.5);
+    step(party, true, []);
+    return { party, run, inst };
+  };
+  it('the vote on Skogen rör sig: the masher fights; the careful and the adult fight when everyone is above 70 % health, else they hide', () => {
+    expect(atAmbush('masher', true).run.ambush).toBeDefined();
+    expect(atAmbush('careful', false).run.ambush).toBeDefined();
+    expect(atAmbush('adult', false).run.ambush).toBeDefined();
+    const hid = atAmbush('careful', true);
+    expect(hid.run.ambush).toBeUndefined();
+    expect(hid.run.purse).toBe(5);
+  });
+
+  it('a wipe in the ambush: the Sagoande gets the party up, the wave waits at the edge and comes again, and the fight can still be won', () => {
+    const { party, run, inst } = atAmbush('careful', false);
+    const area = party.world.areas![run.key]!;
+    for (let t = 0; t < 3300; t += 50) step(party, false, []);
+    expect(run.ambush!.wave).toBe(1);
+    const p = party.players[0]!;
+    const f = inst.fighters[p.id]!;
+    f.hp = 0;
+    f.down = party.now;
+    for (let t = 0; t < 4500; t += 50) step(party, false, []);
+    expect(f.down).toBeUndefined();
+    expect(run.spirit).toBe(0);
+    expect(run.phase).toBe('stop');
+    expect(run.ambush).toBeDefined();
+    // the wave is awake again (it went home and was called back)
+    for (let t = 0; t < 4000; t += 50) step(party, false, []);
+    expect(run.ambush!.mobs.some((id) => inst.mobs[id]?.state === 'fight')).toBe(true);
+    // and the careful bot wins it from here (a big health bar: this is about the flow, not the fight)
+    for (const ff of Object.values(inst.fighters)) ff.max = ff.hp = 100_000;
+    for (let t = 0; t < 240_000 && run.ambush; t += 50) step(party, true, []);
+    expect(run.ambush).toBeUndefined();
+    expect(run.phase).toBe('route');
+    void area;
   });
 });
