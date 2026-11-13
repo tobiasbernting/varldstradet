@@ -180,9 +180,10 @@ export const ROLE = {
  * Dunk: every brute (`MOB_ARCHETYPE`, mates too; pack monsters, and a boss's helpers from Medel) raises its weapon `first` ms into the
  * fight and then every `every` ms (each plus `stagger` ms times its id modulo 5, so two brutes do not slam together), stands still
  * for `warn` ms (times the level's warning) and slams a circle of `radius` tiles round itself: a mark of the level's weight
- * (`RUN_LEVELS[l].dunk`) on every hero inside. A stun or an interrupt cancels it and opens the brute (an Öppning).
+ * (`RUN_LEVELS[l].dunk`) on every hero inside. A stun or an interrupt cancels it and opens the brute (an Öppning). Where several
+ * brutes fight (the later dungeons have two brute slots) they take turns: no Dunk starts within `gap` ms of the one before in the stop.
  */
-export const DUNK = { first: 3000, every: 8000, stagger: 500, warn: 1300, radius: 1.8 } as const;
+export const DUNK = { first: 3000, every: 8000, stagger: 500, warn: 1300, radius: 1.8, gap: 4000 } as const;
 /** Ranged pressure: the circle's radius and warning (ms, times the level's warning), and how far from the boss the furthest hero must be (tiles). */
 export const FAR = { radius: 1.6, warn: 1500, beyond: 4 } as const;
 /** Märke: another player cannot replace a mark for this long. */
@@ -2174,6 +2175,8 @@ export interface SagaInstance {
   mobHeals: number;
   /** Märke: the monster the party has marked with a skull (everyone's auto-attack and untargeted spells go for it), who marked it and when. */
   skull?: { id: number; by: string; at: number };
+  /** When the stop's last Dunk began (brutes take turns: `DUNK.gap`). */
+  dunkAt?: number;
   /** The last time a monster of the stop was fighting (pips fade `PIP_FADE_MS` after it). */
   foughtAt?: number;
 }

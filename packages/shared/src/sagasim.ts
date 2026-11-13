@@ -1895,8 +1895,9 @@ function startDunk(h: Here, m: SagaMob, a: { x: number; y: number }, now: number
   if (!weight || (m.kind !== 'mob' && m.kind !== 'add') || MOB_ARCHETYPE[m.species] !== 'brute' || (m.kind === 'add' && h.inst.run?.easy)) return false;
   const stagger = (m.id % 5) * DUNK.stagger;
   m.dunkAt ??= (m.pulledAt ?? now) + DUNK.first + stagger;
-  if (now < m.dunkAt) return false;
+  if (now < m.dunkAt || now < (h.inst.dunkAt ?? 0) + DUNK.gap) return false;
   m.dunkAt = now + DUNK.every + stagger;
+  h.inst.dunkAt = now;
   const at = now + Math.round(DUNK.warn * (h.inst.run?.warnMul ?? 1));
   const zone = addZone(h, m, { shape: 'circle', x: a.x, y: a.y, r: DUNK.radius, at, dmg: markOf(h) * weight }, out);
   m.cast = { move: -1, start: now, at, zones: [zone], role: 'slam' };

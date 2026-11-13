@@ -115,8 +115,8 @@ swap and the old map is dropped.
 
 Packs in a Flock: three in each of the two rooms, 4 to 5 members each (a pack is never more than 6). From the third row on a
 pack may hold one of the dungeon's big monsters (`BIG_CHANCE`: 60 % of the packs of rows 3 and 4, so about one pack in three of
-the first wing, 70 % in the second wing and 80 % in the hall; half as often on Mycket lätt; always in a Stark vakt), and from
-Lätt up some members are special (section 5.8). On Mycket lätt and Lätt: 2 and 2 to 3 packs of 3 to 4 (`LATT_FLOCK_PACKS`). Monster health
+the first wing, 70 % in the second wing and 80 % in the hall; half as often on Mycket lätt; always in a Stark vakt); a big monster slams the
+ground round itself (the Dunk, section 5.8), and from Lätt up some members are special (5.8). On Mycket lätt and Lätt: 2 and 2 to 3 packs of 3 to 4 (`LATT_FLOCK_PACKS`). Monster health
 by wing is `WING_HP` = 1.85, 2.3, 2.7 (rows 1 to 4, 5 to 8, 9 to 10) on top of the fighter scaling in 5.1. The gate of a
 Flock opens when its required packs are down; the Mellanboss opens its own.
 
@@ -558,7 +558,8 @@ and played with `playRun`. Styles (`BotStyle`):
   about to fall; sets its combo up (Stormsteg then Jättehugg, Isspjut then Runsmäll, Utmana! then Dunderslag, Läkekrets then Solstråle);
   keeps its interrupt for a boss's nova or mend that is due, else for a Besvärjare's heal or a Skytt's shot; takes monsters in the order
   open, Besvärjare, Sköldbärare, Skytt, the rest, and marks that one with the skull when it is the first human of the party; steps out of
-  marks and off a Skytt's line and waits at the rim until they have landed; runs into a Guldring; fetches a Kraftklot; takes the safe lane
+  marks and off a Skytt's line and waits at the rim until they have landed; stops a brute's Dunk with its interrupt when no boss, Besvärjare
+  or Skytt is in the fight, else steps out of it; runs into a Guldring; fetches a Kraftklot; takes the safe lane
   (a Vilosten when it or a friend is hurt, else a fight).
 - `clumsy`: the same buttons with pauses between moves and misses, no holding (it spends at any pips), no order, no dodging, a random lane;
   it does run into a Guldring.
@@ -607,7 +608,13 @@ a shooter and a Sköldbärare a brute where the pack has one (`MOB_ARCHETYPE`).
 | Skytt | 3 s in and then every 7 s aims a striped line (9 by 1.2 tiles, a zone of `kind: 'shot'`) at a hero for 1.5 s times the level's warning, then everyone on it takes 0.85 of a mark | step aside, or interrupt it | the level's small mark and long warning |
 | Sköldbärare | while it lives and is not dazed, its packmates within 3 tiles take half damage (not itself) | take it first, or daze it | a quarter |
 
-**Öppning.** Stopping a cast (a boss's nova or mend, a Besvärjare's heal, a Skytt's shot) leaves the monster open for 4 s: it takes
+**Dunk** (`DUNK`, `RUN_LEVELS[l].dunk`). Packs have damage that can be avoided: every brute (`MOB_ARCHETYPE`, mates too; a boss's
+helpers from Medel) raises its weapon 3 to 5 s into the fight and then every 8 to 10 s (staggered by its id, so two brutes do not slam
+together), stands still for 1.3 s times the level's warning and slams a circle of 1.8 tiles round itself: 0.7 of a mark on every hero
+inside (half a small mark on Lätt; never on Mycket lätt). A stun or an interrupt cancels it and opens the brute. It is a cast in the
+snapshot (`c`, kind `slam`, stoppable) with an ordinary red circle, and counts in `inst.markHits`.
+
+**Öppning.** Stopping a cast (a boss's nova or mend, a Besvärjare's heal, a Skytt's shot, a brute's Dunk) leaves the monster open for 4 s: it takes
 50 % more from everyone (`SagaMob.open`, `OPEN_MS`, `OPEN_BONUS`). A stun on a monster that is not casting opens nothing.
 
 **Märke.** Any hero marks one monster with a skull (the `mark` intent, `markMob`, `inst.skull`, `k` in the snapshot): everyone's
