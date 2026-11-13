@@ -155,6 +155,8 @@ export interface RunState {
   forceDish?: string;
   /** Skogen rör sig: the waves so far, when the next comes (run time), and the monsters of the wave now. */
   ambush?: { wave: number; count: number; nextAt: number; mobs: number[] };
+  /** Development only (the dev message `runnext` with kind `ambush`): the next Händelse is this one. */
+  forceEvent?: string;
   metEvents: string[];
   /** Blessings from events for the rest of the run (for everyone). */
   blessed: RunEffect;
@@ -1073,7 +1075,8 @@ export function buyItem(world: WorldState, playerId: string, msg: Record<string,
 
 /** The Händelse's glade: a picture, a story and two or three choices; everyone votes (the same rule as every vote of a run). */
 function startEvent(farm: WorldState, run: RunState): Change[] {
-  const id = pickEvent(run.seed, run.node, run.metEvents);
+  const id = run.forceEvent ?? pickEvent(run.seed, run.node, run.metEvents);
+  delete run.forceEvent;
   run.metEvents.push(id);
   run.phase = 'event';
   run.event = { id, votes: {}, until: run.elapsed + runPickMs(run.level) };
@@ -1817,6 +1820,11 @@ export function devRunNext(world: WorldState, playerId: string, kind: string, pu
   const farm = farmOf(world);
   const run = RUNS.get(farm);
   if (!run || !run.party.includes(playerId)) return [];
+  // `ambush`: a Händelse that is Skogen rör sig (it is a rare roll otherwise)
+  if (kind === 'ambush') {
+    run.forceEvent = 'bakhall';
+    kind = 'event';
+  }
   let node = run.plan.stops.findIndex((z, i) => z.kind === kind && !run.path.includes(i));
   if (purse !== undefined && Number.isFinite(purse)) run.purse = purse;
   // a seed without such a stop: the first unwalked fight stop becomes one (development only)

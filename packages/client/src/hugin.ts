@@ -92,8 +92,8 @@ export interface Guards {
 export const HUGIN = {
   /** He stays this long unless he is thanked sooner. */
   stayMs: 8000,
-  /** A breath between two tips. */
-  gapMs: 2500,
+  /** A good while between two tips, so a first fight is not a lecture (a tip that waits too long is dropped and comes another time). */
+  gapMs: 15_000,
   markSoonMs: 1500,
   bossYoungMs: 5000,
   /** A tip that could not be shown for this long is dropped (its moment has passed); it may be offered again. */

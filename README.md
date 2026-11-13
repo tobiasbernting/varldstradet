@@ -107,7 +107,7 @@ client: `varldstradet.net.send({ t: 'dev', a: 'warp', x: 20, y: 20 })`. Without 
 | --- | --- |
 | `{ a: 'saga', id }` | Enter dungeon `id` directly (a player without a class becomes a Krigare first). |
 | `{ a: 'runclear' }` | Clear the stop your run is in, as if its monsters had fallen (a Mellanboss or boss too). |
-| `{ a: 'runnext', kind, purse? }` | Jump the run to the first unwalked stop of a kind (`flock`, `mini`, `rest`, `boss`, `shop`, `event`, `treasure`, `elite`) and set the purse. |
+| `{ a: 'runnext', kind, purse? }` | Jump the run to the first unwalked stop of a kind (`flock`, `mini`, `rest`, `boss`, `shop`, `event`, `treasure`, `elite`; `ambush` is an event stop with Skogen rör sig) and set the purse. |
 | `{ a: 'unlock' }` | Count every dungeon before the last as cleared, so a later chapter's arch can be used. |
 | `{ a: 'warp', x, y }` | Stand on tile (x, y) of the map you are in. |
 | `{ a: 'trophy', id, level }` | Win the trophy of boss `id` at difficulty `level` (0 to 4). |
