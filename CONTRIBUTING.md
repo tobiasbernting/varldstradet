@@ -53,6 +53,25 @@ Pet gear is the same with `petPiece` and `petSet` (`PET_LOOK_SETS`), drawn in `p
 Three things, all checked by `pets.test.ts`: an entry in `PETS`, the art, and the species in `ANIMALS` and `SPECIES_NAMES`. The steps are in
 DESIGN.md 7.4.
 
+## Add a monster
+
+A dungeon's ordinary monsters are families (DESIGN.md 2.4): a new one is the **mate** of an existing species and fills its pack slot,
+so it changes no balance. `mobs.test.ts` (shared) and `mobs.art.test.ts` (client) check all of it.
+
+1. Its numbers in `NEW_SAGA_MOBS` (`packages/shared/src/mobs.ts`), each within 10 % of its mate's, and a `kin(species, archetype, mate)`
+   entry in its dungeon's row of `MOB_FAMILIES` (the archetype is the mate's: `swarmer`, `brute` or `shooter`). The name is the `name`
+   there; the journal's one sentence goes in `MOB_TEXT` (`sv.ts`).
+2. The art in `packages/art/src/sagamobs2.ts`: a draw function `(p, f, v)` with two walk frames facing right and three skins (`v` 0 to
+   2; a skin changes a shape, not only a colour), registered in `DRAW` with its size in `SIZE` and a head position in `HAT`; flames and
+   glows go in `AFTER` (drawn after the outline). The illusion of each skin comes by itself.
+3. Its role-gear anchors (front, back, a hand if it has one) in `PLACED` in `packages/art/src/rolegear.ts`; without an entry it gets a
+   default from its sprite size.
+4. Look at it: render every skin and both frames at 4x on the dungeon's floor colour, next to the dungeon's other five, and check that
+   its silhouette is its own.
+
+A boss's helper may be its mate if the species is added to `ADD_KIN`. A whole new slot (a seventh species that is nobody's mate)
+changes pack strength: that is a balance change (section 8).
+
 ## Add a window
 
 Follow the checklist in DESIGN.md section 9. In practice:

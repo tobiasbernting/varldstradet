@@ -124,8 +124,8 @@ hero gets cards, then the runes appear. A Händelse goes straight to its vote; a
 ### 2.4 The nine dungeons
 
 One chapter is one dungeon is one run. The order is the saga's (`DUNGEON_IDS`); a run may be started on any cleared dungeon
-and on the next one. Every dungeon has three monster species (a fast swarmer, a big brute, often a shooter), a mid-boss and a
-boss (`SAGA_BOSSES`). Bifrost's monsters are Loke's illusions of the earlier packs.
+and on the next one. Every dungeon has six monster species (the table below), a mid-boss and a boss (`SAGA_BOSSES`). Bifrost's
+monsters are Loke's illusions of the earlier packs.
 
 | # | Dungeon (id) | Mellanboss: attacks | Boss: attacks (`!` interruptible, `@n` from phase n) | Phases of the boss |
 | --- | --- | --- | --- | --- |
@@ -138,6 +138,38 @@ boss (`SAGA_BOSSES`). Bifrost's monsters are Loke's illusions of the earlier pac
 | 8 | Alvernas lund (`alv`) | Spindeldrottningen: freeze, rain | Nattmaran: nova!, pools, mend!@1, summon@2 | 0.6 / 0.3 |
 | 9 | Fenrisklyftan (`fenrir`) | Sköll: charge, nova! | Fenrisulven: charge, cleave, summon@1, nova!@2 | 0.7 / 0.4 |
 | 10 | Bifrost (`loke`) | Lokes skugga: rain, nova! | Loke: cleave, nova!@1, pools@2, mend!@2, pull@3, nova!@3, line@4 | 0.8 / 0.6 / 0.4 / 0.2 |
+
+**The monsters** (`MOB_FAMILIES` in `mobs.ts`). A dungeon began with three species, which are its pack slots (`dungeonMobs`: the
+weakest, the middle one, the strongest); each has one **mate**, a newcomer of another shape for the same slot, whose numbers
+(health, damage, attack time, reach, speed, sight, slowing) are within 10 % of its own. The archetype says what a monster
+does in a pack: a swarmer is fast and light, a brute slow and tough, a shooter attacks from afar (reach above 2.5).
+
+| Dungeon | Small slot | Middle slot | Big slot (one in the second room, from the second wing) |
+| --- | --- | --- | --- |
+| Draugkryptan | Gravråtta, Fladdermöss (swarmers) | Draugbågskytt, Gravljus (shooters) | Skelettkrigare, Rostdraug (brutes) |
+| Frostjättens borg | Isande, Jätteunge (shooters, slow you) | Isvarg, Snöuggla (swarmers) | Frosttroll, Snögubbe (brutes) |
+| Surts smedja | Eldimp, Eldsalamander (swarmers) | Eldhund, Sotnisse (swarmers) | Lavagolem, Lavasnigel (brutes) |
+| Helheim | Benspindel, Ljusskalle (shooters, slow you) | Helhund, Benkatt (swarmers) | Gengångare, Kistgast (brutes) |
+| Svartalfheims gruvor | Guldbagge, Gruvmullvad (swarmers) | Gruvtroll, Svartalf (brutes) | Stengolem, Malmvagn (brutes) |
+| Havsormens tempel | Lysmanet, Sjöhäst (shooters, slow you) | Sjödraug, Marulk (brutes) | Jättekrabba, Jättesköldpadda (brutes) |
+| Alvernas lund | Skuggalv, Spottblomma (shooters) | Jättespindel, Nattfjäril (swarmers) | Svampvakt, Stubbgubbe (brutes) |
+| Fenrisklyftan | Ulv, Fjällbagge (swarmers) | Rimtroll, Ulvhedin (brutes) | Bergsjätte, Uroxe (brutes) |
+| Bifrost | illusions of Isvarg, Snöuggla | of Skelettkrigare, Rostdraug, Gengångare, Kistgast | of Eldhund, Sotnisse |
+
+Which species fills a slot is chosen by `varyStopPacks` (`mobpacks.ts`) with dice of its own (the run's seed and the stop), after
+the pack tables and the stop's dice have decided how many monsters there are and which slot each fills, so a pack is as strong
+as before. The rules: a pack holds two or three species when it can; no pack of four or more is one species, except that such
+a pack of swarmers is left as a swarm 12 % of the time (`SWARM_CHANCE`); a pack is not the same as the one before it in the
+stop; the first stop of a run shows the mate of one of the two pack-filling slots, the second stop both (`introducedAt`), and
+the big monsters' mates arrive with the big monsters in the second wing. A boss's helpers (`phaseAdds`, a summon) may be the
+helper's mate where that suits the boss (`ADD_KIN`); Garm's hounds, the spider queen's spiders, the Nattmara's elves and the
+wolves of Fenrisklyftan stay as they are.
+
+Every ordinary monster has three **skins** (`MOB_SKINS`): another helmet, weapon, horns or hat as well as other colours, drawn in
+`packages/art` (`sagaanimals.ts`, `sagamobs2.ts`). An animal's `variant` is `mobVariant(skin, illusion)`; `skinStop` gives the
+members of one species in a pack the skins in turn from a start the seed gives, so two of a kind side by side are not twins. A
+skin never changes a fight. The journal lists each open dungeon's monsters with a picture, the archetype and a sentence
+(`MOB_TEXT`).
 
 (The number is the saga chapter; chapters 1 to 3, 5 to 10.) Every boss attack is telegraphed on the ground for a warning time
 before it lands, so the whole fight is readable. What the marks mean and what to do (the text is in `BossAbility.text` and
@@ -389,7 +421,8 @@ replay modifiers, and `SOLO_MERCY` (×0.75, one human with the Hirdmannen).
 ### 5.2 Pack sizes
 
 See 2.3. The tables are `FLOCK_PACKS`, `ELITE_PACKS`, `TREASURE_PACKS`, `MINI_PACKS`, `BOSS_PACKS` and their `LATT_*` versions in `run.ts`. They are
-tuned by the bots; change them with `runtune.ts` open (section 8).
+tuned by the bots; change them with `runtune.ts` open (section 8). The tables and the stop's dice decide a pack's size and the slot of every
+member; the species within a slot is chosen afterwards (section 2.4) and does not change the size or the slots.
 
 ### 5.3 The gentle levels
 
@@ -748,7 +781,10 @@ Code: `access.ts` (rules and state), `http.ts` (routes, cookies, the WebSocket u
 - **One run at a time per server.** A second party waits (`RUN_T.already`). Fine for one family; a household with two groups needs more.
 - **Four särdrag.** More would need new ground effects in the fight sim (a periodic circle under each player, orbs to pop, a slow that
   stacks, a puddle where monsters fall).
-- **Pack roles.** Packs are drawn from the dungeon's three species. Monsters pick targets by threat (the tank's spells make more, Utmana!
+- **Pack roles.** Packs are drawn from the dungeon's six species, two for each of its three slots (section 2.4); the big slot's
+  two only appear as the one big monster of a second room, so they are rare. The art for role gear exists
+  (`packages/art/src/rolegear.ts`: `roleGear`, `drawRoleGear`, `ROLE_ANCHOR`; a staff or leaf crown for a Besvärjare, a bow or
+  quiver for a Skytt, a round blue shield for a Sköldbärare) but nothing draws it in the game yet. Monsters pick targets by threat (the tank's spells make more, Utmana!
   forces it), but the snapshot does not say whom a monster chases, so the client draws no line to show it. There is no patrol and no
   monster that heals or shields others. Telegraphs and the journal carry the teaching.
 - **Balance is only bots.** Nobody has timed a real 7-year-old; the bands in 5.4 are proxies. The clumsy bot is about 1.9 times as slow as
