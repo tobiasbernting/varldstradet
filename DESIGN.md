@@ -505,8 +505,8 @@ the averages at the time of writing.
 | One hero + Hirdmannen (any class) or Krigare + Magiker | Medel | careful | all 6 won, average win 10 to 20 min, the lone Helare 15 to 29 (`run.solo.test.ts`) | Väktare 13.6, Helare 19.8, Krigare 12.6, Magiker 16.2, pair 12.7 |
 | Krigare + Hirdmannen / Väktare + Helare / three / four heroes | Medel | careful | all 3 won; 8 to 16 / 12 to 23 / 9 to 17 / 8 to 15 min (`run.bots.test.ts`) | 12.0 / 16.7 / 12.2 / 10.8 |
 | same four parties | Lätt | clumsy | all 3 won; 13 to 26 / 17 to 33 / 14 to 27 / 15 to 29 min | 19.5 / 25.3 / 20.6 / 22.0 |
-| Krigare + Magiker | Svår | careful | 8 to 12 of 16 won (`run.hard.test.ts`) | HARD3 |
-| Krigare + Magiker | Extrem | careful | 3 to 6 of 16 won | HARD4 |
+| Krigare + Magiker | Svår | careful | 8 to 12 of 16 won (`run.hard.test.ts`) | 10 |
+| Krigare + Magiker | Extrem | careful | 3 to 6 of 16 won | in the band (3 with a little more monster health; near its lower edge) |
 | Any chapter, one Krigare | Medel | careful | no stall: every dungeon ends in a win or a wipe inside 60 min | passes |
 
 **The skill gap** (`run.skill.test.ts`: Medel, one Krigare or one Magiker with the Hirdmannen, six seeds, everyone on the safe lane):
