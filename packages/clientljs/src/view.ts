@@ -2020,7 +2020,8 @@ export class View implements HudTarget {
     for (const [id, a] of this.players) {
       // a fallen friend lies down: the name comes down too
       const low = this.sagaFx.pose(id) === 'down' ? 12 : 0;
-      place(a.label, a.x, a.y - 24 + low);
+      // (in a dungeon a hero's pips stand over their health bar: the name goes above them)
+      place(a.label, a.x, a.y - 24 + low - (low ? 0 : this.sagaFx.nameLift(id) / z));
       if (a.bubble) place(a.bubble, a.x, a.y - 34 + low);
     }
     for (const a of this.npcs.values()) {

@@ -182,6 +182,8 @@ body.saga-fight .act-btn.spend-empty .ic {
 .saga-spell.kick .bolt-badge.now {
   width: 26px;
   height: 26px;
+  right: -13px;
+  top: -15px;
 }
 .saga-spell.spender.glow,
 body.saga-fight .act-btn.spend-glow {
@@ -271,10 +273,10 @@ body.saga-fight .act-btn.spend-glow {
   inset: 0;
   z-index: 40;
   pointer-events: none;
-  border-radius: 50%/38%;
+  border-radius: 34px;
   box-shadow:
-    inset 0 0 0 10px rgba(255, 40, 30, 0.85),
-    inset 0 0 70px 30px rgba(255, 40, 30, 0.55);
+    inset 0 0 0 9px rgba(255, 40, 30, 0.9),
+    inset 0 0 46px 14px rgba(255, 40, 30, 0.6);
   opacity: 0;
 }
 .saga-markflash.go {
@@ -486,10 +488,10 @@ body.saga-fight .act-btn.spend-glow {
   box-shadow: 0 0 0 2px #ffd23f;
 }
 /* numbers: a spender's blow grows with its pips; gold on a monster that sees stars; a mark's is heavy */
-.label.saga-fct.sp2 {
+.label.saga-fct.saga-fct.sp2 {
   font-size: max(var(--fs), calc(7 * var(--u) * var(--txt)));
 }
-.label.saga-fct.sp3 {
+.label.saga-fct.saga-fct.sp3 {
   font-size: max(calc(var(--fs) * 1.5), calc(11 * var(--u) * var(--txt)));
   color: #fff;
   -webkit-text-stroke: 1px #14101c;
@@ -499,15 +501,15 @@ body.saga-fight .act-btn.spend-glow {
     0 0 12px #ffd23f;
   animation-duration: 1.4s;
 }
-.label.saga-fct.onopen {
+.label.saga-fct.saga-fct.onopen {
   color: #ffd23f;
   font-size: max(var(--fs), calc(7 * var(--u) * var(--txt)));
 }
-.label.saga-fct.sp3.onopen {
+.label.saga-fct.saga-fct.sp3.onopen {
   font-size: max(calc(var(--fs) * 1.6), calc(12 * var(--u) * var(--txt)));
   color: #ffe98a;
 }
-.label.saga-fct.mark {
+.label.saga-fct.saga-fct.mark {
   font-size: max(calc(var(--fs) * 1.3), calc(9 * var(--u) * var(--txt)));
   color: #fff;
   text-shadow:
@@ -517,12 +519,12 @@ body.saga-fight .act-btn.spend-glow {
     0 -2px 0 #b3261c;
   animation-duration: 1.4s;
 }
-.label.saga-fct.word {
+.label.saga-fct.saga-fct.word {
   color: #ffd23f;
   font-size: max(var(--fs), calc(7 * var(--u) * var(--txt)));
   animation-duration: 1.6s;
 }
-.label.saga-fct.word.blue {
+.label.saga-fct.saga-fct.word.blue {
   color: #9cc8ff;
 }
 

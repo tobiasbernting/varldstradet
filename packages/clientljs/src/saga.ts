@@ -239,6 +239,12 @@ export class SagaView {
     for (const id of who) if (id !== undefined) this.stopped_.add(id);
   }
 
+  /** How far (screen px) a hero's name is lifted to stand clear of the pips over their bar. */
+  nameLift(id: string): number {
+    const row = this.on ? this.barParts.get(`p${id}`)?.pips : null;
+    return row ? row.offsetHeight + 3 : 0;
+  }
+
   /** Is this body held still by a hit-stop right now? (The view skips its animation meanwhile.) */
   held(id: string | number): boolean {
     return performance.now() < this.stopUntil && this.stopped_.has(id);

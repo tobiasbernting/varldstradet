@@ -775,7 +775,7 @@ export class SagaUi {
         s.el.classList.toggle('free', free);
         s.el.classList.toggle('shared', cooling && cd.shared);
         // a word on the button too, so no state is only a colour: too far away, can stop the cast, none left, fallen
-        const tag = none ? `✖ ${A11Y_T.none}` : off ? `✖ ${flagsOf(client.me) & FLAG.frozen ? A11Y_T.frozen : A11Y_T.down}` : stop ? A11Y_T.kick : far ? `↔ ${A11Y_T.far}` : glow ? FIGHT_UI.spendNow : '';
+        const tag = none ? `✖ ${A11Y_T.none}` : off ? `✖ ${flagsOf(client.me) & FLAG.frozen ? A11Y_T.frozen : A11Y_T.down}` : stop ? A11Y_T.kick : far ? `↔ ${A11Y_T.far}` : '';
         if (s.tag.textContent !== tag) s.tag.textContent = tag;
         s.el.classList.toggle('tagged', !!tag);
         if (s.id === 'potion') s.el.dataset.n = String(pots);
