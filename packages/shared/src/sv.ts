@@ -1588,11 +1588,11 @@ export const FIGHT_UI = {
   spendNow: 'Nu!',
   /** What a screen reader says about the spender: its pips, and why it glows. */
   pipsAre: '{n} av 3 {pips}',
-  glowFull: 'Full kraft! 4 gånger så starkt.',
+  glowFull: 'Full kraft! {n} gånger så starkt.',
   glowOpen: 'Monstret ser stjärnor. Slå nu!',
   glowCombo: 'Kombo! Slå nu!',
   /** The pip row's info card. */
-  pipsCard: 'Dina vanliga slag fyller de 3 rutorna. Fulla rutor gör {spell} 4 gånger så starkt!',
+  pipsCard: 'Dina vanliga slag fyller de 3 rutorna. Fulla rutor gör {spell} {n} gånger så starkt!',
   /** The button that sets up the class's combo. */
   primeFirst: 'Först',
   /** A reaction: it never waits for the other buttons. */
@@ -1611,12 +1611,12 @@ export const FIGHT_UI = {
   howTitle: 'Så slåss du',
   howAuto: 'Av sig själv',
   howPips: '3 {pips}',
-  howBig: 'Stort slag ×4',
+  howBig: 'Stort slag ×{n}',
   howCombo: 'Kombo',
   /** The journal's page about Öppning. */
   openTitle: 'Öppning',
   /** The two hints (once on each device). */
-  hintPips: 'Du har 3 {pips}! Tryck på {spell} eller Slå för ett slag som är 4 gånger så starkt.',
+  hintPips: 'Du har 3 {pips}! Tryck på {spell} eller Slå för ett slag som är {n} gånger så starkt.',
   hintCaster: 'En Besvärjare läker sin vän om {s} sekunder! Avbryt med {spell}.',
   hintCasterNone: 'En Besvärjare läker sin vän om {s} sekunder! Slå den först.',
   // Märke, Samslag, Kraftklot, Guldringen and Runmärken on the screen
@@ -1636,6 +1636,7 @@ export const FIGHT_UI = {
   medalRule2: 'Låt inget monster läka sig: 0 läkningar.',
   medalRule3: 'Var snabba: under {s} sekunder för en flock på Medel.',
   fightPage: 'Slåss tillsammans',
+  pipHalf: 'Halv: ett slag till ger en hel.',
   ringTitle: 'Guldringen',
   ringText: 'Guld = spring IN allihop och stå kvar i 2 sekunder. Rött = spring UT.',
 };
@@ -1645,7 +1646,7 @@ export const HELP_FIGHT: HelpTopic = {
   id: 'fight',
   emoji: '⚔️',
   title: 'Slåss tillsammans',
-  intro: 'Du slår av dig själv. Titta på de 3 rutorna över Slå: när de är fulla är ditt stora slag 4 gånger så starkt!',
+  intro: 'Du slår av dig själv. Titta på de 3 rutorna över Slå: när de är fulla är ditt stora slag 6 gånger så starkt!',
   steps: [
     { icon: 'emoji:💀', text: 'Märke: håll fingret på ett monster, eller tryck på dödskallen bredvid monstrets ruta, så märker du det. Då slår alla på samma monster. Märket kan bytas efter 2 sekunder.', only: 'touch' },
     { icon: 'emoji:💀', text: 'Märke: högerklicka på ett monster, eller tryck Z, så märker du det. Då slår alla på samma monster. Märket kan bytas efter 2 sekunder.', only: 'desktop' },

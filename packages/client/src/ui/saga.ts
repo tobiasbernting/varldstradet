@@ -19,6 +19,7 @@ import {
   PIP_ICONS,
   PIP_MAX,
   PIP_NAMES,
+  SPEND_MUL,
   CLASS_IDS,
   DOWN_MS,
   FRIEND_KINDS,
@@ -90,6 +91,7 @@ import {
   inSaga,
   inSharedPause,
   mySpend,
+  pipHalf,
   pipsOf,
   spendCtx,
   stopTarget,
@@ -826,14 +828,19 @@ export class SagaUi {
     if (cls && pips !== this.pipsShown) {
       newPips(pips, this.pipsShown).forEach((i, k) => window.setTimeout(() => SAGA_SFX.pip(i), k * 90));
       this.pipsShown = pips;
-      if (spender?.pips) setPips(spender.pips, pips);
-      if (this.actPips) setPips(this.actPips, pips);
+      if (spender?.pips) setPips(spender.pips, pips, false, pipHalf(client.me));
+      if (this.actPips) setPips(this.actPips, pips, false, pipHalf(client.me));
       if (pips >= PIP_MAX && firstTime('pips3')) {
         const sp = SPELLS[cls.spells[0]]!;
-        say(fmt(FIGHT_UI.hintPips, { pips: PIP_NAMES[cls.id], spell: sp.name }), { kind: 'system', icon: PIP_ICONS[cls.id], cls: 'hint', log: false, ms: 9000 });
+        say(fmt(FIGHT_UI.hintPips, { pips: PIP_NAMES[cls.id], spell: sp.name, n: SPEND_MUL[PIP_MAX]! }), { kind: 'system', icon: PIP_ICONS[cls.id], cls: 'hint', log: false, ms: 9000 });
       }
     }
-    const said = view?.state === 'glow' ? (view.why === 'full' ? FIGHT_UI.glowFull : view.why === 'open' ? FIGHT_UI.glowOpen : FIGHT_UI.glowCombo) : '';
+    // (half a pip: the first of the two auto-attacks a pip takes has landed)
+    if (cls && view) {
+      if (spender?.pips) setPips(spender.pips, pips, false, pipHalf(client.me));
+      if (this.actPips) setPips(this.actPips, pips, false, pipHalf(client.me));
+    }
+    const said = view?.state === 'glow' ? (view.why === 'full' ? fmt(FIGHT_UI.glowFull, { n: SPEND_MUL[PIP_MAX]! }) : view.why === 'open' ? FIGHT_UI.glowOpen : FIGHT_UI.glowCombo) : '';
     if (said !== this.spendSaid) {
       this.spendSaid = said;
       if (said) announce(said);
@@ -1474,6 +1481,8 @@ export class SagaUi {
         line('🔮', T.sagaOrb, T.sagaOrbText),
         line('⭐', FIGHT_UI.ringTitle, FIGHT_UI.ringText),
         line(h('span', { class: 'em medals' }, '🥇'), FIGHT_UI.medalsTitle, RUN_T.medalText),
+        line('🎯', T.sagaFarName, T.sagaFarText),
+        line('💀', T.sagaWipe, RUN_T.wipeRule),
       ),
     );
     body.append(h('div', { class: 'saga-head' }, T.sagaTitles));

@@ -8,6 +8,7 @@ import {
   CLASSES,
   GCD_MS,
   MOB_FLAG,
+  PIP_AUTO_EVERY,
   PIP_MAX,
   POTION_CD,
   SAGA_BOSSES,
@@ -349,6 +350,31 @@ export function sagaTick(): void {
   if (cooldown(queued).left <= 0) send(queued);
 }
 
+/**
+ * Half a pip: every SECOND auto-attack hit gives a pip (`PIP_AUTO_EVERY`), and the snapshot only carries whole pips, so the
+ * client counts each hero's auto-attacks that found a monster since their last pip. An odd count: the next pip is half full.
+ */
+const autoCount: Record<string, number> = {};
+const autoAt: Record<string, number> = {};
+const pipsWere: Record<string, number> = {};
+export const pipHalf = (id: string): boolean => (autoCount[id] ?? 0) % PIP_AUTO_EVERY === 1 && pipsOf(id) < PIP_MAX;
+bus.on('change', (c) => {
+  if (c.t !== 'spell' || typeof c.by !== 'string' || c.on === undefined) return;
+  const p = client.world?.players[c.by];
+  // (the Hirdmannen's auto-attacks give him no pips)
+  if (!p || p.bot || classOf(p)?.auto !== c.spell) return;
+  autoCount[c.by] = ((autoCount[c.by] ?? 0) + 1) % PIP_AUTO_EVERY;
+  autoAt[c.by] = performance.now();
+});
+bus.on('state', () => {
+  // a pip that came right after an auto-attack was that attack's: the count starts over (this mends a count that drifted)
+  for (const [id, f] of Object.entries(sagaSnap()?.f ?? {})) {
+    const n = f[3] ?? 0;
+    if (n > (pipsWere[id] ?? 0) && performance.now() - (autoAt[id] ?? 0) < 350) autoCount[id] = 0;
+    pipsWere[id] = n;
+  }
+});
+
 /** Your own spell came back from the server: its cooldown and the short pause start now. */
 bus.on('change', (c) => {
   if (c.t !== 'spell' || c.by !== client.me) return;
@@ -379,6 +405,7 @@ bus.on('area', () => {
   // a new dungeon (or none): a fresh fighter, nothing aimed at
   for (const k of Object.keys(ready)) delete ready[k];
   for (const k of Object.keys(castAt)) delete castAt[k];
+  for (const k of Object.keys(autoCount)) delete autoCount[k];
   gcdUntil = 0;
   potionAt = 0;
   queued = null;

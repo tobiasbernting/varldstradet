@@ -1,7 +1,7 @@
 // The fight as the HUD reads it: when the spender glows, how the pip row looks, how a wait is shown for a reaction, which cast
 // an interrupt goes for, and what the settings let the juice do.
 import { describe, expect, it } from 'vitest';
-import { CLASSES, CLASS_IDS, GCD_MS, MOB_FLAG, SPELLS } from '@varldstradet/shared';
+import { CLASSES, CLASS_IDS, GCD_MS, MOB_FLAG, SPELLS, SPEND_MUL } from '@varldstradet/shared';
 import { HIT_STOP, PIP_NOTES, PRIMER, castFill, castToStop, comboPrimed, hitStopMs, interruptOf, isReaction, juiceOf, newPips, pipCells, poofCount, primerHint, shakeOf, spendClass, spendView, waitOf, type SpendCtx } from './fight.ts';
 
 const ctx = (o: Partial<SpendCtx> = {}): SpendCtx => ({ cls: 'krigare', pips: 0, targetFlags: 0, taunted: false, ringFriend: false, ...o });
@@ -13,10 +13,10 @@ describe('the spender: grey, ready or glowing', () => {
   });
   it('is ready (no glow) at one or two pips on a plain target', () => {
     expect(spendView(ctx({ pips: 1 }))).toEqual({ state: 'ready', why: null, mul: 1 });
-    expect(spendView(ctx({ pips: 2 }))).toEqual({ state: 'ready', why: null, mul: 2.2 });
+    expect(spendView(ctx({ pips: 2 }))).toEqual({ state: 'ready', why: null, mul: SPEND_MUL[2] });
   });
   it('glows at three pips for every class', () => {
-    for (const cls of CLASS_IDS) expect(spendView(ctx({ cls, pips: 3 }))).toEqual({ state: 'glow', why: 'full', mul: 4 });
+    for (const cls of CLASS_IDS) expect(spendView(ctx({ cls, pips: 3 }))).toEqual({ state: 'glow', why: 'full', mul: SPEND_MUL[3] });
   });
   it('glows at one pip on a monster that sees stars (Öppning)', () => {
     for (const cls of CLASS_IDS) expect(spendView(ctx({ cls, pips: 1, targetFlags: MOB_FLAG.open })).why).toBe('open');

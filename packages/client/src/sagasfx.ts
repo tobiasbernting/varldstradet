@@ -329,6 +329,11 @@ export const SAGA_SFX = {
     tone(1760, 0.045, 'square', 0.03);
     later(70, () => tone(2349, 0.07, 'square', 0.03));
   },
+  /** A boss throws something at a hero far away: a short whoosh that rises. */
+  lob: () => {
+    sweep(0.22, 500, 2200, 0.05, 'bandpass', 1.5);
+    tone(180, 0.1, 'square', 0.03, 120);
+  },
   /** Märke: the skull lands on a monster (a low knock and a rattle), or is taken away. */
   skull: (on: boolean) => {
     if (on) {

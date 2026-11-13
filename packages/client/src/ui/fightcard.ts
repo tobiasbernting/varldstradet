@@ -1,7 +1,7 @@
 // The fight in pictures, for the HUD, the world's labels and the windows: the pip row (three rune pips, hollow when empty), the
 // special pack monsters' markers (a leaf, an arrow, a shield: told apart by shape as well as colour), a cast's circle, and the
 // "how you fight" strip of the class card, the run's start, the path picker, the journal and the spender's info card.
-import { CLASSES, COMBO_TEXT, FIGHT_UI, PIP_ICONS, PIP_MAX, PIP_NAMES, PIP_TEXT, ROLE_NAMES, ROLE_TEXT, SPELLS, T, fmt, type ClassId, type MobRole } from '@varldstradet/shared';
+import { CLASSES, COMBO_TEXT, FIGHT_UI, PIP_ICONS, PIP_MAX, PIP_NAMES, PIP_TEXT, ROLE_NAMES, ROLE_TEXT, SPELLS, SPEND_MUL, T, fmt, type ClassId, type MobRole } from '@varldstradet/shared';
 import { PRIMER, pipCells } from '../fight.ts';
 import { h } from './dom.ts';
 import './fight.css';
@@ -15,7 +15,7 @@ const svg = (cls: string, viewBox: string, inner: string): HTMLElement => {
 // ---------------------------------------------------------------------------------------------------------------- pips
 
 /** One rune pip: a diamond, hollow while empty; filled it carries a little rune (so it reads without colour). */
-const pip = (): HTMLElement => svg('pip', '0 0 16 16', '<path class="d" d="M8 1.2 14.8 8 8 14.8 1.2 8Z"/><path class="r" d="M6.3 4.6v6.8M6.3 6.2l3.6-2M6.3 9l3.6-2"/>');
+const pip = (): HTMLElement => svg('pip', '0 0 16 16',  '<path class="d" d="M8 1.2 14.8 8 8 14.8 1.2 8Z"/><path class="h" d="M8 2.6 8 13.4 2.6 8Z"/><path class="r" d="M6.3 4.6v6.8M6.3 6.2l3.6-2M6.3 9l3.6-2"/>');
 
 /** A row of three pips in the class's colour (`--c`). Update it with `setPips`. */
 export function pipRow(cls: ClassId, extra = ''): HTMLElement {
@@ -27,8 +27,14 @@ export function pipRow(cls: ClassId, extra = ''): HTMLElement {
 }
 
 /** Fills the row to `n`; the pips that came since last time pop (CSS), unless `quiet`. Returns how many it showed before. */
-export function setPips(row: HTMLElement, n: number, quiet = false): number {
+export function setPips(row: HTMLElement, n: number, quiet = false, half = false): number {
   const before = Number(row.dataset.n ?? 0);
+  // the next empty pip is half full while the first of the two auto-attacks it takes has landed
+  const halfAt = half && n < PIP_MAX ? n : -1;
+  if (Number(row.dataset.h ?? -1) !== halfAt) {
+    row.dataset.h = String(halfAt);
+    [...row.children].forEach((el, i) => el.classList.toggle('half', i === halfAt));
+  }
   if (before === n) return before;
   row.dataset.n = String(n);
   pipCells(n, before).forEach((c, i) => {
@@ -105,7 +111,7 @@ export function fightStrip(cls: ClassId): HTMLElement {
   const strip = h(
     'div',
     { class: 'fight-strip' },
-    h('div', { class: 'row' }, step(auto.icon, FIGHT_UI.howAuto), arrow(), step(row, fmt(FIGHT_UI.howPips, { pips: PIP_NAMES[cls] })), arrow(), step(h('span', { class: 'em big' }, spend.icon, starBadge()), FIGHT_UI.howBig)),
+    h('div', { class: 'row' }, step(auto.icon, FIGHT_UI.howAuto), arrow(), step(row, fmt(FIGHT_UI.howPips, { pips: PIP_NAMES[cls] })), arrow(), step(h('span', { class: 'em big' }, spend.icon, starBadge()), fmt(FIGHT_UI.howBig, { n: SPEND_MUL[PIP_MAX]! }))),
     h('div', { class: 'row combo' }, step(primer.icon, primer.name), arrow('+'), step(spend.icon, spend.name), arrow('='), step(starBadge('lone'), FIGHT_UI.howCombo)),
   );
   strip.style.setProperty('--c', c.color);

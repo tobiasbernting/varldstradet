@@ -7,7 +7,7 @@
 // fallen and frozen are the dungeons' only).
 import { cameraShake, drawEllipse, drawLine, drawLineList, drawPoly, rgb, setAdditiveBlendMode, vec2, type Color, type Vector2 } from 'littlejsengine';
 import { BLOCK_SPECIES, CLASSES, CLASS_IDS, FIGHT_UI, MOB_FLAG, PIP_MAX, ROLE, SAGA_BOSSES, SAGA_MOBS, SPELLS, SPEND, T, TILE, fmt, isSagaKey, type Change, type MobRole, type SagaZone } from '@varldstradet/shared';
-import { FLAG, classOf, fightMode, firstTime, flagsOf, isFoe, liveTarget, markedMob, sagaSnap, setTarget, webbed } from '@v1/saga.ts';
+import { FLAG, classOf, fightMode, firstTime, flagsOf, isFoe, pipHalf, liveTarget, markedMob, sagaSnap, setTarget, webbed } from '@v1/saga.ts';
 import { castFill, hitStopMs, juiceOf, poofCount, shakeOf, spendClass, type Juice } from '@v1/fight.ts';
 import { effectiveFx } from '@v1/fxprefs.ts';
 import { castRing, pipRow, roleMarker, setPips, skullMark, tickMark } from '@v1/ui/fightcard.ts';
@@ -68,7 +68,7 @@ interface BarTop {
   cast?: readonly [string, number, number, 0 | 1];
   flags?: number;
   /** A hero's pips, in their class's colour. */
-  pips?: { cls: keyof typeof CLASSES; n: number };
+  pips?: { cls: keyof typeof CLASSES; n: number; half?: boolean };
   mine?: boolean;
   /** Märke: the party's skull is on this monster. */
   skull?: boolean;
@@ -411,7 +411,8 @@ export class SagaView {
     if (mine || near) {
       if (c.spell === 'cast_ring') {
         /* (the ring's own chime plays when it appears on the floor) */
-      } else if (c.spell.startsWith('cast_')) {
+      } else if (c.spell === 'cast_far') SAGA_SFX.lob();
+      else if (c.spell.startsWith('cast_')) {
         const a = typeof c.by === 'number' ? activeWorld()?.animals[c.by] : undefined;
         const move = c.spell.slice(5);
         bossWindup(move, SAGA_BOSSES[a?.species ?? '']?.moves.find((m) => m.move === move)?.warn ?? 1500);
@@ -431,6 +432,7 @@ export class SagaView {
       this.holdNumbers(c.on, Math.min(0.26, Math.hypot(end.x - from.x, end.y - from.y) * 0.0025));
       return;
     }
+    if (s === 'cast_far') return to ? this.lob(c.by, from, to) : undefined;
     if (s.startsWith('cast_')) {
       const move = s.slice(5);
       if (typeof c.by === 'number') {
@@ -1313,6 +1315,19 @@ export class SagaView {
     }
   }
 
+  /** Ranged pressure: a boss lobs something at a hero far away (its red circle is already on the ground where it will land). */
+  private lob(by: string | number, from: { x: number; y: number }, to: { x: number; y: number }): void {
+    const [r, g, b] = warnColour();
+    this.add(0.45, (layer, f, k) => {
+      if (layer !== 'bright') return;
+      const a = this.body(by, from);
+      const x = lerp(a.x, to.x, k);
+      const y = lerp(a.y, to.y, k) - Math.sin(k * Math.PI) * 26;
+      drawSprite(this.art.glow, x, y, 12, 12, 0, rgba(r, g, b, 0.9));
+      drawSprite(this.art.glow, x, y, 5, 5, 0, rgba(1, 1, 1, 1));
+    }, from, to);
+  }
+
   /** Jättehugg at three pips: the blade's sweep through everything in front. */
   private arc(from: { x: number; y: number }, to: { x: number; y: number }, r: number, wide: number, c: [number, number, number]): void {
     const [cr, cg, cb] = c;
@@ -2114,7 +2129,7 @@ export class SagaView {
       for (const [id, f] of Object.entries(snap.f)) {
         const s = this.find(id);
         const c = classOf(client.world?.players[id]);
-        if (s && !(f[2] & FLAG.down)) bar(`p${id}`, s, f[0] / Math.max(1, f[1]), 'friend', null, { pips: c ? { cls: c.id, n: f[3] ?? 0 } : undefined, mine: id === client.me, inRing: inRing(s) });
+        if (s && !(f[2] & FLAG.down)) bar(`p${id}`, s, f[0] / Math.max(1, f[1]), 'friend', null, { pips: c ? { cls: c.id, n: f[3] ?? 0, half: pipHalf(id) } : undefined, mine: id === client.me, inRing: inRing(s) });
       }
     }
     // a waiting monster you aim at shows its name too
@@ -2162,7 +2177,7 @@ export class SagaView {
       p.pips = top.pips ? pipRow(top.pips.cls, 'over') : null;
       if (p.pips) row.append(p.pips);
     }
-    if (p.pips && top.pips) setPips(p.pips, top.pips.n, !this.juice().loops);
+    if (p.pips && top.pips) setPips(p.pips, top.pips.n, !this.juice().loops, top.pips.half);
     if (!!top.skull !== !!p.skull) {
       p.skull?.remove();
       p.skull = top.skull ? skullMark() : null;

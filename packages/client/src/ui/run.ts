@@ -804,7 +804,8 @@ export class RunUi {
         h('span', { class: 'nm' }, this.level === l.level ? `✔ ${l.name}` : l.name),
         names ? h('span', { class: 'st' }, fmt(RUN_UI.cappedFor, { names })) : null,
       );
-      this.info(t, names ? '🔒' : l.icon, l.name, names ? fmt(RUN_UI.cappedHint, { names }) : l.blurb);
+      // (from Medel up everyone falling ends the stop even if the Hirdmannen stands: the level's card says so)
+      this.info(t, names ? '🔒' : l.icon, l.name, names ? fmt(RUN_UI.cappedHint, { names }) : l.level >= 2 ? `${l.blurb} ${RUN_T.wipeRule}` : l.blurb);
       this.tap(t, () => {
         if (names) {
           this.hint(fmt(RUN_UI.cappedHint, { names }));
