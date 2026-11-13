@@ -70,6 +70,7 @@ import {
   SPECIES_NAMES,
   dungeonSpecies,
   mobVariant,
+  RUN_LEVELS,
 } from '@varldstradet/shared';
 import { getArt, portraitUrl } from '@art/textures.ts';
 import { drawAnimal } from '@art/animals.ts';
@@ -110,7 +111,7 @@ import {
 } from '../saga.ts';
 import { PRIMER, interruptOf, isInterrupt, isReaction, newPips, primerHint, type SpendView } from '../fight.ts';
 import { boltBadge, fightExplain, fightStrip, pipRow, roleLine, roleMarker, setPips, skullMark, starBadge } from './fightcard.ts';
-import { pathOf } from '../run.ts';
+import { myRun, pathOf } from '../run.ts';
 import { pathIcon } from './runpick.ts';
 import { SAGA_SFX } from '../sagasfx.ts';
 import { lootLookCard, rememberLooks, renderLooks, resetLooksWindow } from './looks.ts';
@@ -1166,7 +1167,10 @@ export class SagaUi {
     let sub = web ? T.sagaWebbedSub : T.sagaFrozenSub;
     if (isDown) {
       title = T.sagaFallenTitle;
-      const all = Object.values(sagaSnap()?.f ?? {}).every((f) => f[2] & FLAG.down);
+      // from Medel up the fight is lost when every HUMAN hero is down, whatever the Hirdmannen does (RUN_LEVELS[l].humansOnly)
+      const run = myRun();
+      const humansOnly = !!run && !!RUN_LEVELS[run.level]?.humansOnly;
+      const all = Object.entries(sagaSnap()?.f ?? {}).every(([id, f]) => !!(f[2] & FLAG.down) || (humansOnly && !!client.world?.players[id]?.bot));
       sub = all ? T.sagaWipeSub : fmt(T.sagaFallenSub, { s: Math.max(1, Math.ceil((DOWN_MS - (serverNow() - this.downSince)) / 1000)) });
     }
     const text = `${title}\n${sub}`;
