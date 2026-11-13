@@ -1032,7 +1032,7 @@ export const COMBO_TEXT: Record<ClassId, string> = {
 export const ROLE_NAMES: Record<MobRole, string> = { healer: 'Besvärjare', archer: 'Skytt', shield: 'Sköldbärare' };
 export const ROLE_ICONS: Record<MobRole, string> = { healer: '💗', archer: '🎯', shield: '🛡️' };
 export const ROLE_TEXT: Record<MobRole, string> = {
-  healer: 'Läker en vän var 8:e sekund. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller ta den först!',
+  healer: 'Läker en vän var 10:e sekund. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller ta den först!',
   archer: 'Siktar en rand på marken i 1,5 sekunder och skjuter sedan. Gå åt sidan, eller avbryt den!',
   shield: 'Vännerna inom 3 steg tar hälften så mycket skada. Ta den först, eller gör den yr!',
 };
