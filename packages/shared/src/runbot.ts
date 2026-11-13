@@ -320,6 +320,15 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     const d = dist(a, p);
     const spell = SPELLS[CLASSES[cls].auto];
     const want = isRanged(cls) ? Math.min(5.5, (cls === 'helare' ? 6 : (spell?.range ?? 8) - 2)) : 1.5;
+    // a careful hero who has stepped out of a mark waits at its rim until it has landed (it does not walk back in)
+    if (careful && !mind.noDodge) {
+      const n = Math.hypot(a.x - p.x, a.y - p.y) || 1;
+      const ahead = Math.min(n, 1.2 * TILE);
+      if (d > 0.3 && [0.5, 1].some((k) => marked(area, p.x + ((a.x - p.x) / n) * ahead * k, p.y + ((a.y - p.y) / n) * ahead * k, now))) {
+        p.moving = false;
+        return out;
+      }
+    }
     // the healer stays near whoever is hurt worst, or the tank
     const anchor = cls === 'helare' ? (hurt[0]?.q ?? friends.find((x) => x.ff.cls === 'vaktare')?.q) : undefined;
     if (anchor && dist(anchor, p) > 5) {

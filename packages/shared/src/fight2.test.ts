@@ -5,6 +5,10 @@ import {
   COMBO_CAP,
   DUNGEONS,
   MARK_LOCK_MS,
+  MOB_ARCHETYPE,
+  SAGA_QUESTS,
+  generateRun,
+  mobBase,
   MEDAL_SILVER,
   ORB,
   RING,
@@ -357,5 +361,70 @@ describe('Runmärken', () => {
     expect(told.length).toBe(2); // (each of the two humans is told once)
     for (const c of told) if (c.t === 'toast') for (const pl of silver.l.party.players) expect(c.text).not.toContain(pl.name);
     expect(RUN_T.medalText).toMatch(/1/);
+  });
+});
+
+describe('the new species and the old rules', () => {
+  it('a stat-mate counts for its original in a kill quest', () => {
+    const q = SAGA_QUESTS.find((x) => x.kind === 'kill' && x.target === 'skelett')!;
+    expect(mobBase('rostdraug')).toBe('skelett');
+    const l = lab(['magiker']);
+    l.mute();
+    l.p.saga!.quests[q.id] = 0;
+    for (const species of ['rostdraug', 'skelett', 'gravrotta']) {
+      const m = l.place(species, 3, { still: true });
+      m.hp = 1;
+      press(l, 'p', 'isspjut', m.id);
+    }
+    expect(l.p.saga!.quests[q.id]).toBe(2);
+  });
+
+  it('a Skytt is a shooter and a Sköldbärare a brute wherever the pack has one that is free', () => {
+    let archers = 0;
+    let shields = 0;
+    for (const seed of [1, 2, 3, 4]) {
+      for (const stop of generateRun(seed, { boss: 'draug', level: 3 }).stops) {
+        for (const r of stop.def.rooms) {
+          (r.packs ?? []).forEach((members, pi) => {
+            const roles = r.roles?.[pi] ?? [];
+            const taken = (i: number): boolean => !!roles[i];
+            members.forEach((species, i) => {
+              const role = roles[i];
+              if (role !== 'archer' && role !== 'shield') return;
+              const want = role === 'archer' ? 'shooter' : 'brute';
+              const hasFree = members.some((sp, k) => MOB_ARCHETYPE[sp] === want && (k === i || !taken(k)));
+              if (role === 'archer') archers++;
+              else shields++;
+              if (hasFree) expect(MOB_ARCHETYPE[species], `seed ${seed} stop ${stop.node}`).toBe(want);
+            });
+          });
+        }
+      }
+    }
+    expect(archers).toBeGreaterThan(5);
+    expect(shields).toBeGreaterThan(5);
+  });
+
+  it('big monsters are in packs from the first wing on: about one pack in three there, most packs later, fewer on Mycket lätt', () => {
+    const share = (level: RunLevel, wing: number): number => {
+      let big = 0;
+      let all = 0;
+      for (let seed = 1; seed <= 12; seed++) {
+        for (const stop of generateRun(seed, { boss: 'draug', level }).stops) {
+          if ((stop.row <= 4 ? 0 : stop.row <= 8 ? 1 : 2) !== wing || stop.kind === 'elite') continue;
+          for (const r of stop.def.rooms) for (const members of r.packs ?? []) {
+            all++;
+            if (members.some((sp) => mobBase(sp) === 'skelett')) big++;
+          }
+        }
+      }
+      return big / Math.max(1, all);
+    };
+    expect(share(2, 0)).toBeGreaterThan(0.2);
+    expect(share(2, 0)).toBeLessThan(0.45);
+    expect(share(2, 1)).toBeGreaterThan(0.55);
+    expect(share(1, 0)).toBeGreaterThan(0.2);
+    expect(share(0, 0)).toBeGreaterThan(0.08);
+    expect(share(0, 0)).toBeLessThan(share(2, 0));
   });
 });

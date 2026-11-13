@@ -15,12 +15,13 @@ for (let t = 0; t < 40 * 60_000 && run.phase !== 'ended' && run.phase !== 'victo
   const out: import('../src/protocol.ts').Change[] = [];
   step(party, true, out);
   const inst = party.world.areas![run.key]?.saga;
-  const boss = inst ? inst.mobs[inst.boss] : undefined;
-  if (run.plan.stops[run.node]!.kind !== 'boss' || !boss || boss.state !== 'fight') continue;
+  const boss = inst ? inst.mobs[process.env.MINI ? inst.mini : inst.boss] : undefined;
+  if (run.plan.stops[run.node]!.kind !== (process.env.MINI ? 'mini' : 'boss') || !boss || boss.state !== 'fight') continue;
   t0 ||= run.elapsed;
   const f = inst!.fighters[me]!;
   for (const c of out) {
     const at = ((run.elapsed - t0) / 1000).toFixed(1).padStart(6);
+    if (c.t === 'zone' && c.zone && c.zone.by === boss.id) console.log(`${at} zone ${c.zone.shape} r${c.zone.r} d=${(Math.hypot(c.zone.x - party.players[0]!.x, c.zone.y - party.players[0]!.y) / 16).toFixed(1)}`);
     if (c.t === 'hit' && c.on === me && c.mark) console.log(`${at} MARK ${c.n}  hp ${Math.round(f.hp)}/${f.max} boss ${Math.round((100 * boss.hp) / boss.max)}%`);
     if (c.t === 'spell' && c.by === boss.id && c.spell.startsWith('cast_')) console.log(`${at} ${c.spell}`);
     if (c.t === 'spell' && c.by === me && c.spell === 'potion') console.log(`${at} potion`);

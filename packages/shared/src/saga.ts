@@ -169,7 +169,7 @@ export const MARK_TAKEN_CAP = 0.3;
 export type MobRole = 'healer' | 'archer' | 'shield';
 export const MOB_ROLES: readonly MobRole[] = ['healer', 'archer', 'shield'];
 export const ROLE = {
-  healer: { every: 8000, first: 4000, cast: 2500, heal: 0.3, easy: { cast: 4000, heal: 0.1 } },
+  healer: { every: 10000, first: 4000, cast: 2500, heal: 0.3, easy: { cast: 4000, heal: 0.1 } },
   archer: { every: 7000, first: 3000, warn: 1500, length: 9, width: 1.2 },
   shield: { radius: 3, cut: 0.5, easy: { cut: 0.25 } },
 } as const;
