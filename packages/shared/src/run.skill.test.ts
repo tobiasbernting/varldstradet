@@ -19,6 +19,8 @@ interface Row {
   spirit: number;
   /** The share of the fight stops cleared that got a gold Runmärke. */
   gold: number;
+  /** Runs in which a Sagoande went before the Mellanboss (in rows 1 to 4). */
+  early: number;
 }
 const memo = new Map<string, Row>();
 
@@ -27,7 +29,7 @@ async function row(cls: ClassId, level: RunLevel, style: BotStyle, o: { noDodge?
   const key = JSON.stringify([cls, level, style, o]);
   const had = memo.get(key);
   if (had) return had;
-  const r: Row = { wins: 0, mins: 0, spirit: 0, gold: 0 };
+  const r: Row = { wins: 0, mins: 0, spirit: 0, gold: 0, early: 0 };
   let stops = 0;
   let golds = 0;
   for (const seed of SEEDS) {
@@ -42,13 +44,14 @@ async function row(cls: ClassId, level: RunLevel, style: BotStyle, o: { noDodge?
     }
     const ended = p.changes.find((c) => c.t === 'run' && c.ev === 'ended');
     if (p.outcome === 'wipe' || (ended && ended.t === 'run' && ended.ev === 'ended' && (ended.spiritUsed ?? 0) > 0)) r.spirit++;
+    if (p.changes.some((c) => c.t === 'run' && c.ev === 'state' && !!c.run && c.run.spiritUsed > 0 && c.run.row <= 4)) r.early++;
     stops += p.stops.length;
     golds += p.stops.filter((s) => s.medal === 3).length;
   }
   r.mins /= Math.max(1, r.wins);
   r.gold = golds / Math.max(1, stops);
   memo.set(key, r);
-  console.log(`${cls} level ${level} ${style}${o.noDodge ? ' noDodge' : ''}${o.slots ? ' slot 1 only' : ''}${o.kid ? ' kid' : ''}: ${r.wins}/${SEEDS.length} wins, ${r.mins.toFixed(1)} min, Sagoande in ${r.spirit}, gold ${Math.round(r.gold * 100)} %`);
+  console.log(`${cls} level ${level} ${style}${o.noDodge ? ' noDodge' : ''}${o.slots ? ' slot 1 only' : ''}${o.kid ? ' kid' : ''}: ${r.wins}/${SEEDS.length} wins, ${r.mins.toFixed(1)} min, Sagoande in ${r.spirit} (before the Mellanboss in ${r.early}), gold ${Math.round(r.gold * 100)} %`);
   return r;
 }
 
@@ -62,12 +65,15 @@ describe('Medel: playing well matters (same hero, same seeds, same lane)', () =>
       expect(c.mins).toBeGreaterThan(10);
       expect(c.mins).toBeLessThan(20);
       expect(c.gold).toBeGreaterThanOrEqual(0.6);
+      expect(c.early).toBe(0);
     });
 
     it(`${cls}: the masher loses its Sagoande in at least half its runs, earns gold on at most 20 % of its stops, and is at least 25 % slower than the careful bot or does not win`, T, async () => {
       const c = await row(cls, 2, 'careful');
       const m = await row(cls, 2, 'masher');
       expect(m.spirit).toBeGreaterThanOrEqual(SEEDS.length / 2);
+      // the packs are dangerous to a hero who does not look: the Sagoande goes before the Mellanboss in at least half the runs
+      expect(m.early).toBeGreaterThanOrEqual(SEEDS.length / 2);
       expect(m.gold).toBeLessThanOrEqual(0.2);
       expect(m.wins <= SEEDS.length / 2 || m.mins >= c.mins * 1.25).toBe(true);
     });
@@ -80,6 +86,7 @@ describe('Medel: playing well matters (same hero, same seeds, same lane)', () =>
       expect(a.mins).toBeGreaterThan(12);
       expect(a.mins).toBeLessThan(25);
       expect(a.spirit).toBeLessThanOrEqual(SEEDS.length / 2);
+      expect(a.early).toBe(0);
     });
 
     it(`${cls}: a careful bot that never leaves a mark (and does not back away) wins at most 2 of 6`, T, async () => {

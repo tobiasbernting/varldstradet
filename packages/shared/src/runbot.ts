@@ -371,7 +371,8 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     const anchor = cls === 'helare' ? (hurt[0]?.q ?? friends.find((x) => x.ff.cls === 'vaktare')?.q) : undefined;
     if (anchor && dist(anchor, p) > 5) {
       walkTo(area, p, mind, { x: tileOf(anchor.x), y: tileOf(anchor.y) }, dtMs, now, slowed, 2);
-    } else if (isRanged(cls) && d < 3.5 && cls === 'magiker' && mind.style !== 'masher' && !mind.noDodge) {
+    } else if (isRanged(cls) && d < 3.5 && cls === 'magiker' && mind.style !== 'masher' && !mind.noDodge && dist(t.home, p) < 14) {
+      // (not further than the monster follows: dragged past its leash it goes home, heals, and the fight starts over)
       // (the masher stands where it is and presses its buttons; so does the bot that never leaves a mark: backing away is how a mage leaves most of them)
       // back away from what is close
       const dx = p.x - a.x;
