@@ -97,6 +97,7 @@ class Hugin {
   start(ui: HTMLElement): void {
     if (this.started) return;
     this.started = true;
+    this.bubble.hidden = true;
     this.root.append(this.bird, this.bubble);
     ui.append(this.root);
     onTap(this.bubble, () => this.thank());
@@ -267,6 +268,8 @@ class Hugin {
     this.bird.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -100%) scaleX(${flip})`;
     if (this.bubble.hidden) return;
     // the bubble: over him and away from the hero in the world; beside him when docked. Always whole on the screen.
+    // (docked it may be as wide as the room beside him, so it is as low as it can be and stays over the hero's head)
+    this.bubble.style.maxWidth = this.spot ? '' : `${Math.max(220, vw - (tx + 40) - 8)}px`;
     const bw = this.bubble.offsetWidth;
     const bh = this.bubble.offsetHeight;
     const birdH = this.bird.offsetHeight;

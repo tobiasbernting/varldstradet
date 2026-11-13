@@ -1489,7 +1489,6 @@ export class SagaUi {
         line('⭐', FIGHT_UI.ringTitle, FIGHT_UI.ringText),
         line(h('span', { class: 'em medals' }, '🥇'), FIGHT_UI.medalsTitle, RUN_T.medalText),
         line('🎯', T.sagaFarName, T.sagaFarText),
-        line('💥', T.sagaDunkName, T.sagaDunkText),
         line('💀', T.sagaWipe, RUN_T.wipeRule),
       ),
     );
