@@ -220,7 +220,7 @@ choice, which is also what the clock picks.
 | Den vandrande skalden (`skald`) | Lyssna · Klappa händerna | cooldowns 5 % faster for the run · 20 hacksilver |
 | Sagoanden (`ande`) | Sköldanden · Hjärtanden · Spara anden | armor +5 % · health +8 % · one more Sagoande (at most 5) |
 | Honungsträdet (`honung`) | Plocka honung · Klappa björnen | 2 potions each · everyone heals fully |
-| Skogen rör sig (`bakhall`) | ⚔️ Försvara stenen · Göm er | a fight in three waves, then a *sällsynt* party runa, 25 hacksilver and a Runmärke · 5 hacksilver |
+| Skogen rör sig (`bakhall`) | ⚔️ Försvara gläntan · Göm er | a fight in three waves, then a *sällsynt* party runa, 25 hacksilver and a Runmärke · 5 hacksilver |
 
 **Skogen rör sig** (`AMBUSH`, `AMBUSH_EVENT`, `tickAmbush` in `runsim.ts`) is not one of the ten: it takes the place of a stop's own event
 one time in eleven, by dice of its own. Defending: three waves of the dungeon's monsters (three or four each, two on Mycket lätt; one

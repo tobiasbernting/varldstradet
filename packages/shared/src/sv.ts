@@ -910,7 +910,7 @@ export const EVENT_TEXT: Record<string, string> = {
   honung: 'Ett stort träd är fullt av honung. En björn sover under det.',
 };
 export const EVENT_CHOICES: Record<string, Record<string, [string, string]>> = {
-  bakhall: { forsvara: ['Försvara stenen', 'En strid i 3 vågor! Ni får en sällsynt runa och 25 silver.'], gom: ['Göm er', 'Ingen strid. Ni hittar 5 silver.'] },
+  bakhall: { forsvara: ['Försvara gläntan', 'En strid i 3 vågor! Ni får en sällsynt runa och 25 silver.'], gom: ['Göm er', 'Ingen strid. Ni hittar 5 silver.'] },
   trollunge: { brod: ['Ge bröd', 'Hela laget får en sällsynt runa.'], smyg: ['Smyg förbi', 'Ni hittar 10 silver på marken.'] },
   brunn: { mynt1: ['Kasta 10 silver', 'Hela laget får en vanlig runa.'], mynt3: ['Kasta 30 silver', 'Hela laget får en sällsynt runa.'], gavidare: ['Gå vidare', 'Ni hittar 5 silver vid brunnen.'] },
   kraka: { folj: ['Följ kråkan', 'Den leder er till 30 silver.'], jaga: ['Jaga bort den', '10 silver, och alla läks lite.'] },
@@ -951,7 +951,7 @@ export const RUN_T = {
   near: 'Nära ögat!',
   nearText: 'Kliv ur ett märke i sista stund (0,5 sekunder innan det smäller), så får du 1 prick.',
   ambushWave: '🌲 Våg {n} av {count}!',
-  ambushWon: 'Ni försvarade stenen!',
+  ambushWon: 'Ni försvarade gläntan!',
   ambushWonSub: 'Skogen är lugn igen. Ni får en runa och 25 silver.',
   medalText: 'Guld får ni om ni springer ur märkena (högst 1 träff var), inte låter något monster läka sig och är snabba.',
   started: 'Färden börjar! Tio steg till bossen.',
@@ -1707,7 +1707,7 @@ export const FIGHT_UI = {
   myElement: 'Dina slag är {element}',
   fightChoice: 'Strid',
   waveOf: 'Våg {n} av {count}',
-  waveInfo: 'Monstren kommer i 3 vågor från skogens kant. Håll ihop vid stenen!',
+  waveInfo: 'Monstren kommer i 3 vågor från skogens kant. Håll ihop i gläntan!',
   togetherPowers: 'Hornet och gillet',
 
   ringTitle: 'Guldringen',
@@ -1733,7 +1733,7 @@ export const HELP_FIGHT: HelpTopic = {
     { icon: 'emoji:🔥', text: 'Svagheter: varje fängelsehåla har 1 svaghet: eld, is eller åska. Träffar av den gör 25 % mer skada.' },
     { icon: 'emoji:🛡️', text: 'Perfekt block: res Sköldmur precis innan slaget träffar (0,6 sekunder). Då tar du ingen skada och får 3 Sköldkraft!' },
     { icon: 'emoji:💨', text: 'Nära ögat: kliv ur ett märke i sista stund (0,5 sekunder innan det smäller), så får du 1 prick.' },
-    { icon: 'emoji:🌲', text: 'Skogen rör sig: en händelse där monster kommer i 3 vågor. Försvara stenen, eller göm er.' },
+    { icon: 'emoji:🌲', text: 'Skogen rör sig: en händelse där monster kommer i 3 vågor. Försvara gläntan, eller göm er.' },
     { icon: 'emoji:🐦‍⬛', text: 'Korpen Hugin flyger in med ett tips första gången något nytt händer. Alla tips du har sett finns i Dagboken under Hugins tips.' },
   ],
 };
@@ -1839,7 +1839,7 @@ export const HUGIN_T = {
     weak: 'Monstren här tar 25 % mer skada av {element}. Välj runor med det märket!',
     parry: 'Res Sköldmur precis innan slaget träffar, så tar du 0 skada och får 3 Sköldkraft!',
     near: 'Nära ögat! Kliv ur ett märke i sista stund, så får du 1 prick.',
-    ambush: 'Monstren kommer i 3 vågor från skogens kant. Håll ihop vid stenen!',
+    ambush: 'Monstren kommer i 3 vågor från skogens kant. Håll ihop i gläntan!',
   } as Record<string, string>,
 };
 
