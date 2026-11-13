@@ -483,8 +483,8 @@ Mycket lätt). It is called by the boss's own rain where it has one, else "Fjär
 
 **Per dungeon** (`DUNGEON_TUNE`). A hero is as strong in every chapter, the later dungeons' monsters hit harder and their bosses
 have more health, and a fall costs a Sagoande, so a run multiplies the ordinary blows and the health of the boss and mid-boss by
-dungeon: Draugkryptan 1 / 1, Frostjättens borg 0.9 / 1, Surts smedja 0.8 / 0.85, Helheim 0.85 / 0.9, Svartalfheims gruvor 0.85 / 0.85,
-Havsormens tempel 0.9 / 0.8, Alvernas lund 0.7 / 0.75, Fenrisklyftan 0.6 / 0.7, Bifrost 0.8 / 0.6. The dungeons with many brutes also have
+dungeon: Draugkryptan 1 / 1, Frostjättens borg 0.9 / 1, Surts smedja 0.75 / 0.85, Helheim 0.85 / 0.9, Svartalfheims gruvor 0.85 / 0.85,
+Havsormens tempel 0.9 / 0.8, Alvernas lund 0.65 / 0.75, Fenrisklyftan 0.6 / 0.7, Bifrost 0.8 / 0.6. The dungeons with many brutes also have
 a softer Dunk (5.8): ×0.8 in Frostjättens borg, ×0.7 in Surts smedja, Alvernas lund and Bifrost, ×0.6 in Svartalfheims gruvor, Havsormens
 tempel and Fenrisklyftan. Burning ground has weight 0.5.
 
@@ -516,10 +516,10 @@ the averages at the time of writing.
 | --- | --- | --- | --- | --- |
 | One hero alone (any class) or Krigare + Magiker | Mycket lätt | `kid7` | every run won (6 seeds), none ends on a wipe, average win 14 to 40 min (`run.latt.test.ts`) | 20 to 25 min |
 | same | Lätt | clumsy | same, 14 to 34 min | 19 to 23 min |
-| One hero + Hirdmannen (any class) or Krigare + Magiker | Medel | careful | all 6 won, average win 10 to 20 min, the lone Helare 15 to 29 (`run.solo.test.ts`) | Väktare 13.6, Helare 19.8, Krigare 12.6, Magiker 16.2, pair 12.7 |
-| Krigare + Hirdmannen / Väktare + Helare / three / four heroes | Medel | careful | all 3 won; 8 to 16 / 12 to 23 / 9 to 17 / 8 to 15 min (`run.bots.test.ts`) | 12.0 / 16.7 / 12.2 / 10.8 |
-| same four parties | Lätt | clumsy | all 3 won; 13 to 26 / 17 to 33 / 14 to 27 / 15 to 29 min | 19.5 / 25.3 / 20.6 / 22.0 |
-| Krigare + Magiker | Svår | careful | 8 to 12 of 16 won (`run.hard.test.ts`) | 10 |
+| One hero + Hirdmannen (any class) or Krigare + Magiker | Medel | careful | all 6 won, average win 10 to 20 min, the lone Helare 15 to 29 (`run.solo.test.ts`) | passes (Krigare 11.4, Magiker 13.9) |
+| Krigare + Hirdmannen / Väktare + Helare / three / four heroes | Medel | careful | all 3 won; 8 to 16 / 12 to 23 / 9 to 17 / 8 to 15 min (`run.bots.test.ts`) | 10.4 / 15.5 / 12.3 / 10.5 |
+| same four parties | Lätt | clumsy | all 3 won; 13 to 26 / 17 to 33 / 14 to 27 / 15 to 29 min | 19.4 / 22.3 / 23.5 / 19.7 |
+| Krigare + Magiker | Svår | careful | 8 to 12 of 16 won (`run.hard.test.ts`) | 11 |
 | Krigare + Magiker | Extrem | careful | 3 to 6 of 16 won | in the band (3 with a little more monster health; near its lower edge) |
 | Any chapter, one Krigare | Medel | careful | no stall: every dungeon ends in a win or a wipe inside 60 min | passes |
 
@@ -527,13 +527,18 @@ the averages at the time of writing.
 
 | Bot | Target | Krigare | Magiker |
 | --- | --- | --- | --- |
-| careful | wins all in 10 to 20 min, gold Runmärke on at least 60 % of its fight stops, no wipe before the Mellanboss | 6/6, 11.8 min, 64 % | 6/6, 15.9 min, 62 % |
-| adult (careful, but no machine: 5.6) | wins at least 5 of 6 in 12 to 25 min, a Sagoande in at most half its runs, no wipe before the Mellanboss | 6/6, 12.8 min, none | 6/6, 15.3 min, none |
-| masher | loses its Sagoande in at least half its runs, and before the Mellanboss (rows 1 to 4) in at least half; gold on at most 20 %; wins at most half or is 25 % slower | 0/6, before the Mellanboss in 3, 6 % | 0/6, before the Mellanboss in 5, 14 % |
+| careful | wins all in 10 to 20 min, gold Runmärke on at least 60 % of its fight stops, no wipe before the Mellanboss | 6/6, 11.4 min, 76 % | 6/6, 13.9 min, 76 % |
+| adult (careful, but no machine: 5.6) | wins at least 5 of 6 in 11 to 25 min, a Sagoande in at most half its runs, no wipe before the Mellanboss | 6/6, 12.2 min, none | 6/6, 15.3 min, none |
+| masher | loses its Sagoande in at least half its runs, and before the Mellanboss (rows 1 to 4) in at least half; gold on at most 20 %; wins at most half or is 25 % slower | 0/6, before the Mellanboss in 4, 6 % | 0/6, before the Mellanboss in 5, 8 % |
+| masher with a boss power (Kungens rop, Drakfjäll, Ulvatjut) | wins at most 1 of 6 | 0/6 with each | 0/6 (Kungens rop) |
+| careful with Ulvatjut | wins all in 9 to 20 min | 6/6, 12.0 min | not pinned |
 | careful, never leaves a mark (`noDodge`) | wins at most 2 of 6 | 0/6 | 0/6 |
-| careful, button 1 only (`slots: [0]`) | at least 35 % slower than careful, gold on at most 30 % | 6/6, 21.8 min (+85 %), 20 % | 6/6, 24.8 min (+56 %), 5 % |
+| careful, button 1 only (`slots: [0]`) | at least 35 % slower than careful, gold on at most 30 % | 6/6, 19.8 min (+74 %), 24 % | 6/6, 22.8 min (+64 %), 16 % |
 | masher on Lätt | wins at least 5 of 6 | 6/6 | 6/6 |
 | seven-year-old masher on Mycket lätt (`kid`) | wins every run | 6/6 | 6/6 |
+
+With `runtune --power` the masher Krigare was run with each of the nine powers: none won a run (0 of 6 each). The powers do not make a
+careful hero much faster either (11.1 to 12.0 min with Kungens rop, Ulvatjut, Eldring and Lokes list).
 
 The clumsy bot (a nine-year-old's proxy) wins 0 of 6 on Medel with either hero, and everything on Lätt: Medel is for people who
 leave marks; the step from Lätt is large on purpose and not pinned.
@@ -543,15 +548,17 @@ beyond the no-stall one): the careful bot wins 3 of 3 in every dungeon but Bifro
 
 | Dungeon | careful | adult | masher |
 | --- | --- | --- | --- |
-| Draugkryptan | 3/3, 11.9 min | 3/3, 12.4 | 0/3 |
-| Frostjättens borg | 3/3, 14.3 | 3/3, 14.6 | 0/3 |
-| Surts smedja | 3/3, 15.1 | 2/3, 17.0 | 0/3 |
-| Helheim | 3/3, 14.5 | 3/3, 14.9 | 0/3 |
-| Svartalfheims gruvor | 3/3, 17.1 | 3/3, 19.6 | 0/3 |
-| Havsormens tempel | 3/3, 16.7 | 3/3, 18.6 | 0/3 |
-| Alvernas lund | 3/3, 18.4 | 3/3, 20.4 | 0/3 |
-| Fenrisklyftan | 3/3, 21.5 | 2/3, 25.6 | 0/3 |
-| Bifrost | 2/3, 15.8 | 3/3, 16.7 | 0/3 |
+| Draugkryptan | 3/3, 10.6 min | 3/3, 12.0 | 0/3 |
+| Frostjättens borg | 3/3, 13.5 | 2/3, 13.9 | 0/3 |
+| Surts smedja | 3/3, 15.7 | 2/3, 18.3 | 0/3 |
+| Helheim | 3/3, 14.3 | 3/3, 16.0 | 0/3 |
+| Svartalfheims gruvor | 3/3, 16.6 | 3/3, 19.5 | 0/3 |
+| Havsormens tempel | 3/3, 15.6 | 2/3, 16.4 | 0/3 |
+| Alvernas lund | 3/3, 17.9 | 3/3, 18.7 | 0/3 |
+| Fenrisklyftan | 3/3, 19.0 | 2/3, 21.7 | 0/3 |
+| Bifrost | 2/3, 16.0 | 3/3, 15.9 | 0/3 |
+
+(Every hero here has Draugkungen's trophy and brings Kungens rop, and eats a dish.)
 
 The hard-level bands are for a party without a tank; parties with a Väktare are not pinned by a test. A test also asserts that a run is
 different each time (three seeds give three routes, three sets of stops and three card offers). The soft 30 minutes (2.6) are the
@@ -598,7 +605,7 @@ Chosen at the arch and fixed for the run (`RUN_LEVELS` in `run.ts`; names, blurb
 | 0 Mycket lätt | ×0.4 | ×0.3 | 8 % | as written | ×1 | ×1.8 | none | 5, +1, 5 | never ends the run | ×0.35 | ×0.6 / none | 0 |
 | 1 Lätt | ×0.6 | ×0.5 | 20 % | ×0.8 the wait | ×1 | ×1.4 | one a stop, harmless | 3, +1, 5 | never ends the run | ×0.5 | ×1 / none | 0 |
 | 2 Medel | ×1 | ×0.6 | 50 % | ×0.35 the wait | ×2.3 | ×1 | one a pack | 1 | every human down; ends the run after the one | ×1 | ×1 / none | 0 |
-| 3 Svår | ×1.6 | ×1.1 | 60 % | ×0.35 | ×2.3 | ×0.8 | two a pack | 1 | as Medel | ×1.5 | ×1.5 / +0.5 weight per rarity step | 1 |
+| 3 Svår | ×1.66 | ×1.1 | 60 % | ×0.35 | ×2.3 | ×0.8 | two a pack | 1 | as Medel | ×1.5 | ×1.5 / +0.5 weight per rarity step | 1 |
 | 4 Extrem | ×1.7 | ×1.1 | 70 % | ×0.35 | ×2.3 | ×0.65 | two a pack | none | the first wipe ends it | ×2 | ×2 / +1.0 weight per rarity step | 2 |
 
 Ranged pressure (5.1): never on Mycket lätt, every 25 s at half weight on Lätt, every 10 s from Medel. "Hp" multiplies a monster's, a
@@ -650,7 +657,7 @@ every hero takes a mark of weight 1.4 (0.5 on Lätt). Not on Mycket lätt.
 
 **Runmärken** (`medalFor`, `STOP_PAR`, `MEDAL_SILVER`). When a stop with a fight is cleared the PARTY gets a medal: gold for at most one
 mark hit per fighter in the stop, no monster heal completed, and a time under par; silver for two of the three; bronze for clearing.
-Par is the careful bot's median time in a stop of that kind times 1.6 (Flock 130 s, Stark vakt 150, Skatt 70, Mellanboss 215, Boss 350
+Par is the careful bot's median time in a stop of that kind times 1.6 (Flock 120 s, Stark vakt 150, Skatt 65, Mellanboss 210, Boss 300
 for two fighters on Medel; `PAR_LEVEL` ×1.6, 1.3, 1, 1.4, 1.5 by level; ×1.15 for three or four). Gold pays 8 hacksilver and silver 4.
 The medals are in the run snapshot by stop (`RunSnap.medals`) and counted in the `ended` change. They are never per player and no
 text says who was hit.
@@ -681,7 +688,10 @@ pause), which uses THEIR power and spends the charge for everyone. The Hirdmanne
 | Loke | Lokes list | every hero's pips are filled |
 
 **Gillet** (`DISHES`, `dishOffer`). Every hero eats one dish for the run, picked at the arch from the three the next run's seed serves
-(the lobby keeps that seed, `WorldState.nextRunSeed`); the Hirdmannen eats nothing. DISH_TABLE
+(the lobby keeps that seed, `WorldState.nextRunSeed`); the Hirdmannen eats nothing. Köttgryta (max health +12 %),
+Honungskaka (the hero starts every fight with a pip), Bärsaft (one more potion, and potions heal 30 % more), Rökt fisk (walks 8 % faster,
+`PlayerState.runSpeed`), Mjödbröd (cooldowns 6 % faster). No dish dominates: the careful Krigare on Medel takes 11.2 to 11.8 min with
+each of the five (6 seeds).
 
 **Svagheter** (`Element`, `SPELL_ELEMENT`, `DUNGEON_WEAK`, `SPECIES_WEAK`, `weakOf`, `WEAK_BONUS`). A hit has an element when its spell
 has one (Eldboll and burning: eld; Isspjut: is; Åskregn and a chain's jumps: åska), when the hero's path gives that spell one (Eld:
@@ -843,10 +853,11 @@ many runs), the share of gold and silver Runmärken, the Flocks and Vilosten the
 ```
 node --experimental-transform-types packages/shared/src/runtune.ts --level 2 --style careful --seeds 20 [--from 1]
      [--style clumsy|careful|adult|kid7|masher] [--dungeon draug] [--parties solo|duo|pair|fam|all] [--only 2] [--lane safe|random] [--limit 60]
-     [--nododge] [--slots 0] [--kid] [--pars] [--hp 1 --dmg 0.6 --warn 1 --mark 0.5 --markEvery 0.35 --bossHp 2.3]
+     [--nododge] [--slots 0] [--kid] [--power draug] [--dish kottgryta] [--pars] [--hp 1 --dmg 0.6 --warn 1 --mark 0.5 --markEvery 0.35 --bossHp 2.3]
 ```
 
-`--nododge`, `--slots` and `--kid` are the skill test's bots (5.6); `--pars` prints the median seconds a stop of each kind took (the
+`--nododge`, `--slots` and `--kid` are the skill test's bots (5.6); `--power draug` gives every hero that boss's trophy and power and
+`--dish kottgryta` makes everyone eat that dish; `--pars` prints the median seconds a stop of each kind took (the
 source of `STOP_PAR`); the last group tries a level's numbers without editing the table. Three more aids are in
 `packages/shared/scripts`: `dps.ts` (what each bot style does per second to a training dummy, and what the Hirdmannen and a hero
 Helare heal), `diag.ts` (one run, per stop: marks, blows, healing, falls, the medal) and `boss.ts` (one boss fight, every cast and
@@ -1001,6 +1012,8 @@ Code: `access.ts` (rules and state), `http.ts` (routes, cookies, the WebSocket u
 - **The skill bots are bots.** The `noDodge` bot also does not back away (a mage that backs away leaves most marks without meaning
   to), and the button-1-only bot still dodges everything, so it wins slowly (5.4); nothing in a fight punishes being slow (no enrage,
   by design).
+- **The bots have no element.** No bot chooses runor for a dungeon's weakness, so Svagheter is not in any band; and the adult bot never
+  tries a Perfekt block.
 - **Bifrost is not held**: the careful bot wins 2 of 3 there (5.4).
 - **The mage bot does not back away further than a monster follows** (it used to drag a lone brute past its leash for ever); a person
   can still do that, and the monster then goes home and heals.
