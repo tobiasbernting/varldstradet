@@ -456,7 +456,7 @@ export const DUNGEON_TUNE: Record<DungeonId, { blows: number; boss: number; dunk
   orm: { blows: 0.9, boss: 0.8, dunk: 0.6 },
   alv: { blows: 0.7, boss: 0.75, dunk: 0.7 },
   fenrir: { blows: 0.6, boss: 0.7, dunk: 0.6 },
-  loke: { blows: 0.8, boss: 0.65 },
+  loke: { blows: 0.8, boss: 0.6, dunk: 0.7 },
 };
 
 /** One human alone (with the hired companion, who counts as a fighter for the monsters' health): monsters tolerate this much less. */
