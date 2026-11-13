@@ -172,7 +172,9 @@ export function initGamepad(opts: {
 
     if (fightMode()) {
       // no hotbar in a fight (a dungeon, or hero mode out in the world): the face buttons are the spells, like the keys 1–4
-      if (hit(B.A) || hit(B.RT)) t.act();
+      // LT held and A: the party's horn (two buttons, so the one blow of a stop is never an accident)
+      if (hit(B.A) && down(B.LT)) document.dispatchEvent(new Event('vt:horn'));
+      else if (hit(B.A) || hit(B.RT)) t.act();
       // (the spell bar decides: a spell goes off, or its card comes up while the explain mode is on)
       // (B thanks Hugin when he is there with a tip, instead of casting)
       const thanked = hit(B.B) && hugin.thank();

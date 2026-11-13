@@ -42,6 +42,14 @@ export const TIPS: readonly TipDef[] = [
   { id: 'samslag', pic: fixed('🤝'), text: fixed(HUGIN_T.tips.samslag!) },
   { id: 'medal', pic: fixed(RUN_T.medalIcons[3] ?? '🥇'), text: fixed(HUGIN_T.tips.medal!) },
   { id: 'wipe', pic: fixed('💀'), text: fixed(HUGIN_T.tips.wipe!) },
+  // Stjärnmonster, Hornet, Gillet, Svagheter, Perfekt block, Nära ögat, Skogen rör sig
+  { id: 'star', pic: fixed('star'), text: fixed(HUGIN_T.tips.star!) },
+  { id: 'horn', pic: fixed('📯'), text: fixed(HUGIN_T.tips.horn!) },
+  { id: 'dish', pic: fixed('🍲'), text: fixed(HUGIN_T.tips.dish!) },
+  { id: 'weak', pic: fixed('🔥'), text: fixed(HUGIN_T.tips.weak!) },
+  { id: 'parry', pic: fixed('🛡️'), text: fixed(HUGIN_T.tips.parry!) },
+  { id: 'near', pic: fixed('💨'), text: fixed(HUGIN_T.tips.near!) },
+  { id: 'ambush', pic: fixed('🌲'), text: fixed(HUGIN_T.tips.ambush!) },
 ];
 export const tipDef = (id: string): TipDef | undefined => TIPS.find((t) => t.id === id);
 
@@ -52,7 +60,13 @@ export interface Tip {
   text: string;
 }
 /** What a tip's sentence may still need from the moment when it is read again later in the journal. */
-const LATER: Record<string, Record<string, string | number>> = { mark: { n: '35 %' }, samslag: { a: FIGHT_UI.petName, b: T.sagaYou.toLowerCase() } };
+const LATER: Record<string, Record<string, string | number>> = {
+  mark: { n: '35 %' },
+  samslag: { a: FIGHT_UI.petName, b: T.sagaYou.toLowerCase() },
+  horn: { power: 'en bosskraft' },
+  dish: { dish: 'en rätt', text: '' },
+  weak: { element: 'eld, is eller åska' },
+};
 export function tipFor(id: string, cls: ClassId | null, vars?: Record<string, string | number>): Tip | null {
   const d = tipDef(id);
   if (!d) return null;

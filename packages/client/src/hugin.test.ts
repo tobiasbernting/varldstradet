@@ -12,7 +12,7 @@ const store = (): TipStore & { ids: Set<string> } => {
 
 describe('the registry', () => {
   it('covers what the fight has now', () => {
-    expect(TIPS.map((t) => t.id)).toEqual(['menu', 'auto', 'pips3', 'combo', 'interrupt', 'open', 'shield', 'dunk', 'mark', 'skull', 'orb', 'ring', 'samslag', 'medal', 'wipe']);
+    expect(TIPS.map((t) => t.id)).toEqual(['menu', 'auto', 'pips3', 'combo', 'interrupt', 'open', 'shield', 'dunk', 'mark', 'skull', 'orb', 'ring', 'samslag', 'medal', 'wipe', 'star', 'horn', 'dish', 'weak', 'parry', 'near', 'ambush']);
     expect(new Set(TIPS.map((t) => t.id)).size).toBe(TIPS.length);
   });
   it('every tip has one picture and one short sentence with nothing left to fill in, for every class and for none', () => {
@@ -20,7 +20,7 @@ describe('the registry', () => {
       for (const t of TIPS) {
         const tip = tipFor(t.id, cls)!;
         expect(tip.pic.length).toBeGreaterThan(0);
-        expect(tip.text.length).toBeGreaterThan(10);
+        expect(tip.text.trim().length).toBeGreaterThan(10);
         expect(tip.text.length).toBeLessThanOrEqual(130);
         expect(tip.text).not.toMatch(/[{}]/);
       }

@@ -3,7 +3,7 @@
 // party's frames), caws once, and says ONE thing: a picture and a short sentence in a speech bubble. He stays until he is
 // thanked (a tap, Escape, the gamepad's B) or 8 seconds, then flies off. Calm screen: he simply appears and disappears.
 // The tips and their order are in ../hugin.ts; this file watches the game for their moments and puts him on the screen.
-import { FIGHT_UI, HUGIN_T, MOB_FLAG, PIP_MAX, SAGA_BOSSES, TILE, fmt, isHomeKey, isSagaKey } from '@varldstradet/shared';
+import { DISH_NAMES, DISH_TEXT, ELEMENT_NAMES, FIGHT_UI, HUGIN_T, MOB_FLAG, POWER_NAMES, PIP_MAX, SAGA_BOSSES, TILE, fmt, isHomeKey, isSagaKey } from '@varldstradet/shared';
 import { huginCanvas, type HuginPose } from '@art/hugin.ts';
 import { calm, prefs } from '../a11y.ts';
 import { HUGIN, TIPS, TipQueue, tipFor, type Guards, type Tip, type TipStore } from '../hugin.ts';
@@ -305,6 +305,9 @@ class Hugin {
     bus.on('change', (c) => {
       if (!inSaga()) return;
       if (c.t === 'spell' && c.by === client.me && c.spell === myClass()?.auto && c.on !== undefined) this.offer('auto');
+      else if (c.t === 'spell' && c.by === client.me && c.spell === 'skoldmur') this.offer('parry');
+      else if (c.t === 'hit' && c.kind === 'near' && c.on === client.me) this.offer('near');
+      else if (c.t === 'hit' && c.weak && myRun()) this.offer('weak', { element: ELEMENT_NAMES[myRun()!.weak] ?? '' });
       else if (c.t === 'hit' && c.mark && c.on === client.me && (c.kind === 'dmg' || c.kind === 'block')) this.offer('mark', { n: c.n });
       else if (c.t === 'hit' && c.kind === 'combo' && c.by) {
         const name = (id: string): string => (id.startsWith('pet:') ? FIGHT_UI.petName : (client.world?.players[id]?.name ?? ''));
@@ -334,6 +337,17 @@ class Hugin {
         else if (z.kind === 'gold') this.offer('ring');
       }
       if ((snap.f[client.me]?.[2] ?? 0) & FLAG.down && (myRun()?.level ?? 0) >= 2) this.offer('wipe');
+      // Stjärnmonster, Hornet, Gillet, Skogen rör sig
+      const me = myPlayer();
+      if (me && Object.values(animals).some((a) => !!a.stars && Math.hypot(a.x - me.x, a.y - me.y) < 10 * TILE)) this.offer('star');
+      const run = myRun();
+      if (run) {
+        const power = run.powers?.[client.me];
+        if (power && run.horn && fighting >= 2 && tipStore.seen('pips3')) this.offer('horn', { power: POWER_NAMES[power] ?? '' });
+        const dish = run.dishes?.[client.me];
+        if (dish && !fighting) this.offer('dish', { dish: DISH_NAMES[dish] ?? '', text: DISH_TEXT[dish] ?? '' });
+        if (run.ambush) this.offer('ambush');
+      }
     });
   }
 }

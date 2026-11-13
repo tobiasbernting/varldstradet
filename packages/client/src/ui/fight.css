@@ -888,3 +888,201 @@ body.dev-mouse .saga-skull .key {
     padding: 2px 6px;
   }
 }
+
+/* ------------------------------------------------------------------------------------------------ Stjärnmonster */
+.star-row {
+  display: inline-flex;
+  gap: 1px;
+}
+.star-row .star-badge {
+  width: max(22px, calc(6 * var(--u)));
+  height: max(22px, calc(6 * var(--u)));
+}
+/* ------------------------------------------------------------------------------------------------ Hornet */
+.saga-horn {
+  pointer-events: auto !important;
+  position: relative;
+  align-self: center;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 56px;
+  min-height: 48px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 3px solid #c8a95a;
+  background: #2a2038;
+  color: #fff;
+  font-size: var(--fs);
+  font-weight: 800;
+  cursor: pointer;
+}
+.saga-horn[hidden] {
+  display: none;
+}
+.saga-horn .ic {
+  font-size: calc(26px * var(--txt, 1));
+  line-height: 1;
+}
+.saga-horn .horn {
+  font-size: calc(16px * var(--txt, 1));
+  line-height: 1;
+}
+.saga-horn .key {
+  display: none;
+  color: #ffe9a8;
+  font-weight: 900;
+}
+body.dev-key .saga-horn .key,
+body.dev-mouse .saga-horn .key {
+  display: inline;
+}
+.saga-horn.full {
+  border-color: #ffd23f;
+  box-shadow: 0 0 0 2px #14101c, 0 0 0 4px #ffd23f;
+}
+/* blown, or no power brought: grey, dashed, and crossed out (a shape, not only a colour) */
+.saga-horn.used,
+.saga-horn.none {
+  border-style: dashed;
+  border-color: #8d8798;
+  background: #2a2630;
+}
+.saga-horn.used .ic,
+.saga-horn.none .ic,
+.saga-horn.used .horn,
+.saga-horn.none .horn {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+.saga-horn.used::after,
+.saga-horn.none::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 50%;
+  height: 3px;
+  background: #fff;
+  transform: rotate(-24deg);
+  box-shadow: 0 0 0 1px #14101c;
+}
+@media (max-height: 480px) {
+  .saga-horn .horn,
+  .saga-horn .key {
+    display: none !important;
+  }
+  .saga-horn {
+    min-width: 48px;
+    padding: 2px 6px;
+  }
+}
+/* what a hero brought on the run: small pictures after the name on their party frame */
+.saga-member .br {
+  margin-left: 4px;
+  font-size: max(var(--fs), calc(3.4 * var(--u) * var(--txt)));
+  white-space: nowrap;
+}
+/* ------------------------------------------------------------------------------------------------ Skogen rör sig */
+.run-wave {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 14px;
+  border-radius: 12px;
+  border: 2px solid #c8a95a;
+  background: rgba(24, 18, 30, 0.9);
+  color: #fff;
+  font-size: calc(18px * var(--txt, 1));
+}
+.run-wave[hidden] {
+  display: none;
+}
+.run-wave .dots {
+  display: inline-flex;
+  gap: 6px;
+}
+.run-wave .dots i {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px dashed #fff;
+  box-sizing: border-box;
+}
+.run-wave .dots i.on {
+  border-style: solid;
+  background: #ffd23f;
+}
+.event-choice.fight {
+  border-color: #b3261c;
+}
+.event-choice.fight .price {
+  font-weight: 900;
+}
+/* ------------------------------------------------------------------------------------------------ Svagheter */
+.label.saga-fct.saga-fct.weak {
+  font-size: max(var(--fs), calc(7.5 * var(--u) * var(--txt)));
+  color: #fff;
+  text-shadow:
+    0 2px 0 #14101c,
+    0 0 8px #7fd8ff;
+}
+.label.saga-fct.saga-fct.sp3.weak {
+  font-size: max(calc(var(--fs) * 1.6), calc(12 * var(--u) * var(--txt)));
+}
+.run-panel .tile .weak {
+  position: absolute;
+  right: 4px;
+  top: 2px;
+  font-size: var(--fs);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.run-panel .tile .weak .dn {
+  font-size: 0.7em;
+  margin-right: 1px;
+}
+.run-panel .tile:has(.weak) {
+  position: relative;
+}
+.runa-card .good-badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  border: 2px solid #14101c;
+  background: #14101c;
+  color: #fff;
+  font-size: var(--fs);
+  font-weight: 800;
+  white-space: nowrap;
+}
+/* ------------------------------------------------------------------------------------------------ the arch's pickers */
+.run-panel .tiles.powers,
+.run-panel .tiles.dishes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.run-panel .tiles.dishes {
+  grid-template-columns: repeat(3, 1fr);
+}
+.run-panel .tile.dish .st {
+  font-size: var(--fs);
+  line-height: 1.15;
+  white-space: normal;
+}
+@media (max-width: 700px) {
+  .run-panel .tiles.dishes {
+    grid-template-columns: 1fr;
+  }
+}
+.run-panel .face .brings {
+  font-size: var(--fs);
+  white-space: nowrap;
+}
+.run-panel .power-none {
+  font-size: var(--fs);
+}

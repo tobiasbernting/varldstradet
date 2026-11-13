@@ -36,6 +36,8 @@ export const runClient = {
   offerAt: 0,
   tree: null as TreeInfo | null,
   ended: null as RunEnded | null,
+  /** Gillet: the three dishes the arch offers for the next run (the server sends them with the run's state and after a choice). */
+  dishes: [] as string[],
   /** The last run I was in, as the summary needs its chapter. */
   last: null as RunSnap | null,
 };
@@ -75,6 +77,8 @@ bus.on('change', (c: Change) => {
       runClient.runAt = performance.now();
       if (!c.run) runClient.offer = null;
       if (myRun()) runClient.last = c.run;
+    } else if (c.ev === 'gillet') {
+      if (c.to === null || c.to === client.me) runClient.dishes = c.dishes;
     } else if (c.ev === 'offer') {
       runClient.offer = c.offer;
       runClient.offerAt = performance.now();

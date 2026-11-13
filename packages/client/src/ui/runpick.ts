@@ -1,5 +1,6 @@
 // The personal choices of a run, in windows of their own so ui/run.ts stays what it was: the path (väg) every hero picks after the
 // Mellanboss. Everyone picks at once, nobody waits for a slow friend longer than the clock, and a choice can be explained by touch.
+import { ELEMENT_ICONS, FIGHT_UI } from '@varldstradet/shared';
 import { fightStrip, fightWords } from './fightcard.ts';
 import {
   CLASSES,
@@ -155,7 +156,16 @@ export function renderOfferWindow(host: PickHost, body: HTMLElement, run: RunSna
   const counts = tagCounts(hold, run.runor);
   body.append(h('p', { class: 'intro' }, RUN_T.pickSub));
   const cards = h('div', { class: 'runa-cards' });
-  offer.cards.forEach((id, i) => cards.append(runaCard(host, 'button', { id, key: i + 1, counts, path: run.paths[me], chosen: offer.picked === i }, () => pick(i))));
+  offer.cards.forEach((id, i) => {
+    const card = runaCard(host, 'button', { id, key: i + 1, counts, path: run.paths[me], chosen: offer.picked === i }, () => pick(i));
+    // Svagheter: a card whose tag is what the monsters here are weak to says so (a thumb, the element's picture and the words)
+    if (offer.weak?.[i]) {
+      card.classList.add('good-here');
+      card.append(h('span', { class: 'good-badge' }, `👍 ${ELEMENT_ICONS[run.weak] ?? ''} ${FIGHT_UI.goodHere}`));
+      card.setAttribute('aria-label', `${card.getAttribute('aria-label') ?? ''} ${FIGHT_UI.goodHere}: ${FIGHT_UI.goodHereText}`.trim());
+    }
+    cards.append(card);
+  });
   body.append(cards);
   const humans = run.party.filter((p) => !p.bot);
   const done = new Set(offer.done);

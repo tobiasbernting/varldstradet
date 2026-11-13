@@ -334,6 +334,54 @@ export const SAGA_SFX = {
     sweep(0.22, 500, 2200, 0.05, 'bandpass', 1.5);
     tone(180, 0.1, 'square', 0.03, 120);
   },
+  /** A starred monster comes into view: a small bright chime. */
+  starSeen: () => notes([1319, 1760, 2093], 60, 0.16, 'sine', 0.03),
+  /** A starred monster falls: coins ringing, more for two stars. */
+  coins: (stars: number) => {
+    for (let i = 0; i < 3 + stars * 2; i++) later(i * 55, () => tone(1568 + (i % 3) * 262, 0.09, 'triangle', 0.03, 180));
+  },
+  /** Hornet: a horn call, two notes rising, then the power's own colour (low for the king's shout, bright for ice and light). */
+  horn: (id: string) => {
+    tone(196, 0.5, 'sawtooth', 0.05, 30);
+    later(180, () => {
+      tone(294, 0.8, 'sawtooth', 0.055, 20);
+      tone(147, 0.8, 'triangle', 0.04);
+    });
+    later(420, () => {
+      if (id === 'frost') notes([2093, 1760, 2637], 40, 0.2, 'triangle', 0.035);
+      else if (id === 'surt') sweep(0.6, 300, 1600, 0.06, 'lowpass', 0.7);
+      else if (id === 'hel' || id === 'dvarg') notes([523, 659, 784, 1047], 70, 0.4, 'sine', 0.04);
+      else if (id === 'orm') sweep(0.7, 1800, 200, 0.07, 'lowpass', 0.6);
+      else if (id === 'alv') swell(110, 0.9, 70, 0.04, 'sine');
+      else if (id === 'fenrir') {
+        tone(330, 0.7, 'sine', 0.05, 220);
+        later(300, () => tone(550, 0.6, 'sine', 0.04, -200));
+      } else if (id === 'loke') notes([784, 988, 1175, 1568, 1976], 45, 0.2, 'triangle', 0.035);
+      else boom(1.2);
+    });
+  },
+  /** A hit of the element the monster is weak to: a bright glassy sparkle. */
+  weak: () => {
+    notes([2349, 3136], 35, 0.09, 'sine', 0.03);
+    sweep(0.1, 5000, 7000, 0.02, 'highpass', 2);
+  },
+  /** Perfekt block: a ringing clang. */
+  parry: () => {
+    noise(0.04, 0.09);
+    tone(1865, 0.5, 'triangle', 0.05, -40);
+    tone(2794, 0.4, 'sine', 0.03, -60);
+    later(30, () => tone(932, 0.3, 'square', 0.02));
+  },
+  /** Nära ögat: a quick whoosh past. */
+  near: (mine: boolean) => sweep(0.18, 700, 3600, mine ? 0.06 : 0.03, 'bandpass', 1.4),
+  /** Skogen rör sig: a wave walks in: a low horn and three drum beats. */
+  wave: () => {
+    tone(147, 0.7, 'sawtooth', 0.05, 20);
+    for (let i = 0; i < 3; i++) later(250 + i * 160, () => {
+      tone(82, 0.14, 'triangle', 0.08, -30);
+      noise(0.05, 0.05);
+    });
+  },
   /** Märke: the skull lands on a monster (a low knock and a rattle), or is taken away. */
   skull: (on: boolean) => {
     if (on) {

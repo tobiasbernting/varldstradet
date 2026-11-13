@@ -159,6 +159,11 @@ export function toggleMark(id: number | null = null): void {
   net.send({ t: 'mark', id: markedMob() === t ? null : t });
 }
 
+/** Hornet: blows the party's horn with my boss power (the server says why not, when it cannot be). */
+export function blowHorn(): void {
+  if (inSaga()) net.send({ t: 'horn' });
+}
+
 /** Monsters near you, nearest first; ice blocks holding a friend and monsters already fighting come first. */
 export function nearbyMonsters(maxTiles = 12): number[] {
   const me = myPlayer();

@@ -1,6 +1,7 @@
 // The Köpman's window and the Händelse window of a run (DESIGN.md 3.4 and 2.5), next to ui/run.ts so that file stays what it was.
 // Every ware is a card with a picture, a name, one sentence and a price in silver coins; a price is never only a colour (a card you cannot
 // afford says so in words); a Händelse is a story and two or three big choices, everyone votes, nobody is punished for a choice.
+import { FIGHT_UI } from '@varldstradet/shared';
 import { EVENT_CHOICES, EVENT_TEXT, RUN_T, RUN_UI, canSharpen, eventDef, fmt, type RunSnap } from '@varldstradet/shared';
 import { h } from './dom.ts';
 import { runaCard, type PickHost } from './runpick.ts';
@@ -126,6 +127,11 @@ export function renderEventWindow(host: PickHost, body: HTMLElement, run: RunSna
       h('span', { class: 'price' }, cost ? `${coin(cost)}${poor ? ` · ${RUN_UI.tooPoor}` : ''}` : RUN_UI.eventFree),
       h('span', { class: 'votes' }, who.length ? who.map((n) => h('span', { class: 'v' }, `✔ ${n}`)) : h('span', { class: 'none' }, '·')),
     );
+    // (Skogen rör sig: the choice that starts a fight carries crossed swords and the word; the other is plainly free)
+    if (c.outcome.some((o) => 'ambush' in o)) {
+      el.classList.add('fight');
+      el.querySelector('.price')?.replaceChildren(`⚔️ ${FIGHT_UI.fightChoice}`);
+    }
     host.tap(el, () => vote(i));
     host.info(el, c.icon, name, text);
     list.append(el);
