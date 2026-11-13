@@ -6,7 +6,7 @@
 // glowing on top. Out in the world a hero's spells and hits are drawn the same way (the telegraphs, bars and the
 // fallen and frozen are the dungeons' only).
 import { cameraShake, drawEllipse, drawLine, drawLineList, drawPoly, rgb, setAdditiveBlendMode, vec2, type Color, type Vector2 } from 'littlejsengine';
-import { BLOCK_SPECIES, CLASSES, CLASS_IDS, FIGHT_UI, MOB_FLAG, PIP_MAX, ROLE, SAGA_BOSSES, SAGA_MOBS, SPELLS, SPEND, T, TILE, fmt, isSagaKey, mobRoleName, type Change, type MobRole, type SagaZone } from '@varldstradet/shared';
+import { BLOCK_SPECIES, CLASSES, CLASS_IDS, FIGHT_UI, MOB_FLAG, PIP_MAX, ROLE, SAGA_BOSSES, SAGA_MOBS, SPELLS, SPEND, T, TILE, fmt, isSagaKey, type Change, type MobRole, type SagaZone } from '@varldstradet/shared';
 import { FLAG, classOf, fightMode, flagsOf, isFoe, liveTarget, sagaSnap, setTarget, webbed } from '@v1/saga.ts';
 import { castFill, hitStopMs, juiceOf, poofCount, shakeOf, spendClass, type Juice } from '@v1/fight.ts';
 import { effectiveFx } from '@v1/fxprefs.ts';
@@ -1177,6 +1177,7 @@ export class SagaView {
     const pips = again ? this.spent!.pips : Math.max(1, Math.min(PIP_MAX, this.pipsSeen.get(by) ?? 1));
     this.pipsSeen.set(by, 0);
     this.spent = { until: performance.now() + 40, pips, by };
+    if (!again) (globalThis as { __juiceLog?: string[] }).__juiceLog?.push(`spend:${pips}`);
     const snap = sagaSnap();
     const fl = typeof c.on === 'number' ? (snap?.m[c.on]?.[2] ?? 0) : 0;
     const s = c.spell;
@@ -1918,7 +1919,7 @@ export class SagaView {
         if (!a || !s || id === snap.b?.id) continue;
         const boss = SAGA_BOSSES[a.species];
         const named = boss || t === id || BLOCK_SPECIES.has(a.species);
-        bar(`m${id}`, s, m[0] / Math.max(1, m[1]), boss ? 'boss' : BLOCK_SPECIES.has(a.species) ? 'ice' : t === id ? 'target' : 'mob', named ? (a.role ? mobRoleName(a.name, a.role) : a.name) : null, { role: a.role, cast: snap.c?.[id], flags: m[2] });
+        bar(`m${id}`, s, m[0] / Math.max(1, m[1]), boss ? 'boss' : BLOCK_SPECIES.has(a.species) ? 'ice' : t === id ? 'target' : 'mob', named ? a.name : null, { role: a.role, cast: snap.c?.[id], flags: m[2] });
       }
       for (const [id, f] of Object.entries(snap.f)) {
         const s = this.find(id);
@@ -1930,7 +1931,7 @@ export class SagaView {
     if (typeof t === 'number' && t !== snap?.b?.id && !seen.has(`m${t}`)) {
       const a = animals[t];
       const s = a ? this.find(t) : null;
-      if (a && s) bar(`m${t}`, s, 1, 'target', a.role ? mobRoleName(a.name, a.role) : a.name, { role: a.role });
+      if (a && s) bar(`m${t}`, s, 1, 'target', a.name, { role: a.role });
     }
     // the special monsters show their marker before their pack is woken, so the party can plan
     for (const a of Object.values(animals)) {

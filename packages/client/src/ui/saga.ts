@@ -19,7 +19,6 @@ import {
   PIP_ICONS,
   PIP_MAX,
   PIP_NAMES,
-  mobRoleName,
   CLASS_IDS,
   DOWN_MS,
   FRIEND_KINDS,
@@ -875,7 +874,7 @@ export class SagaUi {
       const m = snap.m[t];
       // a monster still waiting has its full health (the server only sends those that are fighting or hurt)
       // a special pack monster: its role beside its name and its marker for a face; and what state it is in
-      this.targetFrame.set(a?.species === 'spindelnat' ? '🕸️' : a && BLOCK_SPECIES.has(a.species) ? '🧊' : a && SAGA_BOSSES[a.species] ? '💀' : '👹', a?.role ? mobRoleName(a.name, a.role) : (a?.name ?? ''), m ? [m[0], m[1], 0] : null, '#ff8a70', !!m, { role: a?.role, flags: m?.[2] ?? 0 });
+      this.targetFrame.set(a?.species === 'spindelnat' ? '🕸️' : a && BLOCK_SPECIES.has(a.species) ? '🧊' : a && SAGA_BOSSES[a.species] ? '💀' : '👹', a?.name ?? '', m ? [m[0], m[1], 0] : null, '#ff8a70', !!m, { role: a?.role, flags: m?.[2] ?? 0 });
     }
   }
 

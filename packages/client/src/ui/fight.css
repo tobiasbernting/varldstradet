@@ -408,8 +408,8 @@ body.saga-fight .act-btn.spend-glow {
   --k: 0;
   position: relative;
   display: inline-block;
-  width: max(34px, calc(9 * var(--u)));
-  height: max(34px, calc(9 * var(--u)));
+  width: max(40px, calc(11 * var(--u)));
+  height: max(40px, calc(11 * var(--u)));
   flex: none;
   border-radius: 50%;
   background: #14101c;
@@ -435,7 +435,7 @@ body.saga-fight .act-btn.spend-glow {
 }
 .cast-ring .in {
   position: absolute;
-  inset: 4px;
+  inset: 6px;
   width: auto;
   height: auto;
   border-radius: 50%;
@@ -456,11 +456,11 @@ body.saga-fight .act-btn.spend-glow {
   height: 20px;
 }
 /* behind a Sköldbärare's shield: a small shield on the health bar, and a blue edge */
-.label.shielded > b {
+.label.shielded[class*='saga-bar-'] > b {
   overflow: visible;
   border-color: #9cc8ff;
 }
-.label.shielded > b::before {
+.label.shielded[class*='saga-bar-'] > b::before {
   content: '';
   position: absolute;
   left: -11px;
@@ -471,7 +471,7 @@ body.saga-fight .act-btn.spend-glow {
   background: #fff;
   clip-path: polygon(50% 0, 100% 16%, 100% 56%, 50% 100%, 0 56%, 0 16%);
 }
-.label.shielded > b::after {
+.label.shielded[class*='saga-bar-'] > b::after {
   content: '';
   position: absolute;
   left: -9px;
@@ -483,7 +483,7 @@ body.saga-fight .act-btn.spend-glow {
   clip-path: polygon(50% 0, 100% 16%, 100% 56%, 50% 100%, 0 56%, 0 16%);
 }
 /* Öppning: a gold edge on the bar */
-.label.opened > b {
+.label.opened[class*='saga-bar-'] > b {
   border-color: #ffd23f;
   box-shadow: 0 0 0 2px #ffd23f;
 }
