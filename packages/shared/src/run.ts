@@ -443,18 +443,19 @@ export const WING_HP: readonly number[] = [1.85, 2.3, 2.7];
 /**
  * Per dungeon, in a run: the later dungeons' monsters hit harder and their bosses have more health than Draugkryptan's, while a
  * hero is as strong in every chapter (no power from levels or gear) and a fall now costs a Sagoande. `blows` multiplies the
- * ordinary blows of the dungeon's monsters and bosses, `boss` the health of its boss and mid-boss. Tuned so that the careful and
+ * ordinary blows of the dungeon's monsters and bosses, `boss` the health of its boss and mid-boss, `dunk` the weight of a brute's
+ * Dunk (the later dungeons have two brute slots, so far more of them). Tuned so that the careful and
  * the adult bot win every dungeon on Medel (DESIGN.md 5.4).
  */
-export const DUNGEON_TUNE: Record<DungeonId, { blows: number; boss: number }> = {
+export const DUNGEON_TUNE: Record<DungeonId, { blows: number; boss: number; dunk?: number }> = {
   draug: { blows: 1, boss: 1 },
-  frost: { blows: 0.9, boss: 1 },
-  surt: { blows: 0.8, boss: 0.85 },
+  frost: { blows: 0.9, boss: 1, dunk: 0.8 },
+  surt: { blows: 0.8, boss: 0.85, dunk: 0.7 },
   hel: { blows: 0.85, boss: 0.9 },
-  dvarg: { blows: 0.85, boss: 0.85 },
-  orm: { blows: 0.9, boss: 0.8 },
-  alv: { blows: 0.7, boss: 0.75 },
-  fenrir: { blows: 0.6, boss: 0.7 },
+  dvarg: { blows: 0.85, boss: 0.85, dunk: 0.6 },
+  orm: { blows: 0.9, boss: 0.8, dunk: 0.6 },
+  alv: { blows: 0.7, boss: 0.75, dunk: 0.7 },
+  fenrir: { blows: 0.6, boss: 0.7, dunk: 0.6 },
   loke: { blows: 0.8, boss: 0.65 },
 };
 

@@ -1591,7 +1591,8 @@ function tickMob(h: Here, m: SagaMob, dtMs: number, ctx: SimCtx, fields: Map<str
   const far = boss ? h.inst.run?.far : undefined;
   if (far) {
     m.farAt ??= now + far.every;
-    if (now >= m.farAt) {
+    if (now >= m.farAt && !m.cast?.since) {
+      // (never while its Guldring is out: the heroes are asked to stand still in it)
       m.farAt = now + far.every;
       // (the furthest hero, and any other hero who also stands far off: the hired Hirdmannen is often the furthest of two)
       for (const t of partyOf(h)) {
@@ -1829,8 +1830,10 @@ function landCast(h: Here, m: SagaMob, ctx: SimCtx, out: Change[]): void {
   }
   if (mv.move === 'ring') {
     // Guldringen: everyone (all but one of three or four) stood in it for the last while: the boss's power breaks. Else it hurts everyone.
-    const stood = party.filter((p) => cast.since?.[p.id] !== undefined && cast.since[p.id]! <= now - RING.stand).length;
-    const won = party.length > 0 && stood >= (party.length >= 3 ? party.length - 1 : party.length);
+    // (a hero held in ice or a web cannot walk: they are not asked for)
+    const able = party.filter((p) => h.inst.fighters[p.id]?.frozen === undefined);
+    const stood = able.filter((p) => cast.since?.[p.id] !== undefined && cast.since[p.id]! <= now - RING.stand).length;
+    const won = able.length > 0 && stood >= (party.length >= 3 ? able.length - (able.length === party.length ? 1 : 0) : able.length);
     for (const z of zones) {
       out.push(spellFx(h, m.id, won ? 'ring_won' : 'ring_lost', z));
       dropZone(h, z.id, out);

@@ -185,9 +185,15 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     if (slam && stop && !busy && now >= (f.cd[stop] ?? 0) && reacted('kickAt', true) && dist(area.animals[slam.id]!, p) <= (SPELLS[stop]?.range ?? 0) + 0.4 && cast(farm, p, mind, stop, slam.id, ctx, out)) return out;
   }
   // 1. step out of the marks on the floor (a boss's, a Skytt's line: a person sees them)
-  if (careful && !mind.noDodge && reacted('markAt', marked(area, p.x, p.y, now))) {
+  // (gold before red: while a Guldring is out the hero goes to it and stays, whatever else is on the floor)
+  const ringOut = inst.zones.some((z) => z.kind === 'gold');
+  if (careful && !mind.noDodge && !ringOut && reacted('markAt', marked(area, p.x, p.y, now))) {
     const here = { x: tileOf(p.x), y: tileOf(p.y) };
-    const path = bfs(area, here, (x, y) => !marked(area, x * TILE + TILE / 2, y * TILE + TILE / 2, now + 600) && !marked(area, (x + 0.5) * TILE, (y + 0.5) * TILE, now), 12);
+    const free = (x: number, y: number): boolean => !marked(area, x * TILE + TILE / 2, y * TILE + TILE / 2, now + 600) && !marked(area, (x + 0.5) * TILE, (y + 0.5) * TILE, now);
+    // not into the sight of a pack that is still waiting, when there is another way out
+    const waiting = mobs.filter((m) => m.state === 'idle');
+    const quiet = (x: number, y: number): boolean => !waiting.some((m) => Math.hypot(where(m).x / TILE - x - 0.5, where(m).y / TILE - y - 0.5) < 6.5);
+    const path = bfs(area, here, (x, y) => free(x, y) && quiet(x, y), 12) ?? bfs(area, here, free, 12);
     const next = path?.[0];
     if (next !== undefined) {
       const tx = (next % W) * TILE + TILE / 2;
