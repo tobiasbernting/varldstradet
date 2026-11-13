@@ -186,6 +186,35 @@ export const ROLE = {
 export const DUNK = { first: 3000, every: 8000, stagger: 500, warn: 1300, radius: 1.8, gap: 4000 } as const;
 /** Ranged pressure: the circle's radius and warning (ms, times the level's warning), and how far from the boss the furthest hero must be (tiles). */
 export const FAR = { radius: 1.6, warn: 1500, beyond: 4 } as const;
+/**
+ * Stjärnmonster: a pack member without a role may be starred. One star: `hp` times the health, `blows` times its ordinary blows,
+ * drawn `size` bigger; two stars more. When it falls it pays hacksilver and sagafrön (before multipliers) and drops a Kraftklot.
+ */
+export const STAR: Record<1 | 2, { hp: number; blows: number; size: number; silver: number; seeds: number }> = {
+  1: { hp: 1.6, blows: 1.25, size: 1.15, silver: 6, seeds: 1 },
+  2: { hp: 2.4, blows: 1.5, size: 1.3, silver: 15, seeds: 3 },
+};
+
+/**
+ * Svagheter: a hit may have an element. A spell's own (`SPELL_ELEMENT`; burning is eld, a chain's jumps åska), else the one the hero's
+ * path gives that spell, else the hero's own (two or more runor of one of the three tags). Every dungeon's monsters and bosses are
+ * weak to one element (`DUNGEON_WEAK`; one family per dungeon to another, `SPECIES_WEAK`): a hit of it does `WEAK_BONUS` more.
+ * Nothing resists anything.
+ */
+export type Element = 'eld' | 'is' | 'aska';
+export const ELEMENTS: readonly Element[] = ['eld', 'is', 'aska'];
+export const WEAK_BONUS = 0.25;
+export const SPELL_ELEMENT: Record<string, Element> = { eldboll: 'eld', isspjut: 'is', askregn: 'aska' };
+export const DUNGEON_WEAK: Record<DungeonId, Element> = { draug: 'eld', frost: 'eld', surt: 'is', hel: 'aska', dvarg: 'aska', orm: 'aska', alv: 'eld', fenrir: 'eld', loke: 'is' };
+/** The families that differ from their dungeon (by the original species; a mate has its original's): bats and rats hate the cold, the frost's wolves lightning, and so on. */
+export const SPECIES_WEAK: Record<string, Element> = { gravrotta: 'is', isvarg: 'aska', lavagolem: 'aska', helhund: 'eld', stengolem: 'is', jattekrabba: 'is', svampvakt: 'is', bergsjatte: 'aska' };
+
+/** Perfekt block: a Väktare who raises Sköldmur at most this long before a blow or a mark lands takes nothing from it; the attacker is open this long and the Väktare's pips are full. */
+export const PARRY_MS = 600;
+export const PARRY_OPEN_MS = 3_000;
+/** Nära ögat: a hero who was inside a mark during its warning and left it within this long before it landed gets a pip. */
+export const NEAR_MS = 500;
+
 /** Märke: another player cannot replace a mark for this long. */
 export const MARK_LOCK_MS = 2_000;
 /** Samslag: a spender on a monster dazed or slowed by ANOTHER hero (the Hirdmannen, a pet) does this much more; with the class combo at most `COMBO_CAP` times the pip-scaled blow. */
@@ -717,6 +746,8 @@ export interface SagaRoom {
   packs?: string[][];
   /** The special members of those packs: `roles[pack][member]` is that member's role (null: an ordinary one). Left out: none. */
   roles?: (MobRole | null)[][];
+  /** Stjärnmonster: `stars[pack][member]` is 1 or 2 for a starred member (0: none). Left out: none. */
+  stars?: (0 | 1 | 2)[][];
   /** The way into this room is closed until the mid-boss falls. */
   gated?: boolean;
 }
@@ -2052,6 +2083,8 @@ export interface SagaMob {
    * what it is doing ('heal': a Besvärjare healing packmate `on`; 'shot': a Skytt aiming; 'slam': a brute's Dunk). `start` and `at` are when it began and when it lands.
    */
   cast?: { move: number; at: number; zones: string[]; start: number; role?: 'heal' | 'shot' | 'slam'; on?: number; since?: Record<string, number> };
+  /** Stjärnmonster: 1 or 2 stars (`STAR`). */
+  stars?: 1 | 2;
   /** A brute: when its next Dunk comes. */
   dunkAt?: number;
   /** Who dazed it and who slowed it last (a player id, or `pet:<owner id>`): another hero's spender on it is a Samslag. */
@@ -2080,6 +2113,8 @@ export interface SagaFighter {
   /** When each spell is ready again, and the short pause after any spell. */
   cd: Record<string, number>;
   gcd: number;
+  /** Perfekt block: when the Väktare last raised Sköldmur (a hit within `PARRY_MS` after it is parried). */
+  parryAt?: number;
   /** Pips (0..PIP_MAX): built by auto-attack hits and by slots 2 and 3, spent by slot 1. `autoHits` counts the auto-attack hits towards the next pip. */
   pips: number;
   autoHits?: number;
@@ -2131,6 +2166,8 @@ export interface SagaZone {
    * 'orb': a Kraftklot on the floor from `at` until `until` (walk over it: full pips; `dmg` is 0). Left out: a boss's mark.
    */
   kind?: 'shot' | 'gold' | 'orb';
+  /** Nära ögat: when each hero was last inside it during its warning (server only; by player id). */
+  in?: Record<string, number>;
   /** It lands by itself at `at` (a boss's ranged pressure: a circle under the hero furthest away), whatever the boss is doing. Drawn like any mark. */
   auto?: true;
 }
@@ -2175,6 +2212,11 @@ export interface SagaInstance {
   mobHeals: number;
   /** Märke: the monster the party has marked with a skull (everyone's auto-attack and untargeted spells go for it), who marked it and when. */
   skull?: { id: number; by: string; at: number };
+  /** Stjärnmonster that have fallen in the stop (their stars), for the run to pay; and a Bosskraft's Skuggslöja: monsters neither chase nor strike until then. */
+  starsDown?: number[];
+  veilUntil?: number;
+  /** Whether a monster of the stop was fighting at the last tick (a fight has just begun when it was not). */
+  inFight?: boolean;
   /** When the stop's last Dunk began (brutes take turns: `DUNK.gap`). */
   dunkAt?: number;
   /** The last time a monster of the stop was fighting (pips fade `PIP_FADE_MS` after it). */
@@ -2209,6 +2251,9 @@ export interface RunBuffs {
   /** A fallen friend gets up this much sooner (a fraction off DOWN_MS), and a revive gives this much more health. */
   down: number;
   reviveHp: number;
+  /** Svagheter: the element of this hero's hits that have none of their own (two runor of a tag), and the elements the hero's path gives single spells. */
+  element?: Element;
+  elements?: Record<string, Element>;
   /** The hero's path (paths.ts): what it changes in each spell, and the traits that are not a spell's. Empty before a path is chosen. */
   mods: Record<string, SpellMod>;
   traits: PathTraits;
@@ -2249,6 +2294,8 @@ export interface SpellMod {
 export interface PathTraits {
   /** Berserk: below half health, this much more power and this much faster cooldowns (half of it). */
   low?: number;
+  /** A dish (Honungskaka): the hero starts every fight with this many pips. */
+  startPip?: number;
   /** Friends within 7 tiles (and the hero) take this much less damage. */
   aura?: number;
   /** A monster that hits the hero takes this fraction of the damage back (of the blow before armor). */

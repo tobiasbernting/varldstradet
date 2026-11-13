@@ -8,7 +8,7 @@ import { ITEMS, NPCS } from './data.ts';
 
 import { awardTrophy } from './house.ts';
 import { awardLooks, lookRng, syncLooks } from './looks.ts';
-import { RUN_LEVEL_MEDEL } from './run.ts';
+import { BOSS_POWERS, RUN_LEVEL_MEDEL } from './run.ts';
 import { addItem, countItem, removeItem } from './inventory.ts';
 import { addObject, inBounds, mapH, mapW, objectAt, removeObject, tileIndex } from './map.ts';
 import type { Change } from './protocol.ts';
@@ -40,6 +40,15 @@ import {
   SAMSLAG,
   FAR,
   DUNK,
+  STAR,
+  WEAK_BONUS,
+  SPELL_ELEMENT,
+  DUNGEON_WEAK,
+  SPECIES_WEAK,
+  PARRY_MS,
+  PARRY_OPEN_MS,
+  NEAR_MS,
+  type Element,
   DUNGEONS,
   GCD_MS,
   LEASH_TILES,
@@ -165,7 +174,7 @@ const upright = (h: Here, p: PlayerState): boolean => {
 };
 
 /** A floating number. `mark`: the hit came from a ground mark (a boss's telegraphed move, a Skytt's shot), for a sound and a flash of its own. */
-export const hit = (h: Here, on: string | number, n: number, kind: 'dmg' | 'heal' | 'crit' | 'block' | 'stun' | 'kick' | 'miss' | 'orb', mark = false): Change => ({ t: 'hit', area: h.key, on, n: Math.round(n), kind, ...(mark ? { mark: true as const } : {}) });
+export const hit = (h: Here, on: string | number, n: number, kind: 'dmg' | 'heal' | 'crit' | 'block' | 'stun' | 'kick' | 'miss' | 'orb' | 'parry' | 'near', mark = false): Change => ({ t: 'hit', area: h.key, on, n: Math.round(n), kind, ...(mark ? { mark: true as const } : {}) });
 export const spellFx = (h: Here | string, by: string | number, spell: string, from: { x: number; y: number }, to?: { x: number; y: number }, on?: string | number): Change => ({
   t: 'spell',
   area: typeof h === 'string' ? h : h.key,
@@ -684,10 +693,12 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
     return { n: base * gear * (f.rage !== undefined && now < f.rage ? 1.5 : 1) * (crit ? 1.5 : 1), crit };
   };
   const raging = f.rage !== undefined && now < f.rage;
-  const strike = (m: SagaMob, base: number, extras = true): void => {
+  // Svagheter: the spell's own element, else the one the path gives it, else the hero's (two runor of a tag); a chain's jumps are lightning
+  const element: Element | undefined = rb.elements?.[spellId] ?? SPELL_ELEMENT[spellId] ?? rb.element;
+  const strike = (m: SagaMob, base: number, extras = true, elem: Element | undefined = element): void => {
     landed++;
     const pw = power(base);
-    hurtMob(h, m, p.id, pw.n, (sp.threat ?? 1) * (1 + rb.threat), pw.crit, ctx, out);
+    hurtMob(h, m, p.id, pw.n, (sp.threat ?? 1) * (1 + rb.threat), pw.crit, ctx, out, elem);
     // a raging berserker heals a little from every blow
     if (raging) heal(h, p, f, pw.n * RAGE_LEECH, out);
     if (rb.leech) heal(h, p, f, pw.n * rb.leech, out);
@@ -707,7 +718,7 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
         .slice(0, mod.chain);
       for (const o of near) {
         out.push(spellFx(h, p.id, sp.id, at, mobAt(o), o.id));
-        strike(o, base * 0.4, false);
+        strike(o, base * 0.4, false, 'aska');
       }
     }
   };
@@ -818,6 +829,7 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
       break;
     }
     case 'wall':
+      f.parryAt = now; // (Perfekt block: a hit that lands within PARRY_MS of this is parried)
       f.wall = now + (sp.ms ?? 6000) + (mod.ms ?? 0);
       out.push(spellFx(h, p.id, sp.id, p));
       heal(h, p, f, f.max * WALL_HEAL, out);
@@ -955,6 +967,94 @@ export function markMob(world: WorldState, playerId: string, mobId: number | nul
   return [];
 }
 
+/** Wakes a monster (and its pack) for `by` with the health the party and the run give it: for monsters that walk in by themselves (an ambush's waves). */
+export function wakeMob(world: WorldState, areaKey: string, mobId: number, by: string, now: number, out: Change[]): void {
+  const farm = farmOf(world);
+  const area = farm.areas?.[areaKey];
+  const m = area?.saga?.mobs[mobId];
+  if (area?.saga && m) pull({ farm, area, inst: area.saga, key: areaKey }, m, by, now, out);
+}
+
+/**
+ * Bosskrafter: hero `playerId` blows the horn with the power of dungeon `power`'s boss (run.ts `BOSS_POWERS` has the numbers). The
+ * run (runsim.ts) owns the charge and who may blow; this is what it does in the fight. True if it did something.
+ */
+export function usePower(world: WorldState, playerId: string, power: DungeonId, ctx: SimCtx, out: Change[]): boolean {
+  const p = farmOf(world).players[playerId];
+  const h = p ? hereOf(world, p) : null;
+  const f = h && p ? h.inst.fighters[p.id] : undefined;
+  if (!p || !h || !f || f.down !== undefined) return false;
+  const now = ctx.now;
+  const P = BOSS_POWERS[power];
+  const near = mobsNear(h, p, P.radius ?? 0).filter((m) => m.state === 'fight' && m.kind !== 'ice');
+  const heroes = partyOf(h);
+  out.push(spellFx(h, p.id, `power_${power}`, p));
+  switch (power) {
+    case 'draug':
+      for (const m of near) stun(h, m, P.ms, now, out, p.id);
+      break;
+    case 'frost':
+      for (const m of near) {
+        m.slowUntil = Math.max(m.slowUntil ?? 0, now + P.ms);
+        m.slowBy = p.id;
+        out.push(hit(h, m.id, 0, 'stun'));
+      }
+      break;
+    case 'surt':
+      for (const m of near) m.burn = { until: now + P.ms, per: (P.amount ?? 0) / (P.ms / 1000), next: now + 1000, by: p.id };
+      break;
+    case 'hel':
+      if (h.inst.wipeAt !== undefined) return false;
+      for (const q of heroes) {
+        const qf = h.inst.fighters[q.id]!;
+        if (qf.down === undefined) continue;
+        delete qf.down;
+        qf.hp = Math.max(1, Math.round(qf.max * (P.amount ?? 0.5)));
+        qf.fightAt = now;
+        out.push(hit(h, q.id, qf.hp, 'heal'), playerChange(q));
+      }
+      break;
+    case 'dvarg':
+      for (const q of heroes) if (upright(h, q)) giveShield(h.inst.fighters[q.id]!, P.amount ?? 0.35, now, P.ms);
+      break;
+    case 'orm':
+      for (const m of near) {
+        const a = h.area.animals[m.id]!;
+        const d = Math.max(1, Math.hypot(a.x - p.x, a.y - p.y));
+        // pushed away step by step, as far as the floor goes
+        for (let k = 0; k < (P.amount ?? 4) * 2; k++) {
+          const nx = a.x + ((a.x - p.x) / d) * (TILE / 2);
+          const ny = a.y + ((a.y - p.y) / d) * (TILE / 2);
+          if (isSolidForAnimal(h.area, tileOf(nx), tileOf(ny))) break;
+          a.x = nx;
+          a.y = ny;
+        }
+        if (m.kind === 'boss' || m.kind === 'mini') m.home = { ...m.home };
+        m.slowUntil = Math.max(m.slowUntil ?? 0, now + P.ms);
+        m.slowBy = p.id;
+      }
+      break;
+    case 'alv':
+      h.inst.veilUntil = now + P.ms;
+      for (const m of Object.values(h.inst.mobs)) if (m.state === 'fight') delete m.target;
+      break;
+    case 'fenrir':
+      for (const q of heroes) {
+        const qf = h.inst.fighters[q.id]!;
+        if (qf.down !== undefined) continue;
+        qf.howl = { until: now + P.ms, mul: P.amount ?? 0.3 };
+        q.boostUntil = now + P.ms;
+        out.push(playerChange(q));
+      }
+      break;
+    case 'loke':
+      for (const q of heroes) if (upright(h, q)) h.inst.fighters[q.id]!.pips = PIP_MAX;
+      h.inst.foughtAt = now;
+      break;
+  }
+  return true;
+}
+
 /** A shield of `frac` of the fighter's max health (never above SHIELD_CAP of it), for SHIELD_MS. */
 function giveShield(f: SagaFighter, frac: number, now: number, ms = SHIELD_MS): void {
   const cap = f.max * SHIELD_CAP;
@@ -1077,11 +1177,42 @@ function thorns(h: Here, p: PlayerState, amount: number, by: SagaMob | null, now
 /** The context of the tick being run (the thorns of a path need it to hurt a monster from inside a monster's blow). */
 let tickCtx: SimCtx | null = null;
 
+/**
+ * Perfekt block: a Väktare who raised Sköldmur at most PARRY_MS ago takes nothing from this hit; the attacker is open for
+ * PARRY_OPEN_MS (a boss too) and the Väktare's pips are full. One hit per Sköldmur. True if the hit was parried.
+ */
+function parried(h: Here, p: PlayerState, f: SagaFighter, by: SagaMob | null, now: number, out: Change[]): boolean {
+  if (f.cls !== 'vaktare' || f.parryAt === undefined || now - f.parryAt > PARRY_MS) return false;
+  delete f.parryAt;
+  f.pips = PIP_MAX;
+  f.fightAt = now;
+  if (by && h.inst.mobs[by.id]) by.open = Math.max(by.open ?? 0, now + PARRY_OPEN_MS);
+  out.push(hit(h, p.id, 0, 'parry'));
+  return true;
+}
+
+/**
+ * Nära ögat: a mark lands; every hero who stood in it during its warning and stepped out within NEAR_MS before now gets a pip
+ * (once per mark; never from the Guldring).
+ */
+function nearMiss(h: Here, z: SagaZone, now: number, out: Change[]): void {
+  if (!z.in || z.kind === 'gold' || z.kind === 'orb') return;
+  for (const [id, at] of Object.entries(z.in)) {
+    const p = h.farm.players[id];
+    const f = h.inst.fighters[id];
+    if (!p || !f || f.down !== undefined || now - at > NEAR_MS || inZone(z, p)) continue;
+    f.pips = Math.min(PIP_MAX, f.pips + 1);
+    out.push(hit(h, id, 1, 'near'));
+  }
+  delete z.in;
+}
+
 /** A monster's ordinary blow on a hero: scaled by the party, the level, the armor and what the hero's runor take off. */
 function hurtFighter(h: Here, p: PlayerState, amount: number, by: SagaMob | null, now: number, out: Change[]): void {
   const f = h.inst.fighters[p.id];
   // the ice that holds a frozen player keeps everything else out too
   if (!f || f.down !== undefined || f.frozen !== undefined) return;
+  if (parried(h, p, f, by, now, out)) return;
   const rb = buffsOf(h, p.id);
   const armor = Math.min(0.6, fightStats(p).armor + rb.armor);
   let n = Math.max(1, Math.round(amount * mobDmgScale(partyOf(h).length) * (h.inst.run?.dmgMul ?? 1) * mobBoost(h, by) * (1 - armor) * (1 - Math.min(0.5, rb.taken)) * (f.wall !== undefined && now < f.wall ? 0.4 : 1)));
@@ -1100,6 +1231,7 @@ function hurtFighter(h: Here, p: PlayerState, amount: number, by: SagaMob | null
 export function markHit(h: Here, p: PlayerState, frac: number, by: SagaMob | null, now: number, out: Change[]): void {
   const f = h.inst.fighters[p.id];
   if (!f || f.down !== undefined || f.frozen !== undefined || frac <= 0) return;
+  if (parried(h, p, f, by, now, out)) return;
   const less = Math.min(MARK_TAKEN_CAP, buffsOf(h, p.id).taken + auraAt(h, p, now));
   let n = Math.max(1, Math.round(f.max * frac * (1 - less) * (f.wall !== undefined && now < f.wall ? 0.4 : 1)));
   // one mark from full health never knocks anyone down
@@ -1176,7 +1308,7 @@ function pull(h: Here, m: SagaMob, by: string, now: number, out: Change[]): void
       // tougher the more of the family is here
       const base = SAGA_BOSSES[g.species]?.hp ?? SAGA_MOBS[g.species]?.hp ?? g.max;
       const run = h.inst.run;
-      g.max = Math.round(base * (g.kind === 'mob' ? mobHpScale(n) * (run?.hpMul ?? 1) : bossHpScale(n) * (run?.bossMul ?? 1)));
+      g.max = Math.round(base * (g.kind === 'mob' ? mobHpScale(n) * (run?.hpMul ?? 1) * (g.stars ? STAR[g.stars].hp : 1) : bossHpScale(n) * (run?.bossMul ?? 1)));
       g.hp = g.max;
     }
     g.pulledAt = now;
@@ -1191,17 +1323,21 @@ function pull(h: Here, m: SagaMob, by: string, now: number, out: Change[]): void
 }
 
 /** A monster loses health; at zero it is beaten. */
-export function hurtMob(h: Here, m: SagaMob, by: string, amount: number, threatMul: number, crit: boolean, ctx: SimCtx, out: Change[]): void {
+/** What a monster is weak to: its family's own where it has one (a mate has its original's), else its dungeon's. */
+export const weakOf = (species: string, dungeon: DungeonId): Element => SPECIES_WEAK[mobBase(species)] ?? DUNGEON_WEAK[dungeon];
+
+export function hurtMob(h: Here, m: SagaMob, by: string, amount: number, threatMul: number, crit: boolean, ctx: SimCtx, out: Change[], elem?: Element): void {
   if (!h.inst.mobs[m.id] || m.state === 'home') return;
   if (m.state === 'idle') pull(h, m, by, ctx.now, out);
   // a korp's mark and an Öppning make it take more; a Sköldbärare of its pack makes it take less
   const cut = shieldCut(h, m, ctx.now);
-  const n = Math.max(1, Math.round(amount * (m.mark && ctx.now < m.mark.until ? 1 + m.mark.bonus : 1) * (m.open !== undefined && ctx.now < m.open ? 1 + OPEN_BONUS : 1) * (1 - cut)));
+  const weak = !!elem && m.kind !== 'ice' && weakOf(m.species, h.inst.id) === elem;
+  const n = Math.max(1, Math.round(amount * (m.mark && ctx.now < m.mark.until ? 1 + m.mark.bonus : 1) * (m.open !== undefined && ctx.now < m.open ? 1 + OPEN_BONUS : 1) * (1 - cut) * (weak ? 1 + WEAK_BONUS : 1)));
   m.hp -= n;
   if (m.kind !== 'ice') m.threat[by] = (m.threat[by] ?? 0) + n * threatMul;
   const f = h.inst.fighters[by];
   if (f) f.fightAt = ctx.now;
-  out.push(hit(h, m.id, n, crit ? 'crit' : 'dmg'));
+  out.push(weak ? { ...(hit(h, m.id, n, crit ? 'crit' : 'dmg') as Extract<Change, { t: 'hit' }>), weak: true } : hit(h, m.id, n, crit ? 'crit' : 'dmg'));
   if (m.hp <= 0) {
     mobDown(h, m, ctx, out);
     return;
@@ -1247,7 +1383,8 @@ function mobDown(h: Here, m: SagaMob, ctx: SimCtx, out: Change[]): void {
   if (h.inst.skull?.id === m.id) delete h.inst.skull;
   const at = a ? { x: a.x, y: a.y } : m.home;
   // Kraftklot: a special pack monster leaves an orb where it fell
-  if (m.role && m.kind === 'mob') addZone(h, m, { shape: 'circle', x: at.x, y: at.y, r: ORB.radius, at: ctx.now, until: ctx.now + (h.inst.run?.easy ? ORB.easyMs : ORB.ms), dmg: 0, kind: 'orb' }, out);
+  if (m.stars) (h.inst.starsDown ??= []).push(m.stars);
+  if ((m.role || m.stars) && m.kind === 'mob') addZone(h, m, { shape: 'circle', x: at.x, y: at.y, r: ORB.radius, at: ctx.now, until: ctx.now + (h.inst.run?.easy ? ORB.easyMs : ORB.ms), dmg: 0, kind: 'orb' }, out);
   out.push({ t: 'animal', id: m.id, animal: null, area: h.key }, fxOn(h.key, tileOf(at.x), tileOf(at.y), 'poof'));
   if (m.kind === 'ice') {
     freeFrom(h, m, out);
@@ -1618,6 +1755,11 @@ function tickMob(h: Here, m: SagaMob, dtMs: number, ctx: SimCtx, fields: Map<str
     }
     return;
   }
+  // Skuggslöja (a Bosskraft): the monsters have lost sight of everyone; they neither chase nor strike (what is already cast still lands)
+  if (now < (h.inst.veilUntil ?? 0)) {
+    a.moving = false;
+    return;
+  }
   const target = chooseTarget(h, m, now);
   if (!target) {
     resetMob(h, m, out);
@@ -1640,7 +1782,7 @@ function tickMob(h: Here, m: SagaMob, dtMs: number, ctx: SimCtx, fields: Map<str
       m.atkAt = now + stats.atkMs / (raged ? ENRAGE.rate : 1);
       if (ranged) out.push(spellFx(h, m.id, `mob_${m.species}`, a, target, target.id));
       else out.push(spellFx(h, m.id, 'claw', a, target, target.id));
-      hurtFighter(h, target, stats.dmg, m, now, out);
+      hurtFighter(h, target, stats.dmg * (m.stars ? STAR[m.stars].blows : 1), m, now, out);
       if (def?.slows) {
         const f = h.inst.fighters[target.id];
         if (f) f.slow = now + 2500;
@@ -1855,6 +1997,7 @@ function landCast(h: Here, m: SagaMob, ctx: SimCtx, out: Change[]): void {
       dropZone(h, z.id, out);
       continue;
     }
+    nearMiss(h, z, now, out);
     for (const p of party) {
       if (!inZone(z, p)) continue;
       if (mv.move === 'freeze') {
@@ -1966,6 +2109,7 @@ function landRoleCast(h: Here, m: SagaMob, a: { x: number; y: number }, now: num
     if (!z) continue;
     if (cast.role === 'slam') out.push(spellFx(h, m.id, 'land_slam', z));
     else out.push(spellFx(h, m.id, 'land_shot', z, { x: z.x + Math.cos(z.dir ?? 0) * z.r * TILE, y: z.y + Math.sin(z.dir ?? 0) * z.r * TILE }));
+    nearMiss(h, z, now, out);
     for (const p of partyOf(h)) if (upright(h, p) && inZone(z, p)) markHit(h, p, z.dmg, m, now, out);
     dropZone(h, id, out);
   }
@@ -2035,7 +2179,7 @@ export function tickSaga(area: WorldState, key: string, dtMs: number, ctx: SimCt
     else if (now >= m.burn.next) {
       m.burn.next += 1000;
       const by = m.burn.by;
-      hurtMob(h, m, by, m.burn.per, 0.5, false, ctx, out);
+      hurtMob(h, m, by, m.burn.per, 0.5, false, ctx, out, 'eld');
     }
   }
   // players who left (or lost their class) are out of the fight
@@ -2050,6 +2194,9 @@ export function tickSaga(area: WorldState, key: string, dtMs: number, ctx: SimCt
   // the clock of the family's best time starts when the first fighter is in a fresh dungeon
   if (inst.startedAt === undefined && Object.keys(inst.fighters).length) inst.startedAt = now;
   const fighting = inFight(h);
+  // (a dish: the hero starts every fight with a pip)
+  if (fighting && !inst.inFight) for (const p of party) inst.fighters[p.id]!.pips = Math.max(inst.fighters[p.id]!.pips, Math.min(PIP_MAX, buffsOf(h, p.id).traits.startPip ?? 0));
+  inst.inFight = fighting;
   if (fighting) inst.foughtAt = now;
   const sec = dtMs / 1000;
   for (const p of party) {
@@ -2109,9 +2256,12 @@ export function tickSaga(area: WorldState, key: string, dtMs: number, ctx: SimCt
   tickPets(h, dtMs, ctx, out);
   // burning ground
   for (const z of [...inst.zones]) {
+    // Nära ögat: who stands in a mark during its warning
+    if (z.until === undefined && now < z.at && z.kind !== 'gold') for (const p of party) if (upright(h, p) && inZone(z, p)) (z.in ??= {})[p.id] = now;
     if (z.auto && now >= z.at) {
       // a mark that lands by itself (ranged pressure)
       out.push(spellFx(h, z.by, 'land_rain', z));
+      nearMiss(h, z, now, out);
       for (const p of party) if (upright(h, p) && inZone(z, p)) markHit(h, p, z.dmg, inst.mobs[z.by] ?? null, now, out);
       dropZone(h, z.id, out);
       continue;

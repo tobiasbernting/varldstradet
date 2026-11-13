@@ -35,6 +35,7 @@ import {
   ELITE_PACKS,
   TREASURE_PACKS,
   PACK_ROLES,
+  STAR_CHANCE,
   BIG_CHANCE,
   BIG_GENTLE,
   ELITE_ROLES,
@@ -273,6 +274,27 @@ export function assignRoles(rooms: SagaRoom[], rnd: () => number, level: RunLeve
   for (let k = 0; k < spec.perStop && pool.length; k++) give(pool.splice(Math.floor(rnd() * pool.length), 1)[0]!, 1);
 }
 
+/**
+ * Stjärnmonster: writes `stars` beside `packs`: by the level's chance a pack gets one starred member (one or two stars), never a
+ * member with a role, never in the run's first stop. Dice of its own.
+ */
+export function assignStars(rooms: SagaRoom[], rnd: () => number, level: RunLevel, row: number): void {
+  const [one, two] = STAR_CHANCE[level];
+  if (row <= 1 || one + two <= 0) return;
+  for (const r of rooms) {
+    (r.packs ?? []).forEach((members, pi) => {
+      const roll = rnd();
+      const at = rnd();
+      const stars: 0 | 1 | 2 = roll < two ? 2 : roll < two + one ? 1 : 0;
+      const free = members.map((_, i) => i).filter((i) => !r.roles?.[pi]?.[i]);
+      if (!stars || !free.length) return;
+      const row: (0 | 1 | 2)[] = members.map(() => 0);
+      row[free[Math.floor(at * free.length)]!] = stars;
+      (r.stars ??= (r.packs ?? []).map((m) => m.map(() => 0 as const)))[pi] = row;
+    });
+  }
+}
+
 /** Chooses the modifiers of a run: the caller's, or one more for every earlier clear (up to three), by the seed. */
 function pickModifiers(rnd: () => number, opts: RunOptions): string[] {
   if (opts.modifiers) return opts.modifiers.filter((id) => !!modifier(id)).slice(0, MAX_MODIFIERS);
@@ -421,6 +443,7 @@ function planStop(seed: number, node: RouteNode, boss: DungeonId, mods: string[]
   varyStopPacks(rooms, { seed, node: node.id, row: node.row, bulk: [...mobs.small, ...mobs.medium] });
   // the special pack monsters, from a stream of their own (so the rooms and packs of a seed are what they were)
   assignRoles(rooms, mulberry32(hashInts(seed, node.id, 0x401e)), level, node.kind, node.row);
+  assignStars(rooms, mulberry32(hashInts(seed, node.id, 0x57a2)), level, node.row);
   const def: SagaDungeonDef = { ...d, rooms, links };
   const fog = mod.some((m) => m.fog);
   return {

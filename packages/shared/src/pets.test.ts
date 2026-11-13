@@ -43,6 +43,10 @@ import {
   type WorldState,
 } from './index.ts';
 import { makeParty } from './runplay.ts';
+import { GILLET } from './run.ts';
+
+// (these tests pin a hero's exact numbers: nobody eats a dish here; fight3.test.ts has the dishes)
+GILLET.on = false;
 
 // ---------------------------------------------------------------------------
 // The table

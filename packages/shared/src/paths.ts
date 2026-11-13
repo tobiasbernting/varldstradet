@@ -3,7 +3,7 @@
 // few traits that are no spell's, and a plain `RunEffect` for the rest. Roles stay: a Väktare path is still a tank, a Helare path a
 // healer. Names and sentences are in sv.ts (PATH_NAMES, PATH_TEXT, PATH_SPELLS).
 import type { RunEffect } from './run.ts';
-import type { ClassId, PathTraits, SpellMod } from './saga.ts';
+import type { ClassId, Element, PathTraits, SpellMod } from './saga.ts';
 
 export interface PathDef {
   id: string;
@@ -12,6 +12,8 @@ export interface PathDef {
   /** A plain effect (health, crit, regen…) that comes with the path. */
   effect: RunEffect;
   traits: PathTraits;
+  /** Svagheter: the element this path gives some of the class's spells (left out: the spell's own, or the hero's). */
+  elements?: Record<string, Element>;
   /** By spell id: the class's auto-attack and each of its four buttons (`classSpells`) has an entry that changes something. */
   mods: Record<string, SpellMod>;
 }
@@ -19,15 +21,15 @@ export interface PathDef {
 export const PATHS: PathDef[] = [
   // Magiker: eld, is, åska
   {
-    id: 'eld', cls: 'magiker', icon: '🔥', effect: {}, traits: {},
+    id: 'eld', cls: 'magiker', icon: '🔥', effect: {}, traits: {}, elements: { runsmall: 'eld', isspjut: 'eld' },
     mods: { eldboll: { burn: 0.075 }, runsmall: { burn: 0.06 }, isspjut: { power: 0.015, burn: 0.06 }, askregn: { radius: 1, burn: 0.06 }, blink: { cd: 0.06, range: 1 } },
   },
   {
-    id: 'frost', cls: 'magiker', icon: '🧊', effect: {}, traits: {},
+    id: 'frost', cls: 'magiker', icon: '🧊', effect: {}, traits: {}, elements: { eldboll: 'is', runsmall: 'is', askregn: 'is' },
     mods: { eldboll: { slow: 1000 }, runsmall: { slow: 1500 }, isspjut: { ms: 2000, stun: 500, shield: 0.015 }, askregn: { slow: 1500, radius: 0.4 }, blink: { shield: 0.04, cd: 0.05 } },
   },
   {
-    id: 'aska', cls: 'magiker', icon: '🌩️', effect: {}, traits: {},
+    id: 'aska', cls: 'magiker', icon: '🌩️', effect: {}, traits: {}, elements: { eldboll: 'aska', runsmall: 'aska', isspjut: 'aska' },
     mods: { eldboll: { cd: 0.025, chain: 1 }, runsmall: { chain: 1 }, isspjut: { cd: 0.03, chain: 1 }, askregn: { cd: 0.05, power: 0.015, radius: 0.5 }, blink: { cd: 0.1, range: 2 } },
   },
   // Krigare: bärsärk, vapenmästare

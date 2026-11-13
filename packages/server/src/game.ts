@@ -7,6 +7,7 @@ import {
   castSpell,
   setTarget,
   markMob,
+  blowHorn,
   chooseClass,
   devEnterSaga,
   devTrophy,
@@ -502,6 +503,9 @@ export class Game {
         break;
       case 'cast':
         changes = castSpell(this.world, pid, String(msg.spell ?? ''), typeof msg.target === 'number' || typeof msg.target === 'string' ? msg.target : undefined, this.ctx());
+        break;
+      case 'horn':
+        changes = blowHorn(this.world, pid, this.ctx());
         break;
       case 'mark':
         changes = markMob(this.world, pid, typeof msg.id === 'number' ? msg.id : null, this.ctx());
