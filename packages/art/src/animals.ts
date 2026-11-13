@@ -1,6 +1,7 @@
 // Animals: side view facing right (flip for left), 2 walk frames, adult + baby, optional tomteluva.
 import { Px, shade } from './px.js';
 import { SAGA_AFTER, SAGA_ANIMAL_SIZE, SAGA_DRAW, SAGA_HAT_POS, SAGA_OUTLINE, SAGA_RIDE_LIFT, SAGA_VARIANTS } from './sagaanimals.ts';
+import './sagamobs2.ts'; // (adds the dungeons' second families and every monster's skins to the tables above, before they are read here)
 import { OUTLINE } from './world.js';
 import { PET_ANIMAL_SIZE, PET_DRAW, PET_HAT_POS } from './petanimals.ts';
 import { PET_ANCHORS, PET_HEADROOM, PETS, decodeLook, petOfSpecies, type PetWear } from '@varldstradet/shared';
@@ -501,7 +502,7 @@ export const ANIMAL_VARIANTS: Record<string, number> = {
   parrot: PARROT_COLORS.length,
   dino: DINO_COLORS.length,
   gummy: GUMMY_COLORS.length,
-  // Loke's illusions on Bifrost: the saga's monsters drawn ghostly (variant 1)
+  // the dungeons' monsters: their skins, and each skin again as one of Loke's illusions on Bifrost (sagamobs2.ts)
   ...SAGA_VARIANTS,
 };
 // The market town's traffic: a horse and cart (car), a saddled riding horse (motorcycle), the Diligens coach with

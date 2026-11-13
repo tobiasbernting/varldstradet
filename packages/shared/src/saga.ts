@@ -3,6 +3,7 @@
 // map of monster packs, rest stones, a gate, a mid-boss and a boss whose big attacks are telegraphed;
 // win loot in rarity colours. Völvan Sigrun in the city tells the saga, one chapter per dungeon.
 // Data only: the rules live in sagasim.ts, the maps are built by sagamap.ts.
+import { NEW_SAGA_MOBS } from './mobs.ts';
 import { PETS } from './pets.ts';
 import type { NodeKind } from './run.ts';
 import type { Outfit, PlayerState, Terrain } from './types.ts';
@@ -261,6 +262,8 @@ export const SAGA_MOBS: Record<string, SagaMobDef> = {
   bergsjatte: { species: 'bergsjatte', name: 'Bergsjätte', hp: 450, dmg: 15, atkMs: 2500, reach: 1.8, speed: 1.6, aggro: 4 },
   // the web that holds a webbed friend (like the ice block: break it to free them)
   spindelnat: { species: 'spindelnat', name: 'Spindelnät', hp: 60, dmg: 0, atkMs: 999999, reach: 0, speed: 0, aggro: 0 },
+  // the mate of each of the above (mobs.ts): another shape for the same pack slot, with numbers within 10 % of its mate's
+  ...NEW_SAGA_MOBS,
 };
 
 /** What holds a frozen (or webbed) friend: their fight record's `frozen` is one of these. */
