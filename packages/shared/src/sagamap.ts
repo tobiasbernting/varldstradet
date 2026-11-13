@@ -111,7 +111,7 @@ function route(from: { x: number; y: number }, to: { x: number; y: number }, blo
 }
 
 /** Puts a monster (or a boss) on the map and gives it its fight record. */
-export function spawnSagaMob(world: WorldState, inst: SagaInstance, species: string, x: number, y: number, kind: SagaMob['kind'], pack: number, role?: MobRole | null): AnimalState {
+export function spawnSagaMob(world: WorldState, inst: SagaInstance, species: string, x: number, y: number, kind: SagaMob['kind'], pack: number, role?: MobRole | null, stars?: 0 | 1 | 2): AnimalState {
   // a boss's helper may be the helper's mate, where that suits the boss (mobs.ts)
   if (kind === 'add') species = addSpecies(species, world.nextId);
   const boss = SAGA_BOSSES[species];
@@ -144,9 +144,14 @@ export function spawnSagaMob(world: WorldState, inst: SagaInstance, species: str
     a.role = role;
     a.name = mobRoleName(a.name, role);
   }
+  // a starred monster: the stars are on the animal (they show before the pull) and after its name
+  if (stars) {
+    a.stars = stars;
+    a.name = `${a.name} ${'★'.repeat(stars)}`;
+  }
   world.animals[a.id] = a;
   const hp = boss?.hp ?? def?.hp ?? 1;
-  inst.mobs[a.id] = { id: a.id, species, kind, hp, max: hp, home: { x, y }, pack, state: 'idle', threat: {}, atkAt: 0, ...(role ? { role } : {}) };
+  inst.mobs[a.id] = { id: a.id, species, kind, hp, max: hp, home: { x, y }, pack, state: 'idle', threat: {}, atkAt: 0, ...(role ? { role } : {}), ...(stars ? { stars } : {}) };
   return a;
 }
 
@@ -367,7 +372,7 @@ export function buildDungeon(def: SagaDungeonDef, rnd: () => number, solid: Terr
       inst.packs.push(pack);
       members.forEach((species, mi) => {
         const [ox, oy] = PACK_SPOTS[mi % PACK_SPOTS.length]!;
-        pack.members.push(spawnSagaMob(world, inst, species, px(mx + ox), px(my + oy), 'mob', index, r.roles?.[pi]?.[mi]).id);
+        pack.members.push(spawnSagaMob(world, inst, species, px(mx + ox), px(my + oy), 'mob', index, r.roles?.[pi]?.[mi], r.stars?.[pi]?.[mi]).id);
       });
     });
   });

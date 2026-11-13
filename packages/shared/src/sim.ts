@@ -680,7 +680,7 @@ export function maxPlayerSpeed(world: WorldState, p: PlayerState, now: number): 
   const base = p.riding !== undefined ? Math.max(1, rideSpeedMul(world, p), RUN_SPEED_MUL) : RUN_SPEED_MUL;
   // (a boost that ended a second ago may still be in the client's step: the snapshot has not reached it yet)
   const boost = p.boostUntil !== undefined && p.boostUntil + 1000 > now ? BOOST_SPEED_MUL : 1;
-  return PLAYER_SPEED * base * boost * MOVE_SLACK;
+  return PLAYER_SPEED * base * boost * (1 + (p.runSpeed ?? 0)) * MOVE_SLACK;
 }
 
 /**

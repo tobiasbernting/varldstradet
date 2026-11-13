@@ -5,6 +5,7 @@
 // parties (a careful one and a clumsy one that does neither) and of the hired companion (Hirdmannen) the server runs for a lone player. It only does
 // what a person at a keyboard can: it walks with `applyMove`, casts with `castSpell`, presses the use key with
 // `performAction`; it never touches the rules.
+import { runHooks } from './runhooks.ts';
 import { applyMove, farmOf, isSolidForPlayer, lineOfSight, performAction, type SimCtx } from './sim.ts';
 import { SLOW_MUL, castSpell, drinkPotion, inZone, markMob, setTarget } from './sagasim.ts';
 import { CLASSES, REST_RADIUS, SAGA_BOSSES, SPELLS, type ClassId, type SagaMob } from './saga.ts';
@@ -49,6 +50,8 @@ export interface BotMind {
   kickAt?: number;
   goldAt?: number;
   missUntil?: number;
+  /** The boss phase it last saw (it blows the horn when a boss enters a new one). */
+  phase?: number;
 }
 
 export const newMind = (style: BotStyle, rnd: () => number, lane?: 'safe' | 'random'): BotMind => ({ style, rnd, pause: 0, lane: lane ?? (style === 'careful' || style === 'adult' ? 'safe' : 'random') });
@@ -185,6 +188,15 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     if (slam && stop && !busy && now >= (f.cd[stop] ?? 0) && reacted('kickAt', true) && dist(area.animals[slam.id]!, p) <= (SPELLS[stop]?.range ?? 0) + 0.4 && cast(farm, p, mind, stop, slam.id, ctx, out)) return out;
   }
   // 1. step out of the marks on the floor (a boss's, a Skytt's line: a person sees them)
+  // Perfekt block: a careful Väktare whose Sköldmur is ready stays in a boss's sweep and raises it just before the sweep lands
+  if (mind.style === 'careful' && !mind.noDodge && cls === 'vaktare' && now >= (f.cd.skoldmur ?? 0)) {
+    const sweep = inst.zones.find((z) => z.shape === 'cone' && inZone(z, p) && now < z.at);
+    if (sweep) {
+      if (sweep.at - now <= 400) out.push(...castSpell(farm, pid, 'skoldmur', undefined, ctx, { quiet: true }));
+      p.moving = false;
+      return out;
+    }
+  }
   // (gold before red: while a Guldring is out the hero goes to it and stays, whatever else is on the floor)
   const ringOut = inst.zones.some((z) => z.kind === 'gold');
   if (careful && !mind.noDodge && !ringOut && reacted('markAt', marked(area, p.x, p.y, now))) {
@@ -227,6 +239,16 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
 
   // 3. spells
   const boss = mobs.find((m) => (m.kind === 'boss' || m.kind === 'mini') && m.state === 'fight');
+  // Bosskrafter: the horn. The masher blows it as soon as it fights; the careful and the adult when a boss enters a new phase, when two
+  // heroes are under 40 %, or on the stop's last pack if it is still unused. (The hired Hirdmannen has none; the run refuses him.)
+  if (!p.bot && fighting.length && mind.style !== 'clumsy' && mind.style !== 'kid7') {
+    const newPhase = !!boss && (boss.phase ?? 0) > (mind.phase ?? 0);
+    if (boss) mind.phase = boss.phase ?? 0;
+    else delete mind.phase;
+    const low = [f, ...friends.map((x) => x.ff)].filter((x) => x.down === undefined && x.hp < x.max * 0.4).length;
+    const lastPack = !boss && inst.packs.filter((pk) => !pk.dead).length <= 1;
+    if (mind.style === 'masher' || newPhase || low >= 2 || lastPack) out.push(...(runHooks.horn?.(farm, pid, ctx) ?? []).filter((c) => c.t !== 'toast'));
+  }
   const bossMove = boss?.cast ? SAGA_BOSSES[boss.species]?.moves[boss.cast.move] : undefined;
   const ice = mobs.find((m) => m.kind === 'ice');
   const open = (m: SagaMob): boolean => m.open !== undefined && now < m.open;
@@ -234,7 +256,7 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
   const chilled = (m: SagaMob): boolean => dazed(m) || now < (m.slowUntil ?? 0);
   // the careful bot's kill order: a monster that is open first, then Besvärjare, Sköldbärare, Skytt, the rest; the closest of a kind
   // (the adult has no such order: it turns to a Besvärjare when its cast starts)
-  const rank = (m: SagaMob): number => (m.kind === 'ice' ? 0 : open(m) ? 1 : adult ? (m.cast?.role === 'heal' ? 2 : 5) : m.role === 'healer' ? 2 : m.role === 'shield' ? 3 : m.role === 'archer' ? 4 : 5);
+  const rank = (m: SagaMob): number => (m.kind === 'ice' ? 0 : open(m) ? 1 : adult ? (m.cast?.role === 'heal' ? 2 : 5) : m.role === 'healer' ? 2 : m.role === 'shield' ? 3 : m.role === 'archer' ? 4 : m.stars ? 4.5 : 5);
   const current = mobs.find((m) => m.id === f.target && (m.state === 'fight' || !fighting.length));
   let target: SagaMob | undefined;
   if (careful) {

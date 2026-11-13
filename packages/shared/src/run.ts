@@ -5,6 +5,7 @@
 // reuses sagasim.ts for every fight rule). Swedish names and texts are in sv.ts (RUN_NAMES, RUN_TEXT).
 import type { ClassId, DungeonId, PathTraits, RunBuffs, SpellMod } from './saga.ts';
 import { noBuffs } from './saga.ts';
+import { hashInts, mulberry32 } from './rng.ts';
 import type { WeatherKind } from './types.ts';
 
 // ---------------------------------------------------------------------------
@@ -519,6 +520,74 @@ export const LATT_MINI_PACKS = { count: [2, 2], size: [3, 4] } as const;
 export const LATT_BOSS_PACKS = { count: [2, 2], size: [3, 3] } as const;
 
 // ---------------------------------------------------------------------------
+// Stjärnmonster, Bosskrafter and Gillet
+// ---------------------------------------------------------------------------
+
+/** Stjärnmonster: the chance that a pack (never one of the first stop) has a one-star and a two-star member, by level. At most one a pack, never a member with a role. */
+export const STAR_CHANCE: Record<RunLevel, readonly [number, number]> = { 0: [0, 0], 1: [0.1, 0], 2: [0.18, 0.04], 3: [0.25, 0.08], 4: [0.25, 0.08] };
+
+/**
+ * Bosskrafter: every dungeon's boss gives a power to whoever owns its trophy (any level). A hero brings ONE to a run (chosen at the
+ * arch; left alone, the latest boss they have a trophy of). The party has one charge of the horn per stop with a fight; any hero may
+ * blow it, which uses THEIR power. `radius` in tiles round the blower, `ms` how long it lasts, `amount` its number (see each).
+ */
+export interface BossPower {
+  id: DungeonId;
+  icon: string;
+  ms: number;
+  radius?: number;
+  amount?: number;
+}
+export const BOSS_POWERS: Record<DungeonId, BossPower> = {
+  /** Kungens rop: every monster within 6 tiles is stunned 3 s. */
+  draug: { id: 'draug', icon: '👑', ms: 3000, radius: 6 },
+  /** Rimfrost: every monster within 6 tiles is slowed 5 s. */
+  frost: { id: 'frost', icon: '❄️', ms: 5000, radius: 6 },
+  /** Eldring: every monster within 5 tiles burns for 8 s, `amount` damage in all. */
+  surt: { id: 'surt', icon: '🔥', ms: 8000, radius: 5, amount: 190 },
+  /** Hels nåd: every fallen hero stands up with `amount` of their health. */
+  hel: { id: 'hel', icon: '🕯️', ms: 0, amount: 0.5 },
+  /** Drakfjäll: every hero gets a shield of `amount` of max health for 8 s. */
+  dvarg: { id: 'dvarg', icon: '🐉', ms: 8000, amount: 0.35 },
+  /** Flodvåg: monsters within 6 tiles are pushed `amount` tiles away and slowed 4 s. */
+  orm: { id: 'orm', icon: '🌊', ms: 4000, radius: 6, amount: 4 },
+  /** Skuggslöja: for 5 s the monsters lose their targets and do not strike. */
+  alv: { id: 'alv', icon: '🌫️', ms: 5000 },
+  /** Ulvatjut: every hero has `amount` more power, and runs faster, for 8 s. */
+  fenrir: { id: 'fenrir', icon: '🐺', ms: 8000, amount: 0.3 },
+  /** Lokes list: every hero's pips are filled. */
+  loke: { id: 'loke', icon: '🎭', ms: 0 },
+};
+
+/** Gillet: one dish per hero for the whole run, picked at the arch from the three of the day (`dishOffer`); no pick is the first. */
+export interface DishDef {
+  id: string;
+  icon: string;
+  effect: RunEffect;
+  /** Walks this much faster (a fraction). */
+  speed?: number;
+}
+export const DISHES: DishDef[] = [
+  { id: 'kottgryta', icon: '🍲', effect: { hp: 0.12 } },
+  { id: 'honungskaka', icon: '🍯', effect: { traits: { startPip: 1 } } },
+  { id: 'barsaft', icon: '🧃', effect: { potions: 1, potion: 0.3 } },
+  { id: 'roktfisk', icon: '🐟', effect: {}, speed: 0.08 },
+  { id: 'mjodbrod', icon: '🍞', effect: { cd: 0.06 } },
+];
+/** The three dishes of a run, by its seed (dice of their own). */
+export function dishOffer(seed: number): string[] {
+  const rnd = mulberry32(hashInts(seed, 0xd15e5));
+  const pool = DISHES.map((d) => d.id);
+  const out: string[] = [];
+  while (out.length < DISH_OFFER && pool.length) out.push(pool.splice(Math.floor(rnd() * pool.length), 1)[0]!);
+  return out;
+}
+/** A switch for the tests that pin exact numbers of a hero (a dish would move them): off, nobody eats. Always on in the game. */
+export const GILLET = { on: true };
+export const dishDef = (id: string | undefined): DishDef | undefined => DISHES.find((d) => d.id === id);
+export const DISH_OFFER = 3;
+
+// ---------------------------------------------------------------------------
 // Runmärken: a medal for the party when a stop with a fight is cleared
 // ---------------------------------------------------------------------------
 
@@ -616,6 +685,15 @@ export interface RunSnap {
   event?: EventSnap;
   /** At a Vilosten: the heroes who may still choose between Vila and skärpa. */
   restChoice?: string[];
+  /** Bosskrafter: the power each hero brought (a dungeon id; none: no entry), and whether the party's horn is charged in this stop. */
+  powers: Record<string, DungeonId>;
+  horn: boolean;
+  /** Gillet: the dish each hero ate (by player id). */
+  dishes: Record<string, string>;
+  /** The dungeon's weak element, for badges (`weakOf` in sagasim.ts gives a species' own). */
+  weak: 'eld' | 'is' | 'aska';
+  /** Skogen rör sig: the wave now (1..count) while the party defends the stone. */
+  ambush?: { wave: number; count: number };
   /** Runmärken: the party's medal for each fight stop cleared so far, by the stop's id in `route` (1 bronze, 2 silver, 3 gold). */
   medals: Record<number, Medal>;
 }
@@ -648,6 +726,8 @@ export interface RunOfferSnap {
   /** The card tapped so far (it can be changed until everyone has chosen or the clock ends). */
   picked?: number;
   source: 'flock' | 'stark' | 'skatt' | 'mini' | 'shop';
+  /** Svagheter: for each card, whether one of its tags is the element this dungeon's monsters are weak to (a badge; the offer itself never leans to it). */
+  weak: boolean[];
   /** Time left (ms), new offers this hero may still ask for, and the heroes who have chosen. */
   left: number;
   rerolls: number;

@@ -51,8 +51,9 @@ export type Change =
   | { t: 'spell'; area: string; by: string | number; spell: string; x: number; y: number; tx?: number; ty?: number; on?: string | number }
   /** Dungeons: a number floating up from a player (id) or a monster (animal id): damage, healing, or a stun or interrupt. */
   /** `mark`: the hit came from a ground mark the hero did not leave (a boss's telegraphed move, burning ground, a Skytt's shot): a sound and a flash of its own. `kick`: a cast was stopped (the monster is now open, see SagaSnap). */
+  /** `weak`: the hit had the element the monster is weak to (25 % more). `parry`: Perfekt block (Väktare `on` took nothing; the attacker is open). `near`: Nära ögat (hero `on` left a mark at the last moment: +1 pip). */
   /** `combo`: a Samslag on monster `on`: `by` is [who dazed or slowed it (a player id, or `pet:<owner id>`), who spent]; show both names. `orb`: player `on` took a Kraftklot (`n` pips). */
-  | { t: 'hit'; area: string; on: string | number; n: number; kind: 'dmg' | 'heal' | 'crit' | 'block' | 'stun' | 'kick' | 'miss' | 'combo' | 'orb'; mark?: true; by?: [string, string] }
+  | { t: 'hit'; area: string; on: string | number; n: number; kind: 'dmg' | 'heal' | 'crit' | 'block' | 'stun' | 'kick' | 'miss' | 'combo' | 'orb' | 'parry' | 'near'; mark?: true; by?: [string, string]; weak?: true }
   /** Dungeons: a boss's attack marked on the ground until it lands, or burning ground; null when it is gone. */
   | { t: 'zone'; area: string; id: string; zone: SagaZone | null }
   /** Dungeons: a boss says something to everyone inside. */
@@ -72,6 +73,8 @@ export type Change =
    */
   | { t: 'run'; ev: 'state'; to: string | null; run: RunSnap | null }
   | { t: 'run'; ev: 'offer'; to: string | null; offer: RunOfferSnap | null }
+  /** Gillet: the three dishes the arch offers for the next run (ids of `DISHES`); sent with the answer to `run state` and when a hero chooses. */
+  | { t: 'run'; ev: 'gillet'; to: string | null; dishes: string[] }
   | { t: 'run'; ev: 'ended'; to: string; outcome: RunOutcome; ms: number; seeds: number; zones: number; runor: string[]; level?: RunLevel; spiritUsed?: number; path?: NodeKind[]; trophy?: string; trophyWhere?: string; silver?: number; /** Runmärken: how many [bronze, silver, gold] the party earned. */ medals?: [number, number, number] }
   /** Runs: one player's sagafrön, the nodes they have planted, and how grown the family's tree is (0..4). */
   | { t: 'seed'; ev: 'tree'; to: string; seeds: number; earned: number; tree: string[]; stage: number };
@@ -110,6 +113,8 @@ export type ClientMsg =
    * without a target go for it while it is in reach. Send it whenever the chosen monster changes.
    */
   | { t: 'target'; id: number | null }
+  /** Runs, Bosskrafter: blow the party's horn with MY chosen boss power (one charge per stop with a fight, for the whole party). */
+  | { t: 'horn' }
   /** Dungeons, Märke: mark a monster of the stop with the skull for the whole party (`id` its animal id; null takes the mark away). Refused for 2 s after ANOTHER player marked. */
   | { t: 'mark'; id: number | null }
   /** Dungeons: drink a healing potion. */
@@ -152,6 +157,9 @@ export type ClientMsg =
   | { t: 'run'; a: 'buy'; item: 'runa' | 'party' | 'potion' | 'spirit' | 'sharpen'; slot?: number; id?: string }
   | { t: 'run'; a: 'event'; choice: number }
   | { t: 'run'; a: 'leave' }
+  /** At the arch, for MY next run: the boss power I bring (a dungeon id whose boss I have a trophy of; null: none) and the dish I eat (one of the three offered). Stored on my player (`runPrefs`). */
+  | { t: 'run'; a: 'power'; id: string | null }
+  | { t: 'run'; a: 'dish'; id: string }
   | { t: 'run'; a: 'state' }
   /** The Yggdrasil shoot: plant a node of the sagaträd with sagafrön, or ask for the tree's state. */
   | { t: 'seed'; a: 'plant'; node: string }

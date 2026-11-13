@@ -894,8 +894,10 @@ export const STOP_INTROS: Record<string, string> = {
 export const COMPANION_NAME = 'Hirdmannen';
 
 /** Händelser: the name, the story line, and for each choice a name and one sentence of what it gives. */
-export const EVENT_NAMES: Record<string, string> = { trollunge: 'Den hungriga trollungen', brunn: 'Önskebrunnen', kraka: 'Den vilsna kråkan', runsten: 'Runstenen som viskar', spoke: 'Spökets skatt', smedja: 'Gamla smedjan', lasning: 'Kistan med lås', skald: 'Den vandrande skalden', ande: 'Sagoanden', honung: 'Honungsträdet' };
+export const EVENT_NAMES: Record<string, string> = {
+  bakhall: 'Skogen rör sig', trollunge: 'Den hungriga trollungen', brunn: 'Önskebrunnen', kraka: 'Den vilsna kråkan', runsten: 'Runstenen som viskar', spoke: 'Spökets skatt', smedja: 'Gamla smedjan', lasning: 'Kistan med lås', skald: 'Den vandrande skalden', ande: 'Sagoanden', honung: 'Honungsträdet' };
 export const EVENT_TEXT: Record<string, string> = {
+  bakhall: 'Det prasslar i buskarna runt gläntan. Monster kommer i 3 vågor! Vill ni slåss, eller gömma er?',
   trollunge: 'En liten trollunge ser hungrig ut. Han tittar på er matsäck.',
   brunn: 'En gammal brunn glittrar. Kasta ett mynt och önska!',
   kraka: 'En kråka hoppar framför er och kraxar högt.',
@@ -908,6 +910,7 @@ export const EVENT_TEXT: Record<string, string> = {
   honung: 'Ett stort träd är fullt av honung. En björn sover under det.',
 };
 export const EVENT_CHOICES: Record<string, Record<string, [string, string]>> = {
+  bakhall: { forsvara: ['Försvara stenen', 'En strid i 3 vågor! Ni får en sällsynt runa och 25 silver.'], gom: ['Göm er', 'Ingen strid. Ni hittar 5 silver.'] },
   trollunge: { brod: ['Ge bröd', 'Hela laget får en sällsynt runa.'], smyg: ['Smyg förbi', 'Ni hittar 10 silver på marken.'] },
   brunn: { mynt1: ['Kasta 10 silver', 'Hela laget får en vanlig runa.'], mynt3: ['Kasta 30 silver', 'Hela laget får en sällsynt runa.'], gavidare: ['Gå vidare', 'Ni hittar 5 silver vid brunnen.'] },
   kraka: { folj: ['Följ kråkan', 'Den leder er till 30 silver.'], jaga: ['Jaga bort den', '10 silver, och alla läks lite.'] },
@@ -929,6 +932,27 @@ export const RUN_T = {
   // from Medel up every human hero down is a wipe, though the Hirdmannen still stands: the rule (the level's info card, the journal) and the line added to the wipe banner
   wipeRule: 'På Medel och uppåt: om alla hjältar faller behöver ni en Sagoande för att komma upp. Hirdmannen klarar inte färden ensam, och ni har bara 1 Sagoande!',
   wipeHird: 'Hirdmannen klarar det inte ensam.',
+  // Bosskrafter (the party's horn), Gillet (the dish), Stjärnmonster, Svagheter, Skogen rör sig
+  hornName: 'Hornet',
+  hornText: 'Blås i hornet för att använda din bosskraft. Hela gruppen har 1 blås per strid, så prata ihop er!',
+  hornBlown: '📯 {name} blåser i hornet: {icon} {power}!',
+  hornEmpty: 'Hornet är redan blåst. Det laddas i nästa strid.',
+  powerNone: 'Du har ingen bosskraft än. Besegra en boss för att få dess trofé!',
+  powerPick: 'Välj 1 bosskraft att ta med',
+  dishPick: 'Välj 1 rätt till gillet',
+  dishNone: 'Den rätten finns inte i dag.',
+  starName: 'Stjärnmonster',
+  starText: 'Ett monster med 1 eller 2 stjärnor är större, tål mer och slår hårdare. Det ger extra silver och ett kraftklot!',
+  weakName: 'Svaghet',
+  weakText: 'Monstren här tar 25 % mer skada av {element}. Välj runor med det märket!',
+  weakHit: 'Svag punkt!',
+  parry: 'Perfekt block!',
+  parryText: 'Res Sköldmur precis innan slaget träffar (0,6 sekunder). Då tar du ingen skada och får 3 Sköldkraft!',
+  near: 'Nära ögat!',
+  nearText: 'Kliv ur ett märke i sista stund (0,5 sekunder innan det smäller), så får du 1 prick.',
+  ambushWave: '🌲 Våg {n} av {count}!',
+  ambushWon: 'Ni försvarade stenen!',
+  ambushWonSub: 'Skogen är lugn igen. Ni får en runa och 25 silver.',
   medalText: 'Guld får ni om ni springer ur märkena (högst 1 träff var), inte låter något monster läka sig och är snabba.',
   started: 'Färden börjar! Tio steg till bossen.',
   needPort: 'Gå fram till färdporten först.',
@@ -1020,6 +1044,32 @@ export const PATH_SPELLS: Record<string, Record<string, string>> = {
 // ---------------------------------------------------------------------------
 // The fight: pips, combos and the special pack monsters
 // ---------------------------------------------------------------------------
+
+/** Bosskrafter: each boss's power by dungeon id: its name and one sentence with a number (the arch window, the horn button's card). The picture is `BOSS_POWERS[id].icon`. */
+export const POWER_NAMES: Record<string, string> = { draug: 'Kungens rop', frost: 'Rimfrost', surt: 'Eldring', hel: 'Hels nåd', dvarg: 'Drakfjäll', orm: 'Flodvåg', alv: 'Skuggslöja', fenrir: 'Ulvatjut', loke: 'Lokes list' };
+export const POWER_TEXT: Record<string, string> = {
+  draug: 'Alla monster inom 6 steg blir yra i 3 sekunder.',
+  frost: 'Alla monster inom 6 steg blir långsamma i 5 sekunder.',
+  surt: 'Alla monster inom 5 steg brinner i 8 sekunder.',
+  hel: 'Alla som har fallit reser sig med 50 % hälsa.',
+  dvarg: 'Alla hjältar får en sköld på 35 % i 8 sekunder.',
+  orm: 'En våg knuffar bort monstren 4 steg och gör dem långsamma.',
+  alv: 'Monstren tappar bort er och slår inte på 5 sekunder.',
+  fenrir: 'Alla hjältar slår 30 % hårdare och springer fortare i 8 sekunder.',
+  loke: 'Alla hjältar får 3 prickar direkt.',
+};
+/** Gillet: each dish's name and one sentence with a number. The picture is the dish's `icon` (`DISHES`). */
+export const DISH_NAMES: Record<string, string> = { kottgryta: 'Köttgryta', honungskaka: 'Honungskaka', barsaft: 'Bärsaft', roktfisk: 'Rökt fisk', mjodbrod: 'Mjödbröd' };
+export const DISH_TEXT: Record<string, string> = {
+  kottgryta: 'Du får 12 % mer hälsa hela färden.',
+  honungskaka: 'Du börjar varje strid med 1 prick.',
+  barsaft: 'Du får 1 läkedryck till, och dryckerna läker 30 % mer.',
+  roktfisk: 'Du springer 8 % fortare hela färden.',
+  mjodbrod: 'Dina besvärjelser laddar 6 % snabbare.',
+};
+/** Svagheter: the three elements' words and pictures. */
+export const ELEMENT_NAMES: Record<string, string> = { eld: 'eld', is: 'is', aska: 'åska' };
+export const ELEMENT_ICONS: Record<string, string> = { eld: '🔥', is: '❄️', aska: '⚡' };
 
 /** What each class's pips are called, their picture, and one sentence about them (the HUD's pip row and its info card). */
 export const PIP_NAMES: Record<ClassId, string> = { krigare: 'Glöd', magiker: 'Gnistor', vaktare: 'Sköldkraft', helare: 'Ljus' };

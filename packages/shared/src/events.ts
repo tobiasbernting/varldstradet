@@ -16,7 +16,9 @@ export type EventOutcome =
   | { effect: RunEffect }
   | { sharpen: true }
   | { cards: OfferSource }
-  | { spirit: number };
+  | { spirit: number }
+  /** Skogen rör sig: the party defends the stone against waves of the dungeon's monsters (the one outcome that is a fight). */
+  | { ambush: true };
 
 export interface EventChoice {
   id: string;
@@ -31,6 +33,13 @@ export interface EventDef {
   icon: string;
   choices: EventChoice[];
 }
+
+/** Skogen rör sig (`bakhall`): the one Händelse with a fight. Three waves, one every `everyMs` (or when the last is down); what it pays. It comes instead of the stop's own event this often. */
+export const AMBUSH = { waves: 3, everyMs: 20_000, silver: 25, chance: 1 / 11 } as const;
+export const AMBUSH_EVENT: EventDef = { id: 'bakhall', icon: '🌲', choices: [
+  { id: 'forsvara', icon: '⚔️', outcome: [{ ambush: true }] },
+  { id: 'gom', icon: '🤫', outcome: [{ silver: 5 }] },
+] };
 
 export const EVENTS: EventDef[] = [
   { id: 'trollunge', icon: '🧌', choices: [
@@ -76,14 +85,17 @@ export const EVENTS: EventDef[] = [
     { id: 'bjorn', icon: '🐻', outcome: [{ heal: 1 }] },
   ] },
 ];
-export const eventDef = (id: string): EventDef | undefined => EVENTS.find((e) => e.id === id);
+export const eventDef = (id: string): EventDef | undefined => EVENTS.find((e) => e.id === id) ?? (id === AMBUSH_EVENT.id ? AMBUSH_EVENT : undefined);
 
 /** Which event a stop holds: by the seed and the stop, never one the run has met already (until all ten have been). */
 export function pickEvent(seed: number, node: number, met: readonly string[]): string {
   const rnd = mulberry32(hashInts(seed, node, 0xe7e47));
   const fresh = EVENTS.filter((e) => !met.includes(e.id));
   const pool = fresh.length ? fresh : EVENTS;
-  return pool[Math.floor(rnd() * pool.length)]!.id;
+  const id = pool[Math.floor(rnd() * pool.length)]!.id;
+  // (dice of its own, so the events of a seed are what they were when the forest does not move)
+  if (!met.includes(AMBUSH_EVENT.id) && mulberry32(hashInts(seed, node, 0xba4a11))() < AMBUSH.chance) return AMBUSH_EVENT.id;
+  return id;
 }
 
 /** The choice an event takes when the clock runs out: the first free one (nobody is made to pay by being slow). */

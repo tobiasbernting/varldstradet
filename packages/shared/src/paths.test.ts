@@ -3,6 +3,10 @@
 import { describe, expect, it } from 'vitest';
 import { CLASSES, CLASS_IDS, classSpells, PATHS, PATH_NAMES, PATH_SPELLS, PATH_TEXT, SPELLS, TILE, buffsOf, castSpell, choosePath, defaultPath, pathDef, pathsOf, runOf, runPickMs, spawnSagaMob, startRun, tick, type ClassId, type SpellMod } from './index.ts';
 import { makeParty, step } from './runplay.ts';
+import { GILLET } from './run.ts';
+
+// (these tests pin a hero's exact numbers: nobody eats a dish here; fight3.test.ts has the dishes)
+GILLET.on = false;
 import type { Change } from './protocol.ts';
 
 /** Two heroes in the first stop (no companion), the first with `pathId`'s mods (or none), a little arena round them. */

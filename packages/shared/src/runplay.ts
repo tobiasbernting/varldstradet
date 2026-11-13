@@ -4,6 +4,7 @@
 import { addItem } from './inventory.ts';
 import { mulberry32 } from './rng.ts';
 import { CLASSES, XP_LEVELS, newSagaProgress, type ClassId } from './saga.ts';
+import { DISHES } from './run.ts';
 import { newMind, botStep, type BotMind, type BotStyle } from './runbot.ts';
 import { eventDef } from './events.ts';
 import { pathsOf } from './paths.ts';
@@ -43,6 +44,8 @@ export function makeParty(classes: ClassId[], opts: { level?: number; style?: Bo
     const pet = (Array.isArray(opts.pet) ? opts.pet[i] : opts.pet) ?? (typeof process !== 'undefined' ? process.env.BOT_PET : undefined); // (BOT_PET=hund runs the bot tests with a pet each) (every bot brings the same pet, or the list gives one per hero)
     if (pet) grantPet(world, p, pet, [], { quiet: true, now: 0 });
     party.minds.set(p.id, newMind(opts.style ?? 'careful', mulberry32(100 + i), opts.lane));
+    // (Gillet: a bot eats whatever dish its seed says, of the five; one that is not served that run becomes the first that is)
+    p.runPrefs = { dish: DISHES[((opts.seed ?? 7) + i) % DISHES.length]!.id };
   });
   return party;
 }
@@ -82,7 +85,16 @@ export function step(party: Party, bots: boolean, out: Change[]): void {
         const ev = run.event && eventDef(run.event.id);
         if (ev && run.event && !(p.id in run.event.votes)) {
           const ok = ev.choices.map((c, i) => ({ c, i })).filter((x) => (x.c.cost ?? 0) <= run.purse);
-          out.push(...voteEvent(party.world, p.id, ok[Math.floor(party.rnd() * ok.length)]?.i ?? 0, party.ctx()));
+          let pick = ok[Math.floor(party.rnd() * ok.length)]?.i ?? 0;
+          if (ev.id === 'bakhall') {
+            // Skogen rör sig: the masher fights, the careful and the adult when everyone is above 70 % health, the clumsy by luck
+            const style = party.minds.get(p.id)!.style;
+            const fs = Object.values(party.world.areas?.[run.key]?.saga?.fighters ?? {});
+            const healthy = fs.every((f) => f.down === undefined && f.hp >= f.max * 0.7);
+            if (style === 'masher') pick = 0;
+            else if (style === 'careful' || style === 'adult') pick = healthy ? 0 : 1;
+          }
+          out.push(...voteEvent(party.world, p.id, pick, party.ctx()));
         }
       } else {
         // at the Köpman a bot buys what it can: its dearest runa first, then a potion (once per stop)
