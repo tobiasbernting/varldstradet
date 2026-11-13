@@ -857,3 +857,12 @@ body.dev-mouse .saga-skull .key {
 .role-line > .em.medals {
   font-size: calc(34px * var(--txt));
 }
+/* the run's start: the auto-attack stands beside the four buttons, in the same row */
+@media (min-width: 901px) {
+  .run-panel .spellrow:has(.auto) {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+.run-panel .spell.auto {
+  border-style: dashed;
+}
