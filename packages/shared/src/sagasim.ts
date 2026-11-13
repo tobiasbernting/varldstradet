@@ -1690,7 +1690,8 @@ function startCast(h: Here, m: SagaMob, a: { x: number; y: number; facing: strin
   // Lätt: the warning lasts longer (the zones, the cast and the snapshot all use this)
   const warn = Math.round(mv.warn * (h.inst.run?.warnMul ?? 1));
   // (the level makes the plain marks come more often: they, not the boss's blows, are the danger)
-  const plain = mv.move === 'cleave' || mv.move === 'slam' || mv.move === 'rain' || mv.move === 'charge' || mv.move === 'line' || mv.move === 'pools';
+  // (not burning ground: it lingers, and twice as much of it leaves no floor to stand on)
+  const plain = mv.move === 'cleave' || mv.move === 'slam' || mv.move === 'rain' || mv.move === 'charge' || mv.move === 'line';
   m.next![i] = now + mv.every * (plain ? (h.inst.run?.markEvery ?? 1) : 1) + warn;
   const party = partyOf(h).filter((p) => upright(h, p));
   // the ice prison needs a friend to break it: never on someone alone

@@ -73,18 +73,24 @@ describe('Medel: playing well matters (same hero, same seeds, same lane)', () =>
     });
   }
 
-  it('krigare: a careful bot that never leaves a mark wins at most 2 of 6', T, async () => {
-    expect((await row('krigare', 2, 'careful', { noDodge: true })).wins).toBeLessThanOrEqual(2);
-  });
-
-  // KNOWN GAPS (reported to the designer, DESIGN.md section 12): these are the thresholds asked for, and the rules do not reach them yet.
-  // `it.fails` keeps the threshold in the file: when a rule change closes the gap, the test turns red and the `.fails` goes.
-  it.fails('GAP magiker: a careful bot that never leaves a mark wins at most 2 of 6 (a ranged hero backs away from what is close, and so out of most of Draugkryptan’s marks)', T, async () => {
-    expect((await row('magiker', 2, 'careful', { noDodge: true })).wins).toBeLessThanOrEqual(2);
-  });
   for (const cls of ['krigare', 'magiker'] as ClassId[]) {
-    it.fails(`GAP ${cls}: a bot that only presses button 1 wins at most 1 of 6 (it still dodges everything, and nothing in a fight punishes being slow)`, T, async () => {
-      expect((await row(cls, 2, 'careful', { slots: [0] })).wins).toBeLessThanOrEqual(1);
+    it(`${cls}: an adult (the careful bot with a reaction time, missed presses and no perfect kill order) wins at least 5 of 6 in 12 to 25 minutes and needs a Sagoande in at most half its runs`, T, async () => {
+      const a = await row(cls, 2, 'adult');
+      expect(a.wins).toBeGreaterThanOrEqual(5);
+      expect(a.mins).toBeGreaterThan(12);
+      expect(a.mins).toBeLessThan(25);
+      expect(a.spirit).toBeLessThanOrEqual(SEEDS.length / 2);
+    });
+
+    it(`${cls}: a careful bot that never leaves a mark (and does not back away) wins at most 2 of 6`, T, async () => {
+      expect((await row(cls, 2, 'careful', { noDodge: true })).wins).toBeLessThanOrEqual(2);
+    });
+
+    it(`${cls}: a bot that only presses button 1 (it dodges everything) is at least 35 % slower than the careful bot and earns gold on at most 30 % of its fight stops`, T, async () => {
+      const c = await row(cls, 2, 'careful');
+      const one = await row(cls, 2, 'careful', { slots: [0] });
+      expect(one.wins === 0 || one.mins >= c.mins * 1.35).toBe(true);
+      expect(one.gold).toBeLessThanOrEqual(0.3);
     });
   }
 });

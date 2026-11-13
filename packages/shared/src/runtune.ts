@@ -64,6 +64,7 @@ for (const [label, classes] of PARTIES) {
   const stopMs: Record<string, number[]> = {};
   for (let seed = from; seed < from + count; seed++) {
     const party = makeParty(classes, { style, seed, level: 3, ...(lane ? { lane } : {}) });
+    if (process.argv.includes('--where')) (globalThis as { where?: string[] }).where = others;
     // (the chapters before it are cleared, so it is the next one to run)
     for (const p of party.players) p.saga!.cleared = DUNGEON_IDS.slice(0, DUNGEON_IDS.indexOf(dungeon));
     for (const mind of party.minds.values()) {

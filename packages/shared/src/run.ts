@@ -438,6 +438,24 @@ export const wingOf = (row: number): number => (row <= 4 ? 0 : row <= 8 ? 1 : 2)
 /** Health of a stop's monsters by wing (DESIGN.md sections 2.3 and 5.1): the later wings are tougher. Tuned by the bots. */
 export const WING_HP: readonly number[] = [1.85, 2.3, 2.7];
 
+/**
+ * Per dungeon, in a run: the later dungeons' monsters hit harder and their bosses have more health than Draugkryptan's, while a
+ * hero is as strong in every chapter (no power from levels or gear) and a fall now costs a Sagoande. `blows` multiplies the
+ * ordinary blows of the dungeon's monsters and bosses, `boss` the health of its boss and mid-boss. Tuned so that the careful and
+ * the adult bot win every dungeon on Medel (DESIGN.md 5.4).
+ */
+export const DUNGEON_TUNE: Record<DungeonId, { blows: number; boss: number }> = {
+  draug: { blows: 1, boss: 1 },
+  frost: { blows: 0.9, boss: 1 },
+  surt: { blows: 0.8, boss: 0.85 },
+  hel: { blows: 0.85, boss: 0.9 },
+  dvarg: { blows: 0.85, boss: 0.85 },
+  orm: { blows: 0.9, boss: 0.8 },
+  alv: { blows: 0.7, boss: 0.75 },
+  fenrir: { blows: 0.6, boss: 0.7 },
+  loke: { blows: 0.8, boss: 0.65 },
+};
+
 /** One human alone (with the hired companion, who counts as a fighter for the monsters' health): monsters tolerate this much less. */
 export const SOLO_MERCY = 0.75;
 

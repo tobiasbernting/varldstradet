@@ -417,7 +417,7 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     phaseAdds: { species: 'eldimp', count: 3 },
     moves: [
       { move: 'slam', name: 'Städslaget', every: 7000, first: 4000, warn: 1300, radius: 2.8, dmg: 1, text: 'Slår hammaren i städet så golvet sprakar. Spring ut ur cirkeln!' },
-      { move: 'pools', name: 'Glödande slagg', every: 11000, first: 7000, warn: 1000, radius: 1.4, dmg: 0.8, linger: 8000, text: 'Kastar glödande slagg som brinner kvar på golvet. Stå inte i elden!' },
+      { move: 'pools', name: 'Glödande slagg', every: 11000, first: 7000, warn: 1000, radius: 1.4, dmg: 0.5, linger: 8000, text: 'Kastar glödande slagg som brinner kvar på golvet. Stå inte i elden!' },
     ],
     yells: { pull: 'Ingen kommer in i Surts smedja!', phase: ['Imparna! Hjälp mig!'], kill: 'Mer kol till ugnen!', death: 'Elden… slocknar…', wipe: 'Ha! Härdat i elden!' },
     mini: true,
@@ -436,7 +436,7 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     phaseAdds: { species: 'eldimp', count: 3 },
     moves: [
       { move: 'cleave', name: 'Eldsvärdet', every: 8000, first: 5000, warn: 1300, radius: 4.4, arc: 110, dmg: 1, text: 'Svingar det flammande svärdet i en stor båge. Ställ dig bakom honom!' },
-      { move: 'pools', name: 'Lavapölar', every: 12000, first: 8000, warn: 1200, radius: 1.6, dmg: 1, linger: 10000, text: 'Lava väller upp under er och brinner kvar. Flytta på er!' },
+      { move: 'pools', name: 'Lavapölar', every: 12000, first: 8000, warn: 1200, radius: 1.6, dmg: 0.5, linger: 10000, text: 'Lava väller upp under er och brinner kvar. Flytta på er!' },
       { move: 'nova', name: 'Muspels vrede', every: 14000, first: 4000, warn: 2800, radius: 7, dmg: 1.05, phase: 2, interrupt: true, text: 'Hela salen fylls av eld. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!' },
     ],
     yells: { pull: 'Med det här svärdet ska jag bränna Världsträdet!', phase: ['Muspelheims eld brinner i mig!', 'NI KAN INTE STOPPA MIG!'], kill: 'Aska till aska!', death: 'Världsträdet… lever…', wipe: 'Ingen kan stå emot elden!' },
@@ -513,7 +513,7 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     phaseAdds: { species: 'guldbagge', count: 3 },
     moves: [
       { move: 'cleave', name: 'Drakeld', every: 9000, first: 5000, warn: 1400, radius: 4.6, arc: 90, dmg: 1, text: 'Han sprutar eld rakt fram. Ställ dig bakom eller bredvid honom!' },
-      { move: 'pools', name: 'Smält guld', every: 12000, first: 8000, warn: 1200, radius: 1.5, dmg: 1, linger: 9000, text: 'Smält guld rinner ut på golvet och är hett länge. Stå inte i det!' },
+      { move: 'pools', name: 'Smält guld', every: 12000, first: 8000, warn: 1200, radius: 1.5, dmg: 0.5, linger: 9000, text: 'Smält guld rinner ut på golvet och är hett länge. Stå inte i det!' },
       { move: 'mend', name: 'Guldsömn', every: 20000, first: 15000, warn: 3000, radius: 1, dmg: 0, heal: 0.12, phase: 1, interrupt: true, text: 'Han kryper ihop på sitt guld och sover sig frisk. Väck honom med Sköldslag, Stormsteg eller Isspjut!' },
     ],
     yells: { pull: 'MITT guld! Allt är MITT! Inte ett enda litet mynt får ni!', phase: ['Baggar! Skydda skatten!', 'Loke lovade mig allt guld i hela världen!'], kill: 'Ännu en sak till högen.', death: 'Mitt… fina… guld…', wipe: 'Ha! Guldet stannar hos mig.' },
@@ -531,7 +531,7 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     phases: [0.5],
     phaseAdds: { species: 'manet', count: 2 },
     moves: [
-      { move: 'pools', name: 'Bläck', every: 10000, first: 5000, warn: 1100, radius: 1.6, dmg: 0.9, linger: 8000, text: 'Han sprutar svart bläck som ligger kvar på golvet. Stå inte i bläcket!' },
+      { move: 'pools', name: 'Bläck', every: 10000, first: 5000, warn: 1100, radius: 1.6, dmg: 0.5, linger: 8000, text: 'Han sprutar svart bläck som ligger kvar på golvet. Stå inte i bläcket!' },
       { move: 'line', name: 'Tentakelsvep', every: 9000, first: 7000, warn: 1500, radius: 6, width: 1.8, dmg: 0.85, text: 'En lång tentakel slår ner i en rak linje. Gå åt sidan!' },
     ],
     yells: { pull: 'Blubb! Vem har spårat in sand i MITT fina tempel?', phase: ['Blubb blubb! Maneter, hjälp till!'], kill: 'Blubb!', death: 'Blubb… blubb… bluuubb…', wipe: 'Hihi! Åtta armar är bättre än två!' },
@@ -590,7 +590,7 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     phaseAdds: { species: 'skuggalv', count: 2 },
     moves: [
       { move: 'nova', name: 'Mardröm', every: 15000, first: 7000, warn: 2600, radius: 7, dmg: 1.1, interrupt: true, text: 'Hon fyller salen med en mardröm. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!' },
-      { move: 'pools', name: 'Skuggpölar', every: 11000, first: 5000, warn: 1200, radius: 1.5, dmg: 1, linger: 10000, text: 'Mörka pölar av skugga sprider sig på golvet. Stå inte i dem!' },
+      { move: 'pools', name: 'Skuggpölar', every: 11000, first: 5000, warn: 1200, radius: 1.5, dmg: 0.5, linger: 10000, text: 'Mörka pölar av skugga sprider sig på golvet. Stå inte i dem!' },
       { move: 'mend', name: 'Drömsömn', every: 22000, first: 16000, warn: 3000, radius: 1, dmg: 0, heal: 0.1, phase: 1, interrupt: true, text: 'Hon somnar och drömmer sig frisk. Väck henne med Sköldslag, Stormsteg eller Isspjut!' },
       { move: 'summon', name: 'Skuggor!', every: 18000, first: 4000, warn: 1500, radius: 0, count: 2, add: 'skuggalv', dmg: 0, phase: 2, text: 'Hon kallar fram skuggalver ur mörkret. Ta hand om dem snabbt!' },
     ],
@@ -670,7 +670,7 @@ export const SAGA_BOSSES: Record<string, SagaBossDef> = {
     moves: [
       { move: 'cleave', name: 'Kungasvärdet', every: 9000, first: 5000, warn: 1300, radius: 3.6, arc: 100, dmg: 1.1, text: 'Han härmar Draugkungen och svingar ett svärd i en stor båge. Ställ dig bakom honom!' },
       { move: 'nova', name: 'Snöstorm', every: 16000, first: 6000, warn: 2600, radius: 8, dmg: 0.95, interrupt: true, phase: 1, text: 'Han härmar Rimtursen och kallar på en snöstorm. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring långt bort!' },
-      { move: 'pools', name: 'Lavapölar', every: 12000, first: 8000, warn: 1200, radius: 1.6, dmg: 1.1, linger: 9000, phase: 2, text: 'Han härmar Surt, och lava väller upp under er. Flytta på er!' },
+      { move: 'pools', name: 'Lavapölar', every: 12000, first: 8000, warn: 1200, radius: 1.6, dmg: 0.5, linger: 9000, phase: 2, text: 'Han härmar Surt, och lava väller upp under er. Flytta på er!' },
       { move: 'mend', name: 'Lokes list', every: 22000, first: 16000, warn: 3000, radius: 1, dmg: 0, heal: 0.08, interrupt: true, phase: 2, text: 'Han låtsas sova och läker sig i smyg. Avbryt med Sköldslag, Stormsteg eller Isspjut!' },
       { move: 'pull', name: 'Dödens famn', every: 15000, first: 9000, warn: 2200, radius: 7, dmg: 0.5, phase: 3, text: 'Han härmar Hel och drar alla nära sig. Akta er, för sedan kommer Helskriket!' },
       { move: 'nova', name: 'Helskriket', every: 15000, first: 11500, warn: 2400, radius: 4, dmg: 1.05, interrupt: true, phase: 3, text: 'Han skriker som Hel. Avbryt med Sköldslag, Stormsteg eller Isspjut, eller spring ut ur cirkeln!' },

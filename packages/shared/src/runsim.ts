@@ -67,6 +67,7 @@ import {
   type RunSave,
   type RunSnap,
   MEDAL_SILVER,
+  DUNGEON_TUNE,
   medalFor,
   type Medal,
 } from './run.ts';
@@ -663,8 +664,8 @@ export function enterStop(farm: WorldState, run: RunState, node: number, ctx: Si
     name: z.name,
     intro: z.intro,
     hpMul: z.hpMul * (solo ? SOLO_MERCY : 1) * lvl.hp,
-    dmgMul: z.dmgMul * lvl.dmg,
-    bossMul: z.bossMul * (solo ? SOLO_MERCY : 1) * lvl.hp * def.bossHp,
+    dmgMul: z.dmgMul * lvl.dmg * DUNGEON_TUNE[run.plan.boss].blows,
+    bossMul: z.bossMul * (solo ? SOLO_MERCY : 1) * lvl.hp * def.bossHp * DUNGEON_TUNE[run.plan.boss].boss,
     sight: z.sight,
     leash: z.leash,
     ...(moves ? { moves } : {}),
