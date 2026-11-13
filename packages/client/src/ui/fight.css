@@ -419,7 +419,7 @@ body.saga-fight .act-btn.spend-glow {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: conic-gradient(var(--cc, #ff5a4a) calc(var(--k) * 100%), rgba(255, 255, 255, 0.22) 0);
+  background: conic-gradient(var(--cc, #ff5a4a) calc(var(--k) * 100%), rgba(255, 255, 255, 0.4) 0);
 }
 .cast-ring.c-heal {
   --cc: #4fe07a;
@@ -435,7 +435,7 @@ body.saga-fight .act-btn.spend-glow {
 }
 .cast-ring .in {
   position: absolute;
-  inset: 6px;
+  inset: 7px;
   width: auto;
   height: auto;
   border-radius: 50%;
@@ -630,8 +630,8 @@ body.saga-fight .act-btn.spend-glow {
 /* ------------------------------------------------------------------------------------------------ Märke: the party's skull */
 .skull-mark {
   display: inline-block;
-  width: max(34px, calc(10 * var(--u)));
-  height: max(34px, calc(10 * var(--u)));
+  width: max(44px, calc(12 * var(--u)));
+  height: max(44px, calc(12 * var(--u)));
   flex: none;
 }
 .skull-mark svg,
@@ -740,23 +740,23 @@ body.dev-mouse .saga-skull .key {
     0 0 10px #ffd23f;
   animation-duration: 2s;
 }
+/* (docked in the HUD's column the cast bar is not positioned: its fill and its words must still stay inside it) */
+.hud-center > .saga-cast {
+  position: relative;
+}
 /* Guldringen on the boss's cast bar: gold, not the red of a danger */
 .saga-cast.ring {
   border-color: #ffd23f;
 }
 .saga-cast.ring > i {
-  background: linear-gradient(#ffe98a, #e0a800);
-}
-.saga-cast.ring .nm {
-  color: #14101c;
-  text-shadow: 0 1px 0 #fff3;
+  background: linear-gradient(#d9a400, #a87400);
 }
 /* ------------------------------------------------------------------------------------------------ Runmärken */
 .medal-pop {
   position: fixed;
   left: 50%;
-  top: 34%;
-  z-index: 45;
+  top: 22%;
+  z-index: 2000;
   transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
@@ -854,5 +854,5 @@ body.dev-mouse .saga-skull .key {
   gap: 10px;
 }
 .role-line > .em.medals {
-  font-size: 34px;
+  font-size: calc(34px * var(--txt));
 }

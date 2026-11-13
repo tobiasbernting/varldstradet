@@ -1134,13 +1134,13 @@ button.pick {
 .saga-dungeon .mobs {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(calc(70 * var(--u)), 1fr));
-  gap: calc(1 * var(--u)) calc(3 * var(--u));
+  gap: max(8px, calc(1 * var(--u))) calc(3 * var(--u));
   margin-top: calc(1 * var(--u));
 }
 .saga-dungeon .mob {
   display: flex;
   align-items: center;
-  gap: calc(2 * var(--u));
+  gap: max(8px, calc(2 * var(--u)));
 }
 .saga-dungeon .mob .pic {
   flex: 0 0 calc(16 * var(--u));
