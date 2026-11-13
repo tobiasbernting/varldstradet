@@ -1,6 +1,6 @@
 // A tuning script for the runs (DESIGN.md sections 5.6 and 8): plays bot runs of the route and prints the table of section 5.4.
 //   node --experimental-transform-types packages/shared/src/runtune.ts [--level 0..4] [--style clumsy|careful|kid7|masher] [--seeds 20] [--from 1]
-//        [--dungeon draug] [--parties solo|duo|pair|all] [--lane safe|random] [--limit 60]
+//        [--dungeon draug] [--parties solo|duo|pair|fam|all] [--lane safe|random] [--limit 60]
 // One row per party: wins, runs that ended on a wipe, Sagoandans used, minutes until the boss falls, and what the route held on
 // average (fights, Vilosten). Not part of the game.
 import { T } from './sv.ts';
@@ -43,7 +43,11 @@ const noDodge = process.argv.includes('--nododge');
 const slots = arg('slots', '') === '' ? undefined : arg('slots', '').split(',').map(Number);
 for (const k of ['hp', 'dmg', 'warn', 'seeds', 'bossHp', 'mark', 'markEvery'] as const) if (arg(k, '') !== '') RUN_LEVELS[level][k] = Number(arg(k, ''));
 const only = arg('only', '');
-const PARTIES0 = which === 'solo' ? SOLO : which === 'duo' ? DUO : which === 'pair' ? PAIR : [...SOLO, ...DUO];
+const FAM: [string, ClassId[]][] = [
+  ['väktare+helare+magiker', ['vaktare', 'helare', 'magiker']],
+  ['fyra hjältar', ['vaktare', 'helare', 'krigare', 'magiker']],
+];
+const PARTIES0 = which === 'solo' ? SOLO : which === 'duo' ? DUO : which === 'pair' ? PAIR : which === 'fam' ? FAM : [...SOLO, ...DUO];
 const PARTIES = only === '' ? PARTIES0 : PARTIES0.filter((_, i) => String(i) === only);
 
 console.log(`${dungeon}, level ${level} (${T.runLevelName[level]}), ${style} bots${lane ? `, lane ${lane}` : ''}, seeds ${from}..${from + count - 1}`);
