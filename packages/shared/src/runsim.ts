@@ -159,6 +159,8 @@ export interface RunState {
   /** Runmärken: the medal of each fight stop cleared, and the run time when the stop now was entered. */
   medals: Record<number, Medal>;
   stopAt: number;
+  /** How long each fight stop took to clear (ms), for the tuning of the pars. */
+  stopMs: Record<number, number>;
   /** Players who joined while the cards were out: they enter the next stop. */
   waiting: string[];
   victoryAt?: number;
@@ -589,6 +591,7 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
     paid: new Set(),
     medals: {},
     stopAt: 0,
+    stopMs: {},
     waiting: [],
     minds: new Map(),
     statePing: 0,
@@ -1475,6 +1478,7 @@ function awardMedal(farm: WorldState, run: RunState, inst: SagaInstance, out: Ch
   const fighters = Object.keys(inst.fighters).length;
   const medal = medalFor({ markHits: inst.markHits, mobHeals: inst.mobHeals, ms: run.elapsed - run.stopAt, kind: z.kind, level: run.level, fighters });
   run.medals[run.node] = medal;
+  run.stopMs[run.node] = run.elapsed - run.stopAt;
   run.purse += silverFor(run, MEDAL_SILVER[medal]);
   for (const p of humans(farm, run)) out.push(toast(p.id, fmt(RUN_T.medal, { medal: RUN_T.medalNames[medal]!, icon: RUN_T.medalIcons[medal]! }) + (MEDAL_SILVER[medal] ? ` ${fmt(RUN_T.medalSilver, { n: silverFor(run, MEDAL_SILVER[medal]) })}` : '')));
 }

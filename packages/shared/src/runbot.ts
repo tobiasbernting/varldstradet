@@ -37,6 +37,8 @@ export interface BotMind {
   /** For the skill tests: a bot that plays its style but never steps out of a mark, and one that only presses these buttons (slots 0..3). */
   noDodge?: boolean;
   slots?: number[];
+  /** A masher who is seven: the kid7 bot's pauses and misses, pressing like the masher. */
+  kid?: boolean;
 }
 
 export const newMind = (style: BotStyle, rnd: () => number, lane?: 'safe' | 'random'): BotMind => ({ style, rnd, pause: 0, lane: lane ?? (style === 'careful' ? 'safe' : 'random') });
@@ -141,7 +143,7 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
   if (!p || !area || !inst || !f) return out;
   const now = ctx.now;
   const careful = mind.style === 'careful';
-  const clumsy = mind.style === 'clumsy' || mind.style === 'kid7';
+  const clumsy = mind.style === 'clumsy' || mind.style === 'kid7' || !!mind.kid;
   if (f.down !== undefined || f.frozen !== undefined) {
     p.moving = false;
     return out;
@@ -181,7 +183,7 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
       p.moving = false;
       return out;
     }
-    mind.pause = (120 + mind.rnd() * 380) * (mind.style === 'kid7' ? 1.2 : 1);
+    mind.pause = (120 + mind.rnd() * 380) * (mind.style === 'kid7' || mind.kid ? 1.2 : 1);
   }
 
   // 2. a healing potion when low
@@ -295,7 +297,7 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
   };
   // the clumsy bot misses a third of its chances (a kid of seven 40 %)
   if (fighting.length || ice) {
-    if (!clumsy || mind.rnd() > (mind.style === 'kid7' ? 0.4 : 0.35)) casting();
+    if (!clumsy || mind.rnd() > (mind.style === 'kid7' || mind.kid ? 0.4 : 0.35)) casting();
   }
 
   // 4. where to go

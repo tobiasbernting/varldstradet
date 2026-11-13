@@ -57,6 +57,7 @@ for (const [label, classes] of PARTIES) {
   const medals = [0, 0, 0];
   const mins: number[] = [];
   const others: string[] = [];
+  const stopMs: Record<string, number[]> = {};
   for (let seed = from; seed < from + count; seed++) {
     const party = makeParty(classes, { style, seed, level: 3, ...(lane ? { lane } : {}) });
     // (the chapters before it are cleared, so it is the next one to run)
@@ -64,6 +65,7 @@ for (const [label, classes] of PARTIES) {
     for (const mind of party.minds.values()) {
       if (noDodge) mind.noDodge = true;
       if (slots) mind.slots = slots;
+      if (process.argv.includes('--kid')) mind.kid = true;
     }
     const r = playRun(party, { seed, level, dungeon }, limitMin * 60_000);
     if (r.outcome === 'win') {
@@ -71,6 +73,7 @@ for (const [label, classes] of PARTIES) {
       mins.push(r.winMs! / 60_000);
     }
     if (r.outcome === 'wipe') wipes++;
+    for (const st of r.stops) (stopMs[st.kind] ??= []).push(st.ms / 1000);
     const ended = r.changes.find((c) => c.t === 'run' && c.ev === 'ended' && c.to === party.players[0]!.id);
     if (ended && ended.t === 'run' && ended.ev === 'ended') {
       spirits += ended.spiritUsed ?? 0;
@@ -80,6 +83,11 @@ for (const [label, classes] of PARTIES) {
       rests += (ended.path ?? []).filter((k) => k === 'rest').length;
     }
     if (r.outcome !== 'win') others.push(`${seed}:${r.outcome}@${(r.ms / 60_000).toFixed(0)}`);
+  }
+  // --pars: the median seconds a stop of each kind took (STOP_PAR in run.ts is the careful bot's, times 1.6)
+  if (process.argv.includes('--pars')) {
+    const med = (xs: number[]): number => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)] ?? 0;
+    console.log(`  median s per stop: ${Object.entries(stopMs).map(([k, xs]) => `${k} ${med(xs).toFixed(0)} (x1.6 = ${(med(xs) * 1.6).toFixed(0)}, n ${xs.length})`).join('  ')}`);
   }
   const avg = mins.reduce((a, b) => a + b, 0) / Math.max(1, mins.length);
   console.log(
