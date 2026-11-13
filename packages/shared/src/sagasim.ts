@@ -32,6 +32,11 @@ import {
   ROLE,
   SPEND,
   SPEND_MUL,
+  COMBO_CAP,
+  MARK_LOCK_MS,
+  ORB,
+  RING,
+  SAMSLAG,
   DUNGEONS,
   GCD_MS,
   LEASH_TILES,
@@ -156,7 +161,7 @@ const upright = (h: Here, p: PlayerState): boolean => {
 };
 
 /** A floating number. `mark`: the hit came from a ground mark (a boss's telegraphed move, a Skytt's shot), for a sound and a flash of its own. */
-export const hit = (h: Here, on: string | number, n: number, kind: 'dmg' | 'heal' | 'crit' | 'block' | 'stun' | 'kick' | 'miss', mark = false): Change => ({ t: 'hit', area: h.key, on, n: Math.round(n), kind, ...(mark ? { mark: true as const } : {}) });
+export const hit = (h: Here, on: string | number, n: number, kind: 'dmg' | 'heal' | 'crit' | 'block' | 'stun' | 'kick' | 'miss' | 'orb', mark = false): Change => ({ t: 'hit', area: h.key, on, n: Math.round(n), kind, ...(mark ? { mark: true as const } : {}) });
 export const spellFx = (h: Here | string, by: string | number, spell: string, from: { x: number; y: number }, to?: { x: number; y: number }, on?: string | number): Change => ({
   t: 'spell',
   area: typeof h === 'string' ? h : h.key,
@@ -595,7 +600,8 @@ function pickMob(h: Here, p: PlayerState, f: SagaFighter, range: number, wanted:
     const a = h.area.animals[m.id];
     return !!a && dist(a, p) <= range + 0.6 && (!sight || lineOfSight(h.area, p.x, p.y, a.x, a.y));
   };
-  for (const id of [wanted, f.target]) {
+  // the one asked for, then the party's Märke, then the one the hero chose
+  for (const id of [wanted, h.inst.skull?.id, f.target]) {
     const m = id !== undefined ? h.inst.mobs[id] : undefined;
     if (ok(m)) return m;
   }
@@ -684,8 +690,11 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
     // a path's added effects: burning, slowing, a freeze, and lightning that jumps on
     const live = h.inst.mobs[m.id];
     if (live && mod.burn) live.burn = { until: now + BURN_MS, per: (pw.n * mod.burn) / (BURN_MS / 1000), next: now + 1000, by: p.id };
-    if (live && mod.slow) live.slowUntil = Math.max(live.slowUntil ?? 0, now + mod.slow);
-    if (live && mod.stun) stun(h, live, mod.stun, now, out);
+    if (live && mod.slow) {
+      live.slowUntil = Math.max(live.slowUntil ?? 0, now + mod.slow);
+      live.slowBy = p.id;
+    }
+    if (live && mod.stun) stun(h, live, mod.stun, now, out, p.id);
     if (extras && mod.chain && live) {
       const at = mobAt(live);
       const near = mobsNear(h, at, 3)
@@ -715,10 +724,11 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
       strike(m, sp.power);
       if (sp.kind === 'lance' && h.inst.mobs[m.id]) {
         m.slowUntil = now + (sp.ms ?? 3000) + (mod.ms ?? 0);
+        m.slowBy = p.id;
         // the ice also stops a boss's big attack
         if (m.cast) stun(h, m, 0, now, out);
       }
-      if (sp.kind === 'bash' && h.inst.mobs[m.id]) stun(h, m, (sp.ms ?? 1500) + (mod.ms ?? 0), now, out);
+      if (sp.kind === 'bash' && h.inst.mobs[m.id]) stun(h, m, (sp.ms ?? 1500) + (mod.ms ?? 0), now, out, p.id);
       break;
     }
     case 'charge': {
@@ -732,7 +742,7 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
       if (bodyFits(h.area, to.x, to.y)) warp(h, p, 0, 0, out, to);
       out.push(spellFx(h, p.id, sp.id, from, a, m.id));
       strike(m, sp.power);
-      if (h.inst.mobs[m.id]) stun(h, m, (sp.ms ?? 1000) + (mod.ms ?? 0), now, out);
+      if (h.inst.mobs[m.id]) stun(h, m, (sp.ms ?? 1000) + (mod.ms ?? 0), now, out, p.id);
       break;
     }
     case 'storm': {
@@ -857,21 +867,27 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
         out.push(spellFx(h, p.id, sp.id, p, at, first.id));
         const dazed = (o: SagaMob): boolean => now < (o.stunUntil ?? 0);
         const chilled = (o: SagaMob): boolean => now < (o.slowUntil ?? 0) || dazed(o);
+        // Samslag: dazed or slowed by ANOTHER hero (the Hirdmannen, a pet): half as much again, with the class combo at most COMBO_CAP
+        const blow = (o: SagaMob, classMul: number, extras: boolean, part = 1): void => {
+          const primer = dazed(o) && o.stunBy && o.stunBy !== p.id ? o.stunBy : now < (o.slowUntil ?? 0) && o.slowBy && o.slowBy !== p.id ? o.slowBy : undefined;
+          if (primer) out.push({ t: 'hit', area: h.key, on: o.id, n: 0, kind: 'combo', by: [primer, p.id] });
+          strike(o, base * Math.min(COMBO_CAP, classMul * (primer ? SAMSLAG : 1)) * part, extras);
+        };
         if (sp.id === 'jattehugg') {
           // a dazed monster takes double; three pips: everything in the arc in front is hit as well
           const others = full ? mobsNear(h, p, SPEND.jattehugg.arc + (mod.radius ?? 0)).filter((o) => o.id !== first.id && inCone(p, at, mobAt(o), SPEND.jattehugg.deg)) : [];
-          strike(first, base * (dazed(first) ? SPEND.jattehugg.combo : 1));
-          for (const o of others) if (h.inst.mobs[o.id]) strike(o, base * (dazed(o) ? SPEND.jattehugg.combo : 1), false);
+          blow(first, dazed(first) ? SPEND.jattehugg.combo : 1, true);
+          for (const o of others) if (h.inst.mobs[o.id]) blow(o, dazed(o) ? SPEND.jattehugg.combo : 1, false);
         } else if (sp.id === 'runsmall') {
           // a slowed or frozen monster shatters: more, and the splash whatever the pips; three pips splash anyway
           const shatter = chilled(first);
           const mul = shatter ? SPEND.runsmall.combo : 1;
           const others = full || shatter ? mobsNear(h, at, (radius || SPEND.runsmall.radius)).filter((o) => o.id !== first.id) : [];
-          strike(first, base * mul);
-          for (const o of others) if (h.inst.mobs[o.id]) strike(o, base * mul * SPEND.runsmall.splash, false);
+          blow(first, mul, true);
+          for (const o of others) if (h.inst.mobs[o.id]) blow(o, mul, false, SPEND.runsmall.splash);
         } else {
           const all = m ? [m, ...taunted.filter((o) => o.id !== m.id)] : taunted;
-          for (const o of all) if (h.inst.mobs[o.id]) strike(o, base, o.id === first.id);
+          for (const o of all) if (h.inst.mobs[o.id]) blow(o, 1, o.id === first.id);
           if (full) giveShield(f, SPEND.dunderslag.shield, now, SPEND.dunderslag.shieldMs);
         }
       }
@@ -909,6 +925,22 @@ export function setTarget(world: WorldState, playerId: string, mobId: number | n
   return [];
 }
 
+/**
+ * Märke: a hero marks a monster of the stop with the skull for the whole party (null takes it away). Everyone's auto-attack and
+ * spells without a target go for it while it lives and is in reach. The newest mark wins, but for MARK_LOCK_MS only the one who
+ * marked may change it. Marking never wakes a pack.
+ */
+export function markMob(world: WorldState, playerId: string, mobId: number | null, ctx: SimCtx): Change[] {
+  const p = farmOf(world).players[playerId];
+  const h = p ? hereOf(world, p) : null;
+  if (!p || !h || !h.inst.fighters[p.id]) return [];
+  const old = h.inst.skull;
+  if (old && old.by !== p.id && ctx.now - old.at < MARK_LOCK_MS && h.inst.mobs[old.id]) return [];
+  if (mobId === null) delete h.inst.skull;
+  else if (h.inst.mobs[mobId] && h.inst.mobs[mobId]!.kind !== 'ice') h.inst.skull = { id: mobId, by: p.id, at: ctx.now };
+  return [];
+}
+
 /** A shield of `frac` of the fighter's max health (never above SHIELD_CAP of it), for SHIELD_MS. */
 function giveShield(f: SagaFighter, frac: number, now: number, ms = SHIELD_MS): void {
   const cap = f.max * SHIELD_CAP;
@@ -942,7 +974,7 @@ function healThreat(h: Here, by: string, amount: number): void {
  * mend, a Besvärjare's heal, a Skytt's shot) is an Öppning: the monster takes OPEN_BONUS more damage from everyone for OPEN_MS.
  * A stun on a monster that is not casting opens nothing.
  */
-export function stun(h: Here, m: SagaMob, ms: number, now: number, out: Change[]): void {
+export function stun(h: Here, m: SagaMob, ms: number, now: number, out: Change[], by?: string): void {
   if (m.kind === 'boss' || m.kind === 'mini') {
     const move = m.cast ? SAGA_BOSSES[m.species]?.moves[m.cast.move] : undefined;
     if (!move?.interrupt) return;
@@ -962,6 +994,8 @@ export function stun(h: Here, m: SagaMob, ms: number, now: number, out: Change[]
     if (m.role === 'healer' || m.role === 'archer') m.roleAt = now + ROLE[m.role].every;
   }
   m.stunUntil = Math.max(m.stunUntil ?? 0, now + ms);
+  if (by && ms > 0) m.stunBy = by;
+  else if (ms > 0) delete m.stunBy;
   out.push(hit(h, m.id, 0, stopped ? 'kick' : 'stun'));
 }
 
@@ -1195,7 +1229,10 @@ function mobDown(h: Here, m: SagaMob, ctx: SimCtx, out: Change[]): void {
   if (m.cast && m.kind !== 'boss' && m.kind !== 'mini') for (const id of m.cast.zones) dropZone(h, id, out);
   delete h.inst.mobs[m.id];
   delete h.area.animals[m.id];
+  if (h.inst.skull?.id === m.id) delete h.inst.skull;
   const at = a ? { x: a.x, y: a.y } : m.home;
+  // Kraftklot: a special pack monster leaves an orb where it fell
+  if (m.role && m.kind === 'mob') addZone(h, m, { shape: 'circle', x: at.x, y: at.y, r: ORB.radius, at: ctx.now, until: ctx.now + (h.inst.run?.easy ? ORB.easyMs : ORB.ms), dmg: 0, kind: 'orb' }, out);
   out.push({ t: 'animal', id: m.id, animal: null, area: h.key }, fxOn(h.key, tileOf(at.x), tileOf(at.y), 'poof'));
   if (m.kind === 'ice') {
     freeFrom(h, m, out);
@@ -1534,6 +1571,14 @@ function tickMob(h: Here, m: SagaMob, dtMs: number, ctx: SimCtx, fields: Map<str
   }
   if (m.cast) {
     a.moving = false;
+    if (m.cast.since) {
+      // Guldringen: who stands in the ring, and since when
+      const ring = h.inst.zones.find((z) => z.id === m.cast!.zones[0]);
+      for (const p of partyOf(h)) {
+        if (ring && upright(h, p) && inZone(ring, p)) m.cast.since[p.id] ??= now;
+        else delete m.cast.since[p.id];
+      }
+    }
     if (now >= m.cast.at) {
       if (boss) landCast(h, m, ctx, out);
       else landRoleCast(h, m, a, now, out);
@@ -1610,7 +1655,7 @@ function startCast(h: Here, m: SagaMob, a: { x: number; y: number; facing: strin
   const boss = SAGA_BOSSES[m.species]!;
   const now = ctx.now;
   const unlocked = h.inst.run?.moves;
-  const i = boss.moves.findIndex((mv, k) => (mv.phase ?? 0) <= (m.phase ?? 0) && now >= m.next![k]! && (!unlocked || unlocked.includes(k)));
+  const i = boss.moves.findIndex((mv, k) => (mv.phase ?? 0) <= (m.phase ?? 0) && now >= m.next![k]! && (!unlocked || unlocked.includes(k) || (mv.move === 'ring' && !!h.inst.run?.ring)));
   if (i < 0) return false;
   const mv = boss.moves[i]!;
   // Lätt: the warning lasts longer (the zones, the cast and the snapshot all use this)
@@ -1674,8 +1719,23 @@ function startCast(h: Here, m: SagaMob, a: { x: number; y: number; facing: strin
     }
     case 'summon':
       break;
+    case 'ring': {
+      // a golden circle some tiles from the boss, on free floor in plain sight
+      const a0 = ctx.rnd() * Math.PI * 2;
+      for (let k = 0; k < 12 && !zones.length; k++) {
+        const ang = a0 + (k * Math.PI) / 6;
+        const d = (RING.near + ctx.rnd() * (RING.far - RING.near)) * TILE;
+        const x = a.x + Math.cos(ang) * d;
+        const y = a.y + Math.sin(ang) * d;
+        if (!inBounds(h.area, tileOf(x), tileOf(y)) || isSolidForPlayer(h.area, tileOf(x), tileOf(y)) || !lineOfSight(h.area, a.x, a.y, x, y)) continue;
+        zones.push(addZone(h, m, { shape: 'circle', x, y, r: mv.radius, at, dmg: 0, kind: 'gold' }, out));
+      }
+      if (!zones.length) return false;
+      toEveryone(h, out, T.sagaRing);
+      break;
+    }
   }
-  m.cast = { move: i, at, zones, start: now };
+  m.cast = { move: i, at, zones, start: now, ...(mv.move === 'ring' ? { since: {} } : {}) };
   const dx = (tank ?? party[0]!).x - a.x;
   a.facing = Math.abs(dx) > 0 ? (dx > 0 ? 'right' : 'left') : a.facing;
   out.push(spellFx(h, m.id, `cast_${mv.move}`, a));
@@ -1730,6 +1790,24 @@ function landCast(h: Here, m: SagaMob, ctx: SimCtx, out: Change[]): void {
       out.push(hit(h, m.id, n, 'heal'));
     }
     toEveryone(h, out, fmt(T.sagaMended, { boss: boss.name }));
+  }
+  if (mv.move === 'ring') {
+    // Guldringen: everyone (all but one of three or four) stood in it for the last while: the boss's power breaks. Else it hurts everyone.
+    const stood = party.filter((p) => cast.since?.[p.id] !== undefined && cast.since[p.id]! <= now - RING.stand).length;
+    const won = party.length > 0 && stood >= (party.length >= 3 ? party.length - 1 : party.length);
+    for (const z of zones) {
+      out.push(spellFx(h, m.id, won ? 'ring_won' : 'ring_lost', z));
+      dropZone(h, z.id, out);
+    }
+    if (won) {
+      m.open = now + RING.open;
+      out.push(hit(h, m.id, 0, 'kick'));
+      toEveryone(h, out, T.sagaRingWon);
+    } else {
+      for (const p of party) markHit(h, p, markOf(h) * (h.inst.run?.easy ? RING.easyWeight : mv.dmg), m, now, out);
+      toEveryone(h, out, T.sagaRingLost);
+    }
+    return;
   }
   let pulled = false;
   for (const z of zones) {
@@ -1977,6 +2055,17 @@ export function tickSaga(area: WorldState, key: string, dtMs: number, ctx: SimCt
       dropZone(h, z.id, out);
       continue;
     }
+    if (z.kind === 'orb') {
+      // Kraftklot: the first hero to walk over it gets full pips
+      const taker = party.find((p) => upright(h, p) && inst.fighters[p.id]!.frozen === undefined && dist(p, z) <= ORB.radius);
+      if (taker) {
+        inst.fighters[taker.id]!.pips = PIP_MAX;
+        inst.foughtAt = now; // (they keep for a while, as after a fight)
+        out.push(hit(h, taker.id, PIP_MAX, 'orb'));
+        dropZone(h, z.id, out);
+      }
+      continue;
+    }
     if (Math.floor(now / 1000) === Math.floor((now - dtMs) / 1000)) continue;
     for (const p of party) if (upright(h, p) && inZone(z, p)) markHit(h, p, z.dmg, inst.mobs[z.by] ?? null, now, out);
   }
@@ -2091,6 +2180,8 @@ export interface SagaSnap {
   c?: Record<number, [string, number, number, 0 | 1]>;
   /** Öppning: monster id -> until when (server ms). Left out when nobody is open. */
   o?: Record<number, number>;
+  /** Märke: the animal id of the monster the party has marked with the skull. Left out when none is. */
+  k?: number;
   /** The boss in a fight: its id, phase, and the attack it is getting ready (name, when it lands, warning ms, stoppable). */
   b?: { id: number; phase: number; cast?: { name: string; at: number; warn: number; kick: boolean } };
 }
@@ -2128,6 +2219,7 @@ export function sagaSnapshot(farm: WorldState, now: number): Record<string, Saga
         if (mv && m.cast) snap.b.cast = { name: mv.name, at: m.cast.at, warn: Math.round(mv.warn * (inst.run?.warnMul ?? 1)), kick: !!mv.interrupt };
       }
     }
+    if (inst.skull && inst.mobs[inst.skull.id]) snap.k = inst.skull.id;
     (res ??= {})[k] = snap;
   }
   return res;

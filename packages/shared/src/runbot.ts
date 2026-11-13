@@ -6,7 +6,7 @@
 // what a person at a keyboard can: it walks with `applyMove`, casts with `castSpell`, presses the use key with
 // `performAction`; it never touches the rules.
 import { applyMove, farmOf, isSolidForPlayer, lineOfSight, performAction, type SimCtx } from './sim.ts';
-import { SLOW_MUL, castSpell, drinkPotion, inZone, setTarget } from './sagasim.ts';
+import { SLOW_MUL, castSpell, drinkPotion, inZone, markMob, setTarget } from './sagasim.ts';
 import { CLASSES, REST_RADIUS, SAGA_BOSSES, SPELLS, type ClassId, type SagaMob } from './saga.ts';
 import { PLAYER_SPEED, TILE, type AnimalState, type Facing, type PlayerState, type WorldState } from './types.ts';
 import type { Change } from './protocol.ts';
@@ -112,7 +112,7 @@ function walkTo(area: WorldState, p: PlayerState, mind: BotMind, goalTile: { x: 
 
 /** Is a point inside any mark on the ground (or about to be)? */
 const marked = (area: WorldState, x: number, y: number, now: number): boolean =>
-  (area.saga?.zones ?? []).some((z) => (z.until === undefined || now >= z.at) && inZone(z, { x, y }) && (z.dmg > 0 || z.until !== undefined));
+  (area.saga?.zones ?? []).some((z) => z.kind !== 'orb' && z.kind !== 'gold' && (z.until === undefined || now >= z.at) && inZone(z, { x, y }) && (z.dmg > 0 || z.until !== undefined));
 
 /** What a person would do: the healer's spell on the hurt one, etc. True if a spell went. */
 function cast(farm: WorldState, p: PlayerState, mind: BotMind, spell: string, target: number | string | undefined, ctx: SimCtx, out: Change[]): boolean {
@@ -172,8 +172,10 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     }
   }
 
+  // Guldringen: gold means run IN (everyone but the masher), and stay there; even the clumsy bot runs without dawdling
+  const gold = mind.style === 'masher' ? undefined : inst.zones.find((z) => z.kind === 'gold');
   // the clumsy bot is slow on the draw: it thinks for a moment between moves
-  if (clumsy) {
+  if (clumsy && !gold) {
     mind.pause -= dtMs;
     if (mind.pause > 0) {
       p.moving = false;
@@ -201,6 +203,12 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
   if (careful) {
     const best = [...fighting].sort((a, b) => rank(a) - rank(b) || dist(where(a), p) - dist(where(b), p))[0];
     target = ice ?? (current && current.state === 'fight' && best && rank(current) <= rank(best) ? current : best) ?? current;
+    // Märke: the first human of the party marks by the kill order; everyone else (the Hirdmannen too) follows the skull
+    const first = Object.keys(inst.fighters).find((id) => !farm.players[id]?.bot);
+    const skull = inst.skull ? fighting.find((m) => m.id === inst.skull!.id) : undefined;
+    if (first === pid) {
+      if (target && target.kind !== 'ice' && inst.skull?.id !== target.id) markMob(farm, pid, target.id, ctx);
+    } else if (skull && !ice) target = skull;
     // (a person clicks the monster: the auto-attack follows)
     if (target && f.target !== target.id) setTarget(farm, pid, target.id);
   } else target = ice ?? current ?? [...fighting].sort((a, b) => dist(where(a), p) - dist(where(b), p))[0];
@@ -292,6 +300,17 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
 
   // 4. where to go
   const hereT = { x: tileOf(p.x), y: tileOf(p.y) };
+  if (gold) {
+    if (Math.hypot(gold.x - p.x, gold.y - p.y) / TILE > gold.r - 1) walkTo(area, p, mind, { x: tileOf(gold.x), y: tileOf(gold.y) }, dtMs, now, slowed, 0.8);
+    else p.moving = false;
+    return out;
+  }
+  // Kraftklot: the careful bot fetches an orb that lies near, when the way there is not marked
+  const orb = careful && f.pips < 3 ? inst.zones.find((z) => z.kind === 'orb' && dist(z, p) <= 6 && !marked(area, z.x, z.y, now + 600)) : undefined;
+  if (orb) {
+    walkTo(area, p, mind, { x: tileOf(orb.x), y: tileOf(orb.y) }, dtMs, now, slowed, 0);
+    return out;
+  }
   const rests = inst.rests;
   if (fighting.length || ice) {
     mind.resting = false;

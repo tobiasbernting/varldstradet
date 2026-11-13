@@ -2282,8 +2282,9 @@ describe('Lätt and the Sagoandan (DESIGN.md 4.5 and 5.3)', () => {
     };
     const tv = trace(v);
     const tl = trace(l);
-    expect(tv.seen).toEqual([0, 1, 2]);
-    expect(tl.seen.every((k) => k < 2)).toBe(true);
+    expect(tv.seen).toEqual([0, 1, 2, 3]);
+    // (Lätt: the first two attacks, and the Guldring in its harmless form)
+    expect(tl.seen.every((k) => k < 2 || k === 3)).toBe(true);
     expect(tl.seen.length).toBeGreaterThan(0);
     // (the first cast is seen on the tick it starts: its warning minus at most that tick)
     expect(tl.warn / tv.warn).toBeGreaterThan(1.3);

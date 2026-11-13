@@ -173,6 +173,14 @@ export const ROLE = {
   shield: { radius: 3, cut: 0.5, easy: { cut: 0.25 } },
 } as const;
 
+/** Märke: another player cannot replace a mark for this long. */
+export const MARK_LOCK_MS = 2_000;
+/** Samslag: a spender on a monster dazed or slowed by ANOTHER hero (the Hirdmannen, a pet) does this much more; with the class combo at most `COMBO_CAP` times the pip-scaled blow. */
+export const SAMSLAG = 1.5;
+export const COMBO_CAP = 3;
+/** Kraftklot: a special pack monster drops an orb that lies `ms` (`easyMs` on Mycket lätt and Lätt); the first hero within `radius` tiles gets full pips. */
+export const ORB = { ms: 5_000, easyMs: 10_000, radius: 0.8 } as const;
+
 /** The Hirdmannen heals at a human-ish pace: his Läkerunan's cooldown is this many times the spell's (and he holds his Solstråle for 3 pips, runbot.ts). */
 export const COMPANION_HEAL_CD = 2;
 
@@ -259,7 +267,7 @@ export const SAGA_MOBS: Record<string, SagaMobDef> = {
 export const BLOCK_SPECIES: ReadonlySet<string> = new Set(['isblock', 'spindelnat']);
 
 /** A boss's big attacks. Every one is telegraphed on the ground (warn ms) before it lands. */
-export type BossMove = 'cleave' | 'slam' | 'rain' | 'charge' | 'freeze' | 'pools' | 'nova' | 'summon' | 'line' | 'pull' | 'mend';
+export type BossMove = 'cleave' | 'slam' | 'rain' | 'charge' | 'freeze' | 'pools' | 'nova' | 'summon' | 'line' | 'pull' | 'mend' | 'ring';
 
 export interface BossAbility {
   move: BossMove;
@@ -1066,6 +1074,21 @@ export const DUNGEONS: Record<DungeonId, SagaDungeonDef> = {
     illusions: true,
   },
 };
+
+/**
+ * Guldringen: a golden star-circle `near`..`far` tiles from the boss. If at landing every upright hero in the fight (the Hirdmannen
+ * too; all but one when three or four fight) has stood in it for the last `stand` ms, the boss's power breaks: nobody is hurt and
+ * the boss is open for `open` ms. Otherwise every hero takes a mark of weight `weight` (`easyWeight` on Lätt). Every last boss has
+ * it from phase 1, and the mid-bosses of chapters 6 to 10; never on Mycket lätt. Gold = run IN, red = run OUT.
+ */
+export const RING = { every: 30_000, first: 12_000, warn: 4_000, radius: 2.6, weight: 1.4, easyWeight: 0.5, stand: 2_000, near: 4, far: 6, open: 6_000 } as const;
+export const RING_MOVE: BossAbility = { move: 'ring', name: 'Guldringen', every: RING.every, first: RING.first, warn: RING.warn, radius: RING.radius, dmg: RING.weight, phase: 1, text: 'En gyllene ring lyser på golvet. Spring IN i den allihop och stå kvar i 2 sekunder! Guld = spring IN, rött = spring UT.' };
+for (const d of Object.values(DUNGEONS)) {
+  SAGA_BOSSES[d.boss]!.moves.push(RING_MOVE);
+  if (d.chapter >= 6) SAGA_BOSSES[d.mini]!.moves.push(RING_MOVE);
+}
+/** Is this boss move the Guldring? (the levels' "first two attacks only" keeps it on Lätt) */
+export const ringIndex = (species: string): number => SAGA_BOSSES[species]?.moves.findIndex((mv) => mv.move === 'ring') ?? -1;
 
 export const sagaKey = (id: DungeonId): string => `saga:${id}`;
 export const isSagaKey = (k: string | undefined): boolean => !!k && k.startsWith('saga:');
@@ -2013,7 +2036,10 @@ export interface SagaMob {
    * The cast it is busy with. A boss: `move` is the index into its moves. A special pack monster: `move` is -1 and `role` says
    * what it is doing ('heal': a Besvärjare healing packmate `on`; 'shot': a Skytt aiming). `start` and `at` are when it began and when it lands.
    */
-  cast?: { move: number; at: number; zones: string[]; start: number; role?: 'heal' | 'shot'; on?: number };
+  cast?: { move: number; at: number; zones: string[]; start: number; role?: 'heal' | 'shot'; on?: number; since?: Record<string, number> };
+  /** Who dazed it and who slowed it last (a player id, or `pet:<owner id>`): another hero's spender on it is a Samslag. */
+  stunBy?: string;
+  slowBy?: string;
   pulledAt?: number;
   /** A special pack monster (see `MobRole`), and when its next cast is due. */
   role?: MobRole;
@@ -2080,8 +2106,11 @@ export interface SagaZone {
   dmg: number;
   /** The monster that made it. */
   by: number;
-  /** 'shot': a Skytt's Siktskott (the client stripes it differently from a boss's line). Left out: a boss's mark. */
-  kind?: 'shot';
+  /**
+   * 'shot': a Skytt's Siktskott (striped). 'gold': the Guldring (a golden star-circle: stand IN it; `dmg` is 0).
+   * 'orb': a Kraftklot on the floor from `at` until `until` (walk over it: full pips; `dmg` is 0). Left out: a boss's mark.
+   */
+  kind?: 'shot' | 'gold' | 'orb';
 }
 
 /** A dungeon while the family is in it. Rebuilt from scratch when nobody has been inside for a while. */
@@ -2122,6 +2151,8 @@ export interface SagaInstance {
   /** Counted per stop for the Runmärken: mark hits that landed on a hero, and heals a Besvärjare completed. */
   markHits: number;
   mobHeals: number;
+  /** Märke: the monster the party has marked with a skull (everyone's auto-attack and untargeted spells go for it), who marked it and when. */
+  skull?: { id: number; by: string; at: number };
   /** The last time a monster of the stop was fighting (pips fade `PIP_FADE_MS` after it). */
   foughtAt?: number;
 }
@@ -2258,6 +2289,8 @@ export interface SagaRunLink {
   mark?: number;
   /** The gentle levels: the special pack monsters are in their harmless form (`ROLE.*.easy`). */
   easy?: boolean;
+  /** Lätt: the boss also uses its Guldring, though `moves` holds only its first two attacks. */
+  ring?: boolean;
 }
 
 /** Nobody inside for this long: the dungeon starts over (monsters back, chests closed). */
