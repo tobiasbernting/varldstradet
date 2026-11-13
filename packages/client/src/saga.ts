@@ -36,6 +36,8 @@ import {
 } from '@varldstradet/shared';
 import { castToStop, isInterrupt, spendView, waitOf, type SpendCtx, type SpendView, type Wait } from './fight.ts';
 import { net } from './net.ts';
+import { myRun } from './run.ts';
+import { SPECIES_WEAK, mobBase, type Element } from '@varldstradet/shared';
 import { activeWorld, bus, client, myPlayer, serverNow } from './state.ts';
 
 /** The fighter flags in a snapshot. */
@@ -157,6 +159,13 @@ export function toggleMark(id: number | null = null): void {
   const t = id ?? (typeof liveTarget() === 'number' ? (liveTarget() as number) : spendTarget());
   if (t === null) return;
   net.send({ t: 'mark', id: markedMob() === t ? null : t });
+}
+
+/** Svagheter: the element a monster of the run you are in is weak to (its family's own, else the dungeon's). Null outside a run. */
+export function weakOfMob(species: string | undefined): Element | null {
+  const run = myRun();
+  if (!run || !species || BLOCK_SPECIES.has(species)) return null;
+  return SPECIES_WEAK[mobBase(species)] ?? run.weak;
 }
 
 /** Hornet: blows the party's horn with my boss power (the server says why not, when it cannot be). */

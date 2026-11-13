@@ -22,9 +22,7 @@ import {
   POWER_NAMES,
   POWER_TEXT,
   dishDef,
-  dungeonOfKey,
   heroElement,
-  weakOf,
   MOB_FLAG,
   MOB_ROLES,
   PIP_MAX,
@@ -95,6 +93,7 @@ import {
   fightMode,
   flagsOf,
   blowHorn,
+  weakOfMob,
   markedMob,
   spendTarget,
   toggleMark,
@@ -900,9 +899,8 @@ export class SagaUi {
 
   /** Svagheter: what the monster you aim at is weak to (a down arrow and the element's picture), in a run's dungeon. */
   private weakIcon(species: string | undefined): string {
-    const d = dungeonOfKey(myPlayer()?.area ?? '');
-    if (!species || !d || !myRun() || BLOCK_SPECIES.has(species)) return '';
-    return ` ▼${ELEMENT_ICONS[weakOf(species, d)] ?? ''}`;
+    const w = weakOfMob(species);
+    return w ? ` ▼${ELEMENT_ICONS[w] ?? ''}` : '';
   }
 
   /** What a hero brought on the run, as small pictures on their party frame: the dish, the boss power, and the element of their blows. */

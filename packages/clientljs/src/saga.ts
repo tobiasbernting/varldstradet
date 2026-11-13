@@ -6,8 +6,8 @@
 // glowing on top. Out in the world a hero's spells and hits are drawn the same way (the telegraphs, bars and the
 // fallen and frozen are the dungeons' only).
 import { cameraShake, drawEllipse, drawLine, drawLineList, drawPoly, rgb, setAdditiveBlendMode, vec2, type Color, type Vector2 } from 'littlejsengine';
-import { BLOCK_SPECIES, CLASSES, CLASS_IDS, FIGHT_UI, BOSS_POWERS, ELEMENT_ICONS, MOB_FLAG, PIP_MAX, ROLE, RUN_T, dungeonOfKey, weakOf, SAGA_BOSSES, SAGA_MOBS, SPELLS, SPEND, T, TILE, fmt, isSagaKey, type Change, type MobRole, type SagaZone } from '@varldstradet/shared';
-import { FLAG, classOf, fightMode, flagsOf, isFoe, pipHalf, liveTarget, markedMob, sagaSnap, setTarget, webbed } from '@v1/saga.ts';
+import { BLOCK_SPECIES, CLASSES, CLASS_IDS, FIGHT_UI, BOSS_POWERS, ELEMENT_ICONS, MOB_FLAG, PIP_MAX, ROLE, RUN_T, SAGA_BOSSES, SAGA_MOBS, SPELLS, SPEND, T, TILE, fmt, isSagaKey, type Change, type MobRole, type SagaZone } from '@varldstradet/shared';
+import { FLAG, classOf, fightMode, flagsOf, isFoe, pipHalf, liveTarget, markedMob, weakOfMob, sagaSnap, setTarget, webbed } from '@v1/saga.ts';
 import { castFill, hitStopMs, juiceOf, poofCount, shakeOf, spendClass, type Juice } from '@v1/fight.ts';
 import { effectiveFx } from '@v1/fxprefs.ts';
 import { castRing, pipRow, roleMarker, setPips, skullMark, starRow, tickMark } from '@v1/ui/fightcard.ts';
@@ -1214,9 +1214,8 @@ export class SagaView {
     // Svagheter: a hit of the element the monster is weak to: a bigger number with the element's picture, and a sparkle
     if (monster && hurt && c.weak) {
       cls += ' weak';
-      const d = dungeonOfKey(this.area);
-      const sp = activeWorld()?.animals[c.on as number]?.species;
-      text = `${d && sp ? (ELEMENT_ICONS[weakOf(sp, d)] ?? '') : ''}${text}`;
+      const w = weakOfMob(activeWorld()?.animals[c.on as number]?.species);
+      text = `${w ? (ELEMENT_ICONS[w] ?? '') : ''}${text}`;
       const tw = performance.now();
       if (tw - this.lastWeakSound > 250) {
         this.lastWeakSound = tw;
