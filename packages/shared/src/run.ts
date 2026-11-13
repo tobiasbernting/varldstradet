@@ -457,11 +457,11 @@ export const FLOCK_PACKS = [
 ] as const;
 export const MINI_PACKS = { count: [3, 3], size: [3, 4] } as const;
 /**
- * How often a pack has one of the dungeon's big monsters (the brutes), by wing: about one pack in three in the first wing, most
- * packs later, on every level (times `BIG_GENTLE` on Mycket lätt). A Stark vakt's packs always have one. The `big` of the tables
+ * How often a pack has one of the dungeon's big monsters (the brutes), by wing, from the third row on (rows 1 and 2 have none, so
+ * about one pack in three of the first wing has one); most packs later, on every level (times `BIG_GENTLE` on Mycket lätt). A Stark vakt's packs always have one. The `big` of the tables
  * above is kept for the Stark vakt only.
  */
-export const BIG_CHANCE: readonly number[] = [0.33, 0.7, 0.8];
+export const BIG_CHANCE: readonly number[] = [0.6, 0.7, 0.8];
 export const BIG_GENTLE = 0.5;
 /** A Stark vakt: fewer but bigger packs, with big ones; tougher (`ELITE_HP`). A Skatt: one or two small packs guard it. */
 export const ELITE_PACKS = { a: [1, 2], b: [2, 2], size: [4, 5], big: 2 } as const;

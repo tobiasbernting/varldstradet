@@ -335,9 +335,10 @@ function planStop(seed: number, node: RouteNode, boss: DungeonId, mods: string[]
   let layout: RunBiome | undefined;
   let packIndex = 0;
   // a big monster (a brute) in a pack: by the wing's chance on every level (half as often on Mycket lätt); always in a Stark vakt
-  const bigChance = node.kind === 'elite' ? 1 : (BIG_CHANCE[Math.min(wing, BIG_CHANCE.length - 1)] ?? 0) * (level === 0 ? BIG_GENTLE : 1);
+  // (never in the first two rows: those show two slots, so the newcomers are met a stop at a time; the big ones' mates come with them)
+  const bigChance = node.kind === 'elite' ? 1 : node.row <= 2 ? 0 : (BIG_CHANCE[Math.min(wing, BIG_CHANCE.length - 1)] ?? 0) * (level === 0 ? BIG_GENTLE : 1);
   const packRoom = (r: { x: number; y: number; w: number; h: number }, count: number, size: readonly number[]): void => {
-    const packs = Array.from({ length: count }, () => members(size[0]!, size[1]!, rnd() < bigChance));
+    const packs = Array.from({ length: count }, () => members(size[0]!, size[1]!, bigChance > 0 && rnd() < bigChance));
     for (let k = 0; k < count; k++) required.push(packIndex + k);
     packIndex += count;
     rooms.push({ ...r, kind: 'pack', packs });
@@ -417,7 +418,7 @@ function planStop(seed: number, node: RouteNode, boss: DungeonId, mods: string[]
     }
   }
   // which species fill the slots (each one's original or its mate), with dice of their own (mobpacks.ts)
-  varyStopPacks(rooms, { seed, node: node.id, row: node.row, bulk: [...mobs.small, ...mobs.medium, ...mobs.big] });
+  varyStopPacks(rooms, { seed, node: node.id, row: node.row, bulk: [...mobs.small, ...mobs.medium] });
   // the special pack monsters, from a stream of their own (so the rooms and packs of a seed are what they were)
   assignRoles(rooms, mulberry32(hashInts(seed, node.id, 0x401e)), level, node.kind, node.row);
   const def: SagaDungeonDef = { ...d, rooms, links };
