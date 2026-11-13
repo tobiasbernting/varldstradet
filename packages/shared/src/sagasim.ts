@@ -39,6 +39,7 @@ import {
   RING,
   SAMSLAG,
   FAR,
+  DUNK,
   DUNGEONS,
   GCD_MS,
   LEASH_TILES,
@@ -99,7 +100,7 @@ import {
   ENRAGE,
 } from './saga.ts';
 import { runHooks } from './runhooks.ts';
-import { mobBase } from './mobs.ts';
+import { MOB_ARCHETYPE, mobBase } from './mobs.ts';
 import { awardPetLooks, giveClearPets, petSoak, rollPetDrops, tickPets } from './petsim.ts';
 import { sagaCheckpoint, spawnSagaMob } from './sagamap.ts';
 import {
@@ -1005,6 +1006,7 @@ export function stun(h: Here, m: SagaMob, ms: number, now: number, out: Change[]
     delete m.cast;
     m.open = now + OPEN_MS;
     if (m.role === 'healer' || m.role === 'archer') m.roleAt = now + ROLE[m.role].every;
+    if (m.dunkAt !== undefined) m.dunkAt = now + DUNK.every + (m.id % 5) * DUNK.stagger;
   }
   m.stunUntil = Math.max(m.stunUntil ?? 0, now + ms);
   if (by && ms > 0) m.stunBy = by;
@@ -1404,6 +1406,7 @@ function resetMob(h: Here, m: SagaMob, out: Change[]): void {
   delete m.open;
   delete m.roleAt;
   delete m.farAt;
+  delete m.dunkAt;
   if (m.cast) for (const id of m.cast.zones) dropZone(h, id, out);
   delete m.cast;
   if (SAGA_BOSSES[m.species] && (m.kind === 'boss' || m.kind === 'mini')) {
@@ -1621,6 +1624,7 @@ function tickMob(h: Here, m: SagaMob, dtMs: number, ctx: SimCtx, fields: Map<str
   }
   if (boss && m.next && startCast(h, m, a, ctx, out)) return;
   if (m.role && m.kind === 'mob' && startRoleCast(h, m, a, ctx, out)) return;
+  if (startDunk(h, m, a, now, out)) return;
   const reach = stats.reach;
   const raged = !!h.inst.run?.enrage && m.kind === 'mob' && m.hp < m.max * ENRAGE.below;
   const d = dist(a, target);
@@ -1883,6 +1887,24 @@ function landCast(h: Here, m: SagaMob, ctx: SimCtx, out: Change[]): void {
 }
 
 /**
+ * Dunk: a brute in a fight raises its weapon when it is due and slams the ground round itself after the warning. True if it is
+ * now busy with it (it stands still until it lands or is stopped). Not on Mycket lätt; a boss's helpers only from Medel.
+ */
+function startDunk(h: Here, m: SagaMob, a: { x: number; y: number }, now: number, out: Change[]): boolean {
+  const weight = h.inst.run?.dunk;
+  if (!weight || (m.kind !== 'mob' && m.kind !== 'add') || MOB_ARCHETYPE[m.species] !== 'brute' || (m.kind === 'add' && h.inst.run?.easy)) return false;
+  const stagger = (m.id % 5) * DUNK.stagger;
+  m.dunkAt ??= (m.pulledAt ?? now) + DUNK.first + stagger;
+  if (now < m.dunkAt) return false;
+  m.dunkAt = now + DUNK.every + stagger;
+  const at = now + Math.round(DUNK.warn * (h.inst.run?.warnMul ?? 1));
+  const zone = addZone(h, m, { shape: 'circle', x: a.x, y: a.y, r: DUNK.radius, at, dmg: markOf(h) * weight }, out);
+  m.cast = { move: -1, start: now, at, zones: [zone], role: 'slam' };
+  out.push(spellFx(h, m.id, 'cast_slam', a));
+  return true;
+}
+
+/**
  * A special pack monster starts its cast when it is due: a Besvärjare a heal on its most hurt packmate, a Skytt a line aimed at a
  * random hero in sight. True if it is now busy with it (it stands still until the cast lands or is stopped).
  */
@@ -1938,7 +1960,8 @@ function landRoleCast(h: Here, m: SagaMob, a: { x: number; y: number }, now: num
   for (const id of cast.zones) {
     const z = h.inst.zones.find((x) => x.id === id);
     if (!z) continue;
-    out.push(spellFx(h, m.id, 'land_shot', z, { x: z.x + Math.cos(z.dir ?? 0) * z.r * TILE, y: z.y + Math.sin(z.dir ?? 0) * z.r * TILE }));
+    if (cast.role === 'slam') out.push(spellFx(h, m.id, 'land_slam', z));
+    else out.push(spellFx(h, m.id, 'land_shot', z, { x: z.x + Math.cos(z.dir ?? 0) * z.r * TILE, y: z.y + Math.sin(z.dir ?? 0) * z.r * TILE }));
     for (const p of partyOf(h)) if (upright(h, p) && inZone(z, p)) markHit(h, p, z.dmg, m, now, out);
     dropZone(h, id, out);
   }

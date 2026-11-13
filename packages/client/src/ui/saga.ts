@@ -1467,7 +1467,7 @@ export class SagaUi {
     }
     // the special pack monsters and Öppning: what they are and what to do about them
     body.append(h('div', { class: 'saga-head' }, `👹 ${T.sagaRolesTitle}`));
-    body.append(h('div', { class: 'saga-roles' }, ...MOB_ROLES.map(roleLine), h('div', { class: 'role-line open' }, h('span', { class: 'em' }, '💫'), h('div', null, h('b', null, FIGHT_UI.openTitle), h('div', { class: 'tx' }, T.sagaOpenText)))));
+    body.append(h('div', { class: 'saga-roles' }, ...MOB_ROLES.map(roleLine), h('div', { class: 'role-line' }, h('span', { class: 'em' }, '💥'), h('div', null, h('b', null, T.sagaDunkName), h('div', { class: 'tx' }, T.sagaDunkText))), h('div', { class: 'role-line open' }, h('span', { class: 'em' }, '💫'), h('div', null, h('b', null, FIGHT_UI.openTitle), h('div', { class: 'tx' }, T.sagaOpenText)))));
     if (prog.cls) body.append(fightExplain(prog.cls));
     // fighting together: Märke, Samslag, Kraftklot, Guldringen and Runmärken
     const line = (pic: HTMLElement | string, name: string, text: string): HTMLElement => h('div', { class: 'role-line' }, typeof pic === 'string' ? h('span', { class: 'em' }, pic) : pic, h('div', null, h('b', null, name), h('div', { class: 'tx' }, text)));

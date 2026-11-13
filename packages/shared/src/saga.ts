@@ -176,6 +176,13 @@ export const ROLE = {
   shield: { radius: 3, cut: 0.5, easy: { cut: 0.25 } },
 } as const;
 
+/**
+ * Dunk: every brute (`MOB_ARCHETYPE`, mates too; pack monsters, and a boss's helpers from Medel) raises its weapon `first` ms into the
+ * fight and then every `every` ms (each plus `stagger` ms times its id modulo 5, so two brutes do not slam together), stands still
+ * for `warn` ms (times the level's warning) and slams a circle of `radius` tiles round itself: a mark of the level's weight
+ * (`RUN_LEVELS[l].dunk`) on every hero inside. A stun or an interrupt cancels it and opens the brute (an Öppning).
+ */
+export const DUNK = { first: 3000, every: 8000, stagger: 500, warn: 1300, radius: 1.8 } as const;
 /** Ranged pressure: the circle's radius and warning (ms, times the level's warning), and how far from the boss the furthest hero must be (tiles). */
 export const FAR = { radius: 1.6, warn: 1500, beyond: 4 } as const;
 /** Märke: another player cannot replace a mark for this long. */
@@ -2041,9 +2048,11 @@ export interface SagaMob {
   next?: number[];
   /**
    * The cast it is busy with. A boss: `move` is the index into its moves. A special pack monster: `move` is -1 and `role` says
-   * what it is doing ('heal': a Besvärjare healing packmate `on`; 'shot': a Skytt aiming). `start` and `at` are when it began and when it lands.
+   * what it is doing ('heal': a Besvärjare healing packmate `on`; 'shot': a Skytt aiming; 'slam': a brute's Dunk). `start` and `at` are when it began and when it lands.
    */
-  cast?: { move: number; at: number; zones: string[]; start: number; role?: 'heal' | 'shot'; on?: number; since?: Record<string, number> };
+  cast?: { move: number; at: number; zones: string[]; start: number; role?: 'heal' | 'shot' | 'slam'; on?: number; since?: Record<string, number> };
+  /** A brute: when its next Dunk comes. */
+  dunkAt?: number;
   /** Who dazed it and who slowed it last (a player id, or `pet:<owner id>`): another hero's spender on it is a Samslag. */
   stunBy?: string;
   slowBy?: string;
@@ -2303,6 +2312,8 @@ export interface SagaRunLink {
   easy?: boolean;
   /** A boss's plain marks come this much more often (a multiplier on their `every`; left out, 1). */
   markEvery?: number;
+  /** The weight of a brute's Dunk (`RUN_LEVELS[l].dunk`; left out: brutes do not slam). */
+  dunk?: number;
   /** Ranged pressure (`RUN_LEVELS[l].far`): a circle under the hero furthest from a boss, every so often. */
   far?: { every: number; weight: number };
   /** Medel and up: a wipe is every HUMAN hero down, even while the hired Hirdmannen stands. */

@@ -177,6 +177,13 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     .map(([id, ff]) => ({ id, ff, q: farm.players[id] }))
     .filter((x): x is { id: string; ff: typeof f; q: PlayerState } => !!x.q && x.q.area === p.area && x.id !== pid);
 
+  // a brute's Dunk over me: stop it when the interrupt is free and nothing else needs it (no boss, no Besvärjare or Skytt in the fight); else step out
+  if (careful && !mind.noDodge) {
+    const slam = Object.values(inst.mobs).find((m) => m.cast?.role === 'slam' && area.animals[m.id] && (inst.zones.find((z) => z.id === m.cast!.zones[0]) ? inZone(inst.zones.find((z) => z.id === m.cast!.zones[0])!, p) : false));
+    const stop = f.cls === 'vaktare' ? 'skoldslag' : f.cls === 'krigare' ? 'stormsteg' : f.cls === 'magiker' ? 'isspjut' : undefined;
+    const busy = Object.values(inst.mobs).some((m) => m.state === 'fight' && (m.kind === 'boss' || m.kind === 'mini' || m.role === 'healer' || m.role === 'archer'));
+    if (slam && stop && !busy && now >= (f.cd[stop] ?? 0) && reacted('kickAt', true) && dist(area.animals[slam.id]!, p) <= (SPELLS[stop]?.range ?? 0) + 0.4 && cast(farm, p, mind, stop, slam.id, ctx, out)) return out;
+  }
   // 1. step out of the marks on the floor (a boss's, a Skytt's line: a person sees them)
   if (careful && !mind.noDodge && reacted('markAt', marked(area, p.x, p.y, now))) {
     const here = { x: tileOf(p.x), y: tileOf(p.y) };
@@ -266,11 +273,11 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
       for (const k of [3, 2, 1, 0]) if (go(spells[k]!)) any = true;
       return any;
     }
-    if (careful && kick && ready(kick) && reacted('kickAt', !!bossMove?.interrupt || fighting.some((m) => !!m.cast?.role))) {
+    if (careful && kick && ready(kick) && reacted('kickAt', !!bossMove?.interrupt || fighting.some((m) => !!m.cast?.role && m.cast.role !== 'slam'))) {
       // stopping the boss's big attack; else a Besvärjare's heal or a Skytt's shot (unless the interrupt is kept for the boss)
       if (bossMove?.interrupt && boss && go(kick, boss.id)) return true;
       // (a Besvärjare's heal before a Skytt's shot: the shot can be sidestepped)
-      const caster = keep ? undefined : fighting.filter((m) => m.cast?.role && dist(where(m), p) <= kickReach).sort((x, y) => (x.cast!.role === 'heal' ? 0 : 1) - (y.cast!.role === 'heal' ? 0 : 1))[0];
+      const caster = keep ? undefined : fighting.filter((m) => m.cast?.role && m.cast.role !== 'slam' && dist(where(m), p) <= kickReach).sort((x, y) => (x.cast!.role === 'heal' ? 0 : 1) - (y.cast!.role === 'heal' ? 0 : 1))[0];
       if (caster && go(kick, caster.id)) return true;
     }
     // the spender (slot 1): the careful bot holds it for three pips, unless the moment is right (an Öppning, the class's combo)
