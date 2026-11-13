@@ -394,7 +394,7 @@ export class SagaUi {
   private actStar: HTMLElement | null = null;
   private markFlash = h('div', { class: 'saga-markflash', 'aria-hidden': 'true' });
   /** Märke: the skull button beside the target's frame (it marks the monster you aim at for the whole party). */
-  private skullBtn = h('button', { class: 'saga-skull', type: 'button', 'aria-pressed': 'false' }, skullMark(), h('span', { class: 'lb' }, FIGHT_UI.skullBtn), h('span', { class: 'key k' }, FIGHT_UI.skullKey));
+  private skullBtn = h('button', { class: 'saga-skull', type: 'button', 'aria-pressed': 'false', 'aria-label': T.sagaSkull }, skullMark(), h('span', { class: 'lb' }, FIGHT_UI.skullBtn), h('span', { class: 'key k' }, FIGHT_UI.skullKey));
   /** The pips the row showed last (a new one pops and sounds), the glow's last reason and the last "stop it now" cue. */
   private pipsShown = 0;
   private spendSaid = '';

@@ -425,7 +425,7 @@ body.saga-fight .act-btn.spend-glow {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: conic-gradient(var(--cc, #ff5a4a) calc(var(--k) * 100%), rgba(255, 255, 255, 0.4) 0);
+  background: conic-gradient(var(--cc, #ff5a4a) calc(var(--k) * 100%), #77708a 0);
 }
 .cast-ring.c-heal {
   --cc: #4fe07a;
@@ -875,4 +875,16 @@ body.dev-mouse .saga-skull .key {
 }
 .run-panel .spell.auto {
   border-style: dashed;
+}
+
+/* a short screen: the skull button is its picture only */
+@media (max-height: 480px) {
+  .saga-skull .lb,
+  .saga-skull .key {
+    display: none !important;
+  }
+  .saga-skull {
+    min-width: 48px;
+    padding: 2px 6px;
+  }
 }
