@@ -26,6 +26,7 @@ import {
   devEnterSaga,
   devSagaBest,
   MARK_DEFAULT,
+  isIllusion,
   mobDmgScale,
   objectAt,
   performAction,
@@ -643,7 +644,8 @@ describe('Lokes list: the bosses', () => {
 
   it("Loke has five phases, one for each boss he copies, and his helpers are illusions", () => {
     const w = generateSaga('loke');
-    for (const m of Object.values(w.saga!.mobs)) expect(w.animals[m.id]!.variant).toBe(m.kind === 'mob' ? 1 : undefined);
+    // (an illusion is an odd variant: the rest of the number is the monster's skin, mobs.ts)
+    for (const m of Object.values(w.saga!.mobs)) expect(isIllusion(w.animals[m.id]!.variant)).toBe(m.kind === 'mob');
     const { world, d, inst, m, healer } = atBoss('loke', 'boss');
     const phases = SAGA_BOSSES.loke!.phases;
     expect(phases).toHaveLength(4);
@@ -661,7 +663,7 @@ describe('Lokes list: the bosses', () => {
     expect(yells.join(' ')).toContain('Surt');
     const adds = Object.values(inst.mobs).filter((x) => x.kind === 'add');
     expect(adds.length).toBeGreaterThan(0);
-    for (const x of adds) expect(d.animals[x.id]!.variant).toBe(1);
+    for (const x of adds) expect(isIllusion(d.animals[x.id]!.variant)).toBe(true);
   });
 });
 

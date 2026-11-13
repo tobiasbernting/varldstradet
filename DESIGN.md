@@ -124,8 +124,8 @@ hero gets cards, then the runes appear. A Händelse goes straight to its vote; a
 ### 2.4 The nine dungeons
 
 One chapter is one dungeon is one run. The order is the saga's (`DUNGEON_IDS`); a run may be started on any cleared dungeon
-and on the next one. Every dungeon has three monster species (a fast swarmer, a big brute, often a shooter), a mid-boss and a
-boss (`SAGA_BOSSES`). Bifrost's monsters are Loke's illusions of the earlier packs.
+and on the next one. Every dungeon has six monster species (the table below), a mid-boss and a boss (`SAGA_BOSSES`). Bifrost's
+monsters are Loke's illusions of the earlier packs.
 
 | # | Dungeon (id) | Mellanboss: attacks | Boss: attacks (`!` interruptible, `@n` from phase n) | Phases of the boss |
 | --- | --- | --- | --- | --- |
@@ -138,6 +138,38 @@ boss (`SAGA_BOSSES`). Bifrost's monsters are Loke's illusions of the earlier pac
 | 8 | Alvernas lund (`alv`) | Spindeldrottningen: freeze, rain | Nattmaran: nova!, pools, mend!@1, summon@2 | 0.6 / 0.3 |
 | 9 | Fenrisklyftan (`fenrir`) | Sköll: charge, nova! | Fenrisulven: charge, cleave, summon@1, nova!@2 | 0.7 / 0.4 |
 | 10 | Bifrost (`loke`) | Lokes skugga: rain, nova! | Loke: cleave, nova!@1, pools@2, mend!@2, pull@3, nova!@3, line@4 | 0.8 / 0.6 / 0.4 / 0.2 |
+
+**The monsters** (`MOB_FAMILIES` in `mobs.ts`). A dungeon began with three species, which are its pack slots (`dungeonMobs`: the
+weakest, the middle one, the strongest); each has one **mate**, a newcomer of another shape for the same slot, whose numbers
+(health, damage, attack time, reach, speed, sight, slowing) are within 10 % of its own. The archetype says what a monster
+does in a pack: a swarmer is fast and light, a brute slow and tough, a shooter attacks from afar (reach above 2.5).
+
+| Dungeon | Small slot | Middle slot | Big slot (one in the second room, from the second wing) |
+| --- | --- | --- | --- |
+| Draugkryptan | Gravråtta, Fladdermöss (swarmers) | Draugbågskytt, Gravljus (shooters) | Skelettkrigare, Rostdraug (brutes) |
+| Frostjättens borg | Isande, Jätteunge (shooters, slow you) | Isvarg, Snöuggla (swarmers) | Frosttroll, Snögubbe (brutes) |
+| Surts smedja | Eldimp, Eldsalamander (swarmers) | Eldhund, Sotnisse (swarmers) | Lavagolem, Lavasnigel (brutes) |
+| Helheim | Benspindel, Ljusskalle (shooters, slow you) | Helhund, Benkatt (swarmers) | Gengångare, Kistgast (brutes) |
+| Svartalfheims gruvor | Guldbagge, Gruvmullvad (swarmers) | Gruvtroll, Svartalf (brutes) | Stengolem, Malmvagn (brutes) |
+| Havsormens tempel | Lysmanet, Sjöhäst (shooters, slow you) | Sjödraug, Marulk (brutes) | Jättekrabba, Jättesköldpadda (brutes) |
+| Alvernas lund | Skuggalv, Spottblomma (shooters) | Jättespindel, Nattfjäril (swarmers) | Svampvakt, Stubbgubbe (brutes) |
+| Fenrisklyftan | Ulv, Fjällbagge (swarmers) | Rimtroll, Ulvhedin (brutes) | Bergsjätte, Uroxe (brutes) |
+| Bifrost | illusions of Isvarg, Snöuggla | of Skelettkrigare, Rostdraug, Gengångare, Kistgast | of Eldhund, Sotnisse |
+
+Which species fills a slot is chosen by `varyStopPacks` (`mobpacks.ts`) with dice of its own (the run's seed and the stop), after
+the pack tables and the stop's dice have decided how many monsters there are and which slot each fills, so a pack is as strong
+as before. The rules: a pack holds two or three species when it can; no pack of four or more is one species, except that such
+a pack of swarmers is left as a swarm 12 % of the time (`SWARM_CHANCE`); a pack is not the same as the one before it in the
+stop; the first stop of a run shows the mate of one of the two pack-filling slots, the second stop both (`introducedAt`), and
+the big monsters' mates arrive with the big monsters in the second wing. A boss's helpers (`phaseAdds`, a summon) may be the
+helper's mate where that suits the boss (`ADD_KIN`); Garm's hounds, the spider queen's spiders, the Nattmara's elves and the
+wolves of Fenrisklyftan stay as they are.
+
+Every ordinary monster has three **skins** (`MOB_SKINS`): another helmet, weapon, horns or hat as well as other colours, drawn in
+`packages/art` (`sagaanimals.ts`, `sagamobs2.ts`). An animal's `variant` is `mobVariant(skin, illusion)`; `skinStop` gives the
+members of one species in a pack the skins in turn from a start the seed gives, so two of a kind side by side are not twins. A
+skin never changes a fight. The journal lists each open dungeon's monsters with a picture, the archetype and a sentence
+(`MOB_TEXT`).
 
 (The number is the saga chapter; chapters 1 to 3, 5 to 10.) Every boss attack is telegraphed on the ground for a warning time
 before it lands, so the whole fight is readable. What the marks mean and what to do (the text is in `BossAbility.text` and
@@ -389,7 +421,8 @@ replay modifiers, and `SOLO_MERCY` (×0.75, one human with the Hirdmannen).
 ### 5.2 Pack sizes
 
 See 2.3. The tables are `FLOCK_PACKS`, `ELITE_PACKS`, `TREASURE_PACKS`, `MINI_PACKS`, `BOSS_PACKS` and their `LATT_*` versions in `run.ts`. They are
-tuned by the bots; change them with `runtune.ts` open (section 8).
+tuned by the bots; change them with `runtune.ts` open (section 8). The tables and the stop's dice decide a pack's size and the slot of every
+member; the species within a slot is chosen afterwards (section 2.4) and does not change the size or the slots.
 
 ### 5.3 The gentle levels
 
@@ -631,26 +664,42 @@ device (`varldstradet.a11y` in local storage) and applied as classes and CSS var
   icon, name, one sentence, a speaker button. A press that opened a card does not use the thing when it is released.
 - **Release, not press.** Buttons fire on pointer-up (`onTap` in `ui/dom.ts`), and a press that opened an info card does not fire when it
   is released. Spells are cast the same way, on release.
-- **Settings** ("Inställningar", the gear on the HUD): text size, strong contrast, effects (Alla / Mindre / Av), calm screen (no loops
+- **Settings** ("Inställningar", in the menu behind ☰, in the help window and on the character picker): text size, strong contrast, effects (Alla / Mindre / Av), calm screen (no loops
   or flashes; follows the system's reduced-motion choice until the player chooses), screen shake, colour-blind-safe telegraphs, how long
   to hold to read, HUD size (Liten / Normal / Stor: the buttons, frames and bars, not the words; from the start it follows the screen), left-handed
   buttons, reading aloud (the device's Swedish voice; hidden if there is none).
 - **Input.** Touch (stick on the left half, a big hand button, tap on a tile), keyboard (arrows or WASD, E or space, 1 to 5 for spells and
-  the potion, Tab to aim, Q bag, F emotes, B or J the journal, H help, T chat, M map, G wardrobe), gamepad (Xbox, PlayStation and
-  Switch layouts; the stick and d-pad move a highlight in menus, A selects, B closes). In a fight X, Y, B and RB are spells 1 to 4 and LB
-  the potion. Votes can be made with keys 1 to 3 in a Händelse and at the Köpman.
+  the potion, Tab to aim, Q bag, F emotes, B or J the journal, L the Logg, H help, T chat, M map, K the map of the road in a run, G
+  wardrobe), gamepad (Xbox, PlayStation and Switch layouts; the stick and d-pad move a highlight in menus, A selects, B closes; LT and
+  Start put the highlight on the HUD's own buttons). In a fight X, Y, B and RB are spells 1 to 4 and LB the potion. Votes can be made
+  with keys 1 to 3 in a Händelse and at the Köpman.
+- **The top of the screen and the menu.** The top right has three round buttons and no more, in the lobby and in a run alike
+  (`ui/hud.ts`): the Logg (it carries the unread dot), the map (out of a run the little map of where you are, in a run the map of the
+  road; the little map is then in the menu) and ☰ in the corner. ☰ opens the menu (`ui/hudmenu.ts`, a `.modal` like the others): big
+  tiles, a picture and one word each, in groups: "Mina saker" (wardrobe, bag, emotes, the journal, and Möblera in your own house),
+  "Hjälp och inställningar" (help, Förklara, settings, sound, fullscreen) and in a run "Färden" (the little map), with "Gå hem" apart
+  at the end, which still asks before it ends the run for you. A tile closes the menu and opens its window, so the focus comes back to
+  ☰; the sound is a switch and stays. Escape and the gamepad's B close the menu, the arrow keys walk the tiles, and a key that opens a
+  window (G, Q, F, B or J, L, M, K, H) closes the menu and does its thing. While Förklara or Möblera is on, ☰ carries its picture.
+  In a run the run bar is the top row, flush with the top edge and from side to side (safe-area insets kept), with the three buttons
+  at its right end: where we are (the stop, "Steg n av 10", the road's ten dots), then the run's numbers as one group (time,
+  Sagoandar, hacksilver, sagafrön), then the run's rules (difficulty, path, särdrag). When the row is too narrow it folds, measured
+  (`ui/lane.ts`, `data-fold`): the words of the rules, the rules, the long step, the dots, the stop's word, the sagafrön; the stop's
+  card and the map say what folded away. Out of a run the top row is the chips at the left and the three buttons at the right.
 - **Messages and the Logg.** Everything the game writes on the screen for a moment (toasts, title banners, a boss's shout, the aiming hint) goes
-  through `say()` in `ui/lane.ts` into ONE message lane at the top centre, under the run bar and the round buttons and between the frames at
-  the sides. The panels that stay up (boss bar, the vote on the way on, the "bring the window back" button, the note after a boss) dock in the
+  through `say()` in `ui/lane.ts` into ONE message lane at the top centre, under the top row (the run bar in a run, the chips and the
+  round buttons out of one) and between the frames at the sides. The panels that stay up (boss bar, the vote on the way on, the "bring the window back" button, the note after a boss) dock in the
   same column (`.hud-center`) above the lane, so nothing is drawn over a message and a message never over a panel. Several messages stack
   (what does not fit waits), each stays by its length (never shortened by the calm screen) and waits while a window covers the screen. The
-  same call writes a line (time, kind picture and word, text, who) to the Logg window (`ui/log.ts`; key L, the HUD's 📜 button with an unread
-  dot, the help window, the gamepad through the HUD ring or the help). The last 300 lines are kept in memory and sessionStorage, nothing on the
-  server; chat lines are in it too (filters Alla / Händelser / Chatt). In a run the top of the screen is one row (the run bar; on a screen under
-  500 px high the round buttons fold into one ☰ button), and world labels hide under HUD panels.
+  same call writes a line (time, kind picture and word, text, who) to the Logg window (`ui/log.ts`; key L, the 📜 button at the top right
+  with an unread dot, the help window, the gamepad through the HUD ring or the help). The last 300 lines are kept in memory and sessionStorage, nothing on the
+  server; chat lines are in it too (filters Alla / Händelser / Chatt). In a run the top of the screen is one row (the run bar with the
+  three round buttons in it), the party's frames hang directly under it at the left, and world labels hide under HUD panels.
 - **The HUD's budget** (`hud.css`, `ui/hudfit.ts`; aim: about a quarter of the screen, a third at most, the middle and the hero free, nothing
   over anything). Sizes come from the shorter side of the window, the text size (`--txt`) and the HUD size (`--hk` 0.85 / 1 / 1.2), never under
   the floors: spell buttons 66 px wide (the word Förklara at 16 px) by 52 px, 12 px apart; round buttons 48 px; "Slå" and "Spring" 72 / 64 px.
+  The top is one row as high as a round button (56 px, 48 px on a screen under 700 px wide) plus its edges: about 68 px in a run, where
+  it was two rows (about 136 px) before the menu.
   The spell bar is one row when it fits between the two sides of the bottom (chat/pet/more and the runor chip at one, "Slå"/"Spring" at the
   other, mirrored when left-handed), else two (four spells below, explain, aim and the potion above). `hudfit.ts` measures and sets `--res-l`,
   `--res-r`, `--left-stack`. Under 1240 px wide or 620 px high only chat, the pet and a "⋯" button are shown at the bottom left and the rest
@@ -732,7 +781,10 @@ Code: `access.ts` (rules and state), `http.ts` (routes, cookies, the WebSocket u
 - **One run at a time per server.** A second party waits (`RUN_T.already`). Fine for one family; a household with two groups needs more.
 - **Four särdrag.** More would need new ground effects in the fight sim (a periodic circle under each player, orbs to pop, a slow that
   stacks, a puddle where monsters fall).
-- **Pack roles.** Packs are drawn from the dungeon's three species. Monsters pick targets by threat (the tank's spells make more, Utmana!
+- **Pack roles.** Packs are drawn from the dungeon's six species, two for each of its three slots (section 2.4); the big slot's
+  two only appear as the one big monster of a second room, so they are rare. The art for role gear exists
+  (`packages/art/src/rolegear.ts`: `roleGear`, `drawRoleGear`, `ROLE_ANCHOR`; a staff or leaf crown for a Besvärjare, a bow or
+  quiver for a Skytt, a round blue shield for a Sköldbärare) but nothing draws it in the game yet. Monsters pick targets by threat (the tank's spells make more, Utmana!
   forces it), but the snapshot does not say whom a monster chases, so the client draws no line to show it. There is no patrol and no
   monster that heals or shields others. Telegraphs and the journal carry the teaching.
 - **Balance is only bots.** Nobody has timed a real 7-year-old; the bands in 5.4 are proxies. The clumsy bot is about 1.9 times as slow as

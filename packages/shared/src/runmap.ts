@@ -7,6 +7,7 @@
 import { hashInts, mulberry32, randInt } from './rng.ts';
 import { DUNGEONS, DUNGEON_IDS, MOB_ROLES, SAGA_BOSSES, SAGA_MOBS, type DungeonId, type MobRole, type SagaDungeonDef, type SagaRoom } from './saga.ts';
 import { SOLID, buildDungeon } from './sagamap.ts';
+import { skinStop, varyStopPacks } from './mobpacks.ts';
 import { addObject, objectAt, removeObject } from './map.ts';
 import {
   BOSS_PACKS,
@@ -404,6 +405,8 @@ function planStop(seed: number, node: RouteNode, boss: DungeonId, mods: string[]
       break;
     }
   }
+  // which species fill the slots (each one's original or its mate), with dice of their own (mobpacks.ts)
+  varyStopPacks(rooms, { seed, node: node.id, row: node.row, bulk: [...mobs.small, ...mobs.medium] });
   // the special pack monsters, from a stream of their own (so the rooms and packs of a seed are what they were)
   assignRoles(rooms, mulberry32(hashInts(seed, node.id, 0x401e)), level, node.kind, node.row);
   const def: SagaDungeonDef = { ...d, rooms, links };
@@ -462,6 +465,7 @@ export function buildStop(plan: RunPlan, node: number, key: string): WorldState 
   const rnd = mulberry32(hashInts(plan.seed, node, 0xdec0));
   const world = buildDungeon(z.def, rnd, z.solid, key);
   const inst = world.saga!;
+  skinStop(world, plan.seed, node);
   // the dungeon's way out is gone (a run is left with `leave`); the way on is the väg-runor of the exit room
   const old = objectAt(world, inst.exit.x, inst.exit.y);
   if (old?.kind === 'saga_exit') removeObject(world, old.id);

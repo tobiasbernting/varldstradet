@@ -220,10 +220,13 @@ export function initGamepad(opts: {
     const list = focusables(root);
     // menus redraw themselves when the game state changes: keep the highlight where it was
     if (!focus || !focus.isConnected || !root.contains(focus)) {
+      focus?.classList.remove('pad-focus');
       focus = null;
       // a window that redrew itself (a toggle, a purchase): the thing in the same place in the list gets the ring back
       const same = focusIndex >= 0 && root === lastRoot ? list[Math.min(focusIndex, list.length - 1)] : undefined;
-      setFocus(same ?? nearest(list, focusAt) ?? null);
+      // a window that has just opened and put the focus on one of its own things (the menu's first tile): the ring starts there
+      const own = root !== lastRoot && root.classList.contains('modal') && document.activeElement instanceof HTMLElement && list.includes(document.activeElement) ? document.activeElement : undefined;
+      setFocus(same ?? own ?? nearest(list, focusAt) ?? null);
     }
     lastRoot = root;
     focusIndex = focus ? list.indexOf(focus) : -1;

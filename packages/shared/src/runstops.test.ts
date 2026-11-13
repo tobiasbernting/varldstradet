@@ -82,7 +82,7 @@ describe('Hacksilver (Färdkassan)', () => {
     expect(run.purse).toBe(0);
     const packs = party.world.areas![run.key]!.saga!.packs;
     clearStop(party);
-    expect(run.purse).toBe(packs.reduce((s, pk) => s + packSilver(pk.members.length), 0));
+    expect(run.purse).toBe(packs.reduce((s, pk) => s + packSilver(pk.members.length), 0) + 8); // (and 8 for the gold Runmärke: nobody was hit, nothing healed, in no time)
     expect(run.purse).toBeGreaterThan(0);
   });
 
@@ -219,7 +219,7 @@ describe('the Skatt and the Stark vakt', () => {
       expect(inst.packs.length).toBeGreaterThan(0);
       clearStop(party);
       expect(run.phase).toBe('pick');
-      expect(run.purse).toBe(packs + silver);
+      expect(run.purse).toBe(packs + silver + 8);
       for (const p of party.players) expect(run.offers[p.id]!.source).toBe(source);
     }
     expect(TREASURE_PACKS.size[0]).toBeGreaterThan(0);

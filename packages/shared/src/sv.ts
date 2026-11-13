@@ -204,7 +204,7 @@ export const T = {
   seasonOverride: 'Tvinga säsong',
   admin: 'Föräldrasida',
   help: 'Hjälp',
-  helpHint: 'Tryck på ? när du vill veta hur man gör',
+  helpHint: 'Vill du veta hur man gör? Tryck på ☰ och sedan på Hjälp.',
   stars: 'stjärnor',
   achievement: 'Bragd: {title}! +{stars} ⭐',
   enteredHouse: 'Välkommen in! Möblera som du vill.',
@@ -236,6 +236,15 @@ export const T = {
   // Öppning: the word over a monster whose cast was stopped, and what it means (an info card, the journal)
   sagaOpen: 'Öppning!',
   sagaOpenText: 'Monstret ser stjärnor i 4 sekunder och tar mycket mer skada. Slå nu!',
+  sagaRing: '⭐ En gyllene ring! Spring IN i den allihop!',
+  sagaRingWon: '⭐ Ni stod i ringen! Bossen ser stjärnor i 6 sekunder. Slå nu!',
+  sagaRingLost: 'Aj! Nästa gång: guld = spring IN, rött = spring UT.',
+  sagaSkull: 'Märke',
+  sagaSkullText: 'Tryck på ett monster för att märka det med en dödskalle. Då slår alla på samma monster. Märket kan bytas efter 2 sekunder.',
+  sagaSamslag: 'Samslag!',
+  sagaSamslagText: '{a} och {b} slog ihop! Ett stort slag på ett monster som en vän har gjort yrt eller långsamt slår 50 % hårdare.',
+  sagaOrb: 'Kraftklot',
+  sagaOrbText: 'Särskilda monster tappar ett klot som ligger kvar i 5 sekunder. Spring över det, så får du 3 prickar direkt!',
   sagaHitMark: 'Aj! Spring ut ur märket nästa gång!',
   sagaNoPips: 'Slå laddas av dina vanliga slag. Vänta lite!',
   sagaAutoName: 'Vanligt slag',
@@ -355,7 +364,6 @@ export const T = {
   fullscreen: 'Helskärm',
   fullscreenIphone: 'På iPhone: tryck på Dela ⬆️ i Safari och välj ”Lägg till på hemskärmen”. Starta spelet därifrån så fyller det hela skärmen.',
   players: 'Spelare',
-  sagaGearBtn: 'Garderoben (G)',
   sagaActTwo: 'Andra delen: Lokes list',
   // Saga III (client)
   sagaLevelChip: 'Nivå {n}',
@@ -589,7 +597,6 @@ export const A11Y_T = {
   rotateGo: 'Spela ändå',
   emotes: 'Känslor',
   map: 'Karta',
-  sound: 'Ljud',
   btnGear: 'Byt kläder och vapen. Här finns allt du har vunnit.',
   btnFurnish: 'Flytta möbler i ditt hus.',
   btnBag: 'Titta i din ryggsäck.',
@@ -651,15 +658,16 @@ export const HELP: HelpTopic[] = [
       { icon: 'emoji:✋', text: 'Tryck på den stora handen för att prata med någon eller använda det framför dig.', only: 'touch' },
       { icon: 'emoji:👆', text: 'Du kan också trycka direkt på en ruta bredvid dig.', only: 'touch' },
       { icon: 'emoji:🏃', text: 'Håll in springknappen för att springa fortare.', only: 'touch' },
-      { icon: 'emoji:❔', text: 'Vill du veta vad en knapp gör? Håll ner den en stund, eller tryck på Förklara och sedan på knappen. Då gör den ingenting.', only: 'touch' },
+      { icon: 'emoji:❔', text: 'Vill du veta vad en knapp gör? Håll ner den en stund. Eller tryck på ☰, sedan på Förklara och sedan på knappen. Då gör den ingenting.', only: 'touch' },
       { icon: 'emoji:⌨️', text: 'Gå med piltangenterna eller W A S D.', only: 'desktop' },
       { icon: 'emoji:⎵', text: 'Tryck E eller mellanslag för att prata med någon eller använda det framför dig. Du kan också klicka på en ruta bredvid dig.', only: 'desktop' },
       { icon: 'emoji:🎒', text: 'Q öppnar ryggsäcken, F visar känslor, B eller J dagboken, L loggen (allt som stått på skärmen), H hjälpen och T chatten.', only: 'desktop' },
       { icon: 'emoji:🏃', text: 'Håll in Shift för att springa.', only: 'desktop' },
       { icon: 'emoji:❔', text: 'Håll musen över en knapp, eller välj den med Tab och tryck ?, så får du läsa vad den gör.', only: 'desktop' },
       { icon: 'emoji:🎮', text: 'Med handkontroll: vänster spak går, X eller RT använder, B springer, Y öppnar ryggsäcken. I menyerna flyttar du med spaken, A väljer och B stänger. I en strid: R3 eller upp på styrkorset förklarar knapparna. Håll LT och tryck Start för att flytta mellan knapparna högst upp, B går tillbaka.' },
-      { icon: 'emoji:🗺️', text: 'Kartknappen (eller M) visar en liten karta över Gården: du är gul och kompisar är vita.' },
-      { icon: 'emoji:😊', text: 'Smiley-knappen visar känslor till dina kompisar.' },
+      { icon: 'emoji:☰', text: 'Uppe till höger finns 3 knappar: loggen, kartan och menyn ☰. I menyn finns kläder, ryggsäck, känslor, sagobok, hjälp och inställningar.' },
+      { icon: 'emoji:🗺️', text: 'Kartknappen (eller M) visar en liten karta över Gården: du är gul och kompisar är vita. På en färd visar den färdkartan (K), och den lilla kartan finns i menyn.' },
+      { icon: 'emoji:😊', text: 'Känslor i menyn (eller F) visar känslor till dina kompisar.' },
     ],
   },
   {
@@ -906,6 +914,12 @@ export const EVENT_CHOICES: Record<string, Record<string, [string, string]>> = {
 };
 
 export const RUN_T = {
+  // Runmärken: the party's medal for a stop (never who was hit)
+  medal: '{icon} Runmärke: {medal}!',
+  medalSilver: '+{n} hacksilver.',
+  medalNames: { 1: 'brons', 2: 'silver', 3: 'guld' } as Record<number, string>,
+  medalIcons: { 1: '🥉', 2: '🥈', 3: '🥇' } as Record<number, string>,
+  medalText: 'Guld får ni om ni springer ur märkena (högst 1 träff var), inte låter något monster läka sig och är snabba.',
   started: 'Färden börjar! Tio steg till bossen.',
   needPort: 'Gå fram till färdporten först.',
   already: 'Det pågår redan en färd. Hänga på?',
@@ -1056,6 +1070,7 @@ export const RUN_UI = {
   treeBtn: 'Sagaträdet',
   seeds: 'Sagafrön',
   route: 'Färdkartan',
+  numbers: 'Färdens siffror',
   map: 'Karta',
   mapHint: 'Där ni har gått är guld. Gå ut på en vägruna för att välja nästa steg.',
   home: 'Gå hem',
@@ -1476,6 +1491,28 @@ export const LOOK_T = {
 };
 
 // ---------------------------------------------------------------------------
+// Meny: the sheet behind the HUD's ☰ with everything that has no button of its own at the top (client ui/hudmenu.ts)
+// ---------------------------------------------------------------------------
+
+export const MENU_T = {
+  title: 'Meny',
+  btnInfo: 'Allt annat finns här: kläder, ryggsäck, hjälp och inställningar.',
+  // the groups
+  mine: 'Mina saker',
+  help: 'Hjälp och inställningar',
+  run: 'Färden',
+  // the tiles that have no word elsewhere (one word each)
+  gear: 'Kläder',
+  journal: 'Sagobok',
+  soundOn: 'Ljud på',
+  soundOff: 'Ljud av',
+  minimap: 'Minikarta',
+  // (a soft hyphen: on a narrow tile the long word breaks there, and nowhere else)
+  settings: 'Inställ\u00adningar',
+  keyIs: 'Tangent: {key}.',
+};
+
+// ---------------------------------------------------------------------------
 // Logg: everything the game wrote on the screen, to read again (client ui/lane.ts, ui/log.ts)
 // ---------------------------------------------------------------------------
 
@@ -1483,8 +1520,6 @@ export const LOG_T = {
   title: 'Logg',
   btn: 'Logg',
   btnInfo: 'Allt som stått på skärmen, så du kan läsa det igen. Tangent: L.',
-  menu: 'Meny',
-  menuInfo: 'Alla knappar: väska, kläder, hjälp och mer.',
   newDot: 'Nytt i loggen',
   empty: 'Inget har hänt än. Det som står på skärmen hamnar här.',
   emptyChat: 'Ingen har pratat än.',
@@ -1576,4 +1611,69 @@ export const FIGHT_UI = {
   hintPips: 'Du har 3 {pips}! Tryck på {spell} eller Slå för ett slag som är 4 gånger så starkt.',
   hintCaster: 'En Besvärjare läker sin vän om {s} sekunder! Avbryt med {spell}.',
   hintCasterNone: 'En Besvärjare läker sin vän om {s} sekunder! Slå den först.',
+};
+
+// The dungeons' ordinary monsters in the journal (Dagboken): the heading over them, what each archetype is called, and one
+// sentence a child can read for every species (mobs.ts has the families; mobs.test.ts checks that every one has its sentence).
+export const MOB_T = {
+  journalHead: 'Monster här inne:',
+  archetype: { swarmer: 'Snabb', brute: 'Stark', shooter: 'Skjuter' } as Record<string, string>,
+};
+export const MOB_TEXT: Record<string, string> = {
+  // Draugkryptan
+  gravrotta: 'En rund råtta som bor bland gravarna och nafsar efter tår.',
+  draugbage: 'Ett skelett med huva som skjuter pilar på långt håll.',
+  skelett: 'Ett skelett med svärd och sköld som skramlar när det går.',
+  fladdermoss: 'Tre små fladdermöss som alltid flyger tillsammans.',
+  gravljus: 'En liten låga med ögon som svävar över gravarna och spottar gnistor.',
+  rostdraug: 'En draug i rostig hjälm som gömmer sig bakom sin runda sköld.',
+  // Frostjättens borg
+  isvarg: 'En varg med päls av rimfrost och istappar på ryggen.',
+  isande: 'En liten ande av is som kastar kyla så att du går saktare.',
+  frosttroll: 'Ett stort blått troll med en klubba av is.',
+  snouggla: 'En vit uggla med stora gula ögon som dyker ner utan ett ljud.',
+  jatteunge: 'Frostjättens unge, som tycker att snöbollskrig är det roligaste som finns.',
+  snogubbe: 'En snögubbe som har vaknat och lunkar omkring med sin kvast.',
+  // Surts smedja
+  eldimp: 'En liten röd rackare med horn och en låga på huvudet.',
+  eldhund: 'En sotig hund med man av eld.',
+  lavagolem: 'En jätte av svart sten med glödande lava i sprickorna.',
+  eldsalamander: 'En kvick liten ödla med eld längs hela ryggen.',
+  sotnisse: 'En sotig liten nisse som springer runt med smedens glödheta hammare.',
+  lavasnigel: 'En snigel med ett hus av sten som ryker som en liten vulkan.',
+  // Helheim
+  helhund: 'En svart hund med två huvuden och gröna ögon.',
+  benspindel: 'En spindel av ben som spottar klibbiga nät.',
+  gengangare: 'Ett spöke i lakan som bär på en grön lykta.',
+  benkatt: 'En katt av bara ben som smyger tyst och spinner som en skallra.',
+  ljusskalle: 'En dödskalle med ett ljus på huvudet som svävar runt och blåser kall rök.',
+  kistgast: 'En gammal kista som har fått ben och tittar ut under locket.',
+  // Svartalfheims gruvor
+  guldbagge: 'En skalbagge som glänser som guld och springer fort.',
+  gruvtroll: 'Ett grönt troll med gruvhjälm och hacka.',
+  stengolem: 'En jätte av stenblock med runor som lyser blått.',
+  gruvmullvad: 'En mullvad med gruvlampa som gräver sig fram med stora klor.',
+  svartalf: 'En sur dvärg med stort skägg som inte vill dela med sig av sin malm.',
+  malmvagn: 'En gruvvagn full av malm som rullar helt av sig själv.',
+  // Havsormens tempel
+  manet: 'En lila manet som svävar och bränns lite.',
+  sjodraug: 'Ett skelett från havet med sjögräs i håret och en treudd.',
+  jattekrabba: 'En röd krabba, stor som ett bord, med en väldig klo.',
+  sjohast: 'En sjöhäst som blåser bubblor så att du går saktare.',
+  marulk: 'En fisk med jättestor mun och en liten lykta som dinglar framför näsan.',
+  jatteskoldpadda: 'En urgammal sköldpadda med koraller på sitt tjocka skal.',
+  // Alvernas lund
+  jattespindel: 'En luden spindel med stora runda ögon.',
+  skuggalv: 'En alv i mörk kappa som skjuter med silverbåge.',
+  svampvakt: 'En flugsvamp som står vakt med spjut och sköld.',
+  nattfjaril: 'En stor nattfjäril med ögon på vingarna som fladdrar i månljuset.',
+  spottblomma: 'En blomma som har ryckt upp sina rötter och spottar frön.',
+  stubbgubbe: 'En gammal stubbe som har tröttnat på att stå still.',
+  // Fenrisklyftan
+  ulv: 'En stor grå varg med gula ögon.',
+  rimtroll: 'Ett troll med isspikar på ryggen och en snöboll i handen.',
+  bergsjatte: 'En jätte som bär ett stenblock på axeln.',
+  fjallbagge: 'En bagge med krokiga horn som stångas så fort den får chansen.',
+  ulvhedin: 'En krigare i vargskinn som tror att han själv är en varg.',
+  uroxe: 'En jättelik oxe med långa horn och rimfrost i pälsen.',
 };

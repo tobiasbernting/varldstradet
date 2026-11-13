@@ -63,8 +63,15 @@ import {
   type ClassId,
   type Rarity,
   type SagaQuest,
+  MOB_ARCHETYPE,
+  MOB_T,
+  MOB_TEXT,
+  SPECIES_NAMES,
+  dungeonSpecies,
+  mobVariant,
 } from '@varldstradet/shared';
 import { getArt, portraitUrl } from '@art/textures.ts';
+import { drawAnimal } from '@art/animals.ts';
 import { net } from '../net.ts';
 import {
   FLAG,
@@ -1405,6 +1412,21 @@ export class SagaUi {
         const best = client.world?.sagaBest?.[id];
         chests.append(h('span', { class: `best${best ? '' : ' none'}` }, best ? `⏱️ ${fmt(T.sagaBestTime, { time: clock(best.ms), names: best.names.join(', ') })}` : `⏱️ ${T.sagaNoBestTime}`));
         card.append(chests);
+        // the dungeon's monsters: a picture, the name, what kind of fighter it is and a sentence (Bifrost: the ones Loke copies)
+        const mobs = h('div', { class: 'mobs' });
+        for (const sp of dungeonSpecies(id)) {
+          const px = drawAnimal(sp, 0, false, false, mobVariant(0, !!d.illusions));
+          const kind = MOB_ARCHETYPE[sp];
+          mobs.append(
+            h(
+              'div',
+              { class: 'mob' },
+              h('span', { class: 'pic' }, h('img', { src: px.dataUrl(), alt: '', draggable: 'false', style: { width: `${px.w * 2}px`, height: `${px.h * 2}px` } })),
+              h('span', { class: 'what' }, h('b', null, SPECIES_NAMES[sp] ?? sp), kind ? h('span', { class: 'kind' }, ` · ${MOB_T.archetype[kind]}`) : null, h('br'), MOB_TEXT[sp] ?? ''),
+            ),
+          );
+        }
+        card.append(h('div', { class: 'boss' }, h('b', null, `👾 ${MOB_T.journalHead}`), mobs));
         for (const b of [d.mini, d.boss]) {
           const def = SAGA_BOSSES[b]!;
           const moves = h('ul', { class: 'moves' });

@@ -480,6 +480,29 @@ export const LATT_MINI_PACKS = { count: [2, 2], size: [3, 4] } as const;
 export const LATT_BOSS_PACKS = { count: [2, 2], size: [3, 3] } as const;
 
 // ---------------------------------------------------------------------------
+// Runmärken: a medal for the party when a stop with a fight is cleared
+// ---------------------------------------------------------------------------
+
+/** 1 bronze (cleared), 2 silver (two of the three), 3 gold (all three): few mark hits, no monster heal completed, time under par. */
+export type Medal = 1 | 2 | 3;
+/** Hacksilver a medal pays on top (times 1.5 on the gentle levels, like other hacksilver). */
+export const MEDAL_SILVER: Record<Medal, number> = { 1: 0, 2: 4, 3: 8 };
+/** Gold allows this many mark hits per fighter in the stop. */
+export const MEDAL_MARKS = 1;
+/**
+ * Par (seconds) for a stop by kind, for two fighters on Medel: the careful bot's median time in the stop times 1.6 (measured with
+ * runtune --pars), so an adult makes it and a masher rarely does. `stopPar` scales it by the level and the party.
+ */
+export const STOP_PAR: Partial<Record<NodeKind, number>> = { flock: 150, elite: 150, treasure: 80, mini: 110, boss: 170 };
+export const PAR_LEVEL: Record<RunLevel, number> = { 0: 1.6, 1: 1.3, 2: 1, 3: 1.4, 4: 1.5 };
+export const stopPar = (kind: NodeKind, level: RunLevel, fighters: number): number => (STOP_PAR[kind] ?? 0) * 1000 * PAR_LEVEL[level] * (fighters >= 3 ? 1.15 : 1);
+/** The medal of a cleared stop: counted for the party, never for a name. */
+export function medalFor(o: { markHits: number; mobHeals: number; ms: number; kind: NodeKind; level: RunLevel; fighters: number }): Medal {
+  const ok = [o.markHits <= MEDAL_MARKS * Math.max(1, o.fighters), o.mobHeals === 0, o.ms <= stopPar(o.kind, o.level, o.fighters)].filter(Boolean).length;
+  return ok >= 3 ? 3 : ok === 2 ? 2 : 1;
+}
+
+// ---------------------------------------------------------------------------
 // What the clients are told (protocol.ts carries these)
 // ---------------------------------------------------------------------------
 
@@ -554,6 +577,8 @@ export interface RunSnap {
   event?: EventSnap;
   /** At a Vilosten: the heroes who may still choose between Vila and skärpa. */
   restChoice?: string[];
+  /** Runmärken: the party's medal for each fight stop cleared so far, by the stop's id in `route` (1 bronze, 2 silver, 3 gold). */
+  medals: Record<number, Medal>;
 }
 
 export interface ShopSlotSnap {

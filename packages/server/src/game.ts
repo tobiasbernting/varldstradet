@@ -6,6 +6,7 @@ import {
   callPets,
   castSpell,
   setTarget,
+  markMob,
   chooseClass,
   devEnterSaga,
   devTrophy,
@@ -501,6 +502,9 @@ export class Game {
         break;
       case 'cast':
         changes = castSpell(this.world, pid, String(msg.spell ?? ''), typeof msg.target === 'number' || typeof msg.target === 'string' ? msg.target : undefined, this.ctx());
+        break;
+      case 'mark':
+        changes = markMob(this.world, pid, typeof msg.id === 'number' ? msg.id : null, this.ctx());
         break;
       case 'target':
         changes = setTarget(this.world, pid, typeof msg.id === 'number' ? msg.id : null);
