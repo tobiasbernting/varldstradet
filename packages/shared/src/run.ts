@@ -95,9 +95,9 @@ export interface RunLevelDef {
 export const RUN_LEVELS: Record<RunLevel, RunLevelDef> = {
   0: { id: 0, hp: 0.4, dmg: 0.3, warn: 1.8, mark: 0.08, bossHp: 1, markEvery: 1, humansOnly: false, seeds: 0.35, spirit: 5, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 0.6, rank: 0, affixes: 0 },
   1: { id: 1, hp: 0.6, dmg: 0.5, warn: 1.4, mark: 0.15, bossHp: 1, markEvery: 1, humansOnly: false, seeds: 0.5, spirit: 3, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 1, rank: 0, affixes: 0 },
-  2: { id: 2, hp: 1, dmg: 1, warn: 1, mark: 0.35, bossHp: 1.5, markEvery: 0.5, humansOnly: true, seeds: 1, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1, rank: 0, affixes: 0 },
-  3: { id: 3, hp: 1.75, dmg: 1.6, warn: 0.8, mark: 0.45, bossHp: 1.5, markEvery: 0.45, humansOnly: true, seeds: 1.5, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1.5, rank: 0.5, affixes: 1 },
-  4: { id: 4, hp: 1.9, dmg: 1.6, warn: 0.65, mark: 0.55, bossHp: 1.5, markEvery: 0.4, humansOnly: true, seeds: 2, spirit: 0, spiritPerStop: 0, spiritMax: 0, soft: false, bossMoves: 0, rare: 2, rank: 1, affixes: 2 },
+  2: { id: 2, hp: 1, dmg: 0.6, warn: 1, mark: 0.45, bossHp: 2, markEvery: 0.35, humansOnly: true, seeds: 1, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1, rank: 0, affixes: 0 },
+  3: { id: 3, hp: 1.75, dmg: 1.6, warn: 0.8, mark: 0.55, bossHp: 2, markEvery: 0.35, humansOnly: true, seeds: 1.5, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1.5, rank: 0.5, affixes: 1 },
+  4: { id: 4, hp: 1.9, dmg: 1.6, warn: 0.65, mark: 0.65, bossHp: 2, markEvery: 0.3, humansOnly: true, seeds: 2, spirit: 0, spiritPerStop: 0, spiritMax: 0, soft: false, bossMoves: 0, rare: 2, rank: 1, affixes: 2 },
 };
 /** The boss attacks the easiest levels allow: its first two, whatever a first run's plan has locked. */
 export const LATT = { bossMoves: 2 } as const;
@@ -456,6 +456,13 @@ export const FLOCK_PACKS = [
   { a: [3, 3], b: [3, 3], size: [4, 5], big: 1 },
 ] as const;
 export const MINI_PACKS = { count: [3, 3], size: [3, 4] } as const;
+/**
+ * How often a pack has one of the dungeon's big monsters (the brutes), by wing: about one pack in three in the first wing, most
+ * packs later, on every level (times `BIG_GENTLE` on Mycket lätt). A Stark vakt's packs always have one. The `big` of the tables
+ * above is kept for the Stark vakt only.
+ */
+export const BIG_CHANCE: readonly number[] = [0.33, 0.7, 0.8];
+export const BIG_GENTLE = 0.5;
 /** A Stark vakt: fewer but bigger packs, with big ones; tougher (`ELITE_HP`). A Skatt: one or two small packs guard it. */
 export const ELITE_PACKS = { a: [1, 2], b: [2, 2], size: [4, 5], big: 2 } as const;
 export const ELITE_HP = 1.25;

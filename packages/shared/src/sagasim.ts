@@ -97,6 +97,7 @@ import {
   ENRAGE,
 } from './saga.ts';
 import { runHooks } from './runhooks.ts';
+import { mobBase } from './mobs.ts';
 import { awardPetLooks, giveClearPets, petSoak, rollPetDrops, tickPets } from './petsim.ts';
 import { sagaCheckpoint, spawnSagaMob } from './sagamap.ts';
 import {
@@ -586,7 +587,7 @@ function rollLoot(h: Here, p: PlayerState, table: SagaLoot, from: string, ctx: S
 const spellPower = (p: PlayerState, strongUntil: number | undefined, now: number): number => fightStats(p).power * (strongUntil !== undefined && now < strongUntil ? STRENGTH_MUL : 1);
 
 const CRIT_CHANCE = 0.12;
-const RAGE_LEECH = 0.3;
+const RAGE_LEECH = 0.1;
 /** Sköldmur also gives back a little health. */
 const WALL_HEAL = 0.15;
 
@@ -1368,11 +1369,12 @@ function questCredit(area: WorldState, p: PlayerState, species: string, ctx: Sim
   if (!prog) return;
   for (const q of SAGA_QUESTS) {
     if (prog.quests[q.id] === undefined) continue;
-    if (q.kind === 'kill' && q.target === species && prog.quests[q.id]! < q.count) {
+    // (a stat-mate counts for its original: "8 skelettkrigare" is filled by a Rostdraug too)
+    if (q.kind === 'kill' && q.target === mobBase(species) && prog.quests[q.id]! < q.count) {
       prog.quests[q.id]!++;
       out.push(toast(p.id, fmt(T.sagaQuestProgress, { goal: q.goal, n: prog.quests[q.id]!, count: q.count })));
     }
-    if (collect && q.kind === 'collect' && q.from?.includes(species) && countItem(p.inventory, q.target) < q.count && ctx.rnd() < (q.chance ?? 0.5)) {
+    if (collect && q.kind === 'collect' && (q.from?.includes(species) || q.from?.includes(mobBase(species))) && countItem(p.inventory, q.target) < q.count && ctx.rnd() < (q.chance ?? 0.5)) {
       giveItems(area, p, q.target, 1, out);
       out.push(toast(p.id, fmt(T.sagaQuestProgress, { goal: q.goal, n: countItem(p.inventory, q.target), count: q.count })));
     }
