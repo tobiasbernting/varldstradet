@@ -242,7 +242,8 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     if (careful && kick && ready(kick)) {
       // stopping the boss's big attack; else a Besvärjare's heal or a Skytt's shot (unless the interrupt is kept for the boss)
       if (bossMove?.interrupt && boss && go(kick, boss.id)) return true;
-      const caster = keep ? undefined : fighting.find((m) => m.cast?.role && dist(where(m), p) <= kickReach);
+      // (a Besvärjare's heal before a Skytt's shot: the shot can be sidestepped)
+      const caster = keep ? undefined : fighting.filter((m) => m.cast?.role && dist(where(m), p) <= kickReach).sort((x, y) => (x.cast!.role === 'heal' ? 0 : 1) - (y.cast!.role === 'heal' ? 0 : 1))[0];
       if (caster && go(kick, caster.id)) return true;
     }
     // the spender (slot 1): the careful bot holds it for three pips, unless the moment is right (an Öppning, the class's combo)

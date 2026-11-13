@@ -19,6 +19,7 @@ import {
   T,
   TILE,
   botStep,
+  buffsOf,
   castSpell,
   markMob,
   medalFor,
@@ -158,6 +159,7 @@ describe('Samslag', () => {
     const scene = () => {
       const l = lab(['magiker', 'krigare']);
       l.mute();
+      for (const id of Object.keys(l.inst.fighters)) l.inst.run!.buffs[id] = buffsOf({ power: 19 }); // (so that rounding does not blur the ratios)
       return { l, m: l.place('skelett', 1.5) };
     };
     const plain = scene();
@@ -179,6 +181,7 @@ describe('Samslag', () => {
     // a pet's daze counts as another's; Jättehugg's double and the Samslag stop at three times
     const k = lab(['krigare', 'magiker']);
     k.mute();
+    for (const id of Object.keys(k.inst.fighters)) k.inst.run!.buffs[id] = buffsOf({ power: 19 });
     const m = k.place('skelett', 1.5);
     const one = hitsOn(press(k, 'p', 'jattehugg', m.id, 1), m.id)[0]!;
     stun(hereOf(k), m, 2000, k.party.now, [], `pet:${k.p.id}`);
@@ -284,7 +287,7 @@ describe('Guldringen', () => {
     for (const how of ['one', 'late'] as const) {
       const lost = scene(how);
       expect(lost.m.open, how).toBeUndefined();
-      for (const part of lost.lost) expect(part, how).toBeCloseTo(0.35 * RING.weight, 2);
+      for (const part of lost.lost) expect(part, how).toBeCloseTo(RUN_LEVELS[2].mark * RING.weight, 2);
       expect(lost.l.inst.markHits).toBe(2);
     }
     // three fighters: all but one is enough

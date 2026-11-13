@@ -417,7 +417,7 @@ function planStop(seed: number, node: RouteNode, boss: DungeonId, mods: string[]
     }
   }
   // which species fill the slots (each one's original or its mate), with dice of their own (mobpacks.ts)
-  varyStopPacks(rooms, { seed, node: node.id, row: node.row, bulk: [...mobs.small, ...mobs.medium] });
+  varyStopPacks(rooms, { seed, node: node.id, row: node.row, bulk: [...mobs.small, ...mobs.medium, ...mobs.big] });
   // the special pack monsters, from a stream of their own (so the rooms and packs of a seed are what they were)
   assignRoles(rooms, mulberry32(hashInts(seed, node.id, 0x401e)), level, node.kind, node.row);
   const def: SagaDungeonDef = { ...d, rooms, links };

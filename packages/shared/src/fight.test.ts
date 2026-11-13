@@ -107,8 +107,12 @@ function lab(classes: ClassId[] = ['krigare', 'helare'], opts: { level?: RunLeve
   const mute = (): void => {
     for (const ff of Object.values(inst.fighters)) ff.cd[CLASSES[ff.cls].auto] = NEVER;
   };
+  /** Twenty times the power for everyone, so that a ratio of two blows is not blurred by the rounding of small numbers. */
+  const strong = (): void => {
+    for (const id of Object.keys(inst.fighters)) inst.run!.buffs[id] = buffsOf({ power: 19 });
+  };
   const q = party.players[1];
-  return { party, run, area, inst, p, f, q, fq: q ? inst.fighters[q.id] : undefined, go, ctx, rnd, place, pack, mute };
+  return { party, run, area, inst, p, f, q, fq: q ? inst.fighters[q.id] : undefined, go, ctx, rnd, place, pack, mute, strong };
 }
 type Lab = ReturnType<typeof lab>;
 
@@ -144,15 +148,15 @@ describe('the classes: four buttons, slot 1 the spender, and an auto-attack', ()
       for (const text of [PIP_TEXT[c], COMBO_TEXT[c], SPELLS[mainSpellOf(c)]!.text, SPELLS[attackSpellOf(c)]!.text]) expect(text).toMatch(/\d/);
     }
     expect([PIP_NAMES.krigare, PIP_NAMES.magiker, PIP_NAMES.vaktare, PIP_NAMES.helare]).toEqual(['Glöd', 'Gnistor', 'Sköldkraft', 'Ljus']);
-    expect([SPELLS.jattehugg!.power, SPELLS.runsmall!.power, SPELLS.dunderslag!.power, SPELLS.solstrale!.power]).toEqual([30, 34, 22, 45]);
+    expect([SPELLS.jattehugg!.power, SPELLS.runsmall!.power, SPELLS.dunderslag!.power, SPELLS.solstrale!.power]).toEqual([6, 7, 6, 14]);
     expect(SPELLS.isspjut!.cd).toBe(8000);
     expect([PIP_MAX, [...SPEND_MUL]]).toEqual([3, [0, 1, 2.2, 4]]);
   });
 
-  it('the auto-attack keeps about the damage per second the old button had', () => {
+  it('the auto-attack does about 60 % of the damage per second the old button did (the spender, played well, supplies the rest)', () => {
     // (what the filler did per second when it was pressed on cooldown: hugg 14 / 0.8 s, ljuspil 12 / 1.1 s, yxhugg 20 / 0.9 s, eldboll 24 / 1.3 s)
     const old: Record<ClassId, number> = { vaktare: 14 / 0.8, helare: 12 / 1.1, krigare: 20 / 0.9, magiker: 24 / 1.3 };
-    for (const c of CLASS_IDS) expect(SPELLS[CLASSES[c].auto]!.power / (AUTO_MS[c] / 1000) / old[c], c).toBeCloseTo(1, 1);
+    for (const c of CLASS_IDS) expect(SPELLS[CLASSES[c].auto]!.power / (AUTO_MS[c] / 1000) / old[c], c).toBeCloseTo(0.6, 1);
   });
 });
 
@@ -301,6 +305,7 @@ describe('pips and the spender', () => {
   it('the spender needs a pip, uses them all, and hits 1, 2.2 and 4 times as hard at 1, 2 and 3', () => {
     const l = lab(['magiker']);
     l.mute();
+    l.strong();
     const m = l.place('skelett', 4);
     expect(press(l, 'runsmall', m.id, 0)).toEqual([]);
     const n = [1, 2, 3].map((pips) => {
@@ -319,6 +324,7 @@ describe('pips and the spender', () => {
     const scene = () => {
       const l = lab(['krigare']);
       l.mute();
+      l.strong();
       return { l, front: l.place('skelett', 1.5), beside: l.place('skelett', 1.4, { dy: 0.8 }), behind: l.place('skelett', -1.5) };
     };
     const two = scene();
@@ -338,6 +344,7 @@ describe('pips and the spender', () => {
     const scene = () => {
       const l = lab(['magiker']);
       l.mute();
+      l.strong();
       return { l, a: l.place('skelett', -3), near: l.place('skelett', -1.5), far: l.place('skelett', 2.5) };
     };
     const one = scene();
@@ -383,6 +390,7 @@ describe('pips and the spender', () => {
     const scene = () => {
       const l = lab(['helare', 'krigare', 'magiker']);
       l.mute();
+      l.strong();
       const [, k, m] = l.party.players;
       const fk = l.inst.fighters[k!.id]!;
       const fm = l.inst.fighters[m!.id]!;
@@ -395,7 +403,7 @@ describe('pips and the spender', () => {
     const one = scene();
     const out = press(one.l, 'solstrale', one.k.id, 1);
     const base = healsOn(out, one.k.id)[0]!;
-    expect(base).toBe(Math.round(45 * 1.05 * 1.03));
+    expect(base).toBe(Math.round(SPELLS.solstrale!.power * 1.05 * 1.03 * 20));
     expect(one.fm.hp).toBe(100);
     const two = scene();
     expect(healsOn(press(two.l, 'solstrale', two.k.id, 2), two.k.id)[0]! / base).toBeCloseTo(2.2, 1);
@@ -491,8 +499,8 @@ function bossCast(l: Lab, species: string, i: number) {
 }
 
 describe('marks: a telegraphed hit is a fraction of the victim’s max health', () => {
-  it('the levels: 8, 15, 35, 45 and 55 %', () => {
-    expect([0, 1, 2, 3, 4].map((lv) => RUN_LEVELS[lv as RunLevel].mark)).toEqual([0.08, 0.15, 0.35, 0.45, 0.55]);
+  it('the levels: 8, 15, 50, 60 and 70 %', () => {
+    expect([0, 1, 2, 3, 4].map((lv) => RUN_LEVELS[lv as RunLevel].mark)).toEqual([0.08, 0.15, 0.5, 0.6, 0.7]);
     expect([MARK_NOVA, MARK_POOL, MARK_SHOT, MARK_TAKEN_CAP]).toEqual([1.7, 0.35, 0.85, 0.3]);
   });
 
@@ -538,8 +546,8 @@ describe('marks: a telegraphed hit is a fraction of the victim’s max health', 
     expect(l.f.down).toBeDefined();
   });
 
-  it('an uninterrupted nova is 1.7 marks (60 % on Medel at weight 1), burning ground 0.35 of one every second', () => {
-    expect(RUN_LEVELS[2].mark * MARK_NOVA).toBeCloseTo(0.595);
+  it('an uninterrupted nova is 1.7 marks (85 % on Medel at weight 1), burning ground 0.35 of one every second', () => {
+    expect(RUN_LEVELS[2].mark * MARK_NOVA).toBeCloseTo(0.85);
     const l = lab(['vaktare'], { level: 2 });
     l.mute();
     const i = SAGA_BOSSES.smeden!.moves.findIndex((mv) => mv.move === 'pools');
@@ -564,7 +572,7 @@ describe('marks: a telegraphed hit is a fraction of the victim’s max health', 
       return (hp - l.f.hp) / l.f.max;
     };
     const plain = taken({});
-    expect(plain).toBeCloseTo(0.35 * SAGA_BOSSES.gravvaktare!.moves[0]!.dmg, 2);
+    expect(plain).toBeCloseTo(RUN_LEVELS[2].mark * SAGA_BOSSES.gravvaktare!.moves[0]!.dmg, 2);
     expect(taken({ taken: 0.1 }) / plain).toBeCloseTo(0.9, 1);
     expect(taken({ taken: 0.5 }) / plain).toBeCloseTo(1 - MARK_TAKEN_CAP, 1);
     expect(taken({}, (l) => press(l, 'skoldmur')) / plain).toBeLessThan(0.45);
@@ -637,6 +645,7 @@ describe('special pack monsters', () => {
       const cls: ClassId = how === 'skoldslag' ? 'vaktare' : how === 'isspjut' ? 'magiker' : 'krigare';
       const l = lab([cls, 'helare'], { level: 2 });
       l.mute();
+      l.strong();
       const pk = l.pack();
       const healer = l.place('skelett', 1.5, { pack: pk, role: 'healer' });
       const mate = l.place('skelett', 3, { pack: pk });
@@ -659,7 +668,7 @@ describe('special pack monsters', () => {
       const friend = healer.hp;
       l.fq!.cd = {};
       castSpell(l.party.world, l.q!.id, 'ljuspil', healer.id, l.ctx());
-      expect(friend - healer.hp).toBe(Math.round(Math.round(13 * 1.05 * 1.03 * 100) / 100 * (1 + OPEN_BONUS)));
+      expect(friend - healer.hp).toBe(Math.round(SPELLS.ljuspil!.power * 1.05 * 1.03 * 20 * (1 + OPEN_BONUS)));
       // the heal never came, and the next cast is a whole interval away
       l.go(ROLE.healer.cast + 500);
       expect(mate.hp).toBe(50_000);
@@ -681,6 +690,7 @@ describe('special pack monsters', () => {
   it('interrupting a boss’s nova opens the boss; a blow on an open boss is half as much again', () => {
     const l = lab(['vaktare'], { level: 2 });
     l.mute();
+    l.strong();
     const i = SAGA_BOSSES.draugkung!.moves.findIndex((mv) => mv.move === 'nova');
     const { m } = bossCast(l, 'draugkung', i);
     const snap = sagaSnapshot(l.party.world, l.party.now)![l.run.key]!;
@@ -749,6 +759,7 @@ describe('special pack monsters', () => {
     const scene = (level: RunLevel = 2) => {
       const l = lab(['magiker'], { level });
       l.mute();
+      l.strong();
       const pk = l.pack();
       const shield = l.place('skelett', 3, { pack: pk, role: 'shield' });
       const mate = l.place('skelett', 4, { pack: pk });
@@ -827,8 +838,8 @@ describe('special pack monsters', () => {
 });
 
 describe('the Hirdmannen', () => {
-  it('his Läkerunan recharges twice as slowly as a hero’s (32 a 3 s), and Hirdens lön still makes him 20 % stronger', () => {
-    expect(COMPANION_HEAL_CD).toBe(2);
+  it('his Läkerunan recharges 2.2 times as slowly as a hero’s (32 a 5.5 s), and Hirdens lön still makes him 20 % stronger', () => {
+    expect(COMPANION_HEAL_CD).toBe(2.2);
     const l = lab(['krigare'], { companion: true });
     const c = Object.values(l.area.players).find((x) => x.bot)!;
     const fc = l.inst.fighters[c.id]!;
@@ -841,7 +852,7 @@ describe('the Hirdmannen', () => {
     const h = lab(['helare', 'krigare']);
     h.fq!.hp = 10;
     castSpell(h.party.world, h.p.id, 'lakerunan', h.q!.id, h.ctx());
-    expect(h.f.cd.lakerunan! - h.party.now).toBe(1500);
+    expect(h.f.cd.lakerunan! - h.party.now).toBe(2500);
     // Hirdens lön
     l.inst.run!.buffs[c.id] = buffsOf({ power: 0.2 });
     fc.cd = {};
@@ -850,7 +861,7 @@ describe('the Hirdmannen', () => {
     expect(healsOn(castSpell(l.party.world, c.id, 'lakerunan', l.p.id, l.ctx()), l.p.id)[0]).toBe(Math.round(32 * 1.05 * 1.03 * 1.2));
   });
 
-  it('his throughput on a hero who is being hit: Läkerunan on its slow clock, and a Solstråle only ever with three pips', () => {
+  it('his throughput on a hero who is being hit is about 10 to 12 health a second: a Läkerunan every 5.5 s, a Solstråle only with three pips, and no pips from his auto-attack', () => {
     const l = lab(['krigare'], { companion: true, level: 2 });
     const c = Object.values(l.area.players).find((x) => x.bot)!;
     c.x = l.p.x;
@@ -862,7 +873,8 @@ describe('the Hirdmannen', () => {
     let healed = 0;
     let runor = 0;
     const rays: number[] = [];
-    for (let t = 0; t < 30_000; t += 50) {
+    const SECS = 120;
+    for (let t = 0; t < SECS * 1000; t += 50) {
       const out = l.go(50);
       const by = (spell: string): boolean => out.some((ch) => ch.t === 'spell' && ch.by === c.id && ch.spell === spell);
       const got = healsOn(out, l.p.id).reduce((a, b) => a + b, 0);
@@ -870,19 +882,33 @@ describe('the Hirdmannen', () => {
       if (by('lakerunan')) runor++;
       if (by('solstrale')) rays.push(got);
     }
-    expect(runor).toBeGreaterThanOrEqual(9);
-    expect(runor).toBeLessThanOrEqual(11); // (one every 3 s)
-    // every Solstråle was a three-pip one: four times 45 (a ring under the hero makes it 1.5 times that)
-    expect(rays.length).toBeGreaterThan(0);
-    for (const n of rays) expect(n).toBeGreaterThanOrEqual(Math.round(45 * 4 * 1.05 * 1.03));
-    // Phase A only pins that he heals more than a boss's ordinary blows on Medel (Draugkungen: 12 every 2 s, x0.7 for two fighters) and
-    // that it is finite; the number itself is tuned in Phase B (COMPANION_HEAL_CD) against the marks
-    const perSec = healed / 30;
-    expect(perSec).toBeGreaterThan((SAGA_BOSSES.draugkung!.dmg * 0.7) / 2);
-    expect(perSec).toBeLessThan(120);
+    // one Läkerunan every 5.5 s; his Ljuspil hits all the while and gives him no pip, so a Solstråle comes with every third Läkerunan
+    expect(Math.abs(runor - SECS / 5.5)).toBeLessThanOrEqual(2);
+    expect(Math.abs(rays.length - runor / 3)).toBeLessThanOrEqual(1.5);
+    for (const n of rays) expect(n).toBeGreaterThanOrEqual(Math.round(SPELLS.solstrale!.power * 4 * 1.05 * 1.03));
+    // (DESIGN.md 4.3: enough for a boss's ordinary blows on a hero who dodges, not for standing in marks)
+    const perSec = healed / SECS;
+    expect(perSec).toBeGreaterThanOrEqual(9);
+    expect(perSec).toBeLessThanOrEqual(12.5);
+  });
+
+  it('a hero Helare played by the careful bot heals about 20 to 25 a second on one hurt friend', () => {
+    const l = lab(['helare', 'krigare'], { level: 2 });
+    l.place('skelett', 3, { still: true });
+    l.fq!.max = 1_000_000;
+    l.fq!.hp = 1000;
+    const mind = newMind('careful', () => 0.5);
+    const before = l.fq!.hp;
+    const SECS = 120;
+    for (let t = 0; t < SECS * 1000; t += 50) {
+      botStep(l.party.world, l.p.id, mind, l.ctx(), 50);
+      l.go(50);
+    }
+    const perSec = (l.fq!.hp - before) / SECS;
+    expect(perSec).toBeGreaterThanOrEqual(19);
+    expect(perSec).toBeLessThanOrEqual(26);
   });
 });
-
 
 describe('the masher bot', () => {
   it('presses every button that is ready in the order 4, 3, 2, 1 at nothing in particular, takes a random lane and never leaves a mark', () => {

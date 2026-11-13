@@ -51,7 +51,7 @@ export const PATHS: PathDef[] = [
   // Helare: ljus, natur
   {
     id: 'ljus', cls: 'helare', icon: '☀️', effect: { heal: 0.02 }, traits: {},
-    mods: { solstrale: { power: 0.05 }, lakerunan: { power: 0.1, cd: -0.2 }, ljuspil: { power: 0.05 }, lakekrets: { radius: 1, power: 0.015 }, vackupp: { cd: 0.1, base: 15, range: 2 } },
+    mods: { solstrale: { power: 0.05 }, lakerunan: { power: 0.1, cd: -0.2 }, ljuspil: { power: 0.15 }, lakekrets: { radius: 1, power: 0.015 }, vackupp: { cd: 0.1, base: 15, range: 2 } },
   },
   {
     id: 'natur', cls: 'helare', icon: '🌳', effect: { regen: 0.1 }, traits: {},

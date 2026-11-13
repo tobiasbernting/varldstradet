@@ -155,7 +155,8 @@ describe('the packs of a run', () => {
       const boss = DUNGEON_IDS[seed % DUNGEON_IDS.length]!;
       const stops = packsOf(seed, boss);
       const first = new Set(stops[0]!.packs.flat());
-      expect(first.size).toBeLessThanOrEqual(4);
+      // (three slots since the big monsters came into the first wing: the three originals, one mate, and at most one more from a pack that had to be split)
+      expect(first.size).toBeLessThanOrEqual(5);
       expect(introducedAt(seed, 1, [...first]).size).toBe(1);
       for (const z of stops.filter((s) => s.row <= 2)) {
         // (a pack of four or more of one slot is split even so: the rule against one-species packs comes first)

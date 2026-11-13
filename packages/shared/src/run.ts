@@ -506,7 +506,7 @@ export const MEDAL_MARKS = 1;
  * Par (seconds) for a stop by kind, for two fighters on Medel: the careful bot's median time in the stop times 1.6 (measured with
  * runtune --pars), so an adult makes it and a masher rarely does. `stopPar` scales it by the level and the party.
  */
-export const STOP_PAR: Partial<Record<NodeKind, number>> = { flock: 130, elite: 150, treasure: 60, mini: 205, boss: 345 };
+export const STOP_PAR: Partial<Record<NodeKind, number>> = { flock: 130, elite: 150, treasure: 70, mini: 215, boss: 350 };
 export const PAR_LEVEL: Record<RunLevel, number> = { 0: 1.6, 1: 1.3, 2: 1, 3: 1.4, 4: 1.5 };
 export const stopPar = (kind: NodeKind, level: RunLevel, fighters: number): number => (STOP_PAR[kind] ?? 0) * 1000 * PAR_LEVEL[level] * (fighters >= 3 ? 1.15 : 1);
 /** The medal of a cleared stop: counted for the party, never for a name. */
