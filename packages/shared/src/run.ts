@@ -71,6 +71,8 @@ export interface RunLevelDef {
   bossHp: number;
   /** A boss's plain marks (cleave, slam, rain, charge, line, pools) come this much more often (a multiplier on the time between two uses; 1: as written). */
   markEvery: number;
+  /** The weight of a brute's Dunk (saga.ts `DUNK`), as a share of the level's mark; 0: brutes do not slam. */
+  dunk: number;
   /**
    * Ranged pressure: every `every` ms a boss or mid-boss puts a circle (a mark of weight `weight`) under the hero FURTHEST from it,
    * if that hero is more than `FAR.beyond` tiles away, so nobody ignores the marks by standing far off. Null: never.
@@ -98,11 +100,11 @@ export interface RunLevelDef {
 }
 
 export const RUN_LEVELS: Record<RunLevel, RunLevelDef> = {
-  0: { id: 0, hp: 0.4, dmg: 0.3, warn: 1.8, mark: 0.08, bossHp: 1, markEvery: 1, far: null, humansOnly: false, seeds: 0.35, spirit: 5, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 0.6, rank: 0, affixes: 0 },
-  1: { id: 1, hp: 0.6, dmg: 0.5, warn: 1.4, mark: 0.2, bossHp: 1, markEvery: 0.8, far: { every: 25_000, weight: 0.5 }, humansOnly: false, seeds: 0.5, spirit: 3, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 1, rank: 0, affixes: 0 },
-  2: { id: 2, hp: 1, dmg: 0.6, warn: 1, mark: 0.5, bossHp: 2.3, markEvery: 0.35, far: { every: 10_000, weight: 1 }, humansOnly: true, seeds: 1, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1, rank: 0, affixes: 0 },
-  3: { id: 3, hp: 1.6, dmg: 1.1, warn: 0.8, mark: 0.6, bossHp: 2.3, markEvery: 0.35, far: { every: 10_000, weight: 1 }, humansOnly: true, seeds: 1.5, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1.5, rank: 0.5, affixes: 1 },
-  4: { id: 4, hp: 1.7, dmg: 1.1, warn: 0.65, mark: 0.7, bossHp: 2.3, markEvery: 0.35, far: { every: 10_000, weight: 1 }, humansOnly: true, seeds: 2, spirit: 0, spiritPerStop: 0, spiritMax: 0, soft: false, bossMoves: 0, rare: 2, rank: 1, affixes: 2 },
+  0: { id: 0, hp: 0.4, dmg: 0.3, warn: 1.8, mark: 0.08, bossHp: 1, markEvery: 1, dunk: 0, far: null, humansOnly: false, seeds: 0.35, spirit: 5, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 0.6, rank: 0, affixes: 0 },
+  1: { id: 1, hp: 0.6, dmg: 0.5, warn: 1.4, mark: 0.2, bossHp: 1, markEvery: 0.8, dunk: 0.5, far: { every: 25_000, weight: 0.5 }, humansOnly: false, seeds: 0.5, spirit: 3, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 1, rank: 0, affixes: 0 },
+  2: { id: 2, hp: 1, dmg: 0.6, warn: 1, mark: 0.5, bossHp: 2.3, markEvery: 0.35, dunk: 0.7, far: { every: 10_000, weight: 1 }, humansOnly: true, seeds: 1, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1, rank: 0, affixes: 0 },
+  3: { id: 3, hp: 1.6, dmg: 1.1, warn: 0.8, mark: 0.6, bossHp: 2.3, markEvery: 0.35, dunk: 0.7, far: { every: 10_000, weight: 1 }, humansOnly: true, seeds: 1.5, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1.5, rank: 0.5, affixes: 1 },
+  4: { id: 4, hp: 1.7, dmg: 1.1, warn: 0.65, mark: 0.7, bossHp: 2.3, markEvery: 0.35, dunk: 0.7, far: { every: 10_000, weight: 1 }, humansOnly: true, seeds: 2, spirit: 0, spiritPerStop: 0, spiritMax: 0, soft: false, bossMoves: 0, rare: 2, rank: 1, affixes: 2 },
 };
 /** The boss attacks the easiest levels allow: its first two, whatever a first run's plan has locked. */
 export const LATT = { bossMoves: 2 } as const;
@@ -441,19 +443,20 @@ export const WING_HP: readonly number[] = [1.85, 2.3, 2.7];
 /**
  * Per dungeon, in a run: the later dungeons' monsters hit harder and their bosses have more health than Draugkryptan's, while a
  * hero is as strong in every chapter (no power from levels or gear) and a fall now costs a Sagoande. `blows` multiplies the
- * ordinary blows of the dungeon's monsters and bosses, `boss` the health of its boss and mid-boss. Tuned so that the careful and
+ * ordinary blows of the dungeon's monsters and bosses, `boss` the health of its boss and mid-boss, `dunk` the weight of a brute's
+ * Dunk (the later dungeons have two brute slots, so far more of them). Tuned so that the careful and
  * the adult bot win every dungeon on Medel (DESIGN.md 5.4).
  */
-export const DUNGEON_TUNE: Record<DungeonId, { blows: number; boss: number }> = {
+export const DUNGEON_TUNE: Record<DungeonId, { blows: number; boss: number; dunk?: number }> = {
   draug: { blows: 1, boss: 1 },
-  frost: { blows: 0.9, boss: 1 },
-  surt: { blows: 0.8, boss: 0.85 },
+  frost: { blows: 0.9, boss: 1, dunk: 0.8 },
+  surt: { blows: 0.8, boss: 0.85, dunk: 0.7 },
   hel: { blows: 0.85, boss: 0.9 },
-  dvarg: { blows: 0.85, boss: 0.85 },
-  orm: { blows: 0.9, boss: 0.8 },
-  alv: { blows: 0.7, boss: 0.75 },
-  fenrir: { blows: 0.6, boss: 0.7 },
-  loke: { blows: 0.8, boss: 0.65 },
+  dvarg: { blows: 0.85, boss: 0.85, dunk: 0.6 },
+  orm: { blows: 0.9, boss: 0.8, dunk: 0.6 },
+  alv: { blows: 0.7, boss: 0.75, dunk: 0.7 },
+  fenrir: { blows: 0.6, boss: 0.7, dunk: 0.6 },
+  loke: { blows: 0.8, boss: 0.6, dunk: 0.7 },
 };
 
 /** One human alone (with the hired companion, who counts as a fighter for the monsters' health): monsters tolerate this much less. */

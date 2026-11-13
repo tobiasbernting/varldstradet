@@ -91,6 +91,7 @@ function lab(classes: ClassId[] = ['krigare', 'helare'], opts: { level?: RunLeve
     const a = spawnSagaMob(area, inst, species, p.x + dx * TILE, p.y + (o.dy ?? 0) * TILE, o.kind ?? 'mob', o.pack ?? -1, o.role);
     const m = inst.mobs[a.id]!;
     m.hp = m.max = 100_000;
+    m.dunkAt = NEVER; // (these tests' dummies are skeletons, which are brutes: they do not slam here; fight2.test.ts has the Dunk)
     if (o.pack !== undefined) inst.packs[o.pack]!.members.push(a.id);
     if (!o.idle) {
       m.state = 'fight';

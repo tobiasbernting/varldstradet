@@ -240,6 +240,9 @@ export const T = {
   sagaRingWon: '⭐ Ni stod i ringen! Bossen ser stjärnor i 6 sekunder. Slå nu!',
   sagaRingLost: 'Aj! Nästa gång: guld = spring IN, rött = spring UT.',
   // ranged pressure (a boss's circle under the hero furthest away): its name where the boss has no rain of its own (`farName`), and the journal's sentence
+  // Dunk: a big monster's slam (the journal's line beside the special monsters, the cast ring's word)
+  sagaDunkName: 'Dunk',
+  sagaDunkText: 'Stora monster lyfter vapnet och dunkar i marken efter 1,3 sekunder. Kliv ut ur cirkeln, eller avbryt dem!',
   sagaFarName: 'Fjärrslag',
   sagaFarText: 'Var 10:e sekund siktar bossen på den som står längst bort. Spring ut ur cirkeln!',
   sagaSkull: 'Märke',
@@ -699,6 +702,7 @@ export const HELP: HelpTopic[] = [
       { icon: 'emoji:⚔️', text: 'Fängelsehålorna klaras i ordning, en färd i taget: Draugkryptan, Frostjättens borg och Surts smedja. Du kommer in genom färdporten, bågen vid Världsträdets skott. Sedan fortsätter sagan med Lokes list.' },
       { icon: 'emoji:🔢', text: 'Inne i en fängelsehåla slår du av dig själv när ett monster är nära. Knapparna 1–4 är dina besvärjelser och 5 en läkedryck. Klicka på ett monster för att sikta på det.' },
       { icon: 'emoji:✨', text: 'Vartannat vanligt slag ger 1 prick, och knapp 2 och 3 ger 1 var. Med 3 prickar lyser Slå (knapp 1), och då är den som starkast!' },
+      { icon: 'emoji:💥', text: 'Stora monster lyfter vapnet och dunkar i marken. Kliv ut ur den röda cirkeln innan de slår, den kommer efter 1,3 sekunder!' },
       { icon: 'emoji:⭐', text: 'Vissa monster är särskilda: Besvärjaren läker de andra, Skytten siktar en rand på marken och Sköldbäraren skyddar sina vänner. Avbryt dem, så ser de stjärnor i 4 sekunder!' },
       { icon: 'emoji:🎮', text: 'Med handkontroll i en fängelsehåla: X, Y, B och RB är besvärjelserna, LB en läkedryck, styrkorset vänster/höger byter monster och Select öppnar ryggsäcken.' },
       { icon: 'emoji:🛡️', text: 'Väktaren håller monstren borta från de andra, helaren läker, och krigaren och magikern gör skada. Det går att spela ensam, men det är roligare tillsammans!' },

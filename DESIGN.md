@@ -115,8 +115,8 @@ swap and the old map is dropped.
 
 Packs in a Flock: three in each of the two rooms, 4 to 5 members each (a pack is never more than 6). From the third row on a
 pack may hold one of the dungeon's big monsters (`BIG_CHANCE`: 60 % of the packs of rows 3 and 4, so about one pack in three of
-the first wing, 70 % in the second wing and 80 % in the hall; half as often on Mycket lätt; always in a Stark vakt), and from
-Lätt up some members are special (section 5.8). On Mycket lätt and Lätt: 2 and 2 to 3 packs of 3 to 4 (`LATT_FLOCK_PACKS`). Monster health
+the first wing, 70 % in the second wing and 80 % in the hall; half as often on Mycket lätt; always in a Stark vakt); a big monster slams the
+ground round itself (the Dunk, section 5.8), and from Lätt up some members are special (5.8). On Mycket lätt and Lätt: 2 and 2 to 3 packs of 3 to 4 (`LATT_FLOCK_PACKS`). Monster health
 by wing is `WING_HP` = 1.85, 2.3, 2.7 (rows 1 to 4, 5 to 8, 9 to 10) on top of the fighter scaling in 5.1. The gate of a
 Flock opens when its required packs are down; the Mellanboss opens its own.
 
@@ -472,7 +472,9 @@ Mycket lätt). It is called by the boss's own rain where it has one, else "Fjär
 **Per dungeon** (`DUNGEON_TUNE`). A hero is as strong in every chapter, the later dungeons' monsters hit harder and their bosses
 have more health, and a fall costs a Sagoande, so a run multiplies the ordinary blows and the health of the boss and mid-boss by
 dungeon: Draugkryptan 1 / 1, Frostjättens borg 0.9 / 1, Surts smedja 0.8 / 0.85, Helheim 0.85 / 0.9, Svartalfheims gruvor 0.85 / 0.85,
-Havsormens tempel 0.9 / 0.8, Alvernas lund 0.7 / 0.75, Fenrisklyftan 0.6 / 0.7, Bifrost 0.8 / 0.65. Burning ground has weight 0.5.
+Havsormens tempel 0.9 / 0.8, Alvernas lund 0.7 / 0.75, Fenrisklyftan 0.6 / 0.7, Bifrost 0.8 / 0.6. The dungeons with many brutes also have
+a softer Dunk (5.8): ×0.8 in Frostjättens borg, ×0.7 in Surts smedja, Alvernas lund and Bifrost, ×0.6 in Svartalfheims gruvor, Havsormens
+tempel and Fenrisklyftan. Burning ground has weight 0.5.
 
 ### 5.2 Pack sizes
 
@@ -513,11 +515,11 @@ the averages at the time of writing.
 
 | Bot | Target | Krigare | Magiker |
 | --- | --- | --- | --- |
-| careful | wins all in 10 to 20 min, gold Runmärke on at least 60 % of its fight stops | 6/6, 12.6 min, 62 % | 6/6, 16.2 min, 69 % |
-| adult (careful, but no machine: 5.6) | wins at least 5 of 6 in 12 to 25 min, a Sagoande in at most half its runs | 6/6, 13.0 min, none | 6/6, 18.1 min, none |
-| masher | loses its Sagoande in at least half its runs, gold on at most 20 %, and wins at most half or is 25 % slower | 0/6, 11 % | 0/6, 14 % |
+| careful | wins all in 10 to 20 min, gold Runmärke on at least 60 % of its fight stops, no wipe before the Mellanboss | 6/6, 11.8 min, 64 % | 6/6, 15.9 min, 62 % |
+| adult (careful, but no machine: 5.6) | wins at least 5 of 6 in 12 to 25 min, a Sagoande in at most half its runs, no wipe before the Mellanboss | 6/6, 12.8 min, none | 6/6, 15.3 min, none |
+| masher | loses its Sagoande in at least half its runs, and before the Mellanboss (rows 1 to 4) in at least half; gold on at most 20 %; wins at most half or is 25 % slower | 0/6, before the Mellanboss in 3, 6 % | 0/6, before the Mellanboss in 5, 14 % |
 | careful, never leaves a mark (`noDodge`) | wins at most 2 of 6 | 0/6 | 0/6 |
-| careful, button 1 only (`slots: [0]`) | at least 35 % slower than careful, gold on at most 30 % | 6/6, 21.5 min (+71 %), 27 % | 6/6, 26.4 min (+63 %), 16 % |
+| careful, button 1 only (`slots: [0]`) | at least 35 % slower than careful, gold on at most 30 % | 6/6, 21.8 min (+85 %), 20 % | 6/6, 24.8 min (+56 %), 5 % |
 | masher on Lätt | wins at least 5 of 6 | 6/6 | 6/6 |
 | seven-year-old masher on Mycket lätt (`kid`) | wins every run | 6/6 | 6/6 |
 
@@ -525,19 +527,19 @@ The clumsy bot (a nine-year-old's proxy) wins 0 of 6 on Medel with either hero, 
 leave marks; the step from Lätt is large on purpose and not pinned.
 
 **Every dungeon** (one Krigare with the Hirdmannen, Medel, three seeds, the safe lane; `scripts/dungeons.sh`; not pinned by a test
-beyond the no-stall one): the careful bot wins 3 of 3 in every dungeon, the adult at least 2 of 3, the masher none.
+beyond the no-stall one): the careful bot wins 3 of 3 in every dungeon but Bifrost (2 of 3), the adult at least 2 of 3, the masher none.
 
 | Dungeon | careful | adult | masher |
 | --- | --- | --- | --- |
-| Draugkryptan | 3/3, 12.0 min | 3/3, 12.6 | 0/3 |
-| Frostjättens borg | 3/3, 13.9 | 2/3, 14.4 | 0/3 |
-| Surts smedja | 3/3, 15.3 | 3/3, 16.8 | 0/3 |
-| Helheim | 3/3, 14.3 | 3/3, 15.7 | 0/3 |
-| Svartalfheims gruvor | 3/3, 18.2 | 3/3, 20.2 | 0/3 |
-| Havsormens tempel | 3/3, 16.8 | 3/3, 16.3 | 0/3 |
-| Alvernas lund | 3/3, 19.8 | 2/3, 20.9 | 0/3 |
-| Fenrisklyftan | 3/3, 21.2 | 2/3, 24.0 | 0/3 |
-| Bifrost | 3/3, 17.1 | 2/3, 17.8 | 0/3 |
+| Draugkryptan | 3/3, 11.9 min | 3/3, 12.4 | 0/3 |
+| Frostjättens borg | 3/3, 14.3 | 3/3, 14.6 | 0/3 |
+| Surts smedja | 3/3, 15.1 | 2/3, 17.0 | 0/3 |
+| Helheim | 3/3, 14.5 | 3/3, 14.9 | 0/3 |
+| Svartalfheims gruvor | 3/3, 17.1 | 3/3, 19.6 | 0/3 |
+| Havsormens tempel | 3/3, 16.7 | 3/3, 18.6 | 0/3 |
+| Alvernas lund | 3/3, 18.4 | 3/3, 20.4 | 0/3 |
+| Fenrisklyftan | 3/3, 21.5 | 2/3, 25.6 | 0/3 |
+| Bifrost | 2/3, 15.8 | 3/3, 16.7 | 0/3 |
 
 The hard-level bands are for a party without a tank; parties with a Väktare are not pinned by a test. A test also asserts that a run is
 different each time (three seeds give three routes, three sets of stops and three card offers). The soft 30 minutes (2.6) are the
@@ -558,7 +560,8 @@ and played with `playRun`. Styles (`BotStyle`):
   about to fall; sets its combo up (Stormsteg then Jättehugg, Isspjut then Runsmäll, Utmana! then Dunderslag, Läkekrets then Solstråle);
   keeps its interrupt for a boss's nova or mend that is due, else for a Besvärjare's heal or a Skytt's shot; takes monsters in the order
   open, Besvärjare, Sköldbärare, Skytt, the rest, and marks that one with the skull when it is the first human of the party; steps out of
-  marks and off a Skytt's line and waits at the rim until they have landed; runs into a Guldring; fetches a Kraftklot; takes the safe lane
+  marks and off a Skytt's line and waits at the rim until they have landed; stops a brute's Dunk with its interrupt when no boss, Besvärjare
+  or Skytt is in the fight, else steps out of it; runs into a Guldring; fetches a Kraftklot; takes the safe lane
   (a Vilosten when it or a friend is hurt, else a fight).
 - `clumsy`: the same buttons with pauses between moves and misses, no holding (it spends at any pips), no order, no dodging, a random lane;
   it does run into a Guldring.
@@ -607,7 +610,14 @@ a shooter and a Sköldbärare a brute where the pack has one (`MOB_ARCHETYPE`).
 | Skytt | 3 s in and then every 7 s aims a striped line (9 by 1.2 tiles, a zone of `kind: 'shot'`) at a hero for 1.5 s times the level's warning, then everyone on it takes 0.85 of a mark | step aside, or interrupt it | the level's small mark and long warning |
 | Sköldbärare | while it lives and is not dazed, its packmates within 3 tiles take half damage (not itself) | take it first, or daze it | a quarter |
 
-**Öppning.** Stopping a cast (a boss's nova or mend, a Besvärjare's heal, a Skytt's shot) leaves the monster open for 4 s: it takes
+**Dunk** (`DUNK`, `RUN_LEVELS[l].dunk`). Packs have damage that can be avoided: every brute (`MOB_ARCHETYPE`, mates too; a boss's
+helpers from Medel) raises its weapon 3 to 5 s into the fight and then every 8 to 10 s (staggered by its id, so two brutes do not slam
+together), stands still for 1.3 s times the level's warning and slams a circle of 1.8 tiles round itself: 0.7 of a mark on every hero
+inside (half a small mark on Lätt; never on Mycket lätt). Where several brutes fight they take turns: no Dunk starts within 4 s of the
+one before in the stop. A stun or an interrupt cancels it and opens the brute. It is a cast in the
+snapshot (`c`, kind `slam`, stoppable) with an ordinary red circle, and counts in `inst.markHits`.
+
+**Öppning.** Stopping a cast (a boss's nova or mend, a Besvärjare's heal, a Skytt's shot, a brute's Dunk) leaves the monster open for 4 s: it takes
 50 % more from everyone (`SagaMob.open`, `OPEN_MS`, `OPEN_BONUS`). A stun on a monster that is not casting opens nothing.
 
 **Märke.** Any hero marks one monster with a skull (the `mark` intent, `markMob`, `inst.skull`, `k` in the snapshot): everyone's
@@ -623,7 +633,7 @@ first hero within 0.8 tile gets full pips (a `hit` of kind `orb`).
 
 **Guldringen** (`RING`, the boss move `ring`). Every 30 s from the boss's phase 1 a golden circle of radius 2.6 appears 4 to 6 tiles
 from the boss for 4 s times the level's warning. If at landing every upright hero in the fight (the Hirdmannen too; all but one when
-three or four fight) has stood in it for the last 2 s, the boss's power breaks: nobody is hurt and the boss is open for 6 s. Otherwise
+three or four fight; a hero held in ice or a web is not asked for) has stood in it for the last 2 s, the boss's power breaks: nobody is hurt and the boss is open for 6 s. Otherwise
 every hero takes a mark of weight 1.4 (0.5 on Lätt). Not on Mycket lätt.
 
 **Runmärken** (`medalFor`, `STOP_PAR`, `MEDAL_SILVER`). When a stop with a fight is cleared the PARTY gets a medal: gold for at most one
@@ -934,6 +944,9 @@ Code: `access.ts` (rules and state), `http.ts` (routes, cookies, the WebSocket u
 - **The skill bots are bots.** The `noDodge` bot also does not back away (a mage that backs away leaves most marks without meaning
   to), and the button-1-only bot still dodges everything, so it wins slowly (5.4); nothing in a fight punishes being slow (no enrage,
   by design).
+- **Bifrost is not held**: the careful bot wins 2 of 3 there (5.4).
+- **The mage bot does not back away further than a monster follows** (it used to drag a lone brute past its leash for ever); a person
+  can still do that, and the monster then goes home and heals.
 - **The clumsy bot cannot win Medel** (0 of 6), while it wins everything on Lätt. There is no level between them.
 - **Every human down is a wipe from Medel** (4.5), and nobody is woken out of it. This was needed for marks to cost anything with a
   Hirdmannen who dodges perfectly; his Väck upp! is only ever used there while another human still stands.

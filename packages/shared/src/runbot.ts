@@ -177,10 +177,23 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     .map(([id, ff]) => ({ id, ff, q: farm.players[id] }))
     .filter((x): x is { id: string; ff: typeof f; q: PlayerState } => !!x.q && x.q.area === p.area && x.id !== pid);
 
+  // a brute's Dunk over me: stop it when the interrupt is free and nothing else needs it (no boss, no Besvärjare or Skytt in the fight); else step out
+  if (careful && !mind.noDodge) {
+    const slam = Object.values(inst.mobs).find((m) => m.cast?.role === 'slam' && area.animals[m.id] && (inst.zones.find((z) => z.id === m.cast!.zones[0]) ? inZone(inst.zones.find((z) => z.id === m.cast!.zones[0])!, p) : false));
+    const stop = f.cls === 'vaktare' ? 'skoldslag' : f.cls === 'krigare' ? 'stormsteg' : f.cls === 'magiker' ? 'isspjut' : undefined;
+    const busy = Object.values(inst.mobs).some((m) => m.state === 'fight' && (m.kind === 'boss' || m.kind === 'mini' || m.role === 'healer' || m.role === 'archer'));
+    if (slam && stop && !busy && now >= (f.cd[stop] ?? 0) && reacted('kickAt', true) && dist(area.animals[slam.id]!, p) <= (SPELLS[stop]?.range ?? 0) + 0.4 && cast(farm, p, mind, stop, slam.id, ctx, out)) return out;
+  }
   // 1. step out of the marks on the floor (a boss's, a Skytt's line: a person sees them)
-  if (careful && !mind.noDodge && reacted('markAt', marked(area, p.x, p.y, now))) {
+  // (gold before red: while a Guldring is out the hero goes to it and stays, whatever else is on the floor)
+  const ringOut = inst.zones.some((z) => z.kind === 'gold');
+  if (careful && !mind.noDodge && !ringOut && reacted('markAt', marked(area, p.x, p.y, now))) {
     const here = { x: tileOf(p.x), y: tileOf(p.y) };
-    const path = bfs(area, here, (x, y) => !marked(area, x * TILE + TILE / 2, y * TILE + TILE / 2, now + 600) && !marked(area, (x + 0.5) * TILE, (y + 0.5) * TILE, now), 12);
+    const free = (x: number, y: number): boolean => !marked(area, x * TILE + TILE / 2, y * TILE + TILE / 2, now + 600) && !marked(area, (x + 0.5) * TILE, (y + 0.5) * TILE, now);
+    // not into the sight of a pack that is still waiting, when there is another way out
+    const waiting = mobs.filter((m) => m.state === 'idle');
+    const quiet = (x: number, y: number): boolean => !waiting.some((m) => Math.hypot(where(m).x / TILE - x - 0.5, where(m).y / TILE - y - 0.5) < 6.5);
+    const path = bfs(area, here, (x, y) => free(x, y) && quiet(x, y), 12) ?? bfs(area, here, free, 12);
     const next = path?.[0];
     if (next !== undefined) {
       const tx = (next % W) * TILE + TILE / 2;
@@ -266,11 +279,11 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
       for (const k of [3, 2, 1, 0]) if (go(spells[k]!)) any = true;
       return any;
     }
-    if (careful && kick && ready(kick) && reacted('kickAt', !!bossMove?.interrupt || fighting.some((m) => !!m.cast?.role))) {
+    if (careful && kick && ready(kick) && reacted('kickAt', !!bossMove?.interrupt || fighting.some((m) => !!m.cast?.role && m.cast.role !== 'slam'))) {
       // stopping the boss's big attack; else a Besvärjare's heal or a Skytt's shot (unless the interrupt is kept for the boss)
       if (bossMove?.interrupt && boss && go(kick, boss.id)) return true;
       // (a Besvärjare's heal before a Skytt's shot: the shot can be sidestepped)
-      const caster = keep ? undefined : fighting.filter((m) => m.cast?.role && dist(where(m), p) <= kickReach).sort((x, y) => (x.cast!.role === 'heal' ? 0 : 1) - (y.cast!.role === 'heal' ? 0 : 1))[0];
+      const caster = keep ? undefined : fighting.filter((m) => m.cast?.role && m.cast.role !== 'slam' && dist(where(m), p) <= kickReach).sort((x, y) => (x.cast!.role === 'heal' ? 0 : 1) - (y.cast!.role === 'heal' ? 0 : 1))[0];
       if (caster && go(kick, caster.id)) return true;
     }
     // the spender (slot 1): the careful bot holds it for three pips, unless the moment is right (an Öppning, the class's combo)
@@ -364,7 +377,8 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     const anchor = cls === 'helare' ? (hurt[0]?.q ?? friends.find((x) => x.ff.cls === 'vaktare')?.q) : undefined;
     if (anchor && dist(anchor, p) > 5) {
       walkTo(area, p, mind, { x: tileOf(anchor.x), y: tileOf(anchor.y) }, dtMs, now, slowed, 2);
-    } else if (isRanged(cls) && d < 3.5 && cls === 'magiker' && mind.style !== 'masher' && !mind.noDodge) {
+    } else if (isRanged(cls) && d < 3.5 && cls === 'magiker' && mind.style !== 'masher' && !mind.noDodge && dist(t.home, p) < 14) {
+      // (not further than the monster follows: dragged past its leash it goes home, heals, and the fight starts over)
       // (the masher stands where it is and presses its buttons; so does the bot that never leaves a mark: backing away is how a mage leaves most of them)
       // back away from what is close
       const dx = p.x - a.x;

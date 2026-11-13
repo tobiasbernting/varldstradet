@@ -58,6 +58,7 @@ for (const [label, classes] of PARTIES) {
   let fights = 0;
   let rests = 0;
   let spiritRuns = 0;
+  let early = 0;
   const medals = [0, 0, 0];
   const mins: number[] = [];
   const others: string[] = [];
@@ -78,6 +79,7 @@ for (const [label, classes] of PARTIES) {
       mins.push(r.winMs! / 60_000);
     }
     if (r.outcome === 'wipe') wipes++;
+    if (r.changes.some((c) => c.t === 'run' && c.ev === 'state' && !!c.run && c.run.spiritUsed > 0 && c.run.row <= 4)) early++;
     for (const st of r.stops) (stopMs[st.kind] ??= []).push(st.ms / 1000);
     const ended = r.changes.find((c) => c.t === 'run' && c.ev === 'ended' && c.to === party.players[0]!.id);
     if (ended && ended.t === 'run' && ended.ev === 'ended') {
@@ -96,6 +98,6 @@ for (const [label, classes] of PARTIES) {
   }
   const avg = mins.reduce((a, b) => a + b, 0) / Math.max(1, mins.length);
   console.log(
-    `${label.padEnd(20)} wins ${wins}/${count}  wipe-ends ${wipes}  Sagoandan/run ${(spirits / count).toFixed(2)}  (in ${spiritRuns} runs)  gold ${Math.round((100 * medals[2]!) / Math.max(1, medals[0]! + medals[1]! + medals[2]!))}% silver ${Math.round((100 * medals[1]!) / Math.max(1, medals[0]! + medals[1]! + medals[2]!))}%  flocks ${(fights / count).toFixed(1)} vilor ${(rests / count).toFixed(1)}  min avg ${avg.toFixed(1)} (min ${Math.min(...mins).toFixed(1)}, max ${Math.max(...mins).toFixed(1)})${others.length ? `  not won: ${others.join(' ')}` : ''}`,
+    `${label.padEnd(20)} wins ${wins}/${count}  wipe-ends ${wipes}  Sagoandan/run ${(spirits / count).toFixed(2)}  (in ${spiritRuns} runs, ${early} before the Mellanboss)  gold ${Math.round((100 * medals[2]!) / Math.max(1, medals[0]! + medals[1]! + medals[2]!))}% silver ${Math.round((100 * medals[1]!) / Math.max(1, medals[0]! + medals[1]! + medals[2]!))}%  flocks ${(fights / count).toFixed(1)} vilor ${(rests / count).toFixed(1)}  min avg ${avg.toFixed(1)} (min ${Math.min(...mins).toFixed(1)}, max ${Math.max(...mins).toFixed(1)})${others.length ? `  not won: ${others.join(' ')}` : ''}`,
   );
 }

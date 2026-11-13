@@ -5,6 +5,7 @@ import {
   COMBO_CAP,
   DUNGEONS,
   MARK_LOCK_MS,
+  DUNK,
   ADULT,
   FAR,
   farName,
@@ -528,5 +529,115 @@ describe('the adult bot and the wipe rule', () => {
     const latt = fall(1);
     expect(latt.l.inst.wipeAt).toBeUndefined();
     expect(latt.out.some((c) => c.t === 'banner' && c.to === latt.l.p.id)).toBe(false);
+  });
+});
+
+describe('Dunk: a brute slams the ground round itself', () => {
+  const scene = (level: RunLevel, species = 'skelett') => {
+    const l = lab(['krigare', 'helare'], { level });
+    l.mute();
+    l.q!.y += 4 * TILE; // (the Helare stands a few tiles off)
+    const m = l.place(species, 1.2);
+    m.pulledAt = l.party.now;
+    const first = DUNK.first + (m.id % 5) * DUNK.stagger;
+    return { l, m, first };
+  };
+  it('Medel: 3 to 5 s into the fight and then every 8 to 10 s it stands still for 1.3 s and slams a circle of 1.8 tiles: 0.7 of a mark on everyone inside, counted, in the snapshot as a stoppable cast', () => {
+    expect([0, 1, 2, 3, 4].map((lv) => RUN_LEVELS[lv as RunLevel].dunk)).toEqual([0, 0.5, 0.7, 0.7, 0.7]);
+    const { l, m, first } = scene(2);
+    expect(MOB_ARCHETYPE.skelett).toBe('brute');
+    expect(first).toBeGreaterThanOrEqual(3000);
+    expect(first).toBeLessThanOrEqual(5000);
+    l.go(first - 100);
+    expect(m.cast).toBeUndefined();
+    l.go(200);
+    expect(m.cast).toMatchObject({ role: 'slam', move: -1 });
+    const zone = l.inst.zones.find((z) => z.by === m.id)!;
+    expect(zone).toMatchObject({ shape: 'circle', r: DUNK.radius });
+    expect(zone.kind).toBeUndefined();
+    expect(zone.dmg).toBeCloseTo(RUN_LEVELS[2].mark * 0.7);
+    expect(zone.at - m.cast!.start).toBe(DUNK.warn);
+    expect(sagaSnapshot(l.party.world, l.party.now)![l.run.key]!.c![m.id]).toEqual(['slam', m.cast!.start, m.cast!.at, 1]);
+    const a = { ...l.area.animals[m.id]! };
+    const hp = l.f.hp;
+    const out = l.go(DUNK.warn + 50);
+    // it stood still, the Krigare beside it was hit, the Helare a few tiles off was not
+    expect(l.area.animals[m.id]!.x).toBe(a.x);
+    expect(hp - l.f.hp).toBe(Math.round(l.f.max * RUN_LEVELS[2].mark * 0.7));
+    expect(out.some((c) => c.t === 'hit' && c.on === l.p.id && c.mark)).toBe(true);
+    expect(l.fq!.hp).toBe(l.fq!.max);
+    expect(l.inst.markHits).toBe(1);
+    expect(l.inst.zones.some((z) => z.by === m.id)).toBe(false);
+    // the next one 8 to 10 s after the first began
+    const every = DUNK.every + (m.id % 5) * DUNK.stagger;
+    l.go(every - DUNK.warn - 300);
+    expect(m.cast).toBeUndefined();
+    l.go(400);
+    expect(m.cast?.role).toBe('slam');
+  });
+
+  it('a stun or an interrupt cancels it and opens the brute; stepping out avoids it; two brutes do not slam together', () => {
+    const { l, m, first } = scene(2);
+    l.go(first + 100);
+    const out: Change[] = [];
+    stun(hereOf(l), m, 500, l.party.now, out);
+    expect(m.cast).toBeUndefined();
+    expect(m.open).toBeDefined();
+    expect(out.some((c) => c.t === 'hit' && c.kind === 'kick')).toBe(true);
+    expect(l.inst.zones.some((z) => z.by === m.id)).toBe(false);
+    const hp = l.f.hp;
+    l.go(DUNK.warn + 100);
+    expect(l.f.hp).toBe(hp);
+    const dodge = scene(2);
+    dodge.m.stunUntil = 0;
+    dodge.l.go(dodge.first + 100);
+    dodge.l.p.x += 4 * TILE;
+    dodge.m.threat = { [dodge.l.q!.id]: 1 };
+    const hp2 = dodge.l.f.hp;
+    dodge.l.go(DUNK.warn + 100);
+    expect(dodge.l.f.hp).toBe(hp2);
+    expect(dodge.l.inst.markHits).toBe(0);
+    // staggered by the monster's id
+    expect(new Set([0, 1, 2, 3, 4].map((id) => DUNK.first + (id % 5) * DUNK.stagger)).size).toBe(5);
+  });
+
+  it('Mycket lätt has none, Lätt a harmless one with a longer warning; swarmers and shooters never slam; the journal says what to do', () => {
+    const none = scene(0);
+    none.l.go(12_000);
+    expect(none.m.cast).toBeUndefined();
+    const easy = scene(1);
+    easy.l.go(easy.first + 100);
+    const zone = easy.l.inst.zones.find((z) => z.by === easy.m.id)!;
+    expect(zone.dmg).toBeCloseTo(RUN_LEVELS[1].mark * 0.5);
+    expect(zone.at - easy.m.cast!.start).toBe(Math.round(DUNK.warn * 1.4));
+    const rat = scene(2, 'gravrotta');
+    rat.l.go(12_000);
+    expect(rat.l.inst.zones.some((z) => z.by === rat.m.id)).toBe(false);
+    expect(T.sagaDunkText).toMatch(/1,3/);
+  });
+
+  it('the careful bot stops it with its interrupt when nothing else needs that, else steps out; the masher is hit', () => {
+    const play = (style: 'careful' | 'masher', withHealer: boolean) => {
+      const l = lab(['krigare'], { level: 2 });
+      const m = l.place('skelett', 1.2);
+      m.pulledAt = l.party.now;
+      if (withHealer) l.place('gravrotta', 3, { role: 'healer' }).roleAt = NEVER;
+      l.f.cd.raseri = NEVER;
+      const mind = newMind(style, () => 0.5);
+      const spells: string[] = [];
+      for (let t = 0; t < 7000; t += 50) {
+        for (const c of botStep(l.party.world, l.p.id, mind, l.ctx(), 50)) if (c.t === 'spell' && c.by === l.p.id) spells.push(c.spell);
+        l.go(50);
+        m.atkAt = NEVER;
+      }
+      return { l, m, spells };
+    };
+    const stop = play('careful', false);
+    expect(stop.l.inst.markHits).toBe(0);
+    expect(stop.m.open).toBeDefined();
+    const step = play('careful', true);
+    expect(step.l.inst.markHits).toBe(0);
+    expect(step.m.open).toBeUndefined();
+    expect(play('masher', true).l.inst.markHits).toBeGreaterThan(0);
   });
 });
