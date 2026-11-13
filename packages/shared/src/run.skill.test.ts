@@ -3,7 +3,7 @@
 // leaves a mark, and by one that only ever presses button 1. On the gentle levels the masher must still win: a child is never
 // locked out. Slow (whole runs), so it is a file of its own like the other band files.
 import { describe, expect, it } from 'vitest';
-import type { ClassId, RunLevel } from './index.ts';
+import { DUNGEONS, type ClassId, type DungeonId, type RunLevel } from './index.ts';
 import type { BotStyle } from './runbot.ts';
 import { makeParty, playRun } from './runplay.ts';
 
@@ -25,7 +25,7 @@ interface Row {
 const memo = new Map<string, Row>();
 
 /** Six runs of one hero (with the Hirdmannen) through Draugkryptan. */
-async function row(cls: ClassId, level: RunLevel, style: BotStyle, o: { noDodge?: boolean; slots?: number[]; kid?: boolean } = {}): Promise<Row> {
+async function row(cls: ClassId, level: RunLevel, style: BotStyle, o: { noDodge?: boolean; slots?: number[]; kid?: boolean; power?: DungeonId } = {}): Promise<Row> {
   const key = JSON.stringify([cls, level, style, o]);
   const had = memo.get(key);
   if (had) return had;
@@ -35,7 +35,13 @@ async function row(cls: ClassId, level: RunLevel, style: BotStyle, o: { noDodge?
   for (const seed of SEEDS) {
     await yieldToRunner();
     const party = makeParty([cls], { style, seed, level: 3, lane: 'safe' });
-    for (const mind of party.minds.values()) Object.assign(mind, o);
+    const { power, ...switches } = o;
+    for (const mind of party.minds.values()) Object.assign(mind, switches);
+    // (a boss power: the hero has that boss's trophy and brings its power for the party's horn)
+    if (power) for (const pl of party.players) {
+      pl.trophies = { [DUNGEONS[power].boss]: 2 };
+      pl.runPrefs = { ...pl.runPrefs, power };
+    }
     const p = playRun(party, { seed, level, dungeon: 'draug' }, LIMIT);
     expect(['win', 'wipe']).toContain(p.outcome);
     if (p.outcome === 'win') {
@@ -51,7 +57,7 @@ async function row(cls: ClassId, level: RunLevel, style: BotStyle, o: { noDodge?
   r.mins /= Math.max(1, r.wins);
   r.gold = golds / Math.max(1, stops);
   memo.set(key, r);
-  console.log(`${cls} level ${level} ${style}${o.noDodge ? ' noDodge' : ''}${o.slots ? ' slot 1 only' : ''}${o.kid ? ' kid' : ''}: ${r.wins}/${SEEDS.length} wins, ${r.mins.toFixed(1)} min, Sagoande in ${r.spirit} (before the Mellanboss in ${r.early}), gold ${Math.round(r.gold * 100)} %`);
+  console.log(`${cls} level ${level} ${style}${o.noDodge ? ' noDodge' : ''}${o.slots ? ' slot 1 only' : ''}${o.kid ? ' kid' : ''}${o.power ? ` power ${o.power}` : ''}: ${r.wins}/${SEEDS.length} wins, ${r.mins.toFixed(1)} min, Sagoande in ${r.spirit} (before the Mellanboss in ${r.early}), gold ${Math.round(r.gold * 100)} %`);
   return r;
 }
 
@@ -80,10 +86,10 @@ describe('Medel: playing well matters (same hero, same seeds, same lane)', () =>
   }
 
   for (const cls of ['krigare', 'magiker'] as ClassId[]) {
-    it(`${cls}: an adult (the careful bot with a reaction time, missed presses and no perfect kill order) wins at least 5 of 6 in 12 to 25 minutes and needs a Sagoande in at most half its runs`, T, async () => {
+    it(`${cls}: an adult (the careful bot with a reaction time, missed presses and no perfect kill order) wins at least 5 of 6 in 11 to 25 minutes and needs a Sagoande in at most half its runs`, T, async () => {
       const a = await row(cls, 2, 'adult');
       expect(a.wins).toBeGreaterThanOrEqual(5);
-      expect(a.mins).toBeGreaterThan(12);
+      expect(a.mins).toBeGreaterThan(11); // (12 before the dishes: every hero now eats one)
       expect(a.mins).toBeLessThan(25);
       expect(a.spirit).toBeLessThanOrEqual(SEEDS.length / 2);
       expect(a.early).toBe(0);
@@ -100,6 +106,24 @@ describe('Medel: playing well matters (same hero, same seeds, same lane)', () =>
       expect(one.gold).toBeLessThanOrEqual(0.3);
     });
   }
+});
+
+describe('Medel: a boss power does not carry a hero who does not look', () => {
+  // (runtune ran the masher with each of the nine powers: none won a run; these three are pinned)
+  for (const power of ['draug', 'dvarg', 'fenrir'] as DungeonId[]) {
+    it(`krigare: the masher with ${power}'s power wins at most 1 of 6`, T, async () => {
+      expect((await row('krigare', 2, 'masher', { power })).wins).toBeLessThanOrEqual(1);
+    });
+  }
+  it('magiker: the masher with Kungens rop wins at most 1 of 6', T, async () => {
+    expect((await row('magiker', 2, 'masher', { power: 'draug' })).wins).toBeLessThanOrEqual(1);
+  });
+  it('krigare: the careful bot with Ulvatjut still wins all six, in 9 to 20 minutes', T, async () => {
+    const c = await row('krigare', 2, 'careful', { power: 'fenrir' });
+    expect(c.wins).toBe(SEEDS.length);
+    expect(c.mins).toBeGreaterThan(9);
+    expect(c.mins).toBeLessThan(20);
+  });
 });
 
 describe('the gentle levels: nobody is locked out', () => {

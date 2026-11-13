@@ -3,6 +3,6 @@
 cd "$(dirname "$0")/.." || exit 1
 for d in ${@:-draug frost surt hel dvarg orm alv fenrir loke}; do
   for st in careful adult masher; do
-    echo "$d $st: $(node --experimental-transform-types src/runtune.ts --level 2 --lane safe --seeds 3 --only 2 --style $st --dungeon "$d" 2>&1 | grep ensam | sed -E 's/^.*wins ([0-9]+\/[0-9]+).*min avg ([0-9.]+).*$/\1 won, \2 min/')"
+    echo "$d $st: $(node --experimental-transform-types src/runtune.ts --level 2 --lane safe --seeds 3 --only 2 --style $st --dungeon "$d" ${POWER:+--power $POWER} 2>&1 | grep ensam | sed -E 's/^.*wins ([0-9]+\/[0-9]+).*min avg ([0-9.]+).*$/\1 won, \2 min/')"
   done
 done

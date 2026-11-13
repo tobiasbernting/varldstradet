@@ -19,7 +19,8 @@ follow from that:
 - **A 7-year-old can win.** Mycket lätt is tuned for a clumsy child alone with the Hirdmannen (section 5.4).
 - **Nothing bleeds, monsters poof, nothing you own is lost.** A wipe ends the run at most; everything earned in a run is
   paid out at once and kept.
-- **Gear and hero levels give no power.** Power comes from the class, the run's runor and path, and the sagaträd. Gear,
+- **Gear and hero levels give no power.** Power comes from the class, the run's runor and path, the sagaträd, the boss trophies (each
+  boss's trophy gives a power for the party's horn, 5.9) and the run's dish. Gear,
   looks and levels are for show (sections 4.4 and 7.3).
 - **No reading required to play.** Big pictures, one short sentence on every card, an info card for everything
   (section 9).
@@ -115,7 +116,7 @@ swap and the old map is dropped.
 
 Packs in a Flock: three in each of the two rooms, 4 to 5 members each (a pack is never more than 6). From the third row on a
 pack may hold one of the dungeon's big monsters (`BIG_CHANCE`: 60 % of the packs of rows 3 and 4, so about one pack in three of
-the first wing, 70 % in the second wing and 80 % in the hall; half as often on Mycket lätt; always in a Stark vakt); a big monster slams the
+the first wing, 70 % in the second wing and 80 % in the hall; half as often on Mycket lätt; always in a Stark vakt); from the second stop a pack member without a role may be starred (5.9); a big monster slams the
 ground round itself (the Dunk, section 5.8), and from Lätt up some members are special (5.8). On Mycket lätt and Lätt: 2 and 2 to 3 packs of 3 to 4 (`LATT_FLOCK_PACKS`). Monster health
 by wing is `WING_HP` = 1.85, 2.3, 2.7 (rows 1 to 4, 5 to 8, 9 to 10) on top of the fighter scaling in 5.1. The gate of a
 Flock opens when its required packs are down; the Mellanboss opens its own.
@@ -202,8 +203,9 @@ Chest items that are gear do nothing in a fight.
 
 ### 2.5 Events (Händelser)
 
-Ten events, in `events.ts`; the stop picks one by the seed, never one already met in the run. The party votes (same rule as
-elsewhere). **No choice takes health, a runa you hold, or progress**; a choice may cost hacksilver, and every event has a free
+Ten quiet events and one ambush, in `events.ts`; the stop picks one by the seed, never one already met in the run. The party votes
+(same rule as elsewhere). **No choice takes health, a runa you hold, or progress, EXCEPT a fight the party chooses**, which is always
+drawn with crossed swords (⚔️; there is one: Skogen rör sig, below); a choice may cost hacksilver, and every event has a free
 choice, which is also what the clock picks.
 
 | Event (id) | Choices | Outcome |
@@ -218,9 +220,19 @@ choice, which is also what the clock picks.
 | Den vandrande skalden (`skald`) | Lyssna · Klappa händerna | cooldowns 5 % faster for the run · 20 hacksilver |
 | Sagoanden (`ande`) | Sköldanden · Hjärtanden · Spara anden | armor +5 % · health +8 % · one more Sagoande (at most 5) |
 | Honungsträdet (`honung`) | Plocka honung · Klappa björnen | 2 potions each · everyone heals fully |
+| Skogen rör sig (`bakhall`) | ⚔️ Försvara stenen · Göm er | a fight in three waves, then a *sällsynt* party runa, 25 hacksilver and a Runmärke · 5 hacksilver |
+
+**Skogen rör sig** (`AMBUSH`, `AMBUSH_EVENT`, `tickAmbush` in `runsim.ts`) is not one of the ten: it takes the place of a stop's own event
+one time in eleven, by dice of its own. Defending: three waves of the dungeon's monsters (three or four each, two on Mycket lätt; one
+of the big ones in the last; a special or a starred one may come from the second, by the level) walk in from an edge of the glade,
+one every 20 s or as soon as the one before is down. The horn is charged, the stop's clock and counters start over, and when the last
+monster is down the party is paid and the stop gets its Runmärke (as a Skatt). A wipe there is a wipe as anywhere; a wave that has
+been reset by a Sagoande comes again when a hero is on their feet. The run snapshot has the wave (`RunSnap.ambush`).
 
 ### 2.6 Starting, joining and ending a run
 
+- At the arch every hero also chooses what they bring (stored on the player, `runPrefs`; the messages `run power` and `run dish`): ONE
+  boss power among the bosses whose trophy they own (left alone: the latest; 5.9) and ONE dish of the run's three (left alone: the first).
 - A hero with a class stands at the färdport (the lobby's arch) and opens its window ("Färdporten"): dungeon (a ◀ ▶ row), level
   (five buttons; levels above a party member's cap are marked with a lock and who is capped), the Hirdmannen toggle when one
   would come, and the pet. **Starta!** takes everyone with a class within 6 tiles of the arch (`RUN_JOIN_RADIUS`), up to the
@@ -642,6 +654,51 @@ Par is the careful bot's median time in a stop of that kind times 1.6 (Flock 130
 for two fighters on Medel; `PAR_LEVEL` ×1.6, 1.3, 1, 1.4, 1.5 by level; ×1.15 for three or four). Gold pays 8 hacksilver and silver 4.
 The medals are in the run snapshot by stop (`RunSnap.medals`) and counted in the `ended` change. They are never per player and no
 text says who was hit.
+
+### 5.9 Six rules from Valheim: Stjärnmonster, Bosskrafter, Gillet, Svagheter, Perfekt block and Nära ögat
+
+**Stjärnmonster** (`STAR`, `STAR_CHANCE`, `assignStars`; `AnimalState.stars`, and ★ in the name, so they show before the pull). A pack
+member that carries no role may be starred, at most one a pack and never in the run's first stop: ★ has 1.6 times the health and
+1.25 times the ordinary blows and is drawn 15 % bigger; ★★ 2.4 times, 1.5 times and 30 %. A pack has one with a chance of 0 on Mycket
+lätt, 10 % ★ on Lätt, 18 % ★ and 4 % ★★ on Medel, 25 % and 8 % on Svår and Extrem. When it falls it pays 6 / 15 hacksilver and 1 / 3
+sagafrön (before multipliers) and drops a Kraftklot. The careful bot takes it after the special monsters.
+
+**Bosskrafter and Hornet** (`BOSS_POWERS`, `ownedPowers`, `blowHorn`, `usePower`; names in `POWER_NAMES`). Every dungeon's boss gives a
+power to whoever owns its trophy (any level). A hero brings ONE to a run. The PARTY has one charge of the horn in every stop with a
+fight (it refills on entering the stop, and when an ambush is taken up): any hero may blow it (the `horn` intent; off the shared
+pause), which uses THEIR power and spends the charge for everyone. The Hirdmannen has none and never blows it.
+
+| Boss | Power | Does |
+| --- | --- | --- |
+| Draugkungen | Kungens rop | every monster within 6 tiles is stunned 3 s (a stopped cast is an Öppning) |
+| Rimtursen | Rimfrost | every monster within 6 tiles is slowed 5 s (it primes the Magiker's combo and a Samslag) |
+| Surt | Eldring | every monster within 5 tiles burns for 8 s, 190 in all |
+| Hel | Hels nåd | every fallen hero stands up at 50 % health (not once the wipe's pause has begun) |
+| Fafner | Drakfjäll | every hero gets a shield of 35 % of max health for 8 s |
+| Jörmungandr | Flodvåg | monsters within 6 tiles are pushed up to 4 tiles away and slowed 4 s |
+| Nattmaran | Skuggslöja | for 5 s the monsters lose their targets and neither chase nor strike (what is cast still lands) |
+| Fenrisulven | Ulvatjut | every hero has 30 % more power and runs faster for 8 s |
+| Loke | Lokes list | every hero's pips are filled |
+
+**Gillet** (`DISHES`, `dishOffer`). Every hero eats one dish for the run, picked at the arch from the three the next run's seed serves
+(the lobby keeps that seed, `WorldState.nextRunSeed`); the Hirdmannen eats nothing. DISH_TABLE
+
+**Svagheter** (`Element`, `SPELL_ELEMENT`, `DUNGEON_WEAK`, `SPECIES_WEAK`, `weakOf`, `WEAK_BONUS`). A hit has an element when its spell
+has one (Eldboll and burning: eld; Isspjut: is; Åskregn and a chain's jumps: åska), when the hero's path gives that spell one (Eld:
+Runsmäll and Isspjut burn; Frost: Eldboll, Runsmäll and Åskregn are ice; Åska: Eldboll, Runsmäll and Isspjut are lightning), or, for
+any class, when the hero holds two or more runor of one of the three tags (their own and the party's; the most, which colours every
+hit that has no element of its own). A dungeon's monsters and bosses are weak to ONE element and take 25 % more from it; nothing ever
+resists. Draugkryptan, Frostjättens borg, Alvernas lund and Fenrisklyftan: eld; Surts smedja and Bifrost: is; Helheim, Svartalfheims
+gruvor and Havsormens tempel: åska. One family in each differs: Gravråtta is, Isvarg åska, Lavagolem åska, Helhund eld, Stengolem is,
+Jättekrabba is, Svampvakt is, Bergsjätte åska (a mate has its original's). A weak hit is flagged (`hit.weak`); the run snapshot names
+the dungeon's weakness and an offer marks the cards of that tag, but the offer is never leaned towards it.
+
+**Perfekt block** (`PARRY_MS`, `PARRY_OPEN_MS`). A Väktare who raises Sköldmur at most 0.6 s before a blow or a mark lands on them
+takes nothing from that one hit; the attacker (a boss too) is open for 3 s and the Väktare's pips are full (`hit` kind `parry`). A
+Sköldmur that catches nothing works as before.
+
+**Nära ögat** (`NEAR_MS`). A hero who stood in a mark during its warning and is out of it when it lands, having left within the last
+0.5 s, gets a pip (`hit` kind `near`); once per mark and hero, never from the Guldring.
 
 ## 6. Sagafrön and the sagaträd
 
