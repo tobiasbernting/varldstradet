@@ -16,9 +16,19 @@ import {
   newSagaProgress,
   type ClassId,
   type DungeonId,
+  type SagaInstance,
+  type Element,
+  type MobRole,
+  DUNGEONS,
+  DUNGEON_WEAK,
+  ELEMENTS,
+  MOB_ROLES,
+  STAR,
 } from './saga.ts';
 import { sagaCheckpoint } from './sagamap.ts';
-import { CLEARED_STAT } from './sagasim.ts';
+import { CLEARED_STAT, usePower, wakeMob } from './sagasim.ts';
+import { spawnSagaMob } from './sagamap.ts';
+import { hashInts, mulberry32 } from './rng.ts';
 import { runHooks } from './runhooks.ts';
 import { awardPetLooks, giveClearPets, petSeedBonus } from './petsim.ts';
 import { botStep, newMind, type BotMind } from './runbot.ts';
@@ -65,12 +75,23 @@ import {
   type RunPhase,
   type RunSave,
   type RunSnap,
+  type NodeKind,
+  MEDAL_SILVER,
+  BOSS_POWERS,
+  GILLET,
+  PACK_ROLES,
+  STAR_CHANCE,
+  dishDef,
+  dishOffer,
+  DUNGEON_TUNE,
+  medalFor,
+  type Medal,
 } from './run.ts';
 import { defaultPath, pathDef, pathsOf } from './paths.ts';
 import { canSharpen, heldEffect, offerFor, partyRuna, runa, runaOfRarity, setEffect, tagCounts, type OfferSource, type RunRarity, type RunTag, type RunaHeld } from './runor.ts';
-import { buildStop, chapterBoss, generateRun, placeRunes, routeSnap, type RunPlan } from './runmap.ts';
-import { SHOP_LEGENDARY_ROW, SHOP_PRICE, SHOP_POTIONS, SHOP_SLOTS, SILVER, defaultChoice, eventDef, packSilver, pickEvent, seedsFromSilver, type EventOutcome } from './events.ts';
-import { COMPANION_NAME, EVENT_CHOICES, EVENT_NAMES, PATH_NAMES, RUNA_NAMES, RUN_UI, RUN_T, T, TREE_NAMES, fmt, fmtDuration } from './sv.ts';
+import { buildStop, chapterBoss, dungeonMobs, generateRun, placeRunes, routeSnap, type RunPlan } from './runmap.ts';
+import { SHOP_LEGENDARY_ROW, SHOP_PRICE, SHOP_POTIONS, SHOP_SLOTS, SILVER, defaultChoice, eventDef, packSilver, pickEvent, seedsFromSilver, AMBUSH, type EventOutcome } from './events.ts';
+import { COMPANION_NAME, EVENT_CHOICES, EVENT_NAMES, PATH_NAMES, POWER_NAMES, RUNA_NAMES, RUN_UI, RUN_T, T, TREE_NAMES, fmt, fmtDuration } from './sv.ts';
 import {
   farmOf,
   getArea,
@@ -127,6 +148,15 @@ export interface RunState {
   /** The Köpman's wares in the stop the party is in (a Köpman stop), and the Händelse being voted on (phase `event`) and those met so far. */
   shop?: ShopStock;
   event?: { id: string; votes: Record<string, number>; until: number };
+  /** Bosskrafter: the power each hero brought, and whether the party's horn is charged in this stop. Gillet: each hero's dish. */
+  powers: Record<string, DungeonId>;
+  horn: boolean;
+  dishes: Record<string, string>;
+  forceDish?: string;
+  /** Skogen rör sig: the waves so far, when the next comes (run time), and the monsters of the wave now. */
+  ambush?: { wave: number; count: number; nextAt: number; mobs: number[] };
+  /** Development only (the dev message `runnext` with kind `ambush`): the next Händelse is this one. */
+  forceEvent?: string;
   metEvents: string[];
   /** Blessings from events for the rest of the run (for everyone). */
   blessed: RunEffect;
@@ -152,6 +182,11 @@ export interface RunState {
   /** The fraction of a sagafrö each player is owed by the bonuses (whole seeds are paid; never saved). */
   carry: Record<string, number>;
   paid: Set<string>;
+  /** Runmärken: the medal of each fight stop cleared, and the run time when the stop now was entered. */
+  medals: Record<number, Medal>;
+  stopAt: number;
+  /** How long each fight stop took to clear (ms), for the tuning of the pars. */
+  stopMs: Record<number, number>;
   /** Players who joined while the cards were out: they enter the next stop. */
   waiting: string[];
   victoryAt?: number;
@@ -348,7 +383,15 @@ function refresh(farm: WorldState, run: RunState): void {
   const inst = farm.areas?.[run.key]?.saga;
   if (!inst?.run) return;
   inst.run.buffs = {};
-  for (const p of members(farm, run)) inst.run.buffs[p.id] = buffsOf(effectFor(farm, run, p));
+  for (const p of members(farm, run)) {
+    const b = buffsOf(effectFor(farm, run, p));
+    // Svagheter: the hero's own element (two runor of a tag) and the ones their path gives single spells
+    const element = p.bot ? undefined : heroElement(run.hold[p.id] ?? [], run.runor);
+    if (element) b.element = element;
+    const path = pathDef(run.paths[p.id]);
+    if (path?.elements && path.cls === p.saga?.cls) b.elements = path.elements;
+    inst.run.buffs[p.id] = b;
+  }
 }
 
 /** Sagafrön to every human in the run (`n` before the bonuses of runor, the tree and modifiers). */
@@ -418,6 +461,12 @@ function snap(farm: WorldState, run: RunState): RunSnap {
     ...(run.event && run.phase === 'event' ? { event: { id: run.event.id, choices: eventDef(run.event.id)!.choices.map((c) => ({ id: c.id, cost: c.cost ?? 0 })), votes: { ...run.event.votes }, left: Math.max(0, Math.round(run.event.until - run.elapsed)) } } : {}),
     hold: Object.fromEntries(Object.entries(run.hold).map(([id, hs]) => [id, hs.map((h) => ({ ...h }))])),
     earned: { ...run.earned },
+    medals: { ...run.medals },
+    powers: { ...run.powers },
+    horn: run.horn,
+    dishes: { ...run.dishes },
+    weak: DUNGEON_WEAK[run.plan.boss],
+    ...(run.ambush ? { ambush: { wave: run.ambush.wave, count: run.ambush.count } } : {}),
     paths: { ...run.paths },
     ...(run.phase === 'path' ? { pick: { kind: 'path' as const, left: Math.max(0, Math.round((run.pathUntil ?? run.elapsed) - run.elapsed)), done: Object.keys(run.paths).filter((id) => run.party.includes(id)) } } : {}),
     ...(run.phase === 'pick' ? { pick: { kind: 'runa' as const, left: Math.max(0, Math.round((run.offerUntil ?? run.elapsed) - run.elapsed)), done: Object.entries(run.offers).filter(([, o]) => o.picked !== undefined).map(([id]) => id) } } : {}),
@@ -442,7 +491,7 @@ function shopSnap(run: RunState): NonNullable<RunSnap['shop']> {
 function offerSnap(farm: WorldState, run: RunState, pid: string): RunOfferSnap | null {
   const o = run.offers[pid];
   if (!o || run.phase !== 'pick') return null;
-  return { node: run.offerFrom, cards: [...o.cards], ...(o.picked !== undefined ? { picked: o.picked } : {}), source: o.source, left: Math.max(0, Math.round((run.offerUntil ?? run.elapsed) - run.elapsed)), rerolls: rerollsLeft(farm, run, pid), done: Object.entries(run.offers).filter(([, x]) => x.picked !== undefined).map(([id]) => id) };
+  return { weak: o.cards.map((id) => !!runa(id)?.tags.includes(DUNGEON_WEAK[run.plan.boss])), node: run.offerFrom, cards: [...o.cards], ...(o.picked !== undefined ? { picked: o.picked } : {}), source: o.source, left: Math.max(0, Math.round((run.offerUntil ?? run.elapsed) - run.elapsed)), rerolls: rerollsLeft(farm, run, pid), done: Object.entries(run.offers).filter(([, x]) => x.picked !== undefined).map(([id]) => id) };
 }
 /** The offers to send: each hero gets their own; `to: null` with no offer clears them all. */
 const offerChanges = (farm: WorldState, run: RunState): Change[] => (run.phase === 'pick' ? humans(farm, run).map((q) => ({ t: 'run' as const, ev: 'offer' as const, to: q.id, offer: offerSnap(farm, run, q.id) })) : [{ t: 'run', ev: 'offer', to: null, offer: null }]);
@@ -478,6 +527,8 @@ export interface StartOptions {
   level?: RunLevel;
   /** The dungeon (chapter) to run: the one the starter has cleared or the next one; left out, the next one (DESIGN.md section 2). */
   dungeon?: DungeonId;
+  /** Tuning and tests only: every hero eats this dish, whatever the run's three are (never set by a message). */
+  dish?: string;
 }
 
 /** Which dungeons a player may run: the ones they have cleared and the next one in the saga's order. */
@@ -499,12 +550,80 @@ export function openYggdrasil(world: WorldState, p: PlayerState): Change[] {
   return [{ t: 'open', to: p.id, ui: 'seed' }, treeChange(farmOf(world), p)];
 }
 
+/** The boss powers a player may bring: the dungeons whose boss they have a trophy of (any level), in the saga's order. */
+export const ownedPowers = (p: PlayerState): DungeonId[] => DUNGEON_IDS.filter((d) => p.trophies?.[DUNGEONS[d].boss] !== undefined);
+
+/** The three dishes the arch offers now: those of the next run started here. */
+export function nextDishes(world: WorldState, ctx: SimCtx): string[] {
+  const farm = farmOf(world);
+  farm.nextRunSeed ??= Math.floor(ctx.rnd() * 0x7fffffff);
+  return dishOffer(farm.nextRunSeed);
+}
+
+/** A hero chooses, at the arch, the boss power (null: none) or the dish for their next run. Refused: a power they have no trophy for, a dish that is not served. */
+export function setRunPref(world: WorldState, playerId: string, what: 'power' | 'dish', id: string | null, ctx: SimCtx): Change[] {
+  const farm = farmOf(world);
+  const p = farm.players[playerId];
+  if (!p) return [];
+  const prefs = (p.runPrefs ??= {});
+  if (what === 'power') {
+    if (id !== null && !ownedPowers(p).includes(id as DungeonId)) return [toast(p.id, RUN_T.powerNone)];
+    prefs.power = id;
+  } else {
+    if (id === null || !nextDishes(farm, ctx).includes(id)) return [toast(p.id, RUN_T.dishNone)];
+    prefs.dish = id;
+  }
+  return [playerChange(p), gilletChange(farm, ctx, p.id)];
+}
+const gilletChange = (farm: WorldState, ctx: SimCtx, to: string | null): Change => ({ t: 'run', ev: 'gillet', to, dishes: nextDishes(farm, ctx) });
+
+/**
+ * Bosskrafter: a hero blows the party's horn: THEIR power, and the stop's one charge is spent for everyone. Only in a stop's fight
+ * phase, by a human of the run who brought a power; never the Hirdmannen. Off the shared pause.
+ */
+export function blowHorn(world: WorldState, playerId: string, ctx: SimCtx): Change[] {
+  const farm = farmOf(world);
+  const run = RUNS.get(farm);
+  const p = farm.players[playerId];
+  const power = run && p ? run.powers[p.id] : undefined;
+  if (!run || !p || p.bot || !run.party.includes(p.id) || run.phase !== 'stop') return [];
+  if (!power) return [toast(p.id, RUN_T.powerNone)];
+  if (!run.horn) return [toast(p.id, RUN_T.hornEmpty)];
+  const out: Change[] = [];
+  if (!usePower(farm, p.id, power, ctx, out)) return [];
+  run.horn = false;
+  for (const q of humans(farm, run)) out.push(toast(q.id, fmt(RUN_T.hornBlown, { name: p.name, power: POWER_NAMES[power] ?? power, icon: BOSS_POWERS[power].icon })));
+  out.push(stateChange(farm, run));
+  return out;
+}
+runHooks.horn = blowHorn;
+
+/** The element of a hero's hits that have none of their own: the one of Eld, Is and Åska they hold two or more runor of (their own and the party's); the most, Eld before Is before Åska. */
+export function heroElement(held: readonly RunaHeld[], party: readonly string[]): Element | undefined {
+  const n = tagCounts(held, party);
+  const best = [...ELEMENTS].sort((a, b) => n[b] - n[a])[0]!;
+  return n[best] >= 2 ? best : undefined;
+}
+
 /** Adds up what the tree gives this player (and hands out the start potions). */
 function bring(farm: WorldState, run: RunState, p: PlayerState, out: Change[]): void {
   run.brought.add(p.id);
   const e = farmEffect(farm, p);
+  // Gillet: the dish the hero picked at the arch out of the run's three (none picked, or one that is not served: the first)
+  const offer = dishOffer(run.seed);
+  const dish = GILLET.on ? dishDef(run.forceDish ?? (offer.includes(p.runPrefs?.dish ?? '') ? p.runPrefs!.dish : offer[0])) : undefined;
+  if (dish) {
+    run.dishes[p.id] = dish.id;
+    addEffect(e, dish.effect);
+    if (dish.speed) p.runSpeed = dish.speed;
+  }
+  // Bosskrafter: the power the hero chose among the bosses they have a trophy of (left alone: the latest; null: none)
+  const owned = ownedPowers(p);
+  const want = p.runPrefs?.power;
+  const power = want === null ? undefined : owned.includes(want as DungeonId) ? (want as DungeonId) : owned[owned.length - 1];
+  if (power) run.powers[p.id] = power;
   run.base[p.id] = e;
-  // potions come as items: the tree's
+  // potions come as items: the tree's and the dish's
   if (e.potions) giveHere(farm, p, 'healing_potion', Math.round(e.potions), out);
   delete e.potions;
   out.push(playerChange(p));
@@ -530,7 +649,9 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
   if (capped.length) return [toast(p.id, fmt(RUN_T.capped, { names: capped.map((q) => q.name).join(', '), level: T.runLevelName[wanted]! }))];
   // the dungeon asked for (one cleared, or the next), else the chapter's, or a cleared one at random on a replay (or when all are cleared)
   const cleared = p.saga.cleared;
-  const seed = opts.seed ?? Math.floor(ctx.rnd() * 0x7fffffff);
+  // (the seed the arch showed the dishes of, when the caller gives none)
+  const seed = opts.seed ?? farm.nextRunSeed ?? Math.floor(ctx.rnd() * 0x7fffffff);
+  delete farm.nextRunSeed;
   let boss = chapterBoss(cleared);
   let replay = false;
   if (opts.dungeon !== undefined) {
@@ -566,6 +687,10 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
     nudges: 0,
     purse: 0,
     metEvents: [],
+    powers: {},
+    horn: false,
+    dishes: {},
+    ...(opts.dish ? { forceDish: opts.dish } : {}),
     blessed: {},
     runor: [],
     hold: {},
@@ -579,6 +704,9 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
     earned: {},
     carry: {},
     paid: new Set(),
+    medals: {},
+    stopAt: 0,
+    stopMs: {},
     waiting: [],
     minds: new Map(),
     statePing: 0,
@@ -650,8 +778,8 @@ export function enterStop(farm: WorldState, run: RunState, node: number, ctx: Si
     name: z.name,
     intro: z.intro,
     hpMul: z.hpMul * (solo ? SOLO_MERCY : 1) * lvl.hp,
-    dmgMul: z.dmgMul * lvl.dmg,
-    bossMul: z.bossMul * (solo ? SOLO_MERCY : 1) * lvl.hp,
+    dmgMul: z.dmgMul * lvl.dmg * DUNGEON_TUNE[run.plan.boss].blows,
+    bossMul: z.bossMul * (solo ? SOLO_MERCY : 1) * lvl.hp * def.bossHp * DUNGEON_TUNE[run.plan.boss].boss,
     sight: z.sight,
     leash: z.leash,
     ...(moves ? { moves } : {}),
@@ -668,12 +796,23 @@ export function enterStop(farm: WorldState, run: RunState, node: number, ctx: Si
     wipeSub: RUN_T.wipeSub,
     required: z.required,
     level: run.level,
+    mark: def.mark,
+    ...(run.level <= 1 ? { easy: true } : {}),
+    ...(run.level === 1 ? { ring: true } : {}),
+    ...(def.humansOnly ? { humansOnly: true } : {}),
+    ...(def.far ? { far: def.far } : {}),
+    ...(def.dunk ? { dunk: def.dunk * (DUNGEON_TUNE[run.plan.boss].dunk ?? 1) } : {}),
+    ...(def.markEvery !== 1 ? { markEvery: def.markEvery } : {}),
   };
   (farm.areas ??= {})[key] = world;
   getArea(farm, key);
   run.key = key;
   run.node = node;
   run.path.push(node);
+  run.stopAt = run.elapsed;
+  // the party's horn is charged again in every stop with a fight
+  run.horn = isFlockLike(z.kind) || z.kind === 'mini' || z.kind === 'boss';
+  delete run.ambush;
   run.phase = 'stop';
   run.offers = {};
   delete run.offerUntil;
@@ -760,6 +899,7 @@ export function leaveRun(world: WorldState, playerId: string, ctx: SimCtx): Chan
   run.party = run.party.filter((id) => id !== p.id);
   run.waiting = run.waiting.filter((id) => id !== p.id);
   delete run.offers[p.id];
+  delete p.runSpeed;
   sendHome(farm, p, out);
   out.push(toast(p.id, T.sagaWipeReturn ?? RUN_T.home));
   for (const q of humans(farm, run)) out.push(toast(q.id, fmt(RUN_T.left, { name: p.name })));
@@ -935,7 +1075,8 @@ export function buyItem(world: WorldState, playerId: string, msg: Record<string,
 
 /** The Händelse's glade: a picture, a story and two or three choices; everyone votes (the same rule as every vote of a run). */
 function startEvent(farm: WorldState, run: RunState): Change[] {
-  const id = pickEvent(run.seed, run.node, run.metEvents);
+  const id = run.forceEvent ?? pickEvent(run.seed, run.node, run.metEvents);
+  delete run.forceEvent;
   run.metEvents.push(id);
   run.phase = 'event';
   run.event = { id, votes: {}, until: run.elapsed + runPickMs(run.level) };
@@ -1009,7 +1150,13 @@ function resolveEvent(farm: WorldState, run: RunState, ctx: SimCtx, index: numbe
         }
       }
     } else if ('cards' in o) cards = o.cards;
-    else if ('spirit' in o) {
+    else if ('ambush' in o) {
+      // the party chose the fight: the waves begin, the horn is charged, and the stop's clock and counters start over for its Runmärke
+      run.ambush = { wave: 0, count: AMBUSH.waves, nextAt: run.elapsed + 3000, mobs: [] };
+      run.horn = true;
+      run.stopAt = run.elapsed;
+      if (inst) inst.markHits = inst.mobHeals = 0;
+    } else if ('spirit' in o) {
       run.spirit = Math.min(5, run.spirit + o.spirit);
       if (inst?.run) inst.run.spirit = run.spirit;
     }
@@ -1019,7 +1166,7 @@ function resolveEvent(farm: WorldState, run: RunState, ctx: SimCtx, index: numbe
   refresh(farm, run);
   out.push(stateChange(farm, run));
   if (cards) out.push(...openCards(farm, run, ctx, cards));
-  else out.push(...startRoute(farm, run));
+  else if (!run.ambush) out.push(...startRoute(farm, run));
   return out;
 }
 
@@ -1359,6 +1506,16 @@ function watchStop(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
     out.push(stateChange(farm, run));
   }
   if (z.kind === 'rest') restHeal(farm, run, inst, out);
+  // Stjärnmonster that fell: hacksilver and sagafrön
+  (inst.starsDown ?? []).forEach((stars, i) => {
+    const k = `${run.node}:star:${i}`;
+    if (run.paid.has(k)) return;
+    run.paid.add(k);
+    pay(farm, run, STAR[stars as 1 | 2].seeds, out);
+    run.purse += silverFor(run, STAR[stars as 1 | 2].silver);
+    out.push(stateChange(farm, run));
+  });
+  if (run.ambush) return [...out, ...tickAmbush(farm, run, area, inst, ctx)];
   inst.packs.forEach((pk, i) => {
     const k = `${run.node}:pack:${i}`;
     if (pk.dead && !run.paid.has(k)) {
@@ -1404,11 +1561,15 @@ function watchStop(farm: WorldState, run: RunState, ctx: SimCtx): Change[] {
       pay(farm, run, z.kind === 'elite' ? RUN_SEEDS.zone * 2 : RUN_SEEDS.zone, out);
       if (z.kind === 'elite') run.purse += silverFor(run, SILVER.elite);
       if (z.kind === 'treasure') run.purse += silverFor(run, SILVER.treasure);
+      awardMedal(farm, run, inst, out);
     }
     out.push(...stopCleared(farm, run, ctx));
     return out;
   }
-  if (inst.bossDown && run.phase === 'stop') out.push(...victory(farm, run));
+  if (inst.bossDown && run.phase === 'stop') {
+    awardMedal(farm, run, inst, out);
+    out.push(...victory(farm, run));
+  }
   if (run.phase === 'victory' && run.victoryAt !== undefined && run.elapsed - run.victoryAt >= RUN_VICTORY_MS) return [...out, ...endRun(farm, run, 'win', ctx)];
   if (inst.wipeAt !== undefined && ctx.now >= inst.wipeAt && !inst.run?.revive) return [...out, ...endRun(farm, run, 'wipe', ctx)];
   return out;
@@ -1448,6 +1609,78 @@ function victory(farm: WorldState, run: RunState): Change[] {
   return out;
 }
 
+/**
+ * Skogen rör sig: the waves of an ambush the party chose to fight. A wave of the dungeon's monsters walks in from the edge of the
+ * glade every AMBUSH.everyMs, or as soon as the one before is down; when the last is down the party is paid and the way on opens.
+ */
+function tickAmbush(farm: WorldState, run: RunState, area: WorldState, inst: SagaInstance, ctx: SimCtx): Change[] {
+  const out: Change[] = [];
+  const amb = run.ambush!;
+  const alive = amb.mobs.some((id) => inst.mobs[id]);
+  if (amb.wave >= amb.count && !alive) {
+    // won: a sällsynt runa for the party, hacksilver, and the stop counts for a Runmärke
+    delete run.ambush;
+    run.purse += silverFor(run, AMBUSH.silver);
+    out.push(...giveParty(farm, run, ctx.rnd, 'sallsynt'));
+    awardMedal(farm, run, inst, out, 'treasure');
+    for (const q of humans(farm, run)) out.push(banner(q.id, run.key, RUN_T.ambushWon, RUN_T.ambushWonSub, 'cleared'));
+    refresh(farm, run);
+    out.push(stateChange(farm, run), ...startRoute(farm, run));
+    return out;
+  }
+  // (after a wipe the wave has gone back to the edge and waits: it comes again as soon as a hero is on their feet)
+  const up = humans(farm, run).find((q) => q.area === run.key && inst.fighters[q.id]?.down === undefined);
+  if (up && !inst.wipeAt) for (const id of amb.mobs) if (inst.mobs[id]?.state === 'idle') wakeMob(farm, run.key, id, up.id, ctx.now, out);
+  if (amb.wave >= amb.count || (alive && run.elapsed < amb.nextAt)) return out;
+  // the next wave: three or four of the dungeon's monsters (two on Mycket lätt), one of the big ones in the last, a special or a starred one from the second
+  amb.wave++;
+  amb.nextAt = run.elapsed + AMBUSH.everyMs;
+  const rnd = mulberry32(hashInts(run.seed, run.node, 0xa3b0, amb.wave));
+  const mobs = dungeonMobs(run.plan.boss);
+  const size = run.level === 0 ? 2 : 3 + Math.floor(rnd() * 2);
+  const species = Array.from({ length: size }, (_, i) => {
+    const pool = amb.wave === amb.count && i === 0 && run.level > 0 ? mobs.big : rnd() < 0.5 ? mobs.small : mobs.medium;
+    return pool[Math.floor(rnd() * pool.length)]!;
+  });
+  const roles = PACK_ROLES[run.level];
+  const role: MobRole | null = amb.wave >= 2 && roles.perPack + roles.perStop > 0 ? MOB_ROLES[Math.floor(rnd() * MOB_ROLES.length)]! : null;
+  const [one, two] = STAR_CHANCE[run.level];
+  const roll = rnd();
+  const stars: 0 | 1 | 2 = amb.wave >= 2 ? (roll < two ? 2 : roll < two + one ? 1 : 0) : 0;
+  const room = run.plan.stops[run.node]!.def.rooms[1]!;
+  const side = Math.floor(rnd() * 4);
+  const heroes = humans(farm, run).filter((q) => q.area === run.key);
+  const pack = inst.packs.push({ members: [], dead: false }) - 1;
+  amb.mobs = [];
+  species.forEach((sp, i) => {
+    // along one edge of the glade, a tile inside the wall
+    const f = (i + 1) / (size + 1);
+    const tx = side === 0 ? room.x + 1 : side === 1 ? room.x + room.w - 2 : room.x + 1 + Math.floor((room.w - 2) * f);
+    const ty = side === 2 ? room.y + 1 : side === 3 ? room.y + room.h - 2 : room.y + 1 + Math.floor((room.h - 2) * f);
+    const a = spawnSagaMob(area, inst, sp, tx * TILE + TILE / 2, ty * TILE + TILE / 2, 'mob', pack, i === size - 1 ? role : null, i === 0 && !(i === size - 1 && role) ? stars : 0);
+    inst.packs[pack]!.members.push(a.id);
+    amb.mobs.push(a.id);
+    out.push({ t: 'animal', id: a.id, animal: a, area: run.key });
+  });
+  const victim = heroes[Math.floor(rnd() * heroes.length)] ?? members(farm, run)[0];
+  if (victim && amb.mobs[0] !== undefined) wakeMob(farm, run.key, amb.mobs[0], victim.id, ctx.now, out);
+  for (const q of humans(farm, run)) out.push(toast(q.id, fmt(RUN_T.ambushWave, { n: amb.wave, count: amb.count })));
+  out.push(stateChange(farm, run));
+  return out;
+}
+
+/** Runmärken: the party's medal for the stop just cleared (once), its hacksilver, and a banner. Never per player. */
+function awardMedal(farm: WorldState, run: RunState, inst: SagaInstance, out: Change[], as?: NodeKind): void {
+  const z = { kind: as ?? run.plan.stops[run.node]!.kind };
+  if (run.medals[run.node] !== undefined || !(isFlockLike(z.kind) || z.kind === 'mini' || z.kind === 'boss')) return;
+  const fighters = Object.keys(inst.fighters).length;
+  const medal = medalFor({ markHits: inst.markHits, mobHeals: inst.mobHeals, ms: run.elapsed - run.stopAt, kind: z.kind, level: run.level, fighters });
+  run.medals[run.node] = medal;
+  run.stopMs[run.node] = run.elapsed - run.stopAt;
+  run.purse += silverFor(run, MEDAL_SILVER[medal]);
+  for (const p of humans(farm, run)) out.push(toast(p.id, fmt(RUN_T.medal, { medal: RUN_T.medalNames[medal]!, icon: RUN_T.medalIcons[medal]! }) + (MEDAL_SILVER[medal] ? ` ${fmt(RUN_T.medalSilver, { n: silverFor(run, MEDAL_SILVER[medal]) })}` : '')));
+}
+
 /** The end of a run, for any reason: everyone home in front of the arch with everything, the stop and the companion gone. */
 export function endRun(farm: WorldState, run: RunState, outcome: RunOutcome, ctx: SimCtx, except?: string): Change[] {
   const out: Change[] = [];
@@ -1455,6 +1688,7 @@ export function endRun(farm: WorldState, run: RunState, outcome: RunOutcome, ctx
   const result: RunOutcome = run.outcome === 'win' ? 'win' : outcome;
   run.phase = 'ended';
   run.outcome = result;
+  for (const p of humans(farm, run)) delete p.runSpeed;
   // what is left in Färdkassan turns into sagafrön (one for every 12), the same for everyone in the party
   const silver = run.purse;
   const bonus = seedsFromSilver(silver);
@@ -1471,7 +1705,7 @@ export function endRun(farm: WorldState, run: RunState, outcome: RunOutcome, ctx
     sendHome(farm, p, out);
     if (p.id !== except)
       out.push(
-        { t: 'run', ev: 'ended', to: p.id, outcome: run.outcome, ms: Math.round(run.elapsed), seeds: run.earned[p.id] ?? 0, zones: s.zones, runor: [...run.runor, ...(run.hold[p.id] ?? []).map((h) => h.id)], level: run.level, spiritUsed: run.spiritUsed, path: run.path.map((n) => run.plan.route.nodes[n]!.kind), silver, ...(run.trophies?.[p.id] ? { trophy: run.trophies[p.id]!.item, trophyWhere: run.trophies[p.id]!.where } : {}) },
+        { t: 'run', ev: 'ended', to: p.id, outcome: run.outcome, ms: Math.round(run.elapsed), seeds: run.earned[p.id] ?? 0, zones: s.zones, runor: [...run.runor, ...(run.hold[p.id] ?? []).map((h) => h.id)], level: run.level, spiritUsed: run.spiritUsed, path: run.path.map((n) => run.plan.route.nodes[n]!.kind), silver, medals: [1, 2, 3].map((m) => Object.values(run.medals).filter((x) => x === m).length) as [number, number, number], ...(run.trophies?.[p.id] ? { trophy: run.trophies[p.id]!.item, trophyWhere: run.trophies[p.id]!.where } : {}) },
         toast(p.id, fmt(RUN_T.summary, { time: fmtDuration(run.elapsed), seeds: run.earned[p.id] ?? 0 })),
         playerChange(p),
       );
@@ -1547,9 +1781,13 @@ export function runMessage(world: WorldState, playerId: string, msg: { t: 'run' 
       return restMore(farm, playerId);
     case 'leave':
       return leaveRun(farm, playerId, ctx);
+    case 'power':
+      return setRunPref(farm, playerId, 'power', typeof msg.id === 'string' ? msg.id : null, ctx);
+    case 'dish':
+      return setRunPref(farm, playerId, 'dish', typeof msg.id === 'string' ? msg.id : null, ctx);
     default: {
       const run = RUNS.get(farm);
-      return [stateChange(farm, run), ...(run ? offerChanges(farm, run) : [])];
+      return [stateChange(farm, run), ...(run ? offerChanges(farm, run) : []), gilletChange(farm, ctx, playerId)];
     }
   }
 }
@@ -1582,6 +1820,11 @@ export function devRunNext(world: WorldState, playerId: string, kind: string, pu
   const farm = farmOf(world);
   const run = RUNS.get(farm);
   if (!run || !run.party.includes(playerId)) return [];
+  // `ambush`: a Händelse that is Skogen rör sig (it is a rare roll otherwise)
+  if (kind === 'ambush') {
+    run.forceEvent = 'bakhall';
+    kind = 'event';
+  }
   let node = run.plan.stops.findIndex((z, i) => z.kind === kind && !run.path.includes(i));
   if (purse !== undefined && Number.isFinite(purse)) run.purse = purse;
   // a seed without such a stop: the first unwalked fight stop becomes one (development only)

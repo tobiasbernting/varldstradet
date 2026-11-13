@@ -1,0 +1,1095 @@
+/* The fight on the screen: the pip row, the spender's glow, reactions, the "stop it now" badge, the special monsters' markers,
+   a cast's circle, the mark hit's red ring and lost health, and the "how you fight" strip. New classes only (ui/fightcard.ts,
+   ui/saga.ts and the world's labels in clientljs/saga.ts use them). */
+
+/* ------------------------------------------------------------------------------------------------ the pip row */
+.pips-row {
+  --c: #ffd23f;
+  --pip: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  pointer-events: none;
+}
+.pips-row .pip {
+  display: block;
+  width: var(--pip);
+  height: var(--pip);
+  flex: none;
+}
+.pips-row .pip svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+/* empty: a dashed outline (a shape, not only a colour); filled: the class's colour with a dark rune in it */
+.pips-row .pip .d {
+  fill: rgba(10, 8, 16, 0.8);
+  stroke: #fff;
+  stroke-width: 1.5;
+  stroke-dasharray: 2.4 1.7;
+  stroke-linejoin: round;
+}
+.pips-row .pip .r {
+  fill: none;
+  stroke: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.pips-row .pip .h {
+  fill: none;
+}
+.pips-row .pip.half .h {
+  fill: var(--c);
+}
+.pips-row .pip.on .d {
+  fill: var(--c);
+  stroke: #fff;
+  stroke-width: 1.8;
+  stroke-dasharray: none;
+}
+.pips-row .pip.on .r {
+  stroke: #14101c;
+}
+.pips-row .pip.pop {
+  animation: pip-pop 0.34s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+@keyframes pip-pop {
+  0% {
+    transform: scale(0.3);
+  }
+  55% {
+    transform: scale(1.7);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.a11y-calm .pips-row .pip.pop {
+  animation: none;
+}
+
+/* on the spender's button: over its top edge, inside the bar's own frame */
+.saga-spell.spender {
+  overflow: visible;
+}
+.saga-spell.spender .sweep,
+.saga-spell.spender::before {
+  border-radius: 9px;
+}
+.pips-row.on-btn,
+.pips-row.on-act {
+  position: absolute;
+  left: 50%;
+  top: -8px;
+  transform: translateX(-50%);
+  z-index: 3;
+  padding: 1px 3px;
+  background: #0d0a12;
+  border-radius: 8px;
+  --pip: clamp(13px, 2.6vmin, 18px);
+}
+.saga-spell.spender .tag {
+  top: 8px;
+  border-radius: 0;
+}
+.saga-bar .saga-spell.spender .ic {
+  margin-top: 5px;
+  font-size: max(18px, calc(var(--ic) - 5px));
+}
+.pips-row.on-act {
+  top: -10px;
+  padding: 2px 4px;
+  --pip: clamp(15px, 3.4vmin, 22px);
+}
+.act-btn {
+  overflow: visible;
+}
+
+/* ------------------------------------------------------------------------------------------------ the spender: empty, glowing */
+.saga-spell.spender.empty {
+  border-style: dashed;
+  border-color: #8d8798;
+  background: #2a2630;
+}
+.saga-spell.spender.empty .ic,
+.saga-spell.spender.empty .lb {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+body.saga-fight .act-btn.spend-empty {
+  background: #5d5868;
+  border-style: dashed;
+}
+body.saga-fight .act-btn.spend-empty .ic {
+  filter: grayscale(1);
+  opacity: 0.6;
+}
+/* "this is the right press now": a white and gold ring and a star. It breathes; under calm screen it is steady. */
+.star-badge,
+.bolt-badge {
+  display: block;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+}
+.star-badge svg,
+.bolt-badge svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.star-badge .fg {
+  fill: #ffd23f;
+  stroke: #14101c;
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  paint-order: stroke;
+}
+.bolt-badge .bg {
+  fill: #14101c;
+  stroke: #fff;
+  stroke-width: 1.2;
+}
+.bolt-badge .fg {
+  fill: #7fd8ff;
+}
+.star-badge.now,
+.bolt-badge.now {
+  position: absolute;
+  right: -7px;
+  top: -9px;
+  z-index: 4;
+  display: none;
+}
+.saga-spell.glow .star-badge.now,
+.act-btn.spend-glow .star-badge.now,
+.saga-spell.kick .bolt-badge.now {
+  display: block;
+}
+.act-btn .star-badge.now {
+  right: -2px;
+  top: -4px;
+  width: 30px;
+  height: 30px;
+}
+.saga-spell.kick {
+  overflow: visible;
+}
+.saga-spell.kick .sweep,
+.saga-spell.kick::before {
+  border-radius: 9px;
+}
+.saga-spell.kick .tag {
+  border-radius: 9px 9px 0 0;
+}
+.saga-spell.kick .bolt-badge.now {
+  width: 26px;
+  height: 26px;
+  right: -13px;
+  top: -15px;
+}
+.saga-spell.spender.glow,
+body.saga-fight .act-btn.spend-glow {
+  border-color: #fff;
+  box-shadow:
+    0 0 0 3px #14101c,
+    0 0 0 6px #ffd23f,
+    0 0 14px 8px rgba(255, 210, 63, 0.75);
+  animation: spend-glow 0.9s ease-in-out infinite alternate;
+}
+@keyframes spend-glow {
+  from {
+    box-shadow:
+      0 0 0 3px #14101c,
+      0 0 0 5px #ffd23f,
+      0 0 8px 4px rgba(255, 210, 63, 0.55);
+  }
+  to {
+    box-shadow:
+      0 0 0 3px #14101c,
+      0 0 0 8px #ffd23f,
+      0 0 20px 11px rgba(255, 210, 63, 0.9);
+  }
+}
+.a11y-calm .saga-spell.spender.glow,
+.a11y-calm body.saga-fight .act-btn.spend-glow {
+  animation: none;
+}
+/* colour-blind-safe: the ring is white on black, the star stays */
+.a11y-cb .saga-spell.spender.glow,
+.a11y-cb body.saga-fight .act-btn.spend-glow {
+  box-shadow:
+    0 0 0 3px #000,
+    0 0 0 7px #fff,
+    0 0 0 9px #000;
+  animation: none;
+}
+.saga-spell.spender.glow .star-badge.now,
+.act-btn.spend-glow .star-badge.now {
+  animation: star-in 0.3s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+@keyframes star-in {
+  from {
+    transform: scale(0.2) rotate(-40deg);
+  }
+  to {
+    transform: none;
+  }
+}
+.a11y-calm .star-badge.now {
+  animation: none !important;
+}
+/* the button that sets the combo up, while there are pips to spend: a quiet dotted gold edge */
+.saga-spell.prime {
+  border-style: dotted;
+  border-color: #ffe9a8;
+}
+
+/* ------------------------------------------------------------------------------------------------ reactions and the shared pause */
+/* a reaction never waits for the other buttons: a notch in its corner says so always, and while the others pause it stands out */
+.saga-spell .free-mark {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  border-top: 13px solid #7fd8ff;
+  border-left: 13px solid transparent;
+  pointer-events: none;
+  z-index: 1;
+}
+.saga-spell.tagged .free-mark,
+.saga-spell.kick .free-mark {
+  display: none;
+}
+.saga-spell.free {
+  border-color: #7fd8ff;
+}
+/* the shared pause is a lighter veil than a spell's own wait */
+.saga-spell.shared .sweep {
+  background: conic-gradient(transparent var(--p, 0%), rgba(8, 6, 14, 0.5) var(--p, 0%));
+}
+
+/* ------------------------------------------------------------------------------------------------ a mark hit on you */
+.saga-markflash {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  border-radius: 34px;
+  box-shadow:
+    inset 0 0 0 9px rgba(255, 40, 30, 0.9),
+    inset 0 0 46px 14px rgba(255, 40, 30, 0.6);
+  opacity: 0;
+}
+.saga-markflash.go {
+  animation: mark-flash 0.55s ease-out;
+}
+@keyframes mark-flash {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+/* the health a mark took stays on the bar a moment: white stripes over dark red, then gone */
+.hp > .lost,
+.label[class*='saga-bar-'] > b > u {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(135deg, #fff 0 3px, #b3261c 3px 6px);
+  text-decoration: none;
+  pointer-events: none;
+}
+.hp > .lost[hidden] {
+  display: none;
+}
+.hp > .lost.go,
+.label[class*='saga-bar-'] > b > u.go {
+  animation: lost-go 1.3s ease-in forwards;
+}
+@keyframes lost-go {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.a11y-calm .hp > .lost.go,
+.a11y-calm .label[class*='saga-bar-'] > b > u.go {
+  animation: none;
+}
+
+/* ------------------------------------------------------------------------------------------------ in the world: over heads */
+.label[class*='saga-bar-'] > b {
+  position: relative;
+}
+.label[class*='saga-bar-'] > em {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  font-style: normal;
+}
+.label[class*='saga-bar-'] > em:empty {
+  display: none;
+}
+.pips-row.over {
+  --pip: max(11px, calc(3 * var(--u)));
+  gap: 1px;
+}
+.label.saga-bar-friend.mine .pips-row.over {
+  --pip: max(13px, calc(3.6 * var(--u)));
+}
+/* a special monster whose pack still waits: only its marker */
+.label.saga-bar-idle > b {
+  display: none;
+}
+/* the special monsters: a leaf in a circle, an arrow in a diamond, a boss in a shield */
+.role-mark {
+  display: inline-block;
+  width: max(26px, calc(7 * var(--u)));
+  height: max(26px, calc(7 * var(--u)));
+  flex: none;
+  vertical-align: middle;
+}
+.role-mark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.role-mark .bg {
+  stroke: #14101c;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+.role-mark .fg {
+  fill: #fff;
+}
+.role-mark .ln {
+  fill: none;
+  stroke: #14101c;
+  stroke-width: 1.3;
+  stroke-linecap: round;
+}
+.role-mark .ln.w {
+  stroke: #fff;
+  stroke-width: 2;
+}
+.role-mark.r-healer .bg {
+  fill: #1f9d55;
+}
+.role-mark.r-archer .bg {
+  fill: #d8481e;
+}
+.role-mark.r-shield .bg {
+  fill: #2f6fd6;
+}
+.a11y-cb .role-mark.r-healer .bg {
+  fill: #009e73;
+}
+.a11y-cb .role-mark.r-archer .bg {
+  fill: #d55e00;
+}
+.a11y-cb .role-mark.r-shield .bg {
+  fill: #0072b2;
+}
+.saga-unit .em .role-mark {
+  width: 1.3em;
+  height: 1.3em;
+}
+/* a cast: a circle that fills clockwise, green for healing, red for a shot; a bolt on it when it can be stopped */
+.cast-ring {
+  --k: 0;
+  position: relative;
+  display: inline-block;
+  width: max(40px, calc(11 * var(--u)));
+  height: max(40px, calc(11 * var(--u)));
+  flex: none;
+  border-radius: 50%;
+  background: #14101c;
+  box-shadow: 0 0 0 2px #14101c;
+}
+.cast-ring .fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(var(--cc, #ff5a4a) calc(var(--k) * 100%), #77708a 0);
+}
+.cast-ring.c-heal {
+  --cc: #4fe07a;
+}
+.cast-ring.c-shot {
+  --cc: #ff5a3a;
+}
+.a11y-cb .cast-ring.c-heal {
+  --cc: #56b4e9;
+}
+.a11y-cb .cast-ring.c-shot {
+  --cc: #e69f00;
+}
+.cast-ring .in {
+  position: absolute;
+  inset: 7px;
+  width: auto;
+  height: auto;
+  border-radius: 50%;
+  background: #14101c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs);
+}
+.cast-ring .in.role-mark {
+  padding: 2px;
+}
+.cast-ring .bolt-badge {
+  position: absolute;
+  right: -9px;
+  top: -8px;
+  width: 20px;
+  height: 20px;
+}
+/* behind a Sköldbärare's shield: a small shield on the health bar, and a blue edge */
+.label.shielded[class*='saga-bar-'] > b {
+  overflow: visible;
+  border-color: #9cc8ff;
+}
+.label.shielded[class*='saga-bar-'] > b::before {
+  content: '';
+  position: absolute;
+  left: -11px;
+  top: 50%;
+  translate: 0 -50%;
+  width: 15px;
+  height: 17px;
+  background: #fff;
+  clip-path: polygon(50% 0, 100% 16%, 100% 56%, 50% 100%, 0 56%, 0 16%);
+}
+.label.shielded[class*='saga-bar-'] > b::after {
+  content: '';
+  position: absolute;
+  left: -9px;
+  top: 50%;
+  translate: 0 -50%;
+  width: 11px;
+  height: 13px;
+  background: #2f6fd6;
+  clip-path: polygon(50% 0, 100% 16%, 100% 56%, 50% 100%, 0 56%, 0 16%);
+}
+/* Öppning: a gold edge on the bar */
+.label.opened[class*='saga-bar-'] > b {
+  border-color: #ffd23f;
+  box-shadow: 0 0 0 2px #ffd23f;
+}
+/* numbers: a spender's blow grows with its pips; gold on a monster that sees stars; a mark's is heavy */
+.label.saga-fct.saga-fct.sp2 {
+  font-size: max(var(--fs), calc(7 * var(--u) * var(--txt)));
+}
+.label.saga-fct.saga-fct.sp3 {
+  font-size: max(calc(var(--fs) * 1.5), calc(11 * var(--u) * var(--txt)));
+  color: #fff;
+  -webkit-text-stroke: 1px #14101c;
+  text-shadow:
+    0 0 0 #000,
+    0 3px 0 #b3261c,
+    0 0 12px #ffd23f;
+  animation-duration: 1.4s;
+}
+.label.saga-fct.saga-fct.onopen {
+  color: #ffd23f;
+  font-size: max(var(--fs), calc(7 * var(--u) * var(--txt)));
+}
+.label.saga-fct.saga-fct.sp3.onopen {
+  font-size: max(calc(var(--fs) * 1.6), calc(12 * var(--u) * var(--txt)));
+  color: #ffe98a;
+}
+.label.saga-fct.saga-fct.mark {
+  font-size: max(calc(var(--fs) * 1.3), calc(9 * var(--u) * var(--txt)));
+  color: #fff;
+  text-shadow:
+    0 2px 0 #b3261c,
+    2px 0 0 #b3261c,
+    -2px 0 0 #b3261c,
+    0 -2px 0 #b3261c;
+  animation-duration: 1.4s;
+}
+.label.saga-fct.saga-fct.word {
+  color: #ffd23f;
+  font-size: max(var(--fs), calc(7 * var(--u) * var(--txt)));
+  animation-duration: 1.6s;
+}
+.label.saga-fct.saga-fct.word.blue {
+  color: #9cc8ff;
+}
+
+/* ------------------------------------------------------------------------------------------------ how you fight */
+.fight-strip {
+  --c: #ffd23f;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0;
+}
+.fight-strip .row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 12px;
+  /* (no colours of its own: it sits in light windows and in the dark info card alike, in the words' own colour) */
+  background: rgba(128, 128, 128, 0.16);
+  border: 2px solid rgba(128, 128, 128, 0.55);
+}
+.fight-strip .step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex: 0 1 auto;
+  text-align: center;
+}
+.fight-strip .step .em {
+  position: relative;
+  font-size: calc(30px * var(--txt, 1));
+  line-height: 1.1;
+}
+.fight-strip .step .em.big {
+  font-size: calc(38px * var(--txt, 1));
+}
+.fight-strip .step .em .star-badge {
+  position: absolute;
+  right: -12px;
+  top: -6px;
+}
+.fight-strip .step .w {
+  font-size: var(--fs);
+  font-weight: 800;
+  line-height: 1.15;
+}
+.fight-strip .arr {
+  font-size: calc(22px * var(--txt, 1));
+  font-weight: 900;
+  line-height: calc(36px * var(--txt, 1));
+  color: inherit;
+}
+.fight-strip .pips-row.demo .pip .d {
+  stroke: #14101c;
+}
+.fight-strip .pips-row.demo {
+  --pip: calc(24px * var(--txt, 1));
+  height: calc(33px * var(--txt, 1));
+}
+.fight-strip .star-badge.lone {
+  width: calc(33px * var(--txt, 1));
+  height: calc(33px * var(--txt, 1));
+}
+.fight-explain .sp {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 6px 0;
+}
+.fight-explain .sp .ic {
+  font-size: calc(26px * var(--txt, 1));
+  line-height: 1.1;
+  flex: none;
+}
+.fight-explain .sp b,
+.fight-explain .sp .tx {
+  font-size: var(--fs);
+}
+/* the journal's page about the special monsters */
+.saga-roles {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 8px 0 12px;
+}
+.role-line {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.role-line .role-mark,
+.role-line > .em {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  font-size: calc(34px * var(--txt));
+  line-height: 44px;
+  text-align: center;
+}
+.role-line b,
+.role-line .tx {
+  font-size: var(--fs);
+}
+
+/* ------------------------------------------------------------------------------------------------ Märke: the party's skull */
+.skull-mark {
+  display: inline-block;
+  width: max(44px, calc(12 * var(--u)));
+  height: max(44px, calc(12 * var(--u)));
+  flex: none;
+}
+.skull-mark svg,
+.tick-mark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.skull-mark .bg {
+  fill: #fff;
+  stroke: #14101c;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+.skull-mark .fg {
+  fill: #14101c;
+}
+.skull-mark .ln {
+  fill: none;
+  stroke: #14101c;
+  stroke-width: 1.3;
+}
+.label[class*='saga-bar-'] > em .skull-mark {
+  animation: skull-in 0.3s cubic-bezier(0.2, 1.6, 0.4, 1);
+  filter: drop-shadow(0 0 4px #ff3a2a);
+}
+@keyframes skull-in {
+  from {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+.a11y-calm .label[class*='saga-bar-'] > em .skull-mark {
+  animation: none;
+}
+/* a tick over a hero who stands in Guldringen */
+.tick-mark {
+  display: inline-block;
+  width: max(20px, calc(5 * var(--u)));
+  height: max(20px, calc(5 * var(--u)));
+  flex: none;
+}
+.tick-mark .bg {
+  fill: #ffd23f;
+  stroke: #14101c;
+  stroke-width: 1.4;
+}
+.a11y-cb .tick-mark .bg {
+  fill: #56b4e9;
+}
+.tick-mark .ln {
+  fill: none;
+  stroke: #14101c;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* the skull button beside the target's frame */
+.saga-skull {
+  pointer-events: auto !important;
+  position: relative;
+  align-self: center;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 56px;
+  min-height: 48px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 3px solid #c8a95a;
+  background: #2a2038;
+  color: #fff;
+  font-size: var(--fs);
+  font-weight: 800;
+  cursor: pointer;
+}
+.saga-skull[hidden] {
+  display: none;
+}
+.saga-skull .skull-mark {
+  width: 30px;
+  height: 30px;
+}
+.saga-skull .key {
+  display: none;
+  color: #ffe9a8;
+  font-weight: 900;
+}
+body.dev-key .saga-skull .key,
+body.dev-mouse .saga-skull .key {
+  display: inline;
+}
+.saga-skull[aria-pressed='true'] {
+  border-color: #fff;
+  background: #8a1f1a;
+  box-shadow: 0 0 0 3px #14101c, 0 0 0 5px #fff;
+}
+/* Samslag: both names, big */
+.label.saga-fct.saga-fct.word.big {
+  font-size: max(calc(var(--fs) * 1.25), calc(8 * var(--u) * var(--txt)));
+  color: #fff;
+  text-shadow:
+    0 2px 0 #14101c,
+    0 0 10px #ffd23f;
+  animation-duration: 2s;
+}
+/* (docked in the HUD's column the cast bar is not positioned: its fill and its words must still stay inside it) */
+.hud-center > .saga-cast {
+  position: relative;
+}
+/* Guldringen on the boss's cast bar: gold, not the red of a danger */
+.saga-cast.ring {
+  border-color: #ffd23f;
+}
+.saga-cast.ring > i {
+  background: linear-gradient(#d9a400, #a87400);
+}
+/* ------------------------------------------------------------------------------------------------ Runmärken */
+.medal-pop {
+  position: fixed;
+  left: 50%;
+  top: 22%;
+  z-index: 2000;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 22px;
+  border-radius: 18px;
+  border: 4px solid #c8a95a;
+  background: rgba(24, 18, 30, 0.92);
+  color: #fff;
+  pointer-events: none;
+  animation: medal-pop 2.6s ease-out forwards;
+}
+.medal-pop .ic {
+  font-size: calc(72px * var(--txt, 1));
+  line-height: 1;
+}
+.medal-pop b {
+  font-size: calc(24px * var(--txt, 1));
+  text-transform: capitalize;
+}
+.medal-pop.m3 {
+  border-color: #ffd23f;
+  box-shadow: 0 0 24px 6px rgba(255, 210, 63, 0.6);
+}
+.medal-pop.m2 {
+  border-color: #d8dde6;
+}
+.medal-pop.m1 {
+  border-color: #c98a55;
+}
+@keyframes medal-pop {
+  0% {
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0;
+  }
+  10% {
+    transform: translate(-50%, -50%) scale(1.15);
+    opacity: 1;
+  }
+  18% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  82% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.a11y-calm .medal-pop {
+  animation: medal-calm 2.6s steps(1, end) forwards;
+}
+@keyframes medal-calm {
+  to {
+    opacity: 0;
+  }
+}
+/* a cleared stop's medal on its dot in the run bar's route: a small ring in the medal's colour and a corner mark (1, 2 or 3 pips) */
+.run-bar .dot[data-medal] {
+  position: relative;
+  box-shadow: 0 0 0 2px var(--medal, #c98a55);
+}
+.run-bar .dot[data-medal]::after {
+  content: '';
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--medal, #c98a55);
+  border: 1.5px solid #14101c;
+}
+.run-bar .dot[data-medal='2'] {
+  --medal: #d8dde6;
+}
+.run-bar .dot[data-medal='3'] {
+  --medal: #ffd23f;
+}
+.run-bar .dot[data-medal='3']::after {
+  border-radius: 0;
+  clip-path: polygon(50% 0, 62% 36%, 100% 38%, 70% 60%, 80% 100%, 50% 76%, 20% 100%, 30% 60%, 0 38%, 38% 36%);
+  width: 13px;
+  height: 13px;
+  right: -5px;
+  bottom: -5px;
+  border: 0;
+}
+.run-bar .dot[data-medal='2']::after {
+  border-radius: 2px;
+}
+.medal-counts {
+  display: inline-flex;
+  gap: 10px;
+}
+.role-line > .em.medals {
+  font-size: calc(34px * var(--txt));
+}
+/* the run's start: the auto-attack stands beside the four buttons, in the same row */
+@media (min-width: 901px) {
+  .run-panel .spellrow:has(.auto) {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+.run-panel .spell.auto {
+  border-style: dashed;
+}
+
+/* a short screen: the skull button is its picture only */
+@media (max-height: 480px) {
+  .saga-skull .lb,
+  .saga-skull .key {
+    display: none !important;
+  }
+  .saga-skull {
+    min-width: 48px;
+    padding: 2px 6px;
+  }
+}
+
+/* ------------------------------------------------------------------------------------------------ Stjärnmonster */
+.star-row {
+  display: inline-flex;
+  gap: 1px;
+}
+.star-row .star-badge {
+  width: max(22px, calc(6 * var(--u)));
+  height: max(22px, calc(6 * var(--u)));
+}
+/* ------------------------------------------------------------------------------------------------ Hornet */
+.saga-horn {
+  pointer-events: auto !important;
+  position: relative;
+  align-self: center;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 56px;
+  min-height: 48px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 3px solid #c8a95a;
+  background: #2a2038;
+  color: #fff;
+  font-size: var(--fs);
+  font-weight: 800;
+  cursor: pointer;
+}
+.saga-horn[hidden] {
+  display: none;
+}
+.saga-horn .ic {
+  font-size: calc(26px * var(--txt, 1));
+  line-height: 1;
+}
+.saga-horn .horn {
+  font-size: calc(16px * var(--txt, 1));
+  line-height: 1;
+}
+.saga-horn .key {
+  display: none;
+  color: #ffe9a8;
+  font-weight: 900;
+}
+body.dev-key .saga-horn .key,
+body.dev-mouse .saga-horn .key {
+  display: inline;
+}
+.saga-horn.full {
+  border-color: #ffd23f;
+  box-shadow: 0 0 0 2px #14101c, 0 0 0 4px #ffd23f;
+}
+/* blown, or no power brought: grey, dashed, and crossed out (a shape, not only a colour) */
+.saga-horn.used,
+.saga-horn.none {
+  border-style: dashed;
+  border-color: #8d8798;
+  background: #2a2630;
+}
+.saga-horn.used .ic,
+.saga-horn.none .ic,
+.saga-horn.used .horn,
+.saga-horn.none .horn {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+.saga-horn.used::after,
+.saga-horn.none::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 50%;
+  height: 3px;
+  background: #fff;
+  transform: rotate(-24deg);
+  box-shadow: 0 0 0 1px #14101c;
+}
+@media (max-height: 480px) {
+  .saga-horn .horn,
+  .saga-horn .key {
+    display: none !important;
+  }
+  .saga-horn {
+    min-width: 48px;
+    padding: 2px 6px;
+  }
+}
+/* what a hero brought on the run: small pictures after the name on their party frame */
+.saga-member .br {
+  margin-left: 4px;
+  font-size: max(var(--fs), calc(3.4 * var(--u) * var(--txt)));
+  white-space: nowrap;
+}
+/* ------------------------------------------------------------------------------------------------ Skogen rör sig */
+.run-wave {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 14px;
+  border-radius: 12px;
+  border: 2px solid #c8a95a;
+  background: rgba(24, 18, 30, 0.9);
+  color: #fff;
+  font-size: calc(18px * var(--txt, 1));
+}
+.run-wave[hidden] {
+  display: none;
+}
+.run-wave .dots {
+  display: inline-flex;
+  gap: 6px;
+}
+.run-wave .dots i {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px dashed #fff;
+  box-sizing: border-box;
+}
+.run-wave .dots i.on {
+  border-style: solid;
+  background: #ffd23f;
+}
+.event-choice.fight {
+  border-color: #b3261c;
+}
+.event-choice.fight .price {
+  font-weight: 900;
+}
+/* ------------------------------------------------------------------------------------------------ Svagheter */
+.label.saga-fct.saga-fct.weak {
+  font-size: max(var(--fs), calc(7.5 * var(--u) * var(--txt)));
+  color: #fff;
+  text-shadow:
+    0 2px 0 #14101c,
+    0 0 8px #7fd8ff;
+}
+.label.saga-fct.saga-fct.sp3.weak {
+  font-size: max(calc(var(--fs) * 1.6), calc(12 * var(--u) * var(--txt)));
+}
+.run-panel .tile .weak {
+  position: absolute;
+  right: 4px;
+  top: 2px;
+  font-size: var(--fs);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.run-panel .tile .weak .dn {
+  font-size: var(--fs);
+  margin-right: 1px;
+}
+.run-panel .tile:has(.weak) {
+  position: relative;
+}
+.runa-card .good-badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  border: 2px solid #14101c;
+  background: #14101c;
+  color: #fff;
+  font-size: var(--fs);
+  font-weight: 800;
+  white-space: nowrap;
+}
+/* ------------------------------------------------------------------------------------------------ the arch's pickers */
+.run-panel .tiles.powers,
+.run-panel .tiles.dishes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.run-panel .tiles.dishes {
+  grid-template-columns: repeat(3, 1fr);
+}
+.run-panel .tile.dish .st {
+  font-size: var(--fs);
+  line-height: 1.15;
+  white-space: normal;
+}
+@media (max-width: 700px) {
+  .run-panel .tiles.dishes {
+    grid-template-columns: 1fr;
+  }
+}
+.run-panel .face .brings {
+  font-size: var(--fs);
+  white-space: nowrap;
+}
+.run-panel .power-none {
+  font-size: var(--fs);
+}
+
+/* a short screen: the name comes first on a party frame (what the hero brought is in the arch window and the horn button) */
+@media (max-height: 480px) {
+  .saga-member .br {
+    display: none;
+  }
+}

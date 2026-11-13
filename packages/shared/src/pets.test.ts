@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ANIMALS,
+  CLASSES,
   DUNGEONS,
   DUNGEON_IDS,
   PETS,
@@ -42,6 +43,10 @@ import {
   type WorldState,
 } from './index.ts';
 import { makeParty } from './runplay.ts';
+import { GILLET } from './run.ts';
+
+// (these tests pin a hero's exact numbers: nobody eats a dish here; fight3.test.ts has the dishes)
+GILLET.on = false;
 
 // ---------------------------------------------------------------------------
 // The table
@@ -319,6 +324,8 @@ function lab(pet: string, opts: { level?: number; classes?: ('krigare' | 'helare
     return out;
   };
   go(100);
+  // (these tests are about the pet: the heroes' own auto-attacks are switched off; a test that wants a hero's blow clears `f.cd`)
+  for (const ff of Object.values(inst.fighters)) ff.cd[CLASSES[ff.cls].auto] = Number.MAX_SAFE_INTEGER;
   const p = party.players[0]!;
   const q = party.players[1]!;
   const pa = (): AnimalState => Object.values(area.animals).find((a) => a.owner === p.id && a.petKind === pet)!;

@@ -251,6 +251,10 @@ export interface PlayerState {
   riding?: number;
   /** Pizzapower: moves faster until this server time. */
   boostUntil?: number;
+  /** A run's dish (Rökt fisk): walks this much faster for the whole run (a fraction; the client's own step uses it too). */
+  runSpeed?: number;
+  /** What this hero brings to their next run, chosen at the arch: a boss power (a dungeon id; null: none; left out: the latest trophy's) and a dish (left out: the first offered). */
+  runPrefs?: { power?: string | null; dish?: string };
   /** Standing in a pool (set by the server tick, drives the splash and the Gårdsbok). */
   swimming?: boolean;
   /** In bed: the night passes once every online player sleeps. */
@@ -361,6 +365,10 @@ export interface AnimalState {
   follow?: boolean;
   /** Vehicles (and some wild animals): colour variant. */
   variant?: number;
+  /** A special pack monster of a run's stop ('healer' Besvärjare, 'archer' Skytt, 'shield' Sköldbärare; `MobRole` in saga.ts): the client draws its marker, also before the pack is pulled. */
+  role?: 'healer' | 'archer' | 'shield';
+  /** Stjärnmonster: a starred pack monster (1 or 2 stars: tougher, hits harder, drawn 15 % or 30 % bigger; `STAR` in saga.ts). Shows before the pack is pulled. */
+  stars?: 1 | 2;
   /** Mobs and predators: remaining hit points and next time it may attack. */
   hp?: number;
   /** Wander target (vehicles: the next corner of their route). */
@@ -403,6 +411,8 @@ export interface DropState {
 }
 
 export interface WorldState {
+  /** Runs: the seed of the next run started here (so the arch can show its three dishes before it starts). Not saved. */
+  nextRunSeed?: number;
   day: number;
   /** Milliseconds into the current day. */
   timeMs: number;

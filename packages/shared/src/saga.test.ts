@@ -25,6 +25,8 @@ import {
   isSolidForPlayer,
   devEnterSaga,
   devSagaBest,
+  MARK_DEFAULT,
+  isIllusion,
   mobDmgScale,
   objectAt,
   performAction,
@@ -277,9 +279,10 @@ describe('fighting', () => {
     healer.y = boss.y - 9 * TILE;
     const landed = run(world, 2000);
     expect(inst.fighters[healer.id]!.hp).toBe(hpBefore);
-    // the tank stayed in front of the boss and took the sweep (gentler for a party of two)
-    const sweep = Math.round(SAGA_BOSSES.draugkung!.moves[0]!.dmg * mobDmgScale(2) * (1 - BASE_ARMOR));
-    expect(landed.some((c) => c.t === 'hit' && c.on === tank.id && c.n === sweep)).toBe(true);
+    // the tank stayed in front of the boss and took the sweep: a mark, a fraction of the tank's own max health whatever the party and the armor
+    const sweep = Math.round(inst.fighters[tank.id]!.max * MARK_DEFAULT * SAGA_BOSSES.draugkung!.moves[0]!.dmg);
+    expect(landed.some((c) => c.t === 'hit' && c.on === tank.id && c.n === sweep && c.mark === true)).toBe(true);
+    expect(inst.markHits).toBe(1);
   });
 
   it('a shield bash stops the Draug King\'s scream', () => {
@@ -389,6 +392,7 @@ describe('loot', () => {
     b.y = boss.y;
     run(world, 100);
     inst.mobs[inst.boss]!.hp = 1;
+    inst.fighters[a.id]!.cd = {}; // (the auto-attack has just swung: this is the next swing, pressed)
     castSpell(world, a.id, 'eldboll', inst.boss, ctx());
     expect(inst.bossDown).toBe(true);
     expect(a.saga!.cleared).toContain('draug');
@@ -516,6 +520,11 @@ describe('Lokes list: the bosses', () => {
         expect(def.yells.phase.length).toBe(def.phases.length);
         def.moves.forEach((mv, i) => {
           force(m, i);
+          // (the marks before this one landed on the tank: back on its feet at full health for the next)
+          for (const ff of Object.values(inst.fighters)) {
+            delete ff.down;
+            ff.hp = ff.max;
+          }
           tank.x = a.x + TILE;
           tank.y = a.y;
           waitCast(world, m);
@@ -557,8 +566,8 @@ describe('Lokes list: the bosses', () => {
     expect(z.shape).toBe('line');
     expect(Math.abs(z.dir!)).toBeLessThan(0.2);
     const landed = run(world, SAGA_BOSSES.jarnvakten!.moves[i]!.warn + 100);
-    const dmg = Math.round(SAGA_BOSSES.jarnvakten!.moves[i]!.dmg * mobDmgScale(2) * (1 - BASE_ARMOR));
-    expect(landed.some((c) => c.t === 'hit' && c.on === tank.id && c.n === dmg)).toBe(true);
+    const dmg = Math.round(inst.fighters[tank.id]!.max * MARK_DEFAULT * SAGA_BOSSES.jarnvakten!.moves[i]!.dmg);
+    expect(landed.some((c) => c.t === 'hit' && c.on === tank.id && c.n === dmg && c.mark === true)).toBe(true);
     expect(landed.some((c) => c.t === 'hit' && c.on === healer.id && c.kind === 'dmg')).toBe(false);
   });
 
@@ -635,7 +644,8 @@ describe('Lokes list: the bosses', () => {
 
   it("Loke has five phases, one for each boss he copies, and his helpers are illusions", () => {
     const w = generateSaga('loke');
-    for (const m of Object.values(w.saga!.mobs)) expect(w.animals[m.id]!.variant).toBe(m.kind === 'mob' ? 1 : undefined);
+    // (an illusion is an odd variant: the rest of the number is the monster's skin, mobs.ts)
+    for (const m of Object.values(w.saga!.mobs)) expect(isIllusion(w.animals[m.id]!.variant)).toBe(m.kind === 'mob');
     const { world, d, inst, m, healer } = atBoss('loke', 'boss');
     const phases = SAGA_BOSSES.loke!.phases;
     expect(phases).toHaveLength(4);
@@ -653,7 +663,7 @@ describe('Lokes list: the bosses', () => {
     expect(yells.join(' ')).toContain('Surt');
     const adds = Object.values(inst.mobs).filter((x) => x.kind === 'add');
     expect(adds.length).toBeGreaterThan(0);
-    for (const x of adds) expect(d.animals[x.id]!.variant).toBe(1);
+    for (const x of adds) expect(isIllusion(d.animals[x.id]!.variant)).toBe(true);
   });
 });
 
@@ -776,6 +786,7 @@ describe('Lokes list: gear and levels', () => {
     p.y = a.y;
     run(world, 100);
     m.hp = 1;
+    inst.fighters[p.id]!.cd = {};
     const out = castSpell(world, p.id, 'yxhugg', m.id, ctx());
     expect(out.some((c) => c.t === 'banner' && c.kind === 'level' && c.text === 'Nivå 2!')).toBe(true);
     expect(out.some((c) => c.t === 'banner' && c.kind === 'level' && c.sub?.includes('Vandrarmanteln'))).toBe(true);
@@ -844,6 +855,7 @@ describe('Lokes list: the ending', () => {
     p.y = boss.y;
     run(world, 100);
     inst.mobs[inst.boss]!.hp = 1;
+    inst.fighters[p.id]!.cd = {};
     const fall = castSpell(world, p.id, 'eldboll', inst.boss, ctx());
     expect(inst.bossDown).toBe(true);
     expect(p.saga!.cleared).toContain('loke');
@@ -1027,6 +1039,7 @@ function draugKing(n = 1) {
     run: (ms: number) => run(world, ms),
     finish: () => {
       inst.mobs[inst.boss]!.hp = 1;
+      inst.fighters[players[0]!.id]!.cd = {};
       return castSpell(world, players[0]!.id, 'eldboll', inst.boss, ctx());
     },
   };

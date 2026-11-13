@@ -5,8 +5,10 @@
 // chapter's own look (floor, walls, light, decor, monsters), and the seven biome templates of v1 serve as the layouts of a Flock.
 // The väg-runor on the floor of the exit room are put there by runsim.ts when the stop is cleared.
 import { hashInts, mulberry32, randInt } from './rng.ts';
-import { DUNGEONS, DUNGEON_IDS, SAGA_BOSSES, SAGA_MOBS, type DungeonId, type SagaDungeonDef, type SagaRoom } from './saga.ts';
+import { DUNGEONS, DUNGEON_IDS, MOB_ROLES, SAGA_BOSSES, SAGA_MOBS, type DungeonId, type MobRole, type SagaDungeonDef, type SagaRoom } from './saga.ts';
 import { SOLID, buildDungeon } from './sagamap.ts';
+import { skinStop, varyStopPacks } from './mobpacks.ts';
+import { MOB_ARCHETYPE } from './mobs.ts';
 import { addObject, objectAt, removeObject } from './map.ts';
 import {
   BOSS_PACKS,
@@ -32,6 +34,11 @@ import {
   ELITE_HP,
   ELITE_PACKS,
   TREASURE_PACKS,
+  PACK_ROLES,
+  STAR_CHANCE,
+  BIG_CHANCE,
+  BIG_GENTLE,
+  ELITE_ROLES,
   modifier,
   wingOf,
   type NodeKind,
@@ -230,6 +237,64 @@ function pack(mobs: ReturnType<typeof dungeonMobs>, wing: number, size: number, 
   return m;
 }
 
+/**
+ * The special members of a stop's packs (DESIGN.md: Besvärjare, Skytt, Sköldbärare), by the seed: writes `roles` beside `packs` on
+ * each room. Mycket lätt has none; Lätt has `perStop` in the whole stop; from Medel every pack has `perPack` (a Stark vakt at least
+ * ELITE_ROLES), except that on Medel the first pack of the first stop has none. Two roles in one pack are never the same, so never two Besvärjare.
+ */
+export function assignRoles(rooms: SagaRoom[], rnd: () => number, level: RunLevel, kind: NodeKind, row: number): void {
+  const spec = PACK_ROLES[level];
+  const perPack = spec.perPack > 0 && kind === 'elite' ? Math.max(spec.perPack, ELITE_ROLES) : spec.perPack;
+  const packs = rooms.flatMap((r) => (r.packs ?? []).map((members, pi) => ({ r, pi, members })));
+  if (!packs.length || (perPack <= 0 && spec.perStop <= 0)) return;
+  const give = (p: (typeof packs)[number], n: number): void => {
+    const roles = [...MOB_ROLES];
+    const free = p.members.map((_, i) => i);
+    const row: (MobRole | null)[] = p.members.map(() => null);
+    for (let k = 0; k < n && roles.length && free.length; k++) {
+      const role = roles.splice(Math.floor(rnd() * roles.length), 1)[0]!;
+      // a Skytt is a shooter and a Sköldbärare a brute where the pack has one free; else anyone
+      const want = role === 'archer' ? 'shooter' : role === 'shield' ? 'brute' : undefined;
+      const fits = want ? free.filter((i) => MOB_ARCHETYPE[p.members[i]!] === want) : [];
+      const pool = fits.length ? fits : free;
+      const at = pool[Math.floor(rnd() * pool.length)]!;
+      free.splice(free.indexOf(at), 1);
+      row[at] = role;
+    }
+    (p.r.roles ??= (p.r.packs ?? []).map((m) => m.map(() => null)))[p.pi] = row;
+  };
+  if (perPack > 0) {
+    // (Medel: the run's very first pack teaches nothing new)
+    packs.forEach((p, k) => {
+      if (!(level === 2 && row === 1 && k === 0)) give(p, perPack);
+    });
+    return;
+  }
+  const pool = packs.length > 1 && row === 1 ? packs.slice(1) : [...packs];
+  for (let k = 0; k < spec.perStop && pool.length; k++) give(pool.splice(Math.floor(rnd() * pool.length), 1)[0]!, 1);
+}
+
+/**
+ * Stjärnmonster: writes `stars` beside `packs`: by the level's chance a pack gets one starred member (one or two stars), never a
+ * member with a role, never in the run's first stop. Dice of its own.
+ */
+export function assignStars(rooms: SagaRoom[], rnd: () => number, level: RunLevel, row: number): void {
+  const [one, two] = STAR_CHANCE[level];
+  if (row <= 1 || one + two <= 0) return;
+  for (const r of rooms) {
+    (r.packs ?? []).forEach((members, pi) => {
+      const roll = rnd();
+      const at = rnd();
+      const stars: 0 | 1 | 2 = roll < two ? 2 : roll < two + one ? 1 : 0;
+      const free = members.map((_, i) => i).filter((i) => !r.roles?.[pi]?.[i]);
+      if (!stars || !free.length) return;
+      const row: (0 | 1 | 2)[] = members.map(() => 0);
+      row[free[Math.floor(at * free.length)]!] = stars;
+      (r.stars ??= (r.packs ?? []).map((m) => m.map(() => 0 as const)))[pi] = row;
+    });
+  }
+}
+
 /** Chooses the modifiers of a run: the caller's, or one more for every earlier clear (up to three), by the seed. */
 function pickModifiers(rnd: () => number, opts: RunOptions): string[] {
   if (opts.modifiers) return opts.modifiers.filter((id) => !!modifier(id)).slice(0, MAX_MODIFIERS);
@@ -291,8 +356,11 @@ function planStop(seed: number, node: RouteNode, boss: DungeonId, mods: string[]
   let gate: StopPlan['gate'] = 'packs';
   let layout: RunBiome | undefined;
   let packIndex = 0;
-  const packRoom = (r: { x: number; y: number; w: number; h: number }, count: number, size: readonly number[], bigAt = -1): void => {
-    const packs = Array.from({ length: count }, (_, k) => members(size[0]!, size[1]!, k === bigAt));
+  // a big monster (a brute) in a pack: by the wing's chance on every level (half as often on Mycket lätt); always in a Stark vakt
+  // (never in the first two rows: those show two slots, so the newcomers are met a stop at a time; the big ones' mates come with them)
+  const bigChance = node.kind === 'elite' ? 1 : node.row <= 2 ? 0 : (BIG_CHANCE[Math.min(wing, BIG_CHANCE.length - 1)] ?? 0) * (level === 0 ? BIG_GENTLE : 1);
+  const packRoom = (r: { x: number; y: number; w: number; h: number }, count: number, size: readonly number[]): void => {
+    const packs = Array.from({ length: count }, () => members(size[0]!, size[1]!, bigChance > 0 && rnd() < bigChance));
     for (let k = 0; k < count; k++) required.push(packIndex + k);
     packIndex += count;
     rooms.push({ ...r, kind: 'pack', packs });
@@ -315,7 +383,7 @@ function planStop(seed: number, node: RouteNode, boss: DungeonId, mods: string[]
           const a = order++ === 0;
           const range = a ? spec.a : spec.b;
           const count = n(range);
-          packRoom(f, count, spec.size, !a && spec.big > 0 ? randInt(rnd, 0, count - 1) : -1);
+          packRoom(f, count, spec.size);
         } else if (r.role === 'exit') {
           rooms.push({ ...f, kind: 'pack', gated: true });
           endRoom = i;
@@ -371,6 +439,11 @@ function planStop(seed: number, node: RouteNode, boss: DungeonId, mods: string[]
       break;
     }
   }
+  // which species fill the slots (each one's original or its mate), with dice of their own (mobpacks.ts)
+  varyStopPacks(rooms, { seed, node: node.id, row: node.row, bulk: [...mobs.small, ...mobs.medium] });
+  // the special pack monsters, from a stream of their own (so the rooms and packs of a seed are what they were)
+  assignRoles(rooms, mulberry32(hashInts(seed, node.id, 0x401e)), level, node.kind, node.row);
+  assignStars(rooms, mulberry32(hashInts(seed, node.id, 0x57a2)), level, node.row);
   const def: SagaDungeonDef = { ...d, rooms, links };
   const fog = mod.some((m) => m.fog);
   return {
@@ -427,6 +500,7 @@ export function buildStop(plan: RunPlan, node: number, key: string): WorldState 
   const rnd = mulberry32(hashInts(plan.seed, node, 0xdec0));
   const world = buildDungeon(z.def, rnd, z.solid, key);
   const inst = world.saga!;
+  skinStop(world, plan.seed, node);
   // the dungeon's way out is gone (a run is left with `leave`); the way on is the väg-runor of the exit room
   const old = objectAt(world, inst.exit.x, inst.exit.y);
   if (old?.kind === 'saga_exit') removeObject(world, old.id);

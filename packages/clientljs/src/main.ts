@@ -35,9 +35,11 @@ import { bus, client, helpSeen, markHelpSeen, rememberPlayer } from '@v1/state.t
 import { h } from '@v1/ui/dom.ts';
 import { initGamepad } from '@v1/ui/gamepad.ts';
 import { Hud } from '@v1/ui/hud.ts';
+import { HudMenu } from '@v1/ui/hudmenu.ts';
 import { Menus } from '@v1/ui/menus.ts';
 import { Picker } from '@v1/ui/picker.ts';
 import { SagaUi } from '@v1/ui/saga.ts';
+import { hugin } from '@v1/ui/hugin.ts';
 import { RunUi } from '@v1/ui/run.ts';
 import { SettingsUi } from '@v1/ui/settings.ts';
 import { initAccess } from '@v1/ui/access.ts';
@@ -106,18 +108,23 @@ const run = new RunUi(ui, hud.root);
 const settings = new SettingsUi(ui);
 // Logg: everything the game wrote on the screen (L, the HUD's 📜, the help)
 const log = new LogUi(ui, () => chat.open());
+// Meny: everything that has no button of its own at the top of the screen (the HUD's ☰)
+const hudMenu = new HudMenu(ui, { open: (kind) => menus.toggle(kind), minimap: () => hud.minimap.toggle(), furnish: () => hud.toggleFurnish(), toast: (text, ms) => hud.toast(text, ms) });
 /** Any window open: the world stops reading taps and keys. */
 function syncUiOpen(): void {
-  view.uiOpen = menus.isOpen() || saga.isOpen() || run.isOpen() || settings.isOpen() || log.isOpen();
+  view.uiOpen = menus.isOpen() || saga.isOpen() || run.isOpen() || settings.isOpen() || log.isOpen() || hudMenu.isOpen();
 }
 menus.onChange = syncUiOpen;
 saga.onChange = syncUiOpen;
 run.onChange = syncUiOpen;
 settings.onChange = syncUiOpen;
 log.onChange = syncUiOpen;
-initGamepad({ ui, target: () => (started ? view : null), menus, windows: [log, settings, menus, saga, run], hud });
+hudMenu.onChange = syncUiOpen;
+initGamepad({ ui, target: () => (started ? view : null), menus, windows: [hudMenu, log, settings, menus, saga, run], hud });
 initA11y();
 initHudFit();
+// Hugin, the raven who teaches: he watches for the first time of things and flies in with a tip
+hugin.start(ui);
 initAccess(ui);
 // a phone held upright is asked to turn, and may play anyway
 document.getElementById('rotate-text')!.textContent = A11Y_T.rotate;
@@ -269,6 +276,7 @@ void picker.show();
   bus,
   net,
   view: () => view,
+  hugin,
   mute: (m = true) => setMuted(m),
   muted: () => isMuted(),
   switchPlayer: () => {

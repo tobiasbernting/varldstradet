@@ -1,0 +1,246 @@
+/* "Meny" (ui/hudmenu.ts): the sheet behind the HUD's ☰. Real pixels and the text-size setting, not the HUD's --u. */
+
+/* the sheet hangs from the corner where ☰ is, so the way from the button to a tile is short */
+.modal.menu-modal {
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+}
+.panel.menu-panel {
+  width: min(calc(690px * var(--txt)), 100%);
+  max-width: 100%;
+  max-height: 100%;
+  padding: 12px;
+  gap: 8px;
+  border-width: 4px;
+  border-radius: 16px;
+  box-shadow: 0 6px 0 var(--ink);
+}
+.menu-panel h2 {
+  font-size: max(var(--fs), calc(24px * var(--txt)));
+  gap: 8px;
+}
+.menu-panel .body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 2px;
+}
+.menu-group h3 {
+  margin: 0 0 6px;
+  font-size: max(var(--fs), calc(17px * var(--txt)));
+  font-weight: 900;
+  color: var(--ink);
+}
+.menu-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(calc(122px * var(--txt)), 1fr));
+  gap: 8px;
+}
+/* a tile: a big picture over one word; a whole tile is the target */
+.menu-panel .menu-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 84px;
+  min-width: 0;
+  padding: 6px 4px;
+  background: #fffaf0;
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 0 3px 0 var(--ink);
+  font-size: var(--fs);
+  font-weight: 800;
+  line-height: 1.15;
+  cursor: pointer;
+}
+.menu-panel .menu-tile:active {
+  transform: translateY(3px);
+  box-shadow: none;
+}
+.menu-tile .ic {
+  font-size: calc(32px * var(--txt));
+  line-height: 1.1;
+}
+.menu-tile .lb {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  hyphens: manual;
+  text-align: center;
+}
+/* a white picture (the ❔ of Förklara) on a dark patch, as on the spell bar */
+.menu-tile .ic.dark {
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #2f3b5c;
+}
+/* the keyboard's key for it, on a computer */
+.menu-tile .kb {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 24px;
+  padding: 0 5px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  background: var(--panel-dark);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs);
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+}
+body.touch .menu-tile .kb {
+  display: none;
+}
+/* a switch that is on: a thick frame and a tick as well as the colour */
+.menu-panel .menu-tile[aria-pressed='true'] {
+  background: #fff3c0;
+  box-shadow:
+    0 0 0 3px #d9a52a,
+    0 3px 0 3px var(--ink);
+}
+.menu-tile[aria-pressed='true']::after {
+  content: '✔';
+  position: absolute;
+  top: 4px;
+  left: 8px;
+  font-size: var(--fs);
+  font-weight: 900;
+  color: #2f5a14;
+}
+.menu-run {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* going home from a run: apart from the rest, at the end, and not the colour of the others (the window it opens asks first) */
+.menu-leave {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 3px dashed #b9a67a;
+}
+.menu-panel .menu-leave .menu-tile.danger {
+  flex-direction: row;
+  gap: 8px;
+  min-height: 56px;
+  padding: 6px 16px;
+  background: #fff;
+  color: #8a1f18;
+  border-color: #8a1f18;
+  box-shadow: 0 3px 0 #8a1f18;
+}
+.menu-leave .menu-tile.danger .ic {
+  font-size: calc(26px * var(--txt));
+}
+/* a short screen: the picture stands beside the word, so the whole menu is in view without scrolling */
+@media (max-height: 520px) {
+  .panel.menu-panel {
+    width: 100%;
+    padding: 8px;
+    gap: 4px;
+  }
+  .menu-panel .body {
+    gap: 6px;
+  }
+  .menu-group h3 {
+    margin-bottom: 4px;
+    line-height: 1.1;
+  }
+  .menu-tiles {
+    grid-template-columns: repeat(auto-fill, minmax(calc(140px * var(--txt)), 1fr));
+  }
+  .menu-panel .menu-tile {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 4px;
+    min-height: 52px;
+    padding: 2px 4px;
+  }
+  .menu-tile .lb {
+    text-align: left;
+  }
+  .menu-tile .ic {
+    font-size: calc(22px * var(--txt));
+  }
+  .menu-tile .ic.dark {
+    padding: 0 2px;
+  }
+  .menu-tile[aria-pressed='true']::after {
+    display: none;
+  }
+  /* the run's row: the little map at the left, going home at the far right behind a line */
+  .menu-run {
+    flex-direction: row;
+    align-items: flex-end;
+  }
+  .menu-run .menu-group {
+    flex: 1;
+  }
+  .menu-leave {
+    margin: 0;
+    padding: 0 0 0 12px;
+    border-top: 0;
+    border-left: 3px dashed #b9a67a;
+  }
+  .menu-panel .menu-leave .menu-tile.danger {
+    min-height: 52px;
+  }
+}
+/* a phone held sideways: the groups are told apart by the room between them (their names are still read out), so it all fits */
+@media (max-height: 420px) {
+  .menu-group h3 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .menu-panel .body {
+    gap: 12px;
+    /* (the close button is 56 px: the first row of tiles stays 8 px under it) */
+    padding-top: 6px;
+  }
+}
+/* strong contrast: the tiles are white on blue like every button of a window (a11y.css); the tick follows */
+.a11y-contrast .menu-tile[aria-pressed='true']::after {
+  color: #fff;
+}
+
+/* ☰ says when a switch in the menu is on (Förklara, Möblera): a little badge with its picture, as well as the frame */
+.hud-menu-btn {
+  position: relative;
+}
+.hud-menu-btn.furnishing::after,
+body.explain-on .hud-menu-btn::after {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fff3c0;
+  border: 2px solid var(--ink);
+  font-size: calc(16px * var(--txt));
+  line-height: 22px;
+  text-align: center;
+}
+.hud-menu-btn.furnishing::after {
+  content: '🪑';
+}
+body.explain-on .hud-menu-btn::after {
+  content: '❔';
+}
+.hud-menu-btn.furnishing,
+body.explain-on .hud-menu-btn {
+  background: #fff3c0;
+  outline: 3px solid #d9a52a;
+}

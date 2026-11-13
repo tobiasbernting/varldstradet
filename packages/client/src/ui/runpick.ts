@@ -1,10 +1,13 @@
 // The personal choices of a run, in windows of their own so ui/run.ts stays what it was: the path (väg) every hero picks after the
 // Mellanboss. Everyone picks at once, nobody waits for a slow friend longer than the clock, and a choice can be explained by touch.
+import { ELEMENT_ICONS, FIGHT_UI } from '@varldstradet/shared';
+import { fightStrip, fightWords } from './fightcard.ts';
 import {
   CLASSES,
   PATHS,
   PATH_NAMES,
   PATH_SPELLS,
+  classSpells,
   PATH_TEXT,
   RUNA_NAMES,
   RUNA_RARITY_NAMES,
@@ -61,7 +64,7 @@ export function renderPathWindow(host: PickHost, body: HTMLElement, run: RunSnap
       h(
         'ul',
         { class: 'path-spells' },
-        ...CLASSES[path.cls].spells.map((sid, k) => h('li', null, h('span', { class: 'si' }, SPELLS[sid]!.icon), h('span', null, PATH_SPELLS[path.id]![k]))),
+        ...classSpells(path.cls).map((sid) => h('li', null, h('span', { class: 'si' }, SPELLS[sid]!.icon), h('span', null, PATH_SPELLS[path.id]![sid]))),
       ),
       h('span', { class: 'for' }, chosen ? `✔ ${RUN_UI.pathDone}` : mine ? '' : RUN_UI.pathPick),
     );
@@ -71,6 +74,8 @@ export function renderPathWindow(host: PickHost, body: HTMLElement, run: RunSnap
     cards.append(card);
   });
   body.append(cards);
+  // how the class fights, whatever the path: the auto-attack, the pips and the combo, in pictures
+  if (cls) body.append(h('div', { class: 'fight-how', role: 'img', 'aria-label': fightWords(cls) }, fightStrip(cls)));
   // who has chosen already (a word and a check, not only a colour)
   const done = new Set(run.pick?.kind === 'path' ? run.pick.done : Object.keys(run.paths));
   const humans = run.party.filter((p) => !p.bot);
@@ -151,7 +156,16 @@ export function renderOfferWindow(host: PickHost, body: HTMLElement, run: RunSna
   const counts = tagCounts(hold, run.runor);
   body.append(h('p', { class: 'intro' }, RUN_T.pickSub));
   const cards = h('div', { class: 'runa-cards' });
-  offer.cards.forEach((id, i) => cards.append(runaCard(host, 'button', { id, key: i + 1, counts, path: run.paths[me], chosen: offer.picked === i }, () => pick(i))));
+  offer.cards.forEach((id, i) => {
+    const card = runaCard(host, 'button', { id, key: i + 1, counts, path: run.paths[me], chosen: offer.picked === i }, () => pick(i));
+    // Svagheter: a card whose tag is what the monsters here are weak to says so (a thumb, the element's picture and the words)
+    if (offer.weak?.[i]) {
+      card.classList.add('good-here');
+      card.append(h('span', { class: 'good-badge' }, `👍 ${ELEMENT_ICONS[run.weak] ?? ''} ${FIGHT_UI.goodHere}`));
+      card.setAttribute('aria-label', `${card.getAttribute('aria-label') ?? ''} ${FIGHT_UI.goodHere}: ${FIGHT_UI.goodHereText}`.trim());
+    }
+    cards.append(card);
+  });
   body.append(cards);
   const humans = run.party.filter((p) => !p.bot);
   const done = new Set(offer.done);

@@ -3,6 +3,7 @@
 // route, the summary of a run that ended and the sagaträd. The windows are `.modal`s like everybody else's, so the touch
 // screen, the keys and the gamepad (ui/gamepad.ts) all work in them. The fight itself (spell bar, party frames, boss bar,
 // telegraphs) is the saga's HUD (ui/saga.ts) and is not repeated here.
+import { BOSS_POWERS, DISH_NAMES, DISH_TEXT, DUNGEON_WEAK, ELEMENT_ICONS, ELEMENT_NAMES, POWER_NAMES, POWER_TEXT, dishDef, ownedPowers } from '@varldstradet/shared';
 import {
   DUNGEONS,
   DUNGEON_IDS,
@@ -53,6 +54,8 @@ import {
   type TreeNode,
 } from '@varldstradet/shared';
 import { CLASS_IDS, LOOK_T, PETS, PET_T, activePet, ownedPetIds } from '@varldstradet/shared';
+import { COMBO_TEXT, FIGHT_UI, PIP_TEXT } from '@varldstradet/shared';
+import { SAGA_SFX } from '../sagasfx.ts';
 import { lookSummary } from './looks.ts';
 import { portraitUrl } from '@art/textures.ts';
 import { net } from '../net.ts';
@@ -178,6 +181,9 @@ export class RunUi {
     });
     this.tap(this.cardsBtn, () => this.open(this.reopenWin));
     this.tap(this.runorStrip, () => this.open('runor'));
+    // the map of the road (the HUD's 🗺️ at the top right) and going home (the menu, ui/hudmenu.ts)
+    document.addEventListener('vt:runmap', () => myRun() && (this.win === 'map' ? this.close() : this.open('map')));
+    document.addEventListener('vt:runleave', () => myRun() && this.open('leave'));
     this.info(this.runorStrip, '🎴', RUN_UI.runorHeld, RUN_UI.infoRunor);
 
     bus.on('open', (c) => {
@@ -202,6 +208,13 @@ export class RunUi {
     });
     bus.on('me', () => {
       if (this.win === 'fard' || this.win === 'tree') this.render();
+    });
+    // Runmärken: the medal of the stop just cleared, big for a moment, with its own sound
+    bus.on('medal', (m) => {
+      const el = h('div', { class: `medal-pop m${m}`, role: 'img', 'aria-label': fmt(RUN_T.medal, { icon: '', medal: RUN_T.medalNames[m] ?? '' }).trim() }, h('span', { class: 'ic' }, RUN_T.medalIcons[m] ?? '🏅'), h('b', null, RUN_T.medalNames[m] ?? ''));
+      document.getElementById('ui')?.append(el);
+      SAGA_SFX.medal(m);
+      window.setTimeout(() => el.remove(), 2600);
     });
     bus.on('state', () => {
       if (this.win !== 'fard') return;
@@ -299,6 +312,11 @@ export class RunUi {
   // ---- reacting to the server ----
 
   private fromRun(c: Extract<import('@varldstradet/shared').Change, { t: 'run' }>): void {
+    if (c.ev === 'gillet') {
+      // the dishes of the next run are known (or my choice was taken): the arch window shows them
+      if (this.win === 'fard') this.render();
+      return;
+    }
     if (c.ev === 'state') {
       const run = myRun();
       this.logRun(run);
@@ -416,6 +434,9 @@ export class RunUi {
       const kind: NodeKind | null = pathNode ? pathNode.kind : kinds.length === 1 ? kinds[0]! : null;
       const state = row < run.row ? 'done' : row === run.row ? 'now' : 'next';
       const dot = h('span', { class: `dot ${state}${kind ? '' : ' unknown'}`, title: kind ? STOP_NAMES[kind] : '' }, kind ? KIND_ICON[kind] : '·');
+      // Runmärken: the medal of a cleared stop sits on its dot (ui/fight.css: [data-medal])
+      const medal = pathNode ? run.medals?.[pathNode.id] : undefined;
+      if (medal) dot.dataset.medal = String(medal);
       if (kind && state !== 'next') dot.style.setProperty('--c', KIND_COLOR[kind]);
       rail.append(dot);
     }
@@ -439,24 +460,28 @@ export class RunUi {
     // the stop's card also says what the chips that folded away say: the difficulty, the path and the special rules
     const more = [`${lvl.name}.`, myPath ? `${pathName(myPath)}.` : '', ...affixList.map((m) => `${MODIFIER_NAMES[m] ?? m}.`)].filter(Boolean).join(' ');
     const stop = chip('stop', [h('span', { class: 'ic', 'aria-hidden': 'true' }, cur ? KIND_ICON[cur.kind] : '🧭'), h('span', { class: 'lb' }, stopWord), h('span', { class: 'st' }, ` · ${fmt(RUN_UI.step, { n: run.row, max: ROWS })}`), h('span', { class: 'st-s' }, `${run.row}/${ROWS}`)], stopLabel, { icon: cur ? KIND_ICON[cur.kind] : '🧭', name: cur ? (STOP_NAMES[cur.kind] ?? '') : '', text: `${cur ? RUN_UI.kinds[cur.kind] : ''} ${RUN_UI.infoStep} ${more}` });
-    const ask = h('button', { class: `round-btn${this.infoMode ? ' on' : ''}`, 'aria-label': RUN_UI.explain, 'aria-pressed': String(this.infoMode) }, '❔');
-    onTap(ask, () => {
-      this.infoMode = !this.infoMode;
-      if (this.infoMode) cards.note('❔', RUN_UI.explain, RUN_UI.explainOn);
-      else this.hideInfo();
-      this.sync();
-    });
-    this.info(ask, '❔', RUN_UI.explain, RUN_UI.explainOn);
-    const map = h('button', { class: 'round-btn', 'aria-label': RUN_UI.route }, '🗺️');
-    this.tap(map, () => this.open('map'));
-    this.info(map, '🗺️', RUN_UI.route, RUN_UI.infoMap);
-    const home = h('button', { class: 'round-btn danger', 'aria-label': RUN_UI.home }, '🚪');
-    this.tap(home, () => this.open('leave'));
-    this.info(home, '🚪', RUN_UI.home, RUN_UI.infoHome);
     const affixes = affixList.map((m) => chip('affix', two(ico(MODIFIER_ICON[m]), MODIFIER_NAMES[m] ?? m), MODIFIER_NAMES[m] ?? m, { icon: ico(MODIFIER_ICON[m]), name: MODIFIER_NAMES[m] ?? m, text: MODIFIER_TEXT[m] ?? '' }));
-    // ONE row at every width: the stop, the road, then the chips, then the three buttons; the clock's bar is a thin line under it
-    this.bar.append(h('div', { class: 'line1' }, stop, rail, level, pathChip, ...affixes, clock, spirit, purse, seeds, ask, map, home), h('div', { class: 'clockbar' }, this.clockFill));
+    // ONE row at every width, read from the left: where we are (the stop, the step and the road), then the run's numbers as one group
+    // (time, Sagoandar, hacksilver, sagafrön), then the run's rules (difficulty, path, särdrag), which fold away first. The clock's
+    // bar is a thin line under it. The buttons are not here: the map is at the top right and the rest in the menu (ui/hudmenu.ts).
+    const nums = h('div', { class: 'nums', role: 'group', 'aria-label': RUN_UI.numbers }, clock, spirit, purse, seeds);
+    // Svagheter: the element this dungeon's monsters are weak to, with the run's rules (a down arrow and the element's picture)
+    const weakName = fmt(FIGHT_UI.weakAt, { element: ELEMENT_NAMES[run.weak] ?? run.weak });
+    const weak = run.weak ? chip('affix weak', two(`▼${ELEMENT_ICONS[run.weak] ?? ''}`, ELEMENT_NAMES[run.weak] ?? ''), weakName, { icon: ELEMENT_ICONS[run.weak] ?? '', name: weakName, text: fmt(RUN_T.weakText, { element: ELEMENT_NAMES[run.weak] ?? run.weak }) }) : null;
+    this.bar.append(h('div', { class: 'line1' }, stop, rail, nums, level, pathChip, weak, ...affixes), h('div', { class: 'clockbar' }, this.clockFill));
     this.tickClock(run);
+  }
+
+  /** The small pictures of what a hero brings on the next run: the dish (the first one when none is chosen) and the boss power. */
+  private brings(p: PlayerState): HTMLElement | null {
+    const dishes = runClient.dishes;
+    const dish = dishes.length ? dishDef(dishes.includes(p.runPrefs?.dish ?? '') ? p.runPrefs!.dish! : dishes[0]!) : undefined;
+    const owned = ownedPowers(p);
+    const want = p.runPrefs?.power;
+    const power = want === null ? undefined : owned.includes(want as DungeonId) ? (want as DungeonId) : owned[owned.length - 1];
+    if (!dish && !power) return null;
+    const words = [dish ? (DISH_NAMES[dish.id] ?? '') : '', power ? (POWER_NAMES[power] ?? '') : ''].filter(Boolean).join(', ');
+    return h('span', { class: 'brings', role: 'img', 'aria-label': words, title: words }, dish?.icon ?? '', power ? BOSS_POWERS[power].icon : '');
   }
 
   private tickClock(run: RunSnap): void {
@@ -773,7 +798,10 @@ export class RunUi {
         h('span', { class: 'nm' }, DUNGEONS[id].name),
         h('span', { class: 'st' }, !unlocked ? `🔒 ${RUN_UI.locked}` : this.dungeon === id ? `✔ ${RUN_UI.chosen}` : done ? `✔ ${RUN_UI.cleared}` : '⭐'),
       );
-      this.info(t, unlocked ? DUNGEON_ICON[id] : '🔒', DUNGEONS[id].name, unlocked ? DUNGEONS[id].intro.split(/(?<=[.!?…])\s/)[0]! : RUN_UI.lockedHint);
+      // Svagheter: the element the dungeon's monsters are weak to, as a picture on the card and a sentence in its info
+      const weak = DUNGEON_WEAK[id];
+      if (unlocked) t.append(h('span', { class: 'weak', 'aria-label': fmt(FIGHT_UI.weakAt, { element: ELEMENT_NAMES[weak] ?? weak }) }, h('span', { class: 'dn', 'aria-hidden': 'true' }, '▼'), ELEMENT_ICONS[weak] ?? ''));
+      this.info(t, unlocked ? DUNGEON_ICON[id] : '🔒', DUNGEONS[id].name, unlocked ? `${DUNGEONS[id].intro.split(/(?<=[.!?…])\s/)[0]!} ${fmt(RUN_T.weakText, { element: ELEMENT_NAMES[weak] ?? weak })}` : RUN_UI.lockedHint);
       this.tap(t, () => {
         if (!unlocked) {
           this.hint(RUN_UI.lockedHint);
@@ -800,7 +828,8 @@ export class RunUi {
         h('span', { class: 'nm' }, this.level === l.level ? `✔ ${l.name}` : l.name),
         names ? h('span', { class: 'st' }, fmt(RUN_UI.cappedFor, { names })) : null,
       );
-      this.info(t, names ? '🔒' : l.icon, l.name, names ? fmt(RUN_UI.cappedHint, { names }) : l.blurb);
+      // (from Medel up everyone falling ends the stop even if the Hirdmannen stands: the level's card says so)
+      this.info(t, names ? '🔒' : l.icon, l.name, names ? fmt(RUN_UI.cappedHint, { names }) : l.level >= 2 ? `${l.blurb} ${RUN_T.wipeRule}` : l.blurb);
       this.tap(t, () => {
         if (names) {
           this.hint(fmt(RUN_UI.cappedHint, { names }));
@@ -839,16 +868,27 @@ export class RunUi {
     }
     body.append(row);
     const spells = h('div', { class: 'spellrow' });
-    for (const sid of CLASSES[look].spells) {
+    // the auto-attack first (not a button in the fight: it swings by itself and fills the pips), then the four buttons; the
+    // first of them is the spender, and its card shows how a fight goes in pictures (the pips, the big blow, the combo)
+    const autoSp = SPELLS[CLASSES[look].auto]!;
+    const autoBtn = h('button', { class: 'alt spell auto', 'aria-label': `${T.sagaAutoName}: ${autoSp.name}` }, h('span', { class: 'ic' }, autoSp.icon), h('span', { class: 'nm' }, T.sagaAutoName));
+    this.tap(autoBtn, () => this.showInfo(autoBtn));
+    spells.append(this.info(autoBtn, autoSp.icon, `${T.sagaAutoName}: ${autoSp.name}`, `${T.sagaAutoText} ${PIP_TEXT[look]}`));
+    CLASSES[look].spells.forEach((sid, i) => {
       const sp = SPELLS[sid]!;
       const b = h('button', { class: 'alt spell', 'aria-label': sp.name }, h('span', { class: 'ic' }, sp.icon), h('span', { class: 'nm' }, sp.name));
       this.tap(b, () => this.showInfo(b));
-      spells.append(this.info(b, sp.icon, sp.name, sp.text));
-    }
+      spells.append(this.info(b, sp.icon, sp.name, i === 0 ? `${sp.text} ${COMBO_TEXT[look]}` : sp.text));
+      if (i === 0) b.dataset.infoPic = look;
+    });
     body.append(spells);
 
     // which animal comes along (pets.ts): one on a run, chosen here (or in the lobby at the kennel)
     this.petRow(body, me);
+
+    // Bosskrafter and Gillet: one power for the horn and one dish, chosen here before the run
+    this.powerRow(body, me);
+    this.dishRow(body, me);
 
     // who comes
     body.append(h('div', { class: 'sect' }, `👪 ${RUN_UI.whoComes}`));
@@ -878,6 +918,58 @@ export class RunUi {
     body.append(h('div', { class: 'actions sticky' }, wardrobe, go));
     if (!cls) body.append(h('div', { class: 'hint' }, RUN_UI.noClass));
     else if (!arch.near) body.append(h('div', { class: 'hint' }, RUN_UI.nearGate));
+  }
+
+  /** Bosskrafter: the powers of the bosses whose trophy the hero owns, one chosen for the horn ("Ingen" is a choice too). */
+  private powerRow(body: HTMLElement, me: PlayerState): void {
+    body.append(h('div', { class: 'sect' }, `📯 ${RUN_T.powerPick}`));
+    const owned = ownedPowers(me);
+    if (!owned.length) {
+      // no trophy yet: one sentence on how to get one
+      body.append(h('div', { class: 'hint power-none' }, `🏆 ${RUN_T.powerNone}`));
+      return;
+    }
+    // (nothing chosen: the latest trophy's, as the server does)
+    const want = me.runPrefs?.power;
+    const chosen = want === null ? null : owned.includes(want as DungeonId) ? (want as DungeonId) : owned[owned.length - 1]!;
+    const row = h('div', { class: 'tiles powers', role: 'group', 'aria-label': RUN_T.powerPick });
+    const tile = (id: DungeonId | null): void => {
+      const on = chosen === id;
+      const icon = id ? BOSS_POWERS[id].icon : '🚫';
+      const name = id ? (POWER_NAMES[id] ?? id) : FIGHT_UI.powerNoneTile;
+      const t = h('button', { class: `tile power${on ? ' sel' : ''}`, 'aria-pressed': String(on), 'data-power': id ?? 'none' }, h('span', { class: 'ic' }, icon), h('span', { class: 'nm' }, on ? `✔ ${name}` : name));
+      this.info(t, icon, name, id ? (POWER_TEXT[id] ?? '') : FIGHT_UI.powerNoneText);
+      this.tap(t, () => {
+        net.send({ t: 'run', a: 'power', id });
+        SFX.talk();
+      });
+      row.append(t);
+    };
+    for (const id of owned) tile(id);
+    tile(null);
+    body.append(row);
+  }
+
+  /** Gillet: the three dishes of the next run, one chosen (the first when nothing is). */
+  private dishRow(body: HTMLElement, me: PlayerState): void {
+    const dishes = runClient.dishes;
+    if (!dishes.length) return;
+    body.append(h('div', { class: 'sect' }, `🍲 ${RUN_T.dishPick}`));
+    const chosen = dishes.includes(me.runPrefs?.dish ?? '') ? me.runPrefs!.dish! : dishes[0]!;
+    const row = h('div', { class: 'tiles dishes', role: 'group', 'aria-label': RUN_T.dishPick });
+    for (const id of dishes) {
+      const d = dishDef(id);
+      const on = chosen === id;
+      const name = DISH_NAMES[id] ?? id;
+      const t = h('button', { class: `tile dish${on ? ' sel' : ''}`, 'aria-pressed': String(on), 'data-dish': id }, h('span', { class: 'ic' }, d?.icon ?? '🍲'), h('span', { class: 'nm' }, on ? `✔ ${name}` : name), h('span', { class: 'st' }, DISH_TEXT[id] ?? ''));
+      this.info(t, d?.icon ?? '🍲', name, DISH_TEXT[id] ?? '');
+      this.tap(t, () => {
+        net.send({ t: 'run', a: 'dish', id });
+        SFX.talk();
+      });
+      row.append(t);
+    }
+    body.append(row);
   }
 
   /** "Vilket djur följer med?": the pets you have, one chosen; each one explains itself on the info card. */
@@ -921,6 +1013,8 @@ export class RunUi {
       h('span', { class: 'nm' }, name),
       c ? h('span', { class: 'cls', title: c.name }, c.emoji) : null,
       c ? h('span', { class: 'rolew' }, c.roleName) : null,
+      // what this friend brings: their dish and their boss power, as small pictures
+      p && !bot ? this.brings(p) : null,
     );
   }
 
@@ -1099,6 +1193,8 @@ export class RunUi {
         stat('🌱', RUN_UI.seeds, `+${e.seeds}`),
         stat(lvl.icon, RUN_UI.level, lvl.name),
         stat('🌟', RUN_UI.spiritsUsed, `${e.spiritUsed ?? 0}`),
+        // Runmärken: how many of each the party won (never who was hit)
+        ...(e.medals && e.medals.some((n) => n > 0) ? [stat('🏅', FIGHT_UI.medalsTitle, h('span', { class: 'medal-counts' }, ...[3, 2, 1].map((m) => h('span', { class: `mc m${m}`, 'aria-label': `${RUN_T.medalNames[m]}: ${e.medals![m - 1]}` }, fmt(FIGHT_UI.medalCount, { icon: RUN_T.medalIcons[m]!, n: e.medals![m - 1]! })))))] : []),
       ),
     );
     if (e.trophy) body.append(h('div', { class: 'stat trophy' }, h('span', { class: 'ic' }, itemIcon(e.trophy, '🏆')), h('span', { class: 'lb' }, RUN_UI.trophy), h('b', { class: 'val' }, `${itemName(e.trophy)} (${RUN_UI.trophyWhere[e.trophyWhere ?? 'bag'] ?? ''})`)));

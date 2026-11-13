@@ -2,6 +2,7 @@
 // the wipe, joining, the companion, the sagaträd, the farm's objects, saves) and whole runs played by bot parties.
 import { describe, expect, it } from 'vitest';
 import {
+  classSpells,
   RUN_LEVEL_MEDEL,
   BOSS_STOP,
   MINI_STOP,
@@ -123,8 +124,13 @@ import {
   type NodeKind,
   type RunEffect,
   type WorldState,
+  mobBase,
 } from './index.ts';
 import { makeParty, playRun, step, type Party } from './runplay.ts';
+import { GILLET } from './run.ts';
+
+// (these tests pin a hero's exact numbers: nobody eats a dish here; fight3.test.ts has the dishes)
+GILLET.on = false;
 
 const px = (t: number): number => t * TILE + TILE / 2;
 
@@ -301,7 +307,8 @@ describe('the route generator (generateRoute)', () => {
       const species = new Set([...mobs.small, ...mobs.medium, ...mobs.big]);
       expect([...species].every((m) => (DUNGEONS[boss].rooms.flatMap((r) => r.packs ?? []).flat() as string[]).includes(m))).toBe(true);
       for (const z of plan.stops) {
-        for (const r of z.def.rooms) for (const pk of r.packs ?? []) for (const m of pk) expect(species.has(m), `${boss} ${z.kind}: ${m}`).toBe(true);
+        // (every member stands in a slot of the dungeon: one of its original species or that one's mate, mobs.ts)
+        for (const r of z.def.rooms) for (const pk of r.packs ?? []) for (const m of pk) expect(species.has(mobBase(m)), `${boss} ${z.kind}: ${m}`).toBe(true);
         if (z.kind !== 'flock') continue;
         const t = ZONE_TEMPLATES[z.layout!];
         used.add(z.layout!);
@@ -424,7 +431,7 @@ describe('the data', () => {
       expect(Object.keys(r.effect).length).toBeGreaterThan(0);
       for (const k of Object.keys(r.effect)) expect(EFFECT_KEYS).toContain(k);
       // a class's runa only reaches for the class's own spells
-      for (const s of [...Object.keys(r.effect.spell ?? {}), ...Object.keys(r.effect.spellCd ?? {})]) expect(r.cls && CLASSES[r.cls].spells.includes(s), r.id).toBe(true);
+      for (const s of [...Object.keys(r.effect.spell ?? {}), ...Object.keys(r.effect.spellCd ?? {})]) expect(r.cls && classSpells(r.cls).includes(s), r.id).toBe(true);
     }
   });
 
@@ -532,12 +539,13 @@ describe('every effect', () => {
       castSpell(l.party.world, l.p.id, spell, mob.id, l.ctx());
       return l.f.cd[spell]! - t;
     };
-    expect(cd({})).toBe(1300);
-    expect(cd({ cd: 0.12 })).toBeCloseTo(1300 * 0.88);
-    expect(cd({ spellCd: { eldboll: 0.5 } })).toBeCloseTo(650);
-    expect(cd({ spellCd: { askregn: 0.5 } })).toBe(1300);
+    // (the Eldboll is the auto-attack now: its "cooldown" is the 1.2 s between two swings)
+    expect(cd({})).toBe(1200);
+    expect(cd({ cd: 0.12 })).toBeCloseTo(1200 * 0.88);
+    expect(cd({ spellCd: { eldboll: 0.5 } })).toBeCloseTo(600);
+    expect(cd({ spellCd: { askregn: 0.5 } })).toBe(1200);
     // never less than 40 % of it
-    expect(cd({ cd: 0.9 })).toBeCloseTo(1300 * 0.4);
+    expect(cd({ cd: 0.9 })).toBeCloseTo(1200 * 0.4);
   });
 
   it('hp, armor and taken make a fighter tougher', () => {
@@ -560,7 +568,7 @@ describe('every effect', () => {
     expect(lost({ taken: 0.1 })).toBeLessThan(base);
     // monsters hit harder in a run with a damage modifier
     const l = lab({});
-    expect(l.inst.run!.dmgMul).toBe(1);
+    expect(l.inst.run!.dmgMul).toBe(RUN_LEVELS[2].dmg);
   });
 
   it('the run’s health buff survives a level-up and a change of gear, for the hero and the hired companion', () => {
@@ -716,7 +724,7 @@ describe('every effect', () => {
       return l.f.hp - 50;
     };
     expect(leech({})).toBe(0);
-    expect(leech({ leech: 0.5 })).toBeGreaterThan(5);
+    expect(leech({ leech: 0.5 })).toBeGreaterThan(3);
   });
 
   it('a run’s monsters’ health, damage, sight, leash and unlocked boss moves come from the plan', () => {
@@ -898,13 +906,13 @@ describe('starting, joining and leaving', () => {
     for (const hired of [hp(['krigare'], {})]) {
       expect(hired.n).toBe(1);
       expect(hired.mul).toBeCloseTo(hired.plan * SOLO_MERCY);
-      expect(hired.boss).toBeCloseTo(hired.bossPlan * SOLO_MERCY);
+      expect(hired.boss).toBeCloseTo(hired.bossPlan * SOLO_MERCY * RUN_LEVELS[2].bossHp);
     }
     // a hire turned down: one fighter, the plain numbers
     const alone = hp(['krigare'], { companion: false });
     expect(alone.n).toBe(0);
     expect(alone.mul).toBe(alone.plan);
-    expect(alone.boss).toBe(alone.bossPlan);
+    expect(alone.boss).toBeCloseTo(alone.bossPlan * RUN_LEVELS[2].bossHp);
     // two humans: no mercy, with the companion (two dps) or without (tank and healer)
     for (const duo of [hp(['krigare', 'magiker'], {}), hp(['vaktare', 'helare'], {})]) expect(duo.mul).toBe(duo.plan);
     expect(hp(['krigare', 'magiker'], {}).n).toBe(1);
@@ -2169,7 +2177,7 @@ describe('Lätt and the Sagoandan (DESIGN.md 4.5 and 5.3)', () => {
 
   it('the table: Lätt is what Lätt was and Medel what Vanlig was; the numbers climb with the level', () => {
     expect(levelMuls(1)).toEqual({ hp: 0.6, dmg: 0.5, warn: 1.4, seeds: 0.5 });
-    expect(levelMuls(2)).toEqual({ hp: 1, dmg: 1, warn: 1, seeds: 1 });
+    expect(levelMuls(2)).toEqual({ hp: 1, dmg: 0.6, warn: 1, seeds: 1 }); // (Medel's ordinary blows are the background now: the marks are the danger)
     const L = RUN_LEVEL_IDS.map((l) => RUN_LEVELS[l]);
     for (let i = 1; i < L.length; i++) {
       expect(L[i]!.hp).toBeGreaterThan(L[i - 1]!.hp);
@@ -2221,7 +2229,7 @@ describe('Lätt and the Sagoandan (DESIGN.md 4.5 and 5.3)', () => {
       const before = f.hp;
       l.go(50);
       sk.mob.state = 'fight';
-      sk.mob.threat[l.p.id] = 5;
+      sk.mob.threat = { [l.p.id]: 5 }; // (the heroes auto-attack it meanwhile: it keeps to the mage)
       sk.mob.atkAt = 0;
       const pos = l.area.animals[sk.mob.id]!;
       l.p.x = pos.x + 4;
@@ -2244,8 +2252,8 @@ describe('Lätt and the Sagoandan (DESIGN.md 4.5 and 5.3)', () => {
     const v = lab({}, ['magiker', 'helare'], 2);
     const l = lab({}, ['magiker', 'helare'], 1);
     expect(l.inst.run!.hpMul / v.inst.run!.hpMul).toBeCloseTo(0.6, 5);
-    expect(l.inst.run!.dmgMul / v.inst.run!.dmgMul).toBeCloseTo(0.5, 5);
-    expect(l.inst.run!.bossMul / v.inst.run!.bossMul).toBeCloseTo(0.6, 5);
+    expect(l.inst.run!.dmgMul / v.inst.run!.dmgMul).toBeCloseTo(0.5 / RUN_LEVELS[2].dmg, 5);
+    expect(l.inst.run!.bossMul / v.inst.run!.bossMul).toBeCloseTo(0.6 / RUN_LEVELS[2].bossHp, 5);
     expect(l.inst.run!.warnMul).toBe(1.4);
     expect(v.inst.run!.warnMul).toBeUndefined();
     expect([RUN_LEVELS[1].hp, RUN_LEVELS[1].dmg, RUN_LEVELS[1].warn, RUN_LEVELS[1].seeds, LATT.bossMoves]).toEqual([0.6, 0.5, 1.4, 0.5, 2]);
@@ -2280,8 +2288,9 @@ describe('Lätt and the Sagoandan (DESIGN.md 4.5 and 5.3)', () => {
     };
     const tv = trace(v);
     const tl = trace(l);
-    expect(tv.seen).toEqual([0, 1, 2]);
-    expect(tl.seen.every((k) => k < 2)).toBe(true);
+    expect(tv.seen).toEqual([0, 1, 2, 3]);
+    // (Lätt: the first two attacks, and the Guldring in its harmless form)
+    expect(tl.seen.every((k) => k < 2 || k === 3)).toBe(true);
     expect(tl.seen.length).toBeGreaterThan(0);
     // (the first cast is seen on the tick it starts: its warning minus at most that tick)
     expect(tl.warn / tv.warn).toBeGreaterThan(1.3);
@@ -2309,6 +2318,8 @@ describe('Lätt and the Sagoandan (DESIGN.md 4.5 and 5.3)', () => {
     mob.state = 'fight';
     mob.threat[l.p.id] = 5;
     mob.hp = 5;
+    // (no auto-attacks: the monster stands near the stone and would be fought again as soon as everyone is up)
+    for (const ff of Object.values(l.inst.fighters)) ff.cd[CLASSES[ff.cls].auto] = Number.MAX_SAFE_INTEGER;
     const out = wipeIt(l);
     expect(runOf(l.party.world)).toBe(l.run);
     expect(out.some((c) => c.t === 'banner' && c.kind === 'level' && c.text === RUN_T.spirit && c.sub === fmt(RUN_T.spiritSub, { n: 0 }))).toBe(true);

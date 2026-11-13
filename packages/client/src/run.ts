@@ -18,6 +18,8 @@ export interface RunEnded {
   path?: NodeKind[];
   trophy?: string;
   trophyWhere?: string;
+  /** Runmärken: how many bronze, silver and gold medals the party won. */
+  medals?: [number, number, number];
 }
 export interface TreeInfo {
   seeds: number;
@@ -34,6 +36,8 @@ export const runClient = {
   offerAt: 0,
   tree: null as TreeInfo | null,
   ended: null as RunEnded | null,
+  /** Gillet: the three dishes the arch offers for the next run (the server sends them with the run's state and after a choice). */
+  dishes: [] as string[],
   /** The last run I was in, as the summary needs its chapter. */
   last: null as RunSnap | null,
 };
@@ -65,13 +69,19 @@ export const offerLeft = (): number => (runClient.offer ? Math.max(0, runClient.
 bus.on('change', (c: Change) => {
   if (c.t === 'run') {
     if (c.ev === 'state') {
+      // Runmärken: a stop's medal that was not there before (shown big for a moment: ui/run.ts)
+      const before = runClient.run?.medals ?? {};
+      if (c.run && runClient.run && c.run.party.some((p) => p.id === client.me))
+        for (const [node, m] of Object.entries(c.run.medals ?? {})) if (before[Number(node)] === undefined) bus.emit('medal', m);
       runClient.run = c.run;
       runClient.runAt = performance.now();
       if (!c.run) runClient.offer = null;
       if (myRun()) runClient.last = c.run;
+    } else if (c.ev === 'gillet') {
+      if (c.to === null || c.to === client.me) runClient.dishes = c.dishes;
     } else if (c.ev === 'offer') {
       runClient.offer = c.offer;
       runClient.offerAt = performance.now();
-    } else if (c.ev === 'ended' && c.to === client.me) runClient.ended = { outcome: c.outcome, ms: c.ms, seeds: c.seeds, zones: c.zones, runor: c.runor, level: c.level, spiritUsed: c.spiritUsed, path: c.path, trophy: c.trophy, trophyWhere: c.trophyWhere };
+    } else if (c.ev === 'ended' && c.to === client.me) runClient.ended = { outcome: c.outcome, ms: c.ms, seeds: c.seeds, zones: c.zones, runor: c.runor, level: c.level, spiritUsed: c.spiritUsed, path: c.path, trophy: c.trophy, trophyWhere: c.trophyWhere, medals: c.medals };
   } else if (c.t === 'seed' && c.ev === 'tree' && c.to === client.me) runClient.tree = { seeds: c.seeds, earned: c.earned, tree: c.tree, stage: c.stage };
 });

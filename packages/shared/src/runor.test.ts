@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CLASSES,
   CLASS_IDS,
+  classSpells,
   EFFECT_KEYS,
   OFFER_WEIGHTS,
   PATH_TAGS,
@@ -46,6 +47,10 @@ import {
   type RunEffect,
 } from './index.ts';
 import { makeParty, step, type Party } from './runplay.ts';
+import { GILLET } from './run.ts';
+
+// (these tests pin a hero's exact numbers: nobody eats a dish here; fight3.test.ts has the dishes)
+GILLET.on = false;
 
 describe('runor v2: the data', () => {
   it('has about 30 more runor than the first 38, in four rarities, every one with a name, a sentence with a number, one or two tags and an effect that exists', () => {
@@ -66,7 +71,7 @@ describe('runor v2: the data', () => {
       for (const t of r.tags) expect(RUN_TAGS).toContain(t);
       for (const k of Object.keys(r.effect)) expect(EFFECT_KEYS).toContain(k);
       // a class's runa only reaches for the class's own spells
-      for (const s of [...Object.keys(r.effect.spell ?? {}), ...Object.keys(r.effect.spellCd ?? {}), ...Object.keys(r.effect.mods ?? {})]) expect(r.cls && CLASSES[r.cls].spells.includes(s), `${r.id} ${s}`).toBe(true);
+      for (const s of [...Object.keys(r.effect.spell ?? {}), ...Object.keys(r.effect.spellCd ?? {}), ...Object.keys(r.effect.mods ?? {})]) expect(r.cls && classSpells(r.cls).includes(s), `${r.id} ${s}`).toBe(true);
     }
     for (const t of RUN_TAGS) {
       expect(TAG_NAMES[t]).toBeTruthy();

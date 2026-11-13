@@ -48,6 +48,9 @@ import {
   type WeatherKind,
   type WorldObject,
   type WorldState,
+  isIllusion,
+  STAR,
+  SAGA_MOBS as SAGA_MOBS_,
 } from '@varldstradet/shared';
 import { ANIMAL_SIZE, ANIMAL_VARIANTS, RIDE_LIFT } from '@art/animals.ts';
 import { CHAR_H, dirOf, frameIndex, HEADROOM } from '@art/characters.ts';
@@ -57,10 +60,12 @@ import { net } from '@v1/net.ts';
 import { underHud } from '@v1/ui/lane.ts';
 import { SFX } from '@v1/sound.ts';
 import { activeWorld, bus, client, furnish, inOwnHouse, myArea, myPlayer, serverNow } from '@v1/state.ts';
-import { attackTarget, heroOn, levelOf, sagaMarker, sagaSpeed, titleOf } from '@v1/saga.ts';
+import { prefs } from '@v1/a11y.ts';
+import { setHuginView } from '@v1/ui/hugin.ts';
+import { attackTarget, heroOn, levelOf, sagaMarker, sagaSpeed, titleOf, toggleMark } from '@v1/saga.ts';
 import { KIND_ICON, runClient } from '@v1/run.ts';
 import type { HudTarget } from '@v1/ui/hud.ts';
-import { animalSprites, characterSprites, loadSprites, lookSprite, type ObjectSprites, type Sprites } from './art.ts';
+import { animalSprites, characterSprites, roleGearSprite, loadSprites, lookSprite, type ObjectSprites, type Sprites } from './art.ts';
 import { LooksFx, type FxActor } from './looksfx.ts';
 import type { Sprite } from './atlas.ts';
 import { Effects } from './fx.ts';
@@ -299,10 +304,25 @@ export class View implements HudTarget {
     bus.on('state', () => this.onState());
 
     // clicks and taps on the world (the HUD sits above and keeps its own)
+    // Märke: a right click on a monster, or a finger held on it, marks it with the skull for the whole party
+    let hold = 0;
+    const endHold = (): void => window.clearTimeout(hold);
+    for (const ev of ['pointerup', 'pointercancel', 'pointerleave', 'pointermove']) gameEl.addEventListener(ev, (e) => (ev !== 'pointermove' || (e as PointerEvent).pointerType === 'mouse' ? endHold() : undefined));
+    gameEl.addEventListener('pointerdown', (e) => {
+      if (this.uiOpen) return;
+      const at = this.screenToWorld(e.clientX, e.clientY);
+      const mob = this.sagaFx?.mobAt(at.x, at.y) ?? null;
+      if (mob === null) return;
+      if (e.pointerType === 'mouse' && e.button === 2) toggleMark(mob);
+      else if (e.pointerType !== 'mouse') {
+        endHold();
+        hold = window.setTimeout(() => toggleMark(mob), prefs().hold);
+      }
+    });
     gameEl.addEventListener('pointerdown', (e) => {
       if (this.uiOpen || (e.pointerType === 'mouse' && e.button !== 0)) return;
       const w = this.screenToWorld(e.clientX, e.clientY);
-      // in a dungeon a click on a monster (or a friend) aims at it, and hits a monster in reach
+      // in a dungeon a click on a monster (or a friend) chooses it (the hero swings by themselves); a waiting one in reach is woken
       if (this.sagaFx?.pick(w.x, w.y)) {
         attackTarget();
         return;
@@ -324,6 +344,13 @@ export class View implements HudTarget {
     new LightPainter(() => this.paintLight());
     this.fx = new Effects(this.art);
     this.sagaFx = new SagaView(this.art, this.labels, this.fx, (id) => this.spotOf(id));
+    // Hugin lands beside the hero where there is room: never in a telegraph
+    setHuginView({ pick: () => this.huginSpot(), screen: (wx, wy) => this.worldToScreen(wx, wy) });
+    // a hit body squashes (the fight's juice decides how hard, under the settings)
+    this.sagaFx.onPunch = (id, power) => {
+      const a = typeof id === 'number' ? this.animals.get(id) : this.players.get(id);
+      if (a) a.squashV += power;
+    };
     this.looksFx = new LooksFx(this.art);
     (window as unknown as { __looksFx?: LooksFx }).__looksFx = this.looksFx; // (for the frame cost check)
     this.weather = new WeatherView(this.art);
@@ -749,7 +776,9 @@ export class View implements HudTarget {
     }
     const a = this.animals.get(id);
     const s = a?.frames[0];
-    return a && s ? { x: a.x, y: a.y, w: s.w, h: s.h } : null;
+    // (a starred monster is drawn bigger: its bars, markers and hits follow its real size)
+    const k = STAR[(this.world?.animals[id]?.stars ?? 0) as 1 | 2]?.size ?? 1;
+    return a && s ? { x: a.x, y: a.y, w: s.w * k, h: s.h * k } : null;
   }
 
   /** The touch action button. */
@@ -757,11 +786,37 @@ export class View implements HudTarget {
     this.actFacing();
   }
 
-  /** A quick tap on the joystick's side of a touch screen: in a dungeon, a monster there becomes the target and is hit if in reach. */
+  /** A quick tap on the joystick's side of a touch screen: in a dungeon, a monster there becomes the target (and a waiting one in reach is woken). */
   tap(clientX: number, clientY: number): void {
     if (this.uiOpen) return;
     const w = this.screenToWorld(clientX, clientY);
     if (this.sagaFx?.pick(w.x, w.y)) attackTarget();
+  }
+
+  /** Where a spot of the world is on the screen (px), as the labels are placed. */
+  worldToScreen(wx: number, wy: number): { x: number; y: number } {
+    const z = this.z;
+    const cx = Math.round(this.camX * z) / z;
+    const cy = Math.round(this.camY * z) / z;
+    return { x: Math.round((wx - cx) * z + innerWidth / 2), y: Math.round((wy - cy) * z + innerHeight / 2) };
+  }
+
+  /** A spot beside the hero for Hugin to land on: a little to one side and in front, not inside anything marked on the ground. */
+  private huginSpot(): { wx: number; wy: number } | null {
+    const me = myPlayer();
+    if (!me) return null;
+    const zones = this.saga ? (this.world?.saga?.zones ?? []) : [];
+    const free = (x: number, y: number): boolean => !zones.some((zn) => zn.kind !== 'orb' && Math.hypot(x - zn.x, y - zn.y) <= zn.r * TILE + 10);
+    for (const [dx, dy] of [[-30, 10], [30, 10], [-44, -6], [44, -6], [-30, 34], [30, 34], [-60, 16], [60, 16]] as const) if (free(me.x + dx, me.y + dy)) return { wx: me.x + dx, wy: me.y + dy };
+    return null;
+  }
+
+  /** A finger held still on the joystick's side of a touch screen and let go: Märke on the monster under it. */
+  hold(clientX: number, clientY: number, ms: number): void {
+    if (this.uiOpen || ms < prefs().hold) return;
+    const w = this.screenToWorld(clientX, clientY);
+    const mob = this.sagaFx?.mobAt(w.x, w.y) ?? null;
+    if (mob !== null) toggleMark(mob);
   }
 
   private actFacing(): void {
@@ -842,7 +897,8 @@ export class View implements HudTarget {
     }
     const running = !this.uiOpen && (keyIsDown('ShiftLeft') || keyIsDown('ShiftRight') || this.runHeld);
     const boost = me.boostUntil !== undefined && me.boostUntil > serverNow() ? BOOST_SPEED_MUL : 1;
-    stepPlayer(world, me, dx, dy, dtMs, (me.riding !== undefined ? rideSpeedMul(world, me) : running ? 1.7 : 1) * boost * sagaMul);
+    // (Gillet: the dish Rökt fisk makes the hero faster for the whole run; the server allows the same and no more)
+    stepPlayer(world, me, dx, dy, dtMs, (me.riding !== undefined ? rideSpeedMul(world, me) : running ? 1.7 : 1) * boost * sagaMul * (1 + (me.runSpeed ?? 0)));
     if (me.moving || this.wasMoving) this.sendMove(!me.moving && this.wasMoving);
     this.wasMoving = me.moving;
 
@@ -874,7 +930,8 @@ export class View implements HudTarget {
         const snap = client.snaps.players.get(id);
         if (snap) follow(actor, snap.x, snap.y, 64);
       }
-      this.animateActor(actor, p.facing, p.moving, dt, id === me.id && (running || boost > 1) && p.riding === undefined);
+      // (a hit-stop holds the picture for a blink: the swing, the step and the squash wait; where the hero stands never does)
+      if (!this.sagaFx.held(id)) this.animateActor(actor, p.facing, p.moving, dt, id === me.id && (running || boost > 1) && p.riding === undefined);
       if (p.sleeping) actor.squash = 0;
     }
     for (const [id, actor] of this.animals) {
@@ -889,6 +946,7 @@ export class View implements HudTarget {
         this.animateActor(actor, rider.facing, rider.moving, dt, false);
         continue;
       }
+      if (this.sagaFx.held(id)) continue; // (a hit-stop: the hit monster stands still for a blink)
       const snap = client.snaps.animals.get(id);
       if (snap) follow(actor, snap.x, snap.y, 48);
       this.animateActor(actor, a.facing, a.moving, dt, false);
@@ -1498,8 +1556,10 @@ export class View implements HudTarget {
       const s = a.frames[a.wasMoving ? Math.floor(a.walk * 5) % 2 : 0];
       if (!s) continue;
       const hop = rider ? 0 : this.hopOf(a);
-      const w = s.w * (1 + a.squash * 0.6) * turnScale(a.flip);
-      const h = s.h * (1 - a.squash * 0.6);
+      // Stjärnmonster: one star is 15 % bigger, two stars 30 %
+      const big = STAR[(an.stars ?? 0) as 1 | 2]?.size ?? 1;
+      const w = s.w * big * (1 + a.squash * 0.6) * turnScale(a.flip);
+      const h = s.h * big * (1 - a.squash * 0.6);
       // a pet: a small bounce in its step, and in a fight a pose when it acts that reads at sprite size, by what it does:
       // bite and ram lunge, pounce leaps, purr hops and floats a heart, guard rears up, howl lifts its nose, peck dips, dig dips and throws dirt
       if (an.petKind) {
@@ -1563,7 +1623,20 @@ export class View implements HudTarget {
         q.push(a.y + 4, s, a.x + dx, a.y + 4 - hop - sh / 2 + dy, sw, sh, ang, tint);
         continue;
       }
-      q.push(a.y + 4, s, a.x, a.y + 4 - hop - h / 2, w, h);
+      // a hit monster flashes white for a moment
+      const fl = this.sagaFx.flashOf(id);
+      const add = fl > 0 ? rgba(fl, fl, fl, 0) : 0;
+      q.push(a.y + 4, s, a.x, a.y + 4 - hop - h / 2, w, h, 0, undefined, add);
+      // a special pack monster carries its role's gear (a leafy staff, a bow, a round shield): its own quad on top of the body,
+      // mirrored with it; one of Loke's illusions carries a ghostly one
+      const gear = an.role ? roleGearSprite(an.role, an.species, a.wasMoving ? Math.floor(a.walk * 5) % 2 : 0) : null;
+      if (gear) {
+        const kx = w / s.w;
+        const ky = h / s.h;
+        const gx = (gear.x + gear.s.w / 2 - s.w / 2) * kx;
+        const gy = (gear.y + gear.s.h / 2 - s.h / 2) * ky;
+        q.push(a.y + 4.01, gear.s, a.x + gx, a.y + 4 - hop - h / 2 + gy, gear.s.w * kx, gear.s.h * ky, 0, isIllusion(an.variant) && !!SAGA_MOBS_[an.species] ? rgba(0.75, 0.9, 1, 0.6) : undefined, add);
+      }
     }
     for (const r of this.roofs) if (r.alpha > 0.01 && inView(r.x, r.y, r.sprite.w, r.sprite.h)) q.push(r.depth, r.sprite, r.x + r.sprite.w / 2, r.y + r.sprite.h / 2, r.sprite.w, r.sprite.h, 0, alpha(r.alpha));
     // the cursor on the tile you would use
@@ -2011,7 +2084,8 @@ export class View implements HudTarget {
     for (const [id, a] of this.players) {
       // a fallen friend lies down: the name comes down too
       const low = this.sagaFx.pose(id) === 'down' ? 12 : 0;
-      place(a.label, a.x, a.y - 24 + low);
+      // (in a dungeon a hero's pips stand over their health bar: the name goes above them)
+      place(a.label, a.x, a.y - 24 + low - (low ? 0 : this.sagaFx.nameLift(id) / z));
       if (a.bubble) place(a.bubble, a.x, a.y - 34 + low);
     }
     for (const a of this.npcs.values()) {

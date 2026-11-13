@@ -6,6 +6,7 @@
 // In a dungeon: X, Y, B and RB are spells 1–4, LB a potion, d-pad left/right the next monster, Select backpack,
 // LT/L3 runs.
 // Menus: stick/d-pad moves a highlight between buttons, A presses, B closes, right stick scrolls.
+import { hugin } from './hugin.ts';
 import { cycleTarget, fightMode, inSaga } from '../saga.ts';
 import { setDevice } from '../a11y.ts';
 import { inOwnHouse, myPlayer } from '../state.ts';
@@ -156,7 +157,11 @@ export function initGamepad(opts: {
     if (moving) t.runHeld = down(B.LT) || down(B.L3) || (!fightMode() && down(B.B));
     // (in a fight up on the d-pad is the explain mode, see below; emotes are in the HUD)
     if (hit(B.Up) && !fightMode()) menus.toggle('emotes');
-    if (hit(B.Down)) hud.minimap.toggle();
+    // down on the d-pad: the minimap; in a dungeon it is Märke (the skull on the monster you aim at), the map is in the HUD
+    if (hit(B.Down)) {
+      if (inSaga()) document.dispatchEvent(new Event('vt:mark'));
+      else hud.minimap.toggle();
+    }
     if (hit(B.Start) && down(B.LT)) {
       hudMode = true;
       return;
@@ -167,9 +172,13 @@ export function initGamepad(opts: {
 
     if (fightMode()) {
       // no hotbar in a fight (a dungeon, or hero mode out in the world): the face buttons are the spells, like the keys 1–4
-      if (hit(B.A) || hit(B.RT)) t.act();
+      // LT held and A: the party's horn (two buttons, so the one blow of a stop is never an accident)
+      if (hit(B.A) && down(B.LT)) document.dispatchEvent(new Event('vt:horn'));
+      else if (hit(B.A) || hit(B.RT)) t.act();
       // (the spell bar decides: a spell goes off, or its card comes up while the explain mode is on)
-      [B.X, B.Y, B.B, B.RB, B.LB].forEach((b, i) => hit(b) && document.dispatchEvent(new CustomEvent('vt:spell', { detail: i })));
+      // (B thanks Hugin when he is there with a tip, instead of casting)
+      const thanked = hit(B.B) && hugin.thank();
+      [B.X, B.Y, B.B, B.RB, B.LB].forEach((b, i) => hit(b) && !(b === B.B && thanked) && document.dispatchEvent(new CustomEvent('vt:spell', { detail: i })));
       // R3 or up on the d-pad: the explain mode (the ? button)
       if ((hit(B.R3) && !down(B.LT)) || hit(B.Up)) document.dispatchEvent(new Event('vt:explain'));
       if (hit(B.Left) || hit(B.Right)) cycleTarget();
@@ -220,10 +229,13 @@ export function initGamepad(opts: {
     const list = focusables(root);
     // menus redraw themselves when the game state changes: keep the highlight where it was
     if (!focus || !focus.isConnected || !root.contains(focus)) {
+      focus?.classList.remove('pad-focus');
       focus = null;
       // a window that redrew itself (a toggle, a purchase): the thing in the same place in the list gets the ring back
       const same = focusIndex >= 0 && root === lastRoot ? list[Math.min(focusIndex, list.length - 1)] : undefined;
-      setFocus(same ?? nearest(list, focusAt) ?? null);
+      // a window that has just opened and put the focus on one of its own things (the menu's first tile): the ring starts there
+      const own = root !== lastRoot && root.classList.contains('modal') && document.activeElement instanceof HTMLElement && list.includes(document.activeElement) ? document.activeElement : undefined;
+      setFocus(same ?? own ?? nearest(list, focusAt) ?? null);
     }
     lastRoot = root;
     focusIndex = focus ? list.indexOf(focus) : -1;

@@ -33,7 +33,7 @@ const L: RunRarity = 'legendarisk';
 export const RUNOR: RunaDef[] = [
   // Väktare
   rn('v_tjock', 'vaktare', '🛡️', V, ['skold'], { armor: 0.08 }),
-  rn('v_hugg', 'vaktare', '🗡️', V, ['hugg'], { spell: { hugg: 0.25 } }),
+  rn('v_hugg', 'vaktare', '🗡️', V, ['hugg'], { spell: { hugg: 0.25, dunderslag: 0.25 } }),
   rn('v_ropet', 'vaktare', '📣', O, ['skold'], { spellCd: { utmana: 0.3 } }),
   rn('v_mur', 'vaktare', '🧱', O, ['skold'], { spellCd: { skoldmur: 0.25 } }),
   rn('v_slag', 'vaktare', '💥', S, ['hugg'], { spell: { skoldslag: 0.4 } }),
@@ -47,7 +47,7 @@ export const RUNOR: RunaDef[] = [
   rn('v_vakt', 'vaktare', '🏰', V, ['skold'], { hp: 0.08, armor: 0.03 }),
   rn('v_titan', 'vaktare', '🗿', L, ['skold'], { mods: { skoldmur: { ms: 4000, partyShield: 0.15 } }, taken: 0.08 }),
   // Helare
-  rn('h_runa', 'helare', '💚', V, ['liv'], { spell: { lakerunan: 0.25 } }),
+  rn('h_runa', 'helare', '💚', V, ['liv'], { spell: { lakerunan: 0.25, solstrale: 0.25 } }),
   rn('h_ring', 'helare', '🌿', O, ['liv'], { spell: { lakekrets: 0.35 } }),
   rn('h_pil', 'helare', '✨', V, ['aska'], { spell: { ljuspil: 0.4 } }),
   rn('h_vack', 'helare', '🌅', O, ['liv'], { reviveHp: 0.25 }),
@@ -62,7 +62,7 @@ export const RUNOR: RunaDef[] = [
   rn('h_under', 'helare', '🌄', S, ['liv'], { mods: { vackupp: { cd: 0.4, base: 25 } } }),
   rn('h_livsflod', 'helare', '🌊', L, ['liv'], { mods: { lakekrets: { power: 0.5, radius: 1.5 } }, heal: 0.1 }),
   // Krigare
-  rn('k_yx', 'krigare', '🪓', V, ['hugg'], { spell: { yxhugg: 0.3 } }),
+  rn('k_yx', 'krigare', '🪓', V, ['hugg'], { spell: { yxhugg: 0.3, jattehugg: 0.3 } }),
   rn('k_storm', 'krigare', '💨', O, ['aska'], { spellCd: { stormsteg: 0.35 } }),
   rn('k_virvel', 'krigare', '🌪️', O, ['hugg'], { spell: { virvelvind: 0.35 } }),
   rn('k_raseri', 'krigare', '🔥', S, ['eld'], { spellCd: { raseri: 0.3 } }),
@@ -77,7 +77,7 @@ export const RUNOR: RunaDef[] = [
   rn('k_mod', 'krigare', '🦁', V, ['tur', 'djur'], { crit: 0.06, hp: 0.05 }),
   rn('k_ragnarok', 'krigare', '🌑', L, ['eld'], { mods: { raseri: { ms: 4000, cd: 0.5 } }, power: 0.06 }),
   // Magiker
-  rn('m_eld', 'magiker', '☄️', V, ['eld'], { spell: { eldboll: 0.3 } }),
+  rn('m_eld', 'magiker', '☄️', V, ['eld'], { spell: { eldboll: 0.3, runsmall: 0.3 } }),
   rn('m_is', 'magiker', '❄️', O, ['is'], { spell: { isspjut: 0.35 } }),
   rn('m_ask', 'magiker', '⚡', O, ['aska'], { spell: { askregn: 0.35 } }),
   rn('m_blink', 'magiker', '🌀', V, ['aska'], { spellCd: { blink: 0.4 } }),

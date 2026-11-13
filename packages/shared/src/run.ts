@@ -5,6 +5,7 @@
 // reuses sagasim.ts for every fight rule). Swedish names and texts are in sv.ts (RUN_NAMES, RUN_TEXT).
 import type { ClassId, DungeonId, PathTraits, RunBuffs, SpellMod } from './saga.ts';
 import { noBuffs } from './saga.ts';
+import { hashInts, mulberry32 } from './rng.ts';
 import type { WeatherKind } from './types.ts';
 
 // ---------------------------------------------------------------------------
@@ -67,6 +68,21 @@ export interface RunLevelDef {
   hp: number;
   dmg: number;
   warn: number;
+  /** Bosses and mid-bosses have this many times the health on top of `hp`: long enough that their marks, not their blows, decide the fight. */
+  bossHp: number;
+  /** A boss's plain marks (cleave, slam, rain, charge, line, pools) come this much more often (a multiplier on the time between two uses; 1: as written). */
+  markEvery: number;
+  /** The weight of a brute's Dunk (saga.ts `DUNK`), as a share of the level's mark; 0: brutes do not slam. */
+  dunk: number;
+  /**
+   * Ranged pressure: every `every` ms a boss or mid-boss puts a circle (a mark of weight `weight`) under the hero FURTHEST from it,
+   * if that hero is more than `FAR.beyond` tiles away, so nobody ignores the marks by standing far off. Null: never.
+   */
+  far: { every: number; weight: number } | null;
+  /** When every HUMAN hero has fallen it is a wipe, though the hired Hirdmannen still stands (he cannot carry the run alone). False on the gentle levels: there he fights on and wakes the child. */
+  humansOnly: boolean;
+  /** A mark (a boss's telegraphed move, a Skytt's shot) takes this fraction of the victim's max health (saga.ts `MARK_*` for the nova, the burning ground and the shot). */
+  mark: number;
   /** Sagafrön multiplier on everything a run pays. */
   seeds: number;
   /** Sagoandar: how many a run starts with, how many more each stop after the first brings, and the most at a time. */
@@ -85,11 +101,11 @@ export interface RunLevelDef {
 }
 
 export const RUN_LEVELS: Record<RunLevel, RunLevelDef> = {
-  0: { id: 0, hp: 0.4, dmg: 0.3, warn: 1.8, seeds: 0.35, spirit: 5, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 0.6, rank: 0, affixes: 0 },
-  1: { id: 1, hp: 0.6, dmg: 0.5, warn: 1.4, seeds: 0.5, spirit: 3, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 1, rank: 0, affixes: 0 },
-  2: { id: 2, hp: 1, dmg: 1, warn: 1, seeds: 1, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1, rank: 0, affixes: 0 },
-  3: { id: 3, hp: 1.75, dmg: 1.6, warn: 0.8, seeds: 1.5, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1.5, rank: 0.5, affixes: 1 },
-  4: { id: 4, hp: 1.9, dmg: 1.6, warn: 0.65, seeds: 2, spirit: 0, spiritPerStop: 0, spiritMax: 0, soft: false, bossMoves: 0, rare: 2, rank: 1, affixes: 2 },
+  0: { id: 0, hp: 0.4, dmg: 0.3, warn: 1.8, mark: 0.08, bossHp: 1, markEvery: 1, dunk: 0, far: null, humansOnly: false, seeds: 0.35, spirit: 5, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 0.6, rank: 0, affixes: 0 },
+  1: { id: 1, hp: 0.6, dmg: 0.5, warn: 1.4, mark: 0.2, bossHp: 1, markEvery: 0.8, dunk: 0.5, far: { every: 25_000, weight: 0.5 }, humansOnly: false, seeds: 0.5, spirit: 3, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 1, rank: 0, affixes: 0 },
+  2: { id: 2, hp: 1, dmg: 0.6, warn: 1, mark: 0.5, bossHp: 2.3, markEvery: 0.35, dunk: 0.7, far: { every: 10_000, weight: 1 }, humansOnly: true, seeds: 1, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1, rank: 0, affixes: 0 },
+  3: { id: 3, hp: 1.66, dmg: 1.1, warn: 0.8, mark: 0.6, bossHp: 2.3, markEvery: 0.35, dunk: 0.7, far: { every: 10_000, weight: 1 }, humansOnly: true, seeds: 1.5, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1.5, rank: 0.5, affixes: 1 },
+  4: { id: 4, hp: 1.7, dmg: 1.1, warn: 0.65, mark: 0.7, bossHp: 2.3, markEvery: 0.35, dunk: 0.7, far: { every: 10_000, weight: 1 }, humansOnly: true, seeds: 2, spirit: 0, spiritPerStop: 0, spiritMax: 0, soft: false, bossMoves: 0, rare: 2, rank: 1, affixes: 2 },
 };
 /** The boss attacks the easiest levels allow: its first two, whatever a first run's plan has locked. */
 export const LATT = { bossMoves: 2 } as const;
@@ -425,6 +441,25 @@ export const wingOf = (row: number): number => (row <= 4 ? 0 : row <= 8 ? 1 : 2)
 /** Health of a stop's monsters by wing (DESIGN.md sections 2.3 and 5.1): the later wings are tougher. Tuned by the bots. */
 export const WING_HP: readonly number[] = [1.85, 2.3, 2.7];
 
+/**
+ * Per dungeon, in a run: the later dungeons' monsters hit harder and their bosses have more health than Draugkryptan's, while a
+ * hero is as strong in every chapter (no power from levels or gear) and a fall now costs a Sagoande. `blows` multiplies the
+ * ordinary blows of the dungeon's monsters and bosses, `boss` the health of its boss and mid-boss, `dunk` the weight of a brute's
+ * Dunk (the later dungeons have two brute slots, so far more of them). Tuned so that the careful and
+ * the adult bot win every dungeon on Medel (DESIGN.md 5.4).
+ */
+export const DUNGEON_TUNE: Record<DungeonId, { blows: number; boss: number; dunk?: number }> = {
+  draug: { blows: 1, boss: 1 },
+  frost: { blows: 0.9, boss: 1, dunk: 0.8 },
+  surt: { blows: 0.75, boss: 0.85, dunk: 0.7 },
+  hel: { blows: 0.85, boss: 0.9 },
+  dvarg: { blows: 0.85, boss: 0.85, dunk: 0.6 },
+  orm: { blows: 0.9, boss: 0.8, dunk: 0.6 },
+  alv: { blows: 0.65, boss: 0.75, dunk: 0.7 },
+  fenrir: { blows: 0.6, boss: 0.7, dunk: 0.6 },
+  loke: { blows: 0.8, boss: 0.6, dunk: 0.7 },
+};
+
 /** One human alone (with the hired companion, who counts as a fighter for the monsters' health): monsters tolerate this much less. */
 export const SOLO_MERCY = 0.75;
 
@@ -448,11 +483,31 @@ export const FLOCK_PACKS = [
   { a: [3, 3], b: [3, 3], size: [4, 5], big: 1 },
 ] as const;
 export const MINI_PACKS = { count: [3, 3], size: [3, 4] } as const;
+/**
+ * How often a pack has one of the dungeon's big monsters (the brutes), by wing, from the third row on (rows 1 and 2 have none, so
+ * about one pack in three of the first wing has one); most packs later, on every level (times `BIG_GENTLE` on Mycket lätt). A Stark vakt's packs always have one. The `big` of the tables
+ * above is kept for the Stark vakt only.
+ */
+export const BIG_CHANCE: readonly number[] = [0.6, 0.7, 0.8];
+export const BIG_GENTLE = 0.5;
 /** A Stark vakt: fewer but bigger packs, with big ones; tougher (`ELITE_HP`). A Skatt: one or two small packs guard it. */
 export const ELITE_PACKS = { a: [1, 2], b: [2, 2], size: [4, 5], big: 2 } as const;
 export const ELITE_HP = 1.25;
 export const TREASURE_PACKS = { a: [1, 1], b: [1, 2], size: [3, 4], big: 0 } as const;
 export const BOSS_PACKS = { count: [3, 3], size: [3, 4] } as const;
+/**
+ * Special pack monsters (saga.ts `MobRole`) by level: how many a pack gets (`perPack`), or, on Lätt, how many the whole stop gets
+ * (`perStop`, in their harmless form). On Medel the very first pack of the run (the first pack of the first stop) has none, so it
+ * teaches nothing new. A Stark vakt has at least `ELITE_ROLES` per pack. Never two Besvärjare in a pack. Chosen by the seed.
+ */
+export const PACK_ROLES: Record<RunLevel, { perPack: number; perStop: number }> = {
+  0: { perPack: 0, perStop: 0 },
+  1: { perPack: 0, perStop: 1 },
+  2: { perPack: 1, perStop: 0 },
+  3: { perPack: 2, perStop: 0 },
+  4: { perPack: 2, perStop: 0 },
+};
+export const ELITE_ROLES = 2;
 /**
  * Lätt's packs (DESIGN.md section 5.3 wants a child through the route in about 20-28 minutes): fewer, smaller packs in a Flock and in the
  * rooms before the mid-boss and the boss, on top of the softer monsters. The same shape as above.
@@ -463,6 +518,97 @@ export const LATT_FLOCK_PACKS = [
 ] as const;
 export const LATT_MINI_PACKS = { count: [2, 2], size: [3, 4] } as const;
 export const LATT_BOSS_PACKS = { count: [2, 2], size: [3, 3] } as const;
+
+// ---------------------------------------------------------------------------
+// Stjärnmonster, Bosskrafter and Gillet
+// ---------------------------------------------------------------------------
+
+/** Stjärnmonster: the chance that a pack (never one of the first stop) has a one-star and a two-star member, by level. At most one a pack, never a member with a role. */
+export const STAR_CHANCE: Record<RunLevel, readonly [number, number]> = { 0: [0, 0], 1: [0.1, 0], 2: [0.18, 0.04], 3: [0.25, 0.08], 4: [0.25, 0.08] };
+
+/**
+ * Bosskrafter: every dungeon's boss gives a power to whoever owns its trophy (any level). A hero brings ONE to a run (chosen at the
+ * arch; left alone, the latest boss they have a trophy of). The party has one charge of the horn per stop with a fight; any hero may
+ * blow it, which uses THEIR power. `radius` in tiles round the blower, `ms` how long it lasts, `amount` its number (see each).
+ */
+export interface BossPower {
+  id: DungeonId;
+  icon: string;
+  ms: number;
+  radius?: number;
+  amount?: number;
+}
+export const BOSS_POWERS: Record<DungeonId, BossPower> = {
+  /** Kungens rop: every monster within 6 tiles is stunned 3 s. */
+  draug: { id: 'draug', icon: '👑', ms: 3000, radius: 6 },
+  /** Rimfrost: every monster within 6 tiles is slowed 5 s. */
+  frost: { id: 'frost', icon: '❄️', ms: 5000, radius: 6 },
+  /** Eldring: every monster within 5 tiles burns for 8 s, `amount` damage in all. */
+  surt: { id: 'surt', icon: '🔥', ms: 8000, radius: 5, amount: 190 },
+  /** Hels nåd: every fallen hero stands up with `amount` of their health. */
+  hel: { id: 'hel', icon: '🕯️', ms: 0, amount: 0.5 },
+  /** Drakfjäll: every hero gets a shield of `amount` of max health for 8 s. */
+  dvarg: { id: 'dvarg', icon: '🐉', ms: 8000, amount: 0.35 },
+  /** Flodvåg: monsters within 6 tiles are pushed `amount` tiles away and slowed 4 s. */
+  orm: { id: 'orm', icon: '🌊', ms: 4000, radius: 6, amount: 4 },
+  /** Skuggslöja: for 5 s the monsters lose their targets and do not strike. */
+  alv: { id: 'alv', icon: '🌫️', ms: 5000 },
+  /** Ulvatjut: every hero has `amount` more power, and runs faster, for 8 s. */
+  fenrir: { id: 'fenrir', icon: '🐺', ms: 8000, amount: 0.3 },
+  /** Lokes list: every hero's pips are filled. */
+  loke: { id: 'loke', icon: '🎭', ms: 0 },
+};
+
+/** Gillet: one dish per hero for the whole run, picked at the arch from the three of the day (`dishOffer`); no pick is the first. */
+export interface DishDef {
+  id: string;
+  icon: string;
+  effect: RunEffect;
+  /** Walks this much faster (a fraction). */
+  speed?: number;
+}
+export const DISHES: DishDef[] = [
+  { id: 'kottgryta', icon: '🍲', effect: { hp: 0.12 } },
+  { id: 'honungskaka', icon: '🍯', effect: { traits: { startPip: 1 } } },
+  { id: 'barsaft', icon: '🧃', effect: { potions: 1, potion: 0.3 } },
+  { id: 'roktfisk', icon: '🐟', effect: {}, speed: 0.08 },
+  { id: 'mjodbrod', icon: '🍞', effect: { cd: 0.06 } },
+];
+/** The three dishes of a run, by its seed (dice of their own). */
+export function dishOffer(seed: number): string[] {
+  const rnd = mulberry32(hashInts(seed, 0xd15e5));
+  const pool = DISHES.map((d) => d.id);
+  const out: string[] = [];
+  while (out.length < DISH_OFFER && pool.length) out.push(pool.splice(Math.floor(rnd() * pool.length), 1)[0]!);
+  return out;
+}
+/** A switch for the tests that pin exact numbers of a hero (a dish would move them): off, nobody eats. Always on in the game. */
+export const GILLET = { on: true };
+export const dishDef = (id: string | undefined): DishDef | undefined => DISHES.find((d) => d.id === id);
+export const DISH_OFFER = 3;
+
+// ---------------------------------------------------------------------------
+// Runmärken: a medal for the party when a stop with a fight is cleared
+// ---------------------------------------------------------------------------
+
+/** 1 bronze (cleared), 2 silver (two of the three), 3 gold (all three): few mark hits, no monster heal completed, time under par. */
+export type Medal = 1 | 2 | 3;
+/** Hacksilver a medal pays on top (times 1.5 on the gentle levels, like other hacksilver). */
+export const MEDAL_SILVER: Record<Medal, number> = { 1: 0, 2: 4, 3: 8 };
+/** Gold allows this many mark hits per fighter in the stop. */
+export const MEDAL_MARKS = 1;
+/**
+ * Par (seconds) for a stop by kind, for two fighters on Medel: the careful bot's median time in the stop times 1.6 (measured with
+ * runtune --pars), so an adult makes it and a masher rarely does. `stopPar` scales it by the level and the party.
+ */
+export const STOP_PAR: Partial<Record<NodeKind, number>> = { flock: 120, elite: 150, treasure: 65, mini: 210, boss: 300 };
+export const PAR_LEVEL: Record<RunLevel, number> = { 0: 1.6, 1: 1.3, 2: 1, 3: 1.4, 4: 1.5 };
+export const stopPar = (kind: NodeKind, level: RunLevel, fighters: number): number => (STOP_PAR[kind] ?? 0) * 1000 * PAR_LEVEL[level] * (fighters >= 3 ? 1.15 : 1);
+/** The medal of a cleared stop: counted for the party, never for a name. */
+export function medalFor(o: { markHits: number; mobHeals: number; ms: number; kind: NodeKind; level: RunLevel; fighters: number }): Medal {
+  const ok = [o.markHits <= MEDAL_MARKS * Math.max(1, o.fighters), o.mobHeals === 0, o.ms <= stopPar(o.kind, o.level, o.fighters)].filter(Boolean).length;
+  return ok >= 3 ? 3 : ok === 2 ? 2 : 1;
+}
 
 // ---------------------------------------------------------------------------
 // What the clients are told (protocol.ts carries these)
@@ -539,6 +685,17 @@ export interface RunSnap {
   event?: EventSnap;
   /** At a Vilosten: the heroes who may still choose between Vila and skärpa. */
   restChoice?: string[];
+  /** Bosskrafter: the power each hero brought (a dungeon id; none: no entry), and whether the party's horn is charged in this stop. */
+  powers: Record<string, DungeonId>;
+  horn: boolean;
+  /** Gillet: the dish each hero ate (by player id). */
+  dishes: Record<string, string>;
+  /** The dungeon's weak element, for badges (`weakOf` in sagasim.ts gives a species' own). */
+  weak: 'eld' | 'is' | 'aska';
+  /** Skogen rör sig: the wave now (1..count) while the party defends the stone. */
+  ambush?: { wave: number; count: number };
+  /** Runmärken: the party's medal for each fight stop cleared so far, by the stop's id in `route` (1 bronze, 2 silver, 3 gold). */
+  medals: Record<number, Medal>;
 }
 
 export interface ShopSlotSnap {
@@ -569,6 +726,8 @@ export interface RunOfferSnap {
   /** The card tapped so far (it can be changed until everyone has chosen or the clock ends). */
   picked?: number;
   source: 'flock' | 'stark' | 'skatt' | 'mini' | 'shop';
+  /** Svagheter: for each card, whether one of its tags is the element this dungeon's monsters are weak to (a badge; the offer itself never leans to it). */
+  weak: boolean[];
   /** Time left (ms), new offers this hero may still ask for, and the heroes who have chosen. */
   left: number;
   rerolls: number;

@@ -44,6 +44,8 @@ export interface Events {
   weather: WeatherState | null;
   /** Dungeons: the monster or friend you aim at changed. */
   target: void;
+  /** Runmärken: the party won a medal for the stop just cleared (1 bronze, 2 silver, 3 gold). */
+  medal: number;
   /** Röstprat: rooms, speakers, the handshake and who is talking (ui/voice.ts). */
   voice: Extract<ServerMsg, { t: 'voice' }>;
 }

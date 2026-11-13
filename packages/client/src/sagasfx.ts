@@ -2,6 +2,7 @@
 // swipes and arrows, a boss winding up a big attack and landing it, a boss's shout, falling and getting up, and
 // the fanfare of a treasure chest. Kept short and friendly: the players are small.
 import { ensure, noise, tone } from './sound.ts';
+import { PIP_NOTES } from './fight.ts';
 
 /** Noise through a filter that sweeps from one pitch to another (whooshes, wind, fire). */
 function sweep(dur: number, from: number, to: number, vol = 0.05, type: BiquadFilterType = 'bandpass', q = 1.2): void {
@@ -209,11 +210,253 @@ export function bossLand(move: string): void {
   } else boom(move === 'nova' ? 1.4 : 1);
 }
 
+/** The heroes' auto-attacks, swung about once a second: the same voices as the spells, much quieter and shorter. */
+const AUTO_SOUNDS: Record<string, (v: number) => void> = {
+  hugg: (v) => sweep(0.08, 2400, 900, 0.03 * v, 'highpass', 0.7),
+  yxhugg: (v) => {
+    sweep(0.09, 1700, 600, 0.03 * v, 'highpass', 0.7);
+    tone(120, 0.06, 'square', 0.018 * v, -40);
+  },
+  eldboll: (v) => sweep(0.16, 400, 1300, 0.026 * v, 'lowpass', 0.6),
+  ljuspil: (v) => tone(1100, 0.09, 'triangle', 0.02 * v, 700),
+};
+
+/** The four spenders, heavier with every pip (1..3): Jättehugg, Runsmäll, Dunderslag, Solstråle. */
+function spendSound(id: string, pips: number): void {
+  const k = Math.max(1, Math.min(3, pips));
+  const big = (k - 1) / 2; // 0, 0.5, 1
+  if (id === 'jattehugg') {
+    slash(0.62 - big * 0.12);
+    later(40, () => boom(0.2 + big * 0.9));
+    if (k === 3) later(70, () => sweep(0.3, 2600, 500, 0.06, 'highpass', 0.8));
+  } else if (id === 'runsmall') {
+    sweep(0.18, 500, 2200 + big * 900, 0.05, 'bandpass', 2);
+    later(120, () => {
+      boom(0.2 + big * 0.9);
+      notes([988, 1319, 1976].slice(0, k), 35, 0.12, 'triangle', 0.035);
+    });
+  } else if (id === 'dunderslag') {
+    thud();
+    later(30, () => boom(0.3 + big * 0.9));
+    if (k >= 2) later(60, () => tone(1250 - big * 300, 0.16, 'triangle', 0.04, -400));
+    if (k === 3) later(150, () => tone(196, 0.45, 'triangle', 0.05, 98));
+  } else if (id === 'solstrale') {
+    notes([784, 988, 1175, 1568].slice(0, k + 1), 55, 0.22 + big * 0.2, 'sine', 0.04);
+    if (k === 3) later(160, () => tone(392, 0.6, 'sine', 0.035));
+  }
+}
+
 export const SAGA_SFX = {
   /** A spell or an attack, by the server's spell id (unknown ones are quiet). */
   spell(id: string): void {
     if (id.startsWith('land_')) bossLand(id.slice(5));
     else if (!id.startsWith('cast_')) SPELL_SOUNDS[id]?.();
+  },
+  /** An auto-attack (about one a second for every hero): quiet, and quieter still for a friend's. True if it was one. */
+  auto(id: string, mine: boolean): boolean {
+    const f = AUTO_SOUNDS[id];
+    f?.(mine ? 1 : 0.5);
+    return !!f;
+  },
+  /** A spender going off with this many pips. */
+  spend: spendSound,
+  /** A pip fills: a pop and a note, one step higher for each (0, 1, 2). */
+  pip: (i: number) => {
+    const f = PIP_NOTES[Math.max(0, Math.min(PIP_NOTES.length - 1, i))]!;
+    tone(f, 0.11, 'triangle', 0.05);
+    tone(f * 2, 0.05, 'sine', 0.02);
+    // the last one rings: the row is full
+    if (i >= PIP_NOTES.length - 1) later(70, () => tone(f * 1.5, 0.3, 'sine', 0.03));
+  },
+  /** A combo: the spender landed at the right moment. One bright chord. */
+  combo: () => {
+    for (const f of [523, 659, 784, 1047]) tone(f, 0.38, 'triangle', 0.028);
+    later(90, () => tone(1568, 0.3, 'sine', 0.025));
+  },
+  /** A hit from a ground mark: a heavy, low thud that nothing else makes (quieter when it is a friend). */
+  mark: (mine: boolean) => {
+    const v = mine ? 1 : 0.45;
+    tone(70, 0.34, 'sine', 0.11 * v, -28);
+    tone(104, 0.2, 'square', 0.045 * v, -50);
+    noise(0.12, 0.08 * v);
+  },
+  /** A cast was stopped: a sharp crack, then a small chord of relief. */
+  crack: () => {
+    noise(0.05, 0.11);
+    sweep(0.1, 5200, 900, 0.09, 'highpass', 0.6);
+    tone(180, 0.1, 'square', 0.05, -90);
+    later(70, () => notes([784, 1175], 70, 0.15, 'triangle', 0.045));
+  },
+  /** A Sköldbärare's dome breaks: glass cracking. */
+  domeCrack: () => {
+    notes([2349, 1865, 2794], 28, 0.07, 'triangle', 0.035);
+    sweep(0.14, 6000, 1800, 0.06, 'highpass', 0.9);
+    later(50, () => noise(0.08, 0.05));
+  },
+  /** A Skytt draws its bow: a creak that tightens. */
+  creak: () => {
+    const c = ensure();
+    if (!c) return;
+    const o = c.createOscillator();
+    const lfo = c.createOscillator();
+    const lg = c.createGain();
+    const g = c.createGain();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(95, c.currentTime);
+    o.frequency.exponentialRampToValueAtTime(210, c.currentTime + 0.42);
+    lfo.frequency.setValueAtTime(34, c.currentTime);
+    lfo.frequency.linearRampToValueAtTime(58, c.currentTime + 0.42);
+    lg.gain.value = 26;
+    lfo.connect(lg).connect(o.frequency);
+    g.gain.setValueAtTime(0.001, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.035, c.currentTime + 0.08);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.45);
+    o.connect(g).connect(c.destination);
+    o.start();
+    lfo.start();
+    o.stop(c.currentTime + 0.46);
+    lfo.stop(c.currentTime + 0.46);
+  },
+  /** A Besvärjare starts to heal a packmate: a small chant climbing as long as the cast. */
+  chant: (ms: number) => notes([330, 392, 440, 523], Math.max(120, Math.min(900, ms / 4.5)), 0.32, 'sine', 0.028),
+  /** Öppning: a shimmer that rises. */
+  open: () => {
+    notes([784, 988, 1175, 1568, 1976], 45, 0.2, 'sine', 0.035);
+    sweep(0.4, 1500, 6500, 0.025, 'bandpass', 3);
+  },
+  /** "Now!": something that can be stopped is in reach of your interrupt. Two quick high ticks. */
+  now: () => {
+    tone(1760, 0.045, 'square', 0.03);
+    later(70, () => tone(2349, 0.07, 'square', 0.03));
+  },
+  /** A boss throws something at a hero far away: a short whoosh that rises. */
+  lob: () => {
+    sweep(0.22, 500, 2200, 0.05, 'bandpass', 1.5);
+    tone(180, 0.1, 'square', 0.03, 120);
+  },
+  /** A starred monster comes into view: a small bright chime. */
+  starSeen: () => notes([1319, 1760, 2093], 60, 0.16, 'sine', 0.03),
+  /** A starred monster falls: coins ringing, more for two stars. */
+  coins: (stars: number) => {
+    for (let i = 0; i < 3 + stars * 2; i++) later(i * 55, () => tone(1568 + (i % 3) * 262, 0.09, 'triangle', 0.03, 180));
+  },
+  /** Hornet: a horn call, two notes rising, then the power's own colour (low for the king's shout, bright for ice and light). */
+  horn: (id: string) => {
+    tone(196, 0.5, 'sawtooth', 0.05, 30);
+    later(180, () => {
+      tone(294, 0.8, 'sawtooth', 0.055, 20);
+      tone(147, 0.8, 'triangle', 0.04);
+    });
+    later(420, () => {
+      if (id === 'frost') notes([2093, 1760, 2637], 40, 0.2, 'triangle', 0.035);
+      else if (id === 'surt') sweep(0.6, 300, 1600, 0.06, 'lowpass', 0.7);
+      else if (id === 'hel' || id === 'dvarg') notes([523, 659, 784, 1047], 70, 0.4, 'sine', 0.04);
+      else if (id === 'orm') sweep(0.7, 1800, 200, 0.07, 'lowpass', 0.6);
+      else if (id === 'alv') swell(110, 0.9, 70, 0.04, 'sine');
+      else if (id === 'fenrir') {
+        tone(330, 0.7, 'sine', 0.05, 220);
+        later(300, () => tone(550, 0.6, 'sine', 0.04, -200));
+      } else if (id === 'loke') notes([784, 988, 1175, 1568, 1976], 45, 0.2, 'triangle', 0.035);
+      else boom(1.2);
+    });
+  },
+  /** A hit of the element the monster is weak to: a bright glassy sparkle. */
+  weak: () => {
+    notes([2349, 3136], 35, 0.09, 'sine', 0.03);
+    sweep(0.1, 5000, 7000, 0.02, 'highpass', 2);
+  },
+  /** Perfekt block: a ringing clang. */
+  parry: () => {
+    noise(0.04, 0.09);
+    tone(1865, 0.5, 'triangle', 0.05, -40);
+    tone(2794, 0.4, 'sine', 0.03, -60);
+    later(30, () => tone(932, 0.3, 'square', 0.02));
+  },
+  /** Nära ögat: a quick whoosh past. */
+  near: (mine: boolean) => sweep(0.18, 700, 3600, mine ? 0.06 : 0.03, 'bandpass', 1.4),
+  /** Skogen rör sig: a wave walks in: a low horn and three drum beats. */
+  wave: () => {
+    tone(147, 0.7, 'sawtooth', 0.05, 20);
+    for (let i = 0; i < 3; i++) later(250 + i * 160, () => {
+      tone(82, 0.14, 'triangle', 0.08, -30);
+      noise(0.05, 0.05);
+    });
+  },
+  /** Märke: the skull lands on a monster (a low knock and a rattle), or is taken away. */
+  skull: (on: boolean) => {
+    if (on) {
+      tone(196, 0.09, 'square', 0.05, -60);
+      later(70, () => notes([587, 494], 50, 0.07, 'triangle', 0.035));
+    } else tone(392, 0.08, 'triangle', 0.03, -120);
+  },
+  /** Samslag: two heroes struck together. Two notes at once, a fifth apart, and a bang. */
+  samslag: () => {
+    tone(392, 0.45, 'triangle', 0.05);
+    tone(587, 0.45, 'triangle', 0.045);
+    later(40, () => boom(0.7));
+    later(140, () => {
+      tone(784, 0.4, 'sine', 0.03);
+      tone(1175, 0.4, 'sine', 0.025);
+    });
+  },
+  /** A Kraftklot lies on the floor: a soft hum that fades as its time runs out. */
+  orbHum: (ms: number) => {
+    const c = ensure();
+    if (!c) return;
+    const dur = Math.max(0.5, ms / 1000);
+    for (const [f, v] of [
+      [330, 0.016],
+      [495, 0.01],
+    ] as const) {
+      const o = c.createOscillator();
+      const g = c.createGain();
+      o.type = 'sine';
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.001, c.currentTime);
+      g.gain.exponentialRampToValueAtTime(v, c.currentTime + 0.25);
+      g.gain.linearRampToValueAtTime(0.0001, c.currentTime + dur);
+      o.connect(g).connect(c.destination);
+      o.start();
+      o.stop(c.currentTime + dur);
+    }
+  },
+  /** Someone took a Kraftklot (a friend: the three pip notes come from your own row when it is you). */
+  orbTake: () => {
+    sweep(0.2, 900, 4200, 0.04, 'bandpass', 3);
+    tone(1319, 0.18, 'sine', 0.03);
+  },
+  /** Guldringen appears: a warm chime that says "come here" (nothing like the warning beeps of the red marks). */
+  ringChime: () => {
+    notes([523, 659, 784, 1047], 110, 0.6, 'sine', 0.045);
+    later(60, () => tone(262, 0.9, 'triangle', 0.03));
+  },
+  /** The party stood in the ring: the boss's scream fizzles out, and a cheer. */
+  ringWon: () => {
+    sweep(0.5, 1800, 200, 0.05, 'lowpass', 0.8);
+    tone(300, 0.4, 'sawtooth', 0.03, -200);
+    later(260, () => notes([523, 659, 784, 1047, 1319], 70, 0.3, 'triangle', 0.045));
+    later(700, () => noise(0.2, 0.04));
+  },
+  /** The ring was missed: the scream lands. */
+  ringLost: () => {
+    boom(1.2);
+    tone(196, 0.5, 'sawtooth', 0.045, -90);
+  },
+  /** A Runmärke: bronze one note, silver two, gold a little fanfare. */
+  medal: (m: number) => {
+    if (m >= 3) {
+      notes([523, 659, 784, 1047], 90, 0.3, 'triangle', 0.05);
+      later(380, () => {
+        tone(1319, 0.7, 'sine', 0.04);
+        tone(1047, 0.7, 'triangle', 0.03);
+      });
+    } else if (m === 2) notes([659, 988], 120, 0.4, 'triangle', 0.045);
+    else tone(440, 0.4, 'triangle', 0.045);
+  },
+  /** A monster beaten: a soft pop (heavier after a big blow). */
+  kill: (big: boolean) => {
+    noise(0.1, big ? 0.07 : 0.045);
+    tone(big ? 150 : 220, 0.14, 'triangle', big ? 0.06 : 0.04, -90);
   },
   /** You were hit. */
   hurt: () => tone(300, 0.09, 'square', 0.045, -120),
@@ -299,3 +542,15 @@ export const SAGA_SFX = {
     if (best >= 4) later(650, () => notes([1047, 1319, 1568, 2093, 2637], 60, 0.6, 'triangle', 0.035));
   },
 };
+
+/** For checks from outside (a script sets `window.__sfxLog = []`): every fight sound asked for is written down there. */
+{
+  const all = SAGA_SFX as unknown as Record<string, (...a: unknown[]) => unknown>;
+  for (const k of Object.keys(all)) {
+    const f = all[k]!;
+    all[k] = (...a: unknown[]) => {
+      (globalThis as { __sfxLog?: string[] }).__sfxLog?.push(a.length ? `${k}:${a.join(',')}` : k);
+      return f(...a);
+    };
+  }
+}
