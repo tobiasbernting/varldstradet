@@ -12,11 +12,19 @@ import {
   ATTACK_KINDS,
   BLOCK_SPECIES,
   CLASSES,
+  BOSS_POWERS,
   COMBO_TEXT,
+  ELEMENT_ICONS,
+  EVENT_NAMES,
   FIGHT_UI,
+  HELP_FIGHT,
+  HUGIN_T,
+  POWER_NAMES,
+  POWER_TEXT,
+  dishDef,
+  heroElement,
   MOB_FLAG,
   MOB_ROLES,
-  PIP_ICONS,
   PIP_MAX,
   PIP_NAMES,
   SPEND_MUL,
@@ -84,7 +92,8 @@ import {
   drinkPotion,
   fightMode,
   flagsOf,
-  firstTime,
+  blowHorn,
+  weakOfMob,
   markedMob,
   spendTarget,
   toggleMark,
@@ -109,9 +118,12 @@ import {
   titleOf,
   webbed,
 } from '../saga.ts';
-import { PRIMER, interruptOf, isInterrupt, isReaction, newPips, primerHint, type SpendView } from '../fight.ts';
+import { PRIMER, isInterrupt, isReaction, newPips, primerHint, type SpendView } from '../fight.ts';
 import { boltBadge, fightExplain, fightStrip, pipRow, roleLine, roleMarker, setPips, skullMark, starBadge } from './fightcard.ts';
 import { myRun, pathOf } from '../run.ts';
+import { TIPS } from '../hugin.ts';
+import { seenTips, tipPic } from './hugin.ts';
+import { huginCanvas } from '@art/hugin.ts';
 import { pathIcon } from './runpick.ts';
 import { SAGA_SFX } from '../sagasfx.ts';
 import { lootLookCard, rememberLooks, renderLooks, resetLooksWindow } from './looks.ts';
@@ -213,8 +225,14 @@ class UnitView {
   constructor(cls: string) {
     this.el = h('div', { class: cls }, this.em, h('div', { class: 'col' }, h('div', { class: 'nm' }, this.nm, this.fl), this.meter.el));
   }
+  private br = h('span', { class: 'br' });
+  /** What the hero brought on the run (small pictures after the name: a dish, a boss power, an element). */
+  bring(icons: string): void {
+    if (!this.br.isConnected) this.fl.after(this.br);
+    if (this.br.textContent !== icons) this.br.textContent = icons;
+  }
   private roleFor = '';
-  set(emoji: string, name: string, f: [number, number, number, ...number[]] | null, color: string, numbers = true, mob?: { role?: (typeof MOB_ROLES)[number]; flags: number }): void {
+  set(emoji: string, name: string, f: [number, number, number, ...number[]] | null, color: string, numbers = true, mob?: { role?: (typeof MOB_ROLES)[number]; flags: number; extra?: string }): void {
     const k = f ? Math.max(0, f[0] / Math.max(1, f[1])) : 1;
     // a special pack monster shows its marker where the others have a face
     const role = mob?.role ?? '';
@@ -225,7 +243,7 @@ class UnitView {
     }
     if (!role && this.em.textContent !== emoji) this.em.textContent = emoji;
     if (this.nm.textContent !== name) this.nm.textContent = name;
-    const icons = mob ? mobIcons(mob.flags) : f ? flagIcons(f[2]) : '';
+    const icons = `${mob ? mobIcons(mob.flags) : f ? flagIcons(f[2]) : ''}${mob?.extra ?? ''}`;
     if (this.fl.textContent !== icons) this.fl.textContent = icons;
     this.el.style.setProperty('--c', color);
     this.el.classList.toggle('dead', !mob && !!f && !!(f[2] & FLAG.down));
@@ -395,6 +413,13 @@ export class SagaUi {
   private actStar: HTMLElement | null = null;
   private markFlash = h('div', { class: 'saga-markflash', 'aria-hidden': 'true' });
   /** Märke: the skull button beside the target's frame (it marks the monster you aim at for the whole party). */
+  /** Hornet: the party's one blow per stop, with MY boss power's picture (beside the skull button; key R). */
+  private hornIcon = h('span', { class: 'ic' }, '📯');
+  private hornBtn = h('button', { class: 'saga-horn', type: 'button' }, this.hornIcon, h('span', { class: 'horn', 'aria-hidden': 'true' }, '📯'), h('span', { class: 'key k' }, FIGHT_UI.hornKey));
+  private hornState = '';
+  /** Skogen rör sig: the wave being fought, docked under the run bar with the other panels. */
+  private wave = h('div', { class: 'run-wave', role: 'status' });
+  private waveShown = '';
   private skullBtn = h('button', { class: 'saga-skull', type: 'button', 'aria-pressed': 'false', 'aria-label': T.sagaSkull }, skullMark(), h('span', { class: 'lb' }, FIGHT_UI.skullBtn), h('span', { class: 'key k' }, FIGHT_UI.skullKey));
   /** The pips the row showed last (a new one pops and sounds), the glow's last reason and the last "stop it now" cue. */
   private pipsShown = 0;
@@ -434,7 +459,12 @@ export class SagaUi {
     private menus: Menus,
     social: HTMLElement,
   ) {
-    this.units.append(this.meFrame.el, this.targetFrame.el, this.skullBtn);
+    this.units.append(this.meFrame.el, this.targetFrame.el, this.skullBtn, this.hornBtn);
+    this.hornBtn.hidden = true;
+    cards.info(this.hornBtn, '📯', RUN_T.hornName, RUN_T.hornText);
+    cards.tap(this.hornBtn, () => blowHorn());
+    document.addEventListener('vt:horn', () => blowHorn());
+    this.wave.hidden = true;
     cards.info(this.skullBtn, '💀', T.sagaSkull, T.sagaSkullText);
     cards.tap(this.skullBtn, () => toggleMark());
     document.addEventListener('vt:mark', () => toggleMark());
@@ -444,7 +474,7 @@ export class SagaUi {
     // the spender's card (and the big button's) shows how a fight goes, in pictures
     cards.picture = (key) => (key in CLASSES ? fightStrip(key as ClassId) : null);
     // the boss bar and the cast bar hang in the column under the message lane (ui/lane.ts)
-    centerColumn(hudRoot).prepend(this.boss, this.castBar);
+    centerColumn(hudRoot).prepend(this.boss, this.castBar, this.wave);
     // the tracker hangs under the HUD's round buttons, wherever they wrap to (on a short screen they take two rows)
     const place = (): void => {
       const hr = document.querySelector<HTMLElement>('.hud-right');
@@ -545,6 +575,10 @@ export class SagaUi {
       return true;
     }
     if (!fightMode()) return false;
+    if ((e.key === 'r' || e.key === 'R') && inSaga() && myRun()) {
+      blowHorn();
+      return true;
+    }
     if ((e.key === 'z' || e.key === 'Z') && inSaga()) {
       toggleMark();
       return true;
@@ -831,10 +865,6 @@ export class SagaUi {
       this.pipsShown = pips;
       if (spender?.pips) setPips(spender.pips, pips, false, pipHalf(client.me));
       if (this.actPips) setPips(this.actPips, pips, false, pipHalf(client.me));
-      if (pips >= PIP_MAX && firstTime('pips3')) {
-        const sp = SPELLS[cls.spells[0]]!;
-        say(fmt(FIGHT_UI.hintPips, { pips: PIP_NAMES[cls.id], spell: sp.name, n: SPEND_MUL[PIP_MAX]! }), { kind: 'system', icon: PIP_ICONS[cls.id], cls: 'hint', log: false, ms: 9000 });
-      }
     }
     // (half a pip: the first of the two auto-attacks a pip takes has landed)
     if (cls && view) {
@@ -867,6 +897,59 @@ export class SagaUi {
     window.setTimeout(() => (this.markFlash.hidden = true), 600);
   }
 
+  /** Svagheter: what the monster you aim at is weak to (a down arrow and the element's picture), in a run's dungeon. */
+  private weakIcon(species: string | undefined): string {
+    const w = weakOfMob(species);
+    return w ? ` ▼${ELEMENT_ICONS[w] ?? ''}` : '';
+  }
+
+  /** What a hero brought on the run, as small pictures on their party frame: the dish, the boss power, and the element of their blows. */
+  private bringsOf(id: string): string {
+    const run = myRun();
+    if (!run) return '';
+    const dish = dishDef(run.dishes?.[id])?.icon ?? '';
+    const power = run.powers?.[id] ? BOSS_POWERS[run.powers[id]!].icon : '';
+    const el = run.party.find((p) => p.id === id)?.bot ? undefined : heroElement(run.hold[id] ?? [], run.runor);
+    return `${dish}${power}${el ? (ELEMENT_ICONS[el] ?? '') : ''}`;
+  }
+
+  /** Hornet: full or blown, with my power's picture; grey when I brought none. Only in a run's fight. */
+  private renderHorn(): void {
+    const run = myRun();
+    const power = run?.powers?.[client.me];
+    const show = !!run && inSaga();
+    const state = show ? `${power ?? ''}:${run!.horn ? 1 : 0}` : '';
+    if (state === this.hornState) return;
+    this.hornState = state;
+    this.hornBtn.hidden = !show;
+    if (!show) return;
+    const icon = power ? BOSS_POWERS[power].icon : '📯';
+    if (this.hornIcon.textContent !== icon) this.hornIcon.textContent = icon;
+    const st = !power ? FIGHT_UI.hornNoPower : run!.horn ? FIGHT_UI.hornFull : FIGHT_UI.hornUsed;
+    this.hornBtn.classList.toggle('none', !power);
+    this.hornBtn.classList.toggle('used', !!power && !run!.horn);
+    this.hornBtn.classList.toggle('full', !!power && run!.horn);
+    this.hornBtn.setAttribute('aria-label', `${RUN_T.hornName}${power ? `: ${POWER_NAMES[power] ?? ''}` : ''}. ${st}`);
+    this.hornBtn.dataset.infoIcon = icon;
+    this.hornBtn.dataset.infoName = power ? `${RUN_T.hornName}: ${POWER_NAMES[power] ?? ''}` : RUN_T.hornName;
+    this.hornBtn.dataset.infoText = power ? `${POWER_TEXT[power] ?? ''} ${RUN_T.hornText}` : RUN_T.powerNone;
+  }
+
+  /** Skogen rör sig: "Våg 2 av 3" with a dot for each wave, while the party defends the stone. */
+  private renderWave(): void {
+    const amb = inSaga() ? myRun()?.ambush : undefined;
+    const key = amb ? `${amb.wave}/${amb.count}` : '';
+    if (key === this.waveShown) return;
+    this.waveShown = key;
+    this.wave.hidden = !amb;
+    if (!amb) return;
+    clear(this.wave);
+    const text = fmt(FIGHT_UI.waveOf, { n: Math.max(1, amb.wave), count: amb.count });
+    this.wave.append(h('span', { class: 'ic', 'aria-hidden': 'true' }, '🌲'), h('b', null, text), h('span', { class: 'dots', 'aria-hidden': 'true' }, ...Array.from({ length: amb.count }, (_, i) => h('i', { class: i < amb.wave ? 'on' : '' }))));
+    cards.info(this.wave, '🌲', text, FIGHT_UI.waveInfo);
+    announce(text);
+  }
+
   // ---- your health and your target's ----
 
   private renderUnits(): void {
@@ -889,6 +972,7 @@ export class SagaUi {
     }
     this.units.hidden = false;
     this.meFrame.set(cls?.emoji ?? '🙂', me?.name ?? T.sagaYou, snap.f[client.me] ?? null, cls?.color ?? '#ffe98a');
+    this.renderHorn();
     // the skull button: there while there is a monster to mark; pressed while the one you aim at carries the mark
     const aim = typeof liveTarget() === 'number' ? (liveTarget() as number) : spendTarget();
     const marked = markedMob();
@@ -908,7 +992,7 @@ export class SagaUi {
       const m = snap.m[t];
       // a monster still waiting has its full health (the server only sends those that are fighting or hurt)
       // a special pack monster: its role beside its name and its marker for a face; and what state it is in
-      this.targetFrame.set(a?.species === 'spindelnat' ? '🕸️' : a && BLOCK_SPECIES.has(a.species) ? '🧊' : a && SAGA_BOSSES[a.species] ? '💀' : '👹', a?.name ?? '', m ? [m[0], m[1], 0] : null, '#ff8a70', !!m, { role: a?.role, flags: m?.[2] ?? 0 });
+      this.targetFrame.set(a?.species === 'spindelnat' ? '🕸️' : a && BLOCK_SPECIES.has(a.species) ? '🧊' : a && SAGA_BOSSES[a.species] ? '💀' : '👹', a?.name ?? '', m ? [m[0], m[1], 0] : null, '#ff8a70', !!m, { role: a?.role, flags: m?.[2] ?? 0, extra: this.weakIcon(a?.species) });
     }
   }
 
@@ -947,6 +1031,7 @@ export class SagaUi {
       if (this.party.children[i] !== row.el) this.party.insertBefore(row.el, this.party.children[i] ?? null);
       const c = classOf(client.world?.players[id]);
       row.set(pathOf(id) ? `${c?.emoji ?? ''}${pathIcon(pathOf(id))}` : (c?.emoji ?? '🙂'), name(id), snap!.f[id]!, c?.color ?? '#cccccc', false);
+      row.bring(this.bringsOf(id));
       row.el.classList.toggle('sel', t === id);
     });
     this.renderPets(ids);
@@ -1041,18 +1126,8 @@ export class SagaUi {
     if (!inSaga()) return;
     this.renderParty();
     this.renderBoss();
-    this.casterHint();
+    this.renderWave();
     this.tracker.hidden = this.trackerHidden();
-  }
-
-  /** The first time a Besvärjare starts to heal on this device: one line about stopping it. */
-  private casterHint(): void {
-    const cast = Object.values(sagaSnap()?.c ?? {}).find((c) => c[0] === 'heal');
-    const cls = myClass();
-    if (!cast || !cls || !firstTime('caster')) return;
-    const stop = interruptOf(cls.id);
-    const s = String(Math.round((cast[2] - cast[1]) / 100) / 10).replace('.', ',');
-    say(stop ? fmt(FIGHT_UI.hintCaster, { s, spell: SPELLS[stop]!.name }) : fmt(FIGHT_UI.hintCasterNone, { s }), { kind: 'system', icon: '⚡', cls: 'hint', log: false, ms: 9000 });
   }
 
   // ---- shouts, banners, fallen and frozen ----
@@ -1473,6 +1548,22 @@ export class SagaUi {
     body.append(h('div', { class: 'saga-head' }, `👹 ${T.sagaRolesTitle}`));
     body.append(h('div', { class: 'saga-roles' }, ...MOB_ROLES.map(roleLine), h('div', { class: 'role-line' }, h('span', { class: 'em' }, '💥'), h('div', null, h('b', null, T.sagaDunkName), h('div', { class: 'tx' }, T.sagaDunkText))), h('div', { class: 'role-line open' }, h('span', { class: 'em' }, '💫'), h('div', null, h('b', null, FIGHT_UI.openTitle), h('div', { class: 'tx' }, T.sagaOpenText)))));
     if (prog.cls) body.append(fightExplain(prog.cls));
+    // Hugins tips: every tip the raven has shown on this device, to read again
+    const tips = seenTips();
+    const bird = document.createElement('canvas');
+    const src = huginCanvas('land');
+    bird.width = src.width;
+    bird.height = src.height;
+    bird.getContext('2d')!.drawImage(src, 0, 0);
+    body.append(h('div', { class: 'saga-head' }, `🐦‍⬛ ${HUGIN_T.page}`));
+    body.append(
+      h(
+        'div',
+        { class: 'hugin-tips' },
+        h('div', { class: 'head' }, bird, h('span', { class: 'count' }, tips.length ? fmt(HUGIN_T.pageCount, { n: tips.length, max: TIPS.length }) : HUGIN_T.pageNone)),
+        ...tips.map((t) => h('div', { class: 'tip' }, h('span', { class: 'pic', 'aria-hidden': 'true' }, tipPic(t.pic)), h('span', { class: 'tx' }, t.text))),
+      ),
+    );
     // fighting together: Märke, Samslag, Kraftklot, Guldringen and Runmärken
     const line = (pic: HTMLElement | string, name: string, text: string): HTMLElement => h('div', { class: 'role-line' }, typeof pic === 'string' ? h('span', { class: 'em' }, pic) : pic, h('div', null, h('b', null, name), h('div', { class: 'tx' }, text)));
     body.append(h('div', { class: 'saga-head' }, `🤝 ${FIGHT_UI.fightPage}`));
@@ -1486,6 +1577,13 @@ export class SagaUi {
         line('⭐', FIGHT_UI.ringTitle, FIGHT_UI.ringText),
         line(h('span', { class: 'em medals' }, '🥇'), FIGHT_UI.medalsTitle, RUN_T.medalText),
         line('🎯', T.sagaFarName, T.sagaFarText),
+        line(h('span', { class: 'em' }, '⭐'), RUN_T.starName, RUN_T.starText),
+        line('▼', RUN_T.weakName, FIGHT_UI.weakLine),
+        line('🛡️', RUN_T.parry, RUN_T.parryText),
+        line('💨', RUN_T.near, RUN_T.nearText),
+        line('📯', RUN_T.hornName, RUN_T.hornText),
+        line('🍲', RUN_T.dishPick, HELP_FIGHT.steps.find((st) => st.icon === 'emoji:🍲')?.text ?? ''),
+        line('🌲', EVENT_NAMES.bakhall ?? '', FIGHT_UI.waveInfo),
         line('💀', T.sagaWipe, RUN_T.wipeRule),
       ),
     );

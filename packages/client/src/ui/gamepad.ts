@@ -6,6 +6,7 @@
 // In a dungeon: X, Y, B and RB are spells 1–4, LB a potion, d-pad left/right the next monster, Select backpack,
 // LT/L3 runs.
 // Menus: stick/d-pad moves a highlight between buttons, A presses, B closes, right stick scrolls.
+import { hugin } from './hugin.ts';
 import { cycleTarget, fightMode, inSaga } from '../saga.ts';
 import { setDevice } from '../a11y.ts';
 import { inOwnHouse, myPlayer } from '../state.ts';
@@ -171,9 +172,13 @@ export function initGamepad(opts: {
 
     if (fightMode()) {
       // no hotbar in a fight (a dungeon, or hero mode out in the world): the face buttons are the spells, like the keys 1–4
-      if (hit(B.A) || hit(B.RT)) t.act();
+      // LT held and A: the party's horn (two buttons, so the one blow of a stop is never an accident)
+      if (hit(B.A) && down(B.LT)) document.dispatchEvent(new Event('vt:horn'));
+      else if (hit(B.A) || hit(B.RT)) t.act();
       // (the spell bar decides: a spell goes off, or its card comes up while the explain mode is on)
-      [B.X, B.Y, B.B, B.RB, B.LB].forEach((b, i) => hit(b) && document.dispatchEvent(new CustomEvent('vt:spell', { detail: i })));
+      // (B thanks Hugin when he is there with a tip, instead of casting)
+      const thanked = hit(B.B) && hugin.thank();
+      [B.X, B.Y, B.B, B.RB, B.LB].forEach((b, i) => hit(b) && !(b === B.B && thanked) && document.dispatchEvent(new CustomEvent('vt:spell', { detail: i })));
       // R3 or up on the d-pad: the explain mode (the ? button)
       if ((hit(B.R3) && !down(B.LT)) || hit(B.Up)) document.dispatchEvent(new Event('vt:explain'));
       if (hit(B.Left) || hit(B.Right)) cycleTarget();

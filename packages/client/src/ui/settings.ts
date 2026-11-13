@@ -2,7 +2,7 @@
 // left-handed buttons and reading aloud. Opened from the menu (ui/hudmenu.ts), the help window and the character picker (event 'vt:settings').
 // Every change is applied at once and saved on the device (a11y.ts, fxprefs.ts). A window like the others: a dialog, Escape and the
 // gamepad's B close it, the focus comes back to what opened it.
-import { A11Y_T } from '@varldstradet/shared';
+import { A11Y_T, HUGIN_T } from '@varldstradet/shared';
 import { HOLD_CHOICES, hudSize, prefs, type HudSize, setPref, textCapped, type Prefs, type TextSize } from '../a11y.ts';
 import { FX_SETTINGS, fxSetting, setFxSetting, type FxSetting } from '../fxprefs.ts';
 import { clear, h, onTap } from './dom.ts';
@@ -97,6 +97,8 @@ export class SettingsUi {
     choice<number>('hold', A11Y_T.hold, A11Y_T.holdText, [[HOLD_CHOICES[0], A11Y_T.holdShort], [HOLD_CHOICES[1], A11Y_T.holdMid], [HOLD_CHOICES[2], A11Y_T.holdLong]], HOLD_CHOICES.includes(p.hold as 300) ? p.hold : 450, (v) => setPref('hold', v));
     choice<HudSize>('hud', A11Y_T.hudSize, A11Y_T.hudSizeText, [['small', A11Y_T.hudSmall], ['normal', A11Y_T.hudNormal], ['large', A11Y_T.hudLarge]], hudSize(), (v) => setPref('hud', v));
     toggle('left', A11Y_T.left, A11Y_T.leftText);
+    // Hugin, the raven who teaches (ui/hugin.ts)
+    toggle('hugin', `🐦‍⬛ ${HUGIN_T.setting}`, HUGIN_T.settingText);
     body.append(h('h3', null, A11Y_T.secRead));
     const can = canSpeak();
     toggle('read', A11Y_T.read, can ? A11Y_T.readText : A11Y_T.readNone, !can);

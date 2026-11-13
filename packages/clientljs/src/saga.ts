@@ -6,11 +6,12 @@
 // glowing on top. Out in the world a hero's spells and hits are drawn the same way (the telegraphs, bars and the
 // fallen and frozen are the dungeons' only).
 import { cameraShake, drawEllipse, drawLine, drawLineList, drawPoly, rgb, setAdditiveBlendMode, vec2, type Color, type Vector2 } from 'littlejsengine';
-import { BLOCK_SPECIES, CLASSES, CLASS_IDS, FIGHT_UI, MOB_FLAG, PIP_MAX, ROLE, SAGA_BOSSES, SAGA_MOBS, SPELLS, SPEND, T, TILE, fmt, isSagaKey, type Change, type MobRole, type SagaZone } from '@varldstradet/shared';
-import { FLAG, classOf, fightMode, firstTime, flagsOf, isFoe, pipHalf, liveTarget, markedMob, sagaSnap, setTarget, webbed } from '@v1/saga.ts';
+import { BLOCK_SPECIES, CLASSES, CLASS_IDS, FIGHT_UI, BOSS_POWERS, ELEMENT_ICONS, MOB_FLAG, PIP_MAX, ROLE, RUN_T, SAGA_BOSSES, SAGA_MOBS, SPELLS, SPEND, T, TILE, fmt, isSagaKey, type Change, type MobRole, type SagaZone } from '@varldstradet/shared';
+import { FLAG, classOf, fightMode, flagsOf, isFoe, pipHalf, liveTarget, markedMob, weakOfMob, sagaSnap, setTarget, webbed } from '@v1/saga.ts';
 import { castFill, hitStopMs, juiceOf, poofCount, shakeOf, spendClass, type Juice } from '@v1/fight.ts';
 import { effectiveFx } from '@v1/fxprefs.ts';
-import { castRing, pipRow, roleMarker, setPips, skullMark, tickMark } from '@v1/ui/fightcard.ts';
+import { castRing, pipRow, roleMarker, setPips, skullMark, starRow, tickMark } from '@v1/ui/fightcard.ts';
+import { myRun } from '@v1/run.ts';
 import { SAGA_SFX, bossWindup } from '@v1/sagasfx.ts';
 import { activeWorld, bus, client, myPlayer, serverNow } from '@v1/state.ts';
 import { zoomPx } from '@v1/ui/hud.ts';
@@ -72,6 +73,8 @@ interface BarTop {
   mine?: boolean;
   /** Märke: the party's skull is on this monster. */
   skull?: boolean;
+  /** Stjärnmonster: one or two gold stars over its head. */
+  stars?: number;
   /** This hero stands in Guldringen. */
   inRing?: boolean;
 }
@@ -83,6 +86,8 @@ interface BarParts {
   pipsCls: string;
   skull: HTMLElement | null;
   tick: HTMLElement | null;
+  stars: HTMLElement | null;
+  starsN: number;
 }
 /** The warning colour of a wind-up on the ground: red, or (colour-blind-safe) the orange of the Okabe-Ito palette, which keeps its light-
  *  ness against dark floors and is not mixed up with green or brown; the stripes and the white edge carry the meaning in both. */
@@ -163,6 +168,7 @@ export class SagaView {
   private lastHurtSound = 0;
   private lastCritSound = 0;
   private lastMarkSound = 0;
+  private lastWeakSound = 0;
   private barParts = new Map<string, BarParts>();
   /** Every hero's pips at the last look (a spender's blow is as big as the pips it used). */
   private pipsSeen = new Map<string, number>();
@@ -172,6 +178,9 @@ export class SagaView {
   private openSeen = new Set<number>();
   private domeUp = new Map<number, { x: number; y: number }>();
   private castSeen = new Map<number, string>();
+  /** Stjärnmonster: the stars of each monster met (a sparkle the first time, a richer end), and the ambush's wave. */
+  private starOf = new Map<number, number>();
+  private waveSeen = 0;
   /** Märke: the monster that carried the skull at the last look (undefined before the first). */
   private skullSeen: number | null | undefined = undefined;
   /** Where each monster stood last (a beaten one's poof). */
@@ -221,6 +230,8 @@ export class SagaView {
     this.domeUp.clear();
     this.castSeen.clear();
     this.skullSeen = undefined;
+    this.starOf.clear();
+    this.waveSeen = 0;
     this.lastSpot.clear();
     this.flashes.clear();
     this.stopped_.clear();
@@ -344,6 +355,12 @@ export class SagaView {
     if (c.t === 'xp' && c.to === client.me && (c.area ?? 'farm') === this.area) return this.xp(c.n);
     if (!this.on) return;
     if (c.t === 'animal' && !c.animal && (c.area ?? '') === this.area) return this.gone(c.id);
+    // Skogen rör sig: a monster of a wave steps out of the glade's edge in a puff of leaves
+    if (c.t === 'animal' && c.animal && (c.area ?? '') === this.area && myRun()?.ambush && isFoe(c.animal) && !this.starOf.has(c.animal.id) && !this.lastSpot.has(c.animal.id)) {
+      this.fx.spawn(c.animal.x, c.animal.y, 'poof');
+      this.fx.dust(c.animal.x, c.animal.y + 4, 3);
+      return;
+    }
     if (c.t === 'object' && c.obj?.kind === 'saga_plate' && c.obj.variant === 1 && (c.area ?? '') === this.area) return this.plateLit(c.obj.x, c.obj.y);
     if (c.t === 'zone') {
       if (c.zone && !this.born.has(c.id)) {
@@ -408,6 +425,7 @@ export class SagaView {
     const mine = c.by === client.me;
     const near = !me || Math.hypot(me.x - c.x, me.y - c.y) < 16 * TILE;
     if (c.spell === 'ring_won' || c.spell === 'ring_lost') return this.ringEnd(c.spell === 'ring_won', c.by, { x: c.x, y: c.y });
+    if (c.spell.startsWith('power_')) return this.power(c.spell.slice(6), c.by, { x: c.x, y: c.y });
     if (mine || near) {
       if (c.spell === 'cast_ring') {
         /* (the ring's own chime plays when it appears on the floor) */
@@ -1137,8 +1155,6 @@ export class SagaView {
     this.punch(on, 3);
     this.hitStop('spend', [on, by?.[1]]);
     this.shake('spend');
-    // the first one on this device: what it was, in a line
-    if (a && b && firstTime('samslag')) bus.emit('toast', fmt(T.sagaSamslagText, { a, b }));
   }
 
   /** Guldringen ends: the party stood in it (the scream fizzles into stars, a cheer) or not (the scream lands). */
@@ -1167,6 +1183,7 @@ export class SagaView {
       if (typeof c.on === 'number') this.samslag(c.on, c.by);
       return;
     }
+    if (c.kind === 'parry' || c.kind === 'near') return this.closeCall(c.kind, c.on);
     if (c.kind === 'orb') {
       // a Kraftklot taken: three pips at once (your own row plays its three notes), sparkles and a word
       this.word(c.on, `🔮 ${FIGHT_UI.orbGot}`);
@@ -1194,6 +1211,17 @@ export class SagaView {
     const spent = monster && hurt && this.spent && performance.now() < this.spent.until ? this.spent : null;
     if (spent) cls += ` ${spendClass(spent.pips)}`;
     if (monster && hurt && (sagaSnap()?.m[c.on as number]?.[2] ?? 0) & MOB_FLAG.open) cls += ' onopen';
+    // Svagheter: a hit of the element the monster is weak to: a bigger number with the element's picture, and a sparkle
+    if (monster && hurt && c.weak) {
+      cls += ' weak';
+      const w = weakOfMob(activeWorld()?.animals[c.on as number]?.species);
+      text = `${w ? (ELEMENT_ICONS[w] ?? '') : ''}${text}`;
+      const tw = performance.now();
+      if (tw - this.lastWeakSound > 250) {
+        this.lastWeakSound = tw;
+        SAGA_SFX.weak();
+      }
+    }
     if (monster && hurt) this.punch(c.on as number, spent ? spent.pips : 0);
     // a ground mark hit a hero: a heavy number, and the lost piece stays on their bar a moment
     const marked = !!c.mark && !monster && (c.kind === 'dmg' || c.kind === 'block');
@@ -1401,7 +1429,15 @@ export class SagaView {
     if (this.domeUp.has(id)) this.domeBreak(id);
     if (!s) return;
     const j = this.juice();
-    const big = !!this.spent && performance.now() < this.spent.until + 120 && this.spent.pips >= PIP_MAX;
+    // (a starred monster's end is richer: more of everything, and coins ringing)
+    const starred = this.starOf.get(id) ?? 0;
+    this.starOf.delete(id);
+    const big = starred > 0 || (!!this.spent && performance.now() < this.spent.until + 120 && this.spent.pips >= PIP_MAX);
+    if (starred) {
+      SAGA_SFX.coins(starred);
+      this.fx.spawn(s.x, s.y - 10, 'sparkle');
+      this.fx.spawn(s.x, s.y - 6, 'coin');
+    }
     const at = { x: s.x, y: s.y + 4 - s.h * 0.5 };
     const n = poofCount(j, big);
     (globalThis as { __juiceLog?: string[] }).__juiceLog?.push(`kill:${n}`);
@@ -1416,6 +1452,132 @@ export class SagaView {
     SAGA_SFX.kill(big);
     this.shake('kill');
     this.hitStop('kill', this.spent && performance.now() < this.spent.until + 120 ? [this.spent.by] : []);
+  }
+
+  /** Perfekt block (a bright shield flash on the Väktare, a clang, a blink of stillness) and Nära ögat (a whoosh past the hero). */
+  private closeCall(kind: 'parry' | 'near', on: string | number): void {
+    const s = this.find(on);
+    const mine = on === client.me;
+    if (kind === 'parry') {
+      SAGA_SFX.parry();
+      this.word(on, `🛡️ ${RUN_T.parry}`, 'big blue');
+      if (s) {
+        this.burstRing(on, s, [0.75, 0.9, 1], 30, 0.45);
+        this.burstRing(on, s, [1, 1, 1], 16, 0.25);
+      }
+      this.hitStop('slam', [on]);
+      if (mine) this.shake('spend');
+    } else {
+      SAGA_SFX.near(mine);
+      this.word(on, `💨 ${RUN_T.near}`);
+      if (s && this.juice().flash) {
+        const at = { x: s.x, y: s.y - 8 };
+        this.add(0.3, (layer, f, k) => {
+          if (layer !== 'bright') return;
+          for (let i = -1; i <= 1; i++) drawLine(P(at.x - 14 + 28 * k, at.y + i * 5), P(at.x - 2 + 28 * k, at.y + i * 5), W(1.2), col(1, 1, 1, 0.8 * (1 - k)));
+        }, at, undefined, on);
+      }
+    }
+  }
+
+  /**
+   * Hornet: a hero blew the party's horn. The horn sounds, and each boss's power has its own big picture round the hero who
+   * blew: Kungens rop a gold shockwave, Rimfrost a burst of ice, Eldring a ring of fire, Hels nåd light rising over everyone,
+   * Drakfjäll scales round every hero, Flodvåg two rings of water, Skuggslöja a dark veil, Ulvatjut a red aura, Lokes list
+   * green sparks into the pips.
+   */
+  private power(id: string, by: string | number, at: { x: number; y: number }): void {
+    SAGA_SFX.horn(id);
+    this.hitStop('slam', [by]);
+    this.shake('slam');
+    const def = BOSS_POWERS[id as keyof typeof BOSS_POWERS];
+    const r = (def?.radius ?? 5) * TILE;
+    const heroes = Object.keys(sagaSnap()?.f ?? {});
+    const n = Math.round(12 * this.juice().particles);
+    const ringOf = (c: [number, number, number], rr = r, dur = 0.7, w = 3.5): void => {
+      this.add(dur, (layer, f, k) => {
+        const e = easeOutCubic(k);
+        if (layer === 'light') return void drawSprite(this.art.glow, at.x, at.y, rr * 2.4, rr * 2.4, 0, light(c[0], c[1], c[2], 0.8 * (1 - k)));
+        if (layer === 'ground') return void drawEllipse(P(at.x, at.y), vec2(W(rr * 2 * e), W(rr * 2 * e)), col(c[0], c[1], c[2], 0.22 * (1 - k)));
+        this.ring(at.x, at.y, rr * e, w * (1 - k) + 0.5, col(c[0], c[1], c[2], 1 - k));
+        this.ring(at.x, at.y, rr * e * 0.72, w * 0.5 * (1 - k) + 0.3, col(1, 1, 1, 0.8 * (1 - k)));
+      }, at);
+    };
+    const sparks = (c: [number, number, number], rise: boolean): void => {
+      const bits = [...Array(n)].map((_, i) => ({ a: (i / Math.max(1, n)) * TAU, d: 0.3 + Math.random() * 0.7 }));
+      this.add(0.9, (layer, f, k) => {
+        if (layer !== 'bright') return;
+        for (const b of bits) drawSprite(this.art.glow, at.x + Math.cos(b.a) * r * b.d * (rise ? 0.5 : easeOutCubic(k)), at.y + Math.sin(b.a) * r * b.d * 0.6 * (rise ? 0.5 : easeOutCubic(k)) - (rise ? 40 * k : 0), 6, 6, 0, rgba(c[0], c[1], c[2], 1 - k));
+      }, at);
+    };
+    switch (id) {
+      case 'draug':
+        ringOf([1, 0.85, 0.3]);
+        for (const a of Object.values(activeWorld()?.animals ?? {})) if (isFoe(a) && Math.hypot(a.x - at.x, a.y - at.y) <= r) this.stars(a.id, a, 0.8);
+        break;
+      case 'frost':
+        ringOf([0.6, 0.9, 1]);
+        this.shatter({ x: at.x, y: at.y - 8 }, [0.7, 0.95, 1]);
+        sparks([0.8, 0.95, 1], false);
+        break;
+      case 'surt':
+        ringOf([1, 0.45, 0.1], r, 0.9, 5);
+        sparks([1, 0.6, 0.15], true);
+        break;
+      case 'hel':
+        for (const h of heroes) {
+          const s = this.find(h);
+          if (s) this.sunrise(h, s);
+        }
+        break;
+      case 'dvarg':
+        for (const h of heroes) {
+          const s = this.find(h);
+          if (!s) continue;
+          this.burstRing(h, s, [0.55, 0.85, 0.6], 22, 0.6);
+          this.add(0.8, (layer, f, k) => {
+            if (layer !== 'bright') return;
+            const m = this.body(h, s);
+            // scales: little diamonds settling round the hero
+            for (let i = 0; i < 6; i++) {
+              const a = (i / 6) * TAU + k;
+              const x = m.x + Math.cos(a) * 11;
+              const y = m.y + Math.sin(a) * 12;
+              drawLineList([P(x, y - 3), P(x + 2.5, y), P(x, y + 3), P(x - 2.5, y)], W(1), col(0.7, 1, 0.75, 1 - k), true);
+            }
+          }, s, undefined, h);
+        }
+        break;
+      case 'orm':
+        ringOf([0.3, 0.6, 1], r, 0.8, 5);
+        this.add(0.8, (layer, f, k) => {
+          if (layer !== 'bright' || k < 0.2) return;
+          this.ring(at.x, at.y, r * easeOutCubic((k - 0.2) / 0.8), 2.5 * (1 - k) + 0.4, col(0.7, 0.9, 1, 1 - k));
+        }, at);
+        break;
+      case 'alv':
+        this.add(1.2, (layer, f, k) => {
+          const fade = k < 0.2 ? k / 0.2 : 1 - (k - 0.2) / 0.8;
+          if (layer === 'ground') return void drawEllipse(P(at.x, at.y), vec2(W(r * 3.2), W(r * 3.2)), col(0.12, 0.06, 0.2, 0.55 * fade));
+          if (layer !== 'bright') return;
+          for (let i = 0; i < 5; i++) drawSprite(this.art.glow, at.x + Math.cos(i * 1.3 + k * 2) * r * 0.8, at.y + Math.sin(i * 1.3 + k * 2) * r * 0.5, 50, 26, 0, rgba(0.45, 0.3, 0.7, 0.35 * fade));
+        }, at);
+        break;
+      case 'fenrir':
+        ringOf([1, 0.3, 0.2], r * 0.8, 0.6);
+        for (const h of heroes) {
+          const s = this.find(h);
+          if (s) this.burstRing(h, s, [1, 0.35, 0.2], 24, 0.7);
+        }
+        break;
+      default:
+        // Lokes list: green sparks fly to every hero's pips
+        sparks([0.4, 1, 0.5], true);
+        for (const h of heroes) {
+          const s = this.find(h);
+          if (s) this.explode({ x: s.x, y: s.y - 26 }, [0.4, 1, 0.5], 10, undefined, 0.25);
+        }
+    }
   }
 
   /** A Sköldbärare's dome breaks (it fell, or it is dazed): glass cracking, shards, and a word. */
@@ -1452,6 +1614,20 @@ export class SagaView {
       if (c[0] === 'heal') SAGA_SFX.chant(c[2] - c[1]);
     }
     for (const id of this.castSeen.keys()) if (!snap.c?.[id]) this.castSeen.delete(id);
+    // Stjärnmonster: a sparkle and a chime the first time one is near
+    const me = myPlayer();
+    for (const a of Object.values(activeWorld()?.animals ?? {})) {
+      if (!a.stars || this.starOf.has(a.id) || !me || Math.hypot(a.x - me.x, a.y - me.y) > 11 * TILE) continue;
+      this.starOf.set(a.id, a.stars);
+      this.fx.spawn(a.x, a.y - 14, 'sparkle');
+      SAGA_SFX.starSeen();
+    }
+    // Skogen rör sig: a wave walks in: a horn and drums
+    const wave = myRun()?.ambush?.wave ?? 0;
+    if (wave !== this.waveSeen) {
+      if (wave > this.waveSeen) SAGA_SFX.wave();
+      this.waveSeen = wave;
+    }
     // Märke: the skull moved (a knock), or is gone; your own aim follows the party's mark
     const k = markedMob();
     if (k !== this.skullSeen) {
@@ -2098,7 +2274,7 @@ export class SagaView {
         el.innerHTML = '<em></em><span></span><b><i></i></b>';
         this.labels.appendChild(el);
         this.bars.set(key, el);
-        this.barParts.set(key, { role: '', castKey: '', ring: null, pips: null, pipsCls: '', skull: null, tick: null });
+        this.barParts.set(key, { role: '', castKey: '', ring: null, pips: null, pipsCls: '', skull: null, tick: null, stars: null, starsN: 0 });
       }
       const fl = top.flags ?? 0;
       const want = `label saga-bar-${cls}${fl & MOB_FLAG.shielded ? ' shielded' : ''}${fl & MOB_FLAG.open ? ' opened' : ''}${top.mine ? ' mine' : ''}`;
@@ -2124,7 +2300,7 @@ export class SagaView {
         if (!a || !s || id === snap.b?.id) continue;
         const boss = SAGA_BOSSES[a.species];
         const named = boss || t === id || BLOCK_SPECIES.has(a.species);
-        bar(`m${id}`, s, m[0] / Math.max(1, m[1]), boss ? 'boss' : BLOCK_SPECIES.has(a.species) ? 'ice' : t === id ? 'target' : 'mob', named ? a.name : null, { role: a.role, cast: snap.c?.[id], flags: m[2], skull: id === skull });
+        bar(`m${id}`, s, m[0] / Math.max(1, m[1]), boss ? 'boss' : BLOCK_SPECIES.has(a.species) ? 'ice' : t === id ? 'target' : 'mob', named ? a.name : null, { role: a.role, cast: snap.c?.[id], flags: m[2], skull: id === skull, stars: a.stars });
       }
       for (const [id, f] of Object.entries(snap.f)) {
         const s = this.find(id);
@@ -2136,13 +2312,13 @@ export class SagaView {
     if (typeof t === 'number' && t !== snap?.b?.id && !seen.has(`m${t}`)) {
       const a = animals[t];
       const s = a ? this.find(t) : null;
-      if (a && s) bar(`m${t}`, s, 1, 'target', a.name, { role: a.role, skull: t === skull });
+      if (a && s) bar(`m${t}`, s, 1, 'target', a.name, { role: a.role, skull: t === skull, stars: a.stars });
     }
     // the special monsters show their marker before their pack is woken, so the party can plan (and a marked one its skull)
     for (const a of Object.values(animals)) {
-      if ((!a.role && a.id !== skull) || seen.has(`m${a.id}`) || !(SAGA_MOBS[a.species] || SAGA_BOSSES[a.species]) || a.id === snap?.b?.id) continue;
+      if ((!a.role && !a.stars && a.id !== skull) || seen.has(`m${a.id}`) || !(SAGA_MOBS[a.species] || SAGA_BOSSES[a.species]) || a.id === snap?.b?.id) continue;
       const s = this.find(a.id);
-      if (s) bar(`m${a.id}`, s, 1, 'idle', null, { role: a.role, skull: a.id === skull });
+      if (s) bar(`m${a.id}`, s, 1, 'idle', null, { role: a.role, skull: a.id === skull, stars: a.stars });
     }
     for (const [key, el] of this.bars)
       if (!seen.has(key)) {
@@ -2178,6 +2354,13 @@ export class SagaView {
       if (p.pips) row.append(p.pips);
     }
     if (p.pips && top.pips) setPips(p.pips, top.pips.n, !this.juice().loops, top.pips.half);
+    const stars = top.stars ?? 0;
+    if (stars !== p.starsN) {
+      p.starsN = stars;
+      p.stars?.remove();
+      p.stars = stars ? starRow(stars) : null;
+      if (p.stars) row.prepend(p.stars);
+    }
     if (!!top.skull !== !!p.skull) {
       p.skull?.remove();
       p.skull = top.skull ? skullMark() : null;

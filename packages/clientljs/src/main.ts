@@ -39,6 +39,7 @@ import { HudMenu } from '@v1/ui/hudmenu.ts';
 import { Menus } from '@v1/ui/menus.ts';
 import { Picker } from '@v1/ui/picker.ts';
 import { SagaUi } from '@v1/ui/saga.ts';
+import { hugin } from '@v1/ui/hugin.ts';
 import { RunUi } from '@v1/ui/run.ts';
 import { SettingsUi } from '@v1/ui/settings.ts';
 import { initAccess } from '@v1/ui/access.ts';
@@ -122,6 +123,8 @@ hudMenu.onChange = syncUiOpen;
 initGamepad({ ui, target: () => (started ? view : null), menus, windows: [hudMenu, log, settings, menus, saga, run], hud });
 initA11y();
 initHudFit();
+// Hugin, the raven who teaches: he watches for the first time of things and flies in with a tip
+hugin.start(ui);
 initAccess(ui);
 // a phone held upright is asked to turn, and may play anyway
 document.getElementById('rotate-text')!.textContent = A11Y_T.rotate;
@@ -273,6 +276,7 @@ void picker.show();
   bus,
   net,
   view: () => view,
+  hugin,
   mute: (m = true) => setMuted(m),
   muted: () => isMuted(),
   switchPlayer: () => {

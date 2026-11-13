@@ -3,6 +3,7 @@
 // route, the summary of a run that ended and the sagaträd. The windows are `.modal`s like everybody else's, so the touch
 // screen, the keys and the gamepad (ui/gamepad.ts) all work in them. The fight itself (spell bar, party frames, boss bar,
 // telegraphs) is the saga's HUD (ui/saga.ts) and is not repeated here.
+import { BOSS_POWERS, DISH_NAMES, DISH_TEXT, DUNGEON_WEAK, ELEMENT_ICONS, ELEMENT_NAMES, POWER_NAMES, POWER_TEXT, dishDef, ownedPowers } from '@varldstradet/shared';
 import {
   DUNGEONS,
   DUNGEON_IDS,
@@ -311,6 +312,11 @@ export class RunUi {
   // ---- reacting to the server ----
 
   private fromRun(c: Extract<import('@varldstradet/shared').Change, { t: 'run' }>): void {
+    if (c.ev === 'gillet') {
+      // the dishes of the next run are known (or my choice was taken): the arch window shows them
+      if (this.win === 'fard') this.render();
+      return;
+    }
     if (c.ev === 'state') {
       const run = myRun();
       this.logRun(run);
@@ -459,8 +465,23 @@ export class RunUi {
     // (time, Sagoandar, hacksilver, sagafrön), then the run's rules (difficulty, path, särdrag), which fold away first. The clock's
     // bar is a thin line under it. The buttons are not here: the map is at the top right and the rest in the menu (ui/hudmenu.ts).
     const nums = h('div', { class: 'nums', role: 'group', 'aria-label': RUN_UI.numbers }, clock, spirit, purse, seeds);
-    this.bar.append(h('div', { class: 'line1' }, stop, rail, nums, level, pathChip, ...affixes), h('div', { class: 'clockbar' }, this.clockFill));
+    // Svagheter: the element this dungeon's monsters are weak to, with the run's rules (a down arrow and the element's picture)
+    const weakName = fmt(FIGHT_UI.weakAt, { element: ELEMENT_NAMES[run.weak] ?? run.weak });
+    const weak = run.weak ? chip('affix weak', two(`▼${ELEMENT_ICONS[run.weak] ?? ''}`, ELEMENT_NAMES[run.weak] ?? ''), weakName, { icon: ELEMENT_ICONS[run.weak] ?? '', name: weakName, text: fmt(RUN_T.weakText, { element: ELEMENT_NAMES[run.weak] ?? run.weak }) }) : null;
+    this.bar.append(h('div', { class: 'line1' }, stop, rail, nums, level, pathChip, weak, ...affixes), h('div', { class: 'clockbar' }, this.clockFill));
     this.tickClock(run);
+  }
+
+  /** The small pictures of what a hero brings on the next run: the dish (the first one when none is chosen) and the boss power. */
+  private brings(p: PlayerState): HTMLElement | null {
+    const dishes = runClient.dishes;
+    const dish = dishes.length ? dishDef(dishes.includes(p.runPrefs?.dish ?? '') ? p.runPrefs!.dish! : dishes[0]!) : undefined;
+    const owned = ownedPowers(p);
+    const want = p.runPrefs?.power;
+    const power = want === null ? undefined : owned.includes(want as DungeonId) ? (want as DungeonId) : owned[owned.length - 1];
+    if (!dish && !power) return null;
+    const words = [dish ? (DISH_NAMES[dish.id] ?? '') : '', power ? (POWER_NAMES[power] ?? '') : ''].filter(Boolean).join(', ');
+    return h('span', { class: 'brings', role: 'img', 'aria-label': words, title: words }, dish?.icon ?? '', power ? BOSS_POWERS[power].icon : '');
   }
 
   private tickClock(run: RunSnap): void {
@@ -777,7 +798,10 @@ export class RunUi {
         h('span', { class: 'nm' }, DUNGEONS[id].name),
         h('span', { class: 'st' }, !unlocked ? `🔒 ${RUN_UI.locked}` : this.dungeon === id ? `✔ ${RUN_UI.chosen}` : done ? `✔ ${RUN_UI.cleared}` : '⭐'),
       );
-      this.info(t, unlocked ? DUNGEON_ICON[id] : '🔒', DUNGEONS[id].name, unlocked ? DUNGEONS[id].intro.split(/(?<=[.!?…])\s/)[0]! : RUN_UI.lockedHint);
+      // Svagheter: the element the dungeon's monsters are weak to, as a picture on the card and a sentence in its info
+      const weak = DUNGEON_WEAK[id];
+      if (unlocked) t.append(h('span', { class: 'weak', 'aria-label': fmt(FIGHT_UI.weakAt, { element: ELEMENT_NAMES[weak] ?? weak }) }, h('span', { class: 'dn', 'aria-hidden': 'true' }, '▼'), ELEMENT_ICONS[weak] ?? ''));
+      this.info(t, unlocked ? DUNGEON_ICON[id] : '🔒', DUNGEONS[id].name, unlocked ? `${DUNGEONS[id].intro.split(/(?<=[.!?…])\s/)[0]!} ${fmt(RUN_T.weakText, { element: ELEMENT_NAMES[weak] ?? weak })}` : RUN_UI.lockedHint);
       this.tap(t, () => {
         if (!unlocked) {
           this.hint(RUN_UI.lockedHint);
@@ -862,6 +886,10 @@ export class RunUi {
     // which animal comes along (pets.ts): one on a run, chosen here (or in the lobby at the kennel)
     this.petRow(body, me);
 
+    // Bosskrafter and Gillet: one power for the horn and one dish, chosen here before the run
+    this.powerRow(body, me);
+    this.dishRow(body, me);
+
     // who comes
     body.append(h('div', { class: 'sect' }, `👪 ${RUN_UI.whoComes}`));
     const classes = arch.party.map((p) => p.saga?.cls).filter((c): c is ClassId => !!c);
@@ -890,6 +918,58 @@ export class RunUi {
     body.append(h('div', { class: 'actions sticky' }, wardrobe, go));
     if (!cls) body.append(h('div', { class: 'hint' }, RUN_UI.noClass));
     else if (!arch.near) body.append(h('div', { class: 'hint' }, RUN_UI.nearGate));
+  }
+
+  /** Bosskrafter: the powers of the bosses whose trophy the hero owns, one chosen for the horn ("Ingen" is a choice too). */
+  private powerRow(body: HTMLElement, me: PlayerState): void {
+    body.append(h('div', { class: 'sect' }, `📯 ${RUN_T.powerPick}`));
+    const owned = ownedPowers(me);
+    if (!owned.length) {
+      // no trophy yet: one sentence on how to get one
+      body.append(h('div', { class: 'hint power-none' }, `🏆 ${RUN_T.powerNone}`));
+      return;
+    }
+    // (nothing chosen: the latest trophy's, as the server does)
+    const want = me.runPrefs?.power;
+    const chosen = want === null ? null : owned.includes(want as DungeonId) ? (want as DungeonId) : owned[owned.length - 1]!;
+    const row = h('div', { class: 'tiles powers', role: 'group', 'aria-label': RUN_T.powerPick });
+    const tile = (id: DungeonId | null): void => {
+      const on = chosen === id;
+      const icon = id ? BOSS_POWERS[id].icon : '🚫';
+      const name = id ? (POWER_NAMES[id] ?? id) : FIGHT_UI.powerNoneTile;
+      const t = h('button', { class: `tile power${on ? ' sel' : ''}`, 'aria-pressed': String(on), 'data-power': id ?? 'none' }, h('span', { class: 'ic' }, icon), h('span', { class: 'nm' }, on ? `✔ ${name}` : name));
+      this.info(t, icon, name, id ? (POWER_TEXT[id] ?? '') : FIGHT_UI.powerNoneText);
+      this.tap(t, () => {
+        net.send({ t: 'run', a: 'power', id });
+        SFX.talk();
+      });
+      row.append(t);
+    };
+    for (const id of owned) tile(id);
+    tile(null);
+    body.append(row);
+  }
+
+  /** Gillet: the three dishes of the next run, one chosen (the first when nothing is). */
+  private dishRow(body: HTMLElement, me: PlayerState): void {
+    const dishes = runClient.dishes;
+    if (!dishes.length) return;
+    body.append(h('div', { class: 'sect' }, `🍲 ${RUN_T.dishPick}`));
+    const chosen = dishes.includes(me.runPrefs?.dish ?? '') ? me.runPrefs!.dish! : dishes[0]!;
+    const row = h('div', { class: 'tiles dishes', role: 'group', 'aria-label': RUN_T.dishPick });
+    for (const id of dishes) {
+      const d = dishDef(id);
+      const on = chosen === id;
+      const name = DISH_NAMES[id] ?? id;
+      const t = h('button', { class: `tile dish${on ? ' sel' : ''}`, 'aria-pressed': String(on), 'data-dish': id }, h('span', { class: 'ic' }, d?.icon ?? '🍲'), h('span', { class: 'nm' }, on ? `✔ ${name}` : name), h('span', { class: 'st' }, DISH_TEXT[id] ?? ''));
+      this.info(t, d?.icon ?? '🍲', name, DISH_TEXT[id] ?? '');
+      this.tap(t, () => {
+        net.send({ t: 'run', a: 'dish', id });
+        SFX.talk();
+      });
+      row.append(t);
+    }
+    body.append(row);
   }
 
   /** "Vilket djur följer med?": the pets you have, one chosen; each one explains itself on the info card. */
@@ -933,6 +1013,8 @@ export class RunUi {
       h('span', { class: 'nm' }, name),
       c ? h('span', { class: 'cls', title: c.name }, c.emoji) : null,
       c ? h('span', { class: 'rolew' }, c.roleName) : null,
+      // what this friend brings: their dish and their boss power, as small pictures
+      p && !bot ? this.brings(p) : null,
     );
   }
 

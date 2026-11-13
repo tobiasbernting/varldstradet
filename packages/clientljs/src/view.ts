@@ -49,6 +49,7 @@ import {
   type WorldObject,
   type WorldState,
   isIllusion,
+  STAR,
   SAGA_MOBS as SAGA_MOBS_,
 } from '@varldstradet/shared';
 import { ANIMAL_SIZE, ANIMAL_VARIANTS, RIDE_LIFT } from '@art/animals.ts';
@@ -60,6 +61,7 @@ import { underHud } from '@v1/ui/lane.ts';
 import { SFX } from '@v1/sound.ts';
 import { activeWorld, bus, client, furnish, inOwnHouse, myArea, myPlayer, serverNow } from '@v1/state.ts';
 import { prefs } from '@v1/a11y.ts';
+import { setHuginView } from '@v1/ui/hugin.ts';
 import { attackTarget, heroOn, levelOf, sagaMarker, sagaSpeed, titleOf, toggleMark } from '@v1/saga.ts';
 import { KIND_ICON, runClient } from '@v1/run.ts';
 import type { HudTarget } from '@v1/ui/hud.ts';
@@ -342,6 +344,8 @@ export class View implements HudTarget {
     new LightPainter(() => this.paintLight());
     this.fx = new Effects(this.art);
     this.sagaFx = new SagaView(this.art, this.labels, this.fx, (id) => this.spotOf(id));
+    // Hugin lands beside the hero where there is room: never in a telegraph
+    setHuginView({ pick: () => this.huginSpot(), screen: (wx, wy) => this.worldToScreen(wx, wy) });
     // a hit body squashes (the fight's juice decides how hard, under the settings)
     this.sagaFx.onPunch = (id, power) => {
       const a = typeof id === 'number' ? this.animals.get(id) : this.players.get(id);
@@ -772,7 +776,9 @@ export class View implements HudTarget {
     }
     const a = this.animals.get(id);
     const s = a?.frames[0];
-    return a && s ? { x: a.x, y: a.y, w: s.w, h: s.h } : null;
+    // (a starred monster is drawn bigger: its bars, markers and hits follow its real size)
+    const k = STAR[(this.world?.animals[id]?.stars ?? 0) as 1 | 2]?.size ?? 1;
+    return a && s ? { x: a.x, y: a.y, w: s.w * k, h: s.h * k } : null;
   }
 
   /** The touch action button. */
@@ -785,6 +791,24 @@ export class View implements HudTarget {
     if (this.uiOpen) return;
     const w = this.screenToWorld(clientX, clientY);
     if (this.sagaFx?.pick(w.x, w.y)) attackTarget();
+  }
+
+  /** Where a spot of the world is on the screen (px), as the labels are placed. */
+  worldToScreen(wx: number, wy: number): { x: number; y: number } {
+    const z = this.z;
+    const cx = Math.round(this.camX * z) / z;
+    const cy = Math.round(this.camY * z) / z;
+    return { x: Math.round((wx - cx) * z + innerWidth / 2), y: Math.round((wy - cy) * z + innerHeight / 2) };
+  }
+
+  /** A spot beside the hero for Hugin to land on: a little to one side and in front, not inside anything marked on the ground. */
+  private huginSpot(): { wx: number; wy: number } | null {
+    const me = myPlayer();
+    if (!me) return null;
+    const zones = this.saga ? (this.world?.saga?.zones ?? []) : [];
+    const free = (x: number, y: number): boolean => !zones.some((zn) => zn.kind !== 'orb' && Math.hypot(x - zn.x, y - zn.y) <= zn.r * TILE + 10);
+    for (const [dx, dy] of [[-30, 10], [30, 10], [-44, -6], [44, -6], [-30, 34], [30, 34], [-60, 16], [60, 16]] as const) if (free(me.x + dx, me.y + dy)) return { wx: me.x + dx, wy: me.y + dy };
+    return null;
   }
 
   /** A finger held still on the joystick's side of a touch screen and let go: Märke on the monster under it. */
@@ -873,7 +897,8 @@ export class View implements HudTarget {
     }
     const running = !this.uiOpen && (keyIsDown('ShiftLeft') || keyIsDown('ShiftRight') || this.runHeld);
     const boost = me.boostUntil !== undefined && me.boostUntil > serverNow() ? BOOST_SPEED_MUL : 1;
-    stepPlayer(world, me, dx, dy, dtMs, (me.riding !== undefined ? rideSpeedMul(world, me) : running ? 1.7 : 1) * boost * sagaMul);
+    // (Gillet: the dish Rökt fisk makes the hero faster for the whole run; the server allows the same and no more)
+    stepPlayer(world, me, dx, dy, dtMs, (me.riding !== undefined ? rideSpeedMul(world, me) : running ? 1.7 : 1) * boost * sagaMul * (1 + (me.runSpeed ?? 0)));
     if (me.moving || this.wasMoving) this.sendMove(!me.moving && this.wasMoving);
     this.wasMoving = me.moving;
 
@@ -1531,8 +1556,10 @@ export class View implements HudTarget {
       const s = a.frames[a.wasMoving ? Math.floor(a.walk * 5) % 2 : 0];
       if (!s) continue;
       const hop = rider ? 0 : this.hopOf(a);
-      const w = s.w * (1 + a.squash * 0.6) * turnScale(a.flip);
-      const h = s.h * (1 - a.squash * 0.6);
+      // Stjärnmonster: one star is 15 % bigger, two stars 30 %
+      const big = STAR[(an.stars ?? 0) as 1 | 2]?.size ?? 1;
+      const w = s.w * big * (1 + a.squash * 0.6) * turnScale(a.flip);
+      const h = s.h * big * (1 - a.squash * 0.6);
       // a pet: a small bounce in its step, and in a fight a pose when it acts that reads at sprite size, by what it does:
       // bite and ram lunge, pounce leaps, purr hops and floats a heart, guard rears up, howl lifts its nose, peck dips, dig dips and throws dirt
       if (an.petKind) {

@@ -1691,6 +1691,25 @@ export const FIGHT_UI = {
   medalRule3: 'Var snabba: under {s} sekunder för en flock på Medel.',
   fightPage: 'Slåss tillsammans',
   pipHalf: 'Halv: ett slag till ger en hel.',
+  // Stjärnmonster, Hornet, Gillet, Svagheter, Perfekt block, Nära ögat, Skogen rör sig on the screen
+  hornKey: 'R',
+  hornFull: 'Hornet är laddat',
+  hornUsed: 'Hornet är blåst',
+  hornNoPower: 'Du tog ingen bosskraft med dig',
+  powerNoneTile: 'Ingen',
+  powerNoneText: 'Ta inte med någon bosskraft. Då kan du inte blåsa i hornet.',
+  powerDefault: 'Senaste trofén',
+  dishMine: 'Din rätt',
+  weakAt: 'Svag mot {element}',
+  weakLine: 'Varje fängelsehåla har 1 svaghet: 🔥 eld, ❄️ is eller ⚡ åska. Träffar av den gör 25 % mer skada.',
+  goodHere: 'Bra här',
+  goodHereText: 'Den här runan har märket som monstren här är svaga mot: 25 % mer skada.',
+  myElement: 'Dina slag är {element}',
+  fightChoice: 'Strid',
+  waveOf: 'Våg {n} av {count}',
+  waveInfo: 'Monstren kommer i 3 vågor från skogens kant. Håll ihop vid stenen!',
+  togetherPowers: 'Hornet och gillet',
+
   ringTitle: 'Guldringen',
   ringText: 'Guld = spring IN allihop och stå kvar i 2 sekunder. Rött = spring UT.',
 };
@@ -1708,6 +1727,14 @@ export const HELP_FIGHT: HelpTopic = {
     { icon: 'emoji:🔮', text: 'Kraftklot: särskilda monster tappar ett klot som ligger kvar i 5 sekunder. Spring över det, så får du 3 prickar direkt!' },
     { icon: 'emoji:⭐', text: 'Guldringen: guld = spring IN allihop och stå kvar i 2 sekunder. Rött = spring UT.' },
     { icon: 'emoji:🥇', text: 'Runmärken: varje strid ger brons, silver eller guld. Guld får ni om ni springer ur märkena (högst 1 träff var), inte låter något monster läka sig och är snabba.' },
+    { icon: 'emoji:⭐', text: 'Stjärnmonster: ett monster med 1 eller 2 stjärnor är större, tål mer och slår hårdare. Det ger extra silver och ett kraftklot!' },
+    { icon: 'emoji:📯', text: 'Hornet: vid Färdporten väljer du 1 bosskraft av de bossar du har trofé från. Blås i hornet i striden. Hela gruppen har 1 blås per strid, så prata ihop er!' },
+    { icon: 'emoji:🍲', text: 'Gillet: vid Färdporten väljer du 1 av 3 rätter. Den hjälper dig hela färden.' },
+    { icon: 'emoji:🔥', text: 'Svagheter: varje fängelsehåla har 1 svaghet: eld, is eller åska. Träffar av den gör 25 % mer skada.' },
+    { icon: 'emoji:🛡️', text: 'Perfekt block: res Sköldmur precis innan slaget träffar (0,6 sekunder). Då tar du ingen skada och får 3 Sköldkraft!' },
+    { icon: 'emoji:💨', text: 'Nära ögat: kliv ur ett märke i sista stund (0,5 sekunder innan det smäller), så får du 1 prick.' },
+    { icon: 'emoji:🌲', text: 'Skogen rör sig: en händelse där monster kommer i 3 vågor. Försvara stenen, eller göm er.' },
+    { icon: 'emoji:🐦‍⬛', text: 'Korpen Hugin flyger in med ett tips första gången något nytt händer. Alla tips du har sett finns i Dagboken under Hugins tips.' },
   ],
 };
 
@@ -1774,6 +1801,46 @@ export const MOB_TEXT: Record<string, string> = {
   fjallbagge: 'En bagge med krokiga horn som stångas så fort den får chansen.',
   ulvhedin: 'En krigare i vargskinn som tror att han själv är en varg.',
   uroxe: 'En jättelik oxe med långa horn och rimfrost i pälsen.',
+};
+
+// ---------------------------------------------------------------------------
+// Hugin, the raven who teaches (ui/hugin.ts): one picture and ONE short sentence for each tip, shown once on each device
+// and kept in the journal's "Hugins tips". Kept in one block so that it merges without trouble.
+// ---------------------------------------------------------------------------
+export const HUGIN_T = {
+  name: 'Hugin',
+  /** The setting in Inställningar. */
+  setting: 'Hugin tipsar',
+  settingText: 'Korpen Hugin flyger in och visar ett tips första gången något nytt händer.',
+  /** The bubble's close button, and what a screen reader hears first. */
+  close: 'Tack, Hugin!',
+  says: 'Hugin säger: {text}',
+  /** The journal's page. */
+  page: 'Hugins tips',
+  pageNone: 'Hugin har inte visat något tips än. Han kommer när något nytt händer!',
+  pageCount: '{n} av {max} tips',
+  /** The help window's line about him. */
+  help: 'Korpen Hugin flyger in med ett tips första gången något nytt händer. Alla tips du har sett finns i Dagboken under Hugins tips.',
+  tips: {
+    menu: 'Hej, jag är Hugin! Tryck på ☰ uppe i hörnet: där finns väskan, kartan och 1 hjälpsida för allt.',
+    auto: 'Du slår av dig själv! Vartannat slag fyller 1 av de 3 rutorna över Slå.',
+    pips3: '3 {pips}! Tryck på {spell} eller Slå nu: det är {n} gånger så starkt.',
+    interrupt: 'Monstret laddar! Avbryt med {kick} när blixten syns på knappen.',
+    interruptNone: 'Monstret laddar! Slå det först, innan ringen över det är full.',
+    mark: 'Aj, det tog {n} hälsa! Spring ut ur röda märken innan de smäller.',
+    skull: 'Märk 1 monster med dödskallen, så slår alla på samma monster.',
+    orb: 'Ett Kraftklot! Spring över det inom 5 sekunder, så får du 3 {pips} direkt.',
+    medal: 'Ett Runmärke! Guld får ni med högst 1 märkesträff var och 0 monster som läker sig.',
+    wipe: 'På Medel klarar Hirdmannen inte färden ensam: faller alla hjältar går 1 Sagoande åt.',
+    samslag: '{a} och {b} slog ihop: ett Samslag slår 50 % hårdare!',
+    star: 'Ett stjärnmonster! Det tål mer och slår hårdare, men ger extra silver och 1 kraftklot.',
+    horn: 'Du har {power} med dig! Blås i hornet när det behövs: gruppen har 1 blås per strid.',
+    dish: 'Du åt {dish} före färden. {text}',
+    weak: 'Monstren här tar 25 % mer skada av {element}. Välj runor med det märket!',
+    parry: 'Res Sköldmur precis innan slaget träffar, så tar du 0 skada och får 3 Sköldkraft!',
+    near: 'Nära ögat! Kliv ur ett märke i sista stund, så får du 1 prick.',
+    ambush: 'Monstren kommer i 3 vågor från skogens kant. Håll ihop vid stenen!',
+  } as Record<string, string>,
 };
 
 // (the fight page of the help window: see HELP_FIGHT above)

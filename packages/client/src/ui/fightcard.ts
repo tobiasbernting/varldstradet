@@ -84,6 +84,13 @@ export const skullMark = (extra = ''): HTMLElement => svg(`skull-mark${extra ? `
 /** A tick over a hero who stands in Guldringen. */
 export const tickMark = (): HTMLElement => svg('tick-mark', '0 0 16 16', '<circle class="bg" cx="8" cy="8" r="7.2"/><path class="ln" d="M4.2 8.4l2.6 2.6 5-5.4"/>');
 
+/** Stjärnmonster: one or two gold stars over a monster's head. */
+export const starRow = (n: number): HTMLElement => {
+  const row = h('span', { class: 'star-row', 'aria-hidden': 'true' });
+  for (let i = 0; i < Math.max(1, Math.min(2, n)); i++) row.append(starBadge('lone'));
+  return row;
+};
+
 /** A cast's circle over a monster: it fills clockwise (`--k`, 0..1), with a leaf for healing or an arrow for a shot in the middle. */
 export function castRing(kind: string, stoppable: boolean): HTMLElement {
   const icon = kind === 'heal' ? roleMarker('healer', 'in') : kind === 'shot' ? roleMarker('archer', 'in') : h('span', { class: 'in em' }, '⚠️');
