@@ -1617,6 +1617,7 @@ export const FIGHT_UI = {
   skullOn: 'Märket sitter på {name}.',
   skullOff: 'Märket är borta.',
   samslagBy: '{a} + {b}',
+  samslagLine: 'Gör en vän monstret yrt eller långsamt och du sedan slår ditt stora slag, slår det 50 % hårdare.',
   petName: 'djuret',
   orbGot: '+3',
   inRing: 'Står i ringen',
