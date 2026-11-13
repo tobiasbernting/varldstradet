@@ -104,7 +104,7 @@ export const RUN_LEVELS: Record<RunLevel, RunLevelDef> = {
   0: { id: 0, hp: 0.4, dmg: 0.3, warn: 1.8, mark: 0.08, bossHp: 1, markEvery: 1, dunk: 0, far: null, humansOnly: false, seeds: 0.35, spirit: 5, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 0.6, rank: 0, affixes: 0 },
   1: { id: 1, hp: 0.6, dmg: 0.5, warn: 1.4, mark: 0.2, bossHp: 1, markEvery: 0.8, dunk: 0.5, far: { every: 25_000, weight: 0.5 }, humansOnly: false, seeds: 0.5, spirit: 3, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 1, rank: 0, affixes: 0 },
   2: { id: 2, hp: 1, dmg: 0.6, warn: 1, mark: 0.5, bossHp: 2.3, markEvery: 0.35, dunk: 0.7, far: { every: 10_000, weight: 1 }, humansOnly: true, seeds: 1, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1, rank: 0, affixes: 0 },
-  3: { id: 3, hp: 1.6, dmg: 1.1, warn: 0.8, mark: 0.6, bossHp: 2.3, markEvery: 0.35, dunk: 0.7, far: { every: 10_000, weight: 1 }, humansOnly: true, seeds: 1.5, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1.5, rank: 0.5, affixes: 1 },
+  3: { id: 3, hp: 1.66, dmg: 1.1, warn: 0.8, mark: 0.6, bossHp: 2.3, markEvery: 0.35, dunk: 0.7, far: { every: 10_000, weight: 1 }, humansOnly: true, seeds: 1.5, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1.5, rank: 0.5, affixes: 1 },
   4: { id: 4, hp: 1.7, dmg: 1.1, warn: 0.65, mark: 0.7, bossHp: 2.3, markEvery: 0.35, dunk: 0.7, far: { every: 10_000, weight: 1 }, humansOnly: true, seeds: 2, spirit: 0, spiritPerStop: 0, spiritMax: 0, soft: false, bossMoves: 0, rare: 2, rank: 1, affixes: 2 },
 };
 /** The boss attacks the easiest levels allow: its first two, whatever a first run's plan has locked. */
@@ -451,11 +451,11 @@ export const WING_HP: readonly number[] = [1.85, 2.3, 2.7];
 export const DUNGEON_TUNE: Record<DungeonId, { blows: number; boss: number; dunk?: number }> = {
   draug: { blows: 1, boss: 1 },
   frost: { blows: 0.9, boss: 1, dunk: 0.8 },
-  surt: { blows: 0.8, boss: 0.85, dunk: 0.7 },
+  surt: { blows: 0.75, boss: 0.85, dunk: 0.7 },
   hel: { blows: 0.85, boss: 0.9 },
   dvarg: { blows: 0.85, boss: 0.85, dunk: 0.6 },
   orm: { blows: 0.9, boss: 0.8, dunk: 0.6 },
-  alv: { blows: 0.7, boss: 0.75, dunk: 0.7 },
+  alv: { blows: 0.65, boss: 0.75, dunk: 0.7 },
   fenrir: { blows: 0.6, boss: 0.7, dunk: 0.6 },
   loke: { blows: 0.8, boss: 0.6, dunk: 0.7 },
 };
@@ -601,7 +601,7 @@ export const MEDAL_MARKS = 1;
  * Par (seconds) for a stop by kind, for two fighters on Medel: the careful bot's median time in the stop times 1.6 (measured with
  * runtune --pars), so an adult makes it and a masher rarely does. `stopPar` scales it by the level and the party.
  */
-export const STOP_PAR: Partial<Record<NodeKind, number>> = { flock: 130, elite: 150, treasure: 70, mini: 215, boss: 350 };
+export const STOP_PAR: Partial<Record<NodeKind, number>> = { flock: 120, elite: 150, treasure: 65, mini: 210, boss: 300 };
 export const PAR_LEVEL: Record<RunLevel, number> = { 0: 1.6, 1: 1.3, 2: 1, 3: 1.4, 4: 1.5 };
 export const stopPar = (kind: NodeKind, level: RunLevel, fighters: number): number => (STOP_PAR[kind] ?? 0) * 1000 * PAR_LEVEL[level] * (fighters >= 3 ? 1.15 : 1);
 /** The medal of a cleared stop: counted for the party, never for a name. */
