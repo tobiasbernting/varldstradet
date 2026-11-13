@@ -549,8 +549,9 @@ body.saga-fight .act-btn.spend-glow {
   gap: 8px;
   padding: 8px;
   border-radius: 12px;
-  background: #2a2038;
-  color: #fff;
+  /* (no colours of its own: it sits in light windows and in the dark info card alike, in the words' own colour) */
+  background: rgba(128, 128, 128, 0.16);
+  border: 2px solid rgba(128, 128, 128, 0.55);
 }
 .fight-strip .step {
   display: flex;
@@ -583,7 +584,10 @@ body.saga-fight .act-btn.spend-glow {
   font-size: calc(22px * var(--txt, 1));
   font-weight: 900;
   line-height: calc(36px * var(--txt, 1));
-  color: #ffe9a8;
+  color: inherit;
+}
+.fight-strip .pips-row.demo .pip .d {
+  stroke: #14101c;
 }
 .fight-strip .pips-row.demo {
   --pip: calc(24px * var(--txt, 1));
