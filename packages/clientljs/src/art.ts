@@ -1,5 +1,6 @@
 // Every picture the view draws, packed into the atlas: the 2D game's generated art plus a few soft shapes of our own
 // for light, weather and effects.
+import { roleGear, type RoleGear } from '@art/rolegear.ts';
 import { decodeLook, type Appearance, type Outfit, type PetWear } from '@varldstradet/shared';
 import { animalSheet, ANIMAL_SIZE } from '@art/animals.ts';
 import { CHAR_H, CHAR_W, drawCharacterSheet, lookIcon, lookKey, lookOf } from '@art/characters.ts';
@@ -279,4 +280,22 @@ export function animalSprites(species: string, baby: boolean, jul: boolean, vari
     atlas.flush();
   }
   return s;
+}
+
+// ---- role gear: what a special pack monster carries (a leafy staff or crown, a bow or quiver, a round blue shield) ----
+const ROLE_GEAR: Record<string, RoleGear> = { healer: 'besvarjare', archer: 'skytt', shield: 'skoldbarare' };
+const gearSprites = new Map<string, { s: Sprite; x: number; y: number }>();
+/** The gear of a role on a species' walk frame: a small sprite and its top-left in the monster's sprite pixels (facing right; it may stick out). */
+export function roleGearSprite(role: string, species: string, frame: number): { s: Sprite; x: number; y: number } | null {
+  const gear = ROLE_GEAR[role];
+  if (!gear) return null;
+  const key = `${gear}-${species}-${frame}`;
+  let g = gearSprites.get(key);
+  if (!g) {
+    const d = roleGear(gear, species, frame);
+    g = { s: atlas.add(whole(d.px.canvas)), x: d.x, y: d.y };
+    gearSprites.set(key, g);
+    atlas.flush();
+  }
+  return g;
 }

@@ -329,6 +329,77 @@ export const SAGA_SFX = {
     tone(1760, 0.045, 'square', 0.03);
     later(70, () => tone(2349, 0.07, 'square', 0.03));
   },
+  /** Märke: the skull lands on a monster (a low knock and a rattle), or is taken away. */
+  skull: (on: boolean) => {
+    if (on) {
+      tone(196, 0.09, 'square', 0.05, -60);
+      later(70, () => notes([587, 494], 50, 0.07, 'triangle', 0.035));
+    } else tone(392, 0.08, 'triangle', 0.03, -120);
+  },
+  /** Samslag: two heroes struck together. Two notes at once, a fifth apart, and a bang. */
+  samslag: () => {
+    tone(392, 0.45, 'triangle', 0.05);
+    tone(587, 0.45, 'triangle', 0.045);
+    later(40, () => boom(0.7));
+    later(140, () => {
+      tone(784, 0.4, 'sine', 0.03);
+      tone(1175, 0.4, 'sine', 0.025);
+    });
+  },
+  /** A Kraftklot lies on the floor: a soft hum that fades as its time runs out. */
+  orbHum: (ms: number) => {
+    const c = ensure();
+    if (!c) return;
+    const dur = Math.max(0.5, ms / 1000);
+    for (const [f, v] of [
+      [330, 0.016],
+      [495, 0.01],
+    ] as const) {
+      const o = c.createOscillator();
+      const g = c.createGain();
+      o.type = 'sine';
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.001, c.currentTime);
+      g.gain.exponentialRampToValueAtTime(v, c.currentTime + 0.25);
+      g.gain.linearRampToValueAtTime(0.0001, c.currentTime + dur);
+      o.connect(g).connect(c.destination);
+      o.start();
+      o.stop(c.currentTime + dur);
+    }
+  },
+  /** Someone took a Kraftklot (a friend: the three pip notes come from your own row when it is you). */
+  orbTake: () => {
+    sweep(0.2, 900, 4200, 0.04, 'bandpass', 3);
+    tone(1319, 0.18, 'sine', 0.03);
+  },
+  /** Guldringen appears: a warm chime that says "come here" (nothing like the warning beeps of the red marks). */
+  ringChime: () => {
+    notes([523, 659, 784, 1047], 110, 0.6, 'sine', 0.045);
+    later(60, () => tone(262, 0.9, 'triangle', 0.03));
+  },
+  /** The party stood in the ring: the boss's scream fizzles out, and a cheer. */
+  ringWon: () => {
+    sweep(0.5, 1800, 200, 0.05, 'lowpass', 0.8);
+    tone(300, 0.4, 'sawtooth', 0.03, -200);
+    later(260, () => notes([523, 659, 784, 1047, 1319], 70, 0.3, 'triangle', 0.045));
+    later(700, () => noise(0.2, 0.04));
+  },
+  /** The ring was missed: the scream lands. */
+  ringLost: () => {
+    boom(1.2);
+    tone(196, 0.5, 'sawtooth', 0.045, -90);
+  },
+  /** A Runmärke: bronze one note, silver two, gold a little fanfare. */
+  medal: (m: number) => {
+    if (m >= 3) {
+      notes([523, 659, 784, 1047], 90, 0.3, 'triangle', 0.05);
+      later(380, () => {
+        tone(1319, 0.7, 'sine', 0.04);
+        tone(1047, 0.7, 'triangle', 0.03);
+      });
+    } else if (m === 2) notes([659, 988], 120, 0.4, 'triangle', 0.045);
+    else tone(440, 0.4, 'triangle', 0.045);
+  },
   /** A monster beaten: a soft pop (heavier after a big blow). */
   kill: (big: boolean) => {
     noise(0.1, big ? 0.07 : 0.045);

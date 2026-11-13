@@ -55,6 +55,7 @@ import {
 import { CLASS_IDS, LOOK_T, PETS, PET_T, activePet, ownedPetIds } from '@varldstradet/shared';
 import { COMBO_TEXT, FIGHT_UI, PIP_ICONS, PIP_NAMES, PIP_TEXT } from '@varldstradet/shared';
 import { fightStrip, fightWords } from './fightcard.ts';
+import { SAGA_SFX } from '../sagasfx.ts';
 import { lookSummary } from './looks.ts';
 import { portraitUrl } from '@art/textures.ts';
 import { net } from '../net.ts';
@@ -207,6 +208,13 @@ export class RunUi {
     });
     bus.on('me', () => {
       if (this.win === 'fard' || this.win === 'tree') this.render();
+    });
+    // Runmärken: the medal of the stop just cleared, big for a moment, with its own sound
+    bus.on('medal', (m) => {
+      const el = h('div', { class: `medal-pop m${m}`, role: 'img', 'aria-label': fmt(RUN_T.medal, { icon: '', medal: RUN_T.medalNames[m] ?? '' }).trim() }, h('span', { class: 'ic' }, RUN_T.medalIcons[m] ?? '🏅'), h('b', null, RUN_T.medalNames[m] ?? ''));
+      document.getElementById('ui')?.append(el);
+      SAGA_SFX.medal(m);
+      window.setTimeout(() => el.remove(), 2600);
     });
     bus.on('state', () => {
       if (this.win !== 'fard') return;
@@ -421,6 +429,9 @@ export class RunUi {
       const kind: NodeKind | null = pathNode ? pathNode.kind : kinds.length === 1 ? kinds[0]! : null;
       const state = row < run.row ? 'done' : row === run.row ? 'now' : 'next';
       const dot = h('span', { class: `dot ${state}${kind ? '' : ' unknown'}`, title: kind ? STOP_NAMES[kind] : '' }, kind ? KIND_ICON[kind] : '·');
+      // Runmärken: the medal of a cleared stop sits on its dot (ui/fight.css: [data-medal])
+      const medal = pathNode ? run.medals?.[pathNode.id] : undefined;
+      if (medal) dot.dataset.medal = String(medal);
       if (kind && state !== 'next') dot.style.setProperty('--c', KIND_COLOR[kind]);
       rail.append(dot);
     }
@@ -1096,6 +1107,8 @@ export class RunUi {
         stat('🌱', RUN_UI.seeds, `+${e.seeds}`),
         stat(lvl.icon, RUN_UI.level, lvl.name),
         stat('🌟', RUN_UI.spiritsUsed, `${e.spiritUsed ?? 0}`),
+        // Runmärken: how many of each the party won (never who was hit)
+        ...(e.medals && e.medals.some((n) => n > 0) ? [stat('🏅', FIGHT_UI.medalsTitle, h('span', { class: 'medal-counts' }, ...[3, 2, 1].map((m) => h('span', { class: `mc m${m}`, 'aria-label': `${RUN_T.medalNames[m]}: ${e.medals![m - 1]}` }, fmt(FIGHT_UI.medalCount, { icon: RUN_T.medalIcons[m]!, n: e.medals![m - 1]! })))))] : []),
       ),
     );
     if (e.trophy) body.append(h('div', { class: 'stat trophy' }, h('span', { class: 'ic' }, itemIcon(e.trophy, '🏆')), h('span', { class: 'lb' }, RUN_UI.trophy), h('b', { class: 'val' }, `${itemName(e.trophy)} (${RUN_UI.trophyWhere[e.trophyWhere ?? 'bag'] ?? ''})`)));

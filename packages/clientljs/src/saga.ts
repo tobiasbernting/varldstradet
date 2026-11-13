@@ -7,10 +7,10 @@
 // fallen and frozen are the dungeons' only).
 import { cameraShake, drawEllipse, drawLine, drawLineList, drawPoly, rgb, setAdditiveBlendMode, vec2, type Color, type Vector2 } from 'littlejsengine';
 import { BLOCK_SPECIES, CLASSES, CLASS_IDS, FIGHT_UI, MOB_FLAG, PIP_MAX, ROLE, SAGA_BOSSES, SAGA_MOBS, SPELLS, SPEND, T, TILE, fmt, isSagaKey, type Change, type MobRole, type SagaZone } from '@varldstradet/shared';
-import { FLAG, classOf, fightMode, flagsOf, isFoe, liveTarget, sagaSnap, setTarget, webbed } from '@v1/saga.ts';
+import { FLAG, classOf, fightMode, firstTime, flagsOf, isFoe, liveTarget, markedMob, sagaSnap, setTarget, webbed } from '@v1/saga.ts';
 import { castFill, hitStopMs, juiceOf, poofCount, shakeOf, spendClass, type Juice } from '@v1/fight.ts';
 import { effectiveFx } from '@v1/fxprefs.ts';
-import { castRing, pipRow, roleMarker, setPips } from '@v1/ui/fightcard.ts';
+import { castRing, pipRow, roleMarker, setPips, skullMark, tickMark } from '@v1/ui/fightcard.ts';
 import { SAGA_SFX, bossWindup } from '@v1/sagasfx.ts';
 import { activeWorld, bus, client, myPlayer, serverNow } from '@v1/state.ts';
 import { zoomPx } from '@v1/ui/hud.ts';
@@ -70,6 +70,10 @@ interface BarTop {
   /** A hero's pips, in their class's colour. */
   pips?: { cls: keyof typeof CLASSES; n: number };
   mine?: boolean;
+  /** Märke: the party's skull is on this monster. */
+  skull?: boolean;
+  /** This hero stands in Guldringen. */
+  inRing?: boolean;
 }
 interface BarParts {
   role: string;
@@ -77,10 +81,14 @@ interface BarParts {
   ring: HTMLElement | null;
   pips: HTMLElement | null;
   pipsCls: string;
+  skull: HTMLElement | null;
+  tick: HTMLElement | null;
 }
 /** The warning colour of a wind-up on the ground: red, or (colour-blind-safe) the orange of the Okabe-Ito palette, which keeps its light-
  *  ness against dark floors and is not mixed up with green or brown; the stripes and the white edge carry the meaning in both. */
 const warnColour = (): [number, number, number] => (prefs().cb ? [0.9, 0.62, 0] : [0.85, 0.08, 0.06]);
+/** The colour of what is GOOD to stand in (Guldringen, a Kraftklot): gold, or sky blue beside the colour-blind-safe orange dangers. */
+const goodColour = (): [number, number, number] => (prefs().cb ? [0.34, 0.71, 0.91] : [1, 0.82, 0.2]);
 const W = (v: number): number => v / TILE;
 const P = (x: number, y: number): Vector2 => vec2(x / TILE, -y / TILE);
 const col = (r: number, g: number, b: number, a = 1): Color => rgb(r, g, b, Math.max(0, Math.min(1, a)));
@@ -100,6 +108,7 @@ const MOVE_COLOUR: Record<string, [number, number, number]> = {
   line: [1, 0.85, 0.55],
   pull: [0.55, 0.45, 1],
   mend: [0.45, 1, 0.55],
+  ring: [1, 0.82, 0.2],
 };
 /** Some bosses' moves look like where they live: the frost giant's breath and snowstorm are icy, Surt's wrath is fire. */
 const BOSS_MOVE_COLOUR: Record<string, Record<string, [number, number, number]>> = {
@@ -163,6 +172,8 @@ export class SagaView {
   private openSeen = new Set<number>();
   private domeUp = new Map<number, { x: number; y: number }>();
   private castSeen = new Map<number, string>();
+  /** Märke: the monster that carried the skull at the last look (undefined before the first). */
+  private skullSeen: number | null | undefined = undefined;
   /** Where each monster stood last (a beaten one's poof). */
   private lastSpot = new Map<number, Spot>();
   /** Hit-stop: until when (performance.now) the fight's pictures stand still, and who is frozen. */
@@ -209,6 +220,7 @@ export class SagaView {
     this.openSeen.clear();
     this.domeUp.clear();
     this.castSeen.clear();
+    this.skullSeen = undefined;
     this.lastSpot.clear();
     this.flashes.clear();
     this.stopped_.clear();
@@ -281,6 +293,24 @@ export class SagaView {
     return this.on && (!!SAGA_MOBS[species] || !!SAGA_BOSSES[species]);
   }
 
+  /** The monster at a spot of the world (a right click or a long press marks it). */
+  mobAt(wx: number, wy: number): number | null {
+    if (!this.on) return null;
+    let best: number | null = null;
+    let bestD = Infinity;
+    for (const a of Object.values(activeWorld()?.animals ?? {})) {
+      if (!isFoe(a) || BLOCK_SPECIES.has(a.species)) continue;
+      const s = this.find(a.id);
+      if (!s || Math.abs(wx - s.x) > s.w / 2 + 6 || wy < s.y - s.h - 2 || wy > s.y + 9) continue;
+      const d = Math.hypot(wx - s.x, wy - (s.y + 4 - s.h / 2));
+      if (d < bestD) {
+        bestD = d;
+        best = a.id;
+      }
+    }
+    return best;
+  }
+
   /** A click or tap on the world: a monster (or a friend) there becomes the target. True if something was picked. */
   pick(wx: number, wy: number): boolean {
     if (!this.on && !(this.live && fightMode())) return false;
@@ -323,7 +353,10 @@ export class SagaView {
         const me = myPlayer();
         // something is about to land near you
         // (a Skytt's line: its bow creaks as it is drawn)
-        if (c.zone.kind === 'shot') {
+        if (c.zone.kind === 'gold') SAGA_SFX.ringChime();
+        else if (c.zone.kind === 'orb') {
+          if (me && Math.hypot(me.x - c.zone.x, me.y - c.zone.y) / TILE < 12) SAGA_SFX.orbHum((c.zone.until ?? c.zone.at) - serverNow());
+        } else if (c.zone.kind === 'shot') {
           if (me && Math.hypot(me.x - c.zone.x, me.y - c.zone.y) / TILE < 14) SAGA_SFX.creak();
         } else if (me && serverNow() < c.zone.at && Math.hypot(me.x - c.zone.x, me.y - c.zone.y) / TILE < c.zone.r + 2.5) SAGA_SFX.warn();
       } else if (!c.zone)
@@ -374,8 +407,11 @@ export class SagaView {
     const me = myPlayer();
     const mine = c.by === client.me;
     const near = !me || Math.hypot(me.x - c.x, me.y - c.y) < 16 * TILE;
+    if (c.spell === 'ring_won' || c.spell === 'ring_lost') return this.ringEnd(c.spell === 'ring_won', c.by, { x: c.x, y: c.y });
     if (mine || near) {
-      if (c.spell.startsWith('cast_')) {
+      if (c.spell === 'cast_ring') {
+        /* (the ring's own chime plays when it appears on the floor) */
+      } else if (c.spell.startsWith('cast_')) {
         const a = typeof c.by === 'number' ? activeWorld()?.animals[c.by] : undefined;
         const move = c.spell.slice(5);
         bossWindup(move, SAGA_BOSSES[a?.species ?? '']?.moves.find((m) => m.move === move)?.warn ?? 1500);
@@ -1073,7 +1109,70 @@ export class SagaView {
     if (on !== undefined) this.delay = { on, until: this.t + sec };
   }
 
+  /** A name for a Samslag: a hero's, or their pet's. */
+  private nameOf(id: string): string {
+    const players = client.world?.players ?? {};
+    if (id.startsWith('pet:')) {
+      const owner = id.slice(4);
+      const pet = Object.values(activeWorld()?.animals ?? {}).find((a) => a.owner === owner && !!a.petKind);
+      return pet?.name ?? FIGHT_UI.petName;
+    }
+    return players[id]?.name ?? '';
+  }
+
+  /** Samslag: two heroes struck together. Both names over the monster, a two-note chord, a big burst, a blink of stillness. */
+  private samslag(on: number, by: [string, string] | undefined): void {
+    const a = by ? this.nameOf(by[0]) : '';
+    const b = by ? this.nameOf(by[1]) : '';
+    this.word(on, `🤝 ${T.sagaSamslag}${a && b ? ` ${fmt(FIGHT_UI.samslagBy, { a, b })}` : ''}`, 'big');
+    SAGA_SFX.samslag();
+    const s = this.find(on);
+    if (s) {
+      const at = { x: s.x, y: s.y + 4 - s.h * 0.5 };
+      this.explode(at, [1, 0.85, 0.3], 30, on);
+      this.groundBurst({ x: s.x, y: s.y + 4 }, 2.2 * TILE, [1, 0.85, 0.3]);
+    }
+    this.punch(on, 3);
+    this.hitStop('spend', [on, by?.[1]]);
+    this.shake('spend');
+    // the first one on this device: what it was, in a line
+    if (a && b && firstTime('samslag')) bus.emit('toast', fmt(T.sagaSamslagText, { a, b }));
+  }
+
+  /** Guldringen ends: the party stood in it (the scream fizzles into stars, a cheer) or not (the scream lands). */
+  private ringEnd(won: boolean, by: string | number, at: { x: number; y: number }): void {
+    if (won) {
+      SAGA_SFX.ringWon();
+      const stars = [...Array(Math.round(10 * this.juice().particles) + 2)].map((_, i, arr) => ({ a: (i / arr.length) * TAU, v: 26 + Math.random() * 22 }));
+      this.add(0.9, (layer, f, k) => {
+        const m = this.body(by, at);
+        if (layer === 'light') {
+          drawSprite(this.art.glow, m.x, m.y, 120, 120, 0, light(1, 0.85, 0.3, 0.8 * (1 - k)));
+          return;
+        }
+        if (layer !== 'bright') return;
+        const e = easeOutCubic(k);
+        for (const st of stars) this.star(m.x + Math.cos(st.a) * st.v * e, m.y + Math.sin(st.a) * st.v * e - 8 * e, 3.5 * (1 - k) + 1, col(1, 0.9, 0.35, 1 - k));
+      }, at, undefined, by);
+    } else {
+      SAGA_SFX.ringLost();
+      this.land('nova', at, by);
+    }
+  }
+
   private hit(c: Extract<Change, { t: 'hit' }>): void {
+    if (c.kind === 'combo') {
+      if (typeof c.on === 'number') this.samslag(c.on, c.by);
+      return;
+    }
+    if (c.kind === 'orb') {
+      // a Kraftklot taken: three pips at once (your own row plays its three notes), sparkles and a word
+      this.word(c.on, `🔮 ${FIGHT_UI.orbGot}`);
+      if (c.on !== client.me) SAGA_SFX.orbTake();
+      const sp = this.find(c.on);
+      if (sp) this.fx.spawn(sp.x, sp.y - 8, 'sparkle');
+      return;
+    }
     const s = this.find(c.on);
     if (!s) return;
     const monster = typeof c.on === 'number';
@@ -1338,6 +1437,13 @@ export class SagaView {
       if (c[0] === 'heal') SAGA_SFX.chant(c[2] - c[1]);
     }
     for (const id of this.castSeen.keys()) if (!snap.c?.[id]) this.castSeen.delete(id);
+    // Märke: the skull moved (a knock), or is gone; your own aim follows the party's mark
+    const k = markedMob();
+    if (k !== this.skullSeen) {
+      if (this.skullSeen !== undefined) SAGA_SFX.skull(k !== null);
+      this.skullSeen = k;
+      if (k !== null) setTarget(k);
+    }
     // the Sköldbärare's dome: up while it fights and is not dazed
     const animals = activeWorld()?.animals ?? {};
     for (const [ids, m] of Object.entries(snap.m)) {
@@ -1405,6 +1511,12 @@ export class SagaView {
       const r = z.r * TILE;
       const move = this.moveOf(z);
       if (move === 'mend') continue;
+      if (z.kind === 'gold' || z.kind === 'orb') {
+        // warm light, never the red of a danger
+        const [gr, gg, gb] = goodColour();
+        drawSprite(this.art.glow, z.x, z.y, r * 2.8, r * 2.8, 0, light(gr, gg, gb, z.kind === 'orb' ? 0.5 : 0.6));
+        continue;
+      }
       const reach = z.shape === 'cone' || z.shape === 'line' ? 0.5 : 0;
       const cx = z.x + Math.cos(z.dir ?? 0) * r * reach;
       const cy = z.y + Math.sin(z.dir ?? 0) * r * reach;
@@ -1467,6 +1579,7 @@ export class SagaView {
 
   private drawZone(z: SagaZone, now: number): void {
     const r = z.r * TILE;
+    if (z.kind === 'orb') return this.drawOrb(z, r, now, false);
     const move = this.moveOf(z);
     if (move === 'pull' && now < z.at) {
       // a whirlpool: a dark violet disc turning, darker as it gets ready
@@ -1488,6 +1601,7 @@ export class SagaView {
     }
     const k = this.fill(z, now);
     if (z.kind === 'shot') return this.drawShot(z, r, k);
+    if (z.kind === 'gold') return this.drawGold(z, r, k, false);
     // blinking stays under 3 times a second, and stops when the screen is calm (the filling-up ring tells the time)
     const blink = calm() ? 0.5 : 0.5 + 0.5 * Math.sin(this.t * (6 + k * 11));
     const [fr, fg, fb] = warnColour();
@@ -1496,6 +1610,77 @@ export class SagaView {
     this.zoneShape(z, r * k, col(fr, fg, fb, 0.3 + 0.1 * k));
     // stripes over the whole danger, so it reads without any colour at all
     this.hatch(z, r, col(1, 1, 1, 0.55));
+  }
+
+  /**
+   * Guldringen: the opposite of every red mark. Gold (sky blue when the telegraphs are colour-blind-safe, where the dangers are
+   * orange), a rim of star points, arrowheads all round pointing IN, and a white ring that closes in on the middle as the time
+   * runs out. Nothing in it is striped like a danger.
+   */
+  private drawGold(z: SagaZone, r: number, k: number, edge: boolean): void {
+    const [gr, gg, gb] = goodColour();
+    const still = calm();
+    if (!edge) {
+      drawEllipse(P(z.x, z.y), vec2(W(r * 2), W(r * 2)), col(gr, gg, gb, 0.2));
+      drawEllipse(P(z.x, z.y), vec2(W(r * 1.2), W(r * 1.2)), col(1, 1, 1, 0.12));
+      return;
+    }
+    // the rim: star points all the way round, dark under bright
+    const pts: Vector2[] = [];
+    const n = 24;
+    const turn = still ? 0 : this.t * 0.25;
+    for (let i = 0; i < n * 2; i++) {
+      const a = turn + (i / (n * 2)) * TAU;
+      const rr = i % 2 ? r * 1.1 : r * 0.98;
+      pts.push(P(z.x + Math.cos(a) * rr, z.y + Math.sin(a) * rr));
+    }
+    drawLineList(pts, W(3), col(0.05, 0.03, 0.08, 0.85), true);
+    drawLineList(pts, W(1.5), col(gr, gg, gb, 1), true);
+    // the time left: a white ring closing in
+    this.ring(z.x, z.y, Math.max(2, r * (1 - k)), 1.8, col(0.05, 0.03, 0.08, 0.8));
+    this.ring(z.x, z.y, Math.max(2, r * (1 - k)), 0.9, col(1, 1, 1, 0.95));
+    // arrowheads pointing at the middle, sliding in
+    const spokes = 8;
+    for (let i = 0; i < spokes; i++) {
+      const a = (i / spokes) * TAU + 0.2;
+      for (let j = 0; j < 2; j++) {
+        const u = still ? 0.25 + j * 0.4 : (this.t * 0.7 + j / 2) % 1;
+        const d = r * (1.45 - u * 1.0);
+        const x = z.x + Math.cos(a) * d;
+        const y = z.y + Math.sin(a) * d;
+        const inA = a + Math.PI;
+        const sz = 5;
+        const head = [P(x + Math.cos(inA + 2.5) * sz, y + Math.sin(inA + 2.5) * sz), P(x, y), P(x + Math.cos(inA - 2.5) * sz, y + Math.sin(inA - 2.5) * sz)];
+        const fade = still ? 0.9 : Math.sin(u * Math.PI);
+        drawLineList(head, W(2.6), col(0.05, 0.03, 0.08, 0.7 * fade));
+        drawLineList(head, W(1.4), col(1, 1, 1, 0.95 * fade));
+      }
+    }
+    // a star in the middle: here
+    this.star(z.x, z.y, 5, col(1, 1, 1, 0.95));
+  }
+
+  /** A Kraftklot: a glowing rune ball that bobs gently (still when the screen is calm), in a ring that shrinks as its time runs out. */
+  private drawOrb(z: SagaZone, r: number, now: number, bright: boolean): void {
+    const until = z.until ?? z.at;
+    const left = clamp01((until - now) / Math.max(1, until - z.at));
+    if (left <= 0) return;
+    const [gr, gg, gb] = goodColour();
+    if (!bright) {
+      this.ring(z.x, z.y + 4, r * (0.35 + 0.65 * left), 1.8, col(0.05, 0.03, 0.08, 0.7));
+      this.ring(z.x, z.y + 4, r * (0.35 + 0.65 * left), 0.9, col(gr, gg, gb, 0.95));
+      return;
+    }
+    const bob = calm() ? 0 : Math.sin(this.t * 3 + z.x) * 1.8;
+    const y = z.y - 6 + bob;
+    const pulse = calm() ? 1 : 0.85 + 0.15 * Math.sin(this.t * 5);
+    drawSprite(this.art.glow, z.x, y, 26 * pulse, 26 * pulse, 0, rgba(gr, gg, gb, 0.55));
+    drawSprite(this.art.glow, z.x, y, 12, 12, 0, rgba(1, 1, 1, 0.95));
+    // the rune in it: a diamond with a stroke, like a pip
+    const d = 4.2;
+    drawLineList([P(z.x, y - d), P(z.x + d, y), P(z.x, y + d), P(z.x - d, y)], W(1), col(1, 1, 1, 0.95), true);
+    drawLine(P(z.x - 1, y - 2), P(z.x - 1, y + 2), W(0.8), col(0.1, 0.06, 0.16, 0.9));
+    drawLine(P(z.x - 1, y - 1), P(z.x + 1.4, y - 2.2), W(0.8), col(0.1, 0.06, 0.16, 0.9));
   }
 
   /**
@@ -1525,6 +1710,8 @@ export class SagaView {
 
   private drawZoneEdge(z: SagaZone, now: number): void {
     const r = z.r * TILE;
+    if (z.kind === 'orb') return this.drawOrb(z, r, now, true);
+    if (z.kind === 'gold') return this.drawGold(z, r, this.fill(z, now), true);
     const move = this.moveOf(z);
     if (move === 'mend') return;
     if (move === 'pull' && now < z.at) return this.pullArrows(z, r, now);
@@ -1896,7 +2083,7 @@ export class SagaView {
         el.innerHTML = '<em></em><span></span><b><i></i></b>';
         this.labels.appendChild(el);
         this.bars.set(key, el);
-        this.barParts.set(key, { role: '', castKey: '', ring: null, pips: null, pipsCls: '' });
+        this.barParts.set(key, { role: '', castKey: '', ring: null, pips: null, pipsCls: '', skull: null, tick: null });
       }
       const fl = top.flags ?? 0;
       const want = `label saga-bar-${cls}${fl & MOB_FLAG.shielded ? ' shielded' : ''}${fl & MOB_FLAG.open ? ' opened' : ''}${top.mine ? ' mine' : ''}`;
@@ -1911,6 +2098,9 @@ export class SagaView {
       place(el, s.x, s.y + 4 - s.h - (cls === 'friend' ? 1 : 2));
     };
     const animals = activeWorld()?.animals ?? {};
+    const skull = markedMob();
+    const rings = (activeWorld()?.saga?.zones ?? []).filter((z) => z.kind === 'gold');
+    const inRing = (sp: Spot): boolean => rings.some((z) => Math.hypot(sp.x - z.x, sp.y - z.y) <= z.r * TILE);
     if (snap) {
       for (const [ids, m] of Object.entries(snap.m)) {
         const id = Number(ids);
@@ -1919,25 +2109,25 @@ export class SagaView {
         if (!a || !s || id === snap.b?.id) continue;
         const boss = SAGA_BOSSES[a.species];
         const named = boss || t === id || BLOCK_SPECIES.has(a.species);
-        bar(`m${id}`, s, m[0] / Math.max(1, m[1]), boss ? 'boss' : BLOCK_SPECIES.has(a.species) ? 'ice' : t === id ? 'target' : 'mob', named ? a.name : null, { role: a.role, cast: snap.c?.[id], flags: m[2] });
+        bar(`m${id}`, s, m[0] / Math.max(1, m[1]), boss ? 'boss' : BLOCK_SPECIES.has(a.species) ? 'ice' : t === id ? 'target' : 'mob', named ? a.name : null, { role: a.role, cast: snap.c?.[id], flags: m[2], skull: id === skull });
       }
       for (const [id, f] of Object.entries(snap.f)) {
         const s = this.find(id);
         const c = classOf(client.world?.players[id]);
-        if (s && !(f[2] & FLAG.down)) bar(`p${id}`, s, f[0] / Math.max(1, f[1]), 'friend', null, { pips: c ? { cls: c.id, n: f[3] ?? 0 } : undefined, mine: id === client.me });
+        if (s && !(f[2] & FLAG.down)) bar(`p${id}`, s, f[0] / Math.max(1, f[1]), 'friend', null, { pips: c ? { cls: c.id, n: f[3] ?? 0 } : undefined, mine: id === client.me, inRing: inRing(s) });
       }
     }
     // a waiting monster you aim at shows its name too
     if (typeof t === 'number' && t !== snap?.b?.id && !seen.has(`m${t}`)) {
       const a = animals[t];
       const s = a ? this.find(t) : null;
-      if (a && s) bar(`m${t}`, s, 1, 'target', a.name, { role: a.role });
+      if (a && s) bar(`m${t}`, s, 1, 'target', a.name, { role: a.role, skull: t === skull });
     }
-    // the special monsters show their marker before their pack is woken, so the party can plan
+    // the special monsters show their marker before their pack is woken, so the party can plan (and a marked one its skull)
     for (const a of Object.values(animals)) {
-      if (!a.role || seen.has(`m${a.id}`) || !SAGA_MOBS[a.species]) continue;
+      if ((!a.role && a.id !== skull) || seen.has(`m${a.id}`) || !(SAGA_MOBS[a.species] || SAGA_BOSSES[a.species]) || a.id === snap?.b?.id) continue;
       const s = this.find(a.id);
-      if (s) bar(`m${a.id}`, s, 1, 'idle', null, { role: a.role });
+      if (s) bar(`m${a.id}`, s, 1, 'idle', null, { role: a.role, skull: a.id === skull });
     }
     for (const [key, el] of this.bars)
       if (!seen.has(key)) {
@@ -1973,5 +2163,15 @@ export class SagaView {
       if (p.pips) row.append(p.pips);
     }
     if (p.pips && top.pips) setPips(p.pips, top.pips.n, !this.juice().loops);
+    if (!!top.skull !== !!p.skull) {
+      p.skull?.remove();
+      p.skull = top.skull ? skullMark() : null;
+      if (p.skull) row.append(p.skull);
+    }
+    if (!!top.inRing !== !!p.tick) {
+      p.tick?.remove();
+      p.tick = top.inRing ? tickMark() : null;
+      if (p.tick) row.prepend(p.tick);
+    }
   }
 }

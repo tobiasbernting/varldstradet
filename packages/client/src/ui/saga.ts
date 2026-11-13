@@ -14,6 +14,7 @@ import {
   CLASSES,
   COMBO_TEXT,
   FIGHT_UI,
+  HELP_FIGHT,
   MOB_FLAG,
   MOB_ROLES,
   PIP_ICONS,
@@ -83,6 +84,9 @@ import {
   fightMode,
   flagsOf,
   firstTime,
+  markedMob,
+  spendTarget,
+  toggleMark,
   getTarget,
   inSaga,
   inSharedPause,
@@ -104,7 +108,7 @@ import {
   webbed,
 } from '../saga.ts';
 import { PRIMER, interruptOf, isInterrupt, isReaction, newPips, primerHint, type SpendView } from '../fight.ts';
-import { boltBadge, fightExplain, fightStrip, pipRow, roleLine, roleMarker, setPips, starBadge } from './fightcard.ts';
+import { boltBadge, fightExplain, fightStrip, pipRow, roleLine, roleMarker, setPips, skullMark, starBadge } from './fightcard.ts';
 import { pathOf } from '../run.ts';
 import { pathIcon } from './runpick.ts';
 import { SAGA_SFX } from '../sagasfx.ts';
@@ -388,6 +392,8 @@ export class SagaUi {
   private actPips: HTMLElement | null = null;
   private actStar: HTMLElement | null = null;
   private markFlash = h('div', { class: 'saga-markflash', 'aria-hidden': 'true' });
+  /** Märke: the skull button beside the target's frame (it marks the monster you aim at for the whole party). */
+  private skullBtn = h('button', { class: 'saga-skull', type: 'button', 'aria-pressed': 'false' }, skullMark(), h('span', { class: 'lb' }, FIGHT_UI.skullBtn), h('span', { class: 'key k' }, FIGHT_UI.skullKey));
   /** The pips the row showed last (a new one pops and sounds), the glow's last reason and the last "stop it now" cue. */
   private pipsShown = 0;
   private spendSaid = '';
@@ -426,7 +432,10 @@ export class SagaUi {
     private menus: Menus,
     social: HTMLElement,
   ) {
-    this.units.append(this.meFrame.el, this.targetFrame.el);
+    this.units.append(this.meFrame.el, this.targetFrame.el, this.skullBtn);
+    cards.info(this.skullBtn, '💀', T.sagaSkull, T.sagaSkullText);
+    cards.tap(this.skullBtn, () => toggleMark());
+    document.addEventListener('vt:mark', () => toggleMark());
     this.castBar.append(this.castFill, this.castName);
     this.markFlash.hidden = true;
     hudRoot.append(this.party, this.units, this.bar, this.tracker, this.down, this.markFlash);
@@ -534,6 +543,10 @@ export class SagaUi {
       return true;
     }
     if (!fightMode()) return false;
+    if ((e.key === 'z' || e.key === 'Z') && inSaga()) {
+      toggleMark();
+      return true;
+    }
     if (e.key === 'Tab' && !e.shiftKey && !(document.activeElement && document.activeElement !== document.body && document.activeElement.closest('#ui'))) {
       // Tab is the next monster; once the focus is on a HUD button (Shift+Tab gets there) it moves the focus as usual
       e.preventDefault();
@@ -854,6 +867,7 @@ export class SagaUi {
     const me = myPlayer();
     const cls = myClass();
     if (!snap) {
+      this.skullBtn.hidden = true;
       // out in the world: your hearts, and the monster you aim at with its hearts
       this.units.hidden = !fightMode() || inSaga();
       if (this.units.hidden || !me) return;
@@ -868,6 +882,12 @@ export class SagaUi {
     }
     this.units.hidden = false;
     this.meFrame.set(cls?.emoji ?? '🙂', me?.name ?? T.sagaYou, snap.f[client.me] ?? null, cls?.color ?? '#ffe98a');
+    // the skull button: there while there is a monster to mark; pressed while the one you aim at carries the mark
+    const aim = typeof liveTarget() === 'number' ? (liveTarget() as number) : spendTarget();
+    const marked = markedMob();
+    this.skullBtn.hidden = aim === null && marked === null;
+    const on = marked !== null && (aim === marked || aim === null);
+    if (this.skullBtn.getAttribute('aria-pressed') !== String(on)) this.skullBtn.setAttribute('aria-pressed', String(on));
     const t = liveTarget();
     // the boss has its own bar at the top
     this.targetFrame.el.hidden = t === null || t === snap.b?.id;
@@ -992,8 +1012,11 @@ export class SagaUi {
       if (cast) announce(fmt(cast.kick ? A11Y_T.annKick : A11Y_T.annBoss, { boss: def.name, move: cast.name }), true);
     }
     if (cast) {
+      // Guldringen is the one cast to run INTO: gold, a star, and "Spring IN!"
+      const ring = snap!.c?.[b.id]?.[0] === 'ring';
       this.castBar.classList.toggle('kick', cast.kick);
-      const label = `${cast.kick ? '🛡️ ' : '⚠️ '}${cast.name}${cast.kick ? ` · ${T.sagaCanKick}` : ''}`;
+      this.castBar.classList.toggle('ring', ring);
+      const label = ring ? `⭐ ${cast.name} · ${FIGHT_UI.ringBar}` : `${cast.kick ? '🛡️ ' : '⚠️ '}${cast.name}${cast.kick ? ` · ${T.sagaCanKick}` : ''}`;
       if (this.castName.textContent !== label) this.castName.textContent = label;
     }
   }
@@ -1440,6 +1463,20 @@ export class SagaUi {
     body.append(h('div', { class: 'saga-head' }, `👹 ${T.sagaRolesTitle}`));
     body.append(h('div', { class: 'saga-roles' }, ...MOB_ROLES.map(roleLine), h('div', { class: 'role-line open' }, h('span', { class: 'em' }, '💫'), h('div', null, h('b', null, FIGHT_UI.openTitle), h('div', { class: 'tx' }, T.sagaOpenText)))));
     if (prog.cls) body.append(fightExplain(prog.cls));
+    // fighting together: Märke, Samslag, Kraftklot, Guldringen and Runmärken
+    const line = (pic: HTMLElement | string, name: string, text: string): HTMLElement => h('div', { class: 'role-line' }, typeof pic === 'string' ? h('span', { class: 'em' }, pic) : pic, h('div', null, h('b', null, name), h('div', { class: 'tx' }, text)));
+    body.append(h('div', { class: 'saga-head' }, `🤝 ${FIGHT_UI.fightPage}`));
+    body.append(
+      h(
+        'div',
+        { class: 'saga-roles' },
+        line(skullMark(), T.sagaSkull, T.sagaSkullText),
+        line('🤝', T.sagaSamslag, HELP_FIGHT.steps[2]!.text.replace(/^Samslag: /, '')),
+        line('🔮', T.sagaOrb, T.sagaOrbText),
+        line('⭐', FIGHT_UI.ringTitle, FIGHT_UI.ringText),
+        line(h('span', { class: 'em medals' }, '🥇'), FIGHT_UI.medalsTitle, RUN_T.medalText),
+      ),
+    );
     body.append(h('div', { class: 'saga-head' }, T.sagaTitles));
     body.append(prog.titles.length ? h('div', { class: 'saga-titles' }, ...prog.titles.map((t) => h('span', null, `👑 ${t}`))) : h('div', { class: 'hint' }, T.sagaNoTitles));
   }

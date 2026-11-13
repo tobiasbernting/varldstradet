@@ -1611,6 +1611,40 @@ export const FIGHT_UI = {
   hintPips: 'Du har 3 {pips}! Tryck på {spell} eller Slå för ett slag som är 4 gånger så starkt.',
   hintCaster: 'En Besvärjare läker sin vän om {s} sekunder! Avbryt med {spell}.',
   hintCasterNone: 'En Besvärjare läker sin vän om {s} sekunder! Slå den först.',
+  // Märke, Samslag, Kraftklot, Guldringen and Runmärken on the screen
+  skullBtn: 'Märk',
+  skullKey: 'Z',
+  skullOn: 'Märket sitter på {name}.',
+  skullOff: 'Märket är borta.',
+  samslagBy: '{a} + {b}',
+  petName: 'djuret',
+  orbGot: '+3',
+  inRing: 'Står i ringen',
+  ringBar: 'Spring IN!',
+  medalsTitle: 'Runmärken',
+  medalCount: '{icon} {n}',
+  medalRule1: 'Spring ur märkena: högst 1 träff var.',
+  medalRule2: 'Låt inget monster läka sig: 0 läkningar.',
+  medalRule3: 'Var snabba: under {s} sekunder för en flock på Medel.',
+  fightPage: 'Slåss tillsammans',
+  ringTitle: 'Guldringen',
+  ringText: 'Guld = spring IN allihop och stå kvar i 2 sekunder. Rött = spring UT.',
+};
+
+/** The help window's page about fighting together (added to HELP below; one block, so it merges without trouble). */
+export const HELP_FIGHT: HelpTopic = {
+  id: 'fight',
+  emoji: '⚔️',
+  title: 'Slåss tillsammans',
+  intro: 'Du slår av dig själv. Titta på de 3 rutorna över Slå: när de är fulla är ditt stora slag 4 gånger så starkt!',
+  steps: [
+    { icon: 'emoji:💀', text: 'Märke: håll fingret på ett monster, eller tryck på dödskallen bredvid monstrets ruta, så märker du det. Då slår alla på samma monster. Märket kan bytas efter 2 sekunder.', only: 'touch' },
+    { icon: 'emoji:💀', text: 'Märke: högerklicka på ett monster, eller tryck Z, så märker du det. Då slår alla på samma monster. Märket kan bytas efter 2 sekunder.', only: 'desktop' },
+    { icon: 'emoji:🤝', text: 'Samslag: gör en vän monstret yrt eller långsamt och du slår ditt stora slag, slår det 50 % hårdare.' },
+    { icon: 'emoji:🔮', text: 'Kraftklot: särskilda monster tappar ett klot som ligger kvar i 5 sekunder. Spring över det, så får du 3 prickar direkt!' },
+    { icon: 'emoji:⭐', text: 'Guldringen: guld = spring IN allihop och stå kvar i 2 sekunder. Rött = spring UT.' },
+    { icon: 'emoji:🥇', text: 'Runmärken: varje strid ger brons, silver eller guld. Guld får ni om ni springer ur märkena (högst 1 träff var), inte låter något monster läka sig och är snabba.' },
+  ],
 };
 
 // The dungeons' ordinary monsters in the journal (Dagboken): the heading over them, what each archetype is called, and one
@@ -1677,3 +1711,6 @@ export const MOB_TEXT: Record<string, string> = {
   ulvhedin: 'En krigare i vargskinn som tror att han själv är en varg.',
   uroxe: 'En jättelik oxe med långa horn och rimfrost i pälsen.',
 };
+
+// (the fight page of the help window: see HELP_FIGHT above)
+if (!HELP.some((t) => t.id === HELP_FIGHT.id)) HELP.push(HELP_FIGHT);

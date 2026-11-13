@@ -156,7 +156,11 @@ export function initGamepad(opts: {
     if (moving) t.runHeld = down(B.LT) || down(B.L3) || (!fightMode() && down(B.B));
     // (in a fight up on the d-pad is the explain mode, see below; emotes are in the HUD)
     if (hit(B.Up) && !fightMode()) menus.toggle('emotes');
-    if (hit(B.Down)) hud.minimap.toggle();
+    // down on the d-pad: the minimap; in a dungeon it is Märke (the skull on the monster you aim at), the map is in the HUD
+    if (hit(B.Down)) {
+      if (inSaga()) document.dispatchEvent(new Event('vt:mark'));
+      else hud.minimap.toggle();
+    }
     if (hit(B.Start) && down(B.LT)) {
       hudMode = true;
       return;

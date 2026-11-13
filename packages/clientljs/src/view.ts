@@ -48,6 +48,8 @@ import {
   type WeatherKind,
   type WorldObject,
   type WorldState,
+  isIllusion,
+  SAGA_MOBS as SAGA_MOBS_,
 } from '@varldstradet/shared';
 import { ANIMAL_SIZE, ANIMAL_VARIANTS, RIDE_LIFT } from '@art/animals.ts';
 import { CHAR_H, dirOf, frameIndex, HEADROOM } from '@art/characters.ts';
@@ -57,10 +59,11 @@ import { net } from '@v1/net.ts';
 import { underHud } from '@v1/ui/lane.ts';
 import { SFX } from '@v1/sound.ts';
 import { activeWorld, bus, client, furnish, inOwnHouse, myArea, myPlayer, serverNow } from '@v1/state.ts';
-import { attackTarget, heroOn, levelOf, sagaMarker, sagaSpeed, titleOf } from '@v1/saga.ts';
+import { prefs } from '@v1/a11y.ts';
+import { attackTarget, heroOn, levelOf, sagaMarker, sagaSpeed, titleOf, toggleMark } from '@v1/saga.ts';
 import { KIND_ICON, runClient } from '@v1/run.ts';
 import type { HudTarget } from '@v1/ui/hud.ts';
-import { animalSprites, characterSprites, loadSprites, lookSprite, type ObjectSprites, type Sprites } from './art.ts';
+import { animalSprites, characterSprites, roleGearSprite, loadSprites, lookSprite, type ObjectSprites, type Sprites } from './art.ts';
 import { LooksFx, type FxActor } from './looksfx.ts';
 import type { Sprite } from './atlas.ts';
 import { Effects } from './fx.ts';
@@ -299,6 +302,21 @@ export class View implements HudTarget {
     bus.on('state', () => this.onState());
 
     // clicks and taps on the world (the HUD sits above and keeps its own)
+    // Märke: a right click on a monster, or a finger held on it, marks it with the skull for the whole party
+    let hold = 0;
+    const endHold = (): void => window.clearTimeout(hold);
+    for (const ev of ['pointerup', 'pointercancel', 'pointerleave', 'pointermove']) gameEl.addEventListener(ev, (e) => (ev !== 'pointermove' || (e as PointerEvent).pointerType === 'mouse' ? endHold() : undefined));
+    gameEl.addEventListener('pointerdown', (e) => {
+      if (this.uiOpen) return;
+      const at = this.screenToWorld(e.clientX, e.clientY);
+      const mob = this.sagaFx?.mobAt(at.x, at.y) ?? null;
+      if (mob === null) return;
+      if (e.pointerType === 'mouse' && e.button === 2) toggleMark(mob);
+      else if (e.pointerType !== 'mouse') {
+        endHold();
+        hold = window.setTimeout(() => toggleMark(mob), prefs().hold);
+      }
+    });
     gameEl.addEventListener('pointerdown', (e) => {
       if (this.uiOpen || (e.pointerType === 'mouse' && e.button !== 0)) return;
       const w = this.screenToWorld(e.clientX, e.clientY);
@@ -767,6 +785,14 @@ export class View implements HudTarget {
     if (this.uiOpen) return;
     const w = this.screenToWorld(clientX, clientY);
     if (this.sagaFx?.pick(w.x, w.y)) attackTarget();
+  }
+
+  /** A finger held still on the joystick's side of a touch screen and let go: Märke on the monster under it. */
+  hold(clientX: number, clientY: number, ms: number): void {
+    if (this.uiOpen || ms < prefs().hold) return;
+    const w = this.screenToWorld(clientX, clientY);
+    const mob = this.sagaFx?.mobAt(w.x, w.y) ?? null;
+    if (mob !== null) toggleMark(mob);
   }
 
   private actFacing(): void {
@@ -1572,7 +1598,18 @@ export class View implements HudTarget {
       }
       // a hit monster flashes white for a moment
       const fl = this.sagaFx.flashOf(id);
-      q.push(a.y + 4, s, a.x, a.y + 4 - hop - h / 2, w, h, 0, undefined, fl > 0 ? rgba(fl, fl, fl, 0) : 0);
+      const add = fl > 0 ? rgba(fl, fl, fl, 0) : 0;
+      q.push(a.y + 4, s, a.x, a.y + 4 - hop - h / 2, w, h, 0, undefined, add);
+      // a special pack monster carries its role's gear (a leafy staff, a bow, a round shield): its own quad on top of the body,
+      // mirrored with it; one of Loke's illusions carries a ghostly one
+      const gear = an.role ? roleGearSprite(an.role, an.species, a.wasMoving ? Math.floor(a.walk * 5) % 2 : 0) : null;
+      if (gear) {
+        const kx = w / s.w;
+        const ky = h / s.h;
+        const gx = (gear.x + gear.s.w / 2 - s.w / 2) * kx;
+        const gy = (gear.y + gear.s.h / 2 - s.h / 2) * ky;
+        q.push(a.y + 4.01, gear.s, a.x + gx, a.y + 4 - hop - h / 2 + gy, gear.s.w * kx, gear.s.h * ky, 0, isIllusion(an.variant) && !!SAGA_MOBS_[an.species] ? rgba(0.75, 0.9, 1, 0.6) : undefined, add);
+      }
     }
     for (const r of this.roofs) if (r.alpha > 0.01 && inView(r.x, r.y, r.sprite.w, r.sprite.h)) q.push(r.depth, r.sprite, r.x + r.sprite.w / 2, r.y + r.sprite.h / 2, r.sprite.w, r.sprite.h, 0, alpha(r.alpha));
     // the cursor on the tile you would use

@@ -73,6 +73,11 @@ export const boltBadge = (extra = ''): HTMLElement => svg(`bolt-badge${extra ? `
 /** The star of "this is the right press now" (the spender and the big button). */
 export const starBadge = (extra = ''): HTMLElement => svg(`star-badge${extra ? ` ${extra}` : ''}`, '0 0 16 16', '<path class="fg" d="M8 .8l2.1 4.6 5 .6-3.7 3.4 1 5-4.4-2.5-4.4 2.5 1-5L.9 6l5-.6Z"/>');
 
+/** Märke: the party's skull over the monster everyone should hit (big: it is seen across the room). */
+export const skullMark = (extra = ''): HTMLElement => svg(`skull-mark${extra ? ` ${extra}` : ''}`, '0 0 24 24', '<path class="bg" d="M12 2c5.2 0 9 3.6 9 8.4 0 2.8-1.3 4.8-3 6.1V20a1.6 1.6 0 0 1-1.6 1.6H7.6A1.6 1.6 0 0 1 6 20v-3.5c-1.7-1.3-3-3.3-3-6.1C3 5.6 6.800 2 12 2Z"/><circle class="fg" cx="8.4" cy="10.6" r="2.4"/><circle class="fg" cx="15.6" cy="10.6" r="2.4"/><path class="fg" d="M12 13.4l1.5 2.6h-3Z"/><path class="ln" d="M9.5 18v3.4M12 18v3.4M14.5 18v3.4"/>');
+/** A tick over a hero who stands in Guldringen. */
+export const tickMark = (): HTMLElement => svg('tick-mark', '0 0 16 16', '<circle class="bg" cx="8" cy="8" r="7.2"/><path class="ln" d="M4.2 8.4l2.6 2.6 5-5.4"/>');
+
 /** A cast's circle over a monster: it fills clockwise (`--k`, 0..1), with a leaf for healing or an arrow for a shot in the middle. */
 export function castRing(kind: string, stoppable: boolean): HTMLElement {
   const icon = kind === 'heal' ? roleMarker('healer', 'in') : kind === 'shot' ? roleMarker('archer', 'in') : h('span', { class: 'in em' }, '⚠️');

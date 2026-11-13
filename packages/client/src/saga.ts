@@ -145,6 +145,19 @@ export function posOf(id: number | string): { x: number; y: number } | null {
   return client.snaps.players.get(id) ?? null;
 }
 
+/** Märke: the monster the party has marked with the skull (null: none, or it is gone). */
+export const markedMob = (): number | null => {
+  const k = sagaSnap()?.k;
+  return k !== undefined && isFoe(activeWorld()?.animals[k]) ? k : null;
+};
+/** Marks a monster with the skull for the whole party; marking the marked one again takes the mark away. Null: the one you aim at. */
+export function toggleMark(id: number | null = null): void {
+  if (!inSaga()) return;
+  const t = id ?? (typeof liveTarget() === 'number' ? (liveTarget() as number) : spendTarget());
+  if (t === null) return;
+  net.send({ t: 'mark', id: markedMob() === t ? null : t });
+}
+
 /** Monsters near you, nearest first; ice blocks holding a friend and monsters already fighting come first. */
 export function nearbyMonsters(maxTiles = 12): number[] {
   const me = myPlayer();

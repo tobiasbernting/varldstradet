@@ -626,3 +626,233 @@ body.saga-fight .act-btn.spend-glow {
 .role-line .tx {
   font-size: var(--fs);
 }
+
+/* ------------------------------------------------------------------------------------------------ Märke: the party's skull */
+.skull-mark {
+  display: inline-block;
+  width: max(34px, calc(10 * var(--u)));
+  height: max(34px, calc(10 * var(--u)));
+  flex: none;
+}
+.skull-mark svg,
+.tick-mark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.skull-mark .bg {
+  fill: #fff;
+  stroke: #14101c;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+.skull-mark .fg {
+  fill: #14101c;
+}
+.skull-mark .ln {
+  fill: none;
+  stroke: #14101c;
+  stroke-width: 1.3;
+}
+.label[class*='saga-bar-'] > em .skull-mark {
+  animation: skull-in 0.3s cubic-bezier(0.2, 1.6, 0.4, 1);
+  filter: drop-shadow(0 0 4px #ff3a2a);
+}
+@keyframes skull-in {
+  from {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+.a11y-calm .label[class*='saga-bar-'] > em .skull-mark {
+  animation: none;
+}
+/* a tick over a hero who stands in Guldringen */
+.tick-mark {
+  display: inline-block;
+  width: max(20px, calc(5 * var(--u)));
+  height: max(20px, calc(5 * var(--u)));
+  flex: none;
+}
+.tick-mark .bg {
+  fill: #ffd23f;
+  stroke: #14101c;
+  stroke-width: 1.4;
+}
+.a11y-cb .tick-mark .bg {
+  fill: #56b4e9;
+}
+.tick-mark .ln {
+  fill: none;
+  stroke: #14101c;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* the skull button beside the target's frame */
+.saga-skull {
+  pointer-events: auto !important;
+  position: relative;
+  align-self: center;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 56px;
+  min-height: 48px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 3px solid #c8a95a;
+  background: #2a2038;
+  color: #fff;
+  font-size: var(--fs);
+  font-weight: 800;
+  cursor: pointer;
+}
+.saga-skull[hidden] {
+  display: none;
+}
+.saga-skull .skull-mark {
+  width: 30px;
+  height: 30px;
+}
+.saga-skull .key {
+  display: none;
+  color: #ffe9a8;
+  font-weight: 900;
+}
+body.dev-key .saga-skull .key,
+body.dev-mouse .saga-skull .key {
+  display: inline;
+}
+.saga-skull[aria-pressed='true'] {
+  border-color: #fff;
+  background: #8a1f1a;
+  box-shadow: 0 0 0 3px #14101c, 0 0 0 5px #fff;
+}
+/* Samslag: both names, big */
+.label.saga-fct.saga-fct.word.big {
+  font-size: max(calc(var(--fs) * 1.25), calc(8 * var(--u) * var(--txt)));
+  color: #fff;
+  text-shadow:
+    0 2px 0 #14101c,
+    0 0 10px #ffd23f;
+  animation-duration: 2s;
+}
+/* Guldringen on the boss's cast bar: gold, not the red of a danger */
+.saga-cast.ring {
+  border-color: #ffd23f;
+}
+.saga-cast.ring > i {
+  background: linear-gradient(#ffe98a, #e0a800);
+}
+.saga-cast.ring .nm {
+  color: #14101c;
+  text-shadow: 0 1px 0 #fff3;
+}
+/* ------------------------------------------------------------------------------------------------ Runmärken */
+.medal-pop {
+  position: fixed;
+  left: 50%;
+  top: 34%;
+  z-index: 45;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 22px;
+  border-radius: 18px;
+  border: 4px solid #c8a95a;
+  background: rgba(24, 18, 30, 0.92);
+  color: #fff;
+  pointer-events: none;
+  animation: medal-pop 2.6s ease-out forwards;
+}
+.medal-pop .ic {
+  font-size: calc(72px * var(--txt, 1));
+  line-height: 1;
+}
+.medal-pop b {
+  font-size: calc(24px * var(--txt, 1));
+  text-transform: capitalize;
+}
+.medal-pop.m3 {
+  border-color: #ffd23f;
+  box-shadow: 0 0 24px 6px rgba(255, 210, 63, 0.6);
+}
+.medal-pop.m2 {
+  border-color: #d8dde6;
+}
+.medal-pop.m1 {
+  border-color: #c98a55;
+}
+@keyframes medal-pop {
+  0% {
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0;
+  }
+  10% {
+    transform: translate(-50%, -50%) scale(1.15);
+    opacity: 1;
+  }
+  18% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  82% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.a11y-calm .medal-pop {
+  animation: medal-calm 2.6s steps(1, end) forwards;
+}
+@keyframes medal-calm {
+  to {
+    opacity: 0;
+  }
+}
+/* a cleared stop's medal on its dot in the run bar's route: a small ring in the medal's colour and a corner mark (1, 2 or 3 pips) */
+.run-bar .dot[data-medal] {
+  position: relative;
+  box-shadow: 0 0 0 2px var(--medal, #c98a55);
+}
+.run-bar .dot[data-medal]::after {
+  content: '';
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--medal, #c98a55);
+  border: 1.5px solid #14101c;
+}
+.run-bar .dot[data-medal='2'] {
+  --medal: #d8dde6;
+}
+.run-bar .dot[data-medal='3'] {
+  --medal: #ffd23f;
+}
+.run-bar .dot[data-medal='3']::after {
+  border-radius: 0;
+  clip-path: polygon(50% 0, 62% 36%, 100% 38%, 70% 60%, 80% 100%, 50% 76%, 20% 100%, 30% 60%, 0 38%, 38% 36%);
+  width: 13px;
+  height: 13px;
+  right: -5px;
+  bottom: -5px;
+  border: 0;
+}
+.run-bar .dot[data-medal='2']::after {
+  border-radius: 2px;
+}
+.medal-counts {
+  display: inline-flex;
+  gap: 10px;
+}
+.role-line > .em.medals {
+  font-size: 34px;
+}

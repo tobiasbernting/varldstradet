@@ -18,6 +18,8 @@ export interface HudTarget {
   act(): void;
   /** A quick tap on the joystick's side of the screen (the dungeons aim at a monster tapped there). */
   tap?(clientX: number, clientY: number): void;
+  /** A finger held still there for `ms` and let go. */
+  hold?(clientX: number, clientY: number, ms: number): void;
 }
 
 export function slotEl(stack: ItemStack | null, opts: { selected?: boolean; picked?: boolean; dim?: boolean; key?: string; onTap?: () => void } = {}): HTMLDivElement {
@@ -247,6 +249,8 @@ export class Hud {
       this.joy.style.display = 'none';
       set(0, 0);
       if (e.type === 'pointerup' && moved < 3 * zoomPx() && performance.now() - downAt < 350) this.scene()?.tap?.(e.clientX, e.clientY);
+      // a finger held still on the stick's side: a long press there (Märke: mark the monster under it)
+      else if (e.type === 'pointerup' && moved < 3 * zoomPx()) this.scene()?.hold?.(e.clientX, e.clientY, performance.now() - downAt);
     };
     zone.addEventListener('pointerup', end);
     zone.addEventListener('pointercancel', end);
