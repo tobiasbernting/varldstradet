@@ -12,7 +12,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const src = join(dirname(fileURLToPath(import.meta.url)), '../src');
-const files = ['style.css', 'ui/saga.css', 'ui/run.css', 'ui/looks.css', 'ui/lane.css', 'ui/log.css', 'ui/hudmenu.css', 'hud.css', 'ui/fight.css'];
+const files = ['style.css', 'ui/saga.css', 'ui/run.css', 'ui/looks.css', 'ui/lane.css', 'ui/log.css', 'ui/hudmenu.css', 'hud.css', 'ui/fight.css', 'ui/hugin.css'];
 let total = 0;
 for (const f of files) {
   const p = join(src, f);

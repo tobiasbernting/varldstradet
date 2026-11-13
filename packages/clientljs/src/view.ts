@@ -60,6 +60,7 @@ import { underHud } from '@v1/ui/lane.ts';
 import { SFX } from '@v1/sound.ts';
 import { activeWorld, bus, client, furnish, inOwnHouse, myArea, myPlayer, serverNow } from '@v1/state.ts';
 import { prefs } from '@v1/a11y.ts';
+import { setHuginView } from '@v1/ui/hugin.ts';
 import { attackTarget, heroOn, levelOf, sagaMarker, sagaSpeed, titleOf, toggleMark } from '@v1/saga.ts';
 import { KIND_ICON, runClient } from '@v1/run.ts';
 import type { HudTarget } from '@v1/ui/hud.ts';
@@ -342,6 +343,8 @@ export class View implements HudTarget {
     new LightPainter(() => this.paintLight());
     this.fx = new Effects(this.art);
     this.sagaFx = new SagaView(this.art, this.labels, this.fx, (id) => this.spotOf(id));
+    // Hugin lands beside the hero where there is room: never in a telegraph
+    setHuginView({ pick: () => this.huginSpot(), screen: (wx, wy) => this.worldToScreen(wx, wy) });
     // a hit body squashes (the fight's juice decides how hard, under the settings)
     this.sagaFx.onPunch = (id, power) => {
       const a = typeof id === 'number' ? this.animals.get(id) : this.players.get(id);
@@ -785,6 +788,24 @@ export class View implements HudTarget {
     if (this.uiOpen) return;
     const w = this.screenToWorld(clientX, clientY);
     if (this.sagaFx?.pick(w.x, w.y)) attackTarget();
+  }
+
+  /** Where a spot of the world is on the screen (px), as the labels are placed. */
+  worldToScreen(wx: number, wy: number): { x: number; y: number } {
+    const z = this.z;
+    const cx = Math.round(this.camX * z) / z;
+    const cy = Math.round(this.camY * z) / z;
+    return { x: Math.round((wx - cx) * z + innerWidth / 2), y: Math.round((wy - cy) * z + innerHeight / 2) };
+  }
+
+  /** A spot beside the hero for Hugin to land on: a little to one side and in front, not inside anything marked on the ground. */
+  private huginSpot(): { wx: number; wy: number } | null {
+    const me = myPlayer();
+    if (!me) return null;
+    const zones = this.saga ? (this.world?.saga?.zones ?? []) : [];
+    const free = (x: number, y: number): boolean => !zones.some((zn) => zn.kind !== 'orb' && Math.hypot(x - zn.x, y - zn.y) <= zn.r * TILE + 10);
+    for (const [dx, dy] of [[-30, 10], [30, 10], [-44, -6], [44, -6], [-30, 34], [30, 34], [-60, 16], [60, 16]] as const) if (free(me.x + dx, me.y + dy)) return { wx: me.x + dx, wy: me.y + dy };
+    return null;
   }
 
   /** A finger held still on the joystick's side of a touch screen and let go: Märke on the monster under it. */

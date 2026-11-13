@@ -14,9 +14,9 @@ import {
   CLASSES,
   COMBO_TEXT,
   FIGHT_UI,
+  HUGIN_T,
   MOB_FLAG,
   MOB_ROLES,
-  PIP_ICONS,
   PIP_MAX,
   PIP_NAMES,
   SPEND_MUL,
@@ -84,7 +84,6 @@ import {
   drinkPotion,
   fightMode,
   flagsOf,
-  firstTime,
   markedMob,
   spendTarget,
   toggleMark,
@@ -109,9 +108,12 @@ import {
   titleOf,
   webbed,
 } from '../saga.ts';
-import { PRIMER, interruptOf, isInterrupt, isReaction, newPips, primerHint, type SpendView } from '../fight.ts';
+import { PRIMER, isInterrupt, isReaction, newPips, primerHint, type SpendView } from '../fight.ts';
 import { boltBadge, fightExplain, fightStrip, pipRow, roleLine, roleMarker, setPips, skullMark, starBadge } from './fightcard.ts';
 import { myRun, pathOf } from '../run.ts';
+import { TIPS } from '../hugin.ts';
+import { seenTips, tipPic } from './hugin.ts';
+import { huginCanvas } from '@art/hugin.ts';
 import { pathIcon } from './runpick.ts';
 import { SAGA_SFX } from '../sagasfx.ts';
 import { lootLookCard, rememberLooks, renderLooks, resetLooksWindow } from './looks.ts';
@@ -831,10 +833,6 @@ export class SagaUi {
       this.pipsShown = pips;
       if (spender?.pips) setPips(spender.pips, pips, false, pipHalf(client.me));
       if (this.actPips) setPips(this.actPips, pips, false, pipHalf(client.me));
-      if (pips >= PIP_MAX && firstTime('pips3')) {
-        const sp = SPELLS[cls.spells[0]]!;
-        say(fmt(FIGHT_UI.hintPips, { pips: PIP_NAMES[cls.id], spell: sp.name, n: SPEND_MUL[PIP_MAX]! }), { kind: 'system', icon: PIP_ICONS[cls.id], cls: 'hint', log: false, ms: 9000 });
-      }
     }
     // (half a pip: the first of the two auto-attacks a pip takes has landed)
     if (cls && view) {
@@ -1041,18 +1039,7 @@ export class SagaUi {
     if (!inSaga()) return;
     this.renderParty();
     this.renderBoss();
-    this.casterHint();
     this.tracker.hidden = this.trackerHidden();
-  }
-
-  /** The first time a Besvärjare starts to heal on this device: one line about stopping it. */
-  private casterHint(): void {
-    const cast = Object.values(sagaSnap()?.c ?? {}).find((c) => c[0] === 'heal');
-    const cls = myClass();
-    if (!cast || !cls || !firstTime('caster')) return;
-    const stop = interruptOf(cls.id);
-    const s = String(Math.round((cast[2] - cast[1]) / 100) / 10).replace('.', ',');
-    say(stop ? fmt(FIGHT_UI.hintCaster, { s, spell: SPELLS[stop]!.name }) : fmt(FIGHT_UI.hintCasterNone, { s }), { kind: 'system', icon: '⚡', cls: 'hint', log: false, ms: 9000 });
   }
 
   // ---- shouts, banners, fallen and frozen ----
@@ -1473,6 +1460,22 @@ export class SagaUi {
     body.append(h('div', { class: 'saga-head' }, `👹 ${T.sagaRolesTitle}`));
     body.append(h('div', { class: 'saga-roles' }, ...MOB_ROLES.map(roleLine), h('div', { class: 'role-line' }, h('span', { class: 'em' }, '💥'), h('div', null, h('b', null, T.sagaDunkName), h('div', { class: 'tx' }, T.sagaDunkText))), h('div', { class: 'role-line open' }, h('span', { class: 'em' }, '💫'), h('div', null, h('b', null, FIGHT_UI.openTitle), h('div', { class: 'tx' }, T.sagaOpenText)))));
     if (prog.cls) body.append(fightExplain(prog.cls));
+    // Hugins tips: every tip the raven has shown on this device, to read again
+    const tips = seenTips();
+    const bird = document.createElement('canvas');
+    const src = huginCanvas('land');
+    bird.width = src.width;
+    bird.height = src.height;
+    bird.getContext('2d')!.drawImage(src, 0, 0);
+    body.append(h('div', { class: 'saga-head' }, `🐦‍⬛ ${HUGIN_T.page}`));
+    body.append(
+      h(
+        'div',
+        { class: 'hugin-tips' },
+        h('div', { class: 'head' }, bird, h('span', { class: 'count' }, tips.length ? fmt(HUGIN_T.pageCount, { n: tips.length, max: TIPS.length }) : HUGIN_T.pageNone)),
+        ...tips.map((t) => h('div', { class: 'tip' }, h('span', { class: 'pic', 'aria-hidden': 'true' }, tipPic(t.pic)), h('span', { class: 'tx' }, t.text))),
+      ),
+    );
     // fighting together: Märke, Samslag, Kraftklot, Guldringen and Runmärken
     const line = (pic: HTMLElement | string, name: string, text: string): HTMLElement => h('div', { class: 'role-line' }, typeof pic === 'string' ? h('span', { class: 'em' }, pic) : pic, h('div', null, h('b', null, name), h('div', { class: 'tx' }, text)));
     body.append(h('div', { class: 'saga-head' }, `🤝 ${FIGHT_UI.fightPage}`));
@@ -1486,6 +1489,7 @@ export class SagaUi {
         line('⭐', FIGHT_UI.ringTitle, FIGHT_UI.ringText),
         line(h('span', { class: 'em medals' }, '🥇'), FIGHT_UI.medalsTitle, RUN_T.medalText),
         line('🎯', T.sagaFarName, T.sagaFarText),
+        line('💥', T.sagaDunkName, T.sagaDunkText),
         line('💀', T.sagaWipe, RUN_T.wipeRule),
       ),
     );

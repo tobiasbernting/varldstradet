@@ -1,7 +1,7 @@
 // Accessibility audit of the running game (Playwright, headless Chromium). Not part of the test run: it needs a server.
 // Needs a server with a FRESH database and no run in progress (DEV_TELEPORT=1 ACCESS=open): a leftover run or many characters change the scenes.
 //   node packages/client/scripts/a11y-audit.cjs [--url http://localhost:8110/] [--out dir] [--tag after] [--only 1024x768]
-// For four viewports it plays to each screen (picker, lobby, the ☰ menu, bag, class window, journal, wardrobe, settings, fight HUD, arch
+// For four viewports it plays to each screen (picker, lobby, Hugin's tip, the ☰ menu, bag, class window, journal, wardrobe, settings, fight HUD, arch
 // window, run stop with the cards, summary) and measures every visible interactive element (size, gap to the next), the computed
 // font size of every text, and the contrast of text against what is really behind it (a screenshot taken with the text hidden).
 // It prints and writes a JSON with the counts of violations. Playwright is not a dependency of the repo: it must be installed.
@@ -123,6 +123,12 @@ async function scenarios(browser, v, res) {
   await tag(page, 'picker');
   await create(page, 'Tabbe', 'krigare');
   await tag(page, 'lobby');
+  // Hugin, the raven who teaches: his first tip in the lobby (the bird, the bubble and its close button)
+  await page.evaluate(() => window.varldstradet.hugin?.offer('menu'));
+  for (let i = 0; i < 16 && !(await page.evaluate(() => { const b = document.querySelector('.hugin-bubble'); return !!b && !b.hidden; })); i++) await page.waitForTimeout(500);
+  if (await page.evaluate(() => { const b = document.querySelector('.hugin-bubble'); return !!b && !b.hidden; })) await tag(page, 'hugin'); else console.log('no Hugin bubble');
+  await page.evaluate(() => window.varldstradet.hugin?.thank());
+  await page.waitForTimeout(900);
   const press = async (k) => { await page.keyboard.press(k); await page.waitForTimeout(500); };
   const shut = async () => { for (let i = 0; i < 2; i++) { await page.keyboard.press('Escape'); await page.waitForTimeout(250); } };
   for (const [label, key] of [['bag', 'i'], ['journal', 'j'], ['gear', 'g'], ['help', 'h'], ['emotes', 'f']]) {

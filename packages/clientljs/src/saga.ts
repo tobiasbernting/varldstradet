@@ -7,7 +7,7 @@
 // fallen and frozen are the dungeons' only).
 import { cameraShake, drawEllipse, drawLine, drawLineList, drawPoly, rgb, setAdditiveBlendMode, vec2, type Color, type Vector2 } from 'littlejsengine';
 import { BLOCK_SPECIES, CLASSES, CLASS_IDS, FIGHT_UI, MOB_FLAG, PIP_MAX, ROLE, SAGA_BOSSES, SAGA_MOBS, SPELLS, SPEND, T, TILE, fmt, isSagaKey, type Change, type MobRole, type SagaZone } from '@varldstradet/shared';
-import { FLAG, classOf, fightMode, firstTime, flagsOf, isFoe, pipHalf, liveTarget, markedMob, sagaSnap, setTarget, webbed } from '@v1/saga.ts';
+import { FLAG, classOf, fightMode, flagsOf, isFoe, pipHalf, liveTarget, markedMob, sagaSnap, setTarget, webbed } from '@v1/saga.ts';
 import { castFill, hitStopMs, juiceOf, poofCount, shakeOf, spendClass, type Juice } from '@v1/fight.ts';
 import { effectiveFx } from '@v1/fxprefs.ts';
 import { castRing, pipRow, roleMarker, setPips, skullMark, tickMark } from '@v1/ui/fightcard.ts';
@@ -1137,8 +1137,6 @@ export class SagaView {
     this.punch(on, 3);
     this.hitStop('spend', [on, by?.[1]]);
     this.shake('spend');
-    // the first one on this device: what it was, in a line
-    if (a && b && firstTime('samslag')) bus.emit('toast', fmt(T.sagaSamslagText, { a, b }));
   }
 
   /** Guldringen ends: the party stood in it (the scream fizzles into stars, a cheer) or not (the scream lands). */

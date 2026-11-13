@@ -20,6 +20,8 @@ export interface Prefs {
   left: boolean;
   /** Read the info cards out loud when they come up. */
   read: boolean;
+  /** Hugin, the raven who teaches: he flies in with a tip the first time something new happens. */
+  hugin: boolean;
   /** HUD size; null until the player chooses (then it follows the screen: see defaultHud). */
   hud: HudSize | null;
 }
@@ -48,7 +50,7 @@ const systemCalm = (): boolean => {
     return false;
   }
 };
-const defaults = (): Prefs => ({ text: 'normal', contrast: false, calm: systemCalm(), shake: true, cb: false, hold: 450, left: false, read: false, hud: null });
+const defaults = (): Prefs => ({ text: 'normal', contrast: false, calm: systemCalm(), shake: true, cb: false, hold: 450, left: false, read: false, hugin: true, hud: null });
 
 let cur: Prefs | null = null;
 
@@ -59,7 +61,7 @@ function load(): Prefs {
     if (raw) {
       const o = JSON.parse(raw) as Partial<Prefs>;
       if (o.text === 'normal' || o.text === 'large' || o.text === 'xlarge') p.text = o.text;
-      for (const k of ['contrast', 'calm', 'shake', 'cb', 'left', 'read'] as const) if (typeof o[k] === 'boolean') p[k] = o[k]!;
+      for (const k of ['contrast', 'calm', 'shake', 'cb', 'left', 'read', 'hugin'] as const) if (typeof o[k] === 'boolean') p[k] = o[k]!;
       if (o.hud === 'small' || o.hud === 'normal' || o.hud === 'large') p.hud = o.hud;
       if (typeof o.hold === 'number' && o.hold >= 200 && o.hold <= 1500) p.hold = o.hold;
     }
