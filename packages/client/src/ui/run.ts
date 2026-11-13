@@ -53,8 +53,7 @@ import {
   type TreeNode,
 } from '@varldstradet/shared';
 import { CLASS_IDS, LOOK_T, PETS, PET_T, activePet, ownedPetIds } from '@varldstradet/shared';
-import { COMBO_TEXT, FIGHT_UI, PIP_ICONS, PIP_NAMES, PIP_TEXT } from '@varldstradet/shared';
-import { fightStrip, fightWords } from './fightcard.ts';
+import { COMBO_TEXT, FIGHT_UI, PIP_TEXT } from '@varldstradet/shared';
 import { SAGA_SFX } from '../sagasfx.ts';
 import { lookSummary } from './looks.ts';
 import { portraitUrl } from '@art/textures.ts';
@@ -844,16 +843,20 @@ export class RunUi {
     }
     body.append(row);
     const spells = h('div', { class: 'spellrow' });
-    for (const sid of CLASSES[look].spells) {
+    // the auto-attack first (not a button in the fight: it swings by itself and fills the pips), then the four buttons; the
+    // first of them is the spender, and its card shows how a fight goes in pictures (the pips, the big blow, the combo)
+    const autoSp = SPELLS[CLASSES[look].auto]!;
+    const autoBtn = h('button', { class: 'alt spell auto', 'aria-label': `${T.sagaAutoName}: ${autoSp.name}` }, h('span', { class: 'ic' }, autoSp.icon), h('span', { class: 'nm' }, T.sagaAutoName));
+    this.tap(autoBtn, () => this.showInfo(autoBtn));
+    spells.append(this.info(autoBtn, autoSp.icon, `${T.sagaAutoName}: ${autoSp.name}`, `${T.sagaAutoText} ${PIP_TEXT[look]}`));
+    CLASSES[look].spells.forEach((sid, i) => {
       const sp = SPELLS[sid]!;
       const b = h('button', { class: 'alt spell', 'aria-label': sp.name }, h('span', { class: 'ic' }, sp.icon), h('span', { class: 'nm' }, sp.name));
       this.tap(b, () => this.showInfo(b));
-      spells.append(this.info(b, sp.icon, sp.name, sp.text));
-    }
+      spells.append(this.info(b, sp.icon, sp.name, i === 0 ? `${sp.text} ${COMBO_TEXT[look]}` : sp.text));
+      if (i === 0) b.dataset.infoPic = look;
+    });
     body.append(spells);
-    // how a fight goes, in pictures: the auto-attack fills the pips, the pips make the first button big, and the class's combo
-    const how = h('div', { class: 'fight-how', role: 'img', 'aria-label': fightWords(look) }, fightStrip(look));
-    body.append(this.info(how, PIP_ICONS[look], `${FIGHT_UI.howTitle}: ${PIP_NAMES[look]}`, `${PIP_TEXT[look]} ${COMBO_TEXT[look]}`));
 
     // which animal comes along (pets.ts): one on a run, chosen here (or in the lobby at the kennel)
     this.petRow(body, me);

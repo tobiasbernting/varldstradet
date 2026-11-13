@@ -543,7 +543,8 @@ body.saga-fight .act-btn.spend-glow {
   gap: 8px;
   padding: 8px;
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.28);
+  background: #2a2038;
+  color: #fff;
 }
 .fight-strip .step {
   display: flex;
