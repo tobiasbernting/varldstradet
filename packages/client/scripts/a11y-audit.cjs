@@ -182,12 +182,18 @@ async function scenarios(browser, v, res) {
   await page.waitForTimeout(700);
   if (await page.$('.modal')) await tag(page, 'pet-wardrobe'); else console.log('no pet wardrobe');
   await shut();
-  // the arch window and a run
+  // the arch window and a run (with trophies, so the boss power picker has tiles and the run has a horn)
+  for (const id of ['draugkung', 'rimturs', 'surt']) await page.send({ t: 'dev', a: 'trophy', id, level: 2 });
+  await page.waitForTimeout(400);
   await walkTo(page, 26, 13);
   await page.send({ t: 'act', tx: 26, ty: 12 });
   await page.waitForTimeout(900);
   if (await page.$('.run-panel')) {
     await tag(page, 'arch');
+    // the two pickers of the arch: the boss power for the horn and the dish of the feast
+    await page.evaluate(() => (document.querySelector('.run-panel .tiles.powers') || document.querySelector('.run-panel .power-none'))?.scrollIntoView({ block: 'start' }));
+    await page.waitForTimeout(300);
+    if (await page.$('.run-panel .tile.dish')) await tag(page, 'arch-pickers'); else console.log('no pickers in the arch window');
     await page.evaluate(() => document.querySelector('.run-panel .tile.level')?.click());
     await page.waitForTimeout(200);
     await page.evaluate(() => document.querySelector('.run-panel button.go')?.click());
@@ -205,6 +211,13 @@ async function scenarios(browser, v, res) {
     await page.evaluate(() => document.querySelector('.run-panel .runa-card')?.click());
     await page.waitForTimeout(800);
     await tag(page, 'run-hud');
+    // the party's horn beside the hero's frame (and its info card)
+    if (await page.evaluate(() => { const b = document.querySelector('.saga-horn'); return !!b && !b.hidden; })) {
+      await page.evaluate(() => document.querySelector('.saga-horn').focus());
+      await page.waitForTimeout(400);
+      await tag(page, 'horn');
+      await page.evaluate(() => document.activeElement && document.activeElement.blur());
+    } else console.log('no horn button');
     // the menu in a run: the run's group and "Gå hem" at the end
     await menu('run-menu');
     // the windows of the roguelike's depth, reached with the dev jump (DEV_TELEPORT): cards, the Köpman, a Händelse, a Vilosten, the path pick, the loot
