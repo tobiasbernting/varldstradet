@@ -8,6 +8,7 @@ import { hashInts, mulberry32, randInt } from './rng.ts';
 import { DUNGEONS, DUNGEON_IDS, MOB_ROLES, SAGA_BOSSES, SAGA_MOBS, type DungeonId, type MobRole, type SagaDungeonDef, type SagaRoom } from './saga.ts';
 import { SOLID, buildDungeon } from './sagamap.ts';
 import { skinStop, varyStopPacks } from './mobpacks.ts';
+import { MOB_ARCHETYPE } from './mobs.ts';
 import { addObject, objectAt, removeObject } from './map.ts';
 import {
   BOSS_PACKS,
@@ -34,6 +35,8 @@ import {
   ELITE_PACKS,
   TREASURE_PACKS,
   PACK_ROLES,
+  BIG_CHANCE,
+  BIG_GENTLE,
   ELITE_ROLES,
   modifier,
   wingOf,
@@ -249,7 +252,13 @@ export function assignRoles(rooms: SagaRoom[], rnd: () => number, level: RunLeve
     const row: (MobRole | null)[] = p.members.map(() => null);
     for (let k = 0; k < n && roles.length && free.length; k++) {
       const role = roles.splice(Math.floor(rnd() * roles.length), 1)[0]!;
-      row[free.splice(Math.floor(rnd() * free.length), 1)[0]!] = role;
+      // a Skytt is a shooter and a Sköldbärare a brute where the pack has one free; else anyone
+      const want = role === 'archer' ? 'shooter' : role === 'shield' ? 'brute' : undefined;
+      const fits = want ? free.filter((i) => MOB_ARCHETYPE[p.members[i]!] === want) : [];
+      const pool = fits.length ? fits : free;
+      const at = pool[Math.floor(rnd() * pool.length)]!;
+      free.splice(free.indexOf(at), 1);
+      row[at] = role;
     }
     (p.r.roles ??= (p.r.packs ?? []).map((m) => m.map(() => null)))[p.pi] = row;
   };
@@ -325,8 +334,11 @@ function planStop(seed: number, node: RouteNode, boss: DungeonId, mods: string[]
   let gate: StopPlan['gate'] = 'packs';
   let layout: RunBiome | undefined;
   let packIndex = 0;
-  const packRoom = (r: { x: number; y: number; w: number; h: number }, count: number, size: readonly number[], bigAt = -1): void => {
-    const packs = Array.from({ length: count }, (_, k) => members(size[0]!, size[1]!, k === bigAt));
+  // a big monster (a brute) in a pack: by the wing's chance on every level (half as often on Mycket lätt); always in a Stark vakt
+  // (never in the first two rows: those show two slots, so the newcomers are met a stop at a time; the big ones' mates come with them)
+  const bigChance = node.kind === 'elite' ? 1 : node.row <= 2 ? 0 : (BIG_CHANCE[Math.min(wing, BIG_CHANCE.length - 1)] ?? 0) * (level === 0 ? BIG_GENTLE : 1);
+  const packRoom = (r: { x: number; y: number; w: number; h: number }, count: number, size: readonly number[]): void => {
+    const packs = Array.from({ length: count }, () => members(size[0]!, size[1]!, bigChance > 0 && rnd() < bigChance));
     for (let k = 0; k < count; k++) required.push(packIndex + k);
     packIndex += count;
     rooms.push({ ...r, kind: 'pack', packs });
@@ -349,7 +361,7 @@ function planStop(seed: number, node: RouteNode, boss: DungeonId, mods: string[]
           const a = order++ === 0;
           const range = a ? spec.a : spec.b;
           const count = n(range);
-          packRoom(f, count, spec.size, !a && spec.big > 0 ? randInt(rnd, 0, count - 1) : -1);
+          packRoom(f, count, spec.size);
         } else if (r.role === 'exit') {
           rooms.push({ ...f, kind: 'pack', gated: true });
           endRoom = i;

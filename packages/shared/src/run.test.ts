@@ -564,7 +564,7 @@ describe('every effect', () => {
     expect(lost({ taken: 0.1 })).toBeLessThan(base);
     // monsters hit harder in a run with a damage modifier
     const l = lab({});
-    expect(l.inst.run!.dmgMul).toBe(1);
+    expect(l.inst.run!.dmgMul).toBe(RUN_LEVELS[2].dmg);
   });
 
   it('the run’s health buff survives a level-up and a change of gear, for the hero and the hired companion', () => {
@@ -720,7 +720,7 @@ describe('every effect', () => {
       return l.f.hp - 50;
     };
     expect(leech({})).toBe(0);
-    expect(leech({ leech: 0.5 })).toBeGreaterThan(5);
+    expect(leech({ leech: 0.5 })).toBeGreaterThan(3);
   });
 
   it('a run’s monsters’ health, damage, sight, leash and unlocked boss moves come from the plan', () => {
@@ -902,13 +902,13 @@ describe('starting, joining and leaving', () => {
     for (const hired of [hp(['krigare'], {})]) {
       expect(hired.n).toBe(1);
       expect(hired.mul).toBeCloseTo(hired.plan * SOLO_MERCY);
-      expect(hired.boss).toBeCloseTo(hired.bossPlan * SOLO_MERCY);
+      expect(hired.boss).toBeCloseTo(hired.bossPlan * SOLO_MERCY * RUN_LEVELS[2].bossHp);
     }
     // a hire turned down: one fighter, the plain numbers
     const alone = hp(['krigare'], { companion: false });
     expect(alone.n).toBe(0);
     expect(alone.mul).toBe(alone.plan);
-    expect(alone.boss).toBe(alone.bossPlan);
+    expect(alone.boss).toBeCloseTo(alone.bossPlan * RUN_LEVELS[2].bossHp);
     // two humans: no mercy, with the companion (two dps) or without (tank and healer)
     for (const duo of [hp(['krigare', 'magiker'], {}), hp(['vaktare', 'helare'], {})]) expect(duo.mul).toBe(duo.plan);
     expect(hp(['krigare', 'magiker'], {}).n).toBe(1);
@@ -2173,7 +2173,7 @@ describe('Lätt and the Sagoandan (DESIGN.md 4.5 and 5.3)', () => {
 
   it('the table: Lätt is what Lätt was and Medel what Vanlig was; the numbers climb with the level', () => {
     expect(levelMuls(1)).toEqual({ hp: 0.6, dmg: 0.5, warn: 1.4, seeds: 0.5 });
-    expect(levelMuls(2)).toEqual({ hp: 1, dmg: 1, warn: 1, seeds: 1 });
+    expect(levelMuls(2)).toEqual({ hp: 1, dmg: 0.6, warn: 1, seeds: 1 }); // (Medel's ordinary blows are the background now: the marks are the danger)
     const L = RUN_LEVEL_IDS.map((l) => RUN_LEVELS[l]);
     for (let i = 1; i < L.length; i++) {
       expect(L[i]!.hp).toBeGreaterThan(L[i - 1]!.hp);
@@ -2248,8 +2248,8 @@ describe('Lätt and the Sagoandan (DESIGN.md 4.5 and 5.3)', () => {
     const v = lab({}, ['magiker', 'helare'], 2);
     const l = lab({}, ['magiker', 'helare'], 1);
     expect(l.inst.run!.hpMul / v.inst.run!.hpMul).toBeCloseTo(0.6, 5);
-    expect(l.inst.run!.dmgMul / v.inst.run!.dmgMul).toBeCloseTo(0.5, 5);
-    expect(l.inst.run!.bossMul / v.inst.run!.bossMul).toBeCloseTo(0.6, 5);
+    expect(l.inst.run!.dmgMul / v.inst.run!.dmgMul).toBeCloseTo(0.5 / RUN_LEVELS[2].dmg, 5);
+    expect(l.inst.run!.bossMul / v.inst.run!.bossMul).toBeCloseTo(0.6 / RUN_LEVELS[2].bossHp, 5);
     expect(l.inst.run!.warnMul).toBe(1.4);
     expect(v.inst.run!.warnMul).toBeUndefined();
     expect([RUN_LEVELS[1].hp, RUN_LEVELS[1].dmg, RUN_LEVELS[1].warn, RUN_LEVELS[1].seeds, LATT.bossMoves]).toEqual([0.6, 0.5, 1.4, 0.5, 2]);

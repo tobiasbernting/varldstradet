@@ -55,6 +55,8 @@ export interface Played {
   zoneMs: number[];
   /** When the boss fell (ms of run time), if it did. */
   winMs?: number;
+  /** The fight stops cleared: kind, how long it took (ms) and the party's medal. */
+  stops: { kind: string; ms: number; medal: number }[];
 }
 
 /** One 50 ms step: every bot thinks, the world ticks. */
@@ -105,7 +107,7 @@ export function playRun(party: Party, start: StartOptions = {}, limitMs = 40 * 6
   void arch;
   out.push(...startRun(party.world, starter.id, start, party.ctx()));
   const run = runOf(party.world);
-  if (!run) return { outcome: 'none', ms: 0, changes: out, zoneMs: [] };
+  if (!run) return { outcome: 'none', ms: 0, changes: out, zoneMs: [], stops: [] };
   const zoneMs: number[] = [];
   let lastZone = 0;
   let at = 0;
@@ -118,5 +120,6 @@ export function playRun(party: Party, start: StartOptions = {}, limitMs = 40 * 6
     }
     if (run.phase === 'ended') break;
   }
-  return { outcome: run.outcome ?? 'running', ms: at, changes: out, zoneMs, ...(run.victoryAt !== undefined ? { winMs: run.victoryAt } : {}) };
+  const stops = Object.entries(run.medals).map(([n, medal]) => ({ kind: run.plan.stops[Number(n)]!.kind as string, ms: run.stopMs[Number(n)] ?? 0, medal }));
+  return { outcome: run.outcome ?? 'running', ms: at, changes: out, zoneMs, stops, ...(run.victoryAt !== undefined ? { winMs: run.victoryAt } : {}) };
 }

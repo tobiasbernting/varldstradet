@@ -67,6 +67,17 @@ export interface RunLevelDef {
   hp: number;
   dmg: number;
   warn: number;
+  /** Bosses and mid-bosses have this many times the health on top of `hp`: long enough that their marks, not their blows, decide the fight. */
+  bossHp: number;
+  /** A boss's plain marks (cleave, slam, rain, charge, line, pools) come this much more often (a multiplier on the time between two uses; 1: as written). */
+  markEvery: number;
+  /**
+   * Ranged pressure: every `every` ms a boss or mid-boss puts a circle (a mark of weight `weight`) under the hero FURTHEST from it,
+   * if that hero is more than `FAR.beyond` tiles away, so nobody ignores the marks by standing far off. Null: never.
+   */
+  far: { every: number; weight: number } | null;
+  /** When every HUMAN hero has fallen it is a wipe, though the hired Hirdmannen still stands (he cannot carry the run alone). False on the gentle levels: there he fights on and wakes the child. */
+  humansOnly: boolean;
   /** A mark (a boss's telegraphed move, a Skytt's shot) takes this fraction of the victim's max health (saga.ts `MARK_*` for the nova, the burning ground and the shot). */
   mark: number;
   /** Sagafrön multiplier on everything a run pays. */
@@ -87,11 +98,11 @@ export interface RunLevelDef {
 }
 
 export const RUN_LEVELS: Record<RunLevel, RunLevelDef> = {
-  0: { id: 0, hp: 0.4, dmg: 0.3, warn: 1.8, mark: 0.08, seeds: 0.35, spirit: 5, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 0.6, rank: 0, affixes: 0 },
-  1: { id: 1, hp: 0.6, dmg: 0.5, warn: 1.4, mark: 0.15, seeds: 0.5, spirit: 3, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 1, rank: 0, affixes: 0 },
-  2: { id: 2, hp: 1, dmg: 1, warn: 1, mark: 0.35, seeds: 1, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1, rank: 0, affixes: 0 },
-  3: { id: 3, hp: 1.75, dmg: 1.6, warn: 0.8, mark: 0.45, seeds: 1.5, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1.5, rank: 0.5, affixes: 1 },
-  4: { id: 4, hp: 1.9, dmg: 1.6, warn: 0.65, mark: 0.55, seeds: 2, spirit: 0, spiritPerStop: 0, spiritMax: 0, soft: false, bossMoves: 0, rare: 2, rank: 1, affixes: 2 },
+  0: { id: 0, hp: 0.4, dmg: 0.3, warn: 1.8, mark: 0.08, bossHp: 1, markEvery: 1, far: null, humansOnly: false, seeds: 0.35, spirit: 5, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 0.6, rank: 0, affixes: 0 },
+  1: { id: 1, hp: 0.6, dmg: 0.5, warn: 1.4, mark: 0.2, bossHp: 1, markEvery: 0.8, far: { every: 25_000, weight: 0.5 }, humansOnly: false, seeds: 0.5, spirit: 3, spiritPerStop: 1, spiritMax: 5, soft: true, bossMoves: 2, rare: 1, rank: 0, affixes: 0 },
+  2: { id: 2, hp: 1, dmg: 0.6, warn: 1, mark: 0.5, bossHp: 2.3, markEvery: 0.35, far: { every: 10_000, weight: 1 }, humansOnly: true, seeds: 1, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1, rank: 0, affixes: 0 },
+  3: { id: 3, hp: 1.6, dmg: 1.1, warn: 0.8, mark: 0.6, bossHp: 2.3, markEvery: 0.35, far: { every: 10_000, weight: 1 }, humansOnly: true, seeds: 1.5, spirit: 1, spiritPerStop: 0, spiritMax: 1, soft: false, bossMoves: 0, rare: 1.5, rank: 0.5, affixes: 1 },
+  4: { id: 4, hp: 1.7, dmg: 1.1, warn: 0.65, mark: 0.7, bossHp: 2.3, markEvery: 0.35, far: { every: 10_000, weight: 1 }, humansOnly: true, seeds: 2, spirit: 0, spiritPerStop: 0, spiritMax: 0, soft: false, bossMoves: 0, rare: 2, rank: 1, affixes: 2 },
 };
 /** The boss attacks the easiest levels allow: its first two, whatever a first run's plan has locked. */
 export const LATT = { bossMoves: 2 } as const;
@@ -427,6 +438,24 @@ export const wingOf = (row: number): number => (row <= 4 ? 0 : row <= 8 ? 1 : 2)
 /** Health of a stop's monsters by wing (DESIGN.md sections 2.3 and 5.1): the later wings are tougher. Tuned by the bots. */
 export const WING_HP: readonly number[] = [1.85, 2.3, 2.7];
 
+/**
+ * Per dungeon, in a run: the later dungeons' monsters hit harder and their bosses have more health than Draugkryptan's, while a
+ * hero is as strong in every chapter (no power from levels or gear) and a fall now costs a Sagoande. `blows` multiplies the
+ * ordinary blows of the dungeon's monsters and bosses, `boss` the health of its boss and mid-boss. Tuned so that the careful and
+ * the adult bot win every dungeon on Medel (DESIGN.md 5.4).
+ */
+export const DUNGEON_TUNE: Record<DungeonId, { blows: number; boss: number }> = {
+  draug: { blows: 1, boss: 1 },
+  frost: { blows: 0.9, boss: 1 },
+  surt: { blows: 0.8, boss: 0.85 },
+  hel: { blows: 0.85, boss: 0.9 },
+  dvarg: { blows: 0.85, boss: 0.85 },
+  orm: { blows: 0.9, boss: 0.8 },
+  alv: { blows: 0.7, boss: 0.75 },
+  fenrir: { blows: 0.6, boss: 0.7 },
+  loke: { blows: 0.8, boss: 0.65 },
+};
+
 /** One human alone (with the hired companion, who counts as a fighter for the monsters' health): monsters tolerate this much less. */
 export const SOLO_MERCY = 0.75;
 
@@ -450,6 +479,13 @@ export const FLOCK_PACKS = [
   { a: [3, 3], b: [3, 3], size: [4, 5], big: 1 },
 ] as const;
 export const MINI_PACKS = { count: [3, 3], size: [3, 4] } as const;
+/**
+ * How often a pack has one of the dungeon's big monsters (the brutes), by wing, from the third row on (rows 1 and 2 have none, so
+ * about one pack in three of the first wing has one); most packs later, on every level (times `BIG_GENTLE` on Mycket lätt). A Stark vakt's packs always have one. The `big` of the tables
+ * above is kept for the Stark vakt only.
+ */
+export const BIG_CHANCE: readonly number[] = [0.6, 0.7, 0.8];
+export const BIG_GENTLE = 0.5;
 /** A Stark vakt: fewer but bigger packs, with big ones; tougher (`ELITE_HP`). A Skatt: one or two small packs guard it. */
 export const ELITE_PACKS = { a: [1, 2], b: [2, 2], size: [4, 5], big: 2 } as const;
 export const ELITE_HP = 1.25;
@@ -493,7 +529,7 @@ export const MEDAL_MARKS = 1;
  * Par (seconds) for a stop by kind, for two fighters on Medel: the careful bot's median time in the stop times 1.6 (measured with
  * runtune --pars), so an adult makes it and a masher rarely does. `stopPar` scales it by the level and the party.
  */
-export const STOP_PAR: Partial<Record<NodeKind, number>> = { flock: 150, elite: 150, treasure: 80, mini: 110, boss: 170 };
+export const STOP_PAR: Partial<Record<NodeKind, number>> = { flock: 130, elite: 150, treasure: 70, mini: 215, boss: 350 };
 export const PAR_LEVEL: Record<RunLevel, number> = { 0: 1.6, 1: 1.3, 2: 1, 3: 1.4, 4: 1.5 };
 export const stopPar = (kind: NodeKind, level: RunLevel, fighters: number): number => (STOP_PAR[kind] ?? 0) * 1000 * PAR_LEVEL[level] * (fighters >= 3 ? 1.15 : 1);
 /** The medal of a cleared stop: counted for the party, never for a name. */

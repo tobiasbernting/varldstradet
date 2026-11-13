@@ -15,8 +15,13 @@ import type { Change } from './protocol.ts';
  * `kid7` is a 7-year-old: clumsy with a 1.2 times longer think between moves and 40 % misses (DESIGN.md section 5.6).
  * `masher` presses every button that is ready, in the order 4, 3, 2, 1, at nothing in particular, without pauses or misses; it
  * never steps out of a mark, never chooses which monster first and takes a random lane.
+ * `adult` is a grown-up who plays well but is no machine: the careful bot with `ADULT.react` ms before it starts to leave a mark, to
+ * interrupt or to walk into a Guldring, one press in ten missed, and no perfect kill order (it turns to a Besvärjare when its cast starts).
  */
-export type BotStyle = 'careful' | 'clumsy' | 'kid7' | 'masher';
+export type BotStyle = 'careful' | 'clumsy' | 'kid7' | 'masher' | 'adult';
+
+/** The adult bot: its reaction time (ms), the share of presses it misses, and what a missed press costs (ms). */
+export const ADULT = { react: 350, miss: 0.1, missMs: 1000 } as const;
 
 export interface BotMind {
   style: BotStyle;
@@ -37,9 +42,16 @@ export interface BotMind {
   /** For the skill tests: a bot that plays its style but never steps out of a mark, and one that only presses these buttons (slots 0..3). */
   noDodge?: boolean;
   slots?: number[];
+  /** A masher who is seven: the kid7 bot's pauses and misses, pressing like the masher. */
+  kid?: boolean;
+  /** The adult bot: when it first saw the mark it stands in, the cast it could stop and the Guldring; and until when its missed press costs it. */
+  markAt?: number;
+  kickAt?: number;
+  goldAt?: number;
+  missUntil?: number;
 }
 
-export const newMind = (style: BotStyle, rnd: () => number, lane?: 'safe' | 'random'): BotMind => ({ style, rnd, pause: 0, lane: lane ?? (style === 'careful' ? 'safe' : 'random') });
+export const newMind = (style: BotStyle, rnd: () => number, lane?: 'safe' | 'random'): BotMind => ({ style, rnd, pause: 0, lane: lane ?? (style === 'careful' || style === 'adult' ? 'safe' : 'random') });
 
 const tileOf = (v: number): number => Math.floor(v / TILE);
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }): number => Math.hypot(a.x - b.x, a.y - b.y) / TILE;
@@ -140,8 +152,18 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
   const out: Change[] = [];
   if (!p || !area || !inst || !f) return out;
   const now = ctx.now;
-  const careful = mind.style === 'careful';
-  const clumsy = mind.style === 'clumsy' || mind.style === 'kid7';
+  const adult = mind.style === 'adult';
+  const careful = mind.style === 'careful' || adult;
+  /** Has the adult had its reaction time since it first saw this (the careful bot reacts at once)? */
+  const reacted = (key: 'markAt' | 'kickAt' | 'goldAt', seen: boolean): boolean => {
+    if (!seen) {
+      delete mind[key];
+      return false;
+    }
+    mind[key] ??= now;
+    return !adult || now - mind[key]! >= ADULT.react;
+  };
+  const clumsy = mind.style === 'clumsy' || mind.style === 'kid7' || !!mind.kid;
   if (f.down !== undefined || f.frozen !== undefined) {
     p.moving = false;
     return out;
@@ -156,7 +178,7 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     .filter((x): x is { id: string; ff: typeof f; q: PlayerState } => !!x.q && x.q.area === p.area && x.id !== pid);
 
   // 1. step out of the marks on the floor (a boss's, a Skytt's line: a person sees them)
-  if (careful && !mind.noDodge && marked(area, p.x, p.y, now)) {
+  if (careful && !mind.noDodge && reacted('markAt', marked(area, p.x, p.y, now))) {
     const here = { x: tileOf(p.x), y: tileOf(p.y) };
     const path = bfs(area, here, (x, y) => !marked(area, x * TILE + TILE / 2, y * TILE + TILE / 2, now + 600) && !marked(area, (x + 0.5) * TILE, (y + 0.5) * TILE, now), 12);
     const next = path?.[0];
@@ -173,7 +195,8 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
   }
 
   // Guldringen: gold means run IN (everyone but the masher), and stay there; even the clumsy bot runs without dawdling
-  const gold = mind.style === 'masher' ? undefined : inst.zones.find((z) => z.kind === 'gold');
+  const goldSeen = mind.style === 'masher' ? undefined : inst.zones.find((z) => z.kind === 'gold');
+  const gold = reacted('goldAt', !!goldSeen) ? goldSeen : undefined;
   // the clumsy bot is slow on the draw: it thinks for a moment between moves
   if (clumsy && !gold) {
     mind.pause -= dtMs;
@@ -181,7 +204,7 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
       p.moving = false;
       return out;
     }
-    mind.pause = (120 + mind.rnd() * 380) * (mind.style === 'kid7' ? 1.2 : 1);
+    mind.pause = (120 + mind.rnd() * 380) * (mind.style === 'kid7' || mind.kid ? 1.2 : 1);
   }
 
   // 2. a healing potion when low
@@ -197,7 +220,8 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
   const dazed = (m: SagaMob): boolean => now < (m.stunUntil ?? 0);
   const chilled = (m: SagaMob): boolean => dazed(m) || now < (m.slowUntil ?? 0);
   // the careful bot's kill order: a monster that is open first, then Besvärjare, Sköldbärare, Skytt, the rest; the closest of a kind
-  const rank = (m: SagaMob): number => (m.kind === 'ice' ? 0 : open(m) ? 1 : m.role === 'healer' ? 2 : m.role === 'shield' ? 3 : m.role === 'archer' ? 4 : 5);
+  // (the adult has no such order: it turns to a Besvärjare when its cast starts)
+  const rank = (m: SagaMob): number => (m.kind === 'ice' ? 0 : open(m) ? 1 : adult ? (m.cast?.role === 'heal' ? 2 : 5) : m.role === 'healer' ? 2 : m.role === 'shield' ? 3 : m.role === 'archer' ? 4 : 5);
   const current = mobs.find((m) => m.id === f.target && (m.state === 'fight' || !fighting.length));
   let target: SagaMob | undefined;
   if (careful) {
@@ -216,7 +240,12 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
   const fallen = friends.filter((x) => x.ff.down !== undefined);
   const spells = CLASSES[cls].spells;
   const ready = (id: string): boolean => now >= (f.cd[id] ?? 0) && (!!SPELLS[id]?.offGcd || now >= f.gcd) && (!mind.slots || mind.slots.includes(spells.indexOf(id)));
-  const go = (id: string, at?: number | string): boolean => cast(farm, p, mind, id, at, ctx, out);
+  const go = (id: string, at?: number | string): boolean => {
+    const did = cast(farm, p, mind, id, at, ctx, out);
+    // (the adult misses one press in ten: the next one comes a moment late)
+    if (did && adult && mind.rnd() < ADULT.miss) mind.missUntil = now + ADULT.missMs;
+    return did;
+  };
   // the class's interrupt, and whether to keep it: a boss's stoppable attack (a nova, a mend) is due before it would be ready again
   const kick = cls === 'vaktare' ? 'skoldslag' : cls === 'krigare' ? 'stormsteg' : cls === 'magiker' ? 'isspjut' : undefined;
   const kickReach = kick ? (SPELLS[kick]?.range ?? 0) + 0.4 : 0;
@@ -237,10 +266,11 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
       for (const k of [3, 2, 1, 0]) if (go(spells[k]!)) any = true;
       return any;
     }
-    if (careful && kick && ready(kick)) {
+    if (careful && kick && ready(kick) && reacted('kickAt', !!bossMove?.interrupt || fighting.some((m) => !!m.cast?.role))) {
       // stopping the boss's big attack; else a Besvärjare's heal or a Skytt's shot (unless the interrupt is kept for the boss)
       if (bossMove?.interrupt && boss && go(kick, boss.id)) return true;
-      const caster = keep ? undefined : fighting.find((m) => m.cast?.role && dist(where(m), p) <= kickReach);
+      // (a Besvärjare's heal before a Skytt's shot: the shot can be sidestepped)
+      const caster = keep ? undefined : fighting.filter((m) => m.cast?.role && dist(where(m), p) <= kickReach).sort((x, y) => (x.cast!.role === 'heal' ? 0 : 1) - (y.cast!.role === 'heal' ? 0 : 1))[0];
       if (caster && go(kick, caster.id)) return true;
     }
     // the spender (slot 1): the careful bot holds it for three pips, unless the moment is right (an Öppning, the class's combo)
@@ -261,7 +291,7 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     const d = dist(where(target), p);
     if (cls === 'vaktare') {
       const near = fighting.filter((m) => dist(where(m), p) <= 5);
-      if (near.length >= 2 && go('utmana')) return true;
+      if (near.length >= (careful ? 1 : 2) && go('utmana')) return true;
       if (f.hp < f.max * 0.5) go('skoldmur');
       const taunted = fighting.filter((m) => m.tauntBy === pid && now < (m.tauntUntil ?? 0));
       if (f.pips >= 1 && (full || !careful || open(target) || taunted.length >= 2) && (d <= 2.2 || taunted.length > 0) && go(spend, target.id)) return true;
@@ -271,7 +301,7 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     if (cls === 'krigare') {
       if (go('raseri')) return true;
       const close = fighting.filter((m) => dist(where(m), p) <= 2.2);
-      if (close.length >= 2 && go('virvelvind')) return true;
+      if (close.length >= (careful ? 1 : 2) && go('virvelvind')) return true;
       const big = target.kind === 'boss' || target.kind === 'mini';
       if (f.pips >= 1 && d <= 2.2 && ready(spend) && (full || !careful || open(target) || dazed(target))) {
         // the combo: daze it with Stormsteg first, then the Jättehugg hits double (a boss cannot be dazed)
@@ -284,7 +314,7 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     // magiker
     if (careful && d < 2 && f.hp < f.max * 0.6 && go('blink')) return true;
     const clustered = fighting.filter((m) => dist(where(m), where(target)) <= 2.4);
-    if (clustered.length >= 2 && go('askregn', target.id)) return true;
+    if (clustered.length >= (careful ? 1 : 2) && go('askregn', target.id)) return true;
     if (f.pips >= 1 && ready(spend) && (full || !careful || open(target) || chilled(target))) {
       // the combo: Isspjut first, then the Runsmäll shatters the slowed monster
       if (careful && full && !save && target.kind !== 'ice' && !chilled(target) && ready('isspjut')) go('isspjut', target.id);
@@ -295,7 +325,8 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
   };
   // the clumsy bot misses a third of its chances (a kid of seven 40 %)
   if (fighting.length || ice) {
-    if (!clumsy || mind.rnd() > (mind.style === 'kid7' ? 0.4 : 0.35)) casting();
+    if (adult && now < (mind.missUntil ?? 0)) void 0;
+    else if (!clumsy || mind.rnd() > (mind.style === 'kid7' || mind.kid ? 0.4 : 0.35)) casting();
   }
 
   // 4. where to go
@@ -320,11 +351,21 @@ export function botStep(world: WorldState, pid: string, mind: BotMind, ctx: SimC
     const d = dist(a, p);
     const spell = SPELLS[CLASSES[cls].auto];
     const want = isRanged(cls) ? Math.min(5.5, (cls === 'helare' ? 6 : (spell?.range ?? 8) - 2)) : 1.5;
+    // a careful hero who has stepped out of a mark waits at its rim until it has landed (it does not walk back in)
+    if (careful && !mind.noDodge) {
+      const n = Math.hypot(a.x - p.x, a.y - p.y) || 1;
+      const ahead = Math.min(n, 1.2 * TILE);
+      if (d > 0.3 && [0.5, 1].some((k) => marked(area, p.x + ((a.x - p.x) / n) * ahead * k, p.y + ((a.y - p.y) / n) * ahead * k, now))) {
+        p.moving = false;
+        return out;
+      }
+    }
     // the healer stays near whoever is hurt worst, or the tank
     const anchor = cls === 'helare' ? (hurt[0]?.q ?? friends.find((x) => x.ff.cls === 'vaktare')?.q) : undefined;
     if (anchor && dist(anchor, p) > 5) {
       walkTo(area, p, mind, { x: tileOf(anchor.x), y: tileOf(anchor.y) }, dtMs, now, slowed, 2);
-    } else if (isRanged(cls) && d < 3.5 && cls === 'magiker') {
+    } else if (isRanged(cls) && d < 3.5 && cls === 'magiker' && mind.style !== 'masher' && !mind.noDodge) {
+      // (the masher stands where it is and presses its buttons; so does the bot that never leaves a mark: backing away is how a mage leaves most of them)
       // back away from what is close
       const dx = p.x - a.x;
       const dy = p.y - a.y;

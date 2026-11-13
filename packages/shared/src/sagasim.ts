@@ -29,6 +29,7 @@ import {
   OPEN_MS,
   PIP_FADE_MS,
   PIP_MAX,
+  PIP_AUTO_EVERY,
   ROLE,
   SPEND,
   SPEND_MUL,
@@ -37,6 +38,7 @@ import {
   ORB,
   RING,
   SAMSLAG,
+  FAR,
   DUNGEONS,
   GCD_MS,
   LEASH_TILES,
@@ -97,6 +99,7 @@ import {
   ENRAGE,
 } from './saga.ts';
 import { runHooks } from './runhooks.ts';
+import { mobBase } from './mobs.ts';
 import { awardPetLooks, giveClearPets, petSoak, rollPetDrops, tickPets } from './petsim.ts';
 import { sagaCheckpoint, spawnSagaMob } from './sagamap.ts';
 import {
@@ -586,7 +589,7 @@ function rollLoot(h: Here, p: PlayerState, table: SagaLoot, from: string, ctx: S
 const spellPower = (p: PlayerState, strongUntil: number | undefined, now: number): number => fightStats(p).power * (strongUntil !== undefined && now < strongUntil ? STRENGTH_MUL : 1);
 
 const CRIT_CHANCE = 0.12;
-const RAGE_LEECH = 0.3;
+const RAGE_LEECH = 0.1;
 /** Sköldmur also gives back a little health. */
 const WALL_HEAL = 0.15;
 
@@ -799,6 +802,8 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
       break;
     }
     case 'revive': {
+      // (everyone who counts has fallen: it is a wipe, and nobody is woken out of it)
+      if (h.inst.wipeAt !== undefined) return [];
       const q = pickFriend(h, p, reach, wantFriend, true);
       if (!q) return [toast(p.id, T.sagaNoneDown)];
       const qf = h.inst.fighters[q.id]!;
@@ -896,7 +901,15 @@ export function castSpell(world: WorldState, playerId: string, spellId: string, 
     }
   }
   // pips: a landed auto-attack, and slots 2 and 3 when they land on someone
-  if (landed > 0 && (isAuto || spellId === cdef.spells[1] || spellId === cdef.spells[2])) f.pips = Math.min(PIP_MAX, f.pips + 1);
+  // (the hired Hirdmannen's auto-attacks give him none: his pips come from his slot 2 and 3 only, so he heals at a human-ish pace)
+  if (landed > 0 && isAuto && !p.bot) {
+    // every second auto-attack hit is a pip
+    f.autoHits = (f.autoHits ?? 0) + 1;
+    if (f.autoHits >= PIP_AUTO_EVERY) {
+      f.autoHits = 0;
+      f.pips = Math.min(PIP_MAX, f.pips + 1);
+    }
+  } else if (landed > 0 && (spellId === cdef.spells[1] || spellId === cdef.spells[2])) f.pips = Math.min(PIP_MAX, f.pips + 1);
   // a path's shields: for the caster, and for the friends near
   if (mod.shield) giveShield(f, mod.shield, now);
   if (mod.partyShield)
@@ -1367,11 +1380,12 @@ function questCredit(area: WorldState, p: PlayerState, species: string, ctx: Sim
   if (!prog) return;
   for (const q of SAGA_QUESTS) {
     if (prog.quests[q.id] === undefined) continue;
-    if (q.kind === 'kill' && q.target === species && prog.quests[q.id]! < q.count) {
+    // (a stat-mate counts for its original: "8 skelettkrigare" is filled by a Rostdraug too)
+    if (q.kind === 'kill' && q.target === mobBase(species) && prog.quests[q.id]! < q.count) {
       prog.quests[q.id]!++;
       out.push(toast(p.id, fmt(T.sagaQuestProgress, { goal: q.goal, n: prog.quests[q.id]!, count: q.count })));
     }
-    if (collect && q.kind === 'collect' && q.from?.includes(species) && countItem(p.inventory, q.target) < q.count && ctx.rnd() < (q.chance ?? 0.5)) {
+    if (collect && q.kind === 'collect' && (q.from?.includes(species) || q.from?.includes(mobBase(species))) && countItem(p.inventory, q.target) < q.count && ctx.rnd() < (q.chance ?? 0.5)) {
       giveItems(area, p, q.target, 1, out);
       out.push(toast(p.id, fmt(T.sagaQuestProgress, { goal: q.goal, n: countItem(p.inventory, q.target), count: q.count })));
     }
@@ -1389,6 +1403,7 @@ function resetMob(h: Here, m: SagaMob, out: Change[]): void {
   delete m.slowUntil;
   delete m.open;
   delete m.roleAt;
+  delete m.farAt;
   if (m.cast) for (const id of m.cast.zones) dropZone(h, id, out);
   delete m.cast;
   if (SAGA_BOSSES[m.species] && (m.kind === 'boss' || m.kind === 'mini')) {
@@ -1569,6 +1584,20 @@ function tickMob(h: Here, m: SagaMob, dtMs: number, ctx: SimCtx, fields: Map<str
     a.moving = false;
     return;
   }
+  // ranged pressure: a circle under the hero furthest from the boss, so nobody ignores the marks by standing far off
+  const far = boss ? h.inst.run?.far : undefined;
+  if (far) {
+    m.farAt ??= now + far.every;
+    if (now >= m.farAt) {
+      m.farAt = now + far.every;
+      // (the furthest hero, and any other hero who also stands far off: the hired Hirdmannen is often the furthest of two)
+      for (const t of partyOf(h)) {
+        if (!upright(h, t) || dist(t, a) <= FAR.beyond) continue;
+        addZone(h, m, { shape: 'circle', x: t.x, y: t.y, r: FAR.radius, at: now + Math.round(FAR.warn * (h.inst.run?.warnMul ?? 1)), dmg: markOf(h) * far.weight, auto: true }, out);
+        out.push(spellFx(h, m.id, 'cast_far', a, t, t.id));
+      }
+    }
+  }
   if (m.cast) {
     a.moving = false;
     if (m.cast.since) {
@@ -1660,7 +1689,10 @@ function startCast(h: Here, m: SagaMob, a: { x: number; y: number; facing: strin
   const mv = boss.moves[i]!;
   // Lätt: the warning lasts longer (the zones, the cast and the snapshot all use this)
   const warn = Math.round(mv.warn * (h.inst.run?.warnMul ?? 1));
-  m.next![i] = now + mv.every + warn;
+  // (the level makes the plain marks come more often: they, not the boss's blows, are the danger)
+  // (not burning ground: it lingers, and twice as much of it leaves no floor to stand on)
+  const plain = mv.move === 'cleave' || mv.move === 'slam' || mv.move === 'rain' || mv.move === 'charge' || mv.move === 'line';
+  m.next![i] = now + mv.every * (plain ? (h.inst.run?.markEvery ?? 1) : 1) + warn;
   const party = partyOf(h).filter((p) => upright(h, p));
   // the ice prison needs a friend to break it: never on someone alone
   if (!party.length || (mv.move === 'freeze' && party.length < 2)) return false;
@@ -2050,6 +2082,13 @@ export function tickSaga(area: WorldState, key: string, dtMs: number, ctx: SimCt
   tickPets(h, dtMs, ctx, out);
   // burning ground
   for (const z of [...inst.zones]) {
+    if (z.auto && now >= z.at) {
+      // a mark that lands by itself (ranged pressure)
+      out.push(spellFx(h, z.by, 'land_rain', z));
+      for (const p of party) if (upright(h, p) && inZone(z, p)) markHit(h, p, z.dmg, inst.mobs[z.by] ?? null, now, out);
+      dropZone(h, z.id, out);
+      continue;
+    }
     if (z.until === undefined || now < z.at) continue;
     if (now >= z.until) {
       dropZone(h, z.id, out);
@@ -2071,20 +2110,24 @@ export function tickSaga(area: WorldState, key: string, dtMs: number, ctx: SimCt
   }
   // everyone fell: a short pause, then up at the last rest stone, and the monsters go home. In a run that happens only with
   // a Sagoandan (or on Lätt, where a wipe never ends the run); otherwise runsim.ts ends the run when the pause is over.
-  if (party.length && party.every((p) => !upright(h, p))) {
+  // (Medel and up: the hired Hirdmannen cannot carry the run alone: every human down is a wipe)
+  const holders = inst.run?.humansOnly && party.some((p) => !p.bot) ? party.filter((p) => !p.bot) : party;
+  if (party.length && holders.every((p) => !upright(h, p))) {
     const link = inst.run;
     if (inst.wipeAt === undefined) {
       inst.wipeAt = now + WIPE_MS;
       // a Sagoandan is for a run still being fought; once the boss is down only Lätt (which never ends on a wipe) gets everyone up, free
       const spirits = inst.bossDown ? 0 : (link?.spirit ?? 0);
       if (link && (spirits > 0 || link.soft)) link.revive = true;
+      // (the humans fell while the hired Hirdmannen still stood: the banner says why it is a wipe all the same)
+      const hird = holders.length < party.length && party.some((p) => p.bot && upright(h, p)) ? ` ${RUN_T.wipeHird}` : '';
       const boss = Object.values(inst.mobs).find((m) => (m.kind === 'boss' || m.kind === 'mini') && m.state === 'fight');
       if (boss) out.push(yell(h, boss.species, SAGA_BOSSES[boss.species]!.yells.wipe));
       for (const p of party) {
         if (link?.revive) {
           const left = Math.max(0, spirits - 1);
-          out.push({ t: 'banner', to: p.id, area: key, text: spirits > 0 ? RUN_T.spirit : RUN_T.spiritFree, sub: spirits > 0 ? fmt(RUN_T.spiritSub, { n: left }) : RUN_T.spiritFreeSub, kind: 'level' });
-        } else out.push({ t: 'banner', to: p.id, area: key, text: T.sagaWipe, sub: link?.wipeSub ?? T.sagaWipeSub, kind: 'wipe' });
+          out.push({ t: 'banner', to: p.id, area: key, text: spirits > 0 ? RUN_T.spirit : RUN_T.spiritFree, sub: (spirits > 0 ? fmt(RUN_T.spiritSub, { n: left }) : RUN_T.spiritFreeSub) + hird, kind: 'level' });
+        } else out.push({ t: 'banner', to: p.id, area: key, text: T.sagaWipe, sub: (link?.wipeSub ?? T.sagaWipeSub) + hird, kind: 'wipe' });
       }
     } else if (now >= inst.wipeAt && (!link || link.revive)) {
       delete inst.wipeAt;

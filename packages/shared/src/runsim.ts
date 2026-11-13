@@ -67,6 +67,7 @@ import {
   type RunSave,
   type RunSnap,
   MEDAL_SILVER,
+  DUNGEON_TUNE,
   medalFor,
   type Medal,
 } from './run.ts';
@@ -159,6 +160,8 @@ export interface RunState {
   /** Runmärken: the medal of each fight stop cleared, and the run time when the stop now was entered. */
   medals: Record<number, Medal>;
   stopAt: number;
+  /** How long each fight stop took to clear (ms), for the tuning of the pars. */
+  stopMs: Record<number, number>;
   /** Players who joined while the cards were out: they enter the next stop. */
   waiting: string[];
   victoryAt?: number;
@@ -589,6 +592,7 @@ export function startRun(world: WorldState, playerId: string, opts: StartOptions
     paid: new Set(),
     medals: {},
     stopAt: 0,
+    stopMs: {},
     waiting: [],
     minds: new Map(),
     statePing: 0,
@@ -660,8 +664,8 @@ export function enterStop(farm: WorldState, run: RunState, node: number, ctx: Si
     name: z.name,
     intro: z.intro,
     hpMul: z.hpMul * (solo ? SOLO_MERCY : 1) * lvl.hp,
-    dmgMul: z.dmgMul * lvl.dmg,
-    bossMul: z.bossMul * (solo ? SOLO_MERCY : 1) * lvl.hp,
+    dmgMul: z.dmgMul * lvl.dmg * DUNGEON_TUNE[run.plan.boss].blows,
+    bossMul: z.bossMul * (solo ? SOLO_MERCY : 1) * lvl.hp * def.bossHp * DUNGEON_TUNE[run.plan.boss].boss,
     sight: z.sight,
     leash: z.leash,
     ...(moves ? { moves } : {}),
@@ -681,6 +685,9 @@ export function enterStop(farm: WorldState, run: RunState, node: number, ctx: Si
     mark: def.mark,
     ...(run.level <= 1 ? { easy: true } : {}),
     ...(run.level === 1 ? { ring: true } : {}),
+    ...(def.humansOnly ? { humansOnly: true } : {}),
+    ...(def.far ? { far: def.far } : {}),
+    ...(def.markEvery !== 1 ? { markEvery: def.markEvery } : {}),
   };
   (farm.areas ??= {})[key] = world;
   getArea(farm, key);
@@ -1473,6 +1480,7 @@ function awardMedal(farm: WorldState, run: RunState, inst: SagaInstance, out: Ch
   const fighters = Object.keys(inst.fighters).length;
   const medal = medalFor({ markHits: inst.markHits, mobHeals: inst.mobHeals, ms: run.elapsed - run.stopAt, kind: z.kind, level: run.level, fighters });
   run.medals[run.node] = medal;
+  run.stopMs[run.node] = run.elapsed - run.stopAt;
   run.purse += silverFor(run, MEDAL_SILVER[medal]);
   for (const p of humans(farm, run)) out.push(toast(p.id, fmt(RUN_T.medal, { medal: RUN_T.medalNames[medal]!, icon: RUN_T.medalIcons[medal]! }) + (MEDAL_SILVER[medal] ? ` ${fmt(RUN_T.medalSilver, { n: silverFor(run, MEDAL_SILVER[medal]) })}` : '')));
 }

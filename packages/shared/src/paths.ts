@@ -46,12 +46,12 @@ export const PATHS: PathDef[] = [
   },
   {
     id: 'hamnare', cls: 'vaktare', icon: '🌵', effect: { threat: 0.08 }, traits: { thorns: 0.3 },
-    mods: { hugg: { power: 0.05 }, dunderslag: { power: 0.075 }, utmana: { base: 8, radius: 1 }, skoldslag: { power: 0.075 }, skoldmur: { cd: 0.075, ms: 600 } },
+    mods: { hugg: { power: 0.15 }, dunderslag: { power: 0.075 }, utmana: { base: 8, radius: 1 }, skoldslag: { power: 0.075 }, skoldmur: { cd: 0.075, ms: 600 } },
   },
   // Helare: ljus, natur
   {
     id: 'ljus', cls: 'helare', icon: '☀️', effect: { heal: 0.02 }, traits: {},
-    mods: { solstrale: { power: 0.05 }, lakerunan: { power: 0.1, cd: -0.2 }, ljuspil: { power: 0.05 }, lakekrets: { radius: 1, power: 0.015 }, vackupp: { cd: 0.1, base: 15, range: 2 } },
+    mods: { solstrale: { power: 0.05 }, lakerunan: { power: 0.1, cd: -0.2 }, ljuspil: { power: 0.15 }, lakekrets: { radius: 1, power: 0.015 }, vackupp: { cd: 0.1, base: 15, range: 2 } },
   },
   {
     id: 'natur', cls: 'helare', icon: '🌳', effect: { regen: 0.1 }, traits: {},
